@@ -3,6 +3,7 @@ import { graphql } from "react-relay";
 export const MeQuery = graphql`
   query MeQuery {
     me {
+        __typename
         id
         uuid
         email
@@ -10,6 +11,7 @@ export const MeQuery = graphql`
         lastName
         username
         role{
+            __typename
             id
             uuid
             name

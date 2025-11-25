@@ -38,12 +38,17 @@ export default function CompanySelector() {
             .then((data) => {
                 if (!isMounted) return;
                 const tenantCompanies: Company[] =
-                    data?.tenants?.map((tenant) => ({
-                        id: tenant.id,
-                        uuid: String(tenant.uuid),
-                        name: tenant.name,
-                        logo: null,
-                    })) ?? [];
+                    data?.tenants?.edges
+                        ?.map((edge) => edge?.node)
+                        .filter((tenant): tenant is NonNullable<typeof tenant> =>
+                            Boolean(tenant),
+                        )
+                        .map((tenant) => ({
+                            id: tenant.id,
+                            uuid: String(tenant.uuid),
+                            name: tenant.name,
+                            logo: null,
+                        })) ?? [];
 
                 setCompanies(tenantCompanies);
                 setLoading(false);

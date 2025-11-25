@@ -9,8 +9,8 @@ interface GoogleButtonProps {
 }
 
 export const SOCIAL_AUTH_GOOGLE = `
-  mutation SocialAuthGoogle($accessToken: String!) {
-    socialAuthGoogle(accessToken: $accessToken) {
+  mutation SocialAuthGoogle($input:GoogleSocialAuthInput!) {
+    socialAuthGoogle(input:$input) {
       success
       token
       message
@@ -37,14 +37,21 @@ export const GoogleButton: React.FC<GoogleButtonProps> = ({ isLogin = true }) =>
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         query: SOCIAL_AUTH_GOOGLE,
-                        variables: { accessToken },
+                        variables: {
+                            input: {
+                                accessToken
+                            }
+                        },
                     }),
                 });
 
                 const result = await res.json();
                 if (result.data?.socialAuthGoogle?.success) {
-                    const token = result.data.socialAuthGoogle.token;
-                    socialLogin(token)
+                    console.log("result", result);
+                    const { token, refreshToken } = result.data.socialAuthGoogle;
+                    socialLogin(token, refreshToken)
+                    console.log("token", token);
+                    console.log("refreshToken", refreshToken);
                     showAlert("Login successful", "success");
                     navigate("/")
                 } else {
