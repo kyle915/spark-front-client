@@ -24,6 +24,8 @@ export default function CompanySelector() {
     const { selectTenant, tenantUuid } = useTenantSelection();
     const navigate = useNavigate();
 
+    console.log("Tenant UUID", tenantUuid)
+
     useEffect(() => {
         let isMounted = true;
         setLoading(true);

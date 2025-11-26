@@ -47,16 +47,12 @@ export const GoogleButton: React.FC<GoogleButtonProps> = ({ isLogin = true }) =>
 
                 const result = await res.json();
                 if (result.data?.socialAuthGoogle?.success) {
-                    console.log("result", result);
                     const { token, refreshToken } = result.data.socialAuthGoogle;
                     socialLogin(token, refreshToken)
-                    console.log("token", token);
-                    console.log("refreshToken", refreshToken);
                     showAlert("Login successful", "success");
                     navigate("/")
                 } else {
                     showAlert(result.data?.socialAuthGoogle?.message, "error")
-                    console.error("Auth failed:", result.data?.socialAuthGoogle?.message);
                 }
             } catch (err) {
                 console.error("Google login error:", err);
