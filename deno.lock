@@ -1925,6 +1925,7 @@
       "dependencies": [
         "npm:@eslint/js@^9.39.1",
         "npm:@heroicons/react@^2.2.0",
+        "npm:@hookform/resolvers@^5.2.2",
         "npm:@react-oauth/google@~0.12.2",
         "npm:@tailwindcss/vite@^4.1.17",
         "npm:@types/node@^24.10.1",
@@ -1938,8 +1939,11 @@
         "npm:eslint-plugin-react-hooks@^5.2.0",
         "npm:eslint-plugin-react-refresh@~0.4.24",
         "npm:eslint@^9.39.1",
+        "npm:framer-motion@^12.23.24",
         "npm:globals@^16.5.0",
         "npm:graphql@^16.12.0",
+        "npm:motion@^12.23.24",
+        "npm:react-day-picker@^9.11.2",
         "npm:react-dom@^19.2.0",
         "npm:react-hook-form@^7.66.0",
         "npm:react-relay@^20.1.1",
@@ -1950,6 +1954,7 @@
         "npm:typescript-eslint@^8.46.4",
         "npm:typescript@~5.9.3",
         "npm:vite@^7.2.2",
+        "npm:yup@^1.7.1",
         "npm:zustand@^5.0.8"
       ]
     }
