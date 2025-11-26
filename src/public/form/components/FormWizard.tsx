@@ -29,11 +29,9 @@ export default function FormWizard({ steps, onFinish }: FormWizardProps) {
   const prev = () => setCurrent((c) => Math.max(0, c - 1));
 
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-6">
-      {/* PROGRESS BAR */}
+    <div className="w-full md:w-[760px] mx-auto space-y-6">
       <WizardProgressBar step={current} total={total} />
 
-      {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">{steps[current].title}</h1>
@@ -53,15 +51,15 @@ export default function FormWizard({ steps, onFinish }: FormWizardProps) {
         </div>
       </div>
 
-      {/* CONTENT */}
       <div className="relative min-h-[300px]">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}
+            layout
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.28 }}
+            transition={{ duration: 0.28, layout: { duration: 0.25 } }}
             className="card bg-base-100 p-8 shadow-xl rounded-2xl border border-base-300/50"
           >
             {steps[current].content}
@@ -69,7 +67,6 @@ export default function FormWizard({ steps, onFinish }: FormWizardProps) {
         </AnimatePresence>
       </div>
 
-      {/* FOOTER */}
       <div className="flex justify-between">
         {current > 0 ? (
           <button className="btn btn-outline" onClick={prev}>
