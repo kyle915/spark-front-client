@@ -3,53 +3,35 @@ import { useSparkForm } from "../hooks/useSparkForm";
 import FormInputText from "@/shared/FormInputText";
 import FormDatePicker from "@/shared/FormDatePicker";
 import FormInputTime from "@/shared/FormInputTime";
-import FormTextarea from "@/shared/FormTextarea";
 import FormSelect from "@/shared/FormSelect";
-
 import ProductSelector from "./ProductSelector";
-
 import FormWizard from "./FormWizard";
 import SideSummary from "./SideSummary";
-
 import { calculateProgress } from "../helpers/calculateProgress";
 import FormLocationPicker from "./FormLocationPicker";
 
-const PRODUCTS = [
-  { id: "cranberry", name: "Cranberry", desc: "", img: "" },
-  { id: "grape", name: "Grape", desc: "", img: "" },
-  { id: "orange", name: "Orange", desc: "", img: "" },
-  { id: "power", name: "Power", desc: "", img: "" },
-];
+interface SparkFormProps {
+  // tenantSlug: string;
+  clients: any[];
+  requestTypes: any[];
+  products: any[];
+  // productTypes: any[];
+  distributors: any[];
+  retailers: any[];
+}
 
-const REFERENCES = {
-  client: [
-    { value: "1", label: "Client 1" },
-    { value: "2", label: "Client 2" },
-  ],
-  distributor: [
-    { value: "1", label: "Distributor 1" },
-    { value: "2", label: "Distributor 2" },
-  ],
-  retailer: [
-    { value: "1", label: "Retailer 1" },
-    { value: "2", label: "Retailer 2" },
-  ],
-  request_type: [
-    { value: "install", label: "Installation" },
-    { value: "maintenance", label: "Maintenance" },
-  ],
-  status: [
-    { value: "open", label: "Open" },
-    { value: "closed", label: "Closed" },
-  ],
-  tenant: [
-    { value: "hn", label: "Honduras" },
-    { value: "ni", label: "Nicaragua" },
-  ],
-};
-
-export default function SparkForm() {
+export default function SparkForm({
+  // tenantSlug,
+  clients,
+  requestTypes,
+  products,
+  // productTypes,
+  distributors,
+  retailers,
+}: SparkFormProps) {
   const { control, getValues } = useSparkForm();
+
+  // console.log("Rendering SparkForm for tenant:", tenantSlug);
 
   const onFinish = () => {
     console.log("FORM DATA:", getValues());
@@ -90,26 +72,10 @@ export default function SparkForm() {
             nameLng="longitude"
             label="Select the visit location on the map"
           />
-
-          {/* <FormTextarea name="address" label="Address" control={control} /> */}
-
-          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormInputText
-              name="latitude"
-              label="Latitude"
-              type="number"
-              control={control}
-            />
-            <FormInputText
-              name="longitude"
-              label="Longitude"
-              type="number"
-              control={control}
-            />
-          </div> */}
         </div>
       ),
     },
+
     {
       title: "Products",
       description: "Choose the SKUs you want",
@@ -119,7 +85,12 @@ export default function SparkForm() {
             name="skus"
             label="Choose SKUs"
             control={control}
-            products={PRODUCTS}
+            products={products.map((p) => ({
+              id: p.uuid,
+              name: p.name,
+              desc: "",
+              img: "",
+            }))}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -127,42 +98,56 @@ export default function SparkForm() {
               name="client"
               label="Client"
               control={control}
-              options={REFERENCES.client}
+              options={clients.map((c) => ({
+                value: c.uuid,
+                label: c.name,
+              }))}
             />
+
             <FormSelect
               name="distributor"
               label="Distributor"
               control={control}
-              options={REFERENCES.distributor}
+              options={distributors.map((d) => ({
+                value: d.uuid,
+                label: d.name,
+              }))}
             />
+
             <FormSelect
               name="retailer"
               label="Retailer"
               control={control}
-              options={REFERENCES.retailer}
+              options={retailers.map((r) => ({
+                value: r.uuid,
+                label: r.name,
+              }))}
             />
+
             <FormSelect
               name="request_type"
               label="Request Type"
               control={control}
-              options={REFERENCES.request_type}
+              options={requestTypes.map((rt) => ({
+                value: rt.uuid,
+                label: rt.name,
+              }))}
             />
-            <FormSelect
-              name="status"
-              label="Status"
+
+            {/* <FormSelect
+              name="product_type"
+              label="Product Type"
               control={control}
-              options={REFERENCES.status}
-            />
-            <FormSelect
-              name="tenant"
-              label="Tenant"
-              control={control}
-              options={REFERENCES.tenant}
-            />
+              options={productTypes.map((pt) => ({
+                value: pt.uuid,
+                label: pt.name,
+              }))}
+            /> */}
           </div>
         </div>
       ),
     },
+
     {
       title: "Review & Submit",
       description: "Almost ready!",
@@ -176,12 +161,10 @@ export default function SparkForm() {
 
   return (
     <div className="flex flex-col md:flex-row gap-8">
-      {/* LEFT: FORM */}
       <div className="flex-1">
         <FormWizard steps={steps} onFinish={onFinish} />
       </div>
 
-      {/* RIGHT: SUMMARY */}
       <SideSummary
         values={getValues()}
         progress={calculateProgress(getValues())}

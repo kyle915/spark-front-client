@@ -70,6 +70,11 @@ type AmbassadorToAmbassadorReviewDetailResponse {
   ambassadorToAmbassadorReview: AmbassadorToAmbassadorReview
 }
 
+input AppleSocialAuthInput {
+  clientMutationId: ID = null
+  identityToken: String!
+}
+
 input ApproveRequestInput {
   clientMutationId: ID = null
   id: ID!
@@ -83,6 +88,14 @@ type ApproveRequestResponse {
   event: Event
 }
 
+input BaseRegisterInput {
+  clientMutationId: ID = null
+  firstName: String!
+  email: String!
+  password1: String!
+  password2: String!
+}
+
 """
 Client(id, uuid, name, email, tenant, created_by, updated_by, created_at, updated_at)
 """
@@ -94,13 +107,6 @@ type Client {
   tenantId: ID!
   createdAt: String!
   updatedAt: String!
-}
-
-input ClientAppleSocialAuthInput {
-  clientMutationId: ID = null
-  identityToken: String!
-  roleId: ID!
-  tenantId: ID!
 }
 
 type ClientCountableConnection {
@@ -128,23 +134,6 @@ input ClientFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
-}
-
-input ClientGoogleSocialAuthInput {
-  clientMutationId: ID = null
-  accessToken: String!
-  roleId: ID!
-  tenantId: ID!
-}
-
-input ClientRegisterInput {
-  clientMutationId: ID = null
-  firstName: String!
-  email: String!
-  password1: String!
-  password2: String!
-  roleId: ID!
-  tenantId: ID!
 }
 
 """
@@ -380,7 +369,28 @@ input CreateDistributorInput {
   locationId: ID!
 }
 
+input CreateEventInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  eventTypeId: ID!
+  statusId: ID!
+  requestId: ID!
+  address: String!
+  notes: String!
+  isNational: Boolean! = false
+  startTime: String!
+  endTime: String!
+}
+
 input CreateEventStatusInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  isDefault: Boolean! = false
+}
+
+input CreateEventTypeInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
@@ -672,6 +682,13 @@ type EventCountableEdge {
   node: Event!
 }
 
+type EventDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  event: Event
+}
+
 input EventFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -749,6 +766,13 @@ type EventTypeCountableEdge {
   node: EventType!
 }
 
+type EventTypeDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  eventType: EventType
+}
+
 input EventTypeFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -757,6 +781,11 @@ input EventTypeFiltersInput {
 
 "\n     Errors messages and codes mapped to\n    fields or non fields errors.\n    Example:\n    {\n        field_name: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ],\n        other_field: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ],\n        nonFieldErrors: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ]\n    }\n    "
 scalar ExpectedError
+
+input GoogleSocialAuthInput {
+  clientMutationId: ID = null
+  accessToken: String!
+}
 
 """
 Job(id, uuid, name, description, code, address, start_date, end_date, public, closed, national, ongoing, job_title, other_title, company, event, location, tenant, rate, created_by, updated_by, created_at, updated_at)
@@ -1112,9 +1141,13 @@ type Mutation {
   createRequest(input: CreateRequestInput!): RequestDetailResponse!
   updateRequest(input: UpdateRequestInput!): RequestDetailResponse!
   approveRequest(input: ApproveRequestInput!): ApproveRequestResponse!
-  register(input: ClientRegisterInput!): RegisterResponse!
-  socialAuthGoogle(input: ClientGoogleSocialAuthInput!): SocialAuthResponse!
-  socialAuthApple(input: ClientAppleSocialAuthInput!): SocialAuthResponse!
+  createEventType(input: CreateEventTypeInput!): EventTypeDetailResponse!
+  updateEventType(input: UpdateEventTypeInput!): EventTypeDetailResponse!
+  createEvent(input: CreateEventInput!): EventDetailResponse!
+  updateEvent(input: UpdateEventInput!): EventDetailResponse!
+  register(input: BaseRegisterInput!): RegisterResponse!
+  socialAuthGoogle(input: GoogleSocialAuthInput!): SocialAuthResponse!
+  socialAuthApple(input: AppleSocialAuthInput!): SocialAuthResponse!
 
   "### Checks if a token is not expired and correct.\n\n*Note that this is not for refresh tokens.*\n"
   verifyToken(input: VerifyTokenInput!): VerifyTokenType!
@@ -1333,16 +1366,21 @@ type Query {
   eventType(id: ID!): EventType
   eventStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: EventStatusFiltersInput = null): EventStatusCountableConnection!
   eventStatus(id: ID!): EventStatus
+  publicClients(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): ClientCountableConnection!
   clients(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ClientFiltersInput = null): ClientCountableConnection!
   client(id: ID!): Client
+  publicDistributors(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): DistributorCountableConnection!
   distributors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: DistributorFiltersInput = null): DistributorCountableConnection!
   distributor(id: ID!): Distributor
+  publicRetailer(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): RetailerCountableConnection!
   retailers(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RetailerFiltersInput = null): RetailerCountableConnection!
   retailer(id: ID!): Retailer
   productTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ProductTypeFiltersInput = null): ProductTypeCountableConnection!
   productType(id: ID!): ProductType
+  publicProducts(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): ProductCountableConnection!
   products(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ProductFiltersInput = null): ProductCountableConnection!
   product(id: ID!): Product
+  publicRequestType(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): RequestTypeCountableConnection!
   requestTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestTypeFiltersInput = null): RequestTypeCountableConnection!
   requestType(id: ID!): RequestType
   requestStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: RequestStatusFiltersInput = null): RequestStatusCountableConnection!
@@ -1946,7 +1984,30 @@ input UpdateDistributorInput {
   id: ID!
 }
 
+input UpdateEventInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  eventTypeId: ID!
+  statusId: ID!
+  requestId: ID!
+  address: String!
+  notes: String!
+  isNational: Boolean! = false
+  startTime: String!
+  endTime: String!
+  id: ID!
+}
+
 input UpdateEventStatusInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  isDefault: Boolean! = false
+  id: ID!
+}
+
+input UpdateEventTypeInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!

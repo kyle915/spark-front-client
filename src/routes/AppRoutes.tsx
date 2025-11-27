@@ -28,7 +28,7 @@ const DashboardLinks = {
     },
     // public route
     {
-      path: "/spark-form",
+      path: "/spark-form/:tenantSlug",
       name: "SparkForm",
       component: <SparkFormPage />,
       isPublic: true,

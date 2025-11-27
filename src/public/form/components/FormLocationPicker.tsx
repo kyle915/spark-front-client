@@ -6,10 +6,9 @@ import L from "leaflet";
 
 import InteractiveMap from "@/shared/InteractiveMap";
 
-// Fallback a Times Square, NY
+// Fallback to Times Square, NY
 const FALLBACK_POSITION: [number, number] = [40.758, -73.9855];
 
-// Fix necesario para que se vea el icono del marker
 const defaultMarkerIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
@@ -35,7 +34,7 @@ export default function FormLocationPicker({
   const [initialPosition, setInitialPosition] =
     useState<LatLngExpression>(FALLBACK_POSITION);
 
-  // Detectar ubicación real del usuario
+  // Detect real user location
   useEffect(() => {
     if (!navigator.geolocation) return;
 
@@ -81,7 +80,7 @@ export default function FormLocationPicker({
                     <Marker position={center} icon={defaultMarkerIcon} />
                   </InteractiveMap>
 
-                  {/* 🔥 Mostrar los valores SELECCIONADOS */}
+                  {/* Preview the values */}
                   <pre className="bg-base-300 p-3 rounded-md text-sm overflow-x-auto">
                     Latitude: {latField.value ?? "—"}
                     <br />
