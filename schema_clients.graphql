@@ -88,14 +88,6 @@ type ApproveRequestResponse {
   event: Event
 }
 
-input BaseRegisterInput {
-  clientMutationId: ID = null
-  firstName: String!
-  email: String!
-  password1: String!
-  password2: String!
-}
-
 """
 Client(id, uuid, name, email, tenant, created_by, updated_by, created_at, updated_at)
 """
@@ -134,6 +126,16 @@ input ClientFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
+}
+
+input ClientRegisterInput {
+  clientMutationId: ID = null
+  firstName: String!
+  email: String!
+  password1: String!
+  password2: String!
+  role: UserRoleEnum!
+  tenantId: ID = null
 }
 
 """
@@ -289,6 +291,12 @@ type CompanyToAmbassadorReviewDetailResponse {
   companyToAmbassadorReview: CompanyToAmbassadorReview
 }
 
+input CoordinatesFilterInput {
+  coordinates: [Float!]!
+  range: Float!
+  unit: DistanceUnit! = KILOMETERS
+}
+
 input CreateAmbassadorJobInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -369,28 +377,7 @@ input CreateDistributorInput {
   locationId: ID!
 }
 
-input CreateEventInput {
-  clientMutationId: ID = null
-  tenantId: ID = null
-  name: String!
-  eventTypeId: ID!
-  statusId: ID!
-  requestId: ID!
-  address: String!
-  notes: String!
-  isNational: Boolean! = false
-  startTime: String!
-  endTime: String!
-}
-
 input CreateEventStatusInput {
-  clientMutationId: ID = null
-  tenantId: ID = null
-  name: String!
-  isDefault: Boolean! = false
-}
-
-input CreateEventTypeInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
@@ -528,6 +515,12 @@ input CreateRateTypeInput {
   name: String!
 }
 
+input CreateRequestDetailInput {
+  clientMutationId: ID = null
+  isTableNeeded: Boolean! = false
+  tableSize: Int = null
+}
+
 input CreateRequestInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -543,6 +536,11 @@ input CreateRequestInput {
   requestTypeId: ID!
 }
 
+input CreateRequestProductInput {
+  clientMutationId: ID = null
+  productId: ID!
+}
+
 input CreateRequestStatusInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -555,6 +553,23 @@ input CreateRequestTypeInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
+}
+
+input CreateRequestWithDependenciesInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  date: String!
+  startTime: String!
+  endTime: String!
+  address: String!
+  coordinates: [Float!]!
+  clientId: ID!
+  distributorId: ID!
+  retailerId: ID!
+  requestTypeId: ID!
+  details: [CreateRequestDetailInput!]!
+  products: [CreateRequestProductInput!]!
 }
 
 input CreateRetailerInput {
@@ -682,13 +697,6 @@ type EventCountableEdge {
   node: Event!
 }
 
-type EventDetailResponse {
-  success: Boolean!
-  message: String!
-  clientMutationId: ID
-  event: Event
-}
-
 input EventFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -697,6 +705,7 @@ input EventFiltersInput {
   eventStatusId: ID = null
   requestId: ID = null
   date: String = null
+  coordinates: CoordinatesFilterInput = null
 }
 
 """
@@ -764,13 +773,6 @@ type EventTypeCountableEdge {
 
   """The item at the end of the edge"""
   node: EventType!
-}
-
-type EventTypeDetailResponse {
-  success: Boolean!
-  message: String!
-  clientMutationId: ID
-  eventType: EventType
 }
 
 input EventTypeFiltersInput {
@@ -1118,8 +1120,23 @@ input LocationFiltersInput {
   tenantUuid: ID = null
 }
 
+enum ManageAmbassadorJobAssignmentAction {
+  ACCEPT
+  REJECT
+  BLACKLIST
+  WHITELIST
+}
+
+input ManageAmbassadorJobAssignmentInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  ambassadorJobId: ID!
+  action: ManageAmbassadorJobAssignmentAction!
+  statusId: ID = null
+}
+
 type Mutation {
-  createRequestByUrl(input: CreateRequestInput!, requestUrl: String!): RequestDetailResponse!
+  createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
   createEventStatus(input: CreateEventStatusInput!): EventStatusDetailResponse!
   updateEventStatus(input: UpdateEventStatusInput!): EventStatusDetailResponse!
   createLocation(input: CreateLocationInput!): LocationDetailResponse!
@@ -1141,11 +1158,7 @@ type Mutation {
   createRequest(input: CreateRequestInput!): RequestDetailResponse!
   updateRequest(input: UpdateRequestInput!): RequestDetailResponse!
   approveRequest(input: ApproveRequestInput!): ApproveRequestResponse!
-  createEventType(input: CreateEventTypeInput!): EventTypeDetailResponse!
-  updateEventType(input: UpdateEventTypeInput!): EventTypeDetailResponse!
-  createEvent(input: CreateEventInput!): EventDetailResponse!
-  updateEvent(input: UpdateEventInput!): EventDetailResponse!
-  register(input: BaseRegisterInput!): RegisterResponse!
+  register(input: ClientRegisterInput!): RegisterResponse!
   socialAuthGoogle(input: GoogleSocialAuthInput!): SocialAuthResponse!
   socialAuthApple(input: AppleSocialAuthInput!): SocialAuthResponse!
 
@@ -1202,6 +1215,7 @@ type Mutation {
   updateQuestionOption(input: UpdateQuestionOptionInput!): QuestionOptionDetailResponse!
   createJobRequirementAnswer(input: CreateJobRequirementAnswerInput!): JobRequirementAnswerDetailResponse!
   updateJobRequirementAnswer(input: UpdateJobRequirementAnswerInput!): JobRequirementAnswerDetailResponse!
+  manageAmbassadorJobAssignment(input: ManageAmbassadorJobAssignmentInput!): AmbassadorJobDetailResponse!
 }
 
 type MutationNormalOutput {
@@ -1375,6 +1389,7 @@ type Query {
   publicRetailer(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): RetailerCountableConnection!
   retailers(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RetailerFiltersInput = null): RetailerCountableConnection!
   retailer(id: ID!): Retailer
+  publicProductTypes(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): ProductTypeCountableConnection!
   productTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ProductTypeFiltersInput = null): ProductTypeCountableConnection!
   productType(id: ID!): ProductType
   publicProducts(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): ProductCountableConnection!
@@ -1422,6 +1437,7 @@ type Query {
   availableJobs(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): JobCountableConnection!
   ambassadorJobs(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): AmbassadorJobCountableConnection!
   ambassadorJob(id: ID!): AmbassadorJob
+  jobApplicants(jobId: ID!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): AmbassadorJobCountableConnection!
   companyToAmbassadorReviews(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): CompanyToAmbassadorReviewCountableConnection!
   companyToAmbassadorReview(id: ID!): CompanyToAmbassadorReview
   ambassadorToAmbassadorReviews(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): AmbassadorToAmbassadorReviewCountableConnection!
@@ -1984,30 +2000,7 @@ input UpdateDistributorInput {
   id: ID!
 }
 
-input UpdateEventInput {
-  clientMutationId: ID = null
-  tenantId: ID = null
-  name: String!
-  eventTypeId: ID!
-  statusId: ID!
-  requestId: ID!
-  address: String!
-  notes: String!
-  isNational: Boolean! = false
-  startTime: String!
-  endTime: String!
-  id: ID!
-}
-
 input UpdateEventStatusInput {
-  clientMutationId: ID = null
-  tenantId: ID = null
-  name: String!
-  isDefault: Boolean! = false
-  id: ID!
-}
-
-input UpdateEventTypeInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
@@ -2218,6 +2211,10 @@ input UpdateStatusInput {
   tenantId: ID = null
   name: String!
   id: ID!
+}
+
+enum UserRoleEnum {
+  AMBASSADOR
 }
 
 """A helper model that handles user account stuff."""
