@@ -12,6 +12,7 @@ import FormWizard from "./FormWizard";
 import SideSummary from "./SideSummary";
 
 import { calculateProgress } from "../helpers/calculateProgress";
+import FormLocationPicker from "./FormLocationPicker";
 
 const PRODUCTS = [
   { id: "cranberry", name: "Cranberry", desc: "", img: "" },
@@ -83,9 +84,16 @@ export default function SparkForm() {
             <FormInputTime name="end_time" label="End Time" control={control} />
           </div>
 
-          <FormTextarea name="address" label="Address" control={control} />
+          <FormLocationPicker
+            control={control}
+            nameLat="latitude"
+            nameLng="longitude"
+            label="Select the visit location on the map"
+          />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* <FormTextarea name="address" label="Address" control={control} /> */}
+
+          {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormInputText
               name="latitude"
               label="Latitude"
@@ -98,7 +106,7 @@ export default function SparkForm() {
               type="number"
               control={control}
             />
-          </div>
+          </div> */}
         </div>
       ),
     },
