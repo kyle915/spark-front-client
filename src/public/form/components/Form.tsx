@@ -102,7 +102,6 @@ export default function SparkForm({
       await submit(payload);
       showAlert("Request created successfully!", "success");
 
-      // RESET CORRECTO
       reset({
         name: "",
         date: "",
