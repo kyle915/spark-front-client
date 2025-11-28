@@ -11,8 +11,10 @@ import FormWizard from "./FormWizard";
 import SideSummary from "./SideSummary";
 import FormLocationPicker from "./FormLocationPicker";
 
-import { calculateProgress } from "../helpers/calculateProgress";
+import { useCreateRequest } from "../hooks/useCreateRequest";
+import { calculateProgress } from "../utils/calculateProgress";
 import { useEffect } from "react";
+import { dateFormat } from "../utils/toDate";
 
 interface SparkFormProps {
   clients: any[];
@@ -34,6 +36,9 @@ export default function SparkForm({
   tenantId,
 }: SparkFormProps) {
   const { control, watch, setValue } = useSparkForm();
+  const { submit, loading, error, result } = useCreateRequest(
+    tenantId ? { slug: tenantId } : { slug: "" }
+  );
 
   useEffect(() => {
     if (tenantId) {
@@ -43,10 +48,10 @@ export default function SparkForm({
 
   const values = watch();
 
-  const onFinish = () => {
-    const finalPayload = {
+  const onSubmit = async () => {
+    const payload = {
       name: values.name,
-      date: values.date,
+      date: dateFormat(values.date),
       startTime: values.start_time,
       endTime: values.end_time,
       address: values.address,
@@ -55,12 +60,28 @@ export default function SparkForm({
       distributorId: values.distributor,
       retailerId: values.retailer,
       requestTypeId: values.request_type,
+      // tenantId: values.tenant,
       products: values.skus.map((id) => ({ productId: id })),
-      details: values.details || [],
-      tenantId: values.tenant,
+      details: [
+        {
+          isTableNeeded:
+            values.details?.[0]?.isTableNeeded === "true" ||
+            values.details?.[0]?.isTableNeeded === true,
+          tableSize: values.details?.[0]?.tableSize
+            ? Number(values.details[0].tableSize)
+            : null,
+        },
+      ],
     };
 
-    console.log("FINAL MUTATION PAYLOAD:", finalPayload);
+    try {
+      const created = await submit(payload);
+      console.log("Created:", created);
+      alert("Request successfully created!");
+    } catch (err) {
+      console.error(err);
+      alert("Error: " + err);
+    }
   };
 
   const steps = [
@@ -123,11 +144,11 @@ export default function SparkForm({
             label="Choose SKUs"
             control={control}
             products={products.map((p) => ({
-              id: p.uuid,
+              id: p.id,
               name: p.name,
               desc: "",
               img: "",
-              productTypeId: p.productType.uuid,
+              productTypeId: p.productType.id,
             }))}
             productTypes={productTypes}
           />
@@ -138,7 +159,7 @@ export default function SparkForm({
               label="Client"
               control={control}
               options={clients.map((c) => ({
-                value: c.uuid,
+                value: c.id,
                 label: c.name,
               }))}
             />
@@ -148,7 +169,7 @@ export default function SparkForm({
               label="Distributor"
               control={control}
               options={distributors.map((d) => ({
-                value: d.uuid,
+                value: d.id,
                 label: d.name,
               }))}
             />
@@ -158,7 +179,7 @@ export default function SparkForm({
               label="Retailer"
               control={control}
               options={retailers.map((r) => ({
-                value: r.uuid,
+                value: r.id,
                 label: r.name,
               }))}
             />
@@ -168,7 +189,7 @@ export default function SparkForm({
               label="Request Type"
               control={control}
               options={requestTypes.map((rt) => ({
-                value: rt.uuid,
+                value: rt.id,
                 label: rt.name,
               }))}
             />
@@ -191,7 +212,6 @@ export default function SparkForm({
             control={control}
           /> */}
 
-          {/* Ejemplo de detalles */}
           <FormSelect
             name="details.0.isTableNeeded"
             label="Table Needed?"
@@ -202,7 +222,6 @@ export default function SparkForm({
             ]}
           />
 
-          {/* Size si isTableNeeded === true */}
           {values.details?.[0]?.isTableNeeded === "true" && (
             <FormInputText
               name="details.0.tableSize"
@@ -231,10 +250,14 @@ export default function SparkForm({
   return (
     <div className="flex flex-col md:flex-row gap-8">
       <div className="flex-1">
-        <FormWizard steps={steps} onFinish={onFinish} />
+        <FormWizard steps={steps} onSubmit={onSubmit} />
       </div>
 
-      <SideSummary values={values} progress={calculateProgress(values)} />
+      <SideSummary
+        values={values}
+        progress={calculateProgress(values)}
+        productsFull={products}
+      />
     </div>
   );
 }

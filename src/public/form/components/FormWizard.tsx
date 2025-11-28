@@ -11,10 +11,10 @@ export interface WizardStep {
 
 interface FormWizardProps {
   steps: WizardStep[];
-  onFinish: () => void;
+  onSubmit: () => void;
 }
 
-export default function FormWizard({ steps, onFinish }: FormWizardProps) {
+export default function FormWizard({ steps, onSubmit }: FormWizardProps) {
   const [current, setCurrent] = useState(0);
   const total = steps.length;
 
@@ -23,7 +23,7 @@ export default function FormWizard({ steps, onFinish }: FormWizardProps) {
     if (!valid) return;
 
     if (current < total - 1) setCurrent(current + 1);
-    else onFinish();
+    else onSubmit();
   };
 
   const prev = () => setCurrent((c) => Math.max(0, c - 1));
