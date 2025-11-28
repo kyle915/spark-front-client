@@ -17,6 +17,7 @@ export const useSparkForm = () =>
       longitude: "",
       client: "",
       distributor: "",
+      product_type: "",
       retailer: "",
       request_type: "",
       status: "",

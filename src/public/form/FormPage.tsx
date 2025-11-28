@@ -1,33 +1,44 @@
 import { useParams } from "react-router";
 import SparkFormLayout from "./layout/FormLayout";
 import SparkForm from "./components/Form";
-import { usePublicFormData } from "./hooks/usePublicFormData";
+import {
+  usePublicClients,
+  usePublicDistributors,
+  usePublicProductTypes,
+  usePublicProducts,
+  usePublicRequestTypes,
+  usePublicRetailer,
+} from "./hooks";
 
 export default function SparkFormPage() {
   const { tenantSlug } = useParams();
 
-  // Si todavía no hay tenant, no dispares Relay
   if (!tenantSlug) {
     return <div className="p-6 text-center">Loading…</div>;
   }
 
-  const {
-    clients,
-    requestTypes,
-    products,
-    // productTypes,
-    distributors,
-    retailers,
-  } = usePublicFormData(tenantSlug!);
+  const { clients, loading: loadingClients } = usePublicClients(tenantSlug);
+  const { requestTypes, loading: loadingRequestTypes } =
+    usePublicRequestTypes(tenantSlug);
+  const { products, loading: loadingProducts } = usePublicProducts(tenantSlug);
+  const { productTypes, loading: loadingProductTypes } =
+    usePublicProductTypes(tenantSlug);
+  const { distributors, loading: loadingDistributors } =
+    usePublicDistributors(tenantSlug);
+  const { retailers, loading: loadingRetailers } =
+    usePublicRetailer(tenantSlug);
 
-  console.log("SparkFormPage rendered for tenantSlug:", tenantSlug);
-  console.log("Fetched data:", {
-    clients,
-    requestTypes,
-    products,
-    distributors,
-    retailers,
-  });
+  const isLoading =
+    loadingClients ||
+    loadingRequestTypes ||
+    loadingProducts ||
+    loadingProductTypes ||
+    loadingDistributors ||
+    loadingRetailers;
+
+  if (isLoading) {
+    return <div className="p-6 text-center animate-pulse">Cargando datos…</div>;
+  }
 
   return (
     <SparkFormLayout>
@@ -35,7 +46,7 @@ export default function SparkFormPage() {
         clients={clients}
         requestTypes={requestTypes}
         products={products}
-        // productTypes={productTypes}
+        productTypes={productTypes}
         distributors={distributors}
         retailers={retailers}
       />

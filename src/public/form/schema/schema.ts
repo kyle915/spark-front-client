@@ -13,6 +13,7 @@ export const sparkFormSchema = yup.object({
   client: yup.string().required("Client is required"),
   distributor: yup.string().default("").defined(),
   retailer: yup.string().default("").defined(),
+  product_type: yup.string().default("").defined(),
 
   request_type: yup.string().required("Request type is required"),
   status: yup.string().required("Status is required"),

@@ -11,27 +11,23 @@ import { calculateProgress } from "../helpers/calculateProgress";
 import FormLocationPicker from "./FormLocationPicker";
 
 interface SparkFormProps {
-  // tenantSlug: string;
   clients: any[];
   requestTypes: any[];
   products: any[];
-  // productTypes: any[];
+  productTypes: any[];
   distributors: any[];
   retailers: any[];
 }
 
 export default function SparkForm({
-  // tenantSlug,
   clients,
   requestTypes,
   products,
-  // productTypes,
+  productTypes,
   distributors,
   retailers,
 }: SparkFormProps) {
   const { control, getValues } = useSparkForm();
-
-  // console.log("Rendering SparkForm for tenant:", tenantSlug);
 
   const onFinish = () => {
     console.log("FORM DATA:", getValues());
@@ -42,36 +38,45 @@ export default function SparkForm({
       title: "Basic Information",
       description: "Tell us about the visit",
       content: (
-        <div className="space-y-6">
-          <FormInputText
-            name="name"
-            label="Full Name"
-            control={control}
-            rules={{ required: "Required" }}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="col-span-1">
+            <FormInputText
+              name="name"
+              label="Full Name"
+              control={control}
+              rules={{ required: "Required" }}
+            />
+          </div>
 
-          <FormDatePicker
-            name="date"
-            label="Visit Date"
-            control={control}
-            rules={{ required: "Required" }}
-          />
+          <div className="col-span-1">
+            <FormDatePicker
+              name="date"
+              label="Visit Date"
+              control={control}
+              rules={{ required: "Required" }}
+            />
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="col-span-1">
             <FormInputTime
               name="start_time"
               label="Start Time"
               control={control}
             />
+          </div>
+
+          <div className="col-span-1">
             <FormInputTime name="end_time" label="End Time" control={control} />
           </div>
 
-          <FormLocationPicker
-            control={control}
-            nameLat="latitude"
-            nameLng="longitude"
-            label="Select the visit location on the map"
-          />
+          <div className="col-span-2">
+            <FormLocationPicker
+              control={control}
+              nameLat="latitude"
+              nameLng="longitude"
+              label="Select the visit location on the map"
+            />
+          </div>
         </div>
       ),
     },
@@ -90,7 +95,9 @@ export default function SparkForm({
               name: p.name,
               desc: "",
               img: "",
+              productTypeId: p.productType.uuid,
             }))}
+            productTypes={productTypes}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -133,16 +140,6 @@ export default function SparkForm({
                 label: rt.name,
               }))}
             />
-
-            {/* <FormSelect
-              name="product_type"
-              label="Product Type"
-              control={control}
-              options={productTypes.map((pt) => ({
-                value: pt.uuid,
-                label: pt.name,
-              }))}
-            /> */}
           </div>
         </div>
       ),
