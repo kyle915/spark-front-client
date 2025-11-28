@@ -1,5 +1,5 @@
 export function calculateProgress(values: any): number {
-  const fields = [
+  const step1 = [
     "name",
     "date",
     "start_time",
@@ -7,29 +7,31 @@ export function calculateProgress(values: any): number {
     "address",
     "latitude",
     "longitude",
-    "client",
-    "distributor",
-    "retailer",
-    "request_type",
-    "tenant",
   ];
+
+  const step2 = ["client", "distributor", "retailer", "request_type"];
 
   let filled = 0;
 
-  // Campos simples
-  fields.forEach((f) => {
+  step1.forEach((f) => {
     const v = values[f];
-    const isFilled = v !== undefined && v !== null && v !== "";
-    if (isFilled) filled++;
+    if (v !== undefined && v !== null && v !== "") {
+      filled++;
+    }
   });
 
-  // Validar SKUs
+  step2.forEach((f) => {
+    const v = values[f];
+    if (v !== undefined && v !== null && v !== "") {
+      filled++;
+    }
+  });
+
   if (Array.isArray(values.skus) && values.skus.length > 0) {
     filled++;
   }
 
-  // Total de campos considerados
-  const total = fields.length + 1; // +1 = SKUs
+  const totalRequired = step1.length + step2.length + 1;
 
-  return (filled / total) * 100;
+  return (filled / totalRequired) * 100;
 }

@@ -54,9 +54,7 @@ export default function SparkForm({
 
   const values = watch();
 
-  // -----------------------------
   // STEP VALIDATION MAP
-  // -----------------------------
   const stepFields: Record<string, FieldPath<SparkFormData>[]> = {
     step1: [
       "name",
@@ -104,9 +102,22 @@ export default function SparkForm({
       await submit(payload);
       showAlert("Request created successfully!", "success");
 
+      // RESET CORRECTO
       reset({
-        details: [{ isTableNeeded: "false", tableSize: 0 }],
+        name: "",
+        date: "",
+        start_time: "",
+        end_time: "",
+        latitude: undefined,
+        longitude: undefined,
+        address: "",
         skus: [],
+        client: "",
+        distributor: "",
+        retailer: "",
+        request_type: "",
+        details: [{ isTableNeeded: "false", tableSize: 0 }],
+        tenant: tenantId ?? "",
       });
 
       setResetSignal(Math.random());
@@ -231,6 +242,12 @@ export default function SparkForm({
         </div>
       ),
     },
+
+    {
+      title: "Review & Submit",
+      description: "Almost done! Review your information",
+      content: <pre>{JSON.stringify(values, null, 2)}</pre>,
+    },
   ];
 
   return (
@@ -240,6 +257,7 @@ export default function SparkForm({
           steps={steps}
           onSubmit={onSubmit}
           resetSignal={resetSignal}
+          loadingSubmit={loading}
         />
       </div>
 
@@ -247,6 +265,9 @@ export default function SparkForm({
         values={values}
         progress={calculateProgress(values)}
         productsFull={products}
+        clients={clients}
+        distributors={distributors}
+        retailers={retailers}
       />
     </div>
   );

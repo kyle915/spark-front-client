@@ -10,8 +10,8 @@ interface ProductItem {
   productTypeId: string;
 }
 
-interface Props<T> {
-  name: any;
+interface Props {
+  name: string;
   control: any;
   products: ProductItem[];
   productTypes: any[];
@@ -20,13 +20,13 @@ interface Props<T> {
 
 const ITEMS_PER_PAGE = 6;
 
-export default function ProductSelector<T>({
+export default function ProductSelector({
   name,
   control,
   products,
   productTypes,
   label,
-}: Props<T>) {
+}: Props) {
   const [selectedType, setSelectedType] = useState<string>("all");
   const [page, setPage] = useState(1);
 
@@ -52,7 +52,7 @@ export default function ProductSelector<T>({
     <Controller
       name={name}
       control={control}
-      render={({ field }) => {
+      render={({ field, fieldState: { error } }) => {
         const selected = field.value || [];
 
         const toggle = (id: string) => {
@@ -137,6 +137,10 @@ export default function ProductSelector<T>({
                       checked={active}
                       className="checkbox checkbox-primary"
                     />
+
+                    {error && (
+                      <p className="text-xs text-error mt-1">{error.message}</p>
+                    )}
                   </motion.div>
                 );
               })}

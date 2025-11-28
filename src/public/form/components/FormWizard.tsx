@@ -12,6 +12,7 @@ export interface WizardStep {
 interface FormWizardProps {
   steps: WizardStep[];
   onSubmit: () => void;
+  loadingSubmit?: boolean;
   resetSignal?: any;
 }
 
@@ -19,6 +20,7 @@ export default function FormWizard({
   steps,
   onSubmit,
   resetSignal,
+  loadingSubmit,
 }: FormWizardProps) {
   const [current, setCurrent] = useState(0);
   const total = steps.length;
@@ -88,8 +90,16 @@ export default function FormWizard({
           <span />
         )}
 
-        <button className="btn btn-primary px-8" onClick={next}>
+        <button
+          className="btn btn-primary px-8"
+          onClick={next}
+          disabled={loadingSubmit}
+        >
           {current === total - 1 ? "Finish" : "Next"}
+
+          {loadingSubmit && (
+            <span className="loading loading-spinner ml-2"></span>
+          )}
         </button>
       </div>
     </div>
