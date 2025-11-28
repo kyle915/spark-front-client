@@ -6,17 +6,24 @@ export const sparkFormSchema = yup.object({
   start_time: yup.string().required("Start time is required"),
   end_time: yup.string().required("End time is required"),
   address: yup.string().required("Address is required"),
-
-  latitude: yup.string().default("").defined(),
-  longitude: yup.string().default("").defined(),
-
+  latitude: yup
+    .number()
+    .typeError("Latitude is required")
+    .required("Latitude is required"),
+  longitude: yup
+    .number()
+    .typeError("Longitude is required")
+    .required("Longitude is required"),
   client: yup.string().required("Client is required"),
-  distributor: yup.string().default("").defined(),
-  retailer: yup.string().default("").defined(),
-  product_type: yup.string().default("").defined(),
-
+  distributor: yup.string().required("Distributor is required"),
+  retailer: yup.string().required("Retailer is required"),
   request_type: yup.string().required("Request type is required"),
-  status: yup.string().required("Status is required"),
+  skus: yup
+    .array()
+    .of(yup.string())
+    .min(1, "Select at least one product")
+    .required(),
+  details: yup.array().default([]).defined(),
   tenant: yup.string().required("Tenant is required"),
 });
 

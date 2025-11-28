@@ -4,11 +4,15 @@ import FormInputText from "@/shared/FormInputText";
 import FormDatePicker from "@/shared/FormDatePicker";
 import FormInputTime from "@/shared/FormInputTime";
 import FormSelect from "@/shared/FormSelect";
+import FormTextarea from "@/shared/FormTextarea";
+
 import ProductSelector from "./ProductSelector";
 import FormWizard from "./FormWizard";
 import SideSummary from "./SideSummary";
-import { calculateProgress } from "../helpers/calculateProgress";
 import FormLocationPicker from "./FormLocationPicker";
+
+import { calculateProgress } from "../helpers/calculateProgress";
+import { useEffect } from "react";
 
 interface SparkFormProps {
   clients: any[];
@@ -17,6 +21,7 @@ interface SparkFormProps {
   productTypes: any[];
   distributors: any[];
   retailers: any[];
+  tenantId: string;
 }
 
 export default function SparkForm({
@@ -26,61 +31,88 @@ export default function SparkForm({
   productTypes,
   distributors,
   retailers,
+  tenantId,
 }: SparkFormProps) {
-  const { control, getValues } = useSparkForm();
+  const { control, watch, setValue } = useSparkForm();
+
+  useEffect(() => {
+    if (tenantId) {
+      setValue("tenant", tenantId);
+    }
+  }, [tenantId, setValue]);
+
+  const values = watch();
 
   const onFinish = () => {
-    console.log("FORM DATA:", getValues());
+    const finalPayload = {
+      name: values.name,
+      date: values.date,
+      startTime: values.start_time,
+      endTime: values.end_time,
+      address: values.address,
+      coordinates: [Number(values.latitude), Number(values.longitude)],
+      clientId: values.client,
+      distributorId: values.distributor,
+      retailerId: values.retailer,
+      requestTypeId: values.request_type,
+      products: values.skus.map((id) => ({ productId: id })),
+      details: values.details || [],
+      tenantId: values.tenant,
+    };
+
+    console.log("FINAL MUTATION PAYLOAD:", finalPayload);
   };
 
   const steps = [
+    // ---------------------------------------------------------
+    // STEP 1: BASIC INFORMATION
+    // ---------------------------------------------------------
     {
       title: "Basic Information",
       description: "Tell us about the visit",
       content: (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="col-span-1">
-            <FormInputText
-              name="name"
-              label="Full Name"
-              control={control}
-              rules={{ required: "Required" }}
-            />
-          </div>
+          <FormInputText
+            name="name"
+            label="Full Name"
+            control={control}
+            rules={{ required: "Required" }}
+          />
 
-          <div className="col-span-1">
-            <FormDatePicker
-              name="date"
-              label="Visit Date"
-              control={control}
-              rules={{ required: "Required" }}
-            />
-          </div>
+          <FormDatePicker
+            name="date"
+            label="Visit Date"
+            control={control}
+            rules={{ required: "Required" }}
+          />
 
-          <div className="col-span-1">
-            <FormInputTime
-              name="start_time"
-              label="Start Time"
-              control={control}
-            />
-          </div>
+          <FormInputTime
+            name="start_time"
+            label="Start Time"
+            control={control}
+          />
 
-          <div className="col-span-1">
-            <FormInputTime name="end_time" label="End Time" control={control} />
-          </div>
+          <FormInputTime name="end_time" label="End Time" control={control} />
 
           <div className="col-span-2">
             <FormLocationPicker
               control={control}
               nameLat="latitude"
               nameLng="longitude"
-              label="Select the visit location on the map"
+              label="Select visit location on the map"
             />
+          </div>
+
+          <div className="col-span-2">
+            <FormTextarea name="address" label="Address" control={control} />
           </div>
         </div>
       ),
     },
 
+    // ---------------------------------------------------------
+    // STEP 2: PRODUCT SELECTION
+    // ---------------------------------------------------------
     {
       title: "Products",
       description: "Choose the SKUs you want",
@@ -145,12 +177,52 @@ export default function SparkForm({
       ),
     },
 
+    // ---------------------------------------------------------
+    // STEP 3: EXTRA DETAILS
+    // ---------------------------------------------------------
+    {
+      title: "Extra Details",
+      description: "Optional but recommended",
+      content: (
+        <div className="space-y-6">
+          {/* <FormTextarea
+            name="notes"
+            label="Additional Notes (optional)"
+            control={control}
+          /> */}
+
+          {/* Ejemplo de detalles */}
+          <FormSelect
+            name="details.0.isTableNeeded"
+            label="Table Needed?"
+            control={control}
+            options={[
+              { value: "true", label: "Yes" },
+              { value: "false", label: "No" },
+            ]}
+          />
+
+          {/* Size si isTableNeeded === true */}
+          {values.details?.[0]?.isTableNeeded === "true" && (
+            <FormInputText
+              name="details.0.tableSize"
+              label="Table Size"
+              control={control}
+            />
+          )}
+        </div>
+      ),
+    },
+
+    // ---------------------------------------------------------
+    // STEP 4: REVIEW
+    // ---------------------------------------------------------
     {
       title: "Review & Submit",
       description: "Almost ready!",
       content: (
         <pre className="bg-base-200 p-4 rounded-xl text-xs">
-          {JSON.stringify(getValues(), null, 2)}
+          {JSON.stringify(values, null, 2)}
         </pre>
       ),
     },
@@ -162,10 +234,7 @@ export default function SparkForm({
         <FormWizard steps={steps} onFinish={onFinish} />
       </div>
 
-      <SideSummary
-        values={getValues()}
-        progress={calculateProgress(getValues())}
-      />
+      <SideSummary values={values} progress={calculateProgress(values)} />
     </div>
   );
 }

@@ -49,7 +49,25 @@ export default function SparkFormPage() {
         productTypes={productTypes}
         distributors={distributors}
         retailers={retailers}
+        tenantId={tenantSlug}
       />
     </SparkFormLayout>
   );
 }
+
+/**
+ * address: String!
+clientId: ID!
+clientMutationId: ID = null
+coordinates: [Float!]!
+date: String!
+details: [CreateRequestDetailInput!]!
+distributorId: ID!
+endTime: String!
+name: String!
+products: [CreateRequestProductInput!]!
+requestTypeId: ID!
+retailerId: ID!
+startTime: String!
+tenantId: ID = null
+ */
