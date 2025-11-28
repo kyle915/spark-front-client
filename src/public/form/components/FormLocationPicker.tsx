@@ -57,7 +57,7 @@ export default function FormLocationPicker({
           <Controller
             name={nameLng}
             control={control}
-            render={({ field: lngField }) => {
+            render={({ field: lngField, fieldState: { error } }) => {
               const lat = parseFloat(latField.value);
               const lng = parseFloat(lngField.value);
 
@@ -80,12 +80,9 @@ export default function FormLocationPicker({
                     <Marker position={center} icon={defaultMarkerIcon} />
                   </InteractiveMap>
 
-                  {/* Preview the values */}
-                  <pre className="bg-base-300 p-3 rounded-md text-sm overflow-x-auto">
-                    Latitude: {latField.value ?? "—"}
-                    <br />
-                    Longitude: {lngField.value ?? "—"}
-                  </pre>
+                  {error && (
+                    <p className="text-xs text-error mt-1">{error.message}</p>
+                  )}
                 </>
               );
             }}

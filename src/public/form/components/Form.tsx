@@ -1,5 +1,6 @@
 import { useSparkForm } from "../hooks/useSparkForm";
 
+import { useAlertStore } from "@store/alertStore";
 import FormInputText from "@/shared/FormInputText";
 import FormDatePicker from "@/shared/FormDatePicker";
 import FormInputTime from "@/shared/FormInputTime";
@@ -13,8 +14,10 @@ import FormLocationPicker from "./FormLocationPicker";
 
 import { useCreateRequest } from "../hooks/useCreateRequest";
 import { calculateProgress } from "../utils/calculateProgress";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { dateFormat } from "../utils/toDate";
+import type { SparkFormData } from "../schema/schema";
+import type { FieldPath } from "react-hook-form";
 
 interface SparkFormProps {
   clients: any[];
@@ -35,10 +38,13 @@ export default function SparkForm({
   retailers,
   tenantId,
 }: SparkFormProps) {
-  const { control, watch, setValue } = useSparkForm();
-  const { submit, loading, error, result } = useCreateRequest(
+  const { control, watch, setValue, reset, trigger } = useSparkForm();
+  const [resetSignal, setResetSignal] = useState(0);
+  const { submit, loading } = useCreateRequest(
     tenantId ? { slug: tenantId } : { slug: "" }
   );
+
+  const { showAlert } = useAlertStore();
 
   useEffect(() => {
     if (tenantId) {
@@ -48,7 +54,30 @@ export default function SparkForm({
 
   const values = watch();
 
+  // -----------------------------
+  // STEP VALIDATION MAP
+  // -----------------------------
+  const stepFields: Record<string, FieldPath<SparkFormData>[]> = {
+    step1: [
+      "name",
+      "date",
+      "start_time",
+      "end_time",
+      "latitude",
+      "longitude",
+      "address",
+    ],
+    step2: ["skus", "client", "distributor", "retailer", "request_type"],
+    step3: ["details.0.isTableNeeded", "details.0.tableSize"],
+  };
+
   const onSubmit = async () => {
+    const isValid = await trigger();
+    if (!isValid) return;
+
+    const isTableNeeded =
+      String(values.details?.[0]?.isTableNeeded).toLowerCase() === "true";
+
     const payload = {
       name: values.name,
       date: dateFormat(values.date),
@@ -60,59 +89,47 @@ export default function SparkForm({
       distributorId: values.distributor,
       retailerId: values.retailer,
       requestTypeId: values.request_type,
-      // tenantId: values.tenant,
       products: values.skus.map((id) => ({ productId: id })),
       details: [
         {
-          isTableNeeded:
-            values.details?.[0]?.isTableNeeded === "true" ||
-            values.details?.[0]?.isTableNeeded === true,
-          tableSize: values.details?.[0]?.tableSize
-            ? Number(values.details[0].tableSize)
+          isTableNeeded,
+          tableSize: isTableNeeded
+            ? Number(values.details?.[0]?.tableSize)
             : null,
         },
       ],
     };
 
     try {
-      const created = await submit(payload);
-      console.log("Created:", created);
-      alert("Request successfully created!");
+      await submit(payload);
+      showAlert("Request created successfully!", "success");
+
+      reset({
+        details: [{ isTableNeeded: "false", tableSize: 0 }],
+        skus: [],
+      });
+
+      setResetSignal(Math.random());
     } catch (err) {
-      console.error(err);
-      alert("Error: " + err);
+      showAlert("Error creating request: " + err, "error");
     }
   };
 
   const steps = [
-    // ---------------------------------------------------------
-    // STEP 1: BASIC INFORMATION
-    // ---------------------------------------------------------
     {
       title: "Basic Information",
       description: "Tell us about the visit",
+      validate: () => trigger(stepFields.step1),
       content: (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInputText
-            name="name"
-            label="Full Name"
-            control={control}
-            rules={{ required: "Required" }}
-          />
-
-          <FormDatePicker
-            name="date"
-            label="Visit Date"
-            control={control}
-            rules={{ required: "Required" }}
-          />
+          <FormInputText name="name" label="Full Name" control={control} />
+          <FormDatePicker name="date" label="Visit Date" control={control} />
 
           <FormInputTime
             name="start_time"
             label="Start Time"
             control={control}
           />
-
           <FormInputTime name="end_time" label="End Time" control={control} />
 
           <div className="col-span-2">
@@ -120,7 +137,7 @@ export default function SparkForm({
               control={control}
               nameLat="latitude"
               nameLng="longitude"
-              label="Select visit location on the map"
+              label="Select visit location"
             />
           </div>
 
@@ -131,12 +148,10 @@ export default function SparkForm({
       ),
     },
 
-    // ---------------------------------------------------------
-    // STEP 2: PRODUCT SELECTION
-    // ---------------------------------------------------------
     {
       title: "Products",
-      description: "Choose the SKUs you want",
+      description: "Choose your SKUs",
+      validate: () => trigger(stepFields.step2),
       content: (
         <div className="space-y-10">
           <ProductSelector
@@ -158,12 +173,8 @@ export default function SparkForm({
               name="client"
               label="Client"
               control={control}
-              options={clients.map((c) => ({
-                value: c.id,
-                label: c.name,
-              }))}
+              options={clients.map((c) => ({ value: c.id, label: c.name }))}
             />
-
             <FormSelect
               name="distributor"
               label="Distributor"
@@ -173,17 +184,12 @@ export default function SparkForm({
                 label: d.name,
               }))}
             />
-
             <FormSelect
               name="retailer"
               label="Retailer"
               control={control}
-              options={retailers.map((r) => ({
-                value: r.id,
-                label: r.name,
-              }))}
+              options={retailers.map((r) => ({ value: r.id, label: r.name }))}
             />
-
             <FormSelect
               name="request_type"
               label="Request Type"
@@ -198,20 +204,12 @@ export default function SparkForm({
       ),
     },
 
-    // ---------------------------------------------------------
-    // STEP 3: EXTRA DETAILS
-    // ---------------------------------------------------------
     {
       title: "Extra Details",
-      description: "Optional but recommended",
+      description: "Optional information",
+      validate: () => trigger(stepFields.step3),
       content: (
         <div className="space-y-6">
-          {/* <FormTextarea
-            name="notes"
-            label="Additional Notes (optional)"
-            control={control}
-          /> */}
-
           <FormSelect
             name="details.0.isTableNeeded"
             label="Table Needed?"
@@ -226,23 +224,11 @@ export default function SparkForm({
             <FormInputText
               name="details.0.tableSize"
               label="Table Size"
+              type="number"
               control={control}
             />
           )}
         </div>
-      ),
-    },
-
-    // ---------------------------------------------------------
-    // STEP 4: REVIEW
-    // ---------------------------------------------------------
-    {
-      title: "Review & Submit",
-      description: "Almost ready!",
-      content: (
-        <pre className="bg-base-200 p-4 rounded-xl text-xs">
-          {JSON.stringify(values, null, 2)}
-        </pre>
       ),
     },
   ];
@@ -250,7 +236,11 @@ export default function SparkForm({
   return (
     <div className="flex flex-col md:flex-row gap-8">
       <div className="flex-1">
-        <FormWizard steps={steps} onSubmit={onSubmit} />
+        <FormWizard
+          steps={steps}
+          onSubmit={onSubmit}
+          resetSignal={resetSignal}
+        />
       </div>
 
       <SideSummary

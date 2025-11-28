@@ -17,28 +17,20 @@ export default function SparkFormPage() {
     return <div className="p-6 text-center">Loading…</div>;
   }
 
-  const { clients, loading: loadingClients } = usePublicClients(tenantSlug);
-  const { requestTypes, loading: loadingRequestTypes } =
-    usePublicRequestTypes(tenantSlug);
-  const { products, loading: loadingProducts } = usePublicProducts(tenantSlug);
-  const { productTypes, loading: loadingProductTypes } =
-    usePublicProductTypes(tenantSlug);
-  const { distributors, loading: loadingDistributors } =
-    usePublicDistributors(tenantSlug);
-  const { retailers, loading: loadingRetailers } =
-    usePublicRetailer(tenantSlug);
+  const { clients } = usePublicClients(tenantSlug);
+  const { requestTypes } = usePublicRequestTypes(tenantSlug);
+  const { products } = usePublicProducts(tenantSlug);
+  const { productTypes } = usePublicProductTypes(tenantSlug);
+  const { distributors } = usePublicDistributors(tenantSlug);
+  const { retailers } = usePublicRetailer(tenantSlug);
 
-  const isLoading =
-    loadingClients ||
-    loadingRequestTypes ||
-    loadingProducts ||
-    loadingProductTypes ||
-    loadingDistributors ||
-    loadingRetailers;
-
-  if (isLoading) {
-    return <div className="p-6 text-center animate-pulse">Cargando datos…</div>;
-  }
+  // const isLoading =
+  //   loadingClients ||
+  //   loadingRequestTypes ||
+  //   loadingProducts ||
+  //   loadingProductTypes ||
+  //   loadingDistributors ||
+  //   loadingRetailers;
 
   return (
     <SparkFormLayout>
@@ -54,20 +46,3 @@ export default function SparkFormPage() {
     </SparkFormLayout>
   );
 }
-
-/**
- * address: String!
-clientId: ID!
-clientMutationId: ID = null
-coordinates: [Float!]!
-date: String!
-details: [CreateRequestDetailInput!]!
-distributorId: ID!
-endTime: String!
-name: String!
-products: [CreateRequestProductInput!]!
-requestTypeId: ID!
-retailerId: ID!
-startTime: String!
-tenantId: ID = null
- */

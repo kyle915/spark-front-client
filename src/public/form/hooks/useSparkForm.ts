@@ -20,9 +20,8 @@ export const useSparkForm = () =>
       distributor: "",
       retailer: "",
       request_type: "",
-      // product_type: "",
       skus: [],
-      details: [{ isTableNeeded: "", tableSize: "" }],
+      details: [{ isTableNeeded: "false", tableSize: 0 }],
       tenant: "",
     },
   });

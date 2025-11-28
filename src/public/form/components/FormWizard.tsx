@@ -1,26 +1,38 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import WizardProgressBar from "./WizardProgressBar";
 
 export interface WizardStep {
   title: string;
   description?: string;
   content: React.ReactNode;
-  validate?: () => boolean;
+  validate?: () => Promise<boolean> | boolean;
 }
 
 interface FormWizardProps {
   steps: WizardStep[];
   onSubmit: () => void;
+  resetSignal?: any;
 }
 
-export default function FormWizard({ steps, onSubmit }: FormWizardProps) {
+export default function FormWizard({
+  steps,
+  onSubmit,
+  resetSignal,
+}: FormWizardProps) {
   const [current, setCurrent] = useState(0);
   const total = steps.length;
 
-  const next = () => {
-    const valid = steps[current].validate?.() ?? true;
-    if (!valid) return;
+  useEffect(() => {
+    setCurrent(0);
+  }, [resetSignal]);
+
+  const next = async () => {
+    const validateFn = steps[current].validate;
+    if (validateFn) {
+      const isValid = await validateFn();
+      if (!isValid) return;
+    }
 
     if (current < total - 1) setCurrent(current + 1);
     else onSubmit();
@@ -46,7 +58,7 @@ export default function FormWizard({ steps, onSubmit }: FormWizardProps) {
               key={i}
               className={`w-3 h-3 rounded-full transition-all duration-300
                 ${i === current ? "bg-primary scale-110" : "bg-base-300"}`}
-            ></div>
+            />
           ))}
         </div>
       </div>

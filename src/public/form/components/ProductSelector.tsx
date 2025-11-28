@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { Controller } from "react-hook-form";
 import { useState, useMemo } from "react";
-import FormSelect from "@/shared/FormSelect";
 
 interface ProductItem {
   id: string;
@@ -31,7 +30,6 @@ export default function ProductSelector<T>({
   const [selectedType, setSelectedType] = useState<string>("all");
   const [page, setPage] = useState(1);
 
-  // Filtrar productos por tipo
   const filteredProducts = useMemo(() => {
     const list =
       selectedType === "all"
@@ -41,14 +39,12 @@ export default function ProductSelector<T>({
     return list;
   }, [selectedType, products]);
 
-  // Paginación
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const pageItems = filteredProducts.slice(
     (page - 1) * ITEMS_PER_PAGE,
     page * ITEMS_PER_PAGE
   );
 
-  // Manejo de paginación
   const goNext = () => setPage((p) => Math.min(p + 1, totalPages));
   const goPrev = () => setPage((p) => Math.max(p - 1, 1));
 
@@ -89,7 +85,7 @@ export default function ProductSelector<T>({
               >
                 <option value="all">All Product Types</option>
                 {productTypes.map((pt: any) => (
-                  <option key={pt.uuid} value={pt.uuid}>
+                  <option key={pt.id} value={pt.id}>
                     {pt.name}
                   </option>
                 ))}
