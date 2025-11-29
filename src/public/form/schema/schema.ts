@@ -1,0 +1,53 @@
+import * as yup from "yup";
+
+export const sparkFormSchema = yup.object({
+  name: yup.string().required("Name is required"),
+  date: yup.string().required("Date is required"),
+  start_time: yup.string().required("Start time is required"),
+  end_time: yup.string().required("End time is required"),
+  address: yup.string().required("Address is required"),
+
+  latitude: yup
+    .number()
+    .typeError("Latitude is required")
+    .required("Latitude is required"),
+
+  longitude: yup
+    .number()
+    .typeError("Longitude is required")
+    .required("Longitude is required"),
+
+  client: yup.string().required("Client is required"),
+  distributor: yup.string().required("Distributor is required"),
+  retailer: yup.string().required("Retailer is required"),
+  request_type: yup.string().required("Request type is required"),
+
+  skus: yup
+    .array()
+    .of(yup.string())
+    .min(1, "Select at least one product")
+    .required("Products are required"),
+
+  details: yup
+    .array()
+    .of(
+      yup.object({
+        isTableNeeded: yup.string().required(),
+        tableSize: yup
+          .number()
+          .nullable()
+          .when("isTableNeeded", {
+            is: "true",
+            then: (schema) =>
+              schema
+                .required("Table size is required")
+                .min(1, "Invalid table size"),
+          }),
+      })
+    )
+    .required(),
+
+  tenant: yup.string().required("Tenant is required"),
+});
+
+export type SparkFormData = yup.InferType<typeof sparkFormSchema>;

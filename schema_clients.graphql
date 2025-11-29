@@ -70,6 +70,11 @@ type AmbassadorToAmbassadorReviewDetailResponse {
   ambassadorToAmbassadorReview: AmbassadorToAmbassadorReview
 }
 
+input AppleSocialAuthInput {
+  clientMutationId: ID = null
+  identityToken: String!
+}
+
 input ApproveRequestInput {
   clientMutationId: ID = null
   id: ID!
@@ -94,13 +99,6 @@ type Client {
   tenantId: ID!
   createdAt: String!
   updatedAt: String!
-}
-
-input ClientAppleSocialAuthInput {
-  clientMutationId: ID = null
-  identityToken: String!
-  roleId: ID!
-  tenantId: ID!
 }
 
 type ClientCountableConnection {
@@ -130,21 +128,14 @@ input ClientFiltersInput {
   tenantUuid: ID = null
 }
 
-input ClientGoogleSocialAuthInput {
-  clientMutationId: ID = null
-  accessToken: String!
-  roleId: ID!
-  tenantId: ID!
-}
-
 input ClientRegisterInput {
   clientMutationId: ID = null
   firstName: String!
   email: String!
   password1: String!
   password2: String!
-  roleId: ID!
-  tenantId: ID!
+  role: UserRoleEnum!
+  tenantId: ID = null
 }
 
 """
@@ -298,6 +289,12 @@ type CompanyToAmbassadorReviewDetailResponse {
   message: String!
   clientMutationId: ID
   companyToAmbassadorReview: CompanyToAmbassadorReview
+}
+
+input CoordinatesFilterInput {
+  coordinates: [Float!]!
+  range: Float!
+  unit: DistanceUnit! = KILOMETERS
 }
 
 input CreateAmbassadorJobInput {
@@ -518,6 +515,12 @@ input CreateRateTypeInput {
   name: String!
 }
 
+input CreateRequestDetailInput {
+  clientMutationId: ID = null
+  isTableNeeded: Boolean! = false
+  tableSize: Int = null
+}
+
 input CreateRequestInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -533,6 +536,11 @@ input CreateRequestInput {
   requestTypeId: ID!
 }
 
+input CreateRequestProductInput {
+  clientMutationId: ID = null
+  productId: ID!
+}
+
 input CreateRequestStatusInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -545,6 +553,23 @@ input CreateRequestTypeInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
+}
+
+input CreateRequestWithDependenciesInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  date: String!
+  startTime: String!
+  endTime: String!
+  address: String!
+  coordinates: [Float!]!
+  clientId: ID!
+  distributorId: ID!
+  retailerId: ID!
+  requestTypeId: ID!
+  details: [CreateRequestDetailInput!]!
+  products: [CreateRequestProductInput!]!
 }
 
 input CreateRetailerInput {
@@ -680,6 +705,7 @@ input EventFiltersInput {
   eventStatusId: ID = null
   requestId: ID = null
   date: String = null
+  coordinates: CoordinatesFilterInput = null
 }
 
 """
@@ -757,6 +783,11 @@ input EventTypeFiltersInput {
 
 "\n     Errors messages and codes mapped to\n    fields or non fields errors.\n    Example:\n    {\n        field_name: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ],\n        other_field: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ],\n        nonFieldErrors: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ]\n    }\n    "
 scalar ExpectedError
+
+input GoogleSocialAuthInput {
+  clientMutationId: ID = null
+  accessToken: String!
+}
 
 """
 Job(id, uuid, name, description, code, address, start_date, end_date, public, closed, national, ongoing, job_title, other_title, company, event, location, tenant, rate, created_by, updated_by, created_at, updated_at)
@@ -1089,8 +1120,23 @@ input LocationFiltersInput {
   tenantUuid: ID = null
 }
 
+enum ManageAmbassadorJobAssignmentAction {
+  ACCEPT
+  REJECT
+  BLACKLIST
+  WHITELIST
+}
+
+input ManageAmbassadorJobAssignmentInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  ambassadorJobId: ID!
+  action: ManageAmbassadorJobAssignmentAction!
+  statusId: ID = null
+}
+
 type Mutation {
-  createRequestByUrl(input: CreateRequestInput!, requestUrl: String!): RequestDetailResponse!
+  createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
   createEventStatus(input: CreateEventStatusInput!): EventStatusDetailResponse!
   updateEventStatus(input: UpdateEventStatusInput!): EventStatusDetailResponse!
   createLocation(input: CreateLocationInput!): LocationDetailResponse!
@@ -1113,8 +1159,8 @@ type Mutation {
   updateRequest(input: UpdateRequestInput!): RequestDetailResponse!
   approveRequest(input: ApproveRequestInput!): ApproveRequestResponse!
   register(input: ClientRegisterInput!): RegisterResponse!
-  socialAuthGoogle(input: ClientGoogleSocialAuthInput!): SocialAuthResponse!
-  socialAuthApple(input: ClientAppleSocialAuthInput!): SocialAuthResponse!
+  socialAuthGoogle(input: GoogleSocialAuthInput!): SocialAuthResponse!
+  socialAuthApple(input: AppleSocialAuthInput!): SocialAuthResponse!
 
   "### Checks if a token is not expired and correct.\n\n*Note that this is not for refresh tokens.*\n"
   verifyToken(input: VerifyTokenInput!): VerifyTokenType!
@@ -1169,6 +1215,7 @@ type Mutation {
   updateQuestionOption(input: UpdateQuestionOptionInput!): QuestionOptionDetailResponse!
   createJobRequirementAnswer(input: CreateJobRequirementAnswerInput!): JobRequirementAnswerDetailResponse!
   updateJobRequirementAnswer(input: UpdateJobRequirementAnswerInput!): JobRequirementAnswerDetailResponse!
+  manageAmbassadorJobAssignment(input: ManageAmbassadorJobAssignmentInput!): AmbassadorJobDetailResponse!
 }
 
 type MutationNormalOutput {
@@ -1333,16 +1380,22 @@ type Query {
   eventType(id: ID!): EventType
   eventStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: EventStatusFiltersInput = null): EventStatusCountableConnection!
   eventStatus(id: ID!): EventStatus
+  publicClients(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): ClientCountableConnection!
   clients(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ClientFiltersInput = null): ClientCountableConnection!
   client(id: ID!): Client
+  publicDistributors(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): DistributorCountableConnection!
   distributors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: DistributorFiltersInput = null): DistributorCountableConnection!
   distributor(id: ID!): Distributor
+  publicRetailer(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): RetailerCountableConnection!
   retailers(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RetailerFiltersInput = null): RetailerCountableConnection!
   retailer(id: ID!): Retailer
+  publicProductTypes(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): ProductTypeCountableConnection!
   productTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ProductTypeFiltersInput = null): ProductTypeCountableConnection!
   productType(id: ID!): ProductType
+  publicProducts(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): ProductCountableConnection!
   products(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ProductFiltersInput = null): ProductCountableConnection!
   product(id: ID!): Product
+  publicRequestType(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): RequestTypeCountableConnection!
   requestTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestTypeFiltersInput = null): RequestTypeCountableConnection!
   requestType(id: ID!): RequestType
   requestStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: RequestStatusFiltersInput = null): RequestStatusCountableConnection!
@@ -1384,6 +1437,7 @@ type Query {
   availableJobs(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): JobCountableConnection!
   ambassadorJobs(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): AmbassadorJobCountableConnection!
   ambassadorJob(id: ID!): AmbassadorJob
+  jobApplicants(jobId: ID!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): AmbassadorJobCountableConnection!
   companyToAmbassadorReviews(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): CompanyToAmbassadorReviewCountableConnection!
   companyToAmbassadorReview(id: ID!): CompanyToAmbassadorReview
   ambassadorToAmbassadorReviews(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): AmbassadorToAmbassadorReviewCountableConnection!
@@ -2157,6 +2211,10 @@ input UpdateStatusInput {
   tenantId: ID = null
   name: String!
   id: ID!
+}
+
+enum UserRoleEnum {
+  AMBASSADOR
 }
 
 """A helper model that handles user account stuff."""
