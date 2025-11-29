@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { TenantUserQuery } from "@api/queries/TenantUserQuery";
 import type { TenantUserQuery as TenantUserQueryType } from "@api/queries/__generated__/TenantUserQuery.graphql";
