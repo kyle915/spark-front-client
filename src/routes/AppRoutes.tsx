@@ -10,6 +10,7 @@ import CompanySelector from "@/layout/CompanySelector";
 // Requests
 import RequestsList from "@/requests/RequestsList";
 import RequestView from "@/requests/RequestView";
+import EditRequest from "@/requests/EditRequest";
 
 const DashboardLinks = {
   menu: [
@@ -67,7 +68,7 @@ const RequestsLinks = {
     {
       path: "/request/edit/:uuid",
       name: "Edit Request",
-      component: <h1>Edit Request</h1>,
+      component: <EditRequest />,
     },
   ],
 };
