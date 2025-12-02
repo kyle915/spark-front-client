@@ -52,6 +52,7 @@ const RequestsLinks = {
       name: "List",
       component: <RequestsList />,
       Icon: ListBulletIcon,
+      isPublic: false,
     },
   ],
   routes: [
@@ -59,32 +60,35 @@ const RequestsLinks = {
       path: "/",
       name: "Dashboard",
       component: <h1>Requests Dashboard</h1>,
+      isPublic: false,
     },
     {
       path: "/request/view/:uuid",
       name: "Request View",
       component: <RequestView />,
+      isPublic: false,
     },
     {
       path: "/request/edit/:uuid",
       name: "Edit Request",
       component: <EditRequest />,
+      isPublic: false,
     },
   ],
 };
 
 export const navigationMenuRoutes = [
-  // {
-  //   path: "/",
-  //   title: "Dashboard",
-  //   Icon: BeakerIcon,
-  //   component: <Dashboard />,
-  // },
   {
-    title: "Dashboard Main",
+    path: "/",
+    title: "Dashboard",
     Icon: BeakerIcon,
-    links: DashboardLinks.menu,
+    component: <Dashboard />,
   },
+  // {
+  //   title: "Dashboard Main",
+  //   Icon: BeakerIcon,
+  //   links: DashboardLinks.menu,
+  // },
   {
     title: "Requests",
     Icon: EnvelopeIcon,
