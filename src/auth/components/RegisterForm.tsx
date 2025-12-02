@@ -3,7 +3,7 @@ import LoadingButton from "@/shared/LoadingButton";
 import SocialAuthButtons from "@auth/components/SocialAuthButtons";
 import type { Control, UseFormHandleSubmit } from "react-hook-form";
 import { Controller, useWatch } from "react-hook-form";
-import type { RegisterFormFields } from "@types/auth";
+import type { RegisterFormFields } from "@/types/auth";
 
 
 interface Props {

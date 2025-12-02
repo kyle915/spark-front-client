@@ -8,7 +8,7 @@ import ThemeToggle from "@/shared/ThemeToggle";
 import { useNavigate } from "react-router";
 import { useAuthStore } from '@store/authStore';
 import { register } from "@api/auth/register"
-import type { RegisterFormFields } from "@types/auth";
+import type { RegisterFormFields } from "@/types/auth";
 type FormData = {
     username: string;
     password: string;
