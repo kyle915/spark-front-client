@@ -6,7 +6,7 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute = ({ component }: PrivateRouteProps) => {
-    let location = useLocation();
+    const location = useLocation();
     const jwtToken = localStorage.getItem('@token');
     const isAuth = !!jwtToken;
 
