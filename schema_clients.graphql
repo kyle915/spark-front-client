@@ -88,6 +88,14 @@ type ApproveRequestResponse {
   event: Event
 }
 
+input BaseRegisterInput {
+  clientMutationId: ID = null
+  firstName: String!
+  email: String!
+  password1: String!
+  password2: String!
+}
+
 """
 Client(id, uuid, name, email, tenant, created_by, updated_by, created_at, updated_at)
 """
@@ -126,16 +134,6 @@ input ClientFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
-}
-
-input ClientRegisterInput {
-  clientMutationId: ID = null
-  firstName: String!
-  email: String!
-  password1: String!
-  password2: String!
-  role: UserRoleEnum!
-  tenantId: ID = null
 }
 
 """
@@ -377,7 +375,28 @@ input CreateDistributorInput {
   locationId: ID!
 }
 
+input CreateEventInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  eventTypeId: ID!
+  statusId: ID!
+  requestId: ID!
+  address: String!
+  notes: String!
+  isNational: Boolean! = false
+  startTime: String!
+  endTime: String!
+}
+
 input CreateEventStatusInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  isDefault: Boolean! = false
+}
+
+input CreateEventTypeInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
@@ -595,6 +614,18 @@ input CreateStatusInput {
   name: String!
 }
 
+input CreateTenantInput {
+  clientMutationId: ID = null
+  name: String!
+}
+
+type CreateTenantResponse {
+  success: Boolean!
+  message: String!
+  tenant: TenantType
+  clientMutationId: ID
+}
+
 """
 User(password, last_login, is_superuser, username, first_name, last_name, email, is_staff, date_joined, id, uuid, role, created_by, updated_by, created_at, updated_at, is_active)
 """
@@ -697,6 +728,13 @@ type EventCountableEdge {
   node: Event!
 }
 
+type EventDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  event: Event
+}
+
 input EventFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -773,6 +811,13 @@ type EventTypeCountableEdge {
 
   """The item at the end of the edge"""
   node: EventType!
+}
+
+type EventTypeDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  eventType: EventType
 }
 
 input EventTypeFiltersInput {
@@ -1158,9 +1203,15 @@ type Mutation {
   createRequest(input: CreateRequestInput!): RequestDetailResponse!
   updateRequest(input: UpdateRequestInput!): RequestDetailResponse!
   approveRequest(input: ApproveRequestInput!): ApproveRequestResponse!
-  register(input: ClientRegisterInput!): RegisterResponse!
+  createEventType(input: CreateEventTypeInput!): EventTypeDetailResponse!
+  updateEventType(input: UpdateEventTypeInput!): EventTypeDetailResponse!
+  createEvent(input: CreateEventInput!): EventDetailResponse!
+  updateEvent(input: UpdateEventInput!): EventDetailResponse!
+  register(input: BaseRegisterInput!): RegisterResponse!
   socialAuthGoogle(input: GoogleSocialAuthInput!): SocialAuthResponse!
   socialAuthApple(input: AppleSocialAuthInput!): SocialAuthResponse!
+  createTenant(input: CreateTenantInput!): CreateTenantResponse!
+  updateTenant(input: UpdateTenantInput!): UpdateTenantResponse!
 
   "### Checks if a token is not expired and correct.\n\n*Note that this is not for refresh tokens.*\n"
   verifyToken(input: VerifyTokenInput!): VerifyTokenType!
@@ -1405,7 +1456,7 @@ type Query {
   locations(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: LocationFiltersInput = null): LocationCountableConnection!
   location(id: ID!): Location
   me: CustomUserType!
-  tenants(userUuid: ID = null, first: Int = null, after: String = null, last: Int = null, before: String = null): TenantTypeCountableConnection!
+  tenants(userUuid: ID = null, filters: TenantFiltersInput = null, first: Int = null, after: String = null, last: Int = null, before: String = null): TenantTypeCountableConnection!
   ambassadorJobStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): StatusCountableConnection!
   ambassadorJobStatus(id: ID!): Status
   companyFiles(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): CompanyFileCountableConnection!
@@ -1869,6 +1920,11 @@ type StatusDetailResponse {
   status: Status
 }
 
+input TenantFiltersInput {
+  name: String = null
+  requestUrlName: String = null
+}
+
 """
 Tenant(id, uuid, name, request_url_name, created_by, updated_by, created_at, updated_at)
 """
@@ -1876,6 +1932,7 @@ type TenantType {
   id: ID!
   uuid: UUID!
   name: String!
+  requestUrlName: String
 }
 
 type TenantTypeCountableConnection {
@@ -2000,7 +2057,30 @@ input UpdateDistributorInput {
   id: ID!
 }
 
+input UpdateEventInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  eventTypeId: ID!
+  statusId: ID!
+  requestId: ID!
+  address: String!
+  notes: String!
+  isNational: Boolean! = false
+  startTime: String!
+  endTime: String!
+  id: ID!
+}
+
 input UpdateEventStatusInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  isDefault: Boolean! = false
+  id: ID!
+}
+
+input UpdateEventTypeInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
@@ -2213,8 +2293,17 @@ input UpdateStatusInput {
   id: ID!
 }
 
-enum UserRoleEnum {
-  AMBASSADOR
+input UpdateTenantInput {
+  clientMutationId: ID = null
+  id: ID!
+  name: String = null
+}
+
+type UpdateTenantResponse {
+  success: Boolean!
+  message: String!
+  tenant: TenantType
+  clientMutationId: ID
 }
 
 """A helper model that handles user account stuff."""
