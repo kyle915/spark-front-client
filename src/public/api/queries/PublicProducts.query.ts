@@ -23,8 +23,8 @@
 // `;
 
 export const PUBLIC_PRODUCTS_QUERY = `
-  query PublicProductsQuery($requestUrlName: String!) {
-    publicProducts(requestUrlName: $requestUrlName) {
+  query PublicProductsQuery($requestUrlName: String!, $first: Int = 100) {
+    publicProducts(requestUrlName: $requestUrlName, first: $first) {
       edges {
         node {
           id
