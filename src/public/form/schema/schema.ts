@@ -4,7 +4,23 @@ export const sparkFormSchema = yup.object({
   name: yup.string().required("Name is required"),
   date: yup.string().required("Date is required"),
   start_time: yup.string().required("Start time is required"),
-  end_time: yup.string().required("End time is required"),
+  end_time: yup
+    .string()
+    .required("End time is required")
+    .test(
+      "is-after-start",
+      "End time cannot be earlier than start time",
+      function (value) {
+        const { start_time } = this.parent;
+
+        if (!start_time || !value) return true;
+
+        const start = new Date(`1970-01-01T${start_time}:00`);
+        const end = new Date(`1970-01-01T${value}:00`);
+
+        return end >= start;
+      }
+    ),
   address: yup.string().required("Address is required"),
 
   latitude: yup

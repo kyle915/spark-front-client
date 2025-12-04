@@ -45,7 +45,7 @@ const AppRouter = () => (
 
 const AuthRoute = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated } = useAuthStore();
-  let location = useLocation();
+  const location = useLocation();
 
   return isAuthenticated ? (
     <Navigate to={rootPath} state={{ from: location }} />

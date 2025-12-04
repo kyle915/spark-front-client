@@ -15,6 +15,7 @@ interface FormDatePickerProps<T extends FieldValues> {
   label: string;
   rules?: RegisterOptions<T, Path<T>>;
   disabled?: boolean;
+  minToday?: boolean;
 }
 
 export default function FormDatePicker<T extends FieldValues>({
@@ -23,10 +24,28 @@ export default function FormDatePicker<T extends FieldValues>({
   label,
   rules,
   disabled = false,
+  minToday = false,
 }: FormDatePickerProps<T>) {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const popoverId = `${name}-popover`;
   const anchorVar = `--${name}`;
+
+  // Rules TypeScript compliance
+  const combinedRules: RegisterOptions<T, Path<T>> = {
+    ...rules,
+  };
+
+  // Optional minToday validation
+  if (minToday) {
+    combinedRules.validate = (value: any) => {
+      if (!value) return "Please select a valid date";
+
+      const selected = new Date(value).setHours(0, 0, 0, 0);
+      const today = new Date().setHours(0, 0, 0, 0);
+
+      return selected >= today || "Date cannot be earlier than today";
+    };
+  }
 
   const formatDate = (value: string | Date) => {
     const d = typeof value === "string" ? new Date(value) : value;
@@ -41,7 +60,7 @@ export default function FormDatePicker<T extends FieldValues>({
     <Controller
       name={name}
       control={control}
-      rules={rules}
+      rules={combinedRules}
       render={({ field, fieldState: { error } }) => (
         <div className="form-control w-full">
           {/* Label */}
@@ -81,6 +100,7 @@ export default function FormDatePicker<T extends FieldValues>({
                 if (buttonRef.current)
                   buttonRef.current.innerText = date.toLocaleDateString();
               }}
+              disabled={minToday ? [{ before: new Date() }] : undefined}
               className="react-day-picker"
             />
           </div>
