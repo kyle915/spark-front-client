@@ -16,7 +16,7 @@ export const useSparkForm = () =>
       address: "",
       latitude: undefined,
       longitude: undefined,
-      client: "",
+      client: "1",
       distributor: "",
       retailer: "",
       request_type: "",

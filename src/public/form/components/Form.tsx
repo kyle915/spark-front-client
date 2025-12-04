@@ -38,6 +38,10 @@ export default function SparkForm(props: SparkFormProps) {
   });
 
   useEffect(() => {
+    setValue("client", "1");
+  }, []);
+
+  useEffect(() => {
     if (tenantId) setValue("tenant", tenantId);
   }, [tenantId]);
 

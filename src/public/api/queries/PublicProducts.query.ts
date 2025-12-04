@@ -30,6 +30,7 @@ export const PUBLIC_PRODUCTS_QUERY = `
           id
           uuid
           name
+          image
           tenantId
           productType {
             id
