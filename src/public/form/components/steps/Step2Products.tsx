@@ -4,6 +4,7 @@ import FormSelect from "@/shared/FormSelect";
 interface ProductItem {
   id: string;
   name: string;
+  image?: string | null;
   productType: {
     id: string;
     name: string;
@@ -44,19 +45,21 @@ export function Step2Products({
           id: p.id,
           name: p.name,
           desc: "",
-          img: "",
+          image: p.image,
           productTypeId: p.productType.id,
         }))}
         productTypes={productTypes}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormSelect
-          name="client"
-          label="Client"
-          control={control}
-          options={clients.map((c) => ({ value: c.id, label: c.name }))}
-        />
+        <div className="hidden">
+          <FormSelect
+            name="client"
+            label="Client"
+            control={control}
+            options={clients.map((c) => ({ value: c.id, label: c.name }))}
+          />
+        </div>
         <FormSelect
           name="distributor"
           label="Distributor"

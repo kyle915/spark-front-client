@@ -6,7 +6,7 @@ interface ProductItem {
   id: string;
   name: string;
   desc: string;
-  img: string;
+  image?: string | null;
   productTypeId: string;
 }
 
@@ -114,10 +114,11 @@ export default function ProductSelector({
                       }
                     `}
                   >
-                    {p.img ? (
+                    {p.image ? (
                       <motion.img
-                        src={p.img}
-                        className="h-24"
+                        src={p.image}
+                        alt={p.name}
+                        className="h-24 object-contain"
                         whileHover={{ scale: 1.1 }}
                       />
                     ) : (
