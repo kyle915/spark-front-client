@@ -29,12 +29,18 @@ export function Step3Clients({ control, requestTypes }: Step3NewProps) {
 
       {/* CLIENT TEXT INPUTS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormInputText name="client" label="Client" control={control} />
+        <FormInputText
+          name="client"
+          label="Client"
+          control={control}
+          placeholder="Company or customer name"
+        />
 
         <FormInputText
           name="clientEmail"
           label="Client Email"
           control={control}
+          placeholder="client@example.com"
         />
       </div>
 
@@ -44,18 +50,25 @@ export function Step3Clients({ control, requestTypes }: Step3NewProps) {
           name="distributor"
           label="Distributor"
           control={control}
+          placeholder="Distributor name"
         />
 
         <FormInputText
           name="distributorEmail"
           label="Distributor Email"
           control={control}
+          placeholder="distributor@example.com"
         />
       </div>
 
-      {/* RETAILER SELECT */}
+      {/* RETAILER INPUT */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormInputText name="retailer" label="Retailer" control={control} />
+        <FormInputText
+          name="retailer"
+          label="Retailer"
+          control={control}
+          placeholder="Retail store name"
+        />
       </div>
 
       {/* RETAILER EXTRA FIELDS */}
@@ -67,12 +80,14 @@ export function Step3Clients({ control, requestTypes }: Step3NewProps) {
             name="retailerAddress"
             label="Retailer Address"
             control={control}
+            placeholder="Street, city, and store reference"
           />
 
           <FormInputText
             name="retailerStoreContact"
             label="Store Contact"
             control={control}
+            placeholder="Main contact number"
           />
         </div>
 
@@ -81,12 +96,14 @@ export function Step3Clients({ control, requestTypes }: Step3NewProps) {
             name="storeManagerName"
             label="Store Manager Name"
             control={control}
+            placeholder="Manager's full name"
           />
 
           <FormInputText
             name="storeManagerContact"
             label="Store Manager Contact"
             control={control}
+            placeholder="Manager's phone number"
           />
         </div>
       </div>

@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { createRequestService } from "../../api/services/createRequestByUrl";
-import type { CreateRequestWithDependenciesInput } from "../types/CreateRequestByUrl";
+import type { CreateRequestInput } from "../types/CreateRequestByUrl";
 
 export function useCreateRequest({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<unknown>(null);
 
-  async function submit(input: CreateRequestWithDependenciesInput) {
+  async function submit(input: CreateRequestInput) {
     setLoading(true);
     setError(null);
 

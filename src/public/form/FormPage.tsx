@@ -7,6 +7,7 @@ import {
   usePublicProductTypes,
   usePublicProducts,
   usePublicRequestTypes,
+  usePublicTimeZones,
   // usePublicRetailer,
 } from "./hooks";
 
@@ -19,8 +20,10 @@ export default function SparkFormPage() {
   // const { clients } = usePublicClients(slug);
   const { requestTypes } = usePublicRequestTypes(slug);
   const { productTypes } = usePublicProductTypes(slug);
+  const { timeZones } = usePublicTimeZones();
   // const { distributors } = usePublicDistributors(slug);
   // const { retailers } = usePublicRetailer(slug);
+
   // if (
   //   !tenantSlug ||
   //   loadingProducts ||
@@ -43,6 +46,7 @@ export default function SparkFormPage() {
         // distributors={distributors}
         // retailers={retailers}
         tenantId={slug}
+        timeZones={timeZones}
       />
     </SparkFormLayout>
   );

@@ -30,7 +30,5 @@ export function usePublicProducts(requestUrlName: string) {
       .finally(() => setLoading(false));
   }, [requestUrlName]);
 
-  console.log("usePublicProducts", products);
-
   return { products, loading };
 }

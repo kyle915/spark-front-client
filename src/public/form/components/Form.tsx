@@ -26,6 +26,10 @@ interface SparkFormProps {
     name: string;
   }[];
   tenantId: string;
+  timeZones: {
+    id: string;
+    name: string;
+  }[];
 }
 
 export default function SparkForm(props: SparkFormProps) {
@@ -37,6 +41,7 @@ export default function SparkForm(props: SparkFormProps) {
     // distributors,
     // retailers,
     tenantId,
+    timeZones,
   } = props;
 
   const { control, watch, setValue, reset, trigger } = useSparkForm();
@@ -57,7 +62,7 @@ export default function SparkForm(props: SparkFormProps) {
       title: "Basic Information",
       description: "Tell us about the visit",
       validate: () => trigger(stepFields.step1),
-      content: <Step1Basic control={control} />,
+      content: <Step1Basic control={control} timeZones={timeZones} />,
     },
     {
       title: "Products",
@@ -80,7 +85,7 @@ export default function SparkForm(props: SparkFormProps) {
     {
       title: "Extra Details",
       description: "Optional details",
-      validate: () => trigger(stepFields.step3),
+      validate: () => trigger(stepFields.step4),
       content: <Step4Details control={control} values={values} />,
     },
   ];

@@ -38,23 +38,32 @@ export default function SideSummary({
     {
       title: "Basic Information",
       done:
-        values.name &&
-        values.date &&
-        values.start_time &&
-        values.latitude &&
-        values.longitude &&
-        values.address,
+        Boolean(values.name) &&
+        Boolean(values.date) &&
+        Boolean(values.start_time) &&
+        Boolean(values.end_time) &&
+        Boolean(values.latitude) &&
+        Boolean(values.longitude) &&
+        Boolean(values.address) &&
+        Boolean(values.timeZoneId),
     },
     {
       title: "Products",
-      done: values.skus?.length > 0,
+      done: Array.isArray(values.skus) && values.skus.length > 0,
     },
     {
-      title: "Extra Details",
+      title: "Client Details",
       done:
-        values.details?.[0]?.isTableNeeded === "false" ||
-        (values.details?.[0]?.isTableNeeded === "true" &&
-          values.details?.[0]?.tableSize),
+        Boolean(values.client) &&
+        Boolean(values.clientEmail) &&
+        Boolean(values.distributor) &&
+        Boolean(values.distributorEmail) &&
+        Boolean(values.retailer) &&
+        Boolean(values.retailerAddress) &&
+        Boolean(values.retailerStoreContact) &&
+        Boolean(values.storeManagerName) &&
+        Boolean(values.storeManagerContact) &&
+        Boolean(values.request_type),
     },
   ];
 
@@ -112,6 +121,14 @@ export default function SideSummary({
               <span className="opacity-50">Not set</span>
             )}
           </p>
+          <p>
+            <span className="font-semibold">Time Zone:</span>{" "}
+            {values.timeZoneId ? (
+              values.timeZoneId
+            ) : (
+              <span className="opacity-50">Not set</span>
+            )}
+          </p>
         </div>
       </section>
 
@@ -119,7 +136,7 @@ export default function SideSummary({
       <section>
         <h3 className="text-sm font-semibold opacity-70 flex items-center gap-2">
           <UserIcon className="w-4 h-4 text-primary" />
-          Client Info
+          Info Client | Distributor | Retailer
         </h3>
 
         <div className="mt-2 text-xs bg-base-200/40 p-3 rounded-lg border border-base-300/30 space-y-1">
