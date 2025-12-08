@@ -5,6 +5,8 @@ query PublicProductsQuery {
       node {
         id
         name
+        code
+        offset
       }
     }
   }
