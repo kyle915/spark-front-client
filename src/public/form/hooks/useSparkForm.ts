@@ -26,7 +26,7 @@ export const useSparkForm = () =>
       end_time: "",
       storeManagerContact: "",
       storeManagerName: "",
-      tenant: "",
+      // tenant: "",
       timeZoneId: "",
       skus: [],
     },

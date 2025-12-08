@@ -74,7 +74,7 @@ export const sparkFormSchema = yup.object({
     ),
   storeManagerName: yup.string().required("Manager name is required"),
   storeManagerContact: yup.string().required("Manager contact is required"),
-  tenant: yup.string().required("Tenant is required"),
+  // tenant: yup.string().required("Tenant is required"),
   timeZoneId: yup.string().required("Time zone is required"),
 });
 

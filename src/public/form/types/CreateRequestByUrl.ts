@@ -46,9 +46,6 @@ export interface CreateRequestInput {
 
   // DETAILS
   details: CreateRequestDetailInput[];
-
-  // TENANT
-  tenantId?: string | null;
 }
 
 export interface CreateRequestResponse {

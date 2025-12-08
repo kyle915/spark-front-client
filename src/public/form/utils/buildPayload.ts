@@ -35,8 +35,5 @@ export function buildPayload(values: SparkFormData): CreateRequestInput {
           : null,
       },
     ],
-
-    // TENANT
-    tenantId: values.tenant ?? null,
   };
 }

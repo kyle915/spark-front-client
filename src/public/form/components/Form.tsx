@@ -1,5 +1,5 @@
 import { useSparkForm } from "../hooks/useSparkForm";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import FormWizard from "./FormWizard";
 import SideSummary from "./SideSummary";
 import { Step1Basic, Step2Products, Step4Details, Step3Clients } from "./steps";
@@ -44,7 +44,7 @@ export default function SparkForm(props: SparkFormProps) {
     timeZones,
   } = props;
 
-  const { control, watch, setValue, reset, trigger } = useSparkForm();
+  const { control, watch, reset, trigger } = useSparkForm();
   const values = watch();
   const [resetSignal, setResetSignal] = useState(0);
 
@@ -53,9 +53,9 @@ export default function SparkForm(props: SparkFormProps) {
     setResetSignal(Math.random());
   });
 
-  useEffect(() => {
-    if (tenantId) setValue("tenant", tenantId);
-  }, [tenantId, setValue]);
+  // useEffect(() => {
+  //   if (tenantId) setValue("tenant", tenantId);
+  // }, [tenantId, setValue]);
 
   const steps = [
     {
