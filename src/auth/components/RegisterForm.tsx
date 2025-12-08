@@ -35,6 +35,7 @@ export default function RegisterForm({ control, handleSubmit, onSubmit }: Props)
           name="firstName"
           control={control}
           label="Your Name"
+          placeholder="Enter your name"
           rules={{ required: "Name is required" }}
         />
       </div>
@@ -47,6 +48,7 @@ export default function RegisterForm({ control, handleSubmit, onSubmit }: Props)
           name="email"
           control={control}
           label="Your Email"
+          placeholder="Enter your email"
           rules={{ required: "Email is required" }}
         />
       </div>
@@ -60,6 +62,7 @@ export default function RegisterForm({ control, handleSubmit, onSubmit }: Props)
           type="password"
           control={control}
           label="Your Password"
+          placeholder="Enter your password"
           rules={{ required: "Password is required" }}
         />
       </div>
@@ -73,6 +76,7 @@ export default function RegisterForm({ control, handleSubmit, onSubmit }: Props)
           type="password"
           control={control}
           label="Repeat Your Password"
+          placeholder="Confirm your password"
           rules={{
             required: "Please confirm your password",
             validate: (value) =>

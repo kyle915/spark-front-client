@@ -308,6 +308,7 @@ const RequestsList = () => {
                 name="date"
                 label="Filter by Date"
                 type="date"
+                placeholder="Select date"
               />
             </div>
             <RequestsListInner

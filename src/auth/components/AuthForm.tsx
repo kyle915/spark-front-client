@@ -28,6 +28,7 @@ export default function AuthForm({ control, handleSubmit, onSubmit }: Props) {
           name="username"
           control={control}
           label="Your Email"
+          placeholder="Enter your email"
           rules={{ required: "Email is required" }}
         />
       </div>
@@ -41,6 +42,7 @@ export default function AuthForm({ control, handleSubmit, onSubmit }: Props) {
           type="password"
           control={control}
           label="Your Password"
+          placeholder="Enter your password"
           rules={{ required: "Password is required" }}
         />
       </div>

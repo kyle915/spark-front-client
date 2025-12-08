@@ -51,6 +51,7 @@ export default function RequestForm({
           name="name"
           control={control}
           label="Name"
+          placeholder="Enter name"
           rules={{ required: "Name is required" }}
         />
 
@@ -96,6 +97,7 @@ export default function RequestForm({
           control={control}
           label="Date"
           type="date"
+          placeholder="Select date"
           rules={{ required: "Date is required" }}
         />
 
@@ -118,6 +120,7 @@ export default function RequestForm({
           name="address"
           control={control}
           label="Address"
+          placeholder="Enter address"
           rules={{ required: "Address is required" }}
         />
       </div>

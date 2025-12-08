@@ -27,6 +27,7 @@ export function Step4Details({ control, values }: Step4DetailsProps) {
           label="Table Size"
           type="number"
           control={control}
+          placeholder="Enter table size"
         />
       )}
     </div>
