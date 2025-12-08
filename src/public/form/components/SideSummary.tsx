@@ -9,80 +9,73 @@ import {
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 import { dateFormat } from "../utils/toDate";
+import type { SparkFormData } from "../schema/schema";
+
+interface SideSummaryProps {
+  values: SparkFormData;
+  progress: number;
+  productsFull: {
+    id: string;
+    name: string;
+  }[];
+}
 
 export default function SideSummary({
   values,
   progress,
   productsFull,
-  clients,
-  distributors,
-  retailers,
-}: {
-  values: any;
-  progress: number;
-  productsFull: any[];
-  clients: any[];
-  distributors: any[];
-  retailers: any[];
-}) {
+}: SideSummaryProps) {
   const isComplete = progress >= 100;
 
-  const selectedProducts = (values.skus || []).map((id: string) => {
+  // PRODUCT NAMES SELECTED
+  const selectedProducts = (values.skus || []).map((id) => {
     const found = productsFull.find((p) => p.id === id);
     return found ? found.name : id;
   });
 
-  const findName = (list: any[], id: string) => {
-    const item = list.find((x) => x.id === id);
-    return item ? item.name : id;
-  };
-
-  const clientName = values.client ? findName(clients, values.client) : null;
-
-  const distributorName = values.distributor
-    ? findName(distributors, values.distributor)
-    : null;
-
-  const retailerName = values.retailer
-    ? findName(retailers, values.retailer)
-    : null;
-
+  // STEP STATUS
   const steps = [
     {
       title: "Basic Information",
       done:
-        values.name &&
-        values.date &&
-        values.start_time &&
-        values.latitude &&
-        values.longitude &&
-        values.address,
+        Boolean(values.name) &&
+        Boolean(values.date) &&
+        Boolean(values.start_time) &&
+        Boolean(values.end_time) &&
+        Boolean(values.latitude) &&
+        Boolean(values.longitude) &&
+        Boolean(values.address) &&
+        Boolean(values.timeZoneId),
     },
     {
       title: "Products",
-      done:
-        values.skus?.length > 0 &&
-        values.client &&
-        values.distributor &&
-        values.retailer &&
-        values.request_type,
+      done: Array.isArray(values.skus) && values.skus.length > 0,
     },
     {
-      title: "Extra Details",
+      title: "Client Details",
       done:
-        values.details?.[0]?.isTableNeeded === "false" ||
-        (values.details?.[0]?.isTableNeeded === "true" &&
-          values.details?.[0]?.tableSize),
+        Boolean(values.client) &&
+        Boolean(values.clientEmail) &&
+        Boolean(values.distributor) &&
+        Boolean(values.distributorEmail) &&
+        Boolean(values.retailer) &&
+        Boolean(values.retailerAddress) &&
+        Boolean(values.retailerStoreContact) &&
+        Boolean(values.storeManagerName) &&
+        Boolean(values.storeManagerContact) &&
+        Boolean(values.request_type),
     },
   ];
 
-  const warnings = [];
+  // WARNINGS
+  const warnings: string[] = [];
 
   if (!values.skus?.length) warnings.push("No products selected.");
   if (!values.latitude || !values.longitude)
     warnings.push("Select a location on the map.");
   if (!values.date) warnings.push("Visit date is missing.");
-  if (!values.client) warnings.push("Client is not selected.");
+  if (!values.client) warnings.push("Client is missing.");
+  if (!values.distributor) warnings.push("Distributor is missing.");
   if (!values.request_type) warnings.push("Request type is required.");
 
   return (
@@ -102,7 +95,7 @@ export default function SideSummary({
         </p>
       </div>
 
-      {/* DATE + BASIC INFO */}
+      {/* DATE + TIME */}
       <section className="space-y-3">
         <h3 className="text-sm font-semibold opacity-70 flex items-center gap-2">
           <CalendarIcon className="w-4 h-4 text-primary" />
@@ -128,32 +121,84 @@ export default function SideSummary({
               <span className="opacity-50">Not set</span>
             )}
           </p>
+          <p>
+            <span className="font-semibold">Time Zone:</span>{" "}
+            {values.timeZoneId ? (
+              values.timeZoneId
+            ) : (
+              <span className="opacity-50">Not set</span>
+            )}
+          </p>
         </div>
       </section>
 
-      {/* CLIENT DATA */}
+      {/* CLIENT / DISTRIBUTOR / RETAILER */}
       <section>
         <h3 className="text-sm font-semibold opacity-70 flex items-center gap-2">
           <UserIcon className="w-4 h-4 text-primary" />
-          Client Info
+          Info Client | Distributor | Retailer
         </h3>
 
         <div className="mt-2 text-xs bg-base-200/40 p-3 rounded-lg border border-base-300/30 space-y-1">
           <p>
             <span className="font-semibold">Client:</span>{" "}
-            {clientName || <span className="opacity-50">Not selected</span>}
+            {values.client || <span className="opacity-50">Not entered</span>}
+          </p>
+
+          <p>
+            <span className="font-semibold">Client Email:</span>{" "}
+            {values.clientEmail || (
+              <span className="opacity-50">Not entered</span>
+            )}
           </p>
 
           <p>
             <span className="font-semibold">Distributor:</span>{" "}
-            {distributorName || (
-              <span className="opacity-50">Not selected</span>
+            {values.distributor || (
+              <span className="opacity-50">Not entered</span>
+            )}
+          </p>
+
+          <p>
+            <span className="font-semibold">Distributor Email:</span>{" "}
+            {values.distributorEmail || (
+              <span className="opacity-50">Not entered</span>
             )}
           </p>
 
           <p>
             <span className="font-semibold">Retailer:</span>{" "}
-            {retailerName || <span className="opacity-50">Not selected</span>}
+            {values.retailer || (
+              <span className="opacity-50">Not selected</span>
+            )}
+          </p>
+
+          <p>
+            <span className="font-semibold">Retailer Address:</span>{" "}
+            {values.retailerAddress || (
+              <span className="opacity-50">Not entered</span>
+            )}
+          </p>
+
+          <p>
+            <span className="font-semibold">Store Contact:</span>{" "}
+            {values.retailerStoreContact || (
+              <span className="opacity-50">Not entered</span>
+            )}
+          </p>
+
+          <p>
+            <span className="font-semibold">Manager Name:</span>{" "}
+            {values.storeManagerName || (
+              <span className="opacity-50">Not entered</span>
+            )}
+          </p>
+
+          <p>
+            <span className="font-semibold">Manager Contact:</span>{" "}
+            {values.storeManagerContact || (
+              <span className="opacity-50">Not entered</span>
+            )}
           </p>
         </div>
       </section>
@@ -167,9 +212,9 @@ export default function SideSummary({
 
         {selectedProducts.length ? (
           <ul className="space-y-1 mt-2">
-            {selectedProducts.map((name: string, index: number) => (
+            {selectedProducts.map((name) => (
               <li
-                key={index}
+                key={name}
                 className="text-xs bg-base-200/50 px-3 py-2 rounded-md border border-base-300/40"
               >
                 {name}
@@ -202,7 +247,7 @@ export default function SideSummary({
         )}
       </section>
 
-      {/* STEP COMPLETION */}
+      {/* FORM STATUS */}
       <section>
         <h3 className="text-sm font-semibold opacity-70">
           Form Status {progress.toFixed(0)}%
@@ -227,7 +272,6 @@ export default function SideSummary({
               ) : (
                 <ExclamationTriangleIcon className="w-4 h-4 text-yellow-500" />
               )}
-
               <span className={s.done ? "text-green-600" : "opacity-70"}>
                 {s.title}
               </span>
@@ -236,7 +280,7 @@ export default function SideSummary({
         </ul>
       </section>
 
-      {/* AUTOMATIC WARNINGS */}
+      {/* WARNINGS */}
       {warnings.length > 0 && (
         <section className="bg-yellow-100 text-yellow-700 text-xs p-3 rounded-lg border border-yellow-300 space-y-1">
           <h4 className="font-semibold flex items-center gap-1">

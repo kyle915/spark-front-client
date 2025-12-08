@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Controller } from "react-hook-form";
 import type { LatLngExpression } from "leaflet";
 import { Marker } from "react-leaflet";
+import type { Control } from "react-hook-form";
+import type { SparkFormData } from "../schema/schema";
 import L from "leaflet";
 
 import InteractiveMap from "@/shared/InteractiveMap";
@@ -17,9 +19,9 @@ const defaultMarkerIcon = L.icon({
 });
 
 interface Props {
-  control: any;
-  nameLat: string;
-  nameLng: string;
+  control: Control<SparkFormData>;
+  nameLat: keyof SparkFormData;
+  nameLng: keyof SparkFormData;
   label?: string;
   height?: string;
 }
@@ -58,8 +60,8 @@ export default function FormLocationPicker({
             name={nameLng}
             control={control}
             render={({ field: lngField, fieldState: { error } }) => {
-              const lat = parseFloat(latField.value);
-              const lng = parseFloat(lngField.value);
+              const lat = parseFloat(String(latField.value ?? ""));
+              const lng = parseFloat(String(lngField.value ?? ""));
 
               const center: LatLngExpression =
                 !isNaN(lat) && !isNaN(lng) ? [lat, lng] : initialPosition;

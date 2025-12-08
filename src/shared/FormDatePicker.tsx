@@ -13,6 +13,7 @@ interface FormDatePickerProps<T extends FieldValues> {
   name: Path<T>;
   control: Control<T>;
   label: string;
+  placeholder: string;
   rules?: RegisterOptions<T, Path<T>>;
   disabled?: boolean;
   minToday?: boolean;
@@ -22,6 +23,7 @@ export default function FormDatePicker<T extends FieldValues>({
   name,
   control,
   label,
+  placeholder,
   rules,
   disabled = false,
   minToday = false,
@@ -37,7 +39,7 @@ export default function FormDatePicker<T extends FieldValues>({
 
   // Optional minToday validation
   if (minToday) {
-    combinedRules.validate = (value: any) => {
+    combinedRules.validate = (value: string) => {
       if (!value) return "Please select a valid date";
 
       const selected = new Date(value).setHours(0, 0, 0, 0);
@@ -80,7 +82,7 @@ export default function FormDatePicker<T extends FieldValues>({
             style={{ anchorName: anchorVar } as React.CSSProperties}
           >
             <span className="text-gray-500">
-              {field.value ? formatDate(field.value) : "MM/DD/YYYY"}
+              {field.value ? formatDate(field.value) : `${placeholder}`}
             </span>
           </button>
 

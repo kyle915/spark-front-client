@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { Controller } from "react-hook-form";
 import { useState, useMemo } from "react";
+import type { Control } from "react-hook-form";
+import type { SparkFormData } from "../schema/schema";
 
 interface ProductItem {
   id: string;
@@ -11,14 +13,17 @@ interface ProductItem {
 }
 
 interface Props {
-  name: string;
-  control: any;
+  name: keyof SparkFormData;
+  control: Control<SparkFormData>;
   products: ProductItem[];
-  productTypes: any[];
+  productTypes: {
+    id: string;
+    name: string;
+  }[];
   label: string;
 }
 
-const ITEMS_PER_PAGE = 6;
+const ITEMS_PER_PAGE = 9;
 
 export default function ProductSelector({
   name,
@@ -53,7 +58,7 @@ export default function ProductSelector({
       name={name}
       control={control}
       render={({ field, fieldState: { error } }) => {
-        const selected = field.value || [];
+        const selected = (field.value as string[]) || [];
 
         const toggle = (id: string) => {
           field.onChange(
@@ -84,7 +89,7 @@ export default function ProductSelector({
                 }}
               >
                 <option value="all">All Product Types</option>
-                {productTypes.map((pt: any) => (
+                {productTypes.map((pt: { id: string; name: string }) => (
                   <option key={pt.id} value={pt.id}>
                     {pt.name}
                   </option>

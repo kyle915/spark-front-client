@@ -1,6 +1,8 @@
 import { dateFormat } from "./toDate";
+import type { SparkFormData } from "../schema/schema";
+import type { CreateRequestInput } from "../types/CreateRequestByUrl";
 
-export function buildPayload(values: any) {
+export function buildPayload(values: SparkFormData): CreateRequestInput {
   const isTableNeeded =
     String(values.details?.[0]?.isTableNeeded).toLowerCase() === "true";
 
@@ -11,11 +13,20 @@ export function buildPayload(values: any) {
     endTime: values.end_time,
     address: values.address,
     coordinates: [Number(values.latitude), Number(values.longitude)],
-    clientId: values.client,
-    distributorId: values.distributor,
-    retailerId: values.retailer,
+    clientName: values.client,
+    clientEmail: values.clientEmail,
+    distributorName: values.distributor,
+    distributorEmail: values.distributorEmail,
+    retailerName: values.retailer,
+    retailerAddress: values.retailerAddress,
+    retailerStoreContact: values.retailerStoreContact,
+    storeManagerName: values.storeManagerName,
+    storeManagerPhone: values.storeManagerContact,
     requestTypeId: values.request_type,
-    products: values.skus.map((id: string) => ({ productId: id })),
+    timezoneId: values.timeZoneId,
+    products: values.skus.map((id) => ({
+      productId: id,
+    })),
     details: [
       {
         isTableNeeded,

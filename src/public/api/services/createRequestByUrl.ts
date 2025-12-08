@@ -1,12 +1,12 @@
 import { gqlRequest } from "../graphqlClient";
 import { CREATE_REQUEST_BY_URL } from "../mutations/createRequestByUrl";
 import type {
-  CreateRequestWithDependenciesInput,
+  CreateRequestInput,
   CreateRequestResponse,
 } from "../../form/types/CreateRequestByUrl";
 
 export async function createRequestService(
-  input: CreateRequestWithDependenciesInput,
+  input: CreateRequestInput,
   requestUrlName: string
 ) {
   const res = await gqlRequest<CreateRequestResponse>(CREATE_REQUEST_BY_URL, {

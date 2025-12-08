@@ -9,20 +9,43 @@ export interface CreateRequestDetailInput {
   clientMutationId?: string | null;
 }
 
-export interface CreateRequestWithDependenciesInput {
+export interface CreateRequestInput {
+  // BASIC INFO
   name: string;
   date: string;
   startTime: string;
   endTime: string;
   address: string;
   coordinates: number[];
-  clientId: string;
-  distributorId: string;
-  retailerId: string;
+
+  // CLIENT
+  clientName: string;
+  clientEmail: string;
+
+  // DISTRIBUTOR
+  distributorName: string;
+  distributorEmail: string;
+
+  // RETAILER
+  retailerName: string;
+  retailerAddress: string;
+  retailerStoreContact: string;
+
+  // STORE MANAGER
+  storeManagerName: string;
+  storeManagerPhone: string;
+
+  // REQUEST TYPE
   requestTypeId: string;
+
+  // TIMEZONE (obligatorio!)
+  timezoneId: string;
+
+  // PRODUCTS
   products: CreateRequestProductInput[];
+
+  // DETAILS
   details: CreateRequestDetailInput[];
-  tenantId?: string | null;
 }
 
 export interface CreateRequestResponse {

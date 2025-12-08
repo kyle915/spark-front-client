@@ -24,6 +24,7 @@ export const PUBLIC_CLIENTS_QUERY = `
           id
           uuid
           name
+          email
           tenantId
         }
       }
