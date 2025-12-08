@@ -1,12 +1,13 @@
 import { useCreateRequest } from "../hooks/useCreateRequest";
 import { useAlertStore } from "@store/alertStore";
 import { buildPayload } from "../utils/buildPayload";
+import type { SparkFormData } from "../schema/schema";
 
-export function useSparkSubmit(tenantId: string, reset: any) {
+export function useSparkSubmit(tenantId: string, reset: () => void) {
   const { submit, loading } = useCreateRequest({ slug: tenantId });
   const { showAlert } = useAlertStore();
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: SparkFormData) => {
     try {
       const payload = buildPayload(values);
       await submit(payload);

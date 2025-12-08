@@ -2,29 +2,40 @@ import { useSparkForm } from "../hooks/useSparkForm";
 import { useEffect, useState } from "react";
 import FormWizard from "./FormWizard";
 import SideSummary from "./SideSummary";
-import { Step1Basic, Step2Products, Step3Details } from "./steps";
+import { Step1Basic, Step2Products, Step4Details, Step3Clients } from "./steps";
 import { calculateProgress } from "../utils/calculateProgress";
 import { stepFields } from "../utils/stepValidation";
 import { useSparkSubmit } from "../hooks";
 
 interface SparkFormProps {
-  clients: any[];
-  requestTypes: any[];
-  products: any[];
-  productTypes: any[];
-  distributors: any[];
-  retailers: any[];
+  requestTypes: {
+    id: string;
+    name: string;
+  }[];
+  products: {
+    id: string;
+    name: string;
+    image?: string | null;
+    productType: {
+      id: string;
+      name: string;
+    };
+  }[];
+  productTypes: {
+    id: string;
+    name: string;
+  }[];
   tenantId: string;
 }
 
 export default function SparkForm(props: SparkFormProps) {
   const {
-    clients,
+    // clients,
     requestTypes,
     products,
     productTypes,
-    distributors,
-    retailers,
+    // distributors,
+    // retailers,
     tenantId,
   } = props;
 
@@ -38,12 +49,8 @@ export default function SparkForm(props: SparkFormProps) {
   });
 
   useEffect(() => {
-    setValue("client", "1");
-  }, []);
-
-  useEffect(() => {
     if (tenantId) setValue("tenant", tenantId);
-  }, [tenantId]);
+  }, [tenantId, setValue]);
 
   const steps = [
     {
@@ -61,18 +68,20 @@ export default function SparkForm(props: SparkFormProps) {
           control={control}
           products={products}
           productTypes={productTypes}
-          clients={clients}
-          distributors={distributors}
-          retailers={retailers}
-          requestTypes={requestTypes}
         />
       ),
+    },
+    {
+      title: "Client Details",
+      description: "Select client, distributor, and retailer",
+      validate: () => trigger(stepFields.step3),
+      content: <Step3Clients control={control} requestTypes={requestTypes} />,
     },
     {
       title: "Extra Details",
       description: "Optional details",
       validate: () => trigger(stepFields.step3),
-      content: <Step3Details control={control} values={values} />,
+      content: <Step4Details control={control} values={values} />,
     },
   ];
 
@@ -91,9 +100,6 @@ export default function SparkForm(props: SparkFormProps) {
         values={values}
         progress={calculateProgress(values)}
         productsFull={products}
-        clients={clients}
-        distributors={distributors}
-        retailers={retailers}
       />
     </div>
   );

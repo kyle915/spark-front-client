@@ -1,7 +1,14 @@
 import FormInputText from "@/shared/FormInputText";
+import type { Control } from "react-hook-form";
+import type { SparkFormData } from "../../schema/schema";
 import FormSelect from "@/shared/FormSelect";
 
-export function Step3Details({ control, values }: any) {
+interface Step4DetailsProps {
+  control: Control<SparkFormData>;
+  values: SparkFormData;
+}
+
+export function Step4Details({ control, values }: Step4DetailsProps) {
   return (
     <div className="space-y-6">
       <FormSelect

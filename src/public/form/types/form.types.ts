@@ -10,6 +10,5 @@ export interface SparkFormData {
   distributor: string;
   retailer: string;
   request_type: string;
-  status: string;
   tenant: string;
 }

@@ -1,5 +1,7 @@
 import ProductSelector from "../ProductSelector";
-import FormSelect from "@/shared/FormSelect";
+// import FormSelect from "@/shared/FormSelect";
+import type { Control } from "react-hook-form";
+import type { SparkFormData } from "../../schema/schema";
 
 interface ProductItem {
   id: string;
@@ -17,24 +19,24 @@ interface SimpleCatalog {
 }
 
 interface Step2ProductsProps {
-  control: any;
+  control: Control<SparkFormData>;
   products: ProductItem[];
   productTypes: SimpleCatalog[];
-  clients: SimpleCatalog[];
-  distributors: SimpleCatalog[];
-  retailers: SimpleCatalog[];
-  requestTypes: SimpleCatalog[];
+  // clients: SimpleCatalog[];
+  // distributors: SimpleCatalog[];
+  // retailers: SimpleCatalog[];
+  // requestTypes: SimpleCatalog[];
 }
 
 export function Step2Products({
   control,
   products,
   productTypes,
-  clients,
-  distributors,
-  retailers,
-  requestTypes,
-}: Step2ProductsProps) {
+}: // clients,
+// distributors,
+// retailers,
+// requestTypes,
+Step2ProductsProps) {
   return (
     <div className="space-y-10">
       <ProductSelector
@@ -51,7 +53,7 @@ export function Step2Products({
         productTypes={productTypes}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="hidden">
           <FormSelect
             name="client"
@@ -81,7 +83,7 @@ export function Step2Products({
             label: rt.name,
           }))}
         />
-      </div>
+      </div> */}
     </div>
   );
 }

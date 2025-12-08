@@ -1,6 +1,5 @@
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-
 import { sparkFormSchema } from "../schema/schema";
 import type { SparkFormData } from "../schema/schema";
 
@@ -9,19 +8,26 @@ export const useSparkForm = () =>
     resolver: yupResolver(sparkFormSchema),
 
     defaultValues: {
-      name: "",
-      date: "",
-      start_time: "",
-      end_time: "",
       address: "",
+      clientEmail: "",
+      client: "",
       latitude: undefined,
       longitude: undefined,
-      client: "1",
+      date: "",
+      details: [{ isTableNeeded: "false", tableSize: null }],
       distributor: "",
-      retailer: "",
+      distributorEmail: "",
+      start_time: "",
+      name: "",
       request_type: "",
-      skus: [],
-      details: [{ isTableNeeded: "false", tableSize: 0 }],
+      retailer: "",
+      retailerAddress: "",
+      retailerStoreContact: "",
+      end_time: "",
+      storeManagerContact: "",
+      storeManagerName: "",
       tenant: "",
+      timeZoneId: "",
+      skus: [],
     },
   });
