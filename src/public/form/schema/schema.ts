@@ -2,12 +2,6 @@ import * as yup from "yup";
 
 export const sparkFormSchema = yup.object({
   address: yup.string().required("Address is required"),
-  clientEmail: yup
-    .string()
-    .email("Invalid email format")
-    .required("Client email is required"),
-
-  client: yup.string().required("Client is required"),
   latitude: yup
     .number()
     .typeError("Latitude is required")

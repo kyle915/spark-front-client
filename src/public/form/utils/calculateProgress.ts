@@ -15,8 +15,6 @@ export function calculateProgress(values: SparkFormData): number {
 
   // STEP 3 – Client / Distributor / Retailer
   const step3: Array<keyof SparkFormData> = [
-    "client",
-    "clientEmail",
     "distributor",
     "distributorEmail",
     "retailer",

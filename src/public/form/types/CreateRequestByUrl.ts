@@ -18,7 +18,7 @@ export interface CreateRequestInput {
   address: string;
   coordinates: number[];
 
-  // CLIENT
+  // CLIENT (not collected in UI, sent as placeholder)
   clientName: string;
   clientEmail: string;
 

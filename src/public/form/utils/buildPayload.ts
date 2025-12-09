@@ -2,6 +2,11 @@ import { dateFormat } from "./toDate";
 import type { SparkFormData } from "../schema/schema";
 import type { CreateRequestInput } from "../types/CreateRequestByUrl";
 
+const CLIENT_PLACEHOLDER = {
+  name: "N/A",
+  email: "no-client@placeholder.local",
+};
+
 export function buildPayload(values: SparkFormData): CreateRequestInput {
   const isTableNeeded =
     String(values.details?.[0]?.isTableNeeded).toLowerCase() === "true";
@@ -13,8 +18,9 @@ export function buildPayload(values: SparkFormData): CreateRequestInput {
     endTime: values.end_time,
     address: values.address,
     coordinates: [Number(values.latitude), Number(values.longitude)],
-    clientName: values.client,
-    clientEmail: values.clientEmail,
+    // Backend still requires client fields even though UI no longer collects them.
+    clientName: CLIENT_PLACEHOLDER.name,
+    clientEmail: CLIENT_PLACEHOLDER.email,
     distributorName: values.distributor,
     distributorEmail: values.distributorEmail,
     retailerName: values.retailer,
