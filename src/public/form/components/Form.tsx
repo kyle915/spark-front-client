@@ -78,7 +78,7 @@ export default function SparkForm(props: SparkFormProps) {
     },
     {
       title: "Client Details",
-      description: "Select client, distributor, and retailer",
+      description: "Select distributor, and retailer",
       validate: () => trigger(stepFields.step3),
       content: <Step3Clients control={control} requestTypes={requestTypes} />,
     },

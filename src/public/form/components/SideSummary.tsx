@@ -54,8 +54,6 @@ export default function SideSummary({
     {
       title: "Client Details",
       done:
-        Boolean(values.client) &&
-        Boolean(values.clientEmail) &&
         Boolean(values.distributor) &&
         Boolean(values.distributorEmail) &&
         Boolean(values.retailer) &&
@@ -74,7 +72,6 @@ export default function SideSummary({
   if (!values.latitude || !values.longitude)
     warnings.push("Select a location on the map.");
   if (!values.date) warnings.push("Visit date is missing.");
-  if (!values.client) warnings.push("Client is missing.");
   if (!values.distributor) warnings.push("Distributor is missing.");
   if (!values.request_type) warnings.push("Request type is required.");
 
@@ -136,22 +133,10 @@ export default function SideSummary({
       <section>
         <h3 className="text-sm font-semibold opacity-70 flex items-center gap-2">
           <UserIcon className="w-4 h-4 text-primary" />
-          Info Client | Distributor | Retailer
+          Distributor | Retailer Details
         </h3>
 
         <div className="mt-2 text-xs bg-base-200/40 p-3 rounded-lg border border-base-300/30 space-y-1">
-          <p>
-            <span className="font-semibold">Client:</span>{" "}
-            {values.client || <span className="opacity-50">Not entered</span>}
-          </p>
-
-          <p>
-            <span className="font-semibold">Client Email:</span>{" "}
-            {values.clientEmail || (
-              <span className="opacity-50">Not entered</span>
-            )}
-          </p>
-
           <p>
             <span className="font-semibold">Distributor:</span>{" "}
             {values.distributor || (

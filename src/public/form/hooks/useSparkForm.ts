@@ -9,8 +9,6 @@ export const useSparkForm = () =>
 
     defaultValues: {
       address: "",
-      clientEmail: "",
-      client: "",
       latitude: undefined,
       longitude: undefined,
       date: "",

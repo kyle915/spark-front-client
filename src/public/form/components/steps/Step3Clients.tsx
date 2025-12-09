@@ -26,63 +26,45 @@ export function Step3Clients({ control, requestTypes }: Step3NewProps) {
           }))}
         />
       </div>
+      <div className="space-y-6 pt-4 border-t border-base-300">
+        <h3 className="font-semibold text-lg">Distributor Details</h3>
+        {/* DISTRIBUTOR TEXT INPUTS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormInputText
+            name="distributor"
+            label="Distributor"
+            control={control}
+            placeholder="Distributor name"
+          />
 
-      {/* CLIENT TEXT INPUTS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormInputText
-          name="client"
-          label="Client"
-          control={control}
-          placeholder="Company or customer name"
-        />
-
-        <FormInputText
-          name="clientEmail"
-          label="Client Email"
-          control={control}
-          placeholder="client@example.com"
-        />
+          <FormInputText
+            name="distributorEmail"
+            label="Distributor Email"
+            control={control}
+            placeholder="distributor@example.com"
+          />
+        </div>
       </div>
-
-      {/* DISTRIBUTOR TEXT INPUTS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormInputText
-          name="distributor"
-          label="Distributor"
-          control={control}
-          placeholder="Distributor name"
-        />
-
-        <FormInputText
-          name="distributorEmail"
-          label="Distributor Email"
-          control={control}
-          placeholder="distributor@example.com"
-        />
-      </div>
-
-      {/* RETAILER INPUT */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormInputText
-          name="retailer"
-          label="Retailer"
-          control={control}
-          placeholder="Retail store name"
-        />
-      </div>
-
       {/* RETAILER EXTRA FIELDS */}
       <div className="space-y-6 pt-4 border-t border-base-300">
         <h3 className="font-semibold text-lg">Retailer Details</h3>
-
+        {/* RETAILER INPUT */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormInputText
+            name="retailer"
+            label="Retailer"
+            control={control}
+            placeholder="Retail store name"
+          />
           <FormInputText
             name="retailerAddress"
             label="Retailer Address"
             control={control}
             placeholder="Street, city, and store reference"
           />
-
+        </div>
+        <div className="space-y-6 pt-4 border-t border-base-300">
+          <h3 className="font-semibold text-lg">Store Details</h3>
           <FormInputText
             name="retailerStoreContact"
             label="Store Contact"
@@ -107,6 +89,6 @@ export function Step3Clients({ control, requestTypes }: Step3NewProps) {
           />
         </div>
       </div>
-    </div>
+    </div >
   );
 }
