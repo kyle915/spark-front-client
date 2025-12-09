@@ -83,7 +83,7 @@ export function Step3Clients({ control, requestTypes }: Step3NewProps) {
 
           <FormInputText
             name="storeManagerContact"
-            label="Store Manager Contact"
+            label="Store Manager Contact Phone"
             control={control}
             placeholder="Manager's phone number"
           />
