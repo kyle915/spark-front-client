@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { TenantUserQuery } from "@api/queries/TenantUserQuery";
-import type { TenantUserQuery as TenantUserQueryType } from "@api/queries/__generated__/TenantUserQuery.graphql";
+import { TenantQuery } from "@/api/queries/TenantQuery";
+import type { TenantQuery as TenantQueryType } from "@api/queries/__generated__/TenantQuery.graphql";
 import { fetchQuery } from "relay-runtime";
 import environment from "@api/relay/environment";
 import { useAuthStore } from "@store/authStore";
@@ -13,6 +13,7 @@ type Company = {
     name: string;
     logo?: string | null;
 };
+type TenantEdge = TenantQueryType["response"]["tenants"]["edges"][number];
 
 export default function CompanySelector() {
     const [selected, setSelected] = useState<string | null>(null);
@@ -24,33 +25,29 @@ export default function CompanySelector() {
     const { selectTenant, tenantUuid } = useTenantSelection();
     const navigate = useNavigate();
 
-    console.log("Tenant UUID", tenantUuid)
-
     useEffect(() => {
         let isMounted = true;
         setLoading(true);
         setError(null);
 
-        const variables: TenantUserQueryType["variables"] = user?.uuid
+        const variables: TenantQueryType["variables"] = user?.uuid
             ? { userUuid: user.uuid }
             : {};
 
-        fetchQuery<TenantUserQueryType>(environment, TenantUserQuery, variables)
+        fetchQuery<TenantQueryType>(environment, TenantQuery, variables)
             .toPromise()
             .then((data) => {
                 if (!isMounted) return;
                 const tenantCompanies: Company[] =
-                    data?.tenants?.edges
-                        ?.map((edge) => edge?.node)
-                        .filter((tenant): tenant is NonNullable<typeof tenant> =>
-                            Boolean(tenant),
-                        )
-                        .map((tenant) => ({
+                    data?.tenants?.edges?.map((tenantEdge: TenantEdge) => {
+                        const tenant = tenantEdge.node;
+                        return {
                             id: tenant.id,
                             uuid: String(tenant.uuid),
                             name: tenant.name,
                             logo: null,
-                        })) ?? [];
+                        };
+                    }) ?? [];
 
                 setCompanies(tenantCompanies);
                 setLoading(false);
@@ -68,7 +65,7 @@ export default function CompanySelector() {
         return () => {
             isMounted = false;
         };
-    }, [user?.id, reloadKey]);
+    }, [user?.uuid, reloadKey]);
 
     useEffect(() => {
         if (!loading && companies.length === 1) {

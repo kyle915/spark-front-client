@@ -12,6 +12,25 @@ type Ambassador {
   updatedAt: String!
 }
 
+input AmbassadorEventFiltersInput {
+  startDate: String = null
+  endDate: String = null
+}
+
+"""
+AmbassadorEvent(id, uuid, is_approved, ambassador, tenant, event, created_by, updated_by, created_at, updated_at)
+"""
+type AmbassadorEventType {
+  id: ID!
+  uuid: String!
+  isApproved: Boolean!
+  ambassador: Ambassador!
+  tenantId: ID!
+  eventId: ID!
+  createdAt: String!
+  updatedAt: String!
+}
+
 """
 AmbassadorJob(id, uuid, appear_as_rfp, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
 """
@@ -96,6 +115,12 @@ input AppleSocialAuthInput {
   identityToken: String!
 }
 
+type ApplyAmbassadorEventResponse {
+  success: Boolean!
+  message: String!
+  application: AmbassadorEventType
+}
+
 input ApproveRequestInput {
   clientMutationId: ID = null
   id: ID!
@@ -107,6 +132,14 @@ type ApproveRequestResponse {
   clientMutationId: ID
   request: Request
   event: Event
+}
+
+input BaseRegisterInput {
+  clientMutationId: ID = null
+  firstName: String!
+  email: String!
+  password1: String!
+  password2: String!
 }
 
 """
@@ -147,16 +180,6 @@ input ClientFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
-}
-
-input ClientRegisterInput {
-  clientMutationId: ID = null
-  firstName: String!
-  email: String!
-  password1: String!
-  password2: String!
-  role: UserRoleEnum!
-  tenantId: ID = null
 }
 
 """
@@ -398,7 +421,28 @@ input CreateDistributorInput {
   locationId: ID!
 }
 
+input CreateEventInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  eventTypeId: ID!
+  requestId: ID!
+  address: String!
+  notes: String!
+  isNational: Boolean! = false
+  coordinates: [Float!] = null
+  startTime: String!
+  endTime: String!
+}
+
 input CreateEventStatusInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  isDefault: Boolean! = false
+}
+
+input CreateEventTypeInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
@@ -559,10 +603,19 @@ input CreateRequestInput {
   endTime: String!
   address: String!
   coordinates: [Float!]!
-  clientId: ID!
-  distributorId: ID!
-  retailerId: ID!
+  timezoneId: ID!
   requestTypeId: ID!
+  clientName: String!
+  clientEmail: String!
+  distributorName: String!
+  distributorEmail: String!
+  retailerName: String!
+  retailerAddress: String!
+  retailerStoreContact: String!
+  storeManagerName: String!
+  storeManagerPhone: String!
+  details: [CreateRequestDetailInput!]!
+  products: [CreateRequestProductInput!]!
 }
 
 input CreateRequestProductInput {
@@ -576,6 +629,14 @@ input CreateRequestStatusInput {
   name: String!
   createEvent: Boolean! = false
   isDefault: Boolean! = false
+}
+
+input CreateRequestStoreManagerInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  phone: String!
+  requestId: ID!
 }
 
 input CreateRequestTypeInput {
@@ -593,10 +654,17 @@ input CreateRequestWithDependenciesInput {
   endTime: String!
   address: String!
   coordinates: [Float!]!
-  clientId: ID!
-  distributorId: ID!
-  retailerId: ID!
+  timezoneId: ID!
   requestTypeId: ID!
+  clientName: String!
+  clientEmail: String!
+  distributorName: String!
+  distributorEmail: String!
+  retailerName: String!
+  retailerAddress: String!
+  retailerStoreContact: String!
+  storeManagerName: String!
+  storeManagerPhone: String!
   details: [CreateRequestDetailInput!]!
   products: [CreateRequestProductInput!]!
 }
@@ -622,6 +690,26 @@ input CreateStatusInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
+}
+
+input CreateTenantInput {
+  clientMutationId: ID = null
+  name: String!
+}
+
+type CreateTenantResponse {
+  success: Boolean!
+  message: String!
+  tenant: TenantType
+  clientMutationId: ID
+}
+
+input CreateTimeZoneInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  code: String!
+  offset: Int!
 }
 
 """
@@ -736,12 +824,13 @@ type DjangoModelType {
 }
 
 """
-Event(id, uuid, name, tenant, request, event_type, status, start_time, end_time, address, notes, is_national, created_by, updated_by, created_at, updated_at)
+Event(id, uuid, name, coordinates, tenant, request, event_type, status, start_time, end_time, address, notes, is_national, created_by, updated_by, created_at, updated_at)
 """
 type Event {
   id: ID!
   uuid: String!
   name: String!
+  coordinates: [Float!]!
   startTime: String
   endTime: String
   address: String!
@@ -790,6 +879,13 @@ type EventDetail {
   ambassadors: [EventAmbassadorInfo!]
   location: Location
   statistics: EventDetailStatistics
+}
+
+type EventDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  event: Event
 }
 
 type EventDetailStatistics {
@@ -898,6 +994,13 @@ type EventTypeCountableEdge {
 
   """The item at the end of the edge"""
   node: EventType!
+}
+
+type EventTypeDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  eventType: EventType
 }
 
 input EventTypeFiltersInput {
@@ -1325,13 +1428,23 @@ type Mutation {
   updateRequest(input: UpdateRequestInput!): RequestDetailResponse!
   approveRequest(input: ApproveRequestInput!): ApproveRequestResponse!
   declineRequest(input: DeclineRequestInput!): DeclineRequestResponse!
+  createRequestStoreManager(input: CreateRequestStoreManagerInput!): RequestStoreManagerDetailResponse!
+  updateRequestStoreManager(input: UpdateRequestStoreManagerInput!): RequestStoreManagerDetailResponse!
+  createTimezone(input: CreateTimeZoneInput!): TimeZoneResponse!
+  updateTimezone(input: UpdateTimeZoneInput!): TimeZoneResponse!
+  createEventType(input: CreateEventTypeInput!): EventTypeDetailResponse!
+  updateEventType(input: UpdateEventTypeInput!): EventTypeDetailResponse!
+  createEvent(input: CreateEventInput!): EventDetailResponse!
+  updateEvent(input: UpdateEventInput!): EventDetailResponse!
   createRecap(input: CreateRecapInput!): RecapDetailResponse!
   updateRecap(input: UpdateRecapInput!): RecapDetailResponse!
   deleteRecap(input: DeleteRecapInput!): RecapDetailResponse!
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
-  register(input: ClientRegisterInput!): RegisterResponse!
+  register(input: BaseRegisterInput!): RegisterResponse!
   socialAuthGoogle(input: GoogleSocialAuthInput!): SocialAuthResponse!
   socialAuthApple(input: AppleSocialAuthInput!): SocialAuthResponse!
+  createTenant(input: CreateTenantInput!): CreateTenantResponse!
+  updateTenant(input: UpdateTenantInput!): UpdateTenantResponse!
 
   "### Checks if a token is not expired and correct.\n\n*Note that this is not for refresh tokens.*\n"
   verifyToken(input: VerifyTokenInput!): VerifyTokenType!
@@ -1387,6 +1500,7 @@ type Mutation {
   createJobRequirementAnswer(input: CreateJobRequirementAnswerInput!): JobRequirementAnswerDetailResponse!
   updateJobRequirementAnswer(input: UpdateJobRequirementAnswerInput!): JobRequirementAnswerDetailResponse!
   manageAmbassadorJobAssignment(input: ManageAmbassadorJobAssignmentInput!): AmbassadorJobDetailResponse!
+  applyAmbassadorEvent(eventId: ID!): ApplyAmbassadorEventResponse!
 }
 
 type MutationNormalOutput {
@@ -1549,6 +1663,7 @@ type Query {
   event(uuid: ID!): Event
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   todayEventsCoordinates(coordinates: [Float!]!, range: Float!, unit: DistanceUnit! = KILOMETERS, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
+  ambassadorEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorEventFiltersInput = null): EventCountableConnection!
   eventTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventTypeFiltersInput = null): EventTypeCountableConnection!
   eventType(id: ID!): EventType
   eventStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: EventStatusFiltersInput = null): EventStatusCountableConnection!
@@ -1575,8 +1690,12 @@ type Query {
   requestStatus(id: ID!): RequestStatus
   requests(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestFiltersInput = null): RequestCountableConnection!
   request(uuid: ID!): Request
+  requestStoreManagers(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestStoreManagerFiltersInput = null): RequestStoreManagerCountableConnection!
+  requestStoreManager(id: ID!): RequestStoreManager
   locations(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: LocationFiltersInput = null): LocationCountableConnection!
   location(id: ID!): Location
+  timezones(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): TimeZoneCountableConnection!
+  publicTimezones(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): TimeZoneCountableConnection!
   recaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RecapFiltersInput = null): RecapCountableConnection!
   recap(uuid: ID!): Recap
   fileTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): FileTypeCountableConnection!
@@ -1634,6 +1753,8 @@ type Query {
   requestStats(filters: DashboardFiltersInput = null): RequestStats!
   requestTimeSeries(filters: DashboardFiltersInput = null, groupBy: TimeGroupBy! = DAY): RequestTimeSeries!
   eventDetail(id: ID!, filters: DashboardFiltersInput = null): EventDetail
+  getUploadUrl(filePath: String!, contentType: String! = "image/jpeg"): UploadUrlResponse!
+  getDownloadUrl(filePath: String!): String!
 }
 
 """
@@ -1863,7 +1984,7 @@ type RegisterResponse {
 }
 
 """
-Request(id, uuid, name, date, start_time, end_time, address, coordinates, client, distributor, retailer, request_type, status, tenant, created_by, updated_by, created_at, updated_at)
+Request(id, uuid, name, date, start_time, end_time, address, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, created_by, updated_by, created_at, updated_at)
 """
 type Request {
   id: ID!
@@ -1874,6 +1995,16 @@ type Request {
   endTime: String
   address: String!
   coordinates: [Float!]!
+  clientName: String
+  clientEmail: String
+  distributorName: String
+  distributorEmail: String
+  retailerName: String
+  retailerAddress: String
+  retailerStoreContact: String
+  storeManagerName: String
+  storeManagerPhone: String
+  timezone: TimeZone
   client: Client
   distributor: Distributor
   retailer: Retailer
@@ -1981,9 +2112,37 @@ type RequestStoreManager {
   name: String!
   phone: String!
   requestId: ID!
+  request: Request
   tenantId: ID
   createdAt: String!
   updatedAt: String!
+}
+
+type RequestStoreManagerCountableConnection {
+  pageInfo: PageInfo!
+  edges: [RequestStoreManagerCountableEdge!]!
+  totalCount: Int!
+}
+
+type RequestStoreManagerCountableEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: RequestStoreManager!
+}
+
+type RequestStoreManagerDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  requestStoreManager: RequestStoreManager
+}
+
+input RequestStoreManagerFiltersInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  tenantUuid: ID = null
 }
 
 type RequestTimeSeries {
@@ -2202,6 +2361,40 @@ type TimeSeriesDataPoint {
   value: Float
 }
 
+"""
+TimeZone(id, uuid, name, code, offset, created_by, updated_by, created_at, updated_at)
+"""
+type TimeZone {
+  id: ID!
+  uuid: String!
+  name: String!
+  code: String!
+  offset: Int!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type TimeZoneCountableConnection {
+  pageInfo: PageInfo!
+  edges: [TimeZoneCountableEdge!]!
+  totalCount: Int!
+}
+
+type TimeZoneCountableEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: TimeZone!
+}
+
+type TimeZoneResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  timezone: TimeZone
+}
+
 "\nthe data that was used to create the token.\n"
 type TokenPayloadType {
   """when the token was created"""
@@ -2310,7 +2503,30 @@ input UpdateDistributorInput {
   id: ID!
 }
 
+input UpdateEventInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  eventTypeId: ID!
+  requestId: ID!
+  address: String!
+  notes: String!
+  isNational: Boolean! = false
+  coordinates: [Float!] = null
+  startTime: String!
+  endTime: String!
+  id: ID!
+}
+
 input UpdateEventStatusInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  isDefault: Boolean! = false
+  id: ID!
+}
+
+input UpdateEventTypeInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
@@ -2478,16 +2694,20 @@ input UpdateRequestInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
+  id: ID!
   date: String!
   startTime: String!
   endTime: String!
   address: String!
   coordinates: [Float!]!
-  clientId: ID!
+  timezoneId: ID!
+  requestTypeId: ID!
   distributorId: ID!
   retailerId: ID!
-  requestTypeId: ID!
-  id: ID!
+  storeManagerName: String!
+  storeManagerPhone: String!
+  details: [CreateRequestDetailInput!]!
+  products: [CreateRequestProductInput!]!
 }
 
 input UpdateRequestStatusInput {
@@ -2496,6 +2716,15 @@ input UpdateRequestStatusInput {
   name: String!
   createEvent: Boolean! = false
   isDefault: Boolean! = false
+  id: ID!
+}
+
+input UpdateRequestStoreManagerInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  phone: String!
+  requestId: ID!
   id: ID!
 }
 
@@ -2532,9 +2761,31 @@ input UpdateStatusInput {
   id: ID!
 }
 
-enum UserRoleEnum {
-  AMBASSADOR
-  CLIENT
+input UpdateTenantInput {
+  clientMutationId: ID = null
+  id: ID!
+  name: String = null
+}
+
+type UpdateTenantResponse {
+  success: Boolean!
+  message: String!
+  tenant: TenantType
+  clientMutationId: ID
+}
+
+input UpdateTimeZoneInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  code: String!
+  offset: Int!
+  id: ID!
+}
+
+type UploadUrlResponse {
+  uploadUrl: String!
+  blobName: String!
 }
 
 """A helper model that handles user account stuff."""
@@ -2560,13 +2811,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
-  lastName: String
-  email: String!
-  id: ID!
-  firstName: String
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
+  lastName: String
+  firstName: String
+  email: String!
+  id: ID!
   archived: Boolean!
   verified: Boolean!
 }
