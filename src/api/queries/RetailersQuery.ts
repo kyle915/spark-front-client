@@ -9,6 +9,8 @@ export const RetailersQuery = graphql`
           id
           uuid
           name
+          address
+          storeContact
         }
       }
     }

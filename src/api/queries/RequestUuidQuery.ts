@@ -12,23 +12,36 @@ query RequestUuidQuery($uuid: ID!) {
     endTime
     address
     coordinates
+    clientName
+    clientEmail
+    distributorName
+    distributorEmail
+    retailerName
+    retailerAddress
+    retailerStoreContact
+    storeManagerName
+    storeManagerPhone
     client {
       __typename
       id
       uuid
       name
+      email
     }
     distributor {
       __typename
       id
       uuid
       name
+      email
     }
     retailer {
       __typename
       id
       uuid
       name
+      address
+      storeContact
     }
     requestType {
       __typename
@@ -41,6 +54,14 @@ query RequestUuidQuery($uuid: ID!) {
       id
       uuid
       name
+    }
+    timezone {
+      __typename
+      id
+      uuid
+      name
+      code
+      offset
     }
     tenantId
     createdAt

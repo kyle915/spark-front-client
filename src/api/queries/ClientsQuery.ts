@@ -9,6 +9,7 @@ export const ClientsQuery = graphql`
           id
           uuid
           name
+          email
         }
       }
     }

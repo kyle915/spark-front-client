@@ -23,7 +23,7 @@ export const DashboardQuery = graphql`
           status {
             name
           }
-
+          
           request {
             date
             client {

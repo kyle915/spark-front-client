@@ -3,13 +3,13 @@ import {
   QueueListIcon,
   ChartPieIcon,
   ClipboardDocumentListIcon,
-  // CalendarDaysIcon,
+  CalendarDaysIcon,
   Bars4Icon,
   // CameraIcon,
   // BuildingStorefrontIcon,
   PlusCircleIcon,
-  // CalendarIcon,
-  // MapIcon,
+  CalendarIcon,
+  MapIcon,
 } from "@heroicons/react/24/solid";
 
 // Dashboard
@@ -24,12 +24,12 @@ import EditRequest from "@/requests/EditRequest";
 import CreateRequest from "@/requests/CreateRequest";
 
 // Events
-// import EventsList from "@events/EventsList";
-// import CreateEvent from "@events/CreateEvent";
-// import EditEvent from "@/events/EditEvent";
-// import EventView from "@/events/EventView";
-// import TodayEvents from "@/events/TodayEvents";
-// import TodayEventsMap from "@/events/TodayEventsMap";
+import EventsList from "@/events/EventsList";
+import CreateEvent from "@/events/CreateEvent";
+import EditEvent from "@/events/EditEvent";
+import EventView from "@/events/EventView";
+import TodayEvents from "@/events/TodayEvents";
+import TodayEventsMap from "@/events/TodayEventsMap";
 
 // Tenants
 // import TenantsList from "@tenants/TenantsList";
@@ -115,27 +115,27 @@ const RequestsLinks = {
 /* -----------------------------------------------------------
    EVENTS
 ----------------------------------------------------------- */
-// const EventsLinks = {
-//   menu: [
-//     { path: "/events/list", name: "List", Icon: Bars4Icon },
-//     { path: "/events/today", name: "Today", Icon: CalendarIcon },
-//     { path: "/events/map", name: "Map", Icon: MapIcon },
-//   ],
+const EventsLinks = {
+  menu: [
+    { path: "/events/list", name: "List", Icon: Bars4Icon },
+    { path: "/events/today", name: "Today", Icon: CalendarIcon },
+    { path: "/events/map", name: "Map", Icon: MapIcon },
+  ],
 
-//   routes: [
-//     { path: "/events/list", component: <EventsList />, isPublic: false },
-//     { path: "/events/today", component: <TodayEvents />, isPublic: false },
-//     { path: "/events/map", component: <TodayEventsMap />, isPublic: false },
+  routes: [
+    { path: "/events/list", component: <EventsList />, isPublic: false },
+    { path: "/events/today", component: <TodayEvents />, isPublic: false },
+    { path: "/events/map", component: <TodayEventsMap />, isPublic: false },
 
-//     {
-//       path: "/event/create/:uuid",
-//       component: <CreateEvent />,
-//       isPublic: false,
-//     },
-//     { path: "/event/view/:uuid", component: <EventView />, isPublic: false },
-//     { path: "/event/edit/:uuid", component: <EditEvent />, isPublic: false },
-//   ],
-// };
+    {
+      path: "/event/create/:uuid",
+      component: <CreateEvent />,
+      isPublic: false,
+    },
+    { path: "/event/view/:uuid", component: <EventView />, isPublic: false },
+    { path: "/event/edit/:uuid", component: <EditEvent />, isPublic: false },
+  ],
+};
 
 /* -----------------------------------------------------------
    TENANTS
@@ -208,11 +208,11 @@ export const navigationMenuRoutes = [
     Icon: ClipboardDocumentListIcon,
     links: RequestsLinks.menu,
   },
-  // {
-  //   title: "Events",
-  //   Icon: CalendarDaysIcon,
-  //   links: EventsLinks.menu,
-  // },
+  {
+    title: "Events",
+    Icon: CalendarDaysIcon,
+    links: EventsLinks.menu,
+  },
   // {
   //   title: "Recaps",
   //   Icon: CameraIcon,
@@ -231,7 +231,7 @@ export const navigationMenuRoutes = [
 export const appRoutes = [
   ...DashboardLinks.routes,
   ...RequestsLinks.routes,
-  // ...EventsLinks.routes,
+  ...EventsLinks.routes,
   // ...TenantsLinks.routes,
   // ...RecapLinks.routes,
   // ...ProductLinks.routes,
