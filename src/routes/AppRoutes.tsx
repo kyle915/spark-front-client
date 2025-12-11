@@ -6,7 +6,7 @@ import {
   CalendarDaysIcon,
   Bars4Icon,
   // CameraIcon,
-  // BuildingStorefrontIcon,
+  BuildingStorefrontIcon,
   PlusCircleIcon,
   CalendarIcon,
   MapIcon,
@@ -32,11 +32,11 @@ import TodayEvents from "@/events/TodayEvents";
 import TodayEventsMap from "@/events/TodayEventsMap";
 
 // Tenants
-// import TenantsList from "@tenants/TenantsList";
-// import CreateTenant from "@tenants/CreateTenant";
-// import EditTenant from "@tenants/EditTenant";
-// import CreateProduct from "@tenants/CreateProduct";
-// import ProductsList from "@tenants/ProductsList";
+import TenantsList from "@/tenants/TenantsList";
+import CreateTenant from "@/tenants/CreateTenant";
+import EditTenant from "@/tenants/EditTenant";
+import CreateProduct from "@/tenants/CreateProduct";
+import ProductsList from "@/tenants/ProductsList";
 
 // Recap
 // import CreateRecap from "@recap/CreateRecap";
@@ -140,41 +140,41 @@ const EventsLinks = {
 /* -----------------------------------------------------------
    TENANTS
 ----------------------------------------------------------- */
-// const TenantsLinks = {
-//   menu: [
-//     { path: "/tenants/create", name: "Create", Icon: PlusCircleIcon },
-//     { path: "/tenants/list", name: "List", Icon: Bars4Icon },
-//   ],
+const TenantsLinks = {
+  menu: [
+    { path: "/tenants/create", name: "Create", Icon: PlusCircleIcon },
+    { path: "/tenants/list", name: "List", Icon: Bars4Icon },
+  ],
 
-//   routes: [
-//     { path: "/tenants/create", component: <CreateTenant />, isPublic: false },
-//     { path: "/tenants/list", component: <TenantsList />, isPublic: false },
-//     { path: "/tenants/edit/:uuid", component: <EditTenant />, isPublic: false },
-//   ],
-// };
+  routes: [
+    { path: "/tenants/create", component: <CreateTenant />, isPublic: false },
+    { path: "/tenants/list", component: <TenantsList />, isPublic: false },
+    { path: "/tenants/edit/:uuid", component: <EditTenant />, isPublic: false },
+  ],
+};
 
 /* -----------------------------------------------------------
    PRODUCTS
 ----------------------------------------------------------- */
-// const ProductLinks = {
-//   menu: [
-//     { path: "/products/create-product", name: "Create", Icon: PlusCircleIcon },
-//     { path: "/products/products-list", name: "List", Icon: Bars4Icon },
-//   ],
+const ProductLinks = {
+  menu: [
+    { path: "/products/create-product", name: "Create", Icon: PlusCircleIcon },
+    { path: "/products/products-list", name: "List", Icon: Bars4Icon },
+  ],
 
-//   routes: [
-//     {
-//       path: "/products/create-product",
-//       component: <CreateProduct />,
-//       isPublic: false,
-//     },
-//     {
-//       path: "/products/products-list",
-//       component: <ProductsList />,
-//       isPublic: false,
-//     },
-//   ],
-// };
+  routes: [
+    {
+      path: "/products/create-product",
+      component: <CreateProduct />,
+      isPublic: false,
+    },
+    {
+      path: "/products/products-list",
+      component: <ProductsList />,
+      isPublic: false,
+    },
+  ],
+};
 
 /* -----------------------------------------------------------
    RECAPS
@@ -218,11 +218,11 @@ export const navigationMenuRoutes = [
   //   Icon: CameraIcon,
   //   links: RecapLinks.menu,
   // },
-  // {
-  //   title: "Product",
-  //   Icon: BuildingStorefrontIcon,
-  //   links: ProductLinks.menu,
-  // },
+  {
+    title: "Product",
+    Icon: BuildingStorefrontIcon,
+    links: ProductLinks.menu,
+  },
 ];
 
 /* -----------------------------------------------------------
@@ -232,8 +232,8 @@ export const appRoutes = [
   ...DashboardLinks.routes,
   ...RequestsLinks.routes,
   ...EventsLinks.routes,
-  // ...TenantsLinks.routes,
+  ...TenantsLinks.routes,
   // ...RecapLinks.routes,
-  // ...ProductLinks.routes,
+  ...ProductLinks.routes,
   ...PublicRoutes.routes,
 ];
