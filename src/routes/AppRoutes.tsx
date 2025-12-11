@@ -5,7 +5,7 @@ import {
   ClipboardDocumentListIcon,
   CalendarDaysIcon,
   Bars4Icon,
-  // CameraIcon,
+  CameraIcon,
   BuildingStorefrontIcon,
   PlusCircleIcon,
   CalendarIcon,
@@ -39,10 +39,10 @@ import CreateProduct from "@/tenants/CreateProduct";
 import ProductsList from "@/tenants/ProductsList";
 
 // Recap
-// import CreateRecap from "@recap/CreateRecap";
-// import RecapList from "@recap/RecapsList";
-// import RecapView from "@recap/RecapView";
-// import EditRecap from "@recap/EditRecap";
+import CreateRecap from "@/recap/CreateRecap";
+import RecapList from "@/recap/RecapsList";
+import RecapView from "@/recap/RecapView";
+import EditRecap from "@/recap/EditRecap";
 
 // Public
 import SparkFormPage from "@/public/form/FormPage";
@@ -179,19 +179,19 @@ const ProductLinks = {
 /* -----------------------------------------------------------
    RECAPS
 ----------------------------------------------------------- */
-// const RecapLinks = {
-//   menu: [
-//     { path: "/recap/create", name: "Create", Icon: PlusCircleIcon },
-//     { path: "/recap/list", name: "List", Icon: Bars4Icon },
-//   ],
+const RecapLinks = {
+  menu: [
+    { path: "/recap/create", name: "Create", Icon: PlusCircleIcon },
+    { path: "/recap/list", name: "List", Icon: Bars4Icon },
+  ],
 
-//   routes: [
-//     { path: "/recap/create", component: <CreateRecap />, isPublic: false },
-//     { path: "/recap/list", component: <RecapList />, isPublic: false },
-//     { path: "/recap/view/:uuid", component: <RecapView />, isPublic: false },
-//     { path: "/recap/edit/:uuid", component: <EditRecap />, isPublic: false },
-//   ],
-// };
+  routes: [
+    { path: "/recap/create", component: <CreateRecap />, isPublic: false },
+    { path: "/recap/list", component: <RecapList />, isPublic: false },
+    { path: "/recap/view/:uuid", component: <RecapView />, isPublic: false },
+    { path: "/recap/edit/:uuid", component: <EditRecap />, isPublic: false },
+  ],
+};
 
 /* -----------------------------------------------------------
    EXPORT: SIDEBAR MENU
@@ -213,11 +213,11 @@ export const navigationMenuRoutes = [
     Icon: CalendarDaysIcon,
     links: EventsLinks.menu,
   },
-  // {
-  //   title: "Recaps",
-  //   Icon: CameraIcon,
-  //   links: RecapLinks.menu,
-  // },
+  {
+    title: "Recaps",
+    Icon: CameraIcon,
+    links: RecapLinks.menu,
+  },
   {
     title: "Product",
     Icon: BuildingStorefrontIcon,
@@ -233,7 +233,7 @@ export const appRoutes = [
   ...RequestsLinks.routes,
   ...EventsLinks.routes,
   ...TenantsLinks.routes,
-  // ...RecapLinks.routes,
+  ...RecapLinks.routes,
   ...ProductLinks.routes,
   ...PublicRoutes.routes,
 ];
