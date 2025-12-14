@@ -33,7 +33,6 @@ import ConfirmationModal from "@/shared/ConfirmationModal";
 import { useAlertStore } from "@/store/alertStore";
 import { DeclineRequestMutation } from "@/api/mutations/DeclineRequestMutation";
 import FormDatePicker from "@/shared/FormDatePicker";
-import { useAuthStore } from "@/store/authStore";
 
 const PAGE_SIZE = 10;
 
@@ -287,9 +286,6 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
 };
 
 const RequestsList = () => {
-  const { user } = useAuthStore();
-
-  console.log(user);
   const { control, watch, reset } = useForm({
     defaultValues: {
       // tenant: "",

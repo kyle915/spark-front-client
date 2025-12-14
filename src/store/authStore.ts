@@ -8,6 +8,7 @@ interface AuthState {
   token: string | null;
   refreshToken: string | null;
   tenantUuid: string | null;
+  tenantId: string | null;
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
@@ -17,6 +18,7 @@ interface AuthState {
   setRefreshToken: (token: string) => void;
   loadFromStorage: () => void;
   setTenantUuid: (uuid: string | null) => void;
+  setTenantId: (id: string | null) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -24,6 +26,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   refreshToken: null,
   tenantUuid: null,
+  tenantId: null,
   isAuthenticated: false,
   loading: false,
   error: null,
@@ -139,6 +142,17 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     set({ tenantUuid: uuid });
   },
+
+  setTenantId: (id) => {
+    if (id) {
+      localStorage.setItem("@tenantId", id);
+    } else {
+      localStorage.removeItem("@tenantId");
+    }
+
+    set({ tenantId: id });
+  },
+
   setRefreshToken: (token) => {
     localStorage.setItem("@refreshToken", token);
     set({ refreshToken: token });

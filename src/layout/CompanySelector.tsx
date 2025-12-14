@@ -74,7 +74,7 @@ export default function CompanySelector() {
     if (!loading && companies.length === 1) {
       const [company] = companies;
       setSelected(company.id);
-      selectTenant(company.uuid);
+      selectTenant(company.uuid, company.id);
       navigate(from, { replace: true });
     }
   }, [companies, navigate, loading, selectTenant, from]);
@@ -89,7 +89,8 @@ export default function CompanySelector() {
 
   const handleSelect = (company: Company) => {
     setSelected(company.id);
-    selectTenant(company.uuid);
+    selectTenant(company.uuid, company.id);
+
     navigate(`/dashboard/${company.uuid}`);
   };
 

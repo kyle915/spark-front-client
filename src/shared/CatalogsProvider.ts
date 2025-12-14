@@ -202,23 +202,38 @@ const CatalogsProvider = ({
   requestStoreManagers = false,
   requestStoreManagersFilters,
 }: CatalogsProviderProps) => {
-  const clientId = useAuthStore((state) => state.user?.id ?? null);
+  const { tenantId } = useAuthStore();
   const [state, setState] = useState<CatalogsState>(() => createInitialState());
 
-  // clientId filter for requests
-  const withClientForRequests = <
+  // tenant filter for requests
+  const withTenantForRequests = <
     T extends Record<string, unknown> | null | undefined
   >(
     filters: T
   ): Record<string, unknown> => {
-    if (!clientId) return (filters ?? {}) as Record<string, unknown>;
+    if (!tenantId) return (filters ?? {}) as Record<string, unknown>;
 
     return {
       ...(filters ?? {}),
-      clientId,
+      tenantId,
     };
   };
 
+  // Filter requests by tenant always
+  const requestsFiltersMemo = useMemo(
+    () => withTenantForRequests(requestsFilters),
+    [requestsFilters]
+  );
+  const retailersFiltersMemo = useMemo(
+    () => withTenantForRequests(retailersFilters) ?? {},
+    [retailersFilters]
+  );
+  const distributorsFiltersMemo = useMemo(
+    () => withTenantForRequests(distributorsFilters) ?? {},
+    [distributorsFilters]
+  );
+
+  // Memoized filters
   const eventTypeFiltersMemo = useMemo(
     () => eventTypesFilters ?? {},
     [eventTypesFilters]
@@ -231,14 +246,7 @@ const CatalogsProvider = ({
     () => clientsFilters ?? {},
     [clientsFilters]
   );
-  const retailersFiltersMemo = useMemo(
-    () => retailersFilters ?? {},
-    [retailersFilters]
-  );
-  const distributorsFiltersMemo = useMemo(
-    () => distributorsFilters ?? {},
-    [distributorsFilters]
-  );
+
   const requestTypesFiltersMemo = useMemo(
     () => requestTypesFilters ?? {},
     [requestTypesFilters]
@@ -246,11 +254,6 @@ const CatalogsProvider = ({
   const requestStatusesFiltersMemo = useMemo(
     () => requestStatusesFilters ?? {},
     [requestStatusesFilters]
-  );
-  // Filter requests by clientId always
-  const requestsFiltersMemo = useMemo(
-    () => withClientForRequests(requestsFilters),
-    [requestsFilters, clientId]
   );
 
   const requestStoreManagersFiltersMemo = useMemo(
@@ -381,7 +384,7 @@ const CatalogsProvider = ({
   );
 
   useCatalogEffect<RetailersQueryType, CatalogItem>(
-    retailers,
+    retailers || !!tenantId,
     retailersFiltersMemo,
     RetailersQuery,
     "retailers",
@@ -389,7 +392,7 @@ const CatalogsProvider = ({
   );
 
   useCatalogEffect<DistributorsQueryType, CatalogItem>(
-    distributors,
+    distributors || !!tenantId,
     distributorsFiltersMemo,
     DistributorsQuery,
     "distributors",
@@ -421,7 +424,7 @@ const CatalogsProvider = ({
   );
 
   useCatalogEffect<RequestsQueryType, CatalogItem>(
-    requests || !!clientId,
+    requests || !!tenantId,
     requestsFiltersMemo,
     RequestsQuery,
     "requests",
