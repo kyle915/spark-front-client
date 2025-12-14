@@ -406,7 +406,7 @@ const RequestsList = () => {
                 <FormDatePicker
                   control={control}
                   name="date"
-                  label="Date"
+                  label="Filter by Date"
                   placeholder="Select date"
                 />
               </div>
