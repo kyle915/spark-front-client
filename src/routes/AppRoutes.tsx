@@ -17,6 +17,9 @@ import DashboardEvents from "@/components/pages/dashboard-event/DashboardEvent";
 import DashboardRetail from "@/components/pages/dashboard-retail/DashboardRetail";
 // import DashboardIndex from "@/components/pages/dashboard";
 
+// Company Selection
+import CompanySelector from "@/layout/CompanySelector";
+
 // Requests
 import RequestsList from "@/requests/RequestsList";
 import RequestView from "@/requests/RequestView";
@@ -56,6 +59,19 @@ const PublicRoutes = {
       path: "/spark-form/:tenantSlug",
       component: <SparkFormPage />,
       isPublic: true,
+    },
+  ],
+};
+
+/*  -----------------------------------------------------------
+ COMPANY SELECTION ROUTE
+----------------------------------------------------------- */
+const CompanyRoutes = {
+  routes: [
+    {
+      path: "/select-company",
+      component: <CompanySelector />,
+      isPublic: false,
     },
   ],
 };
@@ -235,5 +251,6 @@ export const appRoutes = [
   ...TenantsLinks.routes,
   ...RecapLinks.routes,
   ...ProductLinks.routes,
+  ...CompanyRoutes.routes,
   ...PublicRoutes.routes,
 ];
