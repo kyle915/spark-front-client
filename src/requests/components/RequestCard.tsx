@@ -28,7 +28,7 @@ const RequestCard: React.FC<Props> = ({ request }) => {
         {/* ================= BACK BUTTON ================= */}
         <div>
           <Link
-            to="/requests"
+            to="/requests/list"
             className="inline-flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition"
           >
             <ArrowLeftIcon className="w-4 h-4" />
@@ -63,12 +63,29 @@ const RequestCard: React.FC<Props> = ({ request }) => {
               Edit
             </Link>
 
-            <div className="flex items-center gap-3">
-              <span className="badge badge-lg badge-primary">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* STATUS */}
+              <span
+                className={`
+                badge badge-lg gap-2 font-semibold
+                ${
+                  request.status?.name === "Pending"
+                    ? "badge-warning"
+                    : request.status?.name === "Approved"
+                    ? "badge-success"
+                    : request.status?.name === "Declined"
+                    ? "badge-error"
+                    : "badge-neutral"
+                }
+                `}
+              >
+                <CheckCircleIcon className="w-4 h-4" />
                 {request.status?.name ?? "Unknown"}
               </span>
+
+              {/* REQUEST TYPE */}
               {request.requestType?.name && (
-                <span className="badge badge-outline">
+                <span className="badge badge-outline badge-lg font-medium">
                   {request.requestType.name}
                 </span>
               )}

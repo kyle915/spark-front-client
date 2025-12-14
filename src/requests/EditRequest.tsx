@@ -9,6 +9,8 @@ import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__ge
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { UpdateRequestMutation } from "@api/mutations/UpdateRequestMutation";
 import type { UpdateRequestMutation as UpdateRequestMutationType } from "@api/mutations/__generated__/UpdateRequestMutation.graphql";
+import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
+import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import { useAlertStore } from "@store/alertStore";
 
 type EditRequestContentProps = {
@@ -24,6 +26,14 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     UpdateRequestMutation
   );
   const { showAlert } = useAlertStore();
+
+  const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
+    TimezonesQuery,
+    {},
+    { fetchPolicy: "store-and-network" }
+  );
+
+  const timezones = timezonesData.timezones?.edges.map((e) => e.node) || [];
 
   if (!request) {
     return (
@@ -77,16 +87,13 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     retailerId: request.retailer?.id,
     distributorId: request.distributor?.id,
     requestTypeId: request.requestType?.id,
+    timezoneId: request.timezone?.id,
   };
 
   const filters = { tenantId: request.tenantId };
 
   return (
     <>
-      <div className="flex items-center gap-2 mb-6">
-        <h1 className="text-2xl font-bold">Edit Request</h1>
-        <p className="text-base-content/70">Request: {request.name}</p>
-      </div>
       <CatalogsProvider
         clients={true}
         clientsFilters={filters}
@@ -100,11 +107,13 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
         {(catalogs) => (
           <RequestForm
             onSubmit={handleSubmit}
+            mode="edit"
             defaultValues={defaultValues}
             clients={catalogs.clients}
             retailers={catalogs.retailers}
             distributors={catalogs.distributors}
             requestTypes={catalogs.requestTypes}
+            timezones={timezones}
           />
         )}
       </CatalogsProvider>

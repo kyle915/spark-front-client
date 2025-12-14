@@ -1,21 +1,23 @@
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 import Layout from "@/layout/Layout";
 import Loading from "@/shared/Loading";
 import RequestForm, { type RequestFormValues } from "./components/RequestForm";
+
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { TenantsQuery } from "@/api/queries/TenantsQuery";
 import { RequestTypesQuery } from "@/api/queries/RequestTypesQuery";
 import { ProductTypesQuery } from "@/api/queries/ProductTypesQuery";
 import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
-import type { TenantsQuery as TenantsQueryType } from "@api/queries/__generated__/TenantsQuery.graphql";
+
 import type { RequestTypesQuery as RequestTypesQueryType } from "@api/queries/__generated__/RequestTypesQuery.graphql";
 import type { ProductTypesQuery as ProductTypesQueryType } from "@api/queries/__generated__/ProductTypesQuery.graphql";
 import type { ProductsQuery as ProductsQueryType } from "@api/queries/__generated__/ProductsQuery.graphql";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import type { RequestMutation } from "@api/mutations/__generated__/RequestMutation.graphql";
+
 import { useAlertStore } from "@store/alertStore";
+// import { useAuthStore } from "@store/authStore";
 import { useNavigate } from "react-router";
 
 interface CreateRequestFormProps {
@@ -23,6 +25,9 @@ interface CreateRequestFormProps {
 }
 
 const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
+  // ========================
+  // QUERIES
+  // ========================
   const requestTypesData = useLazyLoadQuery<RequestTypesQueryType>(
     RequestTypesQuery,
     { filters: { tenantId } },
@@ -47,19 +52,32 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
     { fetchPolicy: "store-and-network" }
   );
 
+  // ========================
+  // MUTATION
+  // ========================
   const [commitCreateRequest, isCreating] = useMutation<RequestMutation>(
     CreateRequestMutation
   );
+
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
 
+  // ========================
+  // DATA MAPPING
+  // ========================
   const requestTypes =
     requestTypesData.requestTypes?.edges.map((e) => e.node) || [];
+
   const productTypes =
     productTypesData.productTypes?.edges.map((e) => e.node) || [];
+
   const products = productsData.products?.edges.map((e) => e.node) || [];
+
   const timezones = timezonesData.timezones?.edges.map((e) => e.node) || [];
 
+  // ========================
+  // SUBMIT
+  // ========================
   const handleSubmit = (formData: RequestFormValues) => {
     commitCreateRequest({
       variables: {
@@ -73,7 +91,8 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
           coordinates: (formData.coordinates ?? []) as readonly number[],
           timezoneId: formData.timezoneId!,
           requestTypeId: formData.requestTypeId!,
-          // Create mode fields
+
+          // Create-only fields
           clientName: formData.clientName!,
           clientEmail: formData.clientEmail!,
           distributorName: formData.distributorName!,
@@ -83,6 +102,7 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
           retailerStoreContact: formData.retailerStoreContact!,
           storeManagerName: formData.storeManagerName!,
           storeManagerPhone: formData.storeManagerPhone!,
+
           // Details
           details: [
             {
@@ -92,8 +112,11 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
                 : null,
             },
           ],
+
           // Products
-          products: (formData.products || []).map((id) => ({ productId: id })),
+          products: (formData.products || []).map((id) => ({
+            productId: id,
+          })),
         },
       },
       onCompleted: (response) => {
@@ -132,52 +155,36 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
   );
 };
 
+// ========================
+// PAGE CONTENT
+// ========================
 const CreateRequestContent = () => {
-  const [selectedTenantId, setSelectedTenantId] = useState<string>("");
+  // const tenantId = useAuthStore((state) => state.tenantUuid);
 
-  const tenantsData = useLazyLoadQuery<TenantsQueryType>(
-    TenantsQuery,
-    {},
-    { fetchPolicy: "store-and-network" }
-  );
-
-  const tenants = tenantsData.tenants?.edges.map((e) => e.node) || [];
+  // if (!tenantId) {
+  //   return (
+  //     <div className="flex items-center justify-center py-20 text-base-content/60">
+  //       No tenant selected. Please select a company first.
+  //     </div>
+  //   );
+  // }
 
   return (
     <>
-      <div className="flex flex-col gap-4 mb-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Create Request</h1>
-        </div>
-
-        <div className="form-control w-full max-w-xs">
-          <label className="label">
-            <span className="label-text">Select Tenant</span>
-          </label>
-          <select
-            className="select select-bordered"
-            value={selectedTenantId}
-            onChange={(e) => setSelectedTenantId(e.target.value)}
-          >
-            <option value="">Select a tenant...</option>
-            {tenants.map((tenant) => (
-              <option key={tenant.id} value={tenant.id}>
-                {tenant.name}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Create Request</h1>
       </div>
 
-      {selectedTenantId && (
-        <Suspense fallback={<Loading />}>
-          <CreateRequestForm tenantId={selectedTenantId} />
-        </Suspense>
-      )}
+      <Suspense fallback={<Loading />}>
+        <CreateRequestForm tenantId={""} />
+      </Suspense>
     </>
   );
 };
 
+// ========================
+// PAGE
+// ========================
 const CreateRequest = () => {
   return (
     <Layout>
