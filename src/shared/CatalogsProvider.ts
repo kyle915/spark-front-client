@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { fetchQuery, type GraphQLTaggedNode } from "react-relay";
 
+import { useAuthStore } from "@/store/authStore";
+
 import type { EventStatus, EventType } from "../types/events/formTypes";
 import environment from "@api/relay/environment";
 import { EventTypeQuery } from "@api/queries/EventTypeQuery";
@@ -200,7 +202,22 @@ const CatalogsProvider = ({
   requestStoreManagers = false,
   requestStoreManagersFilters,
 }: CatalogsProviderProps) => {
+  const clientId = useAuthStore((state) => state.user?.id ?? null);
   const [state, setState] = useState<CatalogsState>(() => createInitialState());
+
+  // clientId filter for requests
+  const withClientForRequests = <
+    T extends Record<string, unknown> | null | undefined
+  >(
+    filters: T
+  ): Record<string, unknown> => {
+    if (!clientId) return (filters ?? {}) as Record<string, unknown>;
+
+    return {
+      ...(filters ?? {}),
+      clientId,
+    };
+  };
 
   const eventTypeFiltersMemo = useMemo(
     () => eventTypesFilters ?? {},
@@ -230,10 +247,12 @@ const CatalogsProvider = ({
     () => requestStatusesFilters ?? {},
     [requestStatusesFilters]
   );
+  // Filter requests by clientId always
   const requestsFiltersMemo = useMemo(
-    () => requestsFilters ?? {},
-    [requestsFilters]
+    () => withClientForRequests(requestsFilters),
+    [requestsFilters, clientId]
   );
+
   const requestStoreManagersFiltersMemo = useMemo(
     () => requestStoreManagersFilters ?? {},
     [requestStoreManagersFilters]
@@ -402,13 +421,14 @@ const CatalogsProvider = ({
   );
 
   useCatalogEffect<RequestsQueryType, CatalogItem>(
-    requests,
+    requests || !!clientId,
     requestsFiltersMemo,
     RequestsQuery,
     "requests",
     parseRequests,
     requestsVariablesMemo
   );
+
   useCatalogEffect<RequestStoreManagersQueryType, RequestStoreManagerItem>(
     requestStoreManagers,
     requestStoreManagersFiltersMemo,

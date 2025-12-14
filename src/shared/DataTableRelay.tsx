@@ -222,7 +222,7 @@ export default function DataTableRelay<T>({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl shadow-lg bg-base-200 p-4 space-y-4">
+    <div className="overflow-x-auto rounded-xl shadow-lg bg-base-100 p-4 space-y-4">
       <div className="flex justify-end">
         <span className="text-sm text-base-content font-medium">
           Total: {resolvedTotalCount}

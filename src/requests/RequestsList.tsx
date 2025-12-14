@@ -1,4 +1,4 @@
-import { Suspense, useCallback } from "react";
+import { Suspense, useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import Layout from "@/layout/Layout";
 import DataTableRelay from "@/shared/DataTableRelay";
@@ -11,20 +11,28 @@ import {
   useRelayPagination,
   type PageLoadedPayload,
 } from "@/hooks/useRelayPagination";
-import { usePreloadedQuery } from "react-relay/hooks";
+import { useMutation, usePreloadedQuery } from "react-relay/hooks";
 import type { PreloadedQuery } from "react-relay";
 import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import CatalogsProvider from "@shared/CatalogsProvider";
-import FormSelect from "@shared/FormSelect";
-import FormInputText from "@shared/FormInputText";
 
 //Icons
 import {
   EyeIcon,
   CheckCircleIcon,
   PencilIcon,
+  XCircleIcon,
+  ClipboardDocumentListIcon,
+  FunnelIcon as FilterIcon,
 } from "@heroicons/react/24/outline";
+import { FunnelXIcon } from "lucide-react";
+import FormAutocomplete from "@/shared/FormAutocomplete";
+import type { DeclineRequestMutation as DeclineRequestMutationType } from "@api/mutations/__generated__/DeclineRequestMutation.graphql";
+import ConfirmationModal from "@/shared/ConfirmationModal";
+import { useAlertStore } from "@/store/alertStore";
+import { DeclineRequestMutation } from "@/api/mutations/DeclineRequestMutation";
+import FormDatePicker from "@/shared/FormDatePicker";
 
 const PAGE_SIZE = 10;
 
@@ -101,6 +109,29 @@ type RequestsListInnerProps = {
 
 const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
   const navigate = useNavigate();
+  const showAlert = useAlertStore((state) => state.showAlert);
+  const [commitDecline, isDeclineInFlight] =
+    useMutation<DeclineRequestMutationType>(DeclineRequestMutation);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [requestToDecline, setRequestToDecline] = useState<RequestRow | null>(
+    null
+  );
+
+  const {
+    queryRef,
+    displayPage,
+    isNavigating,
+    handlePageLoaded,
+    refresh,
+    goNext,
+    goPrevious,
+    goToPage,
+  } = useRelayPagination<RequestsQueryType>({
+    query: RequestsQuery,
+    pageSize: PAGE_SIZE,
+    initialVariables: { filters },
+  });
+
   const handleViewRequest = useCallback(
     (request: RequestRow) => {
       console.info("Viewing request", request.uuid);
@@ -123,10 +154,47 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
     [navigate]
   );
 
+  const handleDeclineClick = useCallback((request: RequestRow) => {
+    setRequestToDecline(request);
+    setIsModalOpen(true);
+  }, []);
+
+  const handleConfirmDecline = useCallback(() => {
+    if (!requestToDecline?.id) {
+      console.error("Request ID is missing");
+      return;
+    }
+    commitDecline({
+      variables: {
+        input: {
+          id: requestToDecline.id,
+        },
+      },
+      onCompleted: (response) => {
+        if (response.declineRequest.success) {
+          showAlert("Request declined successfully", "success");
+          refresh();
+        } else {
+          showAlert(`Error: ${response.declineRequest.message}`, "error");
+        }
+      },
+      onError: (error) => {
+        showAlert(`Error declining request: ${error.message}`, "error");
+      },
+    });
+  }, [requestToDecline, commitDecline, showAlert, refresh]);
+
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+    setRequestToDecline(null);
+  }, []);
+
   const renderRequestActions = useCallback(
     (request: RequestRow) => {
+      const statusSlug = request.status?.slug?.toLowerCase();
       const statusName = request.status?.name?.toLowerCase();
       const isApproved = statusName === "approved" || statusName === "aprobado";
+      const isDeclined = statusSlug === "decline";
 
       return (
         <div className="flex gap-2">
@@ -148,8 +216,8 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
 
           <button
             type="button"
-            className={`btn btn-xs tooltip ${
-              isApproved ? "btn-disabled" : "btn-primary"
+            className={`btn btn-xs btn-outline btn-success tooltip ${
+              isApproved ? "btn-disabled" : ""
             }`}
             data-tip={isApproved ? "Already approved" : "Approve Request"}
             onClick={() => handleApproveRequest(request)}
@@ -157,28 +225,45 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
           >
             <CheckCircleIcon className="w-5 h-5" />
           </button>
+
+          <button
+            type="button"
+            className={`btn btn-xs btn-outline btn-error tooltip ${
+              isDeclined ? "btn-disabled" : ""
+            }`}
+            data-tip={isDeclined ? "Already declined" : "Decline Request"}
+            onClick={() => handleDeclineClick(request)}
+            disabled={isDeclined || isDeclineInFlight}
+          >
+            <XCircleIcon className="w-5 h-5" />
+          </button>
         </div>
       );
     },
-    [handleApproveRequest, handleViewRequest, handleEditRequest]
+    [
+      handleApproveRequest,
+      handleViewRequest,
+      handleEditRequest,
+      handleDeclineClick,
+      isDeclineInFlight,
+    ]
   );
-
-  const {
-    queryRef,
-    displayPage,
-    isNavigating,
-    handlePageLoaded,
-    goNext,
-    goPrevious,
-    goToPage,
-  } = useRelayPagination<RequestsQueryType>({
-    query: RequestsQuery,
-    pageSize: PAGE_SIZE,
-    initialVariables: { filters },
-  });
 
   return (
     <>
+      <ConfirmationModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmDecline}
+        title="Decline Request"
+        message={`Are you sure you want to decline the request "${
+          requestToDecline?.name || ""
+        }"?`}
+        confirmText="Decline"
+        cancelText="Cancel"
+        confirmButtonClass="btn-error"
+      />
+
       <Suspense fallback={<Loading />}>
         {queryRef ? (
           <RequestsTableContent
@@ -201,9 +286,9 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
 };
 
 const RequestsList = () => {
-  const { control, watch } = useForm({
+  const { control, watch, reset } = useForm({
     defaultValues: {
-      tenant: "",
+      // tenant: "",
       client: "",
       retailer: "",
       distributor: "",
@@ -211,7 +296,7 @@ const RequestsList = () => {
       date: "",
     },
   });
-  const selectedTenant = watch("tenant");
+  // const selectedTenant = watch("tenant");
   //   const selectedClient = watch("client");
   const selectedRetailer = watch("retailer");
   const selectedDistributor = watch("distributor");
@@ -219,7 +304,7 @@ const RequestsList = () => {
   const selectedDate = watch("date");
 
   const filters = {
-    tenantId: selectedTenant || undefined,
+    // tenantId: selectedTenant || undefined,
     // clientId: selectedClient || undefined,
     retailerId: selectedRetailer || undefined,
     distributorId: selectedDistributor || undefined,
@@ -227,18 +312,17 @@ const RequestsList = () => {
     date: selectedDate || undefined,
   };
 
-  const catalogFilters = selectedTenant
-    ? { tenantId: selectedTenant }
-    : undefined;
+  const catalogFilters = undefined;
 
   return (
     <Layout>
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold">Requests</h1>
+      <div className="mb-4 flex items-center gap-4">
+        <ClipboardDocumentListIcon className="w-8 h-8 text-primary" />
+        <h1 className="text-2xl font-bold"> Requests</h1>
       </div>
 
       <CatalogsProvider
-        tenants={true}
+        // tenants={true}
         clients={true}
         retailers={true}
         distributors={true}
@@ -250,7 +334,7 @@ const RequestsList = () => {
       >
         {(catalogs) => (
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-base-200 rounded-lg">
+            {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-base-200 rounded-lg">
               <FormSelect
                 control={control}
                 name="tenant"
@@ -261,60 +345,79 @@ const RequestsList = () => {
                 }))}
                 placeholder="Select a tenant"
               />
+            </div> */}
+            <div className="rounded-xl  bg-base-100 p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-1">
+                  <FilterIcon className="w-4 h-4" />
+                  <h2 className="text-sm font-semibold text-base-content/70">
+                    Filters
+                  </h2>
+                </div>
+
+                {Object.entries(watch()).some(([, value]) => value) && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => reset()}
+                    >
+                      <FunnelXIcon className="w-4 h-4" />
+                      Clear filters
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <FormAutocomplete
+                  control={control}
+                  name="retailer"
+                  label="Retailer"
+                  options={catalogs.retailers.map((r) => ({
+                    label: r.name,
+                    value: r.id,
+                  }))}
+                  placeholder="Search retailer..."
+                />
+
+                <FormAutocomplete
+                  control={control}
+                  name="distributor"
+                  label="Distributor"
+                  options={catalogs.distributors.map((d) => ({
+                    label: d.name,
+                    value: d.id,
+                  }))}
+                  placeholder="Search distributor..."
+                />
+
+                <FormAutocomplete
+                  control={control}
+                  name="status"
+                  label="Status"
+                  options={catalogs.requestStatuses.map((s) => ({
+                    label: s.name,
+                    value: s.id,
+                  }))}
+                  placeholder="Search status..."
+                />
+
+                <FormDatePicker
+                  control={control}
+                  name="date"
+                  label="Date"
+                  placeholder="Select date"
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* <FormSelect
-                control={control}
-                name="client"
-                label="Filter by Client"
-                options={catalogs.clients.map((c) => ({
-                  label: c.name,
-                  value: c.id,
-                }))}
-                placeholder="Select a client"
-              /> */}
-              <FormSelect
-                control={control}
-                name="retailer"
-                label="Filter by Retailer"
-                options={catalogs.retailers.map((r) => ({
-                  label: r.name,
-                  value: r.id,
-                }))}
-                placeholder="Select a retailer"
-              />
-              <FormSelect
-                control={control}
-                name="distributor"
-                label="Filter by Distributor"
-                options={catalogs.distributors.map((d) => ({
-                  label: d.name,
-                  value: d.id,
-                }))}
-                placeholder="Select a distributor"
-              />
-              <FormSelect
-                control={control}
-                name="status"
-                label="Filter by Status"
-                options={catalogs.requestStatuses.map((s) => ({
-                  label: s.name,
-                  value: s.id,
-                }))}
-                placeholder="Select a status"
-              />
-              <FormInputText
-                control={control}
-                name="date"
-                label="Filter by Date"
-                type="date"
-                placeholder="Select date"
+
+            <div className="mt-2">
+              <RequestsListInner
+                key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedDate}`}
+                filters={filters}
               />
             </div>
-            <RequestsListInner
-              key={`${selectedTenant}-${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedDate}`}
-              filters={filters}
-            />
           </div>
         )}
       </CatalogsProvider>
