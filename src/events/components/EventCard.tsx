@@ -32,6 +32,7 @@ const EventCard: React.FC<Props> = ({ event }) => {
     notes,
     isNational,
     eventType,
+    coordinates,
     status,
     request,
   } = event;
@@ -140,7 +141,7 @@ const EventCard: React.FC<Props> = ({ event }) => {
         </div>
 
         {/* ================= MAIN GRID ================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
           {/* LEFT */}
           <div className="lg:col-span-2 space-y-6">
             {/* BASIC INFORMATION */}
@@ -223,7 +224,7 @@ const EventCard: React.FC<Props> = ({ event }) => {
 
           {/* RIGHT / MAP */}
           <div className="lg:col-span-1">
-            <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-4 sticky top-6">
+            <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 h-full flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-lg">Location</p>
                 <span className="text-xs opacity-60">
@@ -234,12 +235,12 @@ const EventCard: React.FC<Props> = ({ event }) => {
               </div>
 
               <LocationMap
-                coordinates={request?.coordinates ?? null}
+                coordinates={coordinates ?? null}
                 label={name ?? "Event Location"}
                 address={address ?? null}
               />
 
-              <p className="text-xs text-center opacity-60">
+              <p className="text-xs text-center opacity-60 mt-4">
                 Tip: Use the Edit button to update event information or
                 location.
               </p>

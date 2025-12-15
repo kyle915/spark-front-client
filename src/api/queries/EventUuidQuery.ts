@@ -1,12 +1,13 @@
 import { graphql } from "react-relay";
 
 export const EventUuidQuery = graphql`
-query EventUuidQuery($uuid: ID!) {
+  query EventUuidQuery($uuid: ID!) {
     event(uuid: $uuid) {
       __typename
       id
       uuid
       name
+      coordinates
       startTime
       endTime
       address
@@ -68,4 +69,4 @@ query EventUuidQuery($uuid: ID!) {
       }
     }
   }
-`
+`;

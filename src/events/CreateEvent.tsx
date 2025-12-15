@@ -2,21 +2,21 @@ import { Suspense, useMemo } from "react";
 import Layout from "@/layout/Layout";
 import { useParams } from "react-router";
 import Loading from "@shared/Loading";
-import CatalogsProvider from "@/shared/CatalogsProvider";
+import CatalogsProvider from "@shared/CatalogsProvider";
 import EventForm from "./components/EventForm";
 import type { EventFormValues } from "../types/events/formTypes";
-import { RequestUuidQuery } from "@/api/queries/RequestUuidQuery";
-import type { RequestUuidQuery as RequestUuidQueryType } from "@/api/queries/__generated__/RequestUuidQuery.graphql";
+import { RequestUuidQuery } from "@api/queries/RequestUuidQuery";
+import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__generated__/RequestUuidQuery.graphql";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { CreateEventMutation } from "@/api/mutations/CreateEventMutation";
-import type { CreateEventMutation as CreateEventMutationType } from "@/api/mutations/__generated__/CreateEventMutation.graphql";
-import { ApproveRequestMutation } from "@/api/mutations/ApproveRequestMutation";
-import type { ApproveRequestMutation as ApproveRequestMutationType } from "@/api/mutations/__generated__/ApproveRequestMutation.graphql";
-import { UpdateRequestMutation } from "@/api/mutations/UpdateRequestMutation";
-import type { UpdateRequestMutation as UpdateRequestMutationType } from "@/api/mutations/__generated__/UpdateRequestMutation.graphql";
-import { LocationsQuery } from "@/api/queries/LocationsQuery";
-import type { LocationsQuery as LocationsQueryType } from "@/api/queries/__generated__/LocationsQuery.graphql";
-import { useAlertStore } from "@/store/alertStore";
+import { CreateEventMutation } from "@api/mutations/CreateEventMutation";
+import type { CreateEventMutation as CreateEventMutationType } from "@api/mutations/__generated__/CreateEventMutation.graphql";
+import { ApproveRequestMutation } from "@api/mutations/ApproveRequestMutation";
+import type { ApproveRequestMutation as ApproveRequestMutationType } from "@api/mutations/__generated__/ApproveRequestMutation.graphql";
+import { UpdateRequestMutation } from "@api/mutations/UpdateRequestMutation";
+import type { UpdateRequestMutation as UpdateRequestMutationType } from "@api/mutations/__generated__/UpdateRequestMutation.graphql";
+import { LocationsQuery } from "@api/queries/LocationsQuery";
+import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
+import { useAlertStore } from "@store/alertStore";
 import { useNavigate } from "react-router";
 
 type CreateEventContentProps = {
@@ -105,10 +105,22 @@ const CreateEventContent = ({ uuid }: CreateEventContentProps) => {
   };
 
   const runCreateEvent = (formData: EventFormValues) => {
-    if (!formData.eventTypeId || !formData.startTime || !formData.endTime) {
+    if (
+      !formData.eventTypeId ||
+      !formData.startTime ||
+      !formData.endTime ||
+      !formData.date
+    ) {
       showAlert("Missing required fields for event creation", "error");
       return;
     }
+
+    const startTimeWithDate = formData.date
+      ? `${formData.date} ${formData.startTime}`
+      : formData.startTime;
+    const endTimeWithDate = formData.date
+      ? `${formData.date} ${formData.endTime}`
+      : formData.endTime;
 
     commitCreateEvent({
       variables: {
@@ -119,8 +131,12 @@ const CreateEventContent = ({ uuid }: CreateEventContentProps) => {
           address: formData.address,
           notes: formData.notes ?? "",
           isNational: formData.isNational ?? false,
-          startTime: formData.startTime,
-          endTime: formData.endTime,
+          startTime: startTimeWithDate,
+          endTime: endTimeWithDate,
+          coordinates:
+            formData.coordinates ??
+            (request.coordinates as readonly number[] | null | undefined) ??
+            undefined,
           tenantId: request.tenantId,
         },
       },
@@ -171,7 +187,12 @@ const CreateEventContent = ({ uuid }: CreateEventContentProps) => {
   };
 
   const handleSubmit = (formData: EventFormValues) => {
-    if (!formData.eventTypeId || !formData.startTime || !formData.endTime) {
+    if (
+      !formData.eventTypeId ||
+      !formData.startTime ||
+      !formData.endTime ||
+      !formData.date
+    ) {
       showAlert("Missing required fields for event creation", "error");
       return;
     }
@@ -190,11 +211,13 @@ const CreateEventContent = ({ uuid }: CreateEventContentProps) => {
           input: {
             id: request.id,
             name: request.name ?? formData.name,
-            date: request.date ?? "",
-            startTime: request.startTime ?? "00:00",
-            endTime: request.endTime ?? "00:00",
+            date: request.date ?? formData.date ?? "",
+            startTime: request.startTime ?? formData.startTime ?? "00:00",
+            endTime: request.endTime ?? formData.endTime ?? "00:00",
             address: request.address ?? formData.address,
-            coordinates: (request.coordinates ?? []) as readonly number[],
+            coordinates: (formData.coordinates ??
+              request.coordinates ??
+              []) as readonly number[],
             timezoneId: request.timezone.id,
             requestTypeId: request.requestType.id,
             distributorId:
@@ -237,8 +260,10 @@ const CreateEventContent = ({ uuid }: CreateEventContentProps) => {
   const baseDefaultValues: Partial<EventFormValues> = {
     name: request.name ?? "",
     address: request.address ?? "",
+    date: request.date ?? "",
     startTime: request.startTime ?? undefined,
     endTime: request.endTime ?? undefined,
+    coordinates: (request.coordinates ?? undefined) as number[] | undefined,
     distributorId: request.distributor?.id ?? undefined,
     retailerId: request.retailer?.id ?? undefined,
     storeManagerName:

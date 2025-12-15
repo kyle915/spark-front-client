@@ -22,6 +22,8 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
   const data = useLazyLoadQuery<EventUuidQueryType>(EventUuidQuery, { uuid });
   const event = data.event;
 
+  console.log("Event data:", event);
+
   const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
     filters: { tenantId: event?.tenantId },
   });
@@ -84,16 +86,14 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
     startTime: event.startTime ?? undefined,
     endTime: event.endTime ?? undefined,
     notes: event.notes ?? "",
+    // date: event.date ?? undefined,
     isNational: event.isNational ?? false,
+    coordinates: event.coordinates.map((coord) => coord) ?? undefined,
     eventTypeId: event.eventType?.id,
   };
 
   return (
     <>
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold">Edit event</h1>
-        <p className="text-base-content/70">Event: {event.name}</p>
-      </div>
       <CatalogsProvider eventTypes eventTypesFilters={eventTypeFilters}>
         {({ eventTypes, loading, errors, refetch }) => {
           if (loading.eventTypes) {

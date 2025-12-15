@@ -55,7 +55,13 @@ export interface EventFormValues {
   requestId?: string | null;
   eventTypeId?: string | null;
   tenantId?: string | null;
+  date?: string | null;
+  distributorName?: string | null;
+  distributorEmail?: string | null;
   distributorId?: string | null;
+  retailerName?: string | null;
+  retailerAddress?: string | null;
+  retailerStoreContact?: string | null;
   retailerId?: string | null;
   storeManagerId?: string | null;
   storeManagerName?: string | null;
@@ -67,6 +73,7 @@ export interface EventFormValues {
   isNational: boolean;
   distributorLocationId?: string | null;
   retailerLocationId?: string | null;
+  coordinates?: number[] | null;
 }
 
 // ------------------------------------
@@ -84,6 +91,8 @@ export interface EventFormProps {
   requestStoreManagers?: RequestStoreManagerItem[];
   locations?: Location[];
   requestContactInfo?: RequestContactInfo;
+  enableContactSection?: boolean;
+  contactMode?: "request" | "manual";
   onSubmit: (data: EventFormValues) => void;
   defaultValues?: Partial<EventFormValues>;
   onRefetch?: (
