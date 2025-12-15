@@ -202,7 +202,7 @@ const EventsList = () => {
   return (
     <Layout>
       <div className="flex items-center gap-2 mb-4">
-        <Bars4Icon className="w-6 h-6" />
+        <Bars4Icon className="w-8 h-8 text-primary" />
         <h1 className="text-2xl font-bold">Events</h1>
       </div>
 

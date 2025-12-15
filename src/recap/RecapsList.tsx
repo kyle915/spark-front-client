@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Layout from "@/layout/Layout";
 import { useLazyLoadQuery, usePreloadedQuery } from "react-relay/hooks";
 import DataTableRelay from "@/shared/DataTableRelay";
@@ -7,20 +7,25 @@ import {
   type PageLoadedPayload,
 } from "@/hooks/useRelayPagination";
 import Loading from "@/shared/Loading";
-import { TenantsQuery } from "@/api/queries/TenantsQuery";
 import { EventsQuery } from "@/api/queries/EventsQuery";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
-import type { TenantsQuery as TenantsQueryType } from "@/api/queries/__generated__/TenantsQuery.graphql";
 import type { EventsQuery as EventsQueryType } from "@/api/queries/__generated__/EventsQuery.graphql";
 import type { RecapsQuery as RecapsQueryType } from "@/api/queries/__generated__/RecapsQuery.graphql";
 import type { PreloadedQuery } from "react-relay";
 import type { RecapRow } from "@/types/columnsTypes";
 import { createRecapColumns } from "@/utils/columns";
-import { EyeIcon, PencilIcon } from "@heroicons/react/24/solid";
+import { CameraIcon } from "@heroicons/react/24/solid";
+import { EyeIcon, PencilIcon } from "@heroicons/react/24/outline";
+
 import { useNavigate } from "react-router";
+import { useAuthStore } from "@/store/authStore";
+import { FilterIcon, FunnelXIcon } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
+// ======================================================
+// TABLE CONTENT
+// ======================================================
 type RecapsTableContentProps = {
   queryReference: PreloadedQuery<RecapsQueryType>;
   currentPage: number;
@@ -97,6 +102,9 @@ const RecapsTableContent = ({
   );
 };
 
+// ======================================================
+// LIST INNER (PAGINATION)
+// ======================================================
 type RecapsListInnerProps = {
   filters?: {
     eventId?: string;
@@ -140,38 +148,22 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
   );
 };
 
+// ======================================================
+// PAGE
+// ======================================================
 const RecapList = () => {
-  const tenantsData = useLazyLoadQuery<TenantsQueryType>(
-    TenantsQuery,
-    {},
-    { fetchPolicy: "store-and-network" }
-  );
+  const { tenantId } = useAuthStore();
 
-  const [selectedTenantId, setSelectedTenantId] = useState<string>("");
   const [selectedEventId, setSelectedEventId] = useState<string>("");
 
-  const tenantOptions = useMemo(
-    () =>
-      tenantsData.tenants.edges.map((edge) => ({
-        value: edge.node.id,
-        label: edge.node.name,
-      })),
-    [tenantsData]
-  );
-
-  useEffect(() => {
-    if (!selectedTenantId && tenantOptions.length > 0) {
-      setSelectedTenantId(tenantOptions[0].value);
-    }
-  }, [selectedTenantId, tenantOptions]);
-
-  useEffect(() => {
-    setSelectedEventId("");
-  }, [selectedTenantId]);
-
+  // =========================
+  // EVENTS (FROM TENANT)
+  // =========================
   const eventsData = useLazyLoadQuery<EventsQueryType>(
     EventsQuery,
-    { filters: { tenantId: selectedTenantId || undefined } },
+    {
+      filters: { tenantId: tenantId || undefined },
+    },
     { fetchPolicy: "store-and-network" }
   );
 
@@ -181,10 +173,11 @@ const RecapList = () => {
         const dateLabel = edge.node.startTime
           ? new Date(edge.node.startTime).toLocaleDateString()
           : "";
+
         return {
           value: edge.node.id,
           label: dateLabel
-            ? `${edge.node.name} - ${dateLabel}`
+            ? `${edge.node.name} – ${dateLabel}`
             : edge.node.name,
         };
       }),
@@ -192,69 +185,80 @@ const RecapList = () => {
   );
 
   const filters = selectedEventId ? { eventId: selectedEventId } : undefined;
+
   const emptyMessage = selectedEventId
     ? "No recaps found for this event."
-    : "No recaps found for this tenant.";
+    : "No recaps found.";
 
   return (
     <Layout>
-      <div className="mb-4">
+      {/* =========================
+          HEADER
+      ========================= */}
+      <div className="mb-4 flex items-center gap-4">
+        <CameraIcon className="w-8 h-8 text-primary" />
         <h1 className="text-2xl font-bold">Recaps</h1>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4 mb-6">
-        <div className="form-control w-full sm:w-64">
-          <label className="label pb-1">
-            <span className="label-text">Tenant</span>
-          </label>
-          <select
-            className="select select-bordered w-full rounded-full"
-            value={selectedTenantId}
-            onChange={(e) => setSelectedTenantId(e.target.value)}
-            disabled={tenantOptions.length === 0}
-          >
-            {tenantOptions.length === 0 && (
-              <option value="">No tenants found</option>
-            )}
-            {tenantOptions.map((tenant) => (
-              <option key={tenant.value} value={tenant.value}>
-                {tenant.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* =========================
+          FILTERS
+      ========================= */}
+      <div className="flex flex-col gap-4">
+        <div className="rounded-xl  bg-base-100 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-1">
+              <FilterIcon className="w-4 h-4" />
+              <h2 className="text-sm font-semibold text-base-content/70">
+                Filters
+              </h2>
+            </div>
 
-        <div className="form-control w-full sm:w-64">
-          <label className="label pb-1">
-            <span className="label-text">Event</span>
-          </label>
-          <select
-            className="select select-bordered w-full rounded-full"
-            value={selectedEventId}
-            onChange={(e) => setSelectedEventId(e.target.value)}
-            disabled={!selectedTenantId || eventOptions.length === 0}
-          >
-            <option value="">All events</option>
-            {eventOptions.map((event) => (
-              <option key={event.value} value={event.value}>
-                {event.label}
-              </option>
-            ))}
-          </select>
+            {selectedEventId && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setSelectedEventId("")}
+                >
+                  <FunnelXIcon className="w-4 h-4" />
+                  Clear filters
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="form-control w-full sm:w-64">
+              <label className="label pb-1">
+                <span className="label-text">Event</span>
+              </label>
+              <select
+                className="select select-bordered w-full rounded-full"
+                value={selectedEventId}
+                onChange={(e) => setSelectedEventId(e.target.value)}
+                disabled={eventOptions.length === 0}
+              >
+                <option value="">All events</option>
+                {eventOptions.map((event) => (
+                  <option key={event.value} value={event.value}>
+                    {event.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+        <div className="mt-2">
+          {/* =========================
+          TABLE
+      ========================= */}
+          <RecapsListInner
+            key={selectedEventId}
+            filters={filters}
+            emptyMessage={emptyMessage}
+          />
         </div>
       </div>
-
-      {!selectedTenantId ? (
-        <div className="alert alert-warning">
-          <span>Please select a tenant to view recaps.</span>
-        </div>
-      ) : (
-        <RecapsListInner
-          key={`${selectedTenantId}-${selectedEventId}`}
-          filters={filters}
-          emptyMessage={emptyMessage}
-        />
-      )}
     </Layout>
   );
 };
