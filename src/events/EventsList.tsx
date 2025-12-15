@@ -16,12 +16,13 @@ import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import CatalogsProvider from "@shared/CatalogsProvider";
 import FormAutocomplete from "@shared/FormAutocomplete";
+import FormDatePicker from "@/shared/FormDatePicker";
+import { useAuthStore } from "@/store/authStore";
 
 //Icons
 import { EyeIcon, PencilIcon } from "@heroicons/react/24/outline";
 import { FilterIcon, FunnelXIcon } from "lucide-react";
-import FormDatePicker from "@/shared/FormDatePicker";
-import { useAuthStore } from "@/store/authStore";
+import { Bars4Icon } from "@heroicons/react/24/solid";
 
 const PAGE_SIZE = 10;
 
@@ -200,7 +201,8 @@ const EventsList = () => {
 
   return (
     <Layout>
-      <div className="mb-4">
+      <div className="flex items-center gap-2 mb-4">
+        <Bars4Icon className="w-6 h-6" />
         <h1 className="text-2xl font-bold">Events</h1>
       </div>
 

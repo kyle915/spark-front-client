@@ -15,11 +15,8 @@ import EditableLocationMap from "@shared/EditableLocationMap";
 import FormCheckbox from "@shared/FormCheckbox";
 import FormTextarea from "@shared/FormTextarea";
 
-import {
-  ArrowLeftIcon,
-  PencilIcon,
-  XCircleIcon,
-} from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { PencilIcon } from "@heroicons/react/24/solid";
 import { SaveIcon } from "lucide-react";
 
 import { useMutation } from "react-relay/hooks";
@@ -211,7 +208,6 @@ export default function EventForm({
   };
 
   const handleCreateStoreManager = async () => {
-    // Validar campos requeridos
     const isValid = await trigger(["storeManagerName", "storeManagerPhone"]);
 
     if (!isValid) {
@@ -289,16 +285,16 @@ export default function EventForm({
 
             <div>
               <div className="flex items-center gap-2">
-                <PencilIcon className="w-4 h-4 text-base-content/50" />
-                <p className="text-xs uppercase tracking-[0.5em] text-base-content/40">
-                  {mode === "edit" ? "Edit Event" : "New Event"}
-                </p>
+                <PencilIcon className="w-6 h-6 text-base-content/50" />
+
+                <div className="flex items-center">
+                  <h1 className="text-3xl font-semibold mt-1 ">
+                    {mode === "edit"
+                      ? defaultValues?.name ?? "Edit Event"
+                      : "Create Event"}
+                  </h1>
+                </div>
               </div>
-              <h1 className="text-3xl font-semibold mt-1">
-                {mode === "edit"
-                  ? defaultValues?.name ?? "Edit Event"
-                  : "Create Event"}
-              </h1>
               <p className="text-base-content/70 text-sm mt-2">
                 {mode === "edit"
                   ? "Update the event information. Changes will apply immediately after saving."
@@ -389,211 +385,215 @@ export default function EventForm({
                 </span>
               </div>
 
-              {/* ================= DISTRIBUTOR ================= */}
-              <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
-                <p className="font-medium">Distributor</p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* ================= DISTRIBUTOR ================= */}
+                <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
+                  <p className="font-medium">Distributor</p>
 
-                {/* SELECT */}
-                <FormAutocomplete
-                  name="distributorId"
-                  control={control}
-                  label="Select distributor"
-                  placeholder="Search distributor..."
-                  options={distributorsOptions}
-                />
+                  {/* SELECT */}
+                  <FormAutocomplete
+                    name="distributorId"
+                    control={control}
+                    label="Select distributor"
+                    placeholder="Search distributor..."
+                    options={distributorsOptions}
+                  />
 
-                {/* CREATE TOGGLE */}
-                {!distributorId && (
-                  <div className="space-y-3">
-                    {!showDistributorLocation ? (
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-xs"
-                        onClick={() => setShowDistributorLocation(true)}
-                      >
-                        Create new distributor
-                      </button>
-                    ) : (
-                      <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormInputText
-                            name="distributorName"
+                  {/* CREATE TOGGLE */}
+                  {!distributorId && (
+                    <div className="space-y-3">
+                      {!showDistributorLocation ? (
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-xs"
+                          onClick={() => setShowDistributorLocation(true)}
+                        >
+                          Create new distributor
+                        </button>
+                      ) : (
+                        <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormInputText
+                              name="distributorName"
+                              control={control}
+                              label="Distributor name"
+                              placeholder="Enter distributor name"
+                            />
+                            <FormInputText
+                              name="distributorEmail"
+                              control={control}
+                              label="Distributor email"
+                              placeholder="Enter distributor email"
+                            />
+                          </div>
+
+                          <FormAutocomplete
+                            name="distributorLocationId"
                             control={control}
-                            label="Distributor name"
-                            placeholder="Enter distributor name"
+                            label="Distributor location"
+                            placeholder="Select location"
+                            options={locations.map((l) => ({
+                              value: l.id,
+                              label: l.name,
+                            }))}
                           />
-                          <FormInputText
-                            name="distributorEmail"
-                            control={control}
-                            label="Distributor email"
-                            placeholder="Enter distributor email"
-                          />
+
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-xs"
+                              onClick={handleCreateDistributor}
+                              disabled={isCreatingDistributor}
+                            >
+                              Confirm distributor
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-xs"
+                              onClick={() => {
+                                setShowDistributorLocation(false);
+                                setValue("distributorLocationId", null);
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
-
-                        <FormAutocomplete
-                          name="distributorLocationId"
-                          control={control}
-                          label="Distributor location"
-                          placeholder="Select location"
-                          options={locations.map((l) => ({
-                            value: l.id,
-                            label: l.name,
-                          }))}
-                        />
-
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-xs"
-                            onClick={handleCreateDistributor}
-                            disabled={isCreatingDistributor}
-                          >
-                            Confirm distributor
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs"
-                            onClick={() => {
-                              setShowDistributorLocation(false);
-                              setValue("distributorLocationId", null);
-                            }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* ================= RETAILER ================= */}
-              <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
-                <p className="font-medium">Retailer</p>
-
-                {/* SELECT */}
-                <FormAutocomplete
-                  name="retailerId"
-                  control={control}
-                  label="Select retailer"
-                  placeholder="Search retailer..."
-                  options={retailersOptions}
-                />
-
-                {/* CREATE TOGGLE */}
-                {!retailerId && (
-                  <div className="space-y-3">
-                    {!showRetailerLocation ? (
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-xs"
-                        onClick={() => setShowRetailerLocation(true)}
-                      >
-                        Create new retailer
-                      </button>
-                    ) : (
-                      <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormInputText
-                            name="retailerName"
-                            control={control}
-                            label="Retailer name"
-                            placeholder="Enter retailer name"
-                          />
-                          <FormInputText
-                            name="retailerAddress"
-                            control={control}
-                            label="Retailer address"
-                            placeholder="Enter retailer address"
-                          />
-                          <FormInputText
-                            name="retailerStoreContact"
-                            control={control}
-                            label="Store contact"
-                            placeholder="Enter store contact"
-                          />
-                        </div>
-
-                        <FormAutocomplete
-                          name="retailerLocationId"
-                          control={control}
-                          label="Retailer location"
-                          placeholder="Select location"
-                          options={locations.map((l) => ({
-                            value: l.id,
-                            label: l.name,
-                          }))}
-                        />
-
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-xs"
-                            onClick={handleCreateRetailer}
-                            disabled={isCreatingRetailer}
-                          >
-                            Confirm retailer
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs"
-                            onClick={() => {
-                              setShowRetailerLocation(false);
-                              setValue("retailerLocationId", null);
-                            }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* ================= STORE MANAGER ================= */}
-              <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
-                <p className="font-medium">Store manager</p>
-
-                {/* SELECT */}
-                <FormAutocomplete
-                  name="storeManagerId"
-                  control={control}
-                  label="Select store manager"
-                  placeholder="Search store manager..."
-                  options={storeManagerOptions}
-                />
-
-                {/* CREATE */}
-                {!storeManagerId && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormInputText
-                        name="storeManagerName"
-                        control={control}
-                        label="Store manager name"
-                        placeholder="Enter name"
-                        rules={{ required: "Store manager name is required" }}
-                      />
-                      <FormInputText
-                        name="storeManagerPhone"
-                        control={control}
-                        label="Store manager phone"
-                        placeholder="Enter phone"
-                        rules={{ required: "Store manager phone is required" }}
-                      />
+                      )}
                     </div>
+                  )}
+                </div>
 
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-xs"
-                      onClick={handleCreateStoreManager}
-                      disabled={isCreatingStoreManager}
-                    >
-                      Create store manager
-                    </button>
-                  </div>
-                )}
+                {/* ================= RETAILER ================= */}
+                <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
+                  <p className="font-medium">Retailer</p>
+
+                  {/* SELECT */}
+                  <FormAutocomplete
+                    name="retailerId"
+                    control={control}
+                    label="Select retailer"
+                    placeholder="Search retailer..."
+                    options={retailersOptions}
+                  />
+
+                  {/* CREATE TOGGLE */}
+                  {!retailerId && (
+                    <div className="space-y-3">
+                      {!showRetailerLocation ? (
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-xs"
+                          onClick={() => setShowRetailerLocation(true)}
+                        >
+                          Create new retailer
+                        </button>
+                      ) : (
+                        <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormInputText
+                              name="retailerName"
+                              control={control}
+                              label="Retailer name"
+                              placeholder="Enter retailer name"
+                            />
+                            <FormInputText
+                              name="retailerAddress"
+                              control={control}
+                              label="Retailer address"
+                              placeholder="Enter retailer address"
+                            />
+                            <FormInputText
+                              name="retailerStoreContact"
+                              control={control}
+                              label="Store contact"
+                              placeholder="Enter store contact"
+                            />
+                          </div>
+
+                          <FormAutocomplete
+                            name="retailerLocationId"
+                            control={control}
+                            label="Retailer location"
+                            placeholder="Select location"
+                            options={locations.map((l) => ({
+                              value: l.id,
+                              label: l.name,
+                            }))}
+                          />
+
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-xs"
+                              onClick={handleCreateRetailer}
+                              disabled={isCreatingRetailer}
+                            >
+                              Confirm retailer
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-xs"
+                              onClick={() => {
+                                setShowRetailerLocation(false);
+                                setValue("retailerLocationId", null);
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ================= STORE MANAGER ================= */}
+                <div className="col-span-2 space-y-4 rounded-xl bg-base-200/60 p-4">
+                  <p className="font-medium">Store manager</p>
+
+                  {/* SELECT */}
+                  <FormAutocomplete
+                    name="storeManagerId"
+                    control={control}
+                    label="Select store manager"
+                    placeholder="Search store manager..."
+                    options={storeManagerOptions}
+                  />
+
+                  {/* CREATE */}
+                  {!storeManagerId && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormInputText
+                          name="storeManagerName"
+                          control={control}
+                          label="Store manager name"
+                          placeholder="Enter name"
+                          rules={{ required: "Store manager name is required" }}
+                        />
+                        <FormInputText
+                          name="storeManagerPhone"
+                          control={control}
+                          label="Store manager phone"
+                          placeholder="Enter phone"
+                          rules={{
+                            required: "Store manager phone is required",
+                          }}
+                        />
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-xs"
+                        onClick={handleCreateStoreManager}
+                        disabled={isCreatingStoreManager}
+                      >
+                        Create store manager
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
           )}

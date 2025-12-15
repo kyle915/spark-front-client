@@ -16,9 +16,15 @@ import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import CatalogsProvider from "@/shared/CatalogsProvider";
 import FormAutocomplete from "@/shared/FormAutocomplete";
+import { useAuthStore } from "@/store/authStore";
 
 //Icons
-import { EyeIcon, PencilIcon } from "@heroicons/react/24/solid";
+import {
+  CalendarDaysIcon,
+  EyeIcon,
+  PencilIcon,
+} from "@heroicons/react/24/outline";
+import { FilterIcon, FunnelXIcon } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
@@ -170,33 +176,33 @@ const TodayEventsInner = ({ filters }: TodayEventsInnerProps) => {
 };
 
 const TodayEvents = () => {
-  const { control, watch } = useForm({
+  const { tenantId } = useAuthStore();
+  const { control, watch, reset } = useForm({
     defaultValues: {
-      tenant: "",
+      // tenant: "",
       eventType: "",
       status: "",
       request: "",
     },
   });
-  const selectedTenant = watch("tenant");
+  // const selectedTenant = watch("tenant");
   const selectedEventType = watch("eventType");
   const selectedStatus = watch("status");
   const selectedRequest = watch("request");
 
   const filters = {
-    tenantId: selectedTenant || undefined,
+    tenantId: tenantId || undefined,
     eventTypeId: selectedEventType || undefined,
     eventStatusId: selectedStatus || undefined,
     requestId: selectedRequest || undefined,
   };
 
-  const catalogFilters = selectedTenant
-    ? { tenantId: selectedTenant }
-    : undefined;
+  const catalogFilters = undefined;
 
   return (
     <Layout>
-      <div className="mb-4">
+      <div className="flex items-center gap-2 mb-4">
+        <CalendarDaysIcon className="w-6 h-6" />
         <h1 className="text-2xl font-bold">Today's Events</h1>
       </div>
 
@@ -211,7 +217,7 @@ const TodayEvents = () => {
       >
         {(catalogs) => (
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-base-200 rounded-lg">
+            {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-base-200 rounded-lg">
               <FormAutocomplete
                 control={control}
                 name="tenant"
@@ -222,41 +228,66 @@ const TodayEvents = () => {
                 }))}
                 placeholder="Search tenant..."
               />
+            </div> */}
+            <div className="rounded-xl  bg-base-100 p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-1">
+                  <FilterIcon className="w-4 h-4" />
+                  <h2 className="text-sm font-semibold text-base-content/70">
+                    Filters
+                  </h2>
+                </div>
+
+                {Object.entries(watch()).some(([, value]) => value) && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => reset()}
+                    >
+                      <FunnelXIcon className="w-4 h-4" />
+                      Clear filters
+                    </button>
+                  </>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormAutocomplete
+                  control={control}
+                  name="eventType"
+                  label="Filter by Event Type"
+                  options={catalogs.eventTypes.map((t) => ({
+                    label: t.name,
+                    value: t.id,
+                  }))}
+                  placeholder="Search event type..."
+                />
+                <FormAutocomplete
+                  control={control}
+                  name="status"
+                  label="Filter by Status"
+                  options={catalogs.eventStatuses.map((s) => ({
+                    label: s.name,
+                    value: s.id,
+                  }))}
+                  placeholder="Search status..."
+                />
+                <FormAutocomplete
+                  control={control}
+                  name="request"
+                  label="Filter by Request"
+                  options={catalogs.requests.map((r) => ({
+                    label: r.name,
+                    value: r.id,
+                  }))}
+                  placeholder="Search request..."
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormAutocomplete
-                control={control}
-                name="eventType"
-                label="Filter by Event Type"
-                options={catalogs.eventTypes.map((t) => ({
-                  label: t.name,
-                  value: t.id,
-                }))}
-                placeholder="Search event type..."
-              />
-              <FormAutocomplete
-                control={control}
-                name="status"
-                label="Filter by Status"
-                options={catalogs.eventStatuses.map((s) => ({
-                  label: s.name,
-                  value: s.id,
-                }))}
-                placeholder="Search status..."
-              />
-              <FormAutocomplete
-                control={control}
-                name="request"
-                label="Filter by Request"
-                options={catalogs.requests.map((r) => ({
-                  label: r.name,
-                  value: r.id,
-                }))}
-                placeholder="Search request..."
-              />
-            </div>
+
             <TodayEventsInner
-              key={`${selectedTenant}-${selectedEventType}-${selectedStatus}-${selectedRequest}`}
+              key={`${selectedEventType}-${selectedStatus}-${selectedRequest}`}
               filters={filters}
             />
           </div>

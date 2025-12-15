@@ -132,8 +132,6 @@ export default function RequestForm({
     });
   };
 
-  const title = defaultValues?.name ?? "Edit Request";
-
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full">
       <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
@@ -168,31 +166,22 @@ export default function RequestForm({
 
             {/* title row */}
             <div>
-              {mode === "edit" ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <PencilIcon className="w-4 h-4 text-base-content/50" />
-                    <p className="text-xs uppercase tracking-[0.5em] text-base-content/40">
-                      Edit Request
-                    </p>
-                  </div>
-                  <h1 className="text-3xl font-semibold mt-1">{title}</h1>
-                  <p className="text-base-content/70 text-sm mt-2">
-                    Update the request information. Changes will apply
-                    immediately after saving.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2">
-                    <PencilIcon className="w-4 h-4 text-base-content/50" />
-                    <p className="text-lg uppercase bold">New Request</p>
-                  </div>
-                  <p className="text-base-content/70 text-sm mt-2">
-                    Fill out the form below to create a new request.
-                  </p>
-                </>
-              )}
+              <div className="flex items-center gap-2">
+                <PencilIcon className="w-6 h-6 text-base-content/50" />
+
+                <div className="flex items-center">
+                  <h1 className="text-3xl font-semibold mt-1 ">
+                    {mode === "edit"
+                      ? defaultValues?.name ?? "Edit Request"
+                      : "Create Request"}
+                  </h1>
+                </div>
+              </div>
+              <p className="text-base-content/70 text-sm mt-2">
+                {mode === "edit"
+                  ? "Update the request information. Changes will apply immediately after saving."
+                  : "Fill out the form below to create a new request."}
+              </p>
             </div>
           </div>
 
