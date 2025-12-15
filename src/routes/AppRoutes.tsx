@@ -33,6 +33,7 @@ import EditEvent from "@/events/EditEvent";
 import EventView from "@/events/EventView";
 import TodayEvents from "@/events/TodayEvents";
 import TodayEventsMap from "@/events/TodayEventsMap";
+import CreateEventWithoutRequest from "@/events/CreateEventWithoutRequest";
 
 // Tenants
 // import TenantsList from "@/tenants/TenantsList";
@@ -133,6 +134,12 @@ const RequestsLinks = {
 ----------------------------------------------------------- */
 const EventsLinks = {
   menu: [
+    {
+      path: "/event/create",
+      name: "Create",
+      component: <CreateEventWithoutRequest />,
+      Icon: PlusCircleIcon,
+    },
     { path: "/events/list", name: "List", Icon: Bars4Icon },
     { path: "/events/today", name: "Today", Icon: CalendarIcon },
     { path: "/events/map", name: "Map", Icon: MapIcon },
@@ -142,7 +149,11 @@ const EventsLinks = {
     { path: "/events/list", component: <EventsList />, isPublic: false },
     { path: "/events/today", component: <TodayEvents />, isPublic: false },
     { path: "/events/map", component: <TodayEventsMap />, isPublic: false },
-
+    {
+      path: "/event/create",
+      name: "Create Event",
+      component: <CreateEventWithoutRequest />,
+    },
     {
       path: "/event/create/:uuid",
       component: <CreateEvent />,

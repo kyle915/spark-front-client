@@ -140,3 +140,5 @@ vite.config.ts.timestamp-*
 
 **/__generated__/
 src/api/queries/__generated__/
+
+TASKS.md

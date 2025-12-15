@@ -110,6 +110,7 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
 
           return (
             <EventForm
+              mode="edit"
               eventTypes={eventTypes}
               onSubmit={handleSubmit}
               defaultValues={defaultValues}

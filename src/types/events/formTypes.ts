@@ -80,6 +80,7 @@ export interface EventFormValues {
 // Component Props
 // ------------------------------------
 export interface EventFormProps {
+  mode: "create" | "edit";
   tenants?: Tenant[];
   requests?: RequestType[];
   eventTypes: EventType[];
