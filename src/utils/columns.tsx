@@ -8,36 +8,66 @@ import type {
 import { formatDate, formatTime } from "@/utils";
 
 export const requestColumns: Column<RequestRow>[] = [
-  { key: "name", label: "Name" },
   {
-    key: "date",
-    label: "Date",
-    render: (_value, row) => formatDate(row.date ?? null),
+    key: "name",
+    label: "Request",
+    render: (_v, row) => (
+      <div className="flex flex-col">
+        <span className="font-medium">{row.name}</span>
+        {row.requestType?.name && (
+          <span className="text-xs opacity-60">{row.requestType.name}</span>
+        )}
+      </div>
+    ),
   },
   {
-    key: "startTime",
-    label: "Start Time",
-    render: (_value, row) => formatTime(row.startTime ?? null),
+    key: "schedule",
+    label: "Schedule",
+    render: (_v, row) => (
+      <div className="flex flex-col text-sm">
+        <span className="font-medium">{formatDate(row.date ?? null)}</span>
+        <span className="opacity-60">
+          {formatTime(row.startTime ?? null)} -{" "}
+          {formatTime(row.endTime ?? null)}
+        </span>
+      </div>
+    ),
   },
   {
     key: "retailer",
     label: "Retailer",
-    render: (_value, row) => row.retailer?.name ?? "-",
+    render: (_v, row) => (
+      <span className="font-medium">{row.retailer?.name ?? "-"}</span>
+    ),
   },
   {
     key: "distributor",
     label: "Distributor",
-    render: (_value, row) => row.distributor?.name ?? "-",
-  },
-  {
-    key: "requestType",
-    label: "Type",
-    render: (_value, row) => row.requestType?.name ?? "-",
+    render: (_v, row) => (
+      <span className="opacity-70">{row.distributor?.name ?? "-"}</span>
+    ),
   },
   {
     key: "status",
     label: "Status",
-    render: (_value, row) => row.status?.name ?? "-",
+    render: (_v, row) => {
+      const statusColorMap: Record<string, string> = {
+        Pending: "badge-warning",
+        Approved: "badge-success",
+        Rejected: "badge-error",
+        Cancelled: "badge-neutral",
+      };
+
+      return (
+        <span
+          className={`badge badge-sm ${
+            statusColorMap[row.status?.name ?? ""] ?? "badge-outline"
+          }`}
+        >
+          {row.status?.name ?? "-"}
+        </span>
+      );
+    },
   },
 ];
 
@@ -45,41 +75,69 @@ export const eventColumns: Column<EventRow>[] = [
   {
     key: "name",
     label: "Event",
+    render: (_v, row) => (
+      <div className="flex flex-col">
+        <span className="font-medium">{row.name}</span>
+        {row.request?.name && (
+          <span className="text-xs opacity-60">{row.request.name}</span>
+        )}
+      </div>
+    ),
   },
   {
-    key: "eventDate",
-    label: "Date",
-    render: (_value, row) => formatDate(row.request?.date ?? "-"),
-  },
-  {
-    key: "eventStart",
-    label: "Start Time",
-    render: (_value, row) => formatTime(row.startTime ?? "-"),
-  },
-  {
-    key: "eventEnd",
-    label: "End Time",
-    render: (_value, row) => formatTime(row.endTime ?? "-"),
+    key: "schedule",
+    label: "Schedule",
+    render: (_v, row) => (
+      <div className="flex flex-col text-sm">
+        <span className="font-medium">
+          {formatDate(row.request?.date ?? "-")}
+        </span>
+        <span className="opacity-60">
+          {formatTime(row.startTime || null)} –{" "}
+          {formatTime(row.endTime || null)}
+        </span>
+      </div>
+    ),
   },
   {
     key: "address",
     label: "Address",
-    render: (_value, row) => row.address ?? "-",
+    render: (_v, row) => (
+      <span className="block max-w-[220px] truncate" title={row.address ?? ""}>
+        {row.address ?? "-"}
+      </span>
+    ),
   },
   {
     key: "eventType",
     label: "Type",
-    render: (_value, row) => row.eventType?.name ?? "-",
+    render: (_v, row) => (
+      <span className="badge badge-outline badge-sm">
+        {row.eventType?.name ?? "-"}
+      </span>
+    ),
   },
   {
     key: "status",
     label: "Status",
-    render: (_value, row) => row.status?.name ?? "-",
-  },
-  {
-    key: "request",
-    label: "Request",
-    render: (_value, row) => row.request?.name ?? "-",
+    render: (_v, row) => {
+      const statusColorMap: Record<string, string> = {
+        Pending: "badge-warning",
+        Approved: "badge-success",
+        Rejected: "badge-error",
+        Cancelled: "badge-neutral",
+      };
+
+      return (
+        <span
+          className={`badge badge-sm ${
+            statusColorMap[row.status?.name ?? ""] ?? "badge-outline"
+          }`}
+        >
+          {row.status?.name ?? "-"}
+        </span>
+      );
+    },
   },
 ];
 

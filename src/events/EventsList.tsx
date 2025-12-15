@@ -18,9 +18,10 @@ import CatalogsProvider from "@shared/CatalogsProvider";
 import FormAutocomplete from "@shared/FormAutocomplete";
 
 //Icons
-import { EyeIcon, PencilIcon } from "@heroicons/react/24/solid";
+import { EyeIcon, PencilIcon } from "@heroicons/react/24/outline";
 import { FilterIcon, FunnelXIcon } from "lucide-react";
 import FormDatePicker from "@/shared/FormDatePicker";
+import { useAuthStore } from "@/store/authStore";
 
 const PAGE_SIZE = 10;
 
@@ -170,6 +171,8 @@ const EventsListInner = ({ filters }: EventsListInnerProps) => {
 };
 
 const EventsList = () => {
+  const { tenantId } = useAuthStore();
+
   const { control, watch, reset } = useForm({
     defaultValues: {
       // tenant: "",
@@ -186,7 +189,7 @@ const EventsList = () => {
   const selectedDate = watch("date");
 
   const filters = {
-    // tenantId: selectedTenant || undefined,
+    tenantId: tenantId || undefined,
     eventTypeId: selectedEventType || undefined,
     eventStatusId: selectedStatus || undefined,
     requestId: selectedRequest || undefined,

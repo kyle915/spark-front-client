@@ -20,6 +20,7 @@ export interface RequestRow {
   name: string;
   date?: string | null;
   startTime?: string | null;
+  endTime?: string | null;
   address?: string | null;
   client?: NamedEntity | null;
   distributor?: NamedEntity | null;
