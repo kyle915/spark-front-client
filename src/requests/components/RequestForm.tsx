@@ -89,16 +89,58 @@ export default function RequestForm({
 }: RequestFormProps) {
   const navigate = useNavigate();
 
-  const { handleSubmit, control, watch, setValue, reset } =
+  const safeDefaultValues: RequestFormValues = {
+    name: "",
+    date: "",
+    startTime: "",
+    endTime: "",
+    address: "",
+    coordinates: null,
+    timezoneId: null,
+    retailerId: null,
+    distributorId: null,
+    requestTypeId: null,
+
+    clientName: "",
+    clientEmail: "",
+    distributorName: "",
+    distributorEmail: "",
+    retailerName: "",
+    retailerAddress: "",
+    retailerStoreContact: "",
+    storeManagerName: "",
+    storeManagerPhone: "",
+
+    isTableNeeded: false,
+    tableSize: "",
+    products: [],
+
+    ...defaultValues,
+  };
+
+  const { handleSubmit, control, watch, setValue, reset, formState } =
     useForm<RequestFormValues>({
-      defaultValues,
+      defaultValues: safeDefaultValues,
     });
 
+  const isDirty = formState.isDirty;
+
   useEffect(() => {
-    if (defaultValues && Object.keys(defaultValues).length > 0) {
-      reset(defaultValues);
+    if (mode === "edit" && Object.keys(defaultValues).length > 0) {
+      reset({
+        name: defaultValues.name ?? "",
+        date: defaultValues.date ?? "",
+        startTime: defaultValues.startTime ?? "",
+        endTime: defaultValues.endTime ?? "",
+        address: defaultValues.address ?? "",
+        coordinates: defaultValues.coordinates ?? null,
+        timezoneId: defaultValues.timezoneId ?? null,
+        retailerId: defaultValues.retailerId ?? null,
+        distributorId: defaultValues.distributorId ?? null,
+        requestTypeId: defaultValues.requestTypeId ?? null,
+      });
     }
-  }, [defaultValues, reset]);
+  }, [mode, defaultValues, reset]);
 
   const [selectedProductType, setSelectedProductType] = useState<string>("");
 
@@ -157,7 +199,11 @@ export default function RequestForm({
                   <XCircleIcon className="w-4 h-4" />
                   Cancel
                 </Link>
-                <button type="submit" className="btn btn-sm btn-primary">
+                <button
+                  type="submit"
+                  className="btn btn-sm btn-primary"
+                  disabled={!isDirty}
+                >
                   <SaveIcon className="w-4 h-4" />
                   Save changes
                 </button>
@@ -484,7 +530,11 @@ export default function RequestForm({
             >
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={!isDirty}
+            >
               Save changes
             </button>
           </div>

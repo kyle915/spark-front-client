@@ -50,14 +50,47 @@ export default function EventForm({
   const navigate = useNavigate();
   const { showAlert } = useAlertStore();
 
+  const safeDefaultValues: EventFormValues = {
+    name: "",
+    address: "",
+    tenant: tenantId || "",
+    eventTypeId: null,
+    date: "",
+    startTime: "",
+    endTime: "",
+    notes: "",
+    isNational: false,
+    coordinates: null,
+
+    distributorId: null,
+    retailerId: null,
+    storeManagerId: null,
+
+    distributorName: "",
+    distributorEmail: "",
+    retailerName: "",
+    retailerAddress: "",
+    retailerStoreContact: "",
+    storeManagerName: "",
+    storeManagerPhone: "",
+
+    distributorLocationId: null,
+    retailerLocationId: null,
+
+    ...defaultValues,
+  };
+
   /* ================= FORM ================= */
-  const { handleSubmit, control, setValue, trigger } = useForm<EventFormValues>(
-    {
-      defaultValues,
-    }
-  );
+  const { handleSubmit, control, setValue, trigger, formState } =
+    useForm<EventFormValues>({
+      defaultValues: safeDefaultValues,
+    });
+
+  /* ================= WATCH IF HAVE CHANGES ================= */
+  const isDirty = formState.isDirty;
 
   /* ================= WATCH ================= */
+
   const distributorId = useWatch({ control, name: "distributorId" });
   const retailerId = useWatch({ control, name: "retailerId" });
   const storeManagerId = useWatch({ control, name: "storeManagerId" });
@@ -76,6 +109,7 @@ export default function EventForm({
   /* ================= UI STATE ================= */
   const [showDistributorLocation, setShowDistributorLocation] = useState(false);
   const [showRetailerLocation, setShowRetailerLocation] = useState(false);
+  const [showStoreManagerCreate, setShowStoreManagerCreate] = useState(false);
 
   /* ================= CONTACT MODE ================= */
   const effectiveContactMode = useMemo(
@@ -223,7 +257,7 @@ export default function EventForm({
       variables: {
         input: {
           tenantId,
-          requestId: requestId ?? "",
+          requestId: requestId ?? null,
           name: storeManagerName,
           phone: storeManagerPhone,
         },
@@ -276,7 +310,11 @@ export default function EventForm({
                   <XCircleIcon className="w-4 h-4" />
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-sm btn-primary">
+                <button
+                  type="submit"
+                  className="btn btn-sm btn-primary"
+                  disabled={!isDirty}
+                >
                   <SaveIcon className="w-4 h-4" />
                   {mode === "edit" ? "Save changes" : "Create event"}
                 </button>
@@ -402,6 +440,7 @@ export default function EventForm({
                   {/* CREATE TOGGLE */}
                   {!distributorId && (
                     <div className="space-y-3">
+                      <p className="text-base-content/60">or</p>
                       {!showDistributorLocation ? (
                         <button
                           type="button"
@@ -480,6 +519,7 @@ export default function EventForm({
                   {/* CREATE TOGGLE */}
                   {!retailerId && (
                     <div className="space-y-3">
+                      <p className="text-base-content/60">or</p>
                       {!showRetailerLocation ? (
                         <button
                           type="button"
@@ -561,36 +601,64 @@ export default function EventForm({
                     options={storeManagerOptions}
                   />
 
-                  {/* CREATE */}
+                  {/* CREATE TOGGLE */}
                   {!storeManagerId && (
                     <div className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormInputText
-                          name="storeManagerName"
-                          control={control}
-                          label="Store manager name"
-                          placeholder="Enter name"
-                          rules={{ required: "Store manager name is required" }}
-                        />
-                        <FormInputText
-                          name="storeManagerPhone"
-                          control={control}
-                          label="Store manager phone"
-                          placeholder="Enter phone"
-                          rules={{
-                            required: "Store manager phone is required",
-                          }}
-                        />
-                      </div>
+                      <p className="text-base-content/60">or</p>
+                      {!showStoreManagerCreate ? (
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-xs"
+                          onClick={() => setShowStoreManagerCreate(true)}
+                        >
+                          Create new store manager
+                        </button>
+                      ) : (
+                        <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormInputText
+                              name="storeManagerName"
+                              control={control}
+                              label="Store manager name"
+                              placeholder="Enter name"
+                              rules={{
+                                required: "Store manager name is required",
+                              }}
+                            />
+                            <FormInputText
+                              name="storeManagerPhone"
+                              control={control}
+                              label="Store manager phone"
+                              placeholder="Enter phone"
+                              rules={{
+                                required: "Store manager phone is required",
+                              }}
+                            />
+                          </div>
 
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-xs"
-                        onClick={handleCreateStoreManager}
-                        disabled={isCreatingStoreManager}
-                      >
-                        Create store manager
-                      </button>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-xs"
+                              onClick={handleCreateStoreManager}
+                              disabled={isCreatingStoreManager}
+                            >
+                              Confirm store manager
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-xs"
+                              onClick={() => {
+                                setShowStoreManagerCreate(false);
+                                setValue("storeManagerName", "");
+                                setValue("storeManagerPhone", "");
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -637,7 +705,11 @@ export default function EventForm({
             >
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={!isDirty}
+            >
               {mode === "edit" ? "Save changes" : "Create event"}
             </button>
           </div>

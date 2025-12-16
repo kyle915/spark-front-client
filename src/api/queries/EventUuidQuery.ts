@@ -12,6 +12,7 @@ export const EventUuidQuery = graphql`
       endTime
       address
       isNational
+      date
       notes
       request {
         __typename

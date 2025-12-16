@@ -247,7 +247,7 @@ export default function DataTableRelay<T>({
               (node as { id?: string | number } | undefined)?.id ?? index;
             const safeNode = node;
             return (
-              <tr key={rowKey} className="hover">
+              <tr key={rowKey} className="transition-colors hover:bg-base-200">
                 {columns.map((col) => {
                   const key = col.key;
                   const value =

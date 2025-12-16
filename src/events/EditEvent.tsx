@@ -86,9 +86,9 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
     startTime: event.startTime ?? undefined,
     endTime: event.endTime ?? undefined,
     notes: event.notes ?? "",
-    // date: event.date ?? undefined,
+    date: event.date ?? undefined,
     isNational: event.isNational ?? false,
-    coordinates: event.coordinates.map((coord) => coord) ?? undefined,
+    coordinates: event.coordinates?.map((coord) => coord) ?? undefined,
     eventTypeId: event.eventType?.id,
   };
 

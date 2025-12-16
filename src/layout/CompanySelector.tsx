@@ -13,25 +13,24 @@ type Company = {
   name: string;
   logo?: string | null;
 };
+
 type TenantEdge = TenantQueryType["response"]["tenants"]["edges"][number];
 
 export default function CompanySelector() {
-  const [selected, setSelected] = useState<string | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const { user } = useAuthStore();
-  const { selectTenant, tenantUuid } = useTenantSelection();
+
+  const { user, logout } = useAuthStore();
+  const { selectTenant } = useTenantSelection();
+
   const navigate = useNavigate();
   const location = useLocation();
+
   const from =
     (location.state as { from?: { pathname: string } })?.from?.pathname || "/";
 
   useEffect(() => {
     let isMounted = true;
-    setLoading(true);
-    setError(null);
 
     const variables: TenantQueryType["variables"] = user?.uuid
       ? { userUuid: user.uuid }
@@ -41,9 +40,10 @@ export default function CompanySelector() {
       .toPromise()
       .then((data) => {
         if (!isMounted) return;
+
         const tenantCompanies: Company[] =
-          data?.tenants?.edges?.map((tenantEdge: TenantEdge) => {
-            const tenant = tenantEdge.node;
+          data?.tenants?.edges?.map((edge: TenantEdge) => {
+            const tenant = edge.node;
             return {
               id: tenant.id,
               uuid: String(tenant.uuid),
@@ -52,75 +52,42 @@ export default function CompanySelector() {
             };
           }) ?? [];
 
+        // 👉 CASO: SOLO UN TENANT → AUTOSELECT + REDIRECT
+        if (tenantCompanies.length === 1) {
+          const [company] = tenantCompanies;
+          selectTenant(company.uuid, company.id);
+          navigate(from, { replace: true });
+          return;
+        }
+
         setCompanies(tenantCompanies);
         setLoading(false);
       })
-      .catch((err: unknown) => {
-        if (!isMounted) return;
-        const message =
-          err instanceof Error
-            ? err.message
-            : "The companies could not be loaded.";
-        setError(message);
-        setLoading(false);
+      .catch(() => {
+        // 👉 ERROR DE API = LOGOUT
+        logout();
+        navigate("/login", { replace: true });
       });
 
     return () => {
       isMounted = false;
     };
-  }, [user?.uuid, reloadKey]);
+  }, [user?.uuid, logout, navigate, from, selectTenant]);
 
-  useEffect(() => {
-    if (!loading && companies.length === 1) {
-      const [company] = companies;
-      setSelected(company.id);
-      selectTenant(company.uuid, company.id);
-      navigate(from, { replace: true });
-    }
-  }, [companies, navigate, loading, selectTenant, from]);
-
-  useEffect(() => {
-    if (!tenantUuid || !companies.length) return;
-    const company = companies.find((c) => c.uuid === tenantUuid);
-    if (company) {
-      setSelected(company.id);
-    }
-  }, [tenantUuid, companies]);
-
-  const handleSelect = (company: Company) => {
-    setSelected(company.id);
-    selectTenant(company.uuid, company.id);
-
-    navigate(`/dashboard/${company.uuid}`);
-  };
-
+  // 👉 Si estamos redirigiendo automáticamente
   if (loading) {
     return (
-      <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center p-6 gap-4 text-base-content">
+      <div className="min-h-screen bg-base-100 flex items-center justify-center">
         <span className="loading loading-spinner loading-lg text-primary" />
-        <p>Loading companies...</p>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center p-6 gap-4 text-center text-base-content">
-        <p>{error}</p>
-        <button
-          className="btn btn-primary"
-          onClick={() => setReloadKey((prev) => prev + 1)}
-        >
-          Try again
-        </button>
-      </div>
-    );
-  }
-
+  // 👉 Si no hay compañías (caso raro pero posible)
   if (!companies.length) {
     return (
-      <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center p-6 text-base-content">
-        <p>We cannot find any companies associated with your user account.</p>
+      <div className="min-h-screen bg-base-100 flex items-center justify-center text-base-content">
+        <p>No companies associated with this account.</p>
       </div>
     );
   }
@@ -143,25 +110,16 @@ export default function CompanySelector() {
         {companies.map((company) => (
           <div
             key={company.id}
-            onClick={() => handleSelect(company)}
-            className={`card bg-base-200 shadow-xl cursor-pointer transition transform hover:scale-105 border-2 ${
-              selected === company.id
-                ? "border-primary ring ring-primary ring-offset-2"
-                : "border-transparent"
-            }`}
+            onClick={() => {
+              selectTenant(company.uuid, company.id);
+              navigate(`/dashboard/${company.uuid}`);
+            }}
+            className="card bg-base-200 shadow-xl cursor-pointer transition transform hover:scale-105 border-2 border-transparent hover:border-primary"
           >
             <div className="card-body items-center text-center">
-              {company.logo ? (
-                <img
-                  src={company.logo}
-                  alt={company.name}
-                  className="w-32 h-32 object-contain mb-4"
-                />
-              ) : (
-                <div className="w-32 h-32 rounded-full bg-primary/10 text-primary flex items-center justify-center text-3xl font-bold mb-4">
-                  {company.name.slice(0, 2).toUpperCase()}
-                </div>
-              )}
+              <div className="w-32 h-32 rounded-full bg-primary/10 text-primary flex items-center justify-center text-3xl font-bold mb-4">
+                {company.name.slice(0, 2).toUpperCase()}
+              </div>
               <h3 className="text-xl font-semibold text-base-content">
                 {company.name}
               </h3>
@@ -169,15 +127,6 @@ export default function CompanySelector() {
           </div>
         ))}
       </div>
-
-      {selected && (
-        <div className="mt-10 text-lg text-base-content">
-          You have selected:{" "}
-          <span className="font-bold text-primary">
-            {companies.find((c) => c.id === selected)?.name}
-          </span>
-        </div>
-      )}
     </div>
   );
 }

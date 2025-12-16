@@ -33,8 +33,6 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     { fetchPolicy: "store-and-network" }
   );
 
-  const timezones = timezonesData.timezones?.edges.map((e) => e.node) || [];
-
   if (!request) {
     return (
       <div className="alert alert-warning">
@@ -54,10 +52,14 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
           endTime: formData.endTime || "00:00",
           address: formData.address,
           coordinates: (formData.coordinates ?? []) as readonly number[],
-          clientId: formData.clientId ?? "",
-          retailerId: formData.retailerId ?? "",
-          distributorId: formData.distributorId ?? "",
+          timezoneId: formData.timezoneId ?? "",
           requestTypeId: formData.requestTypeId ?? "",
+          distributorId: formData.distributorId ?? "",
+          retailerId: formData.retailerId ?? "",
+          storeManagerName: formData.storeManagerName ?? "",
+          storeManagerPhone: formData.storeManagerPhone ?? "",
+          details: [],
+          products: [],
         },
       },
       onCompleted: (response) => {
@@ -79,18 +81,18 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
   const defaultValues: Partial<RequestFormValues> = {
     name: request.name ?? "",
     date: request.date ?? "",
-    startTime: request.startTime,
-    endTime: request.endTime,
-    address: request.address,
-    coordinates: request.coordinates as number[] | null | undefined,
-    clientId: request.client?.id,
-    retailerId: request.retailer?.id,
-    distributorId: request.distributor?.id,
-    requestTypeId: request.requestType?.id,
-    timezoneId: request.timezone?.id,
+    startTime: request.startTime ?? "",
+    endTime: request.endTime ?? "",
+    address: request.address ?? "",
+    coordinates: request.coordinates?.length ? [...request.coordinates] : null,
+    timezoneId: request.timezone?.id ?? null,
+    retailerId: request.retailer?.id ?? null,
+    distributorId: request.distributor?.id ?? null,
+    requestTypeId: request.requestType?.id ?? null,
   };
 
   const filters = { tenantId: request.tenantId };
+  const timezones = timezonesData.timezones?.edges.map((e) => e.node) || [];
 
   return (
     <>

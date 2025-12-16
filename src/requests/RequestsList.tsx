@@ -229,7 +229,7 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
           <button
             type="button"
             className={`btn btn-xs btn-outline btn-error tooltip ${
-              isDeclined ? "btn-disabled" : ""
+              isDeclined || isApproved ? "btn-disabled" : ""
             }`}
             data-tip={isDeclined ? "Already declined" : "Decline Request"}
             onClick={() => handleDeclineClick(request)}
