@@ -2,14 +2,12 @@ import { useEffect, useMemo, useState, Suspense } from "react";
 import Layout from "@/layout/Layout";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { fetchQuery, graphql } from "react-relay";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, Link } from "react-router";
 import { useForm } from "react-hook-form";
 import type { Control } from "react-hook-form";
-import { TenantsQuery } from "@/api/queries/TenantsQuery";
 import { EventsQuery } from "@/api/queries/EventsQuery";
 import { RecapQuery } from "@/api/queries/RecapQuery";
 import { UpdateRecapMutation } from "@/api/mutations/UpdateRecapMutation";
-import type { TenantsQuery as TenantsQueryType } from "@/api/queries/__generated__/TenantsQuery.graphql";
 import type { EventsQuery as EventsQueryType } from "@/api/queries/__generated__/EventsQuery.graphql";
 import type { RecapQuery as RecapQueryType } from "@/api/queries/__generated__/RecapQuery.graphql";
 import type { UpdateRecapMutation as UpdateRecapMutationType } from "@/api/mutations/__generated__/UpdateRecapMutation.graphql";
@@ -18,21 +16,27 @@ import { useAlertStore } from "@/store/alertStore";
 import FormInputText from "@/shared/FormInputText";
 import FormAutocomplete from "@/shared/FormAutocomplete";
 import Loading from "@/shared/Loading";
-import LoadingButton from "@/shared/LoadingButton";
 import environment from "@/api/relay/environment";
+
+import { useAuthStore } from "@/store/authStore";
+import {
+  ArrowLeftIcon,
+  PencilIcon,
+  XCircleIcon,
+} from "@heroicons/react/24/solid";
+import { SaveIcon } from "lucide-react";
 
 type RecapFormValues = {
   name: string;
-  tenantId: string;
   eventId: string;
 };
 
 type EventSelectProps = {
-  tenantId: string;
+  tenantId: string; // debe ser válido siempre
   control: Control<RecapFormValues>;
 };
 
-const EventSelect = ({ tenantId, control }: EventSelectProps) => {
+const EventSelect = ({ control, tenantId }: EventSelectProps) => {
   const eventsData = useLazyLoadQuery<EventsQueryType>(
     EventsQuery,
     { filters: { tenantId } },
@@ -83,6 +87,7 @@ const EditRecap = () => {
     { id: 0, file: null },
   ]);
   const [nextFileId, setNextFileId] = useState(1);
+  const { tenantId } = useAuthStore();
 
   const recapData = useLazyLoadQuery<RecapQueryType>(
     RecapQuery,
@@ -92,30 +97,12 @@ const EditRecap = () => {
 
   const recap = recapData.recap;
 
-  const tenantsData = useLazyLoadQuery<TenantsQueryType>(
-    TenantsQuery,
-    {},
-    { fetchPolicy: "store-and-network" }
-  );
-
-  const tenantOptions = useMemo(
-    () =>
-      tenantsData.tenants.edges.map((edge) => ({
-        value: edge.node.id,
-        label: edge.node.name,
-      })),
-    [tenantsData]
-  );
-
-  const { control, handleSubmit, watch, setValue } = useForm<RecapFormValues>({
+  const { control, handleSubmit, setValue } = useForm<RecapFormValues>({
     defaultValues: {
       name: recap?.name ?? "",
-      tenantId: recap?.event?.tenantId ?? "",
       eventId: recap?.event?.id ?? "",
     },
   });
-
-  const selectedTenantId = watch("tenantId");
 
   useEffect(() => {
     if (recap?.recapFiles) {
@@ -124,16 +111,6 @@ const EditRecap = () => {
       );
     }
   }, [recap?.recapFiles]);
-
-  useEffect(() => {
-    if (!selectedTenantId) {
-      const initialTenant =
-        recap?.event?.tenantId || tenantOptions[0]?.value || "";
-      if (initialTenant) {
-        setValue("tenantId", initialTenant);
-      }
-    }
-  }, [recap?.event?.tenantId, selectedTenantId, setValue, tenantOptions]);
 
   useEffect(() => {
     if (!recap?.event?.id) return;
@@ -296,150 +273,182 @@ const EditRecap = () => {
 
   return (
     <Layout>
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold">Edit Recap</h1>
-        <p className="text-sm text-base-content/70">UUID: {recap.uuid}</p>
-      </div>
-
-      <div className="card bg-base-200 shadow-xl">
-        <div className="card-body">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <FormInputText
-              control={control}
-              name="name"
-              placeholder=""
-              label="Recap Name"
-              rules={{
-                required: "Recap name is required",
-                minLength: {
-                  value: 2,
-                  message: "Recap name must be at least 2 characters",
-                },
-              }}
-            />
-
-            <FormAutocomplete
-              control={control}
-              name="tenantId"
-              label="Tenant"
-              placeholder="Search tenant..."
-              options={tenantOptions}
-              rules={{
-                required: "Tenant is required",
-              }}
-              disabled={tenantOptions.length === 0}
-            />
-
-            {selectedTenantId ? (
-              <Suspense fallback={<Loading />}>
-                <EventSelect tenantId={selectedTenantId} control={control} />
-              </Suspense>
-            ) : (
-              <FormAutocomplete
-                control={control}
-                name="eventId"
-                label="Event"
-                options={[]}
-                placeholder="Select a tenant first"
-                disabled
-              />
-            )}
-
-            <div className="space-y-3">
-              <div>
-                <h3 className="font-semibold text-sm mb-2">Existing Files</h3>
-                {existingFiles.length === 0 ? (
-                  <p className="text-sm text-base-content/70">
-                    No existing files. Please add new ones.
-                  </p>
-                ) : (
-                  <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
-                    {existingFiles.map((fileUrl, index) => (
-                      <div
-                        key={`${fileUrl}-${index}`}
-                        className="card bg-base-100 shadow-sm"
-                      >
-                        <div className="card-body p-3 space-y-2">
-                          <div className="h-32 w-full bg-base-200 rounded-lg flex items-center justify-center overflow-hidden">
-                            <img
-                              src={fileUrl}
-                              className="max-h-full max-w-full object-contain"
-                              alt={`Existing file ${index + 1}`}
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-error"
-                            onClick={() => handleRemoveExistingFile(index)}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
+          <div className="p-8 md:p-10 space-y-8">
+            <div className="flex flex-col gap-5 border-b border-base-100/20">
+              <div className="flex items-center justify-between gap-4">
+                <Link
+                  to="/recap/list"
+                  className="inline-flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition"
+                >
+                  <ArrowLeftIcon className="w-4 h-4" />
+                  Back to list
+                </Link>
               </div>
 
-              <div className="space-y-2">
-                <h3 className="font-semibold text-sm">Add New Files</h3>
-                {newFiles.map((item, index) => (
-                  <div key={item.id} className="flex items-center gap-2">
-                    <input
-                      type="file"
-                      className="file-input file-input-bordered w-full"
-                      accept="image/*,.pdf"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] ?? null;
-                        if (file) {
-                          const error = validateFile(file);
-                          if (error) {
-                            showAlert(error, "error");
-                            e.target.value = "";
-                            return;
-                          }
-                        }
-                        handleNewFileChange(file, index);
-                      }}
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+                    <PencilIcon className="w-6 h-6" />
+                    <h1>{recap.name ? `Edit: ${recap.name}` : "Edit Recap"}</h1>
+                  </span>
+                </div>
+                <p className="text-base-content/70 text-sm mt-2">
+                  Update the recap details and files below.
+                </p>
+              </div>
+
+              <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-lg">Basic Information</p>
+                  <span className="text-xs text-base-content/60">
+                    Required fields
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormInputText
+                    control={control}
+                    name="name"
+                    placeholder=""
+                    label="Recap Name"
+                    rules={{
+                      required: "Recap name is required",
+                      minLength: {
+                        value: 2,
+                        message: "Recap name must be at least 2 characters",
+                      },
+                    }}
+                  />
+
+                  {tenantId ? (
+                    <Suspense fallback={<Loading />}>
+                      <EventSelect tenantId={tenantId} control={control} />
+                    </Suspense>
+                  ) : (
+                    <FormAutocomplete
+                      control={control}
+                      name="eventId"
+                      label="Event"
+                      options={[]}
+                      placeholder="Select a tenant first"
+                      disabled
                     />
+                  )}
+                </div>
+              </section>
+
+              <section className="space-y-6 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+                <div className="flex items-center justify-between">
+                  <label className="label">
+                    <span className="label-text font-semibold">Files</span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 space-y-2">
+                  <div>
+                    <h3 className="font-semibold text-sm mb-2">
+                      Existing Files
+                    </h3>
+                    {existingFiles.length === 0 ? (
+                      <p className="text-sm text-base-content/70">
+                        No existing files. Please add new ones.
+                      </p>
+                    ) : (
+                      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                        {existingFiles.map((fileUrl, index) => (
+                          <div
+                            key={`${fileUrl}-${index}`}
+                            className="card bg-base-100 shadow-sm"
+                          >
+                            <div className="card-body p-3 space-y-2">
+                              <div className="h-32 w-full bg-base-200 rounded-lg flex items-center justify-center overflow-hidden">
+                                <img
+                                  src={fileUrl}
+                                  className="max-h-full max-w-full object-contain"
+                                  alt={`Existing file ${index + 1}`}
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-error"
+                                onClick={() => handleRemoveExistingFile(index)}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-sm">Add New Files</h3>
+                    {newFiles.map((item, index) => (
+                      <div key={item.id} className="flex items-center gap-2">
+                        <input
+                          type="file"
+                          className="file-input file-input-bordered w-full"
+                          accept="image/*,.pdf"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] ?? null;
+                            if (file) {
+                              const error = validateFile(file);
+                              if (error) {
+                                showAlert(error, "error");
+                                e.target.value = "";
+                                return;
+                              }
+                            }
+                            handleNewFileChange(file, index);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => handleRemoveNewFile(index)}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
                     <button
                       type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => handleRemoveNewFile(index)}
+                      className="btn btn-outline btn-sm"
+                      onClick={handleAddNewFile}
                     >
-                      Remove
+                      Add File
                     </button>
                   </div>
-                ))}
+                </div>
+              </section>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <div className="flex items-center gap-2">
+                  <Link
+                    type="button"
+                    className="btn btn-sm btn-outline"
+                    to="/recap/list"
+                  >
+                    <XCircleIcon className="w-4 h-4" />
+                    Cancel
+                  </Link>
+                </div>
                 <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
-                  onClick={handleAddNewFile}
+                  type="submit"
+                  className="btn btn-sm btn-primary"
+                  disabled={isInFlight || loading}
                 >
-                  Add File
+                  <SaveIcon className="w-4 h-4" />
+                  Update Recap
                 </button>
               </div>
             </div>
-
-            <div className="card-actions justify-end gap-2">
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => navigate(-1)}
-                disabled={isInFlight || loading}
-              >
-                Cancel
-              </button>
-              <LoadingButton
-                type="submit"
-                loading={loading}
-                text="Update Recap"
-                disabled={isInFlight}
-              />
-            </div>
-          </form>
+          </div>
         </div>
-      </div>
+      </form>
     </Layout>
   );
 };

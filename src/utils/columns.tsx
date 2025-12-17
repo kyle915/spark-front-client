@@ -33,6 +33,7 @@ export const requestColumns: Column<RequestRow>[] = [
       </div>
     ),
   },
+
   {
     key: "retailer",
     label: "Retailer",
@@ -60,8 +61,8 @@ export const requestColumns: Column<RequestRow>[] = [
 
       return (
         <span
-          className={`badge badge-sm ${
-            statusColorMap[row.status?.name ?? ""] ?? "badge-outline"
+          className={`badge badge-sm badge-outline ${
+            statusColorMap[row.status?.name ?? ""] ?? ""
           }`}
         >
           {row.status?.name ?? "-"}
@@ -92,7 +93,15 @@ export const eventColumns: Column<EventRow>[] = [
         <span className="font-medium">
           {formatDate(row.request?.date ?? "-")}
         </span>
-        <span className="opacity-60">
+      </div>
+    ),
+  },
+  {
+    key: "startTime",
+    label: "Time",
+    render: (_v, row) => (
+      <div className="flex flex-col text-sm">
+        <span className="font-medium">
           {formatTime(row.startTime || null)} –{" "}
           {formatTime(row.endTime || null)}
         </span>
@@ -112,7 +121,7 @@ export const eventColumns: Column<EventRow>[] = [
     key: "eventType",
     label: "Type",
     render: (_v, row) => (
-      <span className="badge badge-outline badge-sm">
+      <span className="badge badge-soft badge-secondary badge-sm">
         {row.eventType?.name ?? "-"}
       </span>
     ),
@@ -130,8 +139,8 @@ export const eventColumns: Column<EventRow>[] = [
 
       return (
         <span
-          className={`badge badge-sm ${
-            statusColorMap[row.status?.name ?? ""] ?? "badge-outline"
+          className={`badge badge-sm badge-outline ${
+            statusColorMap[row.status?.name ?? ""] ?? ""
           }`}
         >
           {row.status?.name ?? "-"}

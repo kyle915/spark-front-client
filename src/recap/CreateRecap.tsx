@@ -1,26 +1,30 @@
-import { useEffect, useMemo, useState, Suspense } from "react";
+import { useMemo, useState, Suspense } from "react";
 import Layout from "@/layout/Layout";
 import { useMutation, useLazyLoadQuery } from "react-relay/hooks";
 import { fetchQuery, graphql } from "react-relay";
 import { CreateRecapMutation } from "@/api/mutations/CreateRecapMutation";
 import { EventsQuery } from "@/api/queries/EventsQuery";
-import { TenantsQuery } from "@/api/queries/TenantsQuery";
 import { FileTypesQuery } from "@/api/queries/FileTypesQuery";
 import type { CreateRecapMutation as CreateRecapMutationType } from "@/api/mutations/__generated__/CreateRecapMutation.graphql";
 import type { EventsQuery as EventsQueryType } from "@/api/queries/__generated__/EventsQuery.graphql";
-import type { TenantsQuery as TenantsQueryType } from "@/api/queries/__generated__/TenantsQuery.graphql";
 import type { FileTypesQuery as FileTypesQueryType } from "@/api/queries/__generated__/FileTypesQuery.graphql";
 import type { GraphQLTaggedNode } from "react-relay";
 import { useAlertStore } from "@/store/alertStore";
-import { useNavigate } from "react-router";
+import { Link } from "react-router";
 import { useForm } from "react-hook-form";
 import type { Control } from "react-hook-form";
 import FormInputText from "@shared/FormInputText";
 import FormAutocomplete from "@shared/FormAutocomplete";
 import FileUploadItem from "@/shared/FileUploadItem";
 import Loading from "@shared/Loading";
-import LoadingButton from "@shared/LoadingButton";
 import environment from "@api/relay/environment";
+import {
+  ArrowLeftIcon,
+  PencilIcon,
+  XCircleIcon,
+} from "@heroicons/react/24/solid";
+import { SaveIcon } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
 
 type RecapFormValues = {
   name: string;
@@ -74,7 +78,7 @@ type FileItem = {
 };
 
 const RecapForm = () => {
-  const navigate = useNavigate();
+  const { tenantId } = useAuthStore();
   const [commitCreateRecap, isInFlight] =
     useMutation<CreateRecapMutationType>(CreateRecapMutation);
   const [loading, setLoading] = useState(false);
@@ -84,34 +88,18 @@ const RecapForm = () => {
   ]);
   const [nextFileId, setNextFileId] = useState(1);
 
-  const { control, handleSubmit, reset, watch, setValue } =
-    useForm<RecapFormValues>({
-      defaultValues: {
-        name: "",
-        tenantId: "",
-        eventId: "",
-      },
-    });
-
-  const tenantsData = useLazyLoadQuery<TenantsQueryType>(
-    TenantsQuery,
-    {},
-    { fetchPolicy: "store-and-network" }
-  );
+  const { control, handleSubmit, reset } = useForm<RecapFormValues>({
+    defaultValues: {
+      name: "",
+      tenantId: tenantId || "",
+      eventId: "",
+    },
+  });
 
   const fileTypesData = useLazyLoadQuery<FileTypesQueryType>(
     FileTypesQuery,
     {},
     { fetchPolicy: "store-and-network" }
-  );
-
-  const tenantOptions = useMemo(
-    () =>
-      tenantsData.tenants.edges.map((edge) => ({
-        value: edge.node.id,
-        label: edge.node.name,
-      })),
-    [tenantsData]
   );
 
   const fileTypeOptions = useMemo(
@@ -124,18 +112,6 @@ const RecapForm = () => {
       })),
     [fileTypesData]
   );
-
-  const selectedTenantId = watch("tenantId");
-
-  useEffect(() => {
-    if (!selectedTenantId && tenantOptions.length > 0) {
-      setValue("tenantId", tenantOptions[0].value);
-    }
-  }, [selectedTenantId, tenantOptions, setValue]);
-
-  useEffect(() => {
-    setValue("eventId", "");
-  }, [selectedTenantId, setValue]);
 
   const GetUploadUrlQuery: GraphQLTaggedNode = graphql`
     query CreateRecap_GetUploadUrlQuery(
@@ -242,7 +218,7 @@ const RecapForm = () => {
           showAlert(createRecapResponse.message, "success");
           reset({
             name: "",
-            tenantId: selectedTenantId,
+            tenantId: tenantId || "",
             eventId: "",
           });
           setFileItems([{ id: nextFileId, file: null, fileTypeId: "" }]);
@@ -298,63 +274,81 @@ const RecapForm = () => {
 
   return (
     <Layout>
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold">Create Recap</h1>
-      </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full">
+        <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
+          <div className="p-8 md:p-10 space-y-8">
+            <div className="flex flex-col gap-5 border-b border-base-100/20">
+              <div className="flex items-center justify-between gap-4">
+                <Link
+                  to="/events/list"
+                  className="inline-flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition"
+                >
+                  <ArrowLeftIcon className="w-4 h-4" />
+                  Back to list
+                </Link>
+              </div>
 
-      <div className="card bg-base-200 shadow-xl">
-        <div className="card-body">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <FormInputText
-              control={control}
-              name="name"
-              label="Recap Name"
-              placeholder="e.g., Event Recap June 2024"
-              rules={{
-                required: "Recap name is required",
-                minLength: {
-                  value: 2,
-                  message: "Recap name must be at least 2 characters",
-                },
-              }}
-            />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+                    <PencilIcon className="w-6 h-6" />
+                    <h1>Create Recap</h1>
+                  </span>
+                </div>
+                <p className="text-base-content/70 text-sm mt-2">
+                  Fill out the form below to create a new recap.
+                </p>
+              </div>
+            </div>
 
-            <FormAutocomplete
-              control={control}
-              name="tenantId"
-              label="Tenant"
-              placeholder="Search tenant..."
-              options={tenantOptions}
-              rules={{
-                required: "Tenant is required",
-              }}
-              disabled={tenantOptions.length === 0}
-            />
+            <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-lg">Basic Information</p>
+                <span className="text-xs text-base-content/60">
+                  Required fields
+                </span>
+              </div>
 
-            {selectedTenantId ? (
-              <Suspense fallback={<Loading />}>
-                <EventSelect
-                  key={selectedTenantId}
-                  tenantId={selectedTenantId}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormInputText
                   control={control}
+                  name="name"
+                  label="Recap Name"
+                  placeholder="e.g., Event Recap June 2024"
+                  rules={{
+                    required: "Recap name is required",
+                    minLength: {
+                      value: 2,
+                      message: "Recap name must be at least 2 characters",
+                    },
+                  }}
                 />
-              </Suspense>
-            ) : (
-              <FormAutocomplete
-                control={control}
-                name="eventId"
-                label="Event"
-                options={[]}
-                placeholder="Select a tenant first"
-                disabled
-              />
-            )}
 
-            <div>
-              <label className="label">
-                <span className="label-text font-semibold">Files</span>
-              </label>
-              <div className="space-y-3">
+                {tenantId ? (
+                  <Suspense fallback={<Loading />}>
+                    <EventSelect tenantId={tenantId} control={control} />
+                  </Suspense>
+                ) : (
+                  <FormAutocomplete
+                    control={control}
+                    name="eventId"
+                    label="Event"
+                    options={[]}
+                    placeholder="Select a tenant first"
+                    disabled
+                  />
+                )}
+              </div>
+            </section>
+
+            <section className="space-y-6 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+              <div className="flex items-center justify-between">
+                <label className="label">
+                  <span className="label-text font-semibold">Files</span>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1">
                 {fileItems.map((item, index) => (
                   <FileUploadItem
                     key={item.id}
@@ -366,49 +360,54 @@ const RecapForm = () => {
                     onError={handleFileError}
                   />
                 ))}
+
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm mt-3 mx-auto flex items-center gap-2"
+                  onClick={handleAddFile}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Add Another File
+                </button>
+              </div>
+            </section>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <div className="flex items-center gap-2">
+                <Link
+                  type="button"
+                  className="btn btn-sm btn-outline"
+                  to="/recap/list"
+                >
+                  <XCircleIcon className="w-4 h-4" />
+                  Cancel
+                </Link>
               </div>
               <button
-                type="button"
-                className="btn btn-outline btn-sm mt-3"
-                onClick={handleAddFile}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                Add Another File
-              </button>
-            </div>
-
-            <div className="card-actions justify-end gap-2">
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => navigate(-1)}
-                disabled={isInFlight || loading}
-              >
-                Cancel
-              </button>
-              <LoadingButton
                 type="submit"
-                loading={loading}
-                text="Create Recap"
-                disabled={isInFlight}
-              />
+                className="btn btn-sm btn-primary"
+                disabled={isInFlight && loading}
+              >
+                <SaveIcon className="w-4 h-4" />
+                Create Recap
+              </button>
             </div>
-          </form>
+          </div>
         </div>
-      </div>
+      </form>
     </Layout>
   );
 };

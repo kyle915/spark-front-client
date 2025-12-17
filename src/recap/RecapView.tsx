@@ -5,41 +5,54 @@ import { FileTypesQuery } from "@/api/queries/FileTypesQuery";
 import type { FileTypesQuery as FileTypesQueryType } from "@api/queries/__generated__/FileTypesQuery.graphql";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useParams, useNavigate } from "react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatDate, formatTime } from "@/utils";
+import { MapPinHouse } from "lucide-react";
 
-// ======================================================
-// SMALL COMPONENTS
-// ======================================================
-const InfoItem = ({
-  label,
-  value,
+const KpiCardContainer = ({
+  title,
+  icon,
+  children,
 }: {
-  label: string;
-  value?: string | null;
+  title: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
 }) => (
-  <div>
-    <p className="text-xs uppercase tracking-wide text-base-content/60">
-      {label}
-    </p>
-    <p className="text-base font-medium">{value ?? "-"}</p>
+  <div className="card bg-base-100 border border-base-300">
+    <div className="card-body space-y-4">
+      <div className="flex items-center gap-2">
+        {icon}
+        <h3 className="text-base font-semibold">{title}</h3>
+      </div>
+      {children}
+    </div>
   </div>
 );
 
-const KpiCard = ({
-  label,
-  value,
-  color = "text-base-content",
+const Gallery3DCard = ({
+  src,
+  alt,
+  onClick,
 }: {
-  label: string;
-  value: string | number;
-  color?: string;
+  src: string;
+  alt: string;
+  onClick?: () => void;
 }) => (
-  <div className="card bg-base-200">
-    <div className="card-body">
-      <p className="text-sm text-base-content/60">{label}</p>
-      <p className={`text-3xl font-bold ${color}`}>{value}</p>
-    </div>
+  <div className="hover-3d cursor-pointer" onClick={onClick}>
+    {/* content */}
+    <figure className="w-full h-80 overflow-hidden rounded-2xl bg-base-200">
+      <img src={src} alt={alt} className="w-full h-full object-cover" />
+    </figure>
+
+    {/* 8 empty divs required for DaisyUI 3D */}
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
+    <div></div>
   </div>
 );
 
@@ -159,164 +172,308 @@ const RecapView = () => {
       {/* ======================================================
           HEADER
       ====================================================== */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{recap.name}</h1>
-          <p className="text-sm text-base-content/60">
-            {recap.event?.name} ·{" "}
-            {formatDate(recap.event?.request?.date ?? null)} ·{" "}
-            {formatTime(recap.event?.startTime ?? null)} –{" "}
-            {formatTime(recap.event?.endTime ?? null)}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="badge badge-outline">
-            {recap.event?.eventType?.name}
-          </span>
-          {recap.event?.isNational && (
-            <span className="badge badge-warning">National</span>
-          )}
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={() => navigate(-1)}
-          >
-            Back
-          </button>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={() => navigate(`/recap/edit/${recap.uuid}`)}
-          >
-            Edit
-          </button>
-        </div>
-      </div>
-
-      {/* ======================================================
-          EVENT SUMMARY
-      ====================================================== */}
       <div className="card bg-base-100 border border-base-300 mb-8">
-        <div className="card-body space-y-4">
-          <h2 className="text-lg font-semibold">Event Summary</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            <InfoItem label="Event" value={recap.event?.name} />
-            <InfoItem label="Address" value={recap.event?.address} />
-            <InfoItem label="Type" value={recap.event?.eventType?.name} />
-          </div>
-          {recap.event?.notes && (
-            <div className="rounded-lg bg-base-200 p-3 text-sm">
-              {recap.event.notes}
-            </div>
-          )}
-        </div>
-      </div>
+        <div className="card-body">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+            {/* LEFT */}
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold">{recap.name}</h1>
 
-      {/* ======================================================
-          KPI SECTION
-      ====================================================== */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        <KpiCard
-          label="Products Sold"
-          value={hotData.sales}
-          color="text-primary"
-        />
-        <KpiCard label="Total Consumers" value={hotData.totalConsumers} />
-        <KpiCard
-          label="Tried Before"
-          value={hotData.triedBefore}
-          color="text-purple-500"
-        />
-        <KpiCard
-          label="Competitive Presence"
-          value={hotData.competitor}
-          color="text-warning"
-        />
-      </div>
+              <p className="text-sm text-base-content/60">
+                Event Recap Summary
+              </p>
 
-      {/* ======================================================
-          PEOPLE
-      ====================================================== */}
-      <div className="grid lg:grid-cols-2 gap-6 mb-10">
-        <div className="card bg-base-100 border border-base-300">
-          <div className="card-body space-y-3">
-            <h2 className="text-lg font-semibold">Store Managers</h2>
-            {storeManagers.map((m) => (
-              <div key={m.id} className="rounded-lg bg-base-200 p-3 text-sm">
-                <p className="font-medium">{m.name}</p>
-                <p className="text-base-content/70">{m.phone}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card bg-base-100 border border-base-300">
-          <div className="card-body space-y-3">
-            <h2 className="text-lg font-semibold">Ambassadors</h2>
-            {ambassadors.map((a) => (
-              <div key={a.id} className="rounded-lg bg-base-200 p-3">
-                <div className="flex justify-between">
-                  <p className="font-medium">{a.name}</p>
-                  <span className="badge badge-primary">Rating {a.rating}</span>
+              {/* META INFO */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-base-content/70">
+                <div className="flex items-center gap-1">
+                  <span className="i-lucide-calendar text-base-content/60" />
+                  {formatDate(recap.event?.request?.date ?? null)}
                 </div>
-                {a.address && (
-                  <p className="text-sm text-base-content/70">{a.address}</p>
+
+                <div className="flex items-center gap-1">
+                  <span className="i-lucide-clock text-base-content/60" />
+                  {formatTime(recap.event?.startTime ?? null)} –{" "}
+                  {formatTime(recap.event?.endTime ?? null)}
+                </div>
+
+                {recap.event?.address && (
+                  <div className="flex items-center gap-1">
+                    <span className="i-lucide-map-pin text-base-content/60" />
+                    {recap.event.address}
+                  </div>
                 )}
               </div>
-            ))}
+
+              {/* BADGES */}
+              <div className="flex items-center gap-2 pt-2">
+                {recap.event?.eventType?.name && (
+                  <span className="badge badge-outline">
+                    {recap.event.eventType.name}
+                  </span>
+                )}
+
+                {recap.event?.isNational && (
+                  <span className="badge badge-soft badge-info">
+                    <MapPinHouse className="w-4 h-4 mr-1" />
+                    National Event
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* RIGHT – CTA */}
+            <div className="flex items-start">
+              <button
+                className="btn btn-primary btn-sm rounded-full px-6"
+                onClick={() => navigate(`/recap/edit/${recap.uuid}`)}
+              >
+                Activation
+              </button>
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* ======================================================
+            KPI GRID
+        ====================================================== */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6  mb-8">
+        <KpiCardContainer
+          title="Performance Metrics"
+          icon={<span className="i-lucide-award text-primary" />}
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-base-content/60">Overall Rating</p>
+
+            <div className="flex items-center gap-2">
+              <div className="flex text-warning">
+                {"★★★★★".split("").map((s, i) => (
+                  <span key={i}>{s}</span>
+                ))}
+              </div>
+              <span className="text-xl font-bold">5.0</span>
+            </div>
+
+            <div className="divider my-2" />
+
+            <div className="flex justify-between text-sm">
+              <span className="text-base-content/60">Event Type</span>
+              <span className="font-medium">Activation</span>
+            </div>
+
+            <div className="flex justify-between text-sm">
+              <span className="text-base-content/60">Scope</span>
+              <span className="flex items-center gap-1 font-medium">
+                <span className="i-lucide-globe" />
+                National
+              </span>
+            </div>
+          </div>
+        </KpiCardContainer>
+
+        <KpiCardContainer
+          title="Event Team"
+          icon={<span className="i-lucide-users text-primary" />}
+        >
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs uppercase text-base-content/60 mb-2">
+                Store Manager
+              </p>
+              {storeManagers.map((m) => (
+                <div key={m.id} className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-base-200 flex items-center justify-center font-medium">
+                    {m.name?.[0]}
+                  </div>
+                  <div>
+                    <p className="font-medium">{m.name}</p>
+                    <p className="text-sm text-base-content/60">{m.phone}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="divider my-1" />
+
+            <div>
+              <p className="text-xs uppercase text-base-content/60 mb-2">
+                Brand Ambassadors
+              </p>
+              {ambassadors.map((a) => (
+                <div key={a.id} className="flex items-start gap-3">
+                  <div>
+                    {a.address && (
+                      <p className="text-sm text-base-content/60">
+                        {a.address}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </KpiCardContainer>
+
+        <KpiCardContainer
+          title="Sales Performance"
+          icon={<span className="i-lucide-shopping-cart text-primary" />}
+        >
+          <div className="space-y-3">
+            <div className="flex justify-between items-center bg-base-200 rounded-lg p-3">
+              <span className="flex items-center gap-2 text-sm">
+                <span className="i-lucide-box" />
+                Products Sold
+              </span>
+              <span className="text-xl font-bold">{hotData.sales}</span>
+            </div>
+
+            <div className="flex justify-between text-sm border rounded-lg p-3">
+              <span className="flex items-center gap-2">
+                <span className="i-lucide-dollar-sign" />
+                Case Price
+              </span>
+              <span className="font-medium">$24.00</span>
+            </div>
+
+            <div className="flex justify-between text-sm border rounded-lg p-3">
+              <span className="flex items-center gap-2">
+                <span className="i-lucide-dollar-sign" />
+                Can Price
+              </span>
+              <span className="font-medium">$3.50</span>
+            </div>
+          </div>
+        </KpiCardContainer>
+
+        <KpiCardContainer
+          title="Consumer Engagement"
+          icon={<span className="i-lucide-user-check text-primary" />}
+        >
+          <div className="space-y-3">
+            <div className="flex justify-between items-center bg-base-200 rounded-lg p-3">
+              <span className="flex items-center gap-2 text-sm">
+                <span className="i-lucide-users" />
+                Total Consumers
+              </span>
+              <span className="text-xl font-bold">
+                {hotData.totalConsumers}
+              </span>
+            </div>
+
+            <div className="flex justify-between text-sm border rounded-lg p-3">
+              <span className="flex items-center gap-2">
+                <span className="i-lucide-user-plus" />
+                Tried Before
+              </span>
+              <span className="font-medium">
+                {hotData.triedBefore}{" "}
+                <span className="text-base-content/60">
+                  (
+                  {Math.round(
+                    (hotData.triedBefore / hotData.totalConsumers) * 100
+                  )}
+                  %)
+                </span>
+              </span>
+            </div>
+
+            <div className="flex justify-between text-sm border rounded-lg p-3">
+              <span className="flex items-center gap-2">
+                <span className="i-lucide-trending-up" />
+                Competition
+              </span>
+              <span className="font-medium">{hotData.competitor}</span>
+            </div>
+          </div>
+        </KpiCardContainer>
+      </div>
+
+      {/* ======================================================
+          GALLERY
+      ====================================================== */}
+      <div className="card bg-base-100 border border-base-300 mb-8">
+        <div className="card-body">
+          {/* HEADER */}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Event Gallery</h2>
+            <span className="text-sm text-base-content/60">
+              {imageFiles.length} photos
+            </span>
+          </div>
+
+          {/* CONTENT */}
+          {imageFiles.length === 0 ? (
+            <div className="alert alert-info">
+              No images uploaded for this recap.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {imageFiles.map((file, idx) => (
+                <Gallery3DCard
+                  key={file.id}
+                  src={file.file ?? ""}
+                  alt={file.name}
+                  onClick={() => openPreview(idx)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* ======================================================
           FEEDBACK
       ====================================================== */}
-      <div className="grid lg:grid-cols-2 gap-6 mb-10">
-        <div className="card bg-base-100 border border-base-300">
-          <div className="card-body">
-            <h2 className="text-lg font-semibold mb-2">Consumer Feedback</h2>
-            <div className="italic text-sm bg-base-200 p-4 rounded-lg">
-              “{hotData.feedback}”
-            </div>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="card bg-base-100 border border-base-300 mb-6">
+          <div className="card-body space-y-3">
+            <h3 className="flex items-center gap-2 text-lg font-semibold">
+              <span className="i-lucide-message-square text-primary" />
+              Consumer Feedback
+            </h3>
+
+            <p className="text-sm leading-relaxed text-base-content/80">
+              {hotData.feedback}
+            </p>
           </div>
         </div>
 
-        <div className="card bg-base-100 border border-base-300">
-          <div className="card-body">
-            <h2 className="text-lg font-semibold mb-2">Account Learnings</h2>
-            <div className="space-y-2 text-sm">
-              {hotData.account.map((a) => (
-                <p key={a.label}>
-                  <strong>{a.label}:</strong> {a.value}
-                </p>
-              ))}
+        <div className="card bg-base-100 border border-base-300 mb-12">
+          <div className="card-body space-y-6">
+            <h3 className="flex items-center gap-2 text-lg font-semibold">
+              <span className="i-lucide-clipboard-list text-primary" />
+              Account Learning
+            </h3>
+
+            {/* Anything you'd do differently */}
+            <div className="space-y-1">
+              <p className="text-sm font-medium">
+                Anything you'd do differently?
+              </p>
+              <div className="border-l-2 border-primary pl-4 text-sm text-base-content/80">
+                Set up approach customers in parking lot
+              </div>
+            </div>
+
+            {/* Feedback from the account */}
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Feedback from the account</p>
+              <div className="border-l-2 border-primary pl-4 text-sm text-base-content/80">
+                The owner and company rep was very happy about Zero&apos;s
+                appearance.
+              </div>
+            </div>
+
+            {/* Corporate card */}
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Corporate card used</p>
+              <div className="border-l-2 border-primary pl-4 text-sm text-base-content/80">
+                Yes
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* ======================================================
-          FILES
-      ====================================================== */}
-      <h2 className="text-xl font-semibold mb-3">Evidence & Files</h2>
-      {filesByType.map(([type, files]) => (
-        <div key={type} className="mb-6">
-          <p className="font-medium mb-2">{type}</p>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {files.map((file) => (
-              <div
-                key={file.id}
-                className="card bg-base-200 cursor-pointer"
-                onClick={() => {
-                  const idx = imageFiles.findIndex((f) => f.id === file.id);
-                  if (idx >= 0) openPreview(idx);
-                }}
-              >
-                <div className="card-body text-sm">{file.name}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
 
       {/* ======================================================
           IMAGE PREVIEW MODAL

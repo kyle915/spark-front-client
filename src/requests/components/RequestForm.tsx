@@ -1,6 +1,6 @@
 import { Controller, useForm } from "react-hook-form";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 import FormInputText from "@/shared/FormInputText";
 import FormInputTime from "@/shared/FormInputTime";
 import FormAutocomplete from "@/shared/FormAutocomplete";
@@ -87,8 +87,6 @@ export default function RequestForm({
   productTypes = [],
   products = [],
 }: RequestFormProps) {
-  const navigate = useNavigate();
-
   const safeDefaultValues: RequestFormValues = {
     name: "",
     date: "",
@@ -179,7 +177,7 @@ export default function RequestForm({
       <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
         <div className="p-8 md:p-10 space-y-8">
           {/* HEADER (match View Request) */}
-          <div className="flex flex-col gap-5 pb-6 border-b border-base-100/20">
+          <div className="flex flex-col gap-5 border-b border-base-100/20">
             {/* top row */}
             <div className="flex items-center justify-between gap-4">
               <Link
@@ -213,15 +211,14 @@ export default function RequestForm({
             {/* title row */}
             <div>
               <div className="flex items-center gap-2">
-                <PencilIcon className="w-6 h-6 text-base-content/50" />
-
-                <div className="flex items-center">
-                  <h1 className="text-3xl font-semibold mt-1 ">
+                <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+                  <PencilIcon className="w-6 h-6" />
+                  <h1>
                     {mode === "edit"
                       ? defaultValues?.name ?? "Edit Request"
                       : "Create Request"}
                   </h1>
-                </div>
+                </span>
               </div>
               <p className="text-base-content/70 text-sm mt-2">
                 {mode === "edit"
@@ -423,7 +420,7 @@ export default function RequestForm({
           {mode === "create" && (
             <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
               <p className="font-semibold text-lg">Details</p>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4">
                 <FormCheckbox<RequestFormValues>
                   name="isTableNeeded"
                   control={control}
@@ -523,13 +520,14 @@ export default function RequestForm({
 
           {/* FOOTER ACTIONS (optional but matches nice UX) */}
           <div className="pt-2 flex items-center justify-end gap-2">
-            <button
+            <Link
               type="button"
-              className="btn btn-outline"
-              onClick={() => navigate(-1)}
+              className="btn btn-sm btn-outline"
+              to="/requests/list"
             >
+              <XCircleIcon className="w-4 h-4" />
               Cancel
-            </button>
+            </Link>
             <button
               type="submit"
               className="btn btn-primary"

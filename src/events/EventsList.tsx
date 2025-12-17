@@ -202,8 +202,10 @@ const EventsList = () => {
   return (
     <Layout>
       <div className="flex items-center gap-2 mb-4">
-        <Bars4Icon className="w-8 h-8 text-primary" />
-        <h1 className="text-2xl font-bold">Events</h1>
+        <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+          <Bars4Icon className="w-8 h-8 text-primary" />
+          <h1>All Events</h1>
+        </span>
       </div>
 
       <CatalogsProvider

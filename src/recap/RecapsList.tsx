@@ -196,8 +196,10 @@ const RecapList = () => {
           HEADER
       ========================= */}
       <div className="mb-4 flex items-center gap-4">
-        <CameraIcon className="w-8 h-8 text-primary" />
-        <h1 className="text-2xl font-bold">Recaps</h1>
+        <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+          <CameraIcon className="w-8 h-8" />
+          <h1>Recaps</h1>
+        </span>
       </div>
 
       {/* =========================

@@ -15,6 +15,7 @@ import {
 import type { EventUuidQuery$data } from "@/api/queries/__generated__/EventUuidQuery.graphql";
 import LocationMap from "@/shared/LocationMap";
 import { formatDate, formatTime } from "@/utils";
+import { MapPinHouseIcon } from "lucide-react";
 
 type Event = NonNullable<EventUuidQuery$data["event"]>;
 
@@ -82,7 +83,7 @@ const EventCard: React.FC<Props> = ({ event }) => {
               {/* STATUS */}
               <span
                 className={`
-                  badge badge-lg gap-2 font-semibold
+                  badge badge-soft badge-lg gap-2 font-semibold
                   ${
                     status?.name === "Pending"
                       ? "badge-warning"
@@ -100,13 +101,14 @@ const EventCard: React.FC<Props> = ({ event }) => {
 
               {/* EVENT TYPE */}
               {eventType?.name && (
-                <span className="badge badge-outline badge-lg font-medium">
+                <span className="badge badge-soft badge-outline badge-info badge-lg font-medium">
                   {eventType.name}
                 </span>
               )}
 
               {/* SCOPE */}
-              <span className="badge badge-outline badge-lg font-medium">
+              <span className="badge badge-soft badge-outline badge-info badge-lg font-medium">
+                <MapPinHouseIcon className="w-4 h-4" />
                 {isNational ? "National" : "Local"}
               </span>
             </div>

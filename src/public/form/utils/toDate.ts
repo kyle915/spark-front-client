@@ -1,6 +1,16 @@
-function dateFormat(isoString: string) {
-  if (!isoString) return "";
-  return isoString.split("T")[0];
-}
+export function dateFormat(value: string) {
+  if (!value) return "";
 
-export { dateFormat };
+  // ISO: YYYY-MM-DDTHH:mm:ss
+  if (value.includes("T")) {
+    return value.split("T")[0];
+  }
+
+  // Django: YYYY-MM-DD HH:mm:ss+TZ
+  if (value.includes(" ")) {
+    return value.split(" ")[0];
+  }
+
+  // Ya es YYYY-MM-DD
+  return value;
+}

@@ -202,8 +202,10 @@ const TodayEvents = () => {
   return (
     <Layout>
       <div className="flex items-center gap-2 mb-4">
-        <CalendarDaysIcon className="w-6 h-6" />
-        <h1 className="text-2xl font-bold">Today's Events</h1>
+        <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+          <CalendarDaysIcon className="w-8 h-8" />
+          <h1>Today's Events</h1>
+        </span>
       </div>
 
       <CatalogsProvider

@@ -139,23 +139,22 @@ const TodayEventsMap = () => {
 
   return (
     <Layout>
+      <div className="flex flex-col gap-2 mb-4">
+        <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+          <MapPin className="w-8 h-8" />
+          <h1>Nearby Events</h1>
+        </span>
+        <p className="text-sm text-base-content/60">
+          Showing events around the selected location
+        </p>
+      </div>
       <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
         <div className="p-8 md:p-10 space-y-8">
           <div className="flex flex-col h-[calc(100vh-100px)] gap-4">
             {/* =========================
                 CONTROL PANEL
             ========================= */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 bg-base-200 rounded-2xl">
-              <div className="space-y-1">
-                <h1 className="text-xl font-semibold flex items-center gap-2">
-                  <MapPin className="w-5 h-5 text-primary" />
-                  Nearby Events
-                </h1>
-                <p className="text-sm text-base-content/60">
-                  Showing events around the selected location
-                </p>
-              </div>
-
+            <div className="flex justify-end gap-6 bg-base-200 rounded-2xl">
               <div className="flex flex-wrap items-center gap-5">
                 {/* LOCATION ACTIONS */}
                 <div className="flex items-center gap-2">

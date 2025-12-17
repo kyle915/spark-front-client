@@ -67,7 +67,7 @@ const RequestCard: React.FC<Props> = ({ request }) => {
               {/* STATUS */}
               <span
                 className={`
-                badge badge-lg gap-2 font-semibold
+                badge badge-soft badge-lg gap-2 font-semibold
                 ${
                   request.status?.name === "Pending"
                     ? "badge-warning"
@@ -85,7 +85,7 @@ const RequestCard: React.FC<Props> = ({ request }) => {
 
               {/* REQUEST TYPE */}
               {request.requestType?.name && (
-                <span className="badge badge-outline badge-lg font-medium">
+                <span className="badge badge-soft badge-outline badge-info badge-lg font-medium">
                   {request.requestType.name}
                 </span>
               )}
