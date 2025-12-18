@@ -195,11 +195,16 @@ const RecapList = () => {
       {/* =========================
           HEADER
       ========================= */}
-      <div className="mb-4 flex items-center gap-4">
-        <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
-          <CameraIcon className="w-8 h-8" />
+      <div className="mb-4 flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+          <div className="p-2 rounded-xl bg-primary/10 text-primary">
+            <CameraIcon className="w-6 h-6" />
+          </div>
           <h1>Recaps</h1>
-        </span>
+        </div>
+        <p className="text-base-content/70">
+          Manage your event recaps and summaries.
+        </p>
       </div>
 
       {/* =========================

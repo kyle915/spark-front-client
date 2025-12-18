@@ -62,10 +62,8 @@ const SidebarItem = ({
     if (sectionActive) setExpanded(true);
   }, [sectionActive]);
 
-  // 👉 misma indentación visual, solo aumenta por nivel
   const leftPadding = level === 0 ? "px-4" : level === 1 ? "px-3" : "px-3";
 
-  /* ---------------- GROUP (TIENE HIJOS) ---------------- */
   if (hasChildren && !collapsed) {
     return (
       <div className="text-base-content">
@@ -105,7 +103,6 @@ const SidebarItem = ({
     );
   }
 
-  /* ---------------- LEAF (RUTA FINAL) ---------------- */
   return (
     <li>
       <Link
@@ -206,12 +203,24 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </aside>
 
       <div className="flex flex-col flex-1 min-w-0">
-        <header className="flex justify-end items-center bg-base-100 border-b border-base-300 h-16 px-6 sticky top-0 z-30">
+        <header className="flex justify-end items-center bg-base-100 border-b border-base-300 h-16 px-6 sticky top-0 z-30 text-base-content">
           <div className="flex items-center gap-4">
-            <span className="hidden sm:block">{user?.firstName ?? "User"}</span>
+            <div className="avatar">
+              <div className="w-10 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
+                <img
+                  src="https://i.pravatar.cc/100?img=8"
+                  alt="User Avatar"
+                  className="object-cover"
+                />
+              </div>
+            </div>
+            <span className="font-medium hidden sm:block">
+              {user?.firstName ?? "User"}
+            </span>
+
             <button
               onClick={onLogout}
-              className="btn btn-ghost btn-sm hover:text-error flex items-center gap-1"
+              className="btn btn-ghost btn-sm text-base-content hover:text-error flex items-center gap-1"
             >
               <ArrowRightEndOnRectangleIcon className="w-5 h-5" />
               <span className="hidden sm:block">Logout</span>

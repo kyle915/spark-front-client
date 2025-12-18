@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useForm } from "react-hook-form";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import LoadingButton from "@shared/LoadingButton";
 import { ProductTypesQuery } from "@api/queries/ProductTypesQuery";
@@ -16,6 +16,8 @@ import { useAlertStore } from "@store/alertStore";
 import { useAuthStore } from "@/store/authStore";
 import { TagIcon } from "lucide-react";
 import { PencilIcon } from "@heroicons/react/24/outline";
+import FormInputText from "@/shared/FormInputText";
+import { ArrowLeftIcon } from "@heroicons/react/24/solid";
 
 type ProductTypeFormValues = {
   name: string;
@@ -27,6 +29,7 @@ type ProductTypeFormProps = {
   onSubmit: (values: ProductTypeFormValues) => void;
   submitLabel: string;
   isSubmitting?: boolean;
+  mode?: "create" | "edit";
 };
 
 const ProductTypeForm = ({
@@ -34,45 +37,85 @@ const ProductTypeForm = ({
   onSubmit,
   submitLabel,
   isSubmitting,
+  mode = "create",
 }: ProductTypeFormProps) => {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<ProductTypeFormValues>({
+  const { control, handleSubmit, reset } = useForm<ProductTypeFormValues>({
     defaultValues,
   });
+
+  const isEdit = mode === "edit";
 
   useEffect(() => {
     reset(defaultValues);
   }, [defaultValues, reset]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="form-control gap-2 p-2">
-        <div className="flex flex-row items-center gap-x-4">
-          <label className="label p-0">
-            <span className="label-text">Name</span>
-          </label>
+    <form onSubmit={handleSubmit(onSubmit)} className="w-full">
+      <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
+        <div className="p-8 md:p-10 space-y-8">
+          {/* HEADER */}
+          <div className="flex flex-col gap-4 border-b border-base-100/20">
+            <div className="flex items-center justify-between gap-4">
+              <Link
+                to="/catalogs/product-types/list"
+                className="inline-flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition"
+              >
+                <ArrowLeftIcon className="w-4 h-4" />
+                Back to list
+              </Link>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+                  <PencilIcon className="w-6 h-6" />
+                  <h1>
+                    {isEdit ? "Edit Product Type" : "Create Product Type"}
+                  </h1>
+                </span>
+              </div>
+              <p className="text-base-content/70 text-sm mt-2">
+                {isEdit
+                  ? "Update the information and behavior of this product type."
+                  : "Define and configure the product type behavior."}
+              </p>
+            </div>
+          </div>
 
-          <input
-            type="text"
-            className="input input-bordered"
-            {...register("name", { required: "Name is required" })}
-          />
+          {/* SECTION: BASIC INFORMATION */}
+          <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-lg">Basic Information</p>
+              <span className="text-xs text-base-content/60">
+                Required fields
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormInputText
+                control={control}
+                name="name"
+                label="Product Type Name"
+                placeholder="e.g., Electronics"
+                rules={{
+                  required: "Name is required",
+                  minLength: {
+                    value: 2,
+                    message: "Name must be at least 2 characters",
+                  },
+                }}
+              />
+            </div>
+          </section>
+
+          {/* FOOTER ACTIONS */}
+          <div className="pt-2 flex items-center justify-end">
+            <LoadingButton
+              type="submit"
+              loading={isSubmitting}
+              text={submitLabel}
+            />
+          </div>
         </div>
-        {errors.name && (
-          <span className="text-error text-sm">{errors.name.message}</span>
-        )}
-      </div>
-
-      <div className="flex justify-end">
-        <LoadingButton
-          type="submit"
-          loading={isSubmitting}
-          text={submitLabel}
-        />
       </div>
     </form>
   );
@@ -146,10 +189,15 @@ export const ProductTypesList = () => {
       <div className="mb-4 flex items-center gap-4">
         <div className="flex items-center w-full justify-between">
           <div>
-            <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
-              <TagIcon className="w-8 h-8" />
+            <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                <TagIcon className="w-8 h-8" />
+              </div>
               <h1>Product Types</h1>
-            </span>
+            </div>
+            <p className="text-base-content/70">
+              Manage and organize your product types.
+            </p>
           </div>
 
           <div>
@@ -205,22 +253,12 @@ export const CreateProductType = () => {
 
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Create Product Type</h1>
-        <p className="text-sm text-base-content/70">
-          Assign the product type to a tenant.
-        </p>
-      </div>
-      <div className="card bg-base-100 shadow">
-        <div className="card-body">
-          <ProductTypeForm
-            defaultValues={{ name: "", tenantId: initialTenantId }}
-            onSubmit={handleSubmit}
-            submitLabel="Create"
-            isSubmitting={isCreating}
-          />
-        </div>
-      </div>
+      <ProductTypeForm
+        defaultValues={{ name: "", tenantId: initialTenantId }}
+        onSubmit={handleSubmit}
+        submitLabel="Create"
+        isSubmitting={isCreating}
+      />
     </Layout>
   );
 };
@@ -279,25 +317,16 @@ export const EditProductType = () => {
 
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Edit Product Type</h1>
-        <p className="text-sm text-base-content/70">
-          Update the name or tenant for this product type.
-        </p>
-      </div>
-      <div className="card bg-base-100 shadow">
-        <div className="card-body">
-          <ProductTypeForm
-            defaultValues={{
-              name: productType.name,
-              tenantId: productType.tenantId,
-            }}
-            onSubmit={handleSubmit}
-            submitLabel="Update"
-            isSubmitting={isUpdating}
-          />
-        </div>
-      </div>
+      <ProductTypeForm
+        defaultValues={{
+          name: productType.name,
+          tenantId: productType.tenantId,
+        }}
+        onSubmit={handleSubmit}
+        submitLabel="Update"
+        isSubmitting={isUpdating}
+        mode="edit"
+      />
     </Layout>
   );
 };

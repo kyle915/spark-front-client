@@ -13,6 +13,7 @@ import {
   MapPinIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/solid";
+import { TagIcon } from "lucide-react";
 
 // Dashboard
 import DashboardEvents from "@/components/pages/dashboard-event/DashboardEvent";
@@ -81,7 +82,9 @@ import EditRecap from "@/recap/EditRecap";
 
 // Public
 import SparkFormPage from "@/public/form/FormPage";
-import { TagIcon } from "lucide-react";
+
+// Calendar
+import CalendarConnection from "@/calendar/CalendarConnection";
 
 /* -----------------------------------------------------------
    PUBLIC ROUTES (NO AUTH REQUIRED)
@@ -464,6 +467,27 @@ const CatalogsRoutes = [
 ];
 
 /* -----------------------------------------------------------
+    CALENDAR
+----------------------------------------------------------- */
+const CalendarLinks = {
+  menu: [
+    {
+      path: "/connect-calendar",
+      name: "Connect with Calendar",
+      component: <CalendarConnection />,
+      Icon: CalendarIcon,
+    },
+  ],
+  routes: [
+    {
+      path: "/connect-calendar",
+      component: <CalendarConnection />,
+      isPublic: false,
+    },
+  ],
+};
+
+/* -----------------------------------------------------------
    EXPORT: SIDEBAR MENU
 ----------------------------------------------------------- */
 export const navigationMenuRoutes = [
@@ -498,6 +522,11 @@ export const navigationMenuRoutes = [
     Icon: TagIcon,
     links: CatalogsLinks.menu,
   },
+  {
+    title: "Connect Calendar",
+    path: "/connect-calendar", // Solo link, no submenu
+    Icon: CalendarIcon,
+  },
 ];
 
 /* -----------------------------------------------------------
@@ -511,6 +540,8 @@ export const appRoutes = [
   ...RecapLinks.routes,
   ...ProductLinks.routes,
   ...CatalogsRoutes,
+  //Calendar
+  ...CalendarLinks.routes,
   ...CompanyRoutes.routes,
   ...PublicRoutes.routes,
 ];

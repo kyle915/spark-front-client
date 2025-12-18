@@ -140,14 +140,18 @@ const TodayEventsMap = () => {
   return (
     <Layout>
       <div className="flex flex-col gap-2 mb-4">
-        <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
-          <MapPin className="w-8 h-8" />
+        <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+          <div className="p-2 rounded-xl bg-primary/10 text-primary">
+            <MapPin className="w-8 h-8" />
+          </div>
           <h1>Nearby Events</h1>
-        </span>
+        </div>
+
         <p className="text-sm text-base-content/60">
           Showing events around the selected location
         </p>
       </div>
+
       <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
         <div className="p-8 md:p-10 space-y-8">
           <div className="flex flex-col h-[calc(100vh-100px)] gap-4">

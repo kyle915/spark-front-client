@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { useForm, type UseFormRegister } from "react-hook-form";
-import { useNavigate, useParams } from "react-router";
+import { useForm, type Control } from "react-hook-form";
+import { Link, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import LoadingButton from "@/shared/LoadingButton";
 import { RetailersQuery } from "@/api/queries/RetailersQuery";
@@ -15,9 +15,14 @@ import type { CreateRetailerMutation as CreateRetailerMutationType } from "@/api
 import { UpdateRetailerMutation } from "@/api/mutations/UpdateRetailerMutation";
 import type { UpdateRetailerMutation as UpdateRetailerMutationType } from "@/api/mutations/__generated__/UpdateRetailerMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
-import { PencilIcon } from "@heroicons/react/24/outline";
+import { PencilIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { useAuthStore } from "@/store/authStore";
-import { BuildingStorefrontIcon } from "@heroicons/react/24/solid";
+import {
+  ArrowLeftIcon,
+  BuildingStorefrontIcon,
+} from "@heroicons/react/24/solid";
+import FormAutocomplete from "@/shared/FormAutocomplete";
+import FormInputText from "@/shared/FormInputText";
 
 type RetailerFormValues = {
   name: string;
@@ -27,17 +32,16 @@ type RetailerFormValues = {
   tenantId: string;
 };
 
-type LocationSelectProps = {
+type TenantLocationSelectProps = {
   tenantId: string;
-  register: UseFormRegister<RetailerFormValues>;
-  error?: string;
+  control: Control<RetailerFormValues>;
+  name?: string;
 };
 
 const TenantLocationSelect = ({
   tenantId,
-  register,
-  error,
-}: LocationSelectProps) => {
+  control,
+}: TenantLocationSelectProps) => {
   const data = useLazyLoadQuery<LocationsQueryType>(
     LocationsQuery,
     { filters: { tenantId } },
@@ -45,36 +49,36 @@ const TenantLocationSelect = ({
   );
 
   const locationOptions = useMemo(
-    () => data.locations.edges.map((edge) => edge.node),
+    () =>
+      data.locations.edges.map((edge) => ({
+        label: edge.node.name,
+        value: edge.node.id,
+      })),
     [data]
   );
 
   return (
-    <div className="form-control gap-3">
-      <label className="label pb-0">
-        <span className="label-text">Location</span>
-      </label>
-      <select
-        className="select select-bordered"
-        {...register("locationId", { required: "Location is required" })}
-      >
-        <option value="">Select a location</option>
-        {locationOptions.map((location) => (
-          <option key={location.id} value={location.id}>
-            {location.name}
-          </option>
-        ))}
-      </select>
-      {error ? <span className="text-error text-sm mt-1">{error}</span> : null}
-    </div>
+    <FormAutocomplete
+      control={control}
+      name="locationId"
+      label="Location"
+      placeholder="Select a location"
+      options={locationOptions}
+      rules={{
+        required: "Location is required",
+      }}
+    />
   );
 };
+
+export default TenantLocationSelect;
 
 type RetailerFormProps = {
   defaultValues: RetailerFormValues;
   onSubmit: (values: RetailerFormValues) => void;
   submitLabel: string;
   isSubmitting?: boolean;
+  mode?: "create" | "edit";
 };
 
 const RetailerForm = ({
@@ -82,17 +86,14 @@ const RetailerForm = ({
   onSubmit,
   submitLabel,
   isSubmitting,
+  mode = "create",
 }: RetailerFormProps) => {
-  const {
-    register,
-    handleSubmit,
-    watch,
-    reset,
-    setValue,
-    formState: { errors },
-  } = useForm<RetailerFormValues>({
-    defaultValues,
-  });
+  const { handleSubmit, watch, reset, setValue, control } =
+    useForm<RetailerFormValues>({
+      defaultValues,
+    });
+
+  const isEdit = mode === "edit";
 
   const tenantId = watch("tenantId");
   const lastTenantIdRef = useRef(defaultValues.tenantId);
@@ -109,89 +110,116 @@ const RetailerForm = ({
   }, [tenantId, setValue]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="form-control gap-3">
-          <label className="label pb-0">
-            <span className="label-text">Name</span>
-          </label>
-          <input
-            type="text"
-            className="input input-bordered"
-            {...register("name", { required: "Name is required" })}
-          />
-          {errors.name && (
-            <span className="text-error text-sm mt-1">
-              {errors.name.message}
-            </span>
-          )}
-        </div>
+    <form onSubmit={handleSubmit(onSubmit)} className="w-full">
+      <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
+        <div className="p-8 md:p-10 space-y-8">
+          {/* HEADER (igual al ejemplo) */}
+          <div className="flex flex-col gap-5 border-b border-base-100/20 pb-6">
+            <div className="flex items-center justify-between gap-4">
+              <Link
+                to="/catalogs/retailers/list"
+                className="inline-flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition"
+              >
+                <ArrowLeftIcon className="w-4 h-4" />
+                Back to list
+              </Link>
+            </div>
 
-        <div className="form-control gap-3">
-          <label className="label pb-0">
-            <span className="label-text">Store contact</span>
-          </label>
-          <input
-            type="text"
-            className="input input-bordered"
-            {...register("storeContact", {
-              required: "Store contact is required",
-            })}
-          />
-          {errors.storeContact && (
-            <span className="text-error text-sm mt-1">
-              {errors.storeContact.message}
-            </span>
-          )}
-        </div>
-      </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+                  <BuildingStorefrontIcon className="w-6 h-6" />
+                  <h1>{isEdit ? "Edit Retailer" : "Create Retailer"}</h1>
+                </div>
+              </div>
+              <p className="text-base-content/70 text-sm mt-2">
+                {isEdit
+                  ? "Update the information of this retailer."
+                  : "Fill out the form below to add a new retailer to your system."}
+              </p>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="form-control gap-3">
-          <label className="label pb-0">
-            <span className="label-text">Address</span>
-          </label>
-          <input
-            type="text"
-            className="input input-bordered"
-            {...register("address", { required: "Address is required" })}
-          />
-          {errors.address && (
-            <span className="text-error text-sm mt-1">
-              {errors.address.message}
-            </span>
-          )}
-        </div>
-      </div>
+          {/* SECTION: BASIC INFO (igual al patrón) */}
+          <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-lg">Basic Information</p>
+              <span className="text-xs text-base-content/60">
+                Required fields
+              </span>
+            </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {tenantId ? (
-          <TenantLocationSelect
-            tenantId={tenantId}
-            register={register}
-            error={errors.locationId?.message}
-          />
-        ) : (
-          <div className="form-control gap-3">
-            <label className="label pb-0">
-              <span className="label-text">Location</span>
-            </label>
-            <input
-              className="input input-bordered"
-              disabled
-              value="Select a tenant first"
-              readOnly
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInputText
+                control={control}
+                name="name"
+                label="Name"
+                placeholder="e.g., Retailer Central"
+                rules={{
+                  required: "Name is required",
+                  minLength: {
+                    value: 2,
+                    message: "Name must be at least 2 characters",
+                  },
+                }}
+              />
+
+              <FormInputText
+                control={control}
+                name="storeContact"
+                label="Store contact"
+                placeholder="e.g., +1 555-1234"
+                rules={{
+                  required: "Store contact is required",
+                  minLength: {
+                    value: 2,
+                    message: "Store contact must be at least 2 characters",
+                  },
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <FormInputText
+                control={control}
+                name="address"
+                label="Address"
+                placeholder="e.g., 123 Main St, City, Country"
+                rules={{
+                  required: "Address is required",
+                  minLength: {
+                    value: 4,
+                    message: "Address must be at least 4 characters",
+                  },
+                }}
+              />
+
+              <TenantLocationSelect
+                tenantId={tenantId}
+                control={control}
+                name="locationId"
+              />
+            </div>
+          </section>
+
+          {/* FOOTER ACTIONS (estilo Create Recap) */}
+          <div className="pt-2 flex items-center justify-end gap-2">
+            <Link
+              type="button"
+              className="btn btn-sm btn-outline"
+              to="/stores/list"
+            >
+              <XCircleIcon className="w-4 h-4" />
+              Cancel
+            </Link>
+
+            <LoadingButton
+              type="submit"
+              loading={isSubmitting}
+              text={submitLabel}
             />
           </div>
-        )}
-      </div>
-
-      <div className="flex justify-end">
-        <LoadingButton
-          type="submit"
-          loading={isSubmitting}
-          text={submitLabel}
-        />
+        </div>
       </div>
     </form>
   );
@@ -245,7 +273,7 @@ const RetailersTable = ({ tenantId }: { tenantId: string }) => {
                   <td>{retailer.storeContact}</td>
                   <td>
                     <button
-                      className="btn btn-ghost btn-sm"
+                      className="btn btn-primary btn-sm"
                       onClick={() =>
                         navigate(`/catalogs/retailers/edit/${retailer.uuid}`)
                       }
@@ -273,10 +301,15 @@ export const RetailersList = () => {
       <div className="mb-4 flex items-center gap-4">
         <div className="flex items-center w-full justify-between">
           <div>
-            <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
-              <BuildingStorefrontIcon className="w-8 h-8" />
+            <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                <BuildingStorefrontIcon className="w-8 h-8" />
+              </div>
               <h1>Retailers</h1>
-            </span>
+            </div>
+            <p className="text-base-content/70">
+              Manage and organize your retailers.
+            </p>
           </div>
 
           <div>
@@ -331,28 +364,18 @@ export const CreateRetailer = () => {
 
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Create Retailer</h1>
-        <p className="text-sm text-base-content/70">
-          Assign the retailer to a tenant and location.
-        </p>
-      </div>
-      <div className="card bg-base-100 shadow">
-        <div className="card-body">
-          <RetailerForm
-            defaultValues={{
-              name: "",
-              address: "",
-              storeContact: "",
-              tenantId: initialTenantId,
-              locationId: "",
-            }}
-            onSubmit={handleSubmit}
-            submitLabel="Create"
-            isSubmitting={isCreating}
-          />
-        </div>
-      </div>
+      <RetailerForm
+        defaultValues={{
+          name: "",
+          address: "",
+          storeContact: "",
+          tenantId: initialTenantId,
+          locationId: "",
+        }}
+        onSubmit={handleSubmit}
+        submitLabel="Create"
+        isSubmitting={isCreating}
+      />
     </Layout>
   );
 };
@@ -413,28 +436,19 @@ export const EditRetailer = () => {
 
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Edit Retailer</h1>
-        <p className="text-sm text-base-content/70">
-          Update retailer details for the selected tenant.
-        </p>
-      </div>
-      <div className="card bg-base-100 shadow">
-        <div className="card-body">
-          <RetailerForm
-            defaultValues={{
-              name: retailer.name,
-              address: retailer.address,
-              storeContact: retailer.storeContact,
-              tenantId: retailer.tenantId,
-              locationId: retailer.location?.id ?? "",
-            }}
-            onSubmit={handleSubmit}
-            submitLabel="Update"
-            isSubmitting={isUpdating}
-          />
-        </div>
-      </div>
+      <RetailerForm
+        defaultValues={{
+          name: retailer.name,
+          address: retailer.address,
+          storeContact: retailer.storeContact,
+          tenantId: retailer.tenantId,
+          locationId: retailer.location?.id ?? "",
+        }}
+        onSubmit={handleSubmit}
+        submitLabel="Update"
+        isSubmitting={isUpdating}
+        mode="edit"
+      />
     </Layout>
   );
 };

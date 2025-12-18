@@ -63,11 +63,16 @@ const ProductsList = () => {
 
   return (
     <Layout>
-      <div className="flex items-center gap-2 mb-4">
-        <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
-          <ShoppingCartIcon className="w-8 h-8 text-primary" />
+      <div className="mb-4 flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+          <div className="p-2 rounded-xl bg-primary/10 text-primary">
+            <ShoppingCartIcon className="w-8 h-8 text-primary" />
+          </div>
           <h1>All Products</h1>
-        </span>
+        </div>
+        <p className="text-base-content/70">
+          Manage and browse all products in the system.
+        </p>
       </div>
 
       <div className="flex flex-col gap-4">

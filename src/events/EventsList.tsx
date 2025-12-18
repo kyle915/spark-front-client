@@ -22,7 +22,7 @@ import { useAuthStore } from "@/store/authStore";
 //Icons
 import { EyeIcon, PencilIcon } from "@heroicons/react/24/outline";
 import { FilterIcon, FunnelXIcon } from "lucide-react";
-import { Bars4Icon } from "@heroicons/react/24/solid";
+import { CalendarDaysIcon } from "@heroicons/react/24/solid";
 
 const PAGE_SIZE = 10;
 
@@ -201,11 +201,16 @@ const EventsList = () => {
 
   return (
     <Layout>
-      <div className="flex items-center gap-2 mb-4">
-        <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
-          <Bars4Icon className="w-8 h-8 text-primary" />
+      <div className="mb-4 flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+          <div className="p-2 rounded-xl bg-primary/10 text-primary">
+            <CalendarDaysIcon className="w-8 h-8 text-primary" />
+          </div>
           <h1>All Events</h1>
-        </span>
+        </div>
+        <p className="text-base-content/70">
+          Manage and browse all events in the system.
+        </p>
       </div>
 
       <CatalogsProvider

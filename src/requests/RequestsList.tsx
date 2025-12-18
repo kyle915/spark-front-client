@@ -316,11 +316,16 @@ const RequestsList = () => {
 
   return (
     <Layout>
-      <div className="mb-4 flex items-center gap-4">
-        <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
-          <ClipboardDocumentListIcon className="w-8 h-8" />
+      <div className="mb-4 flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+          <div className="p-2 rounded-xl bg-primary/10 text-primary">
+            <ClipboardDocumentListIcon className="w-8 h-8" />
+          </div>
           <h1>All Requests</h1>
-        </span>
+        </div>
+        <p className="text-base-content/70">
+          Manage and browse all requests in the system.
+        </p>
       </div>
 
       <CatalogsProvider

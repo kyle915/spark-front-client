@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useForm } from "react-hook-form";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import LoadingButton from "@shared/LoadingButton";
 import { LocationsQuery } from "@api/queries/LocationsQuery";
@@ -15,7 +15,8 @@ import type { UpdateLocationMutation as UpdateLocationMutationType } from "@api/
 import { useAlertStore } from "@store/alertStore";
 import { PencilIcon } from "@heroicons/react/24/outline";
 import { useAuthStore } from "@/store/authStore";
-import { MapPinIcon } from "@heroicons/react/24/solid";
+import { ArrowLeftIcon, MapPinIcon } from "@heroicons/react/24/solid";
+import FormInputText from "@/shared/FormInputText";
 
 type LocationFormValues = {
   name: string;
@@ -29,6 +30,7 @@ type LocationFormProps = {
   onSubmit: (values: LocationFormValues) => void;
   submitLabel: string;
   isSubmitting?: boolean;
+  mode?: "create" | "edit";
 };
 
 const LocationForm = ({
@@ -36,80 +38,106 @@ const LocationForm = ({
   onSubmit,
   submitLabel,
   isSubmitting,
+  mode = "create",
 }: LocationFormProps) => {
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<LocationFormValues>({
+  const { control, handleSubmit, reset } = useForm<LocationFormValues>({
     defaultValues,
   });
+
+  const isEdit = mode === "edit";
 
   useEffect(() => {
     reset(defaultValues);
   }, [defaultValues, reset]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="form-control gap-2 p-2">
-          <div className="flex items-center gap-4">
-            <label className="label p-0">
-              <span className="label-text">Name</span>
-            </label>
-            <input
-              type="text"
-              className="input input-bordered"
-              {...register("name", { required: "Name is required" })}
+    <form onSubmit={handleSubmit(onSubmit)} className="w-full">
+      <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
+        <div className="p-8 md:p-10 space-y-8">
+          {/* HEADER */}
+          <div className="flex flex-col gap-4 border-b border-base-100/20">
+            <div className="flex items-center justify-between gap-4">
+              <Link
+                to="/catalogs/locations/list"
+                className="inline-flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition"
+              >
+                <ArrowLeftIcon className="w-4 h-4" />
+                Back to list
+              </Link>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+                  <MapPinIcon className="w-6 h-6" />
+                  <h1>{isEdit ? "Edit Location" : "Create Location"}</h1>
+                </span>
+              </div>
+              <p className="text-base-content/70 text-sm mt-2">
+                {isEdit
+                  ? "Update the location data for this tenant."
+                  : "Assign the location to a tenant."}
+              </p>
+            </div>
+          </div>
+
+          {/* SECTION: BASIC INFORMATION */}
+          <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-lg">Basic Information</p>
+              <span className="text-xs text-base-content/60">
+                Required fields
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormInputText
+                control={control}
+                name="name"
+                label="Location Name"
+                placeholder="e.g., Managua Central"
+                rules={{
+                  required: "Name is required",
+                  minLength: {
+                    value: 2,
+                    message: "Name must be at least 2 characters",
+                  },
+                }}
+              />
+
+              <FormInputText
+                control={control}
+                name="code"
+                label="Location Code"
+                placeholder="e.g., MNG-01"
+                rules={{
+                  required: "Code is required",
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormInputText
+                control={control}
+                name="zip"
+                label="ZIP Code"
+                placeholder="e.g., 14001"
+                rules={{
+                  required: "ZIP is required",
+                }}
+              />
+            </div>
+          </section>
+
+          {/* FOOTER ACTIONS */}
+          <div className="pt-2 flex items-center justify-end">
+            <LoadingButton
+              type="submit"
+              loading={isSubmitting}
+              text={submitLabel}
             />
           </div>
-          {errors.name && (
-            <span className="text-error text-sm">{errors.name.message}</span>
-          )}
         </div>
-
-        <div className="form-control gap-2 p-2">
-          <div className="flex items-center gap-4">
-            <label className="label p-0">
-              <span className="label-text">Code</span>
-            </label>
-            <input
-              type="text"
-              className="input input-bordered"
-              {...register("code", { required: "Code is required" })}
-            />
-          </div>
-          {errors.code && (
-            <span className="text-error text-sm">{errors.code.message}</span>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="form-control gap-2 p-2">
-          <div className="flex items-center gap-4">
-            <label className="label p-0">
-              <span className="label-text">ZIP</span>
-            </label>
-            <input
-              type="text"
-              className="input input-bordered"
-              {...register("zip", { required: "ZIP is required" })}
-            />
-          </div>
-          {errors.zip && (
-            <span className="text-error text-sm">{errors.zip.message}</span>
-          )}
-        </div>
-      </div>
-
-      <div className="flex justify-end">
-        <LoadingButton
-          type="submit"
-          loading={isSubmitting}
-          text={submitLabel}
-        />
       </div>
     </form>
   );
@@ -163,7 +191,7 @@ const LocationsTable = ({ tenantId }: { tenantId: string }) => {
                   <td>{location.zip}</td>
                   <td>
                     <button
-                      className="btn btn-ghost btn-sm"
+                      className="btn btn-primary btn-sm"
                       onClick={() =>
                         navigate(`/catalogs/locations/edit/${location.uuid}`)
                       }
@@ -191,10 +219,16 @@ export const LocationsList = () => {
       <div className="mb-4 flex items-center gap-4">
         <div className="flex items-center w-full justify-between">
           <div>
-            <span className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
-              <MapPinIcon className="w-8 h-8" />
+            <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+              <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                <MapPinIcon className="w-8 h-8" />
+              </div>
+
               <h1>Locations</h1>
-            </span>
+            </div>
+            <p className="text-base-content/70">
+              Manage and organize your locations.
+            </p>
           </div>
 
           <div>
@@ -249,27 +283,17 @@ export const CreateLocation = () => {
 
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Create Location</h1>
-        <p className="text-sm text-base-content/70">
-          Assign the location to a tenant.
-        </p>
-      </div>
-      <div className="card bg-base-100 shadow">
-        <div className="card-body">
-          <LocationForm
-            defaultValues={{
-              name: "",
-              code: "",
-              zip: "",
-              tenantId: initialTenantId,
-            }}
-            onSubmit={handleSubmit}
-            submitLabel="Create"
-            isSubmitting={isCreating}
-          />
-        </div>
-      </div>
+      <LocationForm
+        defaultValues={{
+          name: "",
+          code: "",
+          zip: "",
+          tenantId: initialTenantId,
+        }}
+        onSubmit={handleSubmit}
+        submitLabel="Create"
+        isSubmitting={isCreating}
+      />
     </Layout>
   );
 };
@@ -329,27 +353,18 @@ export const EditLocation = () => {
 
   return (
     <Layout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Edit Location</h1>
-        <p className="text-sm text-base-content/70">
-          Update the location data for this tenant.
-        </p>
-      </div>
-      <div className="card bg-base-100 shadow">
-        <div className="card-body">
-          <LocationForm
-            defaultValues={{
-              name: location.name,
-              code: location.code,
-              zip: location.zip,
-              tenantId: location.tenantId,
-            }}
-            onSubmit={handleSubmit}
-            submitLabel="Update"
-            isSubmitting={isUpdating}
-          />
-        </div>
-      </div>
+      <LocationForm
+        defaultValues={{
+          name: location.name,
+          code: location.code,
+          zip: location.zip,
+          tenantId: location.tenantId,
+        }}
+        onSubmit={handleSubmit}
+        submitLabel="Update"
+        isSubmitting={isUpdating}
+        mode="edit"
+      />
     </Layout>
   );
 };
