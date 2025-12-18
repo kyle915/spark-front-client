@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { motion } from "framer-motion";
+import type { Variants } from "framer-motion";
 import { fetchQuery, graphql } from "react-relay";
 import { useForm } from "react-hook-form";
 import { ProductsQuery } from "@api/queries/ProductsQuery";
@@ -10,10 +12,11 @@ import type { ProductTypesQuery as ProductTypesQueryType } from "@api/queries/__
 import type { DeleteProductMutation as DeleteProductMutationType } from "@api/mutations/__generated__/DeleteProductMutation.graphql";
 import type { UpdateProductMutation as UpdateProductMutationType } from "@api/mutations/__generated__/UpdateProductMutation.graphql";
 import { useAlertStore } from "@store/alertStore";
-import ConfirmationModal from "./ConfirmationModal";
-import ImageUpload from "./ImageUpload";
-import LoadingButton from "./LoadingButton";
+import ConfirmationModal from "../shared/ConfirmationModal";
+import ImageUpload from "../shared/ImageUpload";
+import LoadingButton from "../shared/LoadingButton";
 import environment from "@api/relay/environment";
+import { Edit, Trash2Icon } from "lucide-react";
 
 type ProductNode = {
   id: string;
@@ -110,7 +113,10 @@ const DeleteProductButton = ({
         {isDeleting ? (
           <span className="loading loading-spinner loading-sm" />
         ) : (
-          "Delete"
+          <>
+            <Trash2Icon className="w-4 h-4" />
+            Delete
+          </>
         )}
       </button>
       <ConfirmationModal
@@ -518,6 +524,29 @@ const TenantProductsGrid = ({
     setCurrentPage(1);
   };
 
+  const gridVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.05,
+      },
+    },
+  };
+
+  const cardVariants: Variants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.25,
+        ease: [0.16, 1, 0.3, 1], // ✅ easeOut válido
+      },
+    },
+  };
+
   return (
     <div className="mt-6">
       {!hideTypeFilter && (
@@ -545,7 +574,7 @@ const TenantProductsGrid = ({
       )}
 
       {hideTypeFilter && (
-        <div className="text-sm text-base-content/70 mb-2">
+        <div className="flex text-sm text-base-content/70 mb-2 justify-end">
           Total: {totalCount}
         </div>
       )}
@@ -555,55 +584,76 @@ const TenantProductsGrid = ({
           <span>No products found for this tenant.</span>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+        <motion.div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4"
+          variants={gridVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {products.map((product) => (
-            <div
+            <motion.div
               key={product.id}
-              className="card bg-base-200/70 border border-base-300/60 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+              variants={cardVariants}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="group card bg-base-100 border border-base-300/70 shadow-sm transition-all duration-200 hover:shadow-xl hover:border-primary/50"
             >
-              <div className="card-body flex-row items-center gap-6 p-6">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-base-300/60 flex items-center justify-center overflow-hidden">
-                  {product.image ? (
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    <div className="text-sm text-base-content/60 text-center px-2">
-                      No image
+              <div className="card-body p-4">
+                {/* Imagen */}
+                <div className="relative rounded-2xl overflow-hidden border border-base-300/70 bg-base-200">
+                  <div className="aspect-square w-full flex items-center justify-center">
+                    {product.image ? (
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="badge badge-ghost">No image</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div className="mt-4 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-base leading-snug line-clamp-2">
+                      {product.name}
                     </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-lg truncate">
-                    {product.name}
+
+                    <div className="mt-2">
+                      <span className="badge badge-soft badge-primary">
+                        {product.productType?.name ?? "Uncategorized"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-sm text-base-content/60 truncate">
-                    {product.productType?.name ?? "Uncategorized"}
+
+                  {/* Acciones */}
+                  <div className="flex flex-col gap-2 items-end shrink-0">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline bg-primary hover:bg-primary/90 text-white"
+                      onClick={() => setEditingProduct(product)}
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+
+                    <DeleteProductButton
+                      productId={product.id}
+                      productName={product.name}
+                      onDeleted={handleDeleted}
+                    />
                   </div>
-                </div>
-                <div className="flex flex-col gap-2 items-end">
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => setEditingProduct(product)}
-                  >
-                    Edit
-                  </button>
-                  <DeleteProductButton
-                    productId={product.id}
-                    productName={product.name}
-                    onDeleted={handleDeleted}
-                  />
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
-      <div className="flex items-center justify-center gap-4 mt-6">
+      <div className="flex items-center justify-center gap-4 mt-6 mb-6">
         <button
           type="button"
           className="btn btn-ghost btn-sm border border-base-300"

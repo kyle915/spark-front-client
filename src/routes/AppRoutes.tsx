@@ -40,7 +40,9 @@ import CreateEventWithoutRequest from "@/events/CreateEventWithoutRequest";
 // import CreateTenant from "@/tenants/CreateTenant";
 // import EditTenant from "@/tenants/EditTenant";
 // import CreateProduct from "@/tenants/CreateProduct";
-// import ProductsList from "@/tenants/ProductsList";
+
+// Products
+import ProductsList from "@/products/ProductsList";
 
 // Recap
 import CreateRecap from "@/recap/CreateRecap";
@@ -167,25 +169,25 @@ const EventsLinks = {
 /* -----------------------------------------------------------
    PRODUCTS
 ----------------------------------------------------------- */
-// const ProductLinks = {
-//   menu: [
-//     { path: "/products/create-product", name: "Create", Icon: PlusCircleIcon },
-//     { path: "/products/products-list", name: "List", Icon: Bars4Icon },
-//   ],
+const ProductLinks = {
+  menu: [
+    { path: "/products/create-product", name: "Create", Icon: PlusCircleIcon },
+    { path: "/products/products-list", name: "List", Icon: Bars4Icon },
+  ],
 
-//   routes: [
-//     {
-//       path: "/products/create-product",
-//       component: <CreateProduct />,
-//       isPublic: false,
-//     },
-//     {
-//       path: "/products/products-list",
-//       component: <ProductsList />,
-//       isPublic: false,
-//     },
-//   ],
-// };
+  routes: [
+    // {
+    //   path: "/products/create-product",
+    //   component: <CreateProduct />,
+    //   isPublic: false,
+    // },
+    {
+      path: "/products/products-list",
+      component: <ProductsList />,
+      isPublic: false,
+    },
+  ],
+};
 
 /* -----------------------------------------------------------
    RECAPS
@@ -232,7 +234,7 @@ export const navigationMenuRoutes = [
   {
     title: "Product",
     Icon: BuildingStorefrontIcon,
-    // links: ProductLinks.menu,
+    links: ProductLinks.menu,
   },
 ];
 
@@ -245,7 +247,7 @@ export const appRoutes = [
   ...EventsLinks.routes,
   // ...TenantsLinks.routes,
   ...RecapLinks.routes,
-  // ...ProductLinks.routes,
+  ...ProductLinks.routes,
   ...CompanyRoutes.routes,
   ...PublicRoutes.routes,
 ];
