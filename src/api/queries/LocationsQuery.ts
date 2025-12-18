@@ -8,6 +8,8 @@ export const LocationsQuery = graphql`
                     id
                     uuid
                     name
+                    code
+                    zip
                 }
             }
         }

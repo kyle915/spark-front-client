@@ -285,7 +285,7 @@ const ProductForm = () => {
                 <Link
                   type="button"
                   className="btn btn-sm btn-outline"
-                  to="/recap/list"
+                  to="/product/products-list"
                 >
                   <XCircleIcon className="w-4 h-4" />
                   Cancel
@@ -301,7 +301,7 @@ const ProductForm = () => {
                 ) : (
                   <>
                     <SaveIcon className="w-4 h-4" />
-                    Create Recap
+                    Create Product
                   </>
                 )}
               </button>

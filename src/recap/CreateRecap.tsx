@@ -401,8 +401,14 @@ const RecapForm = () => {
                 className="btn btn-sm btn-primary"
                 disabled={isInFlight && loading}
               >
-                <SaveIcon className="w-4 h-4" />
-                Create Recap
+                {loading ? (
+                  <span className="loading loading-spinner">Saving...</span>
+                ) : (
+                  <>
+                    <SaveIcon className="w-4 h-4" />
+                    Create Recap
+                  </>
+                )}
               </button>
             </div>
           </div>

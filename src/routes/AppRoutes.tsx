@@ -10,6 +10,8 @@ import {
   PlusCircleIcon,
   CalendarIcon,
   MapIcon,
+  MapPinIcon,
+  UserGroupIcon,
 } from "@heroicons/react/24/solid";
 
 // Dashboard
@@ -35,14 +37,41 @@ import TodayEvents from "@/events/TodayEvents";
 import TodayEventsMap from "@/events/TodayEventsMap";
 import CreateEventWithoutRequest from "@/events/CreateEventWithoutRequest";
 
-// Tenants
-// import TenantsList from "@/tenants/TenantsList";
-// import CreateTenant from "@/tenants/CreateTenant";
-// import EditTenant from "@/tenants/EditTenant";
-
 // Products
 import ProductsList from "@/products/ProductsList";
 import CreateProduct from "@/products/CreateProduct";
+
+// Catalogs
+import {
+  ProductTypesList,
+  CreateProductType,
+  EditProductType,
+} from "@/catalogs/ProductTypes";
+import {
+  EventTypesList,
+  CreateEventType,
+  EditEventType,
+} from "@/catalogs/EventTypes";
+import {
+  LocationsList,
+  CreateLocation,
+  EditLocation,
+} from "@/catalogs/Locations";
+import {
+  RequestTypesList,
+  CreateRequestType,
+  EditRequestType,
+} from "@/catalogs/RequestTypes";
+import {
+  DistributorsList,
+  CreateDistributor,
+  EditDistributor,
+} from "@/catalogs/Distributors";
+import {
+  RetailersList,
+  CreateRetailer,
+  EditRetailer,
+} from "@/catalogs/Retailers";
 
 // Recap
 import CreateRecap from "@/recap/CreateRecap";
@@ -52,6 +81,7 @@ import EditRecap from "@/recap/EditRecap";
 
 // Public
 import SparkFormPage from "@/public/form/FormPage";
+import { TagIcon } from "lucide-react";
 
 /* -----------------------------------------------------------
    PUBLIC ROUTES (NO AUTH REQUIRED)
@@ -207,6 +237,233 @@ const RecapLinks = {
 };
 
 /* -----------------------------------------------------------
+   Catalogs
+----------------------------------------------------------- */
+const CatalogsLinks = {
+  menu: [
+    {
+      name: "Product Types",
+      Icon: TagIcon,
+      links: [
+        {
+          path: "/catalogs/product-types/list",
+          name: "List",
+          component: <ProductTypesList />,
+          Icon: Bars4Icon,
+        },
+        {
+          path: "/catalogs/product-types/create",
+          name: "Create",
+          component: <CreateProductType />,
+          Icon: PlusCircleIcon,
+        },
+      ],
+    },
+    {
+      name: "Event Types",
+      Icon: CalendarDaysIcon,
+      links: [
+        {
+          path: "/catalogs/event-types/list",
+          name: "List",
+          component: <EventTypesList />,
+          Icon: Bars4Icon,
+        },
+        {
+          path: "/catalogs/event-types/create",
+          name: "Create",
+          component: <CreateEventType />,
+          Icon: PlusCircleIcon,
+        },
+      ],
+    },
+    {
+      name: "Locations",
+      Icon: MapPinIcon,
+      links: [
+        {
+          path: "/catalogs/locations/list",
+          name: "List",
+          component: <LocationsList />,
+          Icon: Bars4Icon,
+        },
+        {
+          path: "/catalogs/locations/create",
+          name: "Create",
+          component: <CreateLocation />,
+          Icon: PlusCircleIcon,
+        },
+      ],
+    },
+
+    {
+      name: "Request Types",
+      Icon: ClipboardDocumentListIcon,
+      links: [
+        {
+          path: "/catalogs/request-types/list",
+          name: "List",
+          component: <RequestTypesList />,
+          Icon: Bars4Icon,
+        },
+        {
+          path: "/catalogs/request-types/create",
+          name: "Create",
+          component: <CreateRequestType />,
+          Icon: PlusCircleIcon,
+        },
+      ],
+    },
+
+    {
+      name: "Distributors",
+      Icon: UserGroupIcon,
+      links: [
+        {
+          path: "/catalogs/distributors/list",
+          name: "List",
+          component: <DistributorsList />,
+          Icon: Bars4Icon,
+        },
+        {
+          path: "/catalogs/distributors/create",
+          name: "Create",
+          component: <CreateDistributor />,
+          Icon: PlusCircleIcon,
+        },
+      ],
+    },
+
+    {
+      name: "Retailers",
+      Icon: BuildingStorefrontIcon,
+      links: [
+        {
+          path: "/catalogs/retailers/list",
+          name: "List",
+          component: <RetailersList />,
+          Icon: Bars4Icon,
+        },
+        {
+          path: "/catalogs/retailers/create",
+          name: "Create",
+          component: <CreateRetailer />,
+          Icon: PlusCircleIcon,
+        },
+      ],
+    },
+  ],
+  routes: [
+    // products types
+    {
+      path: "/catalogs/product-types/edit/:uuid",
+      name: "Edit Product Type",
+      component: <EditProductType />,
+    },
+    {
+      path: "/catalogs/product-types/create",
+      name: "Create Product Type",
+      component: <CreateProductType />,
+    },
+    {
+      path: "/catalogs/product-types/list",
+      name: "List Product Types",
+      component: <ProductTypesList />,
+    },
+
+    // event types
+    {
+      path: "/catalogs/event-types/edit/:uuid",
+      name: "Edit Event Type",
+      component: <EditEventType />,
+    },
+    {
+      path: "/catalogs/event-types/create",
+      name: "Create Event Type",
+      component: <CreateEventType />,
+    },
+    {
+      path: "/catalogs/event-types/list",
+      name: "List Event Types",
+      component: <EventTypesList />,
+    },
+
+    // locations
+    {
+      path: "/catalogs/locations/edit/:uuid",
+      name: "Edit Location",
+      component: <EditLocation />,
+    },
+    {
+      path: "/catalogs/locations/create",
+      name: "Create Location",
+      component: <CreateLocation />,
+    },
+    {
+      path: "/catalogs/locations/list",
+      name: "List Locations",
+      component: <LocationsList />,
+    },
+    // request types
+    {
+      path: "/catalogs/request-types/edit/:uuid",
+      name: "Edit Request Type",
+      component: <EditRequestType />,
+    },
+    {
+      path: "/catalogs/request-types/create",
+      name: "Create Request Type",
+      component: <CreateRequestType />,
+    },
+    {
+      path: "/catalogs/request-types/list",
+      name: "List Request Types",
+      component: <RequestTypesList />,
+    },
+
+    // distributors
+    {
+      path: "/catalogs/distributors/edit/:uuid",
+      name: "Edit Distributor",
+      component: <EditDistributor />,
+    },
+    {
+      path: "/catalogs/distributors/create",
+      name: "Create Distributor",
+      component: <CreateDistributor />,
+    },
+    {
+      path: "/catalogs/distributors/list",
+      name: "List Distributors",
+      component: <DistributorsList />,
+    },
+
+    // retailers
+    {
+      path: "/catalogs/retailers/edit/:uuid",
+      name: "Edit Retailer",
+      component: <EditRetailer />,
+    },
+    {
+      path: "/catalogs/retailers/create",
+      name: "Create Retailer",
+      component: <CreateRetailer />,
+    },
+    {
+      path: "/catalogs/retailers/list",
+      name: "List Retailers",
+      component: <RetailersList />,
+    },
+  ],
+};
+
+const CatalogsRoutes = [
+  // Flattened leaf routes for router consumption
+  ...CatalogsLinks.menu.flatMap((group) => group.links ?? []),
+  ...CatalogsLinks.routes,
+];
+
+/* -----------------------------------------------------------
    EXPORT: SIDEBAR MENU
 ----------------------------------------------------------- */
 export const navigationMenuRoutes = [
@@ -236,6 +493,11 @@ export const navigationMenuRoutes = [
     Icon: BuildingStorefrontIcon,
     links: ProductLinks.menu,
   },
+  {
+    title: "Catalogs",
+    Icon: TagIcon,
+    links: CatalogsLinks.menu,
+  },
 ];
 
 /* -----------------------------------------------------------
@@ -248,6 +510,7 @@ export const appRoutes = [
   // ...TenantsLinks.routes,
   ...RecapLinks.routes,
   ...ProductLinks.routes,
+  ...CatalogsRoutes,
   ...CompanyRoutes.routes,
   ...PublicRoutes.routes,
 ];
