@@ -39,10 +39,10 @@ import CreateEventWithoutRequest from "@/events/CreateEventWithoutRequest";
 // import TenantsList from "@/tenants/TenantsList";
 // import CreateTenant from "@/tenants/CreateTenant";
 // import EditTenant from "@/tenants/EditTenant";
-// import CreateProduct from "@/tenants/CreateProduct";
 
 // Products
 import ProductsList from "@/products/ProductsList";
+import CreateProduct from "@/products/CreateProduct";
 
 // Recap
 import CreateRecap from "@/recap/CreateRecap";
@@ -176,11 +176,11 @@ const ProductLinks = {
   ],
 
   routes: [
-    // {
-    //   path: "/products/create-product",
-    //   component: <CreateProduct />,
-    //   isPublic: false,
-    // },
+    {
+      path: "/products/create-product",
+      component: <CreateProduct />,
+      isPublic: false,
+    },
     {
       path: "/products/products-list",
       component: <ProductsList />,
