@@ -8,6 +8,8 @@ export const useSparkForm = () =>
     resolver: yupResolver(sparkFormSchema),
 
     defaultValues: {
+      distributorId: "",
+      retailerId: "",
       address: "",
       latitude: undefined,
       longitude: undefined,

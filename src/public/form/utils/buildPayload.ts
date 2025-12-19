@@ -11,18 +11,33 @@ export function buildPayload(values: SparkFormData): CreateRequestInput {
   const isTableNeeded =
     String(values.details?.[0]?.isTableNeeded).toLowerCase() === "true";
 
+  const ensureSeconds = (time?: string | null) => {
+    if (!time) return "";
+    return time.split(":").length === 2 ? `${time}:00` : time;
+  };
+
+  const buildDateTime = (dateValue?: string | null, timeValue?: string | null) => {
+    const formattedDate = dateFormat(dateValue ?? "");
+    if (!formattedDate) return "";
+
+    const timeWithSeconds = ensureSeconds(timeValue) || "00:00:00";
+    return `${formattedDate} ${timeWithSeconds}`;
+  };
+
   return {
     name: values.name,
-    date: dateFormat(values.date),
-    startTime: values.start_time,
-    endTime: values.end_time,
+    date: buildDateTime(values.date, "00:00"),
+    startTime: buildDateTime(values.date, values.start_time),
+    endTime: buildDateTime(values.date, values.end_time),
     address: values.address,
     coordinates: [Number(values.latitude), Number(values.longitude)],
     // Backend still requires client fields even though UI no longer collects them.
     clientName: CLIENT_PLACEHOLDER.name,
     clientEmail: CLIENT_PLACEHOLDER.email,
+    distributorId: values.distributorId || null,
     distributorName: values.distributor,
     distributorEmail: values.distributorEmail,
+    retailerId: values.retailerId || null,
     retailerName: values.retailer,
     retailerAddress: values.retailerAddress,
     retailerStoreContact: values.retailerStoreContact,
