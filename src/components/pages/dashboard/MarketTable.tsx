@@ -1,12 +1,3 @@
-import {
-  useReactTable,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  flexRender,
-  type ColumnDef,
-} from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, BadgeDollarSign } from "lucide-react";
 
@@ -26,61 +17,46 @@ interface Props {
 export function MarketTable({ data }: Props) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [filterType, setFilterType] = useState("none");
+  const [sortKey, setSortKey] = useState<keyof MarketData>("market");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const filteredData = useMemo(() => {
     let d = [...data];
+    const sortBy = (key: keyof MarketData) => {
+      d = d.sort((a, b) => {
+        const first = a[key];
+        const second = b[key];
+        if (typeof first === "number" && typeof second === "number") {
+          return sortDir === "asc" ? first - second : second - first;
+        }
+        return sortDir === "asc"
+          ? String(first).localeCompare(String(second))
+          : String(second).localeCompare(String(first));
+      });
+    };
+
     if (filterType === "top-efficiency")
       d = d.sort((a, b) => b.efficiency - a.efficiency).slice(0, 10);
     if (filterType === "top-conversion")
       d = d.sort((a, b) => b.conversion - a.conversion).slice(0, 10);
     if (filterType === "top-purchases")
       d = d.sort((a, b) => b.purchases - a.purchases).slice(0, 10);
+
+    sortBy(sortKey);
     return d.filter((m) =>
       m.market.toLowerCase().includes(globalFilter.toLowerCase())
     );
-  }, [data, filterType, globalFilter]);
+  }, [data, filterType, globalFilter, sortDir, sortKey]);
 
-  const columns = useMemo<ColumnDef<MarketData>[]>(
-    () => [
-      { accessorKey: "market", header: "Market" },
-      { accessorKey: "consumers", header: "Consumers" },
-      { accessorKey: "purchases", header: "Purchases" },
-      {
-        accessorKey: "conversion",
-        header: "Conversion",
-        cell: (info) => {
-          const v = info.getValue<number>();
-          const color =
-            v >= 25
-              ? "badge-success"
-              : v >= 20
-                ? "badge-info"
-                : "badge-ghost";
-          return (
-            <span className={`badge ${color} font-semibold`}>{v}%</span>
-          );
-        },
-      },
-      { accessorKey: "demos", header: "Demos" },
-      {
-        accessorKey: "efficiency",
-        header: "Efficiency",
-        cell: (info) => `${info.getValue<number>()}%`,
-      },
-    ],
-    []
-  );
+  const toggleSort = (key: keyof MarketData) => {
+    setSortKey(key);
+    setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+  };
 
-  const table = useReactTable({
-    data: filteredData,
-    columns,
-    state: { globalFilter },
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
+  const sortIcon = (key: keyof MarketData) => {
+    if (sortKey !== key) return null;
+    return sortDir === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg p-6 transition-all duration-300">
@@ -117,66 +93,85 @@ export function MarketTable({ data }: Props) {
       <div className="overflow-x-auto">
         <table className="table w-full text-sm">
           <thead>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id} className="bg-gray-100 dark:bg-gray-700">
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    onClick={header.column.getToggleSortingHandler()}
-                    className="cursor-pointer font-semibold text-gray-700 dark:text-gray-200"
-                  >
-                    <div className="flex items-center gap-1">
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                      {{
-                        asc: <ArrowUp size={12} />,
-                        desc: <ArrowDown size={12} />,
-                      }[header.column.getIsSorted() as string] ?? null}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            ))}
+            <tr className="bg-gray-100 dark:bg-gray-700">
+              <th
+                onClick={() => toggleSort("market")}
+                className="cursor-pointer font-semibold text-gray-700 dark:text-gray-200"
+              >
+                <div className="flex items-center gap-1">
+                  Market {sortIcon("market")}
+                </div>
+              </th>
+              <th
+                onClick={() => toggleSort("consumers")}
+                className="cursor-pointer font-semibold text-gray-700 dark:text-gray-200"
+              >
+                <div className="flex items-center gap-1">
+                  Consumers {sortIcon("consumers")}
+                </div>
+              </th>
+              <th
+                onClick={() => toggleSort("purchases")}
+                className="cursor-pointer font-semibold text-gray-700 dark:text-gray-200"
+              >
+                <div className="flex items-center gap-1">
+                  Purchases {sortIcon("purchases")}
+                </div>
+              </th>
+              <th
+                onClick={() => toggleSort("conversion")}
+                className="cursor-pointer font-semibold text-gray-700 dark:text-gray-200"
+              >
+                <div className="flex items-center gap-1">
+                  Conversion {sortIcon("conversion")}
+                </div>
+              </th>
+              <th
+                onClick={() => toggleSort("demos")}
+                className="cursor-pointer font-semibold text-gray-700 dark:text-gray-200"
+              >
+                <div className="flex items-center gap-1">
+                  Demos {sortIcon("demos")}
+                </div>
+              </th>
+              <th
+                onClick={() => toggleSort("efficiency")}
+                className="cursor-pointer font-semibold text-gray-700 dark:text-gray-200"
+              >
+                <div className="flex items-center gap-1">
+                  Efficiency {sortIcon("efficiency")}
+                </div>
+              </th>
+            </tr>
           </thead>
           <tbody>
-            {table.getRowModel().rows.map((row) => (
+            {filteredData.map((row) => (
               <tr
-                key={row.id}
+                key={row.market}
                 className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="py-2 px-3">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
+                <td className="py-2 px-3">{row.market}</td>
+                <td className="py-2 px-3">{row.consumers}</td>
+                <td className="py-2 px-3">{row.purchases}</td>
+                <td className="py-2 px-3">
+                  <span
+                    className={`badge ${
+                      row.conversion >= 25
+                        ? "badge-success"
+                        : row.conversion >= 20
+                          ? "badge-info"
+                          : "badge-ghost"
+                    } font-semibold`}
+                  >
+                    {row.conversion}%
+                  </span>
+                </td>
+                <td className="py-2 px-3">{row.demos}</td>
+                <td className="py-2 px-3">{row.efficiency}%</td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex justify-between items-center mt-4">
-        <button
-          className="btn btn-outline btn-sm rounded-full"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Previous
-        </button>
-        <span className="text-sm font-medium">
-          Page {table.getState().pagination.pageIndex + 1} of{" "}
-          {table.getPageCount()}
-        </span>
-        <button
-          className="btn btn-outline btn-sm rounded-full"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Next
-        </button>
       </div>
     </div>
   );

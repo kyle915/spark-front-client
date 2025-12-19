@@ -1,5 +1,5 @@
 // src/layout/MainLayout.tsx
-import { Outlet } from "react-router-dom";
+import { Outlet } from "react-router";
 import Navbar from "../layout/Navbar";
 
 export default function MainLayout() {

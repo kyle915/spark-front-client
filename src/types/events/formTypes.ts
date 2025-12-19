@@ -27,7 +27,7 @@ export interface RequestStoreManagerItem {
   name: string;
   phone: string;
   uuid?: string;
-  requestId?: string;
+  requestId?: string | null;
 }
 
 export interface EventType {

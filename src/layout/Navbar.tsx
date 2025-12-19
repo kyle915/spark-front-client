@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation } from "react-router";
 import { ChevronDown } from "lucide-react";
 import ThemeToggle from "../components/ui/ThemeToggle";
 
@@ -14,6 +14,14 @@ const defaultNavLinks: NavLinkItem[] = [
 
 export default function Navbar({ navLinks = defaultNavLinks }: { navLinks?: NavLinkItem[]; onOpenDrawer?: () => void }) {
   const location = useLocation();
+  const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
+    `px-3 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${
+      isActive
+        ? "border-b-2 border-primary text-primary"
+        : "text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+    }`;
+  const dropdownLinkClassName = ({ isActive }: { isActive: boolean }) =>
+    isActive ? "font-semibold text-primary" : "";
 
   const currentDashboard =
     location.pathname.startsWith("/dashboard-event")
@@ -34,13 +42,7 @@ export default function Navbar({ navLinks = defaultNavLinks }: { navLinks?: NavL
               <li key={link.to}>
                 <NavLink
                   to={link.to}
-                  className={({ isActive }) =>
-                    `px-3 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${
-                      isActive
-                        ? "border-b-2 border-primary text-primary"
-                        : "text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
-                    }`
-                  }
+                  className={navLinkClassName}
                 >
                   {link.label}
                 </NavLink>
@@ -67,9 +69,7 @@ export default function Navbar({ navLinks = defaultNavLinks }: { navLinks?: NavL
               <li>
                 <NavLink
                   to="/dashboard"
-                  className={({ isActive }) =>
-                    isActive ? "font-semibold text-primary" : ""
-                  }
+                  className={dropdownLinkClassName}
                 >
                   Retail Dashboard
                 </NavLink>
@@ -77,9 +77,7 @@ export default function Navbar({ navLinks = defaultNavLinks }: { navLinks?: NavL
               <li>
                 <NavLink
                   to="/dashboard-event"
-                  className={({ isActive }) =>
-                    isActive ? "font-semibold text-primary" : ""
-                  }
+                  className={dropdownLinkClassName}
                 >
                   Event Dashboard
                 </NavLink>

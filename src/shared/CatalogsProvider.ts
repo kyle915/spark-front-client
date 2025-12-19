@@ -52,7 +52,7 @@ export interface RequestStoreManagerItem {
   name: string;
   phone: string;
   uuid?: string;
-  requestId?: string;
+  requestId?: string | null;
 }
 type CatalogsProviderProps = {
   children: (catalogs: CatalogsState) => ReactNode;
