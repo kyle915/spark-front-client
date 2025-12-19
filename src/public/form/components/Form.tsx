@@ -12,6 +12,14 @@ interface SparkFormProps {
     id: string;
     name: string;
   }[];
+  distributors: {
+    id: string;
+    name: string;
+  }[];
+  retailers: {
+    id: string;
+    name: string;
+  }[];
   products: {
     id: string;
     name: string;
@@ -38,13 +46,13 @@ export default function SparkForm(props: SparkFormProps) {
     requestTypes,
     products,
     productTypes,
-    // distributors,
-    // retailers,
+    distributors,
+    retailers,
     tenantId,
     timeZones,
   } = props;
 
-  const { control, watch, reset, trigger } = useSparkForm();
+  const { control, watch, reset, trigger, setValue } = useSparkForm();
   const values = watch();
   const [resetSignal, setResetSignal] = useState(0);
 
@@ -80,7 +88,15 @@ export default function SparkForm(props: SparkFormProps) {
       title: "Client Details",
       description: "Select distributor, and retailer",
       validate: () => trigger(stepFields.step3),
-      content: <Step3Clients control={control} requestTypes={requestTypes} />,
+      content: (
+        <Step3Clients
+          control={control}
+          setValue={setValue}
+          requestTypes={requestTypes}
+          distributors={distributors}
+          retailers={retailers}
+        />
+      ),
     },
     {
       title: "Extra Details",

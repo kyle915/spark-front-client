@@ -10,9 +10,6 @@ export const CREATE_REQUEST_BY_URL = `
         id
         uuid
         name
-        date
-        startTime
-        endTime
         address
       }
     }
