@@ -34,8 +34,10 @@ export function buildPayload(values: SparkFormData): CreateRequestInput {
     // Backend still requires client fields even though UI no longer collects them.
     clientName: CLIENT_PLACEHOLDER.name,
     clientEmail: CLIENT_PLACEHOLDER.email,
+    distributorId: values.distributorId || null,
     distributorName: values.distributor,
     distributorEmail: values.distributorEmail,
+    retailerId: values.retailerId || null,
     retailerName: values.retailer,
     retailerAddress: values.retailerAddress,
     retailerStoreContact: values.retailerStoreContact,
