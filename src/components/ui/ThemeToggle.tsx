@@ -1,10 +1,10 @@
 import { memo } from "react";
 import { Button } from "../../components/ui/button";
 import { Moon, Sun } from "lucide-react";
-import { useThemeContext } from "../../providers/ThemeContext";
+import { useThemeMode } from "@/hooks/useThemeMode";
 
 const ThemeToggle = () => {
-  const { isDark, toggleTheme } = useThemeContext();
+  const [isDark, toggleTheme] = useThemeMode();
 
   return (
     <Button

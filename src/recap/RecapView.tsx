@@ -1,8 +1,6 @@
 import Layout from "@/layout/Layout";
 import { RecapQuery } from "@/api/queries/RecapQuery";
 import type { RecapQuery as RecapQueryType } from "@/api/queries/__generated__/RecapQuery.graphql";
-import { FileTypesQuery } from "@/api/queries/FileTypesQuery";
-import type { FileTypesQuery as FileTypesQueryType } from "@api/queries/__generated__/FileTypesQuery.graphql";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useParams, useNavigate } from "react-router";
 import { useEffect, useMemo, useState } from "react";
@@ -70,12 +68,6 @@ const RecapView = () => {
     { fetchPolicy: "store-and-network" }
   );
 
-  const fileTypesData = useLazyLoadQuery<FileTypesQueryType>(
-    FileTypesQuery,
-    {},
-    { fetchPolicy: "store-and-network" }
-  );
-
   if (!uuid) {
     return (
       <Layout>
@@ -96,14 +88,6 @@ const RecapView = () => {
   const storeManagers = recap.requestStoreManagers ?? [];
   const ambassadors = recap.ambassadors ?? [];
 
-  const fileTypeLabels = useMemo(() => {
-    const map = new Map<string, string>();
-    fileTypesData.fileTypes.edges.forEach(({ node }) =>
-      map.set(node.id, node.name)
-    );
-    return map;
-  }, [fileTypesData.fileTypes.edges]);
-
   const imageFiles = useMemo(
     () =>
       recap.recapFiles.filter(
@@ -111,15 +95,6 @@ const RecapView = () => {
       ),
     [recap.recapFiles]
   );
-
-  const filesByType = useMemo(() => {
-    const grouped = new Map<string, typeof recap.recapFiles>();
-    recap.recapFiles.forEach((file) => {
-      const label = fileTypeLabels.get(file.fileTypeId) ?? "Other";
-      grouped.set(label, [...(grouped.get(label) ?? []), file]);
-    });
-    return Array.from(grouped.entries());
-  }, [fileTypeLabels, recap.recapFiles]);
 
   // ======================================================
   // PREVIEW CONTROLS
