@@ -3,8 +3,10 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
+  BarController,
   PointElement,
   LineElement,
+  LineController,
   Tooltip,
   Legend,
   type ChartOptions,
@@ -17,8 +19,10 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
+  BarController,
   PointElement,
   LineElement,
+  LineController,
   Tooltip,
   Legend
 );
