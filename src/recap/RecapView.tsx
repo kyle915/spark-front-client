@@ -97,47 +97,30 @@ const RecapView = () => {
   );
 
   // ======================================================
-  // PREVIEW CONTROLS
+  // CONTROLS
   // ======================================================
   const openPreview = (idx: number) => setPreviewIndex(idx);
   const closePreview = () => setPreviewIndex(null);
-  const goNext = () =>
-    setPreviewIndex((i) => (i === null ? null : (i + 1) % imageFiles.length));
-  const goPrev = () =>
-    setPreviewIndex((i) =>
-      i === null ? null : (i - 1 + imageFiles.length) % imageFiles.length
-    );
-
-  useEffect(() => {
-    if (previewIndex === null) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closePreview();
-      if (e.key === "ArrowRight") goNext();
-      if (e.key === "ArrowLeft") goPrev();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [previewIndex]);
 
   // ======================================================
-  // MOCK KPI DATA (igual que antes)
+  // DATA NORMALIZATION FROM API
   // ======================================================
-  const hotData = {
-    sales: 6,
-    totalConsumers: 25,
-    triedBefore: 15,
-    competitor: "Long drink",
-    feedback:
-      "Grape was stated taste like dimetapp. Cranberry was liked a lot. Overall rating: 4/5.",
-    account: [
-      { label: "Anything you'd do differently", value: "Approach parking lot" },
-      {
-        label: "Account feedback",
-        value: "Owner was very happy with Zero’s appearance.",
-      },
-      { label: "Corporate card used", value: "Yes" },
-    ],
-  };
+
+  // Consumers
+  const totalConsumers = recap.consumerEngagements?.length ?? 0;
+
+  // Sales
+  const productsSold = recap.productsSold ?? 0;
+  const totalEarnings = recap.totalEarnings ?? 0;
+
+  // Feedback
+  const hasConsumerFeedback = (recap.consumerFeedback?.length ?? 0) > 0;
+
+  const hasAccountFeedback = (recap.accountFeedback?.length ?? 0) > 0;
+
+  // Flags
+  const hasSalesData =
+    recap.productsSold !== null || recap.totalEarnings !== null;
 
   const currentPreview =
     previewIndex !== null ? imageFiles[previewIndex] : null;
@@ -218,29 +201,24 @@ const RecapView = () => {
           icon={<span className="i-lucide-award text-primary" />}
         >
           <div className="space-y-3">
-            <p className="text-sm text-base-content/60">Overall Rating</p>
-
-            <div className="flex items-center gap-2">
-              <div className="flex text-warning">
-                {"★★★★★".split("").map((s, i) => (
-                  <span key={i}>{s}</span>
-                ))}
-              </div>
-              <span className="text-xl font-bold">5.0</span>
-            </div>
-
-            <div className="divider my-2" />
-
             <div className="flex justify-between text-sm">
               <span className="text-base-content/60">Event Type</span>
-              <span className="font-medium">Activation</span>
+              <span className="font-medium">
+                {recap.event?.eventType?.name ?? "—"}
+              </span>
             </div>
 
             <div className="flex justify-between text-sm">
               <span className="text-base-content/60">Scope</span>
-              <span className="flex items-center gap-1 font-medium">
-                <span className="i-lucide-globe" />
-                National
+              <span className="font-medium">
+                {recap.event?.isNational ? "National" : "Local"}
+              </span>
+            </div>
+
+            <div className="flex justify-between text-sm">
+              <span className="text-base-content/60">Approved</span>
+              <span className="font-medium">
+                {recap.approved ? "Yes" : "Pending"}
               </span>
             </div>
           </div>
@@ -293,73 +271,39 @@ const RecapView = () => {
           title="Sales Performance"
           icon={<span className="i-lucide-shopping-cart text-primary" />}
         >
-          <div className="space-y-3">
-            <div className="flex justify-between items-center bg-base-200 rounded-lg p-3">
-              <span className="flex items-center gap-2 text-sm">
-                <span className="i-lucide-box" />
-                Products Sold
-              </span>
-              <span className="text-xl font-bold">{hotData.sales}</span>
-            </div>
+          {!hasSalesData ? (
+            <p className="text-sm text-base-content/60">
+              No sales data recorded for this event.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center bg-base-200 rounded-lg p-3">
+                <span className="text-sm">Products Sold</span>
+                <span className="text-xl font-bold">{productsSold}</span>
+              </div>
 
-            <div className="flex justify-between text-sm border rounded-lg p-3">
-              <span className="flex items-center gap-2">
-                <span className="i-lucide-dollar-sign" />
-                Case Price
-              </span>
-              <span className="font-medium">$24.00</span>
+              <div className="flex justify-between text-sm border rounded-lg p-3">
+                <span>Total Earnings</span>
+                <span className="font-medium">${totalEarnings.toFixed(2)}</span>
+              </div>
             </div>
-
-            <div className="flex justify-between text-sm border rounded-lg p-3">
-              <span className="flex items-center gap-2">
-                <span className="i-lucide-dollar-sign" />
-                Can Price
-              </span>
-              <span className="font-medium">$3.50</span>
-            </div>
-          </div>
+          )}
         </KpiCardContainer>
 
         <KpiCardContainer
           title="Consumer Engagement"
           icon={<span className="i-lucide-user-check text-primary" />}
         >
-          <div className="space-y-3">
+          {totalConsumers === 0 ? (
+            <p className="text-sm text-base-content/60">
+              No consumer engagements recorded.
+            </p>
+          ) : (
             <div className="flex justify-between items-center bg-base-200 rounded-lg p-3">
-              <span className="flex items-center gap-2 text-sm">
-                <span className="i-lucide-users" />
-                Total Consumers
-              </span>
-              <span className="text-xl font-bold">
-                {hotData.totalConsumers}
-              </span>
+              <span className="text-sm">Total Consumers</span>
+              <span className="text-xl font-bold">{totalConsumers}</span>
             </div>
-
-            <div className="flex justify-between text-sm border rounded-lg p-3">
-              <span className="flex items-center gap-2">
-                <span className="i-lucide-user-plus" />
-                Tried Before
-              </span>
-              <span className="font-medium">
-                {hotData.triedBefore}{" "}
-                <span className="text-base-content/60">
-                  (
-                  {Math.round(
-                    (hotData.triedBefore / hotData.totalConsumers) * 100
-                  )}
-                  %)
-                </span>
-              </span>
-            </div>
-
-            <div className="flex justify-between text-sm border rounded-lg p-3">
-              <span className="flex items-center gap-2">
-                <span className="i-lucide-trending-up" />
-                Competition
-              </span>
-              <span className="font-medium">{hotData.competitor}</span>
-            </div>
-          </div>
+          )}
         </KpiCardContainer>
       </div>
 
@@ -407,45 +351,44 @@ const RecapView = () => {
               Consumer Feedback
             </h3>
 
-            <p className="text-sm leading-relaxed text-base-content/80">
-              {hotData.feedback}
-            </p>
+            {!hasConsumerFeedback ? (
+              <p className="text-sm text-base-content/60">
+                No consumer feedback recorded.
+              </p>
+            ) : (
+              recap.consumerFeedback.map((f) => (
+                <p
+                  key={f.id}
+                  className="text-sm leading-relaxed text-base-content/80"
+                >
+                  {f.feedback}
+                </p>
+              ))
+            )}
           </div>
         </div>
 
-        <div className="card bg-base-100 border border-base-300 mb-12">
+        <div className="card bg-base-100 border border-base-300 mb-6">
           <div className="card-body space-y-6">
             <h3 className="flex items-center gap-2 text-lg font-semibold">
               <span className="i-lucide-clipboard-list text-primary" />
               Account Learning
             </h3>
 
-            {/* Anything you'd do differently */}
-            <div className="space-y-1">
-              <p className="text-sm font-medium">
-                Anything you'd do differently?
+            {!hasAccountFeedback ? (
+              <p className="text-sm text-base-content/60">
+                No account feedback recorded.
               </p>
-              <div className="border-l-2 border-primary pl-4 text-sm text-base-content/80">
-                Set up approach customers in parking lot
-              </div>
-            </div>
-
-            {/* Feedback from the account */}
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Feedback from the account</p>
-              <div className="border-l-2 border-primary pl-4 text-sm text-base-content/80">
-                The owner and company rep was very happy about Zero&apos;s
-                appearance.
-              </div>
-            </div>
-
-            {/* Corporate card */}
-            <div className="space-y-1">
-              <p className="text-sm font-medium">Corporate card used</p>
-              <div className="border-l-2 border-primary pl-4 text-sm text-base-content/80">
-                Yes
-              </div>
-            </div>
+            ) : (
+              recap.accountFeedback.map((item) => (
+                <div key={item.id} className="space-y-1">
+                  <p className="text-sm font-medium">{item.title}</p>
+                  <div className="border-l-2 border-primary pl-4 text-sm text-base-content/80">
+                    {item.feedback}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

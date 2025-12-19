@@ -25,7 +25,7 @@ import { UpdateRequestMutation } from "@api/mutations/UpdateRequestMutation";
 import type { UpdateRequestMutation as UpdateRequestMutationType } from "@api/mutations/__generated__/UpdateRequestMutation.graphql";
 
 import type { EventFormValues } from "../types/events/formTypes";
-import { dateFormat } from "@/public/form/utils/toDate";
+import { normalizeDateTime, dateFormat } from "@/public/form/utils/toDate";
 
 /* ================= Page ================= */
 const CreateEventPage = () => {
@@ -128,23 +128,6 @@ const CreateEventForm = ({ request }: FormProps) => {
     [request, getLegacyField]
   );
 
-  const buildDateTime = (date: string, time: string) => {
-    // date: YYYY-MM-DD
-    // time: HH:mm
-    return `${date} ${time}:00`;
-  };
-
-  const extractTime = (value?: string | null) => {
-    if (!value) return undefined;
-
-    // Si viene como datetime → extrae HH:mm
-    if (value.includes(" ")) {
-      return value.split(" ")[1]?.slice(0, 5);
-    }
-
-    return value; // ya es HH:mm
-  };
-
   const shouldUpdateRequest = (data: EventFormValues) => {
     return (
       data.distributorId !== request.distributor?.id ||
@@ -160,23 +143,20 @@ const CreateEventForm = ({ request }: FormProps) => {
       return;
     }
 
+    console.log("Creating event with data:", data);
+
     commitCreateEvent({
       variables: {
         input: {
           name: data.name,
+          date: dateFormat(data.date),
           eventTypeId: data.eventTypeId,
           requestId: request.id,
           address: data.address,
           notes: data.notes ?? "",
           isNational: data.isNational ?? false,
-          startTime: buildDateTime(
-            dateFormat(data.date ?? ""),
-            extractTime(data.startTime) ?? "00:00"
-          ),
-          endTime: buildDateTime(
-            dateFormat(data.date ?? ""),
-            extractTime(data.endTime) ?? "00:00"
-          ),
+          startTime: normalizeDateTime(data.date ?? "", data.startTime) ?? "",
+          endTime: normalizeDateTime(data.date ?? "", data.endTime) ?? "",
           coordinates: data.coordinates ?? request.coordinates ?? undefined,
           tenantId: request.tenantId,
         },
@@ -223,18 +203,8 @@ const CreateEventForm = ({ request }: FormProps) => {
           id: request.id,
           name: request.name ?? data.name,
           date: request.date ?? dateFormat(data.date ?? "") ?? "",
-          startTime:
-            request.startTime ??
-            buildDateTime(
-              dateFormat(data.date ?? "") ?? "",
-              data.startTime ?? "00:00"
-            ),
-          endTime:
-            request.endTime ??
-            buildDateTime(
-              dateFormat(data.date ?? "") ?? "",
-              data.endTime ?? "00:00"
-            ),
+          startTime: normalizeDateTime(data.date ?? "", data.startTime) ?? "",
+          endTime: normalizeDateTime(data.date ?? "", data.endTime) ?? "",
           address: request.address ?? data.address,
           coordinates: data.coordinates ?? request.coordinates ?? [],
           timezoneId: request.timezone.id,

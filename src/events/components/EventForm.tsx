@@ -375,9 +375,9 @@ export default function EventForm({
                 placeholder="Select date"
                 control={control}
                 label="Date"
-                rules={
-                  mode === "create" ? { required: "Date is required" } : {}
-                }
+                rules={{
+                  required: "Date is required",
+                }}
               />
 
               <FormInputTime
@@ -707,9 +707,10 @@ export default function EventForm({
             </Link>
             <button
               type="submit"
-              className="btn btn-primary"
+              className="btn btn-primary btn-sm"
               disabled={!isDirty}
             >
+              <SaveIcon className="w-4 h-4" />
               {mode === "edit" ? "Save changes" : "Create event"}
             </button>
           </div>
