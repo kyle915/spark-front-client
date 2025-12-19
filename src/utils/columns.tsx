@@ -4,6 +4,7 @@ import type {
   EventRow,
   TenantRow,
   RecapRow,
+  UserRow,
 } from "@/types/columnsTypes";
 import { formatDate, formatTime } from "@/utils";
 
@@ -182,5 +183,22 @@ export const createRecapColumns = (
     key: "createdAt",
     label: "Created At",
     render: (_value, row) => formatDate(row.createdAt ?? null),
+  },
+];
+
+export const userColumns: Column<UserRow>[] = [
+  {
+    key: "name",
+    label: "Name",
+    render: (_value, row) => `${row.firstName} ${row.lastName}`.trim() || "-",
+  },
+  {
+    key: "email",
+    label: "Email",
+  },
+  {
+    key: "role",
+    label: "Role",
+    render: (_value, row) => row.role?.name ?? "-",
   },
 ];

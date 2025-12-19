@@ -204,7 +204,7 @@ const EventsList = () => {
       <div className="mb-4 flex flex-col gap-2">
         <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
           <div className="p-2 rounded-xl bg-primary/10 text-primary">
-            <CalendarDaysIcon className="w-8 h-8 text-primary" />
+            <CalendarDaysIcon className="w-8 h-8" />
           </div>
           <h1>All Events</h1>
         </div>

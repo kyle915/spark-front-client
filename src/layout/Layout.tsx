@@ -24,6 +24,12 @@ interface LayoutProps {
   children?: ReactNode;
 }
 
+type AvatarUser = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+};
+
 const isRouteActive = (path?: string, pathname?: string) => {
   if (!path || !pathname) return false;
   return pathname === path || pathname.startsWith(path + "/");
@@ -39,6 +45,48 @@ const isTreeActive = (item: NavigationLink, pathname: string): boolean => {
   }
 
   return false;
+};
+
+const getUserInitial = (user: AvatarUser | null | undefined) => {
+  if (!user) return "U";
+
+  if (user.firstName) return user.firstName.charAt(0).toUpperCase();
+  if (user.lastName) return user.lastName.charAt(0).toUpperCase();
+  if (user.email) return user.email.charAt(0).toUpperCase();
+
+  return "U";
+};
+
+const UserAvatar = ({
+  src,
+  user,
+  size = "w-10 h-10",
+}: {
+  src?: string | null;
+  user?: AvatarUser | null;
+  size?: string;
+}) => {
+  if (src) {
+    return (
+      <div className={`avatar ${size}`}>
+        <div className="rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
+          <img src={src} alt="User Avatar" className="object-cover" />
+        </div>
+      </div>
+    );
+  }
+
+  const initial = getUserInitial(user);
+
+  return (
+    <div
+      className={`${size} rounded-full flex items-center justify-center 
+      bg-primary text-primary-content font-semibold uppercase
+      ring ring-primary ring-offset-base-100 ring-offset-2`}
+    >
+      {initial}
+    </div>
+  );
 };
 
 const SidebarItem = ({
@@ -126,7 +174,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user } = useAuthStore();
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
-
+  const avatarSrc = user?.image || null;
   const location = useLocation();
   const pathname = location.pathname;
 
@@ -179,15 +227,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* FOOTER */}
         <div className="p-4 border-t border-base-300 flex items-center gap-3">
-          <div className="avatar">
-            <div className="w-10 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
-              <img
-                src="https://i.pravatar.cc/100?img=8"
-                alt="User"
-                className="object-cover"
-              />
-            </div>
-          </div>
+          <UserAvatar src={avatarSrc} user={user} />
+
           {!collapsed && (
             <>
               <div>
@@ -205,18 +246,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="flex flex-col flex-1 min-w-0">
         <header className="flex justify-end items-center bg-base-100 border-b border-base-300 h-16 px-6 sticky top-0 z-30 text-base-content">
           <div className="flex items-center gap-4">
-            <div className="avatar">
-              <div className="w-10 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
-                <img
-                  src="https://i.pravatar.cc/100?img=8"
-                  alt="User Avatar"
-                  className="object-cover"
-                />
-              </div>
-            </div>
-            <span className="font-medium hidden sm:block">
-              {user?.firstName ?? "User"}
-            </span>
+            <UserAvatar src={avatarSrc} user={user} />
 
             <button
               onClick={onLogout}
