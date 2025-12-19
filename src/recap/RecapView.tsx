@@ -3,7 +3,7 @@ import { RecapQuery } from "@/api/queries/RecapQuery";
 import type { RecapQuery as RecapQueryType } from "@/api/queries/__generated__/RecapQuery.graphql";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useParams, useNavigate } from "react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { formatDate, formatTime } from "@/utils";
 import { MapPinHouse } from "lucide-react";
 
@@ -380,14 +380,52 @@ const RecapView = () => {
                 No account feedback recorded.
               </p>
             ) : (
-              recap.accountFeedback.map((item) => (
-                <div key={item.id} className="space-y-1">
-                  <p className="text-sm font-medium">{item.title}</p>
-                  <div className="border-l-2 border-primary pl-4 text-sm text-base-content/80">
-                    {item.feedback}
+              recap.accountFeedback.map((item) => {
+                const hasFeedback = !!item.feedback;
+                const hasDoDifferently = !!item.doDifferentlyFeedback;
+                const hasCorpoCard = !!item.corpoCard;
+
+                if (!hasFeedback && !hasDoDifferently && !hasCorpoCard) {
+                  return null;
+                }
+
+                return (
+                  <div key={item.id} className="space-y-3">
+                    {hasFeedback && (
+                      <div className="space-y-1">
+                        <p className="text-xs uppercase text-base-content/60">
+                          Feedback
+                        </p>
+                        <div className="border-l-2 border-primary pl-4 text-sm text-base-content/80">
+                          {item.feedback}
+                        </div>
+                      </div>
+                    )}
+
+                    {hasDoDifferently && (
+                      <div className="space-y-1">
+                        <p className="text-xs uppercase text-base-content/60">
+                          Do differently next time
+                        </p>
+                        <div className="border-l-2 border-warning pl-4 text-sm text-base-content/80">
+                          {item.doDifferentlyFeedback}
+                        </div>
+                      </div>
+                    )}
+
+                    {hasCorpoCard && (
+                      <div className="space-y-1">
+                        <p className="text-xs uppercase text-base-content/60">
+                          Corpo card
+                        </p>
+                        <div className="border-l-2 border-info pl-4 text-sm text-base-content/80">
+                          {item.corpoCard}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

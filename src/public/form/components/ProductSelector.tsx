@@ -14,7 +14,7 @@ interface ProductItem {
 
 interface Props {
   name: keyof SparkFormData;
-  control: Control<SparkFormData>;
+  control: Control<SparkFormData, any, SparkFormData>;
   products: ProductItem[];
   productTypes: {
     id: string;

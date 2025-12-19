@@ -5,7 +5,7 @@ import { useWatch, type Control, type UseFormSetValue } from "react-hook-form";
 import type { SparkFormData } from "../../schema/schema";
 
 interface Step3NewProps {
-  control: Control<SparkFormData>;
+  control: Control<SparkFormData, any, SparkFormData>;
   setValue: UseFormSetValue<SparkFormData>;
   distributors: { id: string; name: string }[];
   retailers: { id: string; name: string }[];
