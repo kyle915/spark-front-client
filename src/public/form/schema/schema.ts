@@ -36,7 +36,7 @@ export const sparkFormSchema = yup.object({
   distributor: yup
     .string()
     .when("distributorId", {
-      is: (value) => !value,
+      is: (value: string | null | undefined) => !value,
       then: (schema) => schema.required("Distributor is required"),
       otherwise: (schema) => schema.notRequired(),
     }),
@@ -44,7 +44,7 @@ export const sparkFormSchema = yup.object({
     .string()
     .email("Invalid email format")
     .when("distributorId", {
-      is: (value) => !value,
+      is: (value: string | null | undefined) => !value,
       then: (schema) => schema.required("Distributor email is required"),
       otherwise: (schema) => schema.notRequired(),
     }),
@@ -59,12 +59,12 @@ export const sparkFormSchema = yup.object({
   retailer: yup
     .string()
     .when("retailerId", {
-      is: (value) => !value,
+      is: (value: string | null | undefined) => !value,
       then: (schema) => schema.required("Retailer is required"),
       otherwise: (schema) => schema.notRequired(),
     }),
   retailerAddress: yup.string().when("retailerId", {
-    is: (value) => !value,
+    is: (value: string | null | undefined) => !value,
     then: (schema) => schema.required("Retailer address is required"),
     otherwise: (schema) => schema.notRequired(),
   }),

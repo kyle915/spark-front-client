@@ -14,6 +14,7 @@ import { LocationsQuery } from "@/api/queries/LocationsQuery";
 import type { LocationsQuery as LocationsQueryType } from "@/api/queries/__generated__/LocationsQuery.graphql";
 import environment from "@/api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
+import { normalizeDateTime, dateFormat } from "@/public/form/utils/toDate";
 
 const CreateEventWithoutRequestContent = () => {
   const { tenantId } = useAuthStore();
@@ -79,22 +80,17 @@ const CreateEventWithoutRequestContent = () => {
       return;
     }
 
-    const startTimeWithDate = formData.date
-      ? `${formData.date} ${formData.startTime}`
-      : formData.startTime;
-    const endTimeWithDate = formData.date
-      ? `${formData.date} ${formData.endTime}`
-      : formData.endTime;
-
     const input: Record<string, unknown> = {
       name: formData.name,
       eventTypeId: formData.eventTypeId,
       address: formData.address,
       notes: formData.notes ?? "",
       isNational: formData.isNational ?? false,
-      startTime: startTimeWithDate,
-      endTime: endTimeWithDate,
+      startTime:
+        normalizeDateTime(formData.date ?? "", formData.startTime) ?? "",
+      endTime: normalizeDateTime(formData.date ?? "", formData.endTime) ?? "",
       tenantId: tenantId,
+      date: dateFormat(formData.date),
     };
 
     if (formData.coordinates && formData.coordinates.length === 2) {

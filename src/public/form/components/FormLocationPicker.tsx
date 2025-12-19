@@ -20,7 +20,7 @@ const defaultMarkerIcon = L.icon({
 });
 
 interface Props {
-  control: Control<SparkFormData>;
+  control: Control<SparkFormData, any, SparkFormData>;
   nameLat: keyof SparkFormData;
   nameLng: keyof SparkFormData;
   label?: string;

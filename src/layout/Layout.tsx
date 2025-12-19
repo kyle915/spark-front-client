@@ -24,6 +24,12 @@ interface LayoutProps {
   children?: ReactNode;
 }
 
+type AvatarUser = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+};
+
 const isRouteActive = (path?: string, pathname?: string) => {
   if (!path || !pathname) return false;
   return pathname === path || pathname.startsWith(path + "/");
@@ -39,6 +45,48 @@ const isTreeActive = (item: NavigationLink, pathname: string): boolean => {
   }
 
   return false;
+};
+
+const getUserInitial = (user: AvatarUser | null | undefined) => {
+  if (!user) return "U";
+
+  if (user.firstName) return user.firstName.charAt(0).toUpperCase();
+  if (user.lastName) return user.lastName.charAt(0).toUpperCase();
+  if (user.email) return user.email.charAt(0).toUpperCase();
+
+  return "U";
+};
+
+const UserAvatar = ({
+  src,
+  user,
+  size = "w-10 h-10",
+}: {
+  src?: string | null;
+  user?: AvatarUser | null;
+  size?: string;
+}) => {
+  if (src) {
+    return (
+      <div className={`avatar ${size}`}>
+        <div className="rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
+          <img src={src} alt="User Avatar" className="object-cover" />
+        </div>
+      </div>
+    );
+  }
+
+  const initial = getUserInitial(user);
+
+  return (
+    <div
+      className={`${size} rounded-full flex items-center justify-center 
+      bg-primary text-primary-content font-semibold uppercase
+      ring ring-primary ring-offset-base-100 ring-offset-2`}
+    >
+      {initial}
+    </div>
+  );
 };
 
 const SidebarItem = ({
@@ -69,25 +117,32 @@ const SidebarItem = ({
       <div className="text-base-content">
         <button
           onClick={() => setExpanded((v) => !v)}
-          className={`w-full flex items-center justify-between gap-3 py-2 ${leftPadding} rounded-lg transition
-            ${
-              sectionActive ? "bg-primary/10 text-primary" : "hover:bg-base-300"
-            }`}
+          className={`w-full flex items-center gap-3 py-2 ${leftPadding}
+              rounded-lg transition min-w-0 overflow-hidden
+              ${
+                sectionActive
+                  ? "bg-primary/10 text-primary"
+                  : "hover:bg-base-300"
+              }`}
         >
-          <div className="flex items-center gap-3">
-            {item.Icon && <item.Icon className="w-5 h-5 text-primary" />}
-            <span>{item.title ?? item.name}</span>
+          <div className="flex items-center gap-3 min-w-0">
+            {item.Icon && (
+              <item.Icon className="w-5 h-5 text-primary shrink-0" />
+            )}
+            <span className="truncate whitespace-nowrap block max-w-full">
+              {item.title ?? item.name}
+            </span>
           </div>
 
           {expanded ? (
-            <ChevronUpIcon className="w-4 h-4 opacity-70 ml-9" />
+            <ChevronUpIcon className="w-4 h-4 opacity-70 ml-auto shrink-0 transition-transform duration-200" />
           ) : (
-            <ChevronDownIcon className="w-4 h-4 opacity-70 ml-9" />
+            <ChevronDownIcon className="w-4 h-4 opacity-70 ml-auto shrink-0 transition-transform duration-200" />
           )}
         </button>
 
         {expanded && (
-          <ul className="ml-4 mt-1 flex flex-col gap-1 border-l border-base-300 pl-5  ">
+          <ul className="mt-1 ml-3 pl-3 flex flex-col gap-1 border-l border-base-300 min-w-0 overflow-hidden">
             {item.links!.map((child) => (
               <SidebarItem
                 key={child.path ?? child.name}
@@ -107,15 +162,19 @@ const SidebarItem = ({
     <li>
       <Link
         to={item.path ?? "#"}
-        className={`flex items-center gap-3 py-2 px-3 rounded-lg transition
-          ${
-            sectionActive
-              ? "bg-primary/10 text-primary font-semibold"
-              : "hover:bg-base-300"
-          }`}
+        className={`flex items-center gap-3 py-2 px-3 rounded-lg transition min-w-0
+                    ${
+                      sectionActive
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "hover:bg-base-300"
+                    }`}
       >
-        {item.Icon && <item.Icon className="w-5 h-5 text-primary" />}
-        {!collapsed && (item.title ?? item.name)}
+        {item.Icon && <item.Icon className="w-5 h-5 text-primary shrink-0" />}
+        {!collapsed && (
+          <span className="truncate whitespace-nowrap">
+            {item.title ?? item.name}
+          </span>
+        )}
       </Link>
     </li>
   );
@@ -126,7 +185,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user } = useAuthStore();
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
-
+  const avatarSrc = user?.image || null;
   const location = useLocation();
   const pathname = location.pathname;
 
@@ -141,11 +200,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="flex h-screen bg-base-200 text-base-content">
-      <aside
-        className={`bg-base-100 border-r border-base-300 transition-all duration-300 flex flex-col ${
-          collapsed ? "w-20" : "w-72"
-        }`}
-      >
+      <aside className="bg-base-100 border-r border-base-300 transition-all duration-300 flex flex-col h-screen min-h-0 overflow-hidden">
         {/* HEADER */}
         <div className="relative flex items-center justify-center p-4 border-b border-base-300">
           {!collapsed && (
@@ -166,28 +221,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         {/* MENU */}
-        <ul className="menu p-3 text-base flex-1 overflow-y-auto gap-1">
-          {menuItems.map((item) => (
-            <SidebarItem
-              key={item.path ?? item.title}
-              item={item}
-              collapsed={collapsed}
-              pathname={pathname}
-            />
-          ))}
-        </ul>
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+          <ul className="menu p-3 space-y-1 w-full max-w-none">
+            {menuItems.map((item) => (
+              <SidebarItem
+                key={item.path ?? item.title}
+                item={item}
+                collapsed={collapsed}
+                pathname={pathname}
+              />
+            ))}
+          </ul>
+        </div>
 
         {/* FOOTER */}
         <div className="p-4 border-t border-base-300 flex items-center gap-3">
-          <div className="avatar">
-            <div className="w-10 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
-              <img
-                src="https://i.pravatar.cc/100?img=8"
-                alt="User"
-                className="object-cover"
-              />
-            </div>
-          </div>
+          <UserAvatar src={avatarSrc} user={user} />
+
           {!collapsed && (
             <>
               <div>
@@ -205,18 +255,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="flex flex-col flex-1 min-w-0">
         <header className="flex justify-end items-center bg-base-100 border-b border-base-300 h-16 px-6 sticky top-0 z-30 text-base-content">
           <div className="flex items-center gap-4">
-            <div className="avatar">
-              <div className="w-10 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
-                <img
-                  src="https://i.pravatar.cc/100?img=8"
-                  alt="User Avatar"
-                  className="object-cover"
-                />
-              </div>
-            </div>
-            <span className="font-medium hidden sm:block">
-              {user?.firstName ?? "User"}
-            </span>
+            <UserAvatar src={avatarSrc} user={user} />
 
             <button
               onClick={onLogout}

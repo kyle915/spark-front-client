@@ -84,19 +84,19 @@
   --color-primary: oklch(88.7% 0.182 95.352);
   --color-primary-content: oklch(24.3% 0.049 266.472);
   --color-secondary: oklch(100% 0 0);
-  --color-secondary-content: oklch(76.7% 0.140 91.177);
+  --color-secondary-content: oklch(76.7% 0.14 91.177);
   --color-accent: hsl(358, 96%, 42%);
   --color-accent-content: hsl(358, 93%, 94%);
   --color-neutral: oklch(24.3% 0.049 266.472);
-  --color-neutral-content: oklch(76.7% 0.140 91.177);
+  --color-neutral-content: oklch(76.7% 0.14 91.177);
   --color-info: hsl(246, 60%, 42%);
-  --color-info-content: hsl(247, 61% , 80%);
+  --color-info-content: hsl(247, 61%, 80%);
   --color-success: oklch(59% 0.145 163.225);
   --color-success-content: oklch(97% 0.021 166.113);
-  --color-warning: hsl( 35, 96% , 50% );
+  --color-warning: hsl(35, 96%, 50%);
   --color-warning-content: hsl(36, 96%, 20%);
   --color-error: oklch(41.2% 0.154 9.509);
-  --color-error-content: hsl( 358, 100%, 80%);
+  --color-error-content: hsl(358, 100%, 80%);
   --radius-selector: 0.25rem;
   --radius-field: 1rem;
   --radius-box: 1rem;
@@ -115,21 +115,21 @@
   --color-base-200: oklch(98% 0 0);
   --color-base-300: oklch(95% 0 0);
   --color-base-content: oklch(21% 0.006 285.885);
-  --color-primary: oklch(76.7% 0.140 91.177);
+  --color-primary: oklch(76.7% 0.14 91.177);
   --color-primary-content: hsl(45, 65%, 90%);
   --color-secondary: oklch(14% 0 0);
   --color-secondary-content: oklch(88.7% 0.182 95.352);
-  --color-accent: hsl( 274 , 99% , 31% );
-  --color-accent-content: oklch(88.5% 0.075 309.650);
+  --color-accent: hsl(274, 99%, 31%);
+  --color-accent-content: oklch(88.5% 0.075 309.65);
   --color-neutral: oklch(24.3% 0.049 266.472);
-  --color-neutral-content: hsl( 46 , 65% , 52% );
+  --color-neutral-content: hsl(46, 65%, 52%);
   --color-info: oklch(63.2% 0.202 254.088);
-  --color-info-content: hsl( 208, 100%, 10%);
-  --color-success: hsl(109, 64% , 43% );
-  --color-success-content: hsl( 109 , 65% , 10% );
+  --color-info-content: hsl(208, 100%, 10%);
+  --color-success: hsl(109, 64%, 43%);
+  --color-success-content: hsl(109, 65%, 10%);
   --color-warning: hsl(31, 100%, 47%);
   --color-warning-content: hsl(31, 100%, 94%);
-  --color-error: hsl(358, 100% , 64% );
+  --color-error: hsl(358, 100%, 64%);
   --color-error-content: oklch(27% 0.105 12.094);
   --radius-selector: 0.25rem;
   --radius-field: 1rem;
@@ -139,4 +139,45 @@
   --border: 1px;
   --depth: 1;
   --noise: 0;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.app-logo {
+  transition: filter 0.2s ease;
+}
+
+html[data-theme="bijinesu"] .app-logo {
+  filter: brightness(0) invert(1);
+}
+
+.leaflet-theme-dark {
+  position: relative;
+}
+
+.leaflet-theme-dark .leaflet-layer,
+.leaflet-theme-dark .leaflet-control-zoom-in,
+.leaflet-theme-dark .leaflet-control-zoom-out,
+.leaflet-theme-dark .leaflet-control-attribution {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+@keyframes border-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-border-flow {
+  background-size: 200% 200%;
+  animation: border-flow 4s ease infinite;
 }

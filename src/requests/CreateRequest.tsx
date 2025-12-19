@@ -85,47 +85,6 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
   // SUBMIT
   // ========================
   const handleSubmit = (formData: RequestFormValues) => {
-    console.log("Form Data Submitted: ", {
-      input: {
-        tenantId: tenantId,
-        name: formData.name,
-        date: dateFormat(formData.date),
-        startTime: formData.startTime
-          ? buildDateTime(dateFormat(formData.date), formData.startTime)
-          : "",
-        endTime: formData.endTime
-          ? buildDateTime(dateFormat(formData.date), formData.endTime)
-          : "",
-        address: formData.address,
-        coordinates: (formData.coordinates ?? []) as readonly number[],
-        timezoneId: formData.timezoneId!,
-        requestTypeId: formData.requestTypeId!,
-
-        // Create-only fields
-        clientName: formData.clientName!,
-        clientEmail: formData.clientEmail!,
-        distributorName: formData.distributorName!,
-        distributorEmail: formData.distributorEmail!,
-        retailerName: formData.retailerName!,
-        retailerAddress: formData.retailerAddress!,
-        retailerStoreContact: formData.retailerStoreContact!,
-        storeManagerName: formData.storeManagerName!,
-        storeManagerPhone: formData.storeManagerPhone!,
-
-        // Details
-        details: [
-          {
-            isTableNeeded: formData.isTableNeeded || false,
-            tableSize: formData.tableSize ? parseInt(formData.tableSize) : null,
-          },
-        ],
-
-        // Products
-        products: (formData.products || []).map((id) => ({
-          productId: id,
-        })),
-      },
-    });
     commitCreateRequest({
       variables: {
         input: {

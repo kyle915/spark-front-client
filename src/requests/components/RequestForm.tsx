@@ -530,10 +530,11 @@ export default function RequestForm({
             </Link>
             <button
               type="submit"
-              className="btn btn-primary"
+              className="btn btn-primary btn-sm"
               disabled={!isDirty}
             >
-              Save changes
+              {mode === "edit" ? "Save changes" : "Create request"}
+              <SaveIcon className="w-4 h-4" />
             </button>
           </div>
         </div>

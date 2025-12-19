@@ -65,6 +65,7 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
           startTime: formData.startTime,
           endTime: formData.endTime,
           tenantId: event.tenantId,
+          date: formData.date ?? event.date ?? "",
         },
       },
       onCompleted: (response) => {
