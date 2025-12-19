@@ -222,7 +222,7 @@ export default function DataTableRelay<T>({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl shadow-lg bg-base-200 p-4 space-y-4">
+    <div className="overflow-x-auto rounded-xl shadow-lg bg-base-100 p-4 space-y-4">
       <div className="flex justify-end">
         <span className="text-sm text-base-content font-medium">
           Total: {resolvedTotalCount}
@@ -247,7 +247,7 @@ export default function DataTableRelay<T>({
               (node as { id?: string | number } | undefined)?.id ?? index;
             const safeNode = node;
             return (
-              <tr key={rowKey} className="hover">
+              <tr key={rowKey} className="transition-colors hover:bg-base-200">
                 {columns.map((col) => {
                   const key = col.key;
                   const value =

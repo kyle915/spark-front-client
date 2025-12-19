@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "@radix-ui-fork/react-select": "jsr:@radix-ui-fork/react-select@^0.0.8"
+  }
+}

@@ -6,6 +6,9 @@ import path from "node:path";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react({ babel: { plugins: ["relay"] } }), tailwindcss()],
+  optimizeDeps: {
+    exclude: ["leaflet", "react-leaflet"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -18,6 +21,26 @@ export default defineConfig({
       "@hooks": path.resolve(__dirname, "./src/hooks"),
       "@utils": path.resolve(__dirname, "./src/utils"),
       "@requests": path.resolve(__dirname, "./src/requests"),
+      "leaflet/dist/leaflet.css": path.resolve(
+        __dirname,
+        "./node_modules/leaflet/dist/leaflet.css"
+      ),
+      "leaflet/dist/images/marker-icon.png?url": path.resolve(
+        __dirname,
+        "./node_modules/leaflet/dist/images/marker-icon.png"
+      ),
+      "leaflet/dist/images/marker-icon-2x.png?url": path.resolve(
+        __dirname,
+        "./node_modules/leaflet/dist/images/marker-icon-2x.png"
+      ),
+      "leaflet/dist/images/marker-shadow.png?url": path.resolve(
+        __dirname,
+        "./node_modules/leaflet/dist/images/marker-shadow.png"
+      ),
+      leaflet: path.resolve(
+        __dirname,
+        "./node_modules/leaflet/dist/leaflet-src.esm.js"
+      ),
     },
   },
 });

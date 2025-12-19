@@ -13,7 +13,7 @@ interface FormWizardProps {
   steps: WizardStep[];
   onSubmit: () => void;
   loadingSubmit?: boolean;
-  resetSignal?: any;
+  resetSignal?: number;
 }
 
 export default function FormWizard({

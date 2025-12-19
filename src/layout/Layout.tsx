@@ -1,5 +1,5 @@
-import React, { type ReactNode, useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router"; // ✅ usas react-router, no react-router-dom
+import React, { type ReactNode, useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -8,171 +8,131 @@ import {
   ArrowRightEndOnRectangleIcon,
 } from "@heroicons/react/24/solid";
 import ThemeToggle from "@shared/ThemeToggle";
-import { createPortal } from "react-dom";
 import { navigationMenuRoutes } from "@/routes/AppRoutes";
 import { useAuthStore } from "@/store/authStore";
+import { PageTransition } from "./PageTransition";
+
+type NavigationLink = {
+  title?: string;
+  name?: string;
+  path?: string;
+  Icon?: React.ElementType;
+  links?: NavigationLink[];
+};
 
 interface LayoutProps {
   children?: ReactNode;
 }
 
-const FloatingMenu = ({
-  anchorRef,
-  children,
-  onClose,
+const isRouteActive = (path?: string, pathname?: string) => {
+  if (!path || !pathname) return false;
+  return pathname === path || pathname.startsWith(path + "/");
+};
+
+const isTreeActive = (item: NavigationLink, pathname: string): boolean => {
+  if (item.path && isRouteActive(item.path, pathname)) {
+    return true;
+  }
+
+  if (item.links) {
+    return item.links.some((child) => isTreeActive(child, pathname));
+  }
+
+  return false;
+};
+
+const SidebarItem = ({
+  item,
+  collapsed,
+  pathname,
+  level = 0,
 }: {
-  anchorRef: React.RefObject<HTMLDivElement | null>;
-  children: ReactNode;
-  onClose: () => void;
+  item: NavigationLink;
+  collapsed: boolean;
+  pathname: string;
+  level?: number;
 }) => {
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const menuRef = useRef<HTMLDivElement>(null);
+  const hasChildren = !!item.links?.length;
+
+  const sectionActive = isTreeActive(item, pathname);
+
+  const [expanded, setExpanded] = useState(sectionActive);
 
   useEffect(() => {
-    const rect = anchorRef.current?.getBoundingClientRect();
-    if (rect) setPos({ top: rect.top + window.scrollY, left: rect.right + 8 });
-  }, [anchorRef]);
+    if (sectionActive) setExpanded(true);
+  }, [sectionActive]);
 
-  useEffect(() => {
-    const clickOutside = (e: MouseEvent) => {
-      if (
-        !menuRef.current?.contains(e.target as Node) &&
-        !anchorRef.current?.contains(e.target as Node)
-      )
-        onClose();
-    };
-    document.addEventListener("mousedown", clickOutside);
-    return () => document.removeEventListener("mousedown", clickOutside);
-  }, [onClose, anchorRef]);
+  const leftPadding = level === 0 ? "px-4" : level === 1 ? "px-3" : "px-3";
 
-  return createPortal(
-    <div
-      ref={menuRef}
-      className="absolute bg-base-100 border border-base-300 shadow-lg rounded-lg z-[9999] w-48 text-base-content"
-      style={{ top: pos.top, left: pos.left }}
-    >
-      <ul className="menu menu-sm p-2">{children}</ul>
-    </div>,
-    document.body
+  if (hasChildren && !collapsed) {
+    return (
+      <div className="text-base-content">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className={`w-full flex items-center justify-between gap-3 py-2 ${leftPadding} rounded-lg transition
+            ${
+              sectionActive ? "bg-primary/10 text-primary" : "hover:bg-base-300"
+            }`}
+        >
+          <div className="flex items-center gap-3">
+            {item.Icon && <item.Icon className="w-5 h-5 text-primary" />}
+            <span>{item.title ?? item.name}</span>
+          </div>
+
+          {expanded ? (
+            <ChevronUpIcon className="w-4 h-4 opacity-70 ml-9" />
+          ) : (
+            <ChevronDownIcon className="w-4 h-4 opacity-70 ml-9" />
+          )}
+        </button>
+
+        {expanded && (
+          <ul className="ml-4 mt-1 flex flex-col gap-1 border-l border-base-300 pl-5  ">
+            {item.links!.map((child) => (
+              <SidebarItem
+                key={child.path ?? child.name}
+                item={child}
+                collapsed={collapsed}
+                pathname={pathname}
+                level={level + 1}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <li>
+      <Link
+        to={item.path ?? "#"}
+        className={`flex items-center gap-3 py-2 px-3 rounded-lg transition
+          ${
+            sectionActive
+              ? "bg-primary/10 text-primary font-semibold"
+              : "hover:bg-base-300"
+          }`}
+      >
+        {item.Icon && <item.Icon className="w-5 h-5 text-primary" />}
+        {!collapsed && (item.title ?? item.name)}
+      </Link>
+    </li>
   );
 };
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
   const { user } = useAuthStore();
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
 
+  const location = useLocation();
+  const pathname = location.pathname;
+
   const onLogout = () => {
     logout();
     navigate("/login");
-  };
-
-  type NavigationLink = {
-    title?: string;
-    path?: string;
-    Icon?: React.ElementType;
-    links?: NavigationLink[];
-    name?: string;
-  };
-
-  const IconButton = ({
-    id,
-    icon: Icon,
-    label,
-    menu,
-    path,
-  }: {
-    id: string;
-    icon?: React.ElementType;
-    label: string;
-    menu?: NavigationLink[];
-    path?: string;
-  }) => {
-    const ref = useRef<HTMLDivElement>(null);
-    const open = openId === id;
-    const toggle = () => setOpenId(open ? null : id);
-
-    if (!collapsed && menu?.length) {
-      return (
-        <div className="text-base-content">
-          <button
-            onClick={toggle}
-            className="w-full flex items-center justify-between gap-3 py-2 px-3 rounded-lg hover:bg-base-300 transition"
-          >
-            <div className="flex items-center gap-3">
-              {Icon && <Icon className="w-5 h-5 text-primary" />}
-              <span>{label}</span>
-            </div>
-            {open ? (
-              <ChevronUpIcon className="w-4 h-4 opacity-60 transition-transform duration-200" />
-            ) : (
-              <ChevronDownIcon className="w-4 h-4 opacity-60 transition-transform duration-200" />
-            )}
-          </button>
-
-          {open && (
-            <ul className="ml-9 mt-1 flex flex-col gap-1 border-l border-base-300 pl-3">
-              {menu.map((sub) => (
-                <li key={sub.path ?? sub.name ?? Math.random().toString()}>
-                  <Link
-                    to={sub.path ?? "#"}
-                    className="flex items-center gap-2 py-1 hover:text-primary"
-                  >
-                    {sub.Icon && <sub.Icon className="w-4 h-4 text-primary" />}
-                    {sub.name || sub.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      );
-    }
-
-    if (collapsed && menu?.length) {
-      return (
-        <div className="relative">
-          <div
-            ref={ref}
-            className={`flex justify-center p-2 hover:bg-base-300 rounded-lg cursor-pointer text-base-content ${
-              open ? "bg-base-300" : ""
-            }`}
-            onClick={toggle}
-          >
-            {Icon && <Icon className="w-5 h-5 text-primary" />}
-          </div>
-          {open && (
-            <FloatingMenu anchorRef={ref} onClose={() => setOpenId(null)}>
-              {menu.map((sub) => (
-                <li key={sub.path ?? sub.name ?? Math.random().toString()}>
-                  <Link
-                    to={sub.path ?? "#"}
-                    className="flex items-center gap-2 hover:text-primary"
-                  >
-                    {sub.Icon && <sub.Icon className="w-4 h-4 text-primary" />}
-                    {sub.name || sub.title}
-                  </Link>
-                </li>
-              ))}
-            </FloatingMenu>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <li>
-        <Link
-          to={path ?? "#"}
-          className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-base-300 transition"
-        >
-          {Icon && <Icon className="w-5 h-5 text-primary" />}
-          {!collapsed && label}
-        </Link>
-      </li>
-    );
   };
 
   const menuItems = navigationMenuRoutes.filter(
@@ -186,12 +146,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           collapsed ? "w-20" : "w-72"
         }`}
       >
-        <div className="flex items-center justify-between p-4 border-b border-base-300">
+        {/* HEADER */}
+        <div className="relative flex items-center justify-center p-4 border-b border-base-300">
           {!collapsed && (
-            <span className="text-2xl font-bold text-primary">Ignite</span>
+            <img src="/logo.svg" alt="Logo" className="h-8 w-auto app-logo" />
           )}
           <button
-            className="btn btn-ghost btn-sm text-primary"
+            className={`btn btn-ghost btn-sm text-primary ${
+              collapsed ? "" : "absolute right-4"
+            }`}
             onClick={() => setCollapsed(!collapsed)}
           >
             {collapsed ? (
@@ -202,25 +165,24 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </button>
         </div>
 
+        {/* MENU */}
         <ul className="menu p-3 text-base flex-1 overflow-y-auto gap-1">
           {menuItems.map((item) => (
-            <IconButton
-              key={item.title ?? item.path ?? Math.random().toString()}
-              id={item.title ?? item.path ?? ""}
-              icon={item.Icon}
-              label={item.title ?? item.name ?? ""}
-              menu={item.links}
-              path={item.path}
+            <SidebarItem
+              key={item.path ?? item.title}
+              item={item}
+              collapsed={collapsed}
+              pathname={pathname}
             />
           ))}
         </ul>
 
-        {/* USER FOOTER */}
+        {/* FOOTER */}
         <div className="p-4 border-t border-base-300 flex items-center gap-3">
           <div className="avatar">
             <div className="w-10 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
               <img
-                src="https://i.pravatar.cc/100?img=5"
+                src="https://i.pravatar.cc/100?img=8"
                 alt="User"
                 className="object-cover"
               />
@@ -229,14 +191,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {!collapsed && (
             <>
               <div>
-                <p className="font-semibold text-sm text-base-content">
+                <p className="font-semibold text-sm">
                   {user?.firstName ?? "User"}
                 </p>
                 <p className="text-xs opacity-60">Team</p>
               </div>
-              <div className="flex items-center gap-3">
-                <ThemeToggle />
-              </div>
+              <ThemeToggle />
             </>
           )}
         </div>
@@ -268,12 +228,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </header>
 
-        <main className="flex-1 p-6 bg-base-200 overflow-y-auto text-base-content">
-          {children || (
-            <h1 className="text-lg font-semibold text-base-content">
-              Dashboard
-            </h1>
-          )}
+        <main className="flex-1 bg-base-200 overflow-y-auto">
+          <PageTransition>
+            <div className="p-6 min-h-full">
+              {children || <h1 className="text-lg font-semibold">Dashboard</h1>}
+            </div>
+          </PageTransition>
         </main>
       </div>
     </div>

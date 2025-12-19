@@ -9,6 +9,7 @@ export const DistributorsQuery = graphql`
           id
           uuid
           name
+          email
         }
       }
     }

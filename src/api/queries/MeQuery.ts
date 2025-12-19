@@ -11,7 +11,7 @@ export const MeQuery = graphql`
         lastName
         username
         role{
-            __typename
+        __typename
             id
             uuid
             name

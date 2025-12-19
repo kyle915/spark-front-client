@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import Login from "@/auth/Login";
 import PrivateRoute from "@routes/PrivateRoute";
 import { appRoutes } from "@/routes/AppRoutes";
+import TenantRoute from "@/layout/TenantGuard";
 
 const rootPath = "/";
 
@@ -28,13 +29,21 @@ const AppRouter = () => (
       />
       {appRoutes.map((props, key) => (
         <Route
-          path={props.path}
           key={key}
+          path={props.path}
           element={
             props.isPublic ? (
               props.component
             ) : (
-              <PrivateRoute component={props.component} />
+              <PrivateRoute
+                component={
+                  props.path === "/select-company" ? (
+                    props.component
+                  ) : (
+                    <TenantRoute component={props.component} />
+                  )
+                }
+              />
             )
           }
         />

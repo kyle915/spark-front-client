@@ -9,6 +9,8 @@ import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__ge
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { UpdateRequestMutation } from "@api/mutations/UpdateRequestMutation";
 import type { UpdateRequestMutation as UpdateRequestMutationType } from "@api/mutations/__generated__/UpdateRequestMutation.graphql";
+import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
+import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import { useAlertStore } from "@store/alertStore";
 
 type EditRequestContentProps = {
@@ -24,6 +26,12 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     UpdateRequestMutation
   );
   const { showAlert } = useAlertStore();
+
+  const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
+    TimezonesQuery,
+    {},
+    { fetchPolicy: "store-and-network" }
+  );
 
   if (!request) {
     return (
@@ -44,10 +52,14 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
           endTime: formData.endTime || "00:00",
           address: formData.address,
           coordinates: (formData.coordinates ?? []) as readonly number[],
-          clientId: formData.clientId ?? "",
-          retailerId: formData.retailerId ?? "",
-          distributorId: formData.distributorId ?? "",
+          timezoneId: formData.timezoneId ?? "",
           requestTypeId: formData.requestTypeId ?? "",
+          distributorId: formData.distributorId ?? "",
+          retailerId: formData.retailerId ?? "",
+          storeManagerName: formData.storeManagerName ?? "",
+          storeManagerPhone: formData.storeManagerPhone ?? "",
+          details: [],
+          products: [],
         },
       },
       onCompleted: (response) => {
@@ -69,24 +81,21 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
   const defaultValues: Partial<RequestFormValues> = {
     name: request.name ?? "",
     date: request.date ?? "",
-    startTime: request.startTime,
-    endTime: request.endTime,
-    address: request.address,
-    coordinates: request.coordinates as number[] | null | undefined,
-    clientId: request.client?.id,
-    retailerId: request.retailer?.id,
-    distributorId: request.distributor?.id,
-    requestTypeId: request.requestType?.id,
+    startTime: request.startTime ?? "",
+    endTime: request.endTime ?? "",
+    address: request.address ?? "",
+    coordinates: request.coordinates?.length ? [...request.coordinates] : null,
+    timezoneId: request.timezone?.id ?? null,
+    retailerId: request.retailer?.id ?? null,
+    distributorId: request.distributor?.id ?? null,
+    requestTypeId: request.requestType?.id ?? null,
   };
 
   const filters = { tenantId: request.tenantId };
+  const timezones = timezonesData.timezones?.edges.map((e) => e.node) || [];
 
   return (
     <>
-      <div className="flex items-center gap-2 mb-6">
-        <h1 className="text-2xl font-bold">Edit Request</h1>
-        <p className="text-base-content/70">Request: {request.name}</p>
-      </div>
       <CatalogsProvider
         clients={true}
         clientsFilters={filters}
@@ -100,11 +109,13 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
         {(catalogs) => (
           <RequestForm
             onSubmit={handleSubmit}
+            mode="edit"
             defaultValues={defaultValues}
             clients={catalogs.clients}
             retailers={catalogs.retailers}
             distributors={catalogs.distributors}
             requestTypes={catalogs.requestTypes}
+            timezones={timezones}
           />
         )}
       </CatalogsProvider>

@@ -1,0 +1,173 @@
+export interface MarketPerformance {
+  market: string;
+  consumers: number;
+  purchases: number;
+  conversion: number; // %
+  demos: number;
+  efficiency: number; // %
+}
+
+export const mockMarketPerformance: MarketPerformance[] = [
+  {
+    market: "Los Angeles",
+    consumers: 3120,
+    purchases: 645,
+    conversion: 20.7,
+    demos: 61,
+    efficiency: 51.2,
+  },
+  {
+    market: "Florida",
+    consumers: 2105,
+    purchases: 410,
+    conversion: 19.5,
+    demos: 44,
+    efficiency: 45.8,
+  },
+  {
+    market: "Dallas",
+    consumers: 1750,
+    purchases: 370,
+    conversion: 21.1,
+    demos: 36,
+    efficiency: 48.9,
+  },
+  {
+    market: "Seattle",
+    consumers: 1580,
+    purchases: 520,
+    conversion: 32.9,
+    demos: 33,
+    efficiency: 52.1,
+  },
+  {
+    market: "Phoenix",
+    consumers: 1350,
+    purchases: 265,
+    conversion: 19.6,
+    demos: 29,
+    efficiency: 44.8,
+  },
+  {
+    market: "Denver",
+    consumers: 1205,
+    purchases: 241,
+    conversion: 20.0,
+    demos: 26,
+    efficiency: 46.1,
+  },
+  {
+    market: "San Diego",
+    consumers: 1120,
+    purchases: 230,
+    conversion: 20.5,
+    demos: 23,
+    efficiency: 44.3,
+  },
+  {
+    market: "New York City",
+    consumers: 1980,
+    purchases: 410,
+    conversion: 20.7,
+    demos: 40,
+    efficiency: 49.2,
+  },
+  {
+    market: "Houston",
+    consumers: 1620,
+    purchases: 320,
+    conversion: 19.8,
+    demos: 32,
+    efficiency: 46.7,
+  },
+  {
+    market: "Las Vegas",
+    consumers: 1020,
+    purchases: 210,
+    conversion: 20.6,
+    demos: 20,
+    efficiency: 46.3,
+  },
+
+  // Additional 10 markets for pagination
+  {
+    market: "Chicago",
+    consumers: 3100,
+    purchases: 560,
+    conversion: 26.1,
+    demos: 55,
+    efficiency: 50.4,
+  },
+  {
+    market: "Boston",
+    consumers: 1500,
+    purchases: 310,
+    conversion: 20.6,
+    demos: 28,
+    efficiency: 47.1,
+  },
+  {
+    market: "Portland",
+    consumers: 1300,
+    purchases: 250,
+    conversion: 19.2,
+    demos: 24,
+    efficiency: 45.5,
+  },
+  {
+    market: "Atlanta",
+    consumers: 2200,
+    purchases: 480,
+    conversion: 21.8,
+    demos: 38,
+    efficiency: 48.3,
+  },
+  {
+    market: "Miami",
+    consumers: 2400,
+    purchases: 530,
+    conversion: 22.1,
+    demos: 40,
+    efficiency: 50.0,
+  },
+  {
+    market: "Austin",
+    consumers: 1700,
+    purchases: 350,
+    conversion: 20.5,
+    demos: 30,
+    efficiency: 47.8,
+  },
+  {
+    market: "San Jose",
+    consumers: 1600,
+    purchases: 330,
+    conversion: 20.6,
+    demos: 28,
+    efficiency: 46.5,
+  },
+  {
+    market: "Orlando",
+    consumers: 1450,
+    purchases: 305,
+    conversion: 21.0,
+    demos: 27,
+    efficiency: 46.2,
+  },
+  {
+    market: "Detroit",
+    consumers: 1250,
+    purchases: 240,
+    conversion: 19.2,
+    demos: 22,
+    efficiency: 44.9,
+  },
+  {
+    market: "Tampa",
+    consumers: 1180,
+    purchases: 230,
+    conversion: 19.4,
+    demos: 21,
+    efficiency: 43.7,
+  },
+];

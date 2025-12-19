@@ -1,180 +1,132 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import { TenantUserQuery } from "@api/queries/TenantUserQuery";
-import type { TenantUserQuery as TenantUserQueryType } from "@api/queries/__generated__/TenantUserQuery.graphql";
+import { useNavigate, useLocation } from "react-router";
+import { TenantQuery } from "@/api/queries/TenantQuery";
+import type { TenantQuery as TenantQueryType } from "@api/queries/__generated__/TenantQuery.graphql";
 import { fetchQuery } from "relay-runtime";
 import environment from "@api/relay/environment";
 import { useAuthStore } from "@store/authStore";
 import { useTenantSelection } from "@/hooks/useTenantSelection";
 
 type Company = {
-    id: string;
-    uuid: string;
-    name: string;
-    logo?: string | null;
+  id: string;
+  uuid: string;
+  name: string;
+  logo?: string | null;
 };
 
+type TenantEdge = TenantQueryType["response"]["tenants"]["edges"][number];
+
 export default function CompanySelector() {
-    const [selected, setSelected] = useState<string | null>(null);
-    const [companies, setCompanies] = useState<Company[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [reloadKey, setReloadKey] = useState(0);
-    const { user } = useAuthStore();
-    const { selectTenant, tenantUuid } = useTenantSelection();
-    const navigate = useNavigate();
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
 
-    console.log("Tenant UUID", tenantUuid)
+  const { user, logout } = useAuthStore();
+  const { selectTenant } = useTenantSelection();
 
-    useEffect(() => {
-        let isMounted = true;
-        setLoading(true);
-        setError(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-        const variables: TenantUserQueryType["variables"] = user?.uuid
-            ? { userUuid: user.uuid }
-            : {};
+  const from =
+    (location.state as { from?: { pathname: string } })?.from?.pathname || "/";
 
-        fetchQuery<TenantUserQueryType>(environment, TenantUserQuery, variables)
-            .toPromise()
-            .then((data) => {
-                if (!isMounted) return;
-                const tenantCompanies: Company[] =
-                    data?.tenants?.edges
-                        ?.map((edge) => edge?.node)
-                        .filter((tenant): tenant is NonNullable<typeof tenant> =>
-                            Boolean(tenant),
-                        )
-                        .map((tenant) => ({
-                            id: tenant.id,
-                            uuid: String(tenant.uuid),
-                            name: tenant.name,
-                            logo: null,
-                        })) ?? [];
+  useEffect(() => {
+    let isMounted = true;
 
-                setCompanies(tenantCompanies);
-                setLoading(false);
-            })
-            .catch((err: unknown) => {
-                if (!isMounted) return;
-                const message =
-                    err instanceof Error
-                        ? err.message
-                        : "The companies could not be loaded.";
-                setError(message);
-                setLoading(false);
-            });
+    const variables: TenantQueryType["variables"] = user?.uuid
+      ? { userUuid: user.uuid }
+      : {};
 
-        return () => {
-            isMounted = false;
-        };
-    }, [user?.id, reloadKey]);
+    fetchQuery<TenantQueryType>(environment, TenantQuery, variables)
+      .toPromise()
+      .then((data) => {
+        if (!isMounted) return;
 
-    useEffect(() => {
-        if (!loading && companies.length === 1) {
-            const [company] = companies;
-            setSelected(company.id);
-            selectTenant(company.uuid);
-            navigate(`/dashboard/${company.uuid}`);
+        const tenantCompanies: Company[] =
+          data?.tenants?.edges?.map((edge: TenantEdge) => {
+            const tenant = edge.node;
+            return {
+              id: tenant.id,
+              uuid: String(tenant.uuid),
+              name: tenant.name,
+              logo: null,
+            };
+          }) ?? [];
+
+        // 👉 CASO: SOLO UN TENANT → AUTOSELECT + REDIRECT
+        if (tenantCompanies.length === 1) {
+          const [company] = tenantCompanies;
+          selectTenant(company.uuid, company.id);
+          navigate(from, { replace: true });
+          return;
         }
-    }, [companies, navigate, loading, selectTenant]);
 
-    useEffect(() => {
-        if (!tenantUuid || !companies.length) return;
-        const company = companies.find((c) => c.uuid === tenantUuid);
-        if (company) {
-            setSelected(company.id);
-        }
-    }, [tenantUuid, companies]);
+        setCompanies(tenantCompanies);
+        setLoading(false);
+      })
+      .catch(() => {
+        // 👉 ERROR DE API = LOGOUT
+        logout();
+        navigate("/login", { replace: true });
+      });
 
-    const handleSelect = (company: Company) => {
-        setSelected(company.id);
-        selectTenant(company.uuid);
-        navigate(`/dashboard/${company.uuid}`);
+    return () => {
+      isMounted = false;
     };
+  }, [user?.uuid, logout, navigate, from, selectTenant]);
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center p-6 gap-4 text-base-content">
-                <span className="loading loading-spinner loading-lg text-primary" />
-                <p>Loading companies...</p>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center p-6 gap-4 text-center text-base-content">
-                <p>{error}</p>
-                <button
-                    className="btn btn-primary"
-                    onClick={() => setReloadKey((prev) => prev + 1)}
-                >
-                    Try again
-                </button>
-            </div>
-        );
-    }
-
-    if (!companies.length) {
-        return (
-            <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center p-6 text-base-content">
-                <p>We cannot find any companies associated with your user account.</p>
-            </div>
-        );
-    }
-
-    const isOdd = companies.length % 2 !== 0;
-
+  // 👉 Si estamos redirigiendo automáticamente
+  if (loading) {
     return (
-        <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center p-6">
-            <h2 className="text-2xl font-bold text-base-content mb-8">
-                Select your company
-            </h2>
-
-            <div
-                className={`grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl ${isOdd
-                    ? "md:[&>*:last-child]:col-span-2 md:[&>*:last-child]:justify-self-center md:[&>*:last-child]:w-1/2"
-                    : ""
-                    }`}
-            >
-                {companies.map((company) => (
-                    <div
-                        key={company.id}
-                        onClick={() => handleSelect(company)}
-                        className={`card bg-base-200 shadow-xl cursor-pointer transition transform hover:scale-105 border-2 ${selected === company.id
-                            ? "border-primary ring ring-primary ring-offset-2"
-                            : "border-transparent"
-                            }`}
-                    >
-                        <div className="card-body items-center text-center">
-                            {company.logo ? (
-                                <img
-                                    src={company.logo}
-                                    alt={company.name}
-                                    className="w-32 h-32 object-contain mb-4"
-                                />
-                            ) : (
-                                <div className="w-32 h-32 rounded-full bg-primary/10 text-primary flex items-center justify-center text-3xl font-bold mb-4">
-                                    {company.name.slice(0, 2).toUpperCase()}
-                                </div>
-                            )}
-                            <h3 className="text-xl font-semibold text-base-content">
-                                {company.name}
-                            </h3>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {selected && (
-                <div className="mt-10 text-lg text-base-content">
-                    You have selected:{" "}
-                    <span className="font-bold text-primary">
-                        {companies.find((c) => c.id === selected)?.name}
-                    </span>
-                </div>
-            )}
-        </div>
+      <div className="min-h-screen bg-base-100 flex items-center justify-center">
+        <span className="loading loading-spinner loading-lg text-primary" />
+      </div>
     );
+  }
+
+  // 👉 Si no hay compañías (caso raro pero posible)
+  if (!companies.length) {
+    return (
+      <div className="min-h-screen bg-base-100 flex items-center justify-center text-base-content">
+        <p>No companies associated with this account.</p>
+      </div>
+    );
+  }
+
+  const isOdd = companies.length % 2 !== 0;
+
+  return (
+    <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center p-6">
+      <h2 className="text-2xl font-bold text-base-content mb-8">
+        Select your company
+      </h2>
+
+      <div
+        className={`grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl ${
+          isOdd
+            ? "md:[&>*:last-child]:col-span-2 md:[&>*:last-child]:justify-self-center md:[&>*:last-child]:w-1/2"
+            : ""
+        }`}
+      >
+        {companies.map((company) => (
+          <div
+            key={company.id}
+            onClick={() => {
+              selectTenant(company.uuid, company.id);
+              navigate(`/dashboard/${company.uuid}`);
+            }}
+            className="card bg-base-200 shadow-xl cursor-pointer transition transform hover:scale-105 border-2 border-transparent hover:border-primary"
+          >
+            <div className="card-body items-center text-center">
+              <div className="w-32 h-32 rounded-full bg-primary/10 text-primary flex items-center justify-center text-3xl font-bold mb-4">
+                {company.name.slice(0, 2).toUpperCase()}
+              </div>
+              <h3 className="text-xl font-semibold text-base-content">
+                {company.name}
+              </h3>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

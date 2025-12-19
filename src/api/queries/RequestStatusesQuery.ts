@@ -9,6 +9,7 @@ query RequestStatusesQuery($filters: RequestStatusFiltersInput!) {
           id
           uuid
           name
+          slug
           isDefault
         }
       }

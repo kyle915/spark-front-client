@@ -9,6 +9,7 @@ query EventStatusesQuery($filters: EventStatusFiltersInput!) {
           id
           uuid
           name
+          slug
           isDefault
           tenantId
         }

@@ -4,7 +4,7 @@ import type { LatLngExpression } from "leaflet";
 import { Marker } from "react-leaflet";
 import type { Control } from "react-hook-form";
 import type { SparkFormData } from "../schema/schema";
-import L from "leaflet";
+import * as L from "leaflet";
 
 import InteractiveMap from "@/shared/InteractiveMap";
 

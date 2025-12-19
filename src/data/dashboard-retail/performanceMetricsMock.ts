@@ -1,0 +1,58 @@
+export const performanceMetricsMock = [
+  {
+    metricKey: "totalConsumersSampled",
+    title: "Total Consumers Sampled",
+    value: "13,901",
+    change: "+23.4% vs Q4 2024",
+    variant: "success",
+  },
+  {
+    metricKey: "totalPurchases",
+    title: "Total Purchases",
+    value: "14,375",
+    change: "+20.1% vs Q4 2024",
+    variant: "success",
+  },
+  {
+    metricKey: "overallConversionRate",
+    title: "Overall Conversion Rate",
+    value: "20.7%",
+    change: "-1.2% vs Q4 2024",
+    variant: "warning",
+  },
+  {
+    metricKey: "totalDemos",
+    title: "Total Demos",
+    value: "292",
+    change: "+15.8% vs Q4 2024",
+    variant: "success",
+  },
+  {
+    metricKey: "newCustomersSampled",
+    title: "New Customers Sampled",
+    value: "8,420",
+    change: "+22.2% vs Q4 2024",
+    variant: "success",
+  },
+  {
+    metricKey: "boxesSold",
+    title: "Boxes Sold",
+    value: "2,847",
+    change: "+32.1% vs Q4 2024",
+    variant: "success",
+  },
+  {
+    metricKey: "additionalDisplays",
+    title: "Additional Displays",
+    value: "156",
+    change: "+16.4% vs Q4 2024",
+    variant: "success",
+  },
+  {
+    metricKey: "revenueGenerated",
+    title: "Revenue Generated",
+    value: "$284,750",
+    change: "+32.1% vs Q4 2024",
+    variant: "success",
+  },
+];
