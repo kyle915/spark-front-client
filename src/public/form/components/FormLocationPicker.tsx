@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Controller } from "react-hook-form";
 import type { LatLngExpression } from "leaflet";
-import { Marker } from "react-leaflet";
+import { Marker, useMap } from "react-leaflet";
 import type { Control } from "react-hook-form";
 import type { SparkFormData } from "../schema/schema";
 import * as L from "leaflet";
 
 import InteractiveMap from "@/shared/InteractiveMap";
+import MapSearchControl from "@/shared/MapSearchControl";
 
 // Fallback to Times Square, NY
 const FALLBACK_POSITION: [number, number] = [40.758, -73.9855];
@@ -19,12 +20,27 @@ const defaultMarkerIcon = L.icon({
 });
 
 interface Props {
-  control: Control<SparkFormData>;
+  control: Control<SparkFormData, any, SparkFormData>;
   nameLat: keyof SparkFormData;
   nameLng: keyof SparkFormData;
   label?: string;
   height?: string;
 }
+
+const MapSearchControlWrapper = ({
+  onSelect,
+}: {
+  onSelect: (lat: number, lng: number) => void;
+}) => {
+  const map = useMap();
+
+  return (
+    <MapSearchControl
+      map={map}
+      onSelect={(result) => onSelect(result.lat, result.lng)}
+    />
+  );
+};
 
 export default function FormLocationPicker({
   control,
@@ -67,8 +83,9 @@ export default function FormLocationPicker({
                 !isNaN(lat) && !isNaN(lng) ? [lat, lng] : initialPosition;
 
               const handleClick = (lat: number, lng: number) => {
-                latField.onChange(lat.toString());
-                lngField.onChange(lng.toString());
+                latField.onChange(lat);
+                lngField.onChange(lng);
+                setInitialPosition([lat, lng]);
               };
 
               return (
@@ -79,6 +96,7 @@ export default function FormLocationPicker({
                     height={height}
                     onMapClick={handleClick}
                   >
+                    <MapSearchControlWrapper onSelect={handleClick} />
                     <Marker position={center} icon={defaultMarkerIcon} />
                   </InteractiveMap>
 

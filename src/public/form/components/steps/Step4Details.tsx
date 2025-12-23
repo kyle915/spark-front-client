@@ -4,7 +4,7 @@ import type { SparkFormData } from "../../schema/schema";
 import FormSelect from "@/shared/FormSelect";
 
 interface Step4DetailsProps {
-  control: Control<SparkFormData>;
+  control: Control<SparkFormData, any, SparkFormData>;
   values: SparkFormData;
 }
 

@@ -80,6 +80,10 @@ import RecapList from "@/recap/RecapsList";
 import RecapView from "@/recap/RecapView";
 import EditRecap from "@/recap/EditRecap";
 
+// User
+import UsersList from "@/users/UsersList";
+import CreateUser from "@/users/CreateUser";
+
 // Public
 import SparkFormPage from "@/public/form/FormPage";
 
@@ -197,6 +201,38 @@ const EventsLinks = {
     },
     { path: "/event/view/:uuid", component: <EventView />, isPublic: false },
     { path: "/event/edit/:uuid", component: <EditEvent />, isPublic: false },
+  ],
+};
+
+/* -----------------------------------------------------------
+ USERS
+----------------------------------------------------------- */
+const UsersLinks = {
+  menu: [
+    {
+      path: "/users/list",
+      name: "List",
+      component: <UsersList />,
+      Icon: Bars4Icon,
+    },
+    {
+      path: "/users/create",
+      name: "Create",
+      component: <CreateUser />,
+      Icon: PlusCircleIcon,
+    },
+  ],
+  routes: [
+    {
+      path: "/users/list",
+      component: <UsersList />,
+      isPublic: false,
+    },
+    {
+      path: "/users/create",
+      component: <CreateUser />,
+      isPublic: false,
+    },
   ],
 };
 
@@ -539,6 +575,11 @@ export const navigationMenuRoutes = [
     links: EventsLinks.menu,
   },
   {
+    title: "Users",
+    Icon: UserGroupIcon,
+    links: UsersLinks.menu,
+  },
+  {
     title: "Recaps",
     Icon: CameraIcon,
     links: RecapLinks.menu,
@@ -567,7 +608,7 @@ export const appRoutes = [
   ...DashboardLinks.routes,
   ...RequestsLinks.routes,
   ...EventsLinks.routes,
-  // ...TenantsLinks.routes,
+  ...UsersLinks.routes,
   ...RecapLinks.routes,
   ...ProductLinks.routes,
   ...CatalogsRoutes,

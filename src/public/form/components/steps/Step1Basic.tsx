@@ -8,7 +8,7 @@ import type { Control } from "react-hook-form";
 import type { SparkFormData } from "../../schema/schema";
 
 interface Step1BasicProps {
-  control: Control<SparkFormData>;
+  control: Control<SparkFormData, any, SparkFormData>;
   timeZones?: {
     id: string;
     name: string;

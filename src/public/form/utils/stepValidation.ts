@@ -13,8 +13,10 @@ export const stepFields: Record<string, FieldPath<SparkFormData>[]> = {
   ],
   step2: ["skus"],
   step3: [
+    "distributorId",
     "distributor",
     "distributorEmail",
+    "retailerId",
     "retailer",
     "retailerAddress",
     "retailerStoreContact",

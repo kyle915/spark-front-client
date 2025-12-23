@@ -19,7 +19,7 @@ interface SimpleCatalog {
 }
 
 interface Step2ProductsProps {
-  control: Control<SparkFormData>;
+  control: Control<SparkFormData, any, SparkFormData>;
   products: ProductItem[];
   productTypes: SimpleCatalog[];
   // clients: SimpleCatalog[];

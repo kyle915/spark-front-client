@@ -16,7 +16,7 @@ import ConfirmationModal from "../shared/ConfirmationModal";
 import ImageUpload from "../shared/ImageUpload";
 import LoadingButton from "../shared/LoadingButton";
 import environment from "@api/relay/environment";
-import { Edit, Trash2Icon } from "lucide-react";
+import { Edit, ImageOff, Trash2Icon } from "lucide-react";
 
 type ProductNode = {
   id: string;
@@ -598,42 +598,46 @@ const TenantProductsGrid = ({
               whileTap={{ scale: 0.98 }}
               className="group card bg-base-100 border border-base-300/70 shadow-sm transition-all duration-200 hover:shadow-xl hover:border-primary/50"
             >
-              <div className="card-body p-4">
+              <div className="card-body p-4 flex flex-col">
                 {/* Imagen */}
                 <div className="relative rounded-2xl overflow-hidden border border-base-300/70 bg-base-200">
+                  {/* Badge categoría */}
+                  <span
+                    className="
+                      absolute top-2 right-2 z-10
+                      badge badge-dash badge-primary
+                      max-w-[180px] truncate whitespace-nowrap
+                    "
+                    title={product.productType?.name ?? "Uncategorized"}
+                  >
+                    {product.productType?.name ?? "Uncategorized"}
+                  </span>
+
                   <div className="aspect-square w-full flex items-center justify-center">
                     {product.image ? (
                       <img
                         src={product.image}
                         alt={product.name}
                         className="w-full h-full object-cover"
-                        loading="lazy"
                       />
                     ) : (
-                      <div className="badge badge-ghost">No image</div>
+                      <div>
+                        <ImageOff className="w-12 h-12 text-base-content/20" />
+                      </div>
                     )}
                   </div>
                 </div>
 
                 {/* Info */}
-                <div className="mt-4 flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-semibold text-base leading-snug line-clamp-2">
-                      {product.name}
-                    </div>
-
-                    <div className="mt-2">
-                      <span className="badge badge-soft badge-primary">
-                        {product.productType?.name ?? "Uncategorized"}
-                      </span>
-                    </div>
+                <div className="card-body p-4 flex flex-col">
+                  <div className="mt-3 font-semibold text-base leading-snug line-clamp-2">
+                    {product.name}
                   </div>
 
-                  {/* Acciones */}
-                  <div className="flex flex-col gap-2 items-end shrink-0">
+                  <div className="mt-auto pt-4 border-t border-base-300/50 flex justify-between">
                     <button
                       type="button"
-                      className="btn btn-sm btn-outline bg-primary hover:bg-primary/90 text-white"
+                      className="btn btn-sm btn-outline bg-primary text-white"
                       onClick={() => setEditingProduct(product)}
                     >
                       <Edit className="w-4 h-4" />

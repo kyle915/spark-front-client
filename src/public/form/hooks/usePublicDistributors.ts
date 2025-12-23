@@ -9,7 +9,7 @@ interface Distributor {
 }
 
 interface NodeDistributor {
-  edges: { node: Distributor }[];
+  publicDistributors: { edges: { node: Distributor }[] };
 }
 
 export function usePublicDistributors(requestUrlName: string) {
@@ -22,7 +22,7 @@ export function usePublicDistributors(requestUrlName: string) {
     setLoading(true);
     gqlRequest<NodeDistributor>(PUBLIC_DISTRIBUTORS_QUERY, { requestUrlName })
       .then((data) => {
-        setDistributors(mapQuery(data.edges));
+        setDistributors(mapQuery(data.publicDistributors.edges));
       })
       .finally(() => setLoading(false));
   }, [requestUrlName]);

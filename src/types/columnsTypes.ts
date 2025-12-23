@@ -59,3 +59,17 @@ export interface RecapRow {
   event?: NamedEntity | null;
   createdAt?: string | null;
 }
+
+export interface UserRow {
+  id: string;
+  uuid?: string | null;
+  firstName: string;
+  lastName: string;
+  email: string;
+  image?: string | null;
+  role?: {
+    id: string;
+    uuid?: string | null;
+    name: string;
+  } | null;
+}

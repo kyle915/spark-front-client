@@ -3,10 +3,13 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
+  BarController,
   PointElement,
   LineElement,
+  LineController,
   Tooltip,
   Legend,
+  registerables,
   type ChartOptions,
   type TooltipItem,
 } from "chart.js";
@@ -17,10 +20,14 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
+  BarController,
   PointElement,
   LineElement,
+  LineController,
   Tooltip,
-  Legend
+  Legend,
+  // register everything else to avoid missing controllers in production bundles
+  ...registerables
 );
 
 interface MonthlyEvent {

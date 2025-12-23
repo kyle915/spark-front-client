@@ -1,6 +1,8 @@
 import * as yup from "yup";
 
 export const sparkFormSchema = yup.object({
+  distributorId: yup.string().optional().nullable(),
+  retailerId: yup.string().optional().nullable(),
   address: yup.string().required("Address is required"),
   latitude: yup
     .number()
@@ -31,11 +33,21 @@ export const sparkFormSchema = yup.object({
       })
     )
     .required("Details are required"),
-  distributor: yup.string().required("Distributor is required"),
+  distributor: yup
+    .string()
+    .when("distributorId", {
+      is: (value: string | null | undefined) => !value,
+      then: (schema) => schema.required("Distributor is required"),
+      otherwise: (schema) => schema.notRequired(),
+    }),
   distributorEmail: yup
     .string()
     .email("Invalid email format")
-    .required("Distributor email is required"),
+    .when("distributorId", {
+      is: (value: string | null | undefined) => !value,
+      then: (schema) => schema.required("Distributor email is required"),
+      otherwise: (schema) => schema.notRequired(),
+    }),
   start_time: yup.string().required("Start time is required"),
   name: yup.string().required("Name is required"),
   skus: yup
@@ -44,11 +56,19 @@ export const sparkFormSchema = yup.object({
     .min(1, "Select at least one product")
     .required("Products are required"),
   request_type: yup.string().required("Request type is required"),
-  retailer: yup.string().required("Retailer is required"),
-  retailerAddress: yup.string().required("Retailer address is required"),
-  retailerStoreContact: yup
+  retailer: yup
     .string()
-    .required("Retailer store contact is required"),
+    .when("retailerId", {
+      is: (value: string | null | undefined) => !value,
+      then: (schema) => schema.required("Retailer is required"),
+      otherwise: (schema) => schema.notRequired(),
+    }),
+  retailerAddress: yup.string().when("retailerId", {
+    is: (value: string | null | undefined) => !value,
+    then: (schema) => schema.required("Retailer address is required"),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+  retailerStoreContact: yup.string().required("Retailer store contact is required"),
   end_time: yup
     .string()
     .required("End time is required")

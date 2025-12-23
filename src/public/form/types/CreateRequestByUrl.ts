@@ -23,10 +23,12 @@ export interface CreateRequestInput {
   clientEmail: string;
 
   // DISTRIBUTOR
+  distributorId?: string | null;
   distributorName: string;
   distributorEmail: string;
 
   // RETAILER
+  retailerId?: string | null;
   retailerName: string;
   retailerAddress: string;
   retailerStoreContact: string;
