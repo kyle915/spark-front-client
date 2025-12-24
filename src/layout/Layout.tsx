@@ -114,7 +114,7 @@ const SidebarItem = ({
 
   if (hasChildren && !collapsed) {
     return (
-      <div className="text-base-content">
+      <div className="text-base-content text-md">
         <button
           onClick={() => setExpanded((v) => !v)}
           className={`w-full flex items-center gap-3 py-2 ${leftPadding}
@@ -222,7 +222,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* MENU */}
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-          <ul className="menu p-3 space-y-1 w-full max-w-none">
+          <ul className="menu text-base p-3 space-y-1 w-full max-w-none">
             {menuItems.map((item) => (
               <SidebarItem
                 key={item.path ?? item.title}

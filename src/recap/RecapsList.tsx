@@ -1,6 +1,10 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import Layout from "@/layout/Layout";
-import { useLazyLoadQuery, usePreloadedQuery } from "react-relay/hooks";
+import {
+  useLazyLoadQuery,
+  useMutation,
+  usePreloadedQuery,
+} from "react-relay/hooks";
 import DataTableRelay from "@/shared/DataTableRelay";
 import {
   useRelayPagination,
@@ -11,15 +15,23 @@ import { EventsQuery } from "@/api/queries/EventsQuery";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import type { EventsQuery as EventsQueryType } from "@/api/queries/__generated__/EventsQuery.graphql";
 import type { RecapsQuery as RecapsQueryType } from "@/api/queries/__generated__/RecapsQuery.graphql";
+import { ApproveRecapMutation } from "@api/mutations/ApproveRecapMutation";
+import type { ApproveRecapMutation as ApproveRecapMutationType } from "@api/mutations/__generated__/ApproveRecapMutation.graphql";
 import type { PreloadedQuery } from "react-relay";
 import type { RecapRow } from "@/types/columnsTypes";
 import { createRecapColumns } from "@/utils/columns";
 import { CameraIcon } from "@heroicons/react/24/solid";
-import { EyeIcon, PencilIcon } from "@heroicons/react/24/outline";
+import {
+  CheckCircleIcon,
+  EyeIcon,
+  PencilIcon,
+  XCircleIcon,
+} from "@heroicons/react/24/outline";
 
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { FilterIcon, FunnelXIcon } from "lucide-react";
+import { useAlertStore } from "@/store/alertStore";
 
 const PAGE_SIZE = 10;
 
@@ -36,6 +48,11 @@ type RecapsTableContentProps = {
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;
   emptyMessage: string;
+  onApprove: (recap: RecapRow) => void;
+  onDecline: (recap: RecapRow) => void;
+  approvingId: string | null;
+  targetApproval: boolean | null;
+  isApproving: boolean;
 };
 
 const RecapsTableContent = ({
@@ -48,6 +65,11 @@ const RecapsTableContent = ({
   onPageLoaded,
   isNavigating,
   emptyMessage,
+  onApprove,
+  onDecline,
+  approvingId,
+  targetApproval,
+  isApproving,
 }: RecapsTableContentProps) => {
   const navigate = useNavigate();
   const data = usePreloadedQuery<RecapsQueryType>(RecapsQuery, queryReference);
@@ -90,6 +112,38 @@ const RecapsTableContent = ({
             >
               <PencilIcon className="w-5 h-5" />
             </button>
+            <button
+              type="button"
+              className="btn btn-xs btn-outline btn-success tooltip disabled:text-success/50 hover:text-white"
+              onClick={() => onApprove(row)}
+              disabled={isApproving || Boolean(row.approved)}
+              data-tip={row.approved ? "Already approved" : "Approve recap"}
+              aria-label="Approve recap"
+            >
+              {isApproving &&
+              approvingId === row.id &&
+              targetApproval === true ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <CheckCircleIcon className="w-5 h-5" />
+              )}
+            </button>
+            <button
+              type="button"
+              className="btn btn-xs btn-outline btn-error tooltip disabled:text-error/50 hover:text-white"
+              onClick={() => onDecline(row)}
+              disabled={isApproving || !row.approved}
+              data-tip={!row.approved ? "Already declined" : "Decline recap"}
+              aria-label="Decline recap"
+            >
+              {isApproving &&
+              approvingId === row.id &&
+              targetApproval === false ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <XCircleIcon className="w-5 h-5" />
+              )}
+            </button>
           </div>
         ),
       }}
@@ -113,11 +167,17 @@ type RecapsListInnerProps = {
 };
 
 const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
+  const showAlert = useAlertStore((state) => state.showAlert);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [targetApproval, setTargetApproval] = useState<boolean | null>(null);
+  const [commitApprove, isApproving] =
+    useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
   const {
     queryRef,
     displayPage,
     isNavigating,
     handlePageLoaded,
+    refresh,
     goNext,
     goPrevious,
     goToPage,
@@ -126,6 +186,41 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
     pageSize: PAGE_SIZE,
     initialVariables: { filters },
   });
+
+  const handleSetRecapApproval = useCallback(
+    (recap: RecapRow, approved: boolean) => {
+      if (!recap.id) return;
+
+      setApprovingId(recap.id);
+      setTargetApproval(approved);
+      commitApprove({
+        variables: { input: { id: recap.id, approved } },
+        onCompleted: (response) => {
+          const payload = response.approveRecap;
+          if (payload.success) {
+            showAlert(
+              payload.message ?? "Recap updated successfully",
+              "success"
+            );
+            refresh();
+          } else {
+            showAlert(
+              payload.message ?? "Failed to update recap status",
+              "error"
+            );
+          }
+          setApprovingId(null);
+          setTargetApproval(null);
+        },
+        onError: (error) => {
+          showAlert(error.message, "error");
+          setApprovingId(null);
+          setTargetApproval(null);
+        },
+      });
+    },
+    [commitApprove, refresh, showAlert]
+  );
 
   return (
     <Suspense fallback={<Loading />}>
@@ -140,6 +235,11 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
           isNavigating={isNavigating}
           onPageLoaded={handlePageLoaded}
           emptyMessage={emptyMessage}
+          onApprove={(recap) => handleSetRecapApproval(recap, true)}
+          onDecline={(recap) => handleSetRecapApproval(recap, false)}
+          approvingId={approvingId}
+          targetApproval={targetApproval}
+          isApproving={isApproving}
         />
       ) : (
         <Loading />

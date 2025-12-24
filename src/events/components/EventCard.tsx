@@ -143,7 +143,7 @@ const EventCard: React.FC<Props> = ({ event }) => {
         </div>
 
         {/* ================= MAIN GRID ================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-stretch">
           {/* LEFT */}
           <div className="lg:col-span-2 space-y-6">
             {/* BASIC INFORMATION */}
@@ -225,7 +225,7 @@ const EventCard: React.FC<Props> = ({ event }) => {
           </div>
 
           {/* RIGHT / MAP */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-2">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 h-full flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-lg">Location</p>

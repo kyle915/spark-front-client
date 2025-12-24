@@ -216,9 +216,7 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
 
           <button
             type="button"
-            className={`btn btn-xs btn-outline btn-success tooltip ${
-              isApproved ? "btn-disabled" : ""
-            }`}
+            className="btn btn-xs btn-outline btn-success tooltip disabled:text-success/50 hover:text-white"
             data-tip={isApproved ? "Already approved" : "Approve Request"}
             onClick={() => handleApproveRequest(request)}
             disabled={isApproved}
@@ -228,9 +226,7 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
 
           <button
             type="button"
-            className={`btn btn-xs btn-outline btn-error tooltip ${
-              isDeclined || isApproved ? "btn-disabled" : ""
-            }`}
+            className="btn btn-xs btn-outline btn-error tooltip disabled:text-error/50 hover:text-white"
             data-tip={isDeclined ? "Already declined" : "Decline Request"}
             onClick={() => handleDeclineClick(request)}
             disabled={isDeclined || isDeclineInFlight}
