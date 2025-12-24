@@ -8,11 +8,13 @@ import MapSearchControl from "./MapSearchControl";
 const TILE_LAYERS = {
   light: {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   },
   dark: {
     url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   },
 } as const;
 
@@ -62,30 +64,42 @@ const InteractiveMap: FC<InteractiveMapProps> = ({
   onMapClick,
   className = "",
 }) => {
-  const [themeVariant, setThemeVariant] = useState<keyof typeof TILE_LAYERS>("light");
+  const [themeVariant, setThemeVariant] =
+    useState<keyof typeof TILE_LAYERS>("light");
   const [mapInstance, setMapInstance] = useState<LeafletMap | null>(null);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
-    const updateTheme = () => setThemeVariant(getThemeVariant(root.getAttribute("data-theme")));
+    const updateTheme = () =>
+      setThemeVariant(getThemeVariant(root.getAttribute("data-theme")));
 
     updateTheme();
     const observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
-        if (mutation.type === "attributes" && mutation.attributeName === "data-theme") {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "data-theme"
+        ) {
           updateTheme();
         }
       }
     });
-    observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
     return () => observer.disconnect();
   }, []);
 
   const tileLayer = TILE_LAYERS[themeVariant];
 
   return (
-    <div className={`relative rounded-2xl overflow-hidden border border-base-100/20 ${themeVariant === "dark" ? "leaflet-theme-dark" : ""} ${height} ${className}`}>
+    <div
+      className={`relative rounded-2xl overflow-hidden border border-base-100/20 ${
+        themeVariant === "dark" ? "leaflet-theme-dark" : ""
+      } ${height} ${className}`}
+    >
       <MapContainer
         center={center}
         zoom={zoom}

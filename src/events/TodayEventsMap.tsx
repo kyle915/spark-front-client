@@ -197,7 +197,6 @@ const TodayEventsMap = () => {
                 MAP
             ========================= */}
             <InteractiveMap
-              showSearch={true}
               center={center}
               zoom={11}
               height="flex-1"
