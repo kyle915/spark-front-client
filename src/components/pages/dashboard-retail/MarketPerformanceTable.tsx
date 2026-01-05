@@ -18,13 +18,10 @@ const filterOptions = [
   "Top 10 by Purchases",
 ] as const;
 
-const filterDistributor = [
-  "All Distributor",
-  "Straub",
-  "John Lenore",
-  "Nev Bev",
-  "AB1 Sylmar"
-] as const;
+type DistributorOption = {
+  value: string;
+  label: string;
+};
 
 function filterMarkets(data: MarketRow[], filter: string): MarketRow[] {
   switch (filter) {
@@ -45,9 +42,15 @@ function filterMarkets(data: MarketRow[], filter: string): MarketRow[] {
 export default memo(function MarketPerformanceTable({
   data,
   rowsPerPage = 7,
+  distributors = [],
+  selectedDistributor = "",
+  onDistributorChange,
 }: {
   data: MarketRow[];
   rowsPerPage?: number;
+  distributors?: DistributorOption[];
+  selectedDistributor?: string;
+  onDistributorChange?: (value: string) => void;
 }) {
   const [filter, setFilter] = useState<string>("All Markets");
   const [query, setQuery] = useState("");
@@ -95,20 +98,23 @@ export default memo(function MarketPerformanceTable({
         </select>
         <select
           className="select select-bordered w-full md:max-w-xs"
-          value={filterDistributor}
+          value={selectedDistributor}
           onChange={(e) => {
-            setFilter(e.target.value);
+            onDistributorChange?.(e.target.value);
             setPage(1);
           }}
         >
-          {filterDistributor.map((f) => (
-            <option key={f}>{f}</option>
+          <option value="">All Distributors</option>
+          {distributors.map((f) => (
+            <option key={f.value} value={f.value}>
+              {f.label}
+            </option>
           ))}
         </select>
         {/* Search */}
         <input
           type="text"
-          placeholder="Search markets..."
+          placeholder="Search locations..."
           className="input input-bordered w-full md:max-w-xs"
           value={query}
           onChange={(e) => {
@@ -151,8 +157,8 @@ export default memo(function MarketPerformanceTable({
                         m.conversion >= 30
                           ? "#16a34a"
                           : m.conversion >= 20
-                            ? "#60a5fa"
-                            : "#9ca3af",
+                          ? "#60a5fa"
+                          : "#9ca3af",
                     }}
                   >
                     {m.conversion}%

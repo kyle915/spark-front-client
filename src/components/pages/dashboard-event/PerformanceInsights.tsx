@@ -1,49 +1,75 @@
 import { Eye, ShoppingCart, CalendarDays, Target } from "lucide-react";
 
-const insights = [
-  {
-    id: 1,
-    title: "KNEW ABOUT BRAND",
-    value: "4,992",
-    subtitle: "40.0% of sampled",
-    icon: Eye,
-    border: "border-amber-300",
-    bg: "bg-amber-50 dark:bg-amber-300/10",
-    accent: "text-amber-600",
-  },
-  {
-    id: 2,
-    title: "WILLING TO PURCHASE",
-    value: "8,736",
-    subtitle: "70.0% of sampled",
-    icon: ShoppingCart,
-    border: "border-emerald-300",
-    bg: "bg-emerald-50 dark:bg-emerald-300/10",
-    accent: "text-emerald-600",
-  },
-  {
-    id: 3,
-    title: "BEST MONTH",
-    value: "June 2025",
-    subtitle: "35 events | 4,200 consumers",
-    icon: CalendarDays,
-    border: "border-purple-300",
-    bg: "bg-purple-50 dark:bg-purple-300/10",
-    accent: "text-purple-600",
-  },
-  {
-    id: 4,
-    title: "GROWTH RATE",
-    value: "+34.6%",
-    subtitle: "Events vs last year",
-    icon: Target,
-    border: "border-orange-300",
-    bg: "bg-orange-50 dark:bg-orange-300/10",
-    accent: "text-orange-600",
-  },
-];
+type PerformanceInsightsData = {
+  knewAboutBrand: number;
+  knewAboutBrandPercentage: number;
+  willingToPurchase: number;
+  willingToPurchasePercentage: number;
+  bestMonth?: {
+    month: string;
+    eventsCount: number;
+    consumersCount: number;
+  } | null;
+  growthRate: number;
+};
 
-export default function PerformanceInsights() {
+export default function PerformanceInsights({
+  data,
+}: {
+  data: PerformanceInsightsData;
+}) {
+  const formatPercent = (value: number) => `${value.toFixed(1)}%`;
+  const formatNumber = (value: number) => value.toLocaleString();
+
+  const bestMonth = data.bestMonth;
+  const insights = [
+    {
+      id: 1,
+      title: "KNEW ABOUT BRAND",
+      value: formatNumber(data.knewAboutBrand),
+      subtitle: `${formatPercent(data.knewAboutBrandPercentage)} of sampled`,
+      icon: Eye,
+      border: "border-amber-300",
+      bg: "bg-amber-50 dark:bg-amber-300/10",
+      accent: "text-amber-600",
+    },
+    {
+      id: 2,
+      title: "WILLING TO PURCHASE",
+      value: formatNumber(data.willingToPurchase),
+      subtitle: `${formatPercent(data.willingToPurchasePercentage)} of sampled`,
+      icon: ShoppingCart,
+      border: "border-emerald-300",
+      bg: "bg-emerald-50 dark:bg-emerald-300/10",
+      accent: "text-emerald-600",
+    },
+    {
+      id: 3,
+      title: "BEST MONTH",
+      value: bestMonth?.month ?? "N/A",
+      subtitle: bestMonth
+        ? `${
+            bestMonth.eventsCount
+          } events | ${bestMonth.consumersCount.toLocaleString()} consumers`
+        : "No data",
+      icon: CalendarDays,
+      border: "border-purple-300",
+      bg: "bg-purple-50 dark:bg-purple-300/10",
+      accent: "text-purple-600",
+    },
+    {
+      id: 4,
+      title: "GROWTH RATE",
+      value: `${data.growthRate >= 0 ? "+" : ""}${formatPercent(
+        data.growthRate
+      )}`,
+      subtitle: "Events vs last period",
+      icon: Target,
+      border: "border-orange-300",
+      bg: "bg-orange-50 dark:bg-orange-300/10",
+      accent: "text-orange-600",
+    },
+  ];
   return (
     <section className="space-y-6 w-full">
       <h2 className="text-xl font-bold flex items-center gap-2 justify-center">

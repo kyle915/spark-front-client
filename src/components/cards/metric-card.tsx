@@ -18,7 +18,7 @@ import {
   UsersRound,
   Building2,
   Eye,
-  BadgeDollarSign
+  BadgeDollarSign,
 } from "lucide-react";
 
 const metricIcons: Record<string, React.ReactNode> = {
@@ -26,7 +26,7 @@ const metricIcons: Record<string, React.ReactNode> = {
   totalRequests: <ClipboardList />,
   totalClients: <UsersRound />,
   totalDistributors: <Building2 />,
-  consumersSampled: <UsersRound />,
+  totalConsumersSampled: <UsersRound />,
   totalPurchases: <ShoppingCart className="text-green-500" />,
   overallConversionRate: <Target className="text-purple-500" />,
   totalDemos: <BarChart3 className="text-yellow-500" />,
@@ -35,7 +35,7 @@ const metricIcons: Record<string, React.ReactNode> = {
   additionalDisplays: <Users className="text-gray-500" />,
   revenueGenerated: <DollarSign className="text-green-500" />,
   brandAwareness: <Eye />,
-  purchaseIntent: <BadgeDollarSign />
+  purchaseIntent: <BadgeDollarSign />,
 };
 
 export interface MetricCardProps {
@@ -46,6 +46,7 @@ export interface MetricCardProps {
   subtitle?: string;
   variant?: "success" | "error" | "neutral";
   icon?: React.ReactNode;
+  comparisonLabel?: string;
 }
 
 export function MetricCard({
@@ -63,15 +64,15 @@ export function MetricCard({
   const colorScheme =
     variant === "success"
       ? {
-        text: "text-green-600",
-        bg: "bg-green-600/10",
-      }
+          text: "text-green-600",
+          bg: "bg-green-600/10",
+        }
       : variant === "error"
-        ? {
+      ? {
           text: "text-error",
           bg: "bg-error/10",
         }
-        : {
+      : {
           text: "text-neutral-content",
           bg: "bg-base-300/40",
         };
@@ -125,13 +126,7 @@ export function MetricCard({
         >
           {change}
         </span>
-        <span
-          className={cn(
-            "text-sm",
-          )}
-        >
-          vs Q4 2024
-        </span>
+        <span className={cn("text-sm")}>vs Q4 2024</span>
 
         {subtitle && (
           <span className="text-sm text-base-content/60">{subtitle}</span>
