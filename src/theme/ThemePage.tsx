@@ -140,7 +140,7 @@ function ThemeEditorContent({ tenantId }: ThemeEditorContentProps) {
             <h1>Theme Customization</h1>
           </div>
           <p className="text-base-content/70">
-            Customize your tenant&apos;s theme by adjusting the CSS variables
+            Customize your tenant&apos;s theme
           </p>
         </div>
 

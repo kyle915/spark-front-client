@@ -280,7 +280,7 @@ const RecapForm = () => {
             <div className="flex flex-col gap-5 border-b border-base-100/20">
               <div className="flex items-center justify-between gap-4">
                 <Link
-                  to="/events/list"
+                  to="/recap/list"
                   className="inline-flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition"
                 >
                   <ArrowLeftIcon className="w-4 h-4" />

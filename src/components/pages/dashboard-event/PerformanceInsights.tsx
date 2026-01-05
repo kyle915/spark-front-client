@@ -22,6 +22,7 @@ export default function PerformanceInsights({
   const formatNumber = (value: number) => value.toLocaleString();
 
   const bestMonth = data.bestMonth;
+
   const insights = [
     {
       id: 1,
@@ -50,7 +51,7 @@ export default function PerformanceInsights({
       subtitle: bestMonth
         ? `${
             bestMonth.eventsCount
-          } events | ${bestMonth.consumersCount.toLocaleString()} consumers`
+          } events · ${bestMonth.consumersCount.toLocaleString()} consumers`
         : "No data",
       icon: CalendarDays,
       border: "border-purple-300",
@@ -70,6 +71,7 @@ export default function PerformanceInsights({
       accent: "text-orange-600",
     },
   ];
+
   return (
     <section className="space-y-6 w-full">
       <h2 className="text-xl font-bold flex items-center gap-2 justify-center">
@@ -77,26 +79,16 @@ export default function PerformanceInsights({
         Performance Insights
       </h2>
 
-      {/* WRAPPER CON SCROLL ADAPTATIVO */}
-      <div
-        className="
-          flex flex-col gap-6
-          sm:grid sm:grid-cols-2 
-          xl:grid-cols-4
-          overflow-x-auto sm:overflow-visible
-          pb-3 no-scrollbar
-        "
-        style={{ scrollSnapType: "x mandatory" }}
-      >
+      {/* GRID RESPONSIVO */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
         {insights.map((item) => (
           <div
             key={item.id}
             className={`
-              min-w-[260px] 
               p-5 rounded-xl border ${item.border} ${item.bg}
-              transition-colors flex flex-col justify-between h-full
-              hover:shadow-lg hover:scale-[1.03]
-              scroll-snap-align-start
+              flex flex-col justify-between
+              transition-all
+              hover:shadow-lg hover:scale-[1.02]
             `}
           >
             {/* ICON */}
