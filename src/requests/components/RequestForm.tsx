@@ -10,8 +10,8 @@ import FormCheckbox from "@/shared/FormCheckbox";
 import { ArrowLeftIcon, PencilIcon } from "@heroicons/react/24/solid";
 import { XCircleIcon } from "@heroicons/react/24/outline";
 import { SaveIcon } from "lucide-react";
-
 import type { Path, PathValue } from "react-hook-form";
+import { useAutoTimezoneFromCoordinates } from "../hooks/useAutoTimezoneFromCoordinates";
 
 export interface RequestFormValues {
   name: string;
@@ -24,8 +24,6 @@ export interface RequestFormValues {
   retailerId?: string | null;
   distributorId?: string | null;
   requestTypeId?: string | null;
-
-  // Create mode fields
   clientName?: string;
   clientEmail?: string;
   distributorName?: string;
@@ -35,12 +33,8 @@ export interface RequestFormValues {
   retailerStoreContact?: string;
   storeManagerName?: string;
   storeManagerPhone?: string;
-
-  // Details
   isTableNeeded?: boolean;
   tableSize?: string;
-
-  // Products
   products?: string[];
 }
 
@@ -98,7 +92,6 @@ export default function RequestForm({
     retailerId: null,
     distributorId: null,
     requestTypeId: null,
-
     clientName: "",
     clientEmail: "",
     distributorName: "",
@@ -116,12 +109,21 @@ export default function RequestForm({
     ...defaultValues,
   };
 
+  // ========================
+  // INITIALIZE FORM AND FORM STATE
+  // ========================
   const { handleSubmit, control, watch, setValue, reset, formState } =
     useForm<RequestFormValues>({
       defaultValues: safeDefaultValues,
     });
 
   const isDirty = formState.isDirty;
+
+  // ========================
+  // WATCHERS FOR COORDINATES & TIMEZONE AND HOOK
+  // ========================
+  const selectedCoordinates = watch("coordinates");
+  const selectedTimezoneId = watch("timezoneId");
 
   useEffect(() => {
     if (mode === "edit" && Object.keys(defaultValues).length > 0) {
@@ -139,6 +141,15 @@ export default function RequestForm({
       });
     }
   }, [mode, defaultValues, reset]);
+
+  useAutoTimezoneFromCoordinates<RequestFormValues, "timezoneId">({
+    coordinates: selectedCoordinates,
+    timezoneId: selectedTimezoneId,
+    timezones,
+    setValue,
+    timezoneFieldName: "timezoneId",
+    initialFromBackend: Boolean(defaultValues.timezoneId),
+  });
 
   const [selectedProductType, setSelectedProductType] = useState<string>("");
 
