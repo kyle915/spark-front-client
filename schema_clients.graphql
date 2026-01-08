@@ -19,7 +19,8 @@ type AcceptInvitationResponse {
 """
 AccountFeedback(id, uuid, do_differently_feedback, feedback, corpo_card, recap, created_by, updated_by, created_at, updated_at)
 """
-type AccountFeedback {
+type AccountFeedback implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   doDifferentlyFeedback: String
@@ -44,7 +45,8 @@ input ActiveAmbassadorFiltersInput {
 """
 Ambassador(id, uuid, rating, address, coordinates, is_active, user, created_by, updated_by, created_at, updated_at)
 """
-type Ambassador {
+type Ambassador implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   rating: Int!
@@ -79,7 +81,8 @@ enum AmbassadorEventStatus {
 """
 AmbassadorEvent(id, uuid, is_approved, ambassador, tenant, event, created_by, updated_by, created_at, updated_at)
 """
-type AmbassadorEventType {
+type AmbassadorEventType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   isApproved: Boolean!
@@ -126,7 +129,8 @@ input AmbassadorFileInput {
 """
 AmbassadorFile(id, uuid, name, url, main_resume, profile_pic, is_public, file_type, ambassador, created_by, updated_by, created_at, updated_at)
 """
-type AmbassadorFileType {
+type AmbassadorFileType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -169,7 +173,8 @@ type AmbassadorInvitationResponse {
 }
 
 """Model to track ambassador invitations sent by clients or spark-admins."""
-type AmbassadorInvitationType {
+type AmbassadorInvitationType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   email: String!
@@ -201,7 +206,8 @@ type AmbassadorInvitationTypeCountableEdge {
 """
 AmbassadorJob(id, uuid, recap_uploaded, appear_as_rfp, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
 """
-type AmbassadorJob {
+type AmbassadorJob implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   appearAsRfp: Boolean!
@@ -240,6 +246,8 @@ input AmbassadorJobFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   status: AmbassadorJobStatusFilter = null
+  statusId: ID = null
+  statusSlug: String = null
 }
 
 enum AmbassadorJobStatusFilter {
@@ -261,7 +269,8 @@ input AmbassadorNoteFiltersInput {
 """
 AmbassadorNote(id, uuid, note, tenant, ambassador, created_by, updated_by, created_at, updated_at)
 """
-type AmbassadorNoteType {
+type AmbassadorNoteType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   note: String!
@@ -318,7 +327,8 @@ input AmbassadorReviewFiltersInput {
 """
 AmbassadorReview(id, uuid, review, score, ambassador, client, tenant, created_by, updated_by, created_at, updated_at)
 """
-type AmbassadorReviewType {
+type AmbassadorReviewType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   review: String
@@ -359,7 +369,8 @@ input AmbassadorSkillInput {
 """
 AmbassadorSkill(id, uuid, tenant, ambassador, skill, created_by, updated_by, created_at, updated_at)
 """
-type AmbassadorSkillType {
+type AmbassadorSkillType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   ambassadorId: ID!
@@ -384,17 +395,11 @@ type AmbassadorSkillTypeCountableEdge {
   node: AmbassadorSkillType!
 }
 
-type AmbassadorStats {
-  totalAmbassadorsWorking: Int!
-  ambassadorsByEvent: [EventAmbassadorCount!]
-  ambassadorsByLocation: [LocationAmbassadorCount!]
-  uniqueAmbassadorsCount: Int!
-}
-
 """
 AmbassadorToAmbassadorReview(id, uuid, description, rate, tenant, ambassador, created_by, updated_by, created_at, updated_at)
 """
-type AmbassadorToAmbassadorReview {
+type AmbassadorToAmbassadorReview implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   description: String!
@@ -434,7 +439,8 @@ input AmbassadorTraitInput {
 """
 AmbassadorTrait(id, uuid, ambassador, user, created_by, updated_by, created_at, updated_at)
 """
-type AmbassadorTraitType {
+type AmbassadorTraitType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   ambassadorId: ID!
@@ -451,7 +457,8 @@ input AmbassadorWorkHistoryInput {
 """
 AmbassadorWorkHistory(id, uuid, ambassador, user, created_by, updated_by, created_at, updated_at)
 """
-type AmbassadorWorkHistoryType {
+type AmbassadorWorkHistoryType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   ambassadorId: ID!
@@ -480,7 +487,6 @@ type ApplyAmbassadorJobResponse {
 input ApproveAmbassadorInput {
   clientMutationId: ID = null
   ambassadorId: ID!
-  tenantId: ID = null
 }
 
 input ApproveAmbassadorJobInput {
@@ -518,7 +524,8 @@ type ApproveRequestResponse {
 """
 Attendance(id, uuid, clock_time, coordinates, ambassador, job, event, attendace_type, attendance_status, source, timezone, created_by, updated_by, created_at, updated_at)
 """
-type Attendance {
+type Attendance implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   clockTime: String!
@@ -527,11 +534,14 @@ type Attendance {
   jobId: ID
   eventId: ID
   attendaceTypeId: ID
+  attendaceType: AttendanceType
   attendanceStatusId: ID
+  attendanceStatus: AttendanceStatus
   sourceId: ID
   timezoneId: ID
   createdAt: String!
   updatedAt: String!
+  ambassador: Ambassador
 }
 
 type AttendanceCountableConnection {
@@ -566,12 +576,14 @@ input AttendanceFiltersInput {
 }
 
 """
-AttendanceStatus(id, uuid, name, tenant, created_by, updated_by, created_at, updated_at)
+AttendanceStatus(id, uuid, name, slug, tenant, created_by, updated_by, created_at, updated_at)
 """
-type AttendanceStatus {
+type AttendanceStatus implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
+  slug: String
   tenantId: ID
   createdAt: String!
   updatedAt: String!
@@ -599,12 +611,14 @@ type AttendanceStatusDetailResponse {
 }
 
 """
-AttendanceType(id, uuid, name, created_by, updated_by, created_at, updated_at)
+AttendanceType(id, uuid, name, slug, created_by, updated_by, created_at, updated_at)
 """
-type AttendanceType {
+type AttendanceType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
+  slug: String
   createdAt: String!
   updatedAt: String!
 }
@@ -630,10 +644,23 @@ type AttendanceTypeDetailResponse {
   attendanceType: AttendanceType
 }
 
+type BestMonth {
+  month: String!
+  eventsCount: Int!
+  consumersCount: Int!
+}
+
+type BestRecapMonth {
+  month: String!
+  recapsCount: Int!
+  consumersCount: Int!
+}
+
 """
 Client(id, uuid, name, email, tenant, created_by, updated_by, created_at, updated_at)
 """
-type Client {
+type Client implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -681,10 +708,16 @@ input ClientRegisterInput {
   tenantId: ID = null
 }
 
+enum ColorSchemeEnum {
+  DARK
+  LIGHT
+}
+
 """
 Company(id, name, uuid, email, website_url, founding_date, phone, address, about_us, company_size_min, company_size_max, approved, tenant, location, cover, profile_image, created_by, updated_by, created_at, updated_at)
 """
-type Company {
+type Company implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -729,7 +762,8 @@ type CompanyDetailResponse {
 """
 CompanyFile(id, uuid, name, url, file_type, created_by, updated_by, created_at, updated_at)
 """
-type CompanyFile {
+type CompanyFile implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -763,7 +797,8 @@ type CompanyFileDetailResponse {
 """
 CompanyReview(id, uuid, global_score, review, min_pay_timing, max_pay_timing, pay_timing_range, company, ambassador, created_by, updated_by, created_at, updated_at)
 """
-type CompanyReview {
+type CompanyReview implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   globalScore: Int!
@@ -801,7 +836,8 @@ type CompanyReviewDetailResponse {
 """
 CompanyToAmbassadorReview(id, uuid, description, rate, tenant, ambassador, job, created_by, updated_by, created_at, updated_at)
 """
-type CompanyToAmbassadorReview {
+type CompanyToAmbassadorReview implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   description: String!
@@ -834,6 +870,13 @@ type CompanyToAmbassadorReviewDetailResponse {
   companyToAmbassadorReview: CompanyToAmbassadorReview
 }
 
+type ComparisonValues {
+  totalEvents: Int!
+  consumersSampled: Int!
+  brandAwareness: Float!
+  purchaseIntent: Float!
+}
+
 input ConnectGoogleCalendarInput {
   clientMutationId: ID = null
 }
@@ -849,7 +892,8 @@ type ConnectGoogleCalendarResponse {
 """
 ConsumerEngagements(id, uuid, total_consumer, first_time_consumers, brand_aware_consumers, willing_to_purchase_consumers, not_willing_consumers, recap, created_by, updated_by, created_at, updated_at)
 """
-type ConsumerEngagements {
+type ConsumerEngagements implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   totalConsumer: Int!
@@ -873,7 +917,8 @@ input ConsumerEngagementsInput {
 """
 ConsumerFeedback(id, uuid, demographics, feedback, quotes, positive_stories, reasons_to_decline, recap, created_by, updated_by, created_at, updated_at)
 """
-type ConsumerFeedback {
+type ConsumerFeedback implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   demographics: String
@@ -1002,12 +1047,14 @@ input CreateAttendanceStatusInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
+  slug: String = null
 }
 
 input CreateAttendanceTypeInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
+  slug: String = null
 }
 
 input CreateClientInput {
@@ -1185,6 +1232,14 @@ input CreateLocationInput {
   zip: String!
 }
 
+input CreateOrUpdateTenantThemeInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+  colorScheme: ColorSchemeEnum!
+  name: String = null
+  cssVariables: dict = null
+}
+
 input CreatePayTimingInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -1249,10 +1304,12 @@ input CreateRecapInput {
   name: String!
   eventId: ID!
   files: [String!]!
+  fileRecapCategoryId: ID = null
   productsSold: Int = null
   totalEarnings: Float = null
   jobId: ID = null
   retailerId: ID = null
+  ambassadorId: ID = null
   consumerEngagements: ConsumerEngagementsInput = null
   productSamples: [ProductSampleInput!] = null
   salesPerformance: [SalesPerformanceInput!] = null
@@ -1435,22 +1492,6 @@ type CustomUserTypeCountableEdge {
   node: CustomUserType!
 }
 
-input DashboardFiltersInput {
-  clientMutationId: ID = null
-  tenantId: ID = null
-  startDate: String = null
-  endDate: String = null
-  locationId: ID = null
-  locationCode: String = null
-  eventTypeId: ID = null
-  eventStatusId: ID = null
-  requestStatusId: ID = null
-  requestTypeId: ID = null
-  clientId: ID = null
-  distributorId: ID = null
-  retailerId: ID = null
-}
-
 """Date with time (isoformat)"""
 scalar DateTime
 
@@ -1560,7 +1601,8 @@ enum DistanceUnit {
 """
 Distributor(id, uuid, name, email, location, tenant, created_by, updated_by, created_at, updated_at)
 """
-type Distributor {
+type Distributor implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -1598,6 +1640,11 @@ input DistributorFiltersInput {
   tenantUuid: ID = null
 }
 
+type DistributorOption {
+  id: ID!
+  name: String!
+}
+
 type DjangoImageType {
   name: String!
   path: String!
@@ -1607,14 +1654,11 @@ type DjangoImageType {
   height: Int!
 }
 
-type DjangoModelType {
-  pk: ID!
-}
-
 """
 Event(id, uuid, name, date, coordinates, timezone, tenant, request, event_type, status, start_time, end_time, address, notes, is_national, created_by, updated_by, created_at, updated_at)
 """
-type Event {
+type Event implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -1636,19 +1680,6 @@ type Event {
   endTime: String
 }
 
-type EventAmbassadorCount {
-  eventId: ID!
-  eventName: String!
-  ambassadorCount: Int!
-}
-
-type EventAmbassadorInfo {
-  ambassadorId: ID!
-  ambassadorName: String!
-  isApproved: Boolean!
-  jobsCount: Int!
-}
-
 type EventCountableConnection {
   pageInfo: PageInfo!
   edges: [EventCountableEdge!]!
@@ -1663,14 +1694,37 @@ type EventCountableEdge {
   node: Event!
 }
 
-type EventDetail {
-  event: Event!
-  relatedRequestId: ID
-  ambassadorsCount: Int!
-  jobsCount: Int!
-  ambassadors: [EventAmbassadorInfo!]
-  location: Location
-  statistics: EventDetailStatistics
+type EventDashboard {
+  metrics: EventDashboardMetrics!
+  monthlyTrends: MonthlyPerformanceTrend!
+  performanceInsights: PerformanceInsights!
+  recentEvents: [RecentEvent!]
+}
+
+type EventDashboardFilterOptions {
+  distributors: [DistributorOption!]
+  rmms: [RetailerOption!]
+  quarters: [QuarterOption!]
+  tenants: [TenantOption!]
+}
+
+input EventDashboardFiltersInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  startDate: String = null
+  endDate: String = null
+  quarter: String = null
+  rmmId: ID = null
+  distributorId: ID = null
+}
+
+type EventDashboardMetrics {
+  totalEvents: Int!
+  consumersSampled: Int!
+  brandAwareness: Float!
+  purchaseIntent: Float!
+  comparisonPeriod: String
+  comparisonValues: ComparisonValues
 }
 
 type EventDetailResponse {
@@ -1678,14 +1732,6 @@ type EventDetailResponse {
   message: String!
   clientMutationId: ID
   event: Event
-}
-
-type EventDetailStatistics {
-  totalAmbassadors: Int!
-  approvedAmbassadors: Int!
-  totalJobs: Int!
-  activeJobs: Int!
-  totalRequests: Int!
 }
 
 input EventFiltersInput {
@@ -1699,19 +1745,11 @@ input EventFiltersInput {
   coordinates: CoordinatesFilterInput = null
 }
 
-type EventStats {
-  totalEvents: Int!
-  eventsByStatus: [EventStatusCount!]
-  eventsByLocation: [LocationEventCount!]
-  eventsToday: Int!
-  eventsThisWeek: Int!
-  eventsThisMonth: Int!
-}
-
 """
 EventStatus(id, uuid, name, slug, is_default, tenant, created_by, updated_by, created_at, updated_at)
 """
-type EventStatus {
+type EventStatus implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -1720,12 +1758,6 @@ type EventStatus {
   tenantId: ID!
   createdAt: String!
   updatedAt: String!
-}
-
-type EventStatusCount {
-  statusId: ID!
-  statusName: String!
-  count: Int!
 }
 
 type EventStatusCountableConnection {
@@ -1761,16 +1793,11 @@ input EventStatusFiltersInput {
   tenantUuid: ID = null
 }
 
-type EventTimeSeries {
-  dataPoints: [TimeSeriesDataPoint!]!
-  groupBy: String!
-  totalCount: Int!
-}
-
 """
 EventType(id, uuid, name, is_default, tenant, created_by, updated_by, created_at, updated_at)
 """
-type EventType {
+type EventType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -1811,9 +1838,41 @@ input EventTypeFiltersInput {
 scalar ExpectedError
 
 """
+FileRecapCategory(id, uuid, name, tenant, created_by, updated_by, created_at, updated_at)
+"""
+type FileRecapCategory implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  name: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type FileRecapCategoryCountableConnection {
+  pageInfo: PageInfo!
+  edges: [FileRecapCategoryCountableEdge!]!
+  totalCount: Int!
+}
+
+type FileRecapCategoryCountableEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: FileRecapCategory!
+}
+
+input FileRecapCategoryFiltersInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+}
+
+"""
 FileType(id, uuid, name, extension, created_by, updated_by, created_at, updated_at)
 """
-type FileType {
+type FileType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -1834,6 +1893,11 @@ type FileTypeCountableEdge {
 
   """The item at the end of the edge"""
   node: FileType!
+}
+
+input GenerateRecapPdfInput {
+  clientMutationId: ID = null
+  id: ID!
 }
 
 input GoogleCalendarCallbackInput {
@@ -1861,14 +1925,20 @@ input GoogleSocialAuthInput {
 }
 
 """
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf).
+"""
+scalar JSON @specifiedBy(url: "https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf")
+
+"""
 Job(id, uuid, name, description, code, address, start_date, end_date, public, closed, national, ongoing, coordinates, job_title, other_title, company, event, tenant, rate, created_by, updated_by, created_at, updated_at)
 """
-type Job {
+type Job implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
   description: String
-  code: String!
+  code: String
   address: String!
   startDate: String
   endDate: String
@@ -1887,6 +1957,7 @@ type Job {
   jobRequirements: [JobRequirement!]!
   createdAt: String!
   updatedAt: String!
+  attendances: [Attendance!]!
 }
 
 type JobCountableConnection {
@@ -1913,7 +1984,8 @@ type JobDetailResponse {
 """
 JobFile(id, uuid, name, url, job, file_type, created_by, updated_by, created_at, updated_at)
 """
-type JobFile {
+type JobFile implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -1949,12 +2021,14 @@ input JobFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   eventId: ID = null
+  status: JobStatusFilter = null
 }
 
 """
 JobRequirement(id, uuid, name, tenant, job_requirement_type, job, created_by, updated_by, created_at, updated_at)
 """
-type JobRequirement {
+type JobRequirement implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -1968,7 +2042,8 @@ type JobRequirement {
 """
 JobRequirementAnswer(id, uuid, selected_answer, tenant, job_requirement_question, ambassador, created_by, updated_by, created_at, updated_at)
 """
-type JobRequirementAnswer {
+type JobRequirementAnswer implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   selectedAnswer: [Int!]!
@@ -2024,7 +2099,8 @@ type JobRequirementDetailResponse {
 """
 JobRequirementFile(id, uuid, name, url, job_requirement, file_type, created_by, updated_by, created_at, updated_at)
 """
-type JobRequirementFile {
+type JobRequirementFile implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -2059,7 +2135,8 @@ type JobRequirementFileDetailResponse {
 """
 JobRequirementQuestion(id, uuid, question, tenant, job_requirement, question_type, created_by, updated_by, created_at, updated_at)
 """
-type JobRequirementQuestion {
+type JobRequirementQuestion implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   question: String!
@@ -2094,7 +2171,8 @@ type JobRequirementQuestionDetailResponse {
 """
 JobRequirementType(id, uuid, name, tenant, created_by, updated_by, created_at, updated_at)
 """
-type JobRequirementType {
+type JobRequirementType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -2124,10 +2202,16 @@ type JobRequirementTypeDetailResponse {
   jobRequirementType: JobRequirementType
 }
 
+enum JobStatusFilter {
+  OPEN
+  CLOSED
+}
+
 """
 JobTitle(id, uuid, name, tenant, created_by, updated_by, created_at, updated_at)
 """
-type JobTitle {
+type JobTitle implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String
@@ -2160,7 +2244,8 @@ type JobTitleDetailResponse {
 """
 Location(id, uuid, name, code, zip, tenant, created_by, updated_by, created_at, updated_at)
 """
-type Location {
+type Location implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -2169,13 +2254,6 @@ type Location {
   tenantId: ID!
   createdAt: String!
   updatedAt: String!
-}
-
-type LocationAmbassadorCount {
-  locationId: ID!
-  locationName: String!
-  locationCode: String!
-  ambassadorCount: Int!
 }
 
 type LocationCountableConnection {
@@ -2199,13 +2277,6 @@ type LocationDetailResponse {
   location: Location
 }
 
-type LocationEventCount {
-  locationId: ID!
-  locationName: String!
-  locationCode: String!
-  count: Int!
-}
-
 input LocationFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -2225,6 +2296,32 @@ input ManageAmbassadorJobAssignmentInput {
   ambassadorJobId: ID!
   action: ManageAmbassadorJobAssignmentAction!
   statusId: ID = null
+}
+
+type MarketPerformanceAnalysis {
+  dataPoints: [MarketPerformanceData!]!
+}
+
+type MarketPerformanceData {
+  marketId: ID!
+  marketName: String!
+  consumers: Int!
+  purchases: Int!
+  conversion: Float!
+  demos: Int!
+  efficiency: Float!
+}
+
+type MonthlyDataPoint {
+  month: String!
+  consumersSampled: Int!
+  willingToPurchase: Int!
+  conversionRate: Float!
+  eventsCount: Int!
+}
+
+type MonthlyPerformanceTrend {
+  dataPoints: [MonthlyDataPoint!]!
 }
 
 type Mutation {
@@ -2265,6 +2362,7 @@ type Mutation {
   deleteRecap(input: DeleteRecapInput!): RecapDetailResponse!
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
+  generateRecapPdf(input: GenerateRecapPdfInput!): RecapFileDetailResponse!
   register(input: ClientRegisterInput!): RegisterResponse!
   socialAuthGoogle(input: GoogleSocialAuthInput!): SocialAuthResponse!
   socialAuthApple(input: AppleSocialAuthInput!): SocialAuthResponse!
@@ -2273,6 +2371,7 @@ type Mutation {
   connectGoogleCalendar(input: ConnectGoogleCalendarInput!): ConnectGoogleCalendarResponse!
   googleCalendarCallback(input: GoogleCalendarCallbackInput!): GoogleCalendarCallbackResponse!
   disconnectGoogleCalendar(input: DisconnectGoogleCalendarInput!): DisconnectGoogleCalendarResponse!
+  upsertTenantTheme(input: CreateOrUpdateTenantThemeInput!): TenantThemeResponse!
 
   "### Checks if a token is not expired and correct.\n\n*Note that this is not for refresh tokens.*\n"
   verifyToken(input: VerifyTokenInput!): VerifyTokenType!
@@ -2366,6 +2465,12 @@ type MutationNormalOutput {
   errors: ExpectedError
 }
 
+"""An object with a Globally Unique ID"""
+interface Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+}
+
 input ObtainJSONWebTokenInput {
   password: String!
   username: String!
@@ -2403,7 +2508,8 @@ type PageInfo {
 """
 PayTiming(id, uuid, min_pay_timing, max_pay_timing, unit, company_review, created_by, updated_by, created_at, updated_at)
 """
-type PayTiming {
+type PayTiming implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   minPayTiming: Int!
@@ -2435,10 +2541,20 @@ type PayTimingDetailResponse {
   payTiming: PayTiming
 }
 
+type PerformanceInsights {
+  knewAboutBrand: Int!
+  knewAboutBrandPercentage: Float!
+  willingToPurchase: Int!
+  willingToPurchasePercentage: Float!
+  bestMonth: BestMonth
+  growthRate: Float!
+}
+
 """
 Product(id, uuid, name, image, product_type, tenant, created_by, updated_by, created_at, updated_at)
 """
-type Product {
+type Product implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -2486,7 +2602,8 @@ input ProductSampleInput {
 """
 ProductSamples(id, uuid, product, recap, quantity, created_by, updated_by, created_at, updated_at)
 """
-type ProductSamples {
+type ProductSamples implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   product: Product!
@@ -2498,7 +2615,8 @@ type ProductSamples {
 """
 ProductType(id, uuid, name, tenant, created_by, updated_by, created_at, updated_at)
 """
-type ProductType {
+type ProductType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -2542,6 +2660,11 @@ type PublicAmbassadorCreationResponse {
   activationToken: String
 }
 
+type QuarterOption {
+  value: String!
+  label: String!
+}
+
 type Query {
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   event(id: ID = null, uuid: ID = null): Event
@@ -2581,6 +2704,10 @@ type Query {
   publicTimezones(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): TimeZoneCountableConnection!
   recaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RecapFiltersInput = null): RecapCountableConnection!
   recap(uuid: ID!): Recap
+  typeOfGoods(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): TypeOfGoodCountableConnection!
+  typeOfGood(id: ID = null, uuid: ID = null): TypeOfGood
+  fileRecapCategories(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: FileRecapCategoryFiltersInput = null): FileRecapCategoryCountableConnection!
+  fileRecapCategory(id: ID = null, uuid: ID = null): FileRecapCategory
   fileTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): FileTypeCountableConnection!
   fileType(uuid: ID!): FileType
   ambassadorEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorEventsFiltersInput = null): AmbassadorEventTypeCountableConnection!
@@ -2607,6 +2734,8 @@ type Query {
   attendances(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AttendanceFiltersInput = null): AttendanceCountableConnection!
   attendance(id: ID!): Attendance
   googleCalendarConnectionStatus: GoogleCalendarConnectionStatus!
+  tenantThemePublic(requestUrlName: String!, colorScheme: ColorSchemeEnum! = DARK): TenantThemeType
+  tenantTheme(tenantId: ID!, colorScheme: ColorSchemeEnum! = DARK): TenantThemeType
   healthcheck: String!
   me: CustomUserType!
   user(id: ID = null, uuid: ID = null): CustomUserType!
@@ -2656,12 +2785,10 @@ type Query {
   questionOption(id: ID = null, uuid: ID = null): QuestionOption
   jobRequirementAnswers(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): JobRequirementAnswerCountableConnection!
   jobRequirementAnswer(id: ID = null, uuid: ID = null): JobRequirementAnswer
-  eventsStats(filters: DashboardFiltersInput = null): EventStats!
-  eventsTimeSeries(filters: DashboardFiltersInput = null, groupBy: TimeGroupBy! = DAY): EventTimeSeries!
-  ambassadorsStats(filters: DashboardFiltersInput = null): AmbassadorStats!
-  requestStats(filters: DashboardFiltersInput = null): RequestStats!
-  requestTimeSeries(filters: DashboardFiltersInput = null, groupBy: TimeGroupBy! = DAY): RequestTimeSeries!
-  eventDetail(id: ID!, filters: DashboardFiltersInput = null): EventDetail
+  eventDashboardFilterOptions: EventDashboardFilterOptions!
+  eventDashboard(filters: EventDashboardFiltersInput = null): EventDashboard!
+  recapDashboardFilterOptions: RecapDashboardFilterOptions!
+  recapDashboard(filters: RecapDashboardFiltersInput = null): RecapDashboard!
   getUploadUrl(filePath: String!, contentType: String! = "image/jpeg"): UploadUrlResponse!
   getDownloadUrl(filePath: String!): String!
 }
@@ -2669,7 +2796,8 @@ type Query {
 """
 QuestionOption(id, uuid, option, tenant, job_requirement_question, created_by, updated_by, created_at, updated_at)
 """
-type QuestionOption {
+type QuestionOption implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   option: String!
@@ -2703,7 +2831,8 @@ type QuestionOptionDetailResponse {
 """
 QuestionType(id, uuid, name, tenant, created_by, updated_by, created_at, updated_at)
 """
-type QuestionType {
+type QuestionType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -2733,10 +2862,23 @@ type QuestionTypeDetailResponse {
   questionType: QuestionType
 }
 
+type RMMPerformance {
+  dataPoints: [RMMPerformanceData!]!
+}
+
+type RMMPerformanceData {
+  rmmId: ID!
+  rmmName: String!
+  consumersSampled: Int!
+  demos: Int!
+  conversionRate: Float!
+}
+
 """
 Rate(id, uuid, amount, tenant, rate_type, created_by, updated_by, created_at, updated_at)
 """
-type Rate {
+type Rate implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   amount: Float!
@@ -2770,7 +2912,8 @@ type RateDetailResponse {
 """
 RateType(id, uuid, name, tenant, created_by, updated_by, created_at, updated_at)
 """
-type RateType {
+type RateType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -2801,15 +2944,18 @@ type RateTypeDetailResponse {
 }
 
 """
-Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, approved, timezone, event, ambassador, recap_file, job, retailer, created_by, updated_by, created_at, updated_at)
+Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, approved, timezone, event, ambassador, job, retailer, created_by, updated_by, created_at, updated_at)
 """
-type Recap {
+type Recap implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
   approved: Boolean!
   event: Event!
   eventId: ID!
+  jobId: ID
+  job: Job
   recapFile: RecapFile!
   recapFileId: ID!
   createdAt: String!
@@ -2827,6 +2973,13 @@ type Recap {
   requestStoreManagers: [RequestStoreManager!]!
 }
 
+type RecapComparisonValues {
+  totalConsumersSampled: Int!
+  totalPurchases: Int!
+  conversionRate: Float!
+  revenueGenerated: Float!
+}
+
 type RecapCountableConnection {
   pageInfo: PageInfo!
   edges: [RecapCountableEdge!]!
@@ -2841,6 +2994,40 @@ type RecapCountableEdge {
   node: Recap!
 }
 
+type RecapDashboard {
+  metrics: RecapDashboardMetrics!
+  monthlyTrends: RecapMonthlyTrends!
+  performanceInsights: RecapPerformanceInsights!
+  marketAnalysis: MarketPerformanceAnalysis!
+  rmmPerformance: RMMPerformance!
+}
+
+type RecapDashboardFilterOptions {
+  distributors: [DistributorOption!]
+  rmms: [RetailerOption!]
+  quarters: [QuarterOption!]
+  tenants: [TenantOption!]
+}
+
+input RecapDashboardFiltersInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  startDate: String = null
+  endDate: String = null
+  quarter: String = null
+  rmmId: ID = null
+  distributorId: ID = null
+}
+
+type RecapDashboardMetrics {
+  totalConsumersSampled: Int!
+  totalPurchases: Int!
+  conversionRate: Float!
+  revenueGenerated: Float!
+  comparisonPeriod: String
+  comparisonValues: RecapComparisonValues
+}
+
 type RecapDetailResponse {
   success: Boolean!
   message: String!
@@ -2849,16 +3036,19 @@ type RecapDetailResponse {
 }
 
 """
-RecapFile(id, uuid, name, file, approved, file_type, file_recap_category, created_by, updated_by, created_at, updated_at)
+RecapFile(id, uuid, name, file, approved, recap, file_type, file_recap_category, created_by, updated_by, created_at, updated_at)
 """
-type RecapFile {
+type RecapFile implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
   approved: Boolean!
   fileTypeId: ID!
+  fileRecapCategoryId: ID
   createdAt: String!
   updatedAt: String!
+  fileRecapCategory: FileRecapCategory
   file: String
 }
 
@@ -2872,6 +3062,40 @@ type RecapFileDetailResponse {
 input RecapFiltersInput {
   clientMutationId: ID = null
   eventId: ID = null
+}
+
+type RecapMonthlyDataPoint {
+  month: String!
+  consumersSampled: Int!
+  purchases: Int!
+  conversionRate: Float!
+  revenue: Float!
+  recapsCount: Int!
+}
+
+type RecapMonthlyTrends {
+  dataPoints: [RecapMonthlyDataPoint!]!
+}
+
+type RecapPerformanceInsights {
+  newCustomersSampled: Int!
+  newCustomersPercentage: Float!
+  brandAwareness: Int!
+  brandAwarenessPercentage: Float!
+  willingToPurchase: Int!
+  willingToPurchasePercentage: Float!
+  bestMonth: BestRecapMonth
+  growthRate: Float!
+}
+
+type RecentEvent {
+  id: ID!
+  name: String!
+  date: String!
+  location: String!
+  consumers: Int!
+  intentRate: Float!
+  status: String!
 }
 
 """
@@ -2904,7 +3128,8 @@ type RegisterResponse {
 """
 Request(id, uuid, name, date, start_time, end_time, address, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, created_by, updated_by, created_at, updated_at)
 """
-type Request {
+type Request implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -2965,19 +3190,11 @@ input RequestFiltersInput {
   date: String = null
 }
 
-type RequestStats {
-  totalRequests: Int!
-  approvedCount: Int!
-  rejectedCount: Int!
-  pendingCount: Int!
-  approvalRate: Float!
-  rejectionRate: Float!
-  requestsWithJobsCount: Int!
-  requestsWithJobsPercentage: Float!
-  requestsByStatus: [RequestStatusCount!]
-}
-
-type RequestStatus {
+"""
+RequestStatus(id, uuid, name, slug, create_event, is_default, tenant, created_by, updated_by, created_at, updated_at)
+"""
+type RequestStatus implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -2986,12 +3203,6 @@ type RequestStatus {
   isDefault: Boolean!
   createdAt: String!
   updatedAt: String!
-}
-
-type RequestStatusCount {
-  statusId: ID!
-  statusName: String!
-  count: Int!
 }
 
 type RequestStatusCountableConnection {
@@ -3024,7 +3235,8 @@ input RequestStatusFiltersInput {
 """
 RequestStoreManager(id, uuid, name, phone, request, tenant, created_by, updated_by, created_at, updated_at)
 """
-type RequestStoreManager {
+type RequestStoreManager implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -3063,19 +3275,11 @@ input RequestStoreManagerFiltersInput {
   tenantUuid: ID = null
 }
 
-type RequestTimeSeries {
-  dataPoints: [TimeSeriesDataPoint!]!
-  groupBy: String!
-  totalCount: Int!
-  approvalTrend: [TimeSeriesDataPoint!]
-  rejectionTrend: [TimeSeriesDataPoint!]
-  jobsAssignedTrend: [TimeSeriesDataPoint!]
-}
-
 """
 RequestType(id, uuid, name, tenant, created_by, updated_by, created_at, updated_at)
 """
-type RequestType {
+type RequestType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -3114,7 +3318,8 @@ input RequestTypeFiltersInput {
 """
 Retailer(id, uuid, name, address, store_contact, location, tenant, created_by, updated_by, created_at, updated_at)
 """
-type Retailer {
+type Retailer implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -3153,10 +3358,17 @@ input RetailerFiltersInput {
   tenantUuid: ID = null
 }
 
+type RetailerOption {
+  id: ID!
+  name: String!
+  address: String!
+}
+
 """
 ReviewScore(id, uuid, name, score, company_review, created_by, updated_by, created_at, updated_at)
 """
-type ReviewScore {
+type ReviewScore implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String
@@ -3196,7 +3408,8 @@ enum RoleFilterEnum {
 """
 Role(id, uuid, name, slug, created_by, updated_by, created_at, updated_at)
 """
-type RoleType {
+type RoleType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: UUID!
   name: String!
@@ -3205,7 +3418,8 @@ type RoleType {
 """
 SalesPerformance(id, uuid, price, product, recap, type_of_good, created_by, updated_by, created_at, updated_at)
 """
-type SalesPerformance {
+type SalesPerformance implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   product: Product!
@@ -3231,7 +3445,8 @@ input SkillFiltersInput {
 """
 Skill(id, uuid, name, tenant, created_by, updated_by, created_at, updated_at)
 """
-type SkillType {
+type SkillType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -3263,7 +3478,8 @@ type SocialAuthResponse {
 }
 
 """Source(id, uuid, name, created_by, updated_by, created_at, updated_at)"""
-type Source {
+type Source implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -3295,7 +3511,8 @@ type SourceDetailResponse {
 """
 User(password, last_login, is_superuser, username, first_name, last_name, email, is_staff, date_joined, id, uuid, image, role, created_by, updated_by, created_at, updated_at, is_active)
 """
-type SparkUserType {
+type SparkUserType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: UUID!
 
@@ -3310,7 +3527,8 @@ type SparkUserType {
 """
 Status(id, uuid, name, slug, tenant, created_by, updated_by, created_at, updated_at)
 """
-type Status {
+type Status implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -3346,10 +3564,38 @@ input TenantFiltersInput {
   requestUrlName: String = null
 }
 
+type TenantOption {
+  id: ID!
+  name: String!
+}
+
+type TenantThemeResponse {
+  success: Boolean!
+  message: String!
+  theme: TenantThemeType
+  clientMutationId: ID
+}
+
+"""
+Per-tenant visual theme configuration compatible with DaisyUI.
+
+The frontend can use `css_variables` directly to construct a theme
+definition or apply CSS custom properties.
+"""
+type TenantThemeType implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  name: String!
+  colorScheme: String!
+  cssVariables: JSON!
+  tenant: Node!
+}
+
 """
 Tenant(id, uuid, name, image, request_url_name, created_by, updated_by, created_at, updated_at)
 """
-type TenantType {
+type TenantType implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: UUID!
   name: String!
@@ -3371,23 +3617,11 @@ type TenantTypeCountableEdge {
   node: TenantType!
 }
 
-enum TimeGroupBy {
-  HOUR
-  DAY
-  WEEK
-  MONTH
-}
-
-type TimeSeriesDataPoint {
-  timestamp: String!
-  count: Int!
-  value: Float
-}
-
 """
 TimeZone(id, uuid, name, code, offset, created_by, updated_by, created_at, updated_at)
 """
-type TimeZone {
+type TimeZone implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
@@ -3439,12 +3673,27 @@ type TokenType {
 """
 TypeOfGood(id, uuid, name, tenant, created_by, updated_by, created_at, updated_at)
 """
-type TypeOfGood {
+type TypeOfGood implements Node {
+  """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
   name: String!
   createdAt: String!
   updatedAt: String!
+}
+
+type TypeOfGoodCountableConnection {
+  pageInfo: PageInfo!
+  edges: [TypeOfGoodCountableEdge!]!
+  totalCount: Int!
+}
+
+type TypeOfGoodCountableEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: TypeOfGood!
 }
 
 scalar UUID
@@ -3531,6 +3780,7 @@ input UpdateAttendanceStatusInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
+  slug: String = null
   id: ID!
 }
 
@@ -3538,6 +3788,7 @@ input UpdateAttendanceTypeInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
+  slug: String = null
   id: ID!
 }
 
@@ -3795,10 +4046,12 @@ input UpdateRecapInput {
   name: String!
   eventId: ID!
   files: [String!]!
+  fileRecapCategoryId: ID = null
   productsSold: Int = null
   totalEarnings: Float = null
   jobId: ID = null
   retailerId: ID = null
+  ambassadorId: ID = null
   consumerEngagements: ConsumerEngagementsInput = null
   productSamples: [ProductSampleInput!] = null
   salesPerformance: [SalesPerformanceInput!] = null
@@ -3977,7 +4230,7 @@ type UserStatusType {
 User(password, last_login, is_superuser, username, first_name, last_name, email, is_staff, date_joined, id, uuid, image, role, created_by, updated_by, created_at, updated_at, is_active)
 """
 type UserType {
-  logentrySet: [DjangoModelType!]!
+  logentrySet: [Node!]!
 
   """
   Designates that this user has all permissions without explicitly assigning them.
@@ -3990,13 +4243,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
-  id: ID!
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
   lastName: String
-  firstName: String
   email: String!
+  id: ID!
+  firstName: String
   archived: Boolean!
   verified: Boolean!
 }
@@ -4015,3 +4268,5 @@ type VerifyTokenType implements OutputInterface {
   token: TokenType
   user: UserType
 }
+
+scalar dict

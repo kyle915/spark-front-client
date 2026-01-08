@@ -10,7 +10,7 @@ interface FormInputTextProps<T extends FieldValues> {
   name: Path<T>;
   control: Control<T>;
   label: string;
-  placeholder: string;
+  placeholder?: string;
   rules?: RegisterOptions<T, Path<T>>;
   disabled?: boolean;
   type?: string;

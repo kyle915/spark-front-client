@@ -150,7 +150,15 @@ body {
   transition: filter 0.2s ease;
 }
 
-html[data-theme="bijinesu"] .app-logo {
+html[color-scheme="dark"] {
+  color-scheme: dark;
+}
+
+html[color-scheme="light"] {
+  color-scheme: light;
+}
+
+html[color-scheme="dark"] .app-logo {
   filter: brightness(0) invert(1);
 }
 

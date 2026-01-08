@@ -1,9 +1,13 @@
+import { useMemo, useState } from "react";
+import { format } from "date-fns";
 import Layout from "@/layout/Layout";
-import { MetricCard } from "../../cards/metric-card";
-import FiltersPanel from "../../filters/FiltersPanel";
-import ChartCard from "../../charts/ChartCard";
+import { MetricCard } from "@/components/cards/metric-card";
+import FiltersPanel, {
+  type FiltersState,
+} from "@/components/filters/FiltersPanel";
+import ChartCard from "@/components/charts/ChartCard";
 
-import { CalendarDays, CalendarClockIcon } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 
 import DashboardHeader from "../dashboard/DashboardHeader";
 
@@ -14,18 +18,130 @@ import GoalsProgressSection from "../dashboard-event/GoalsProgressSection";
 import RegionalMarketPerformance from "../dashboard-event/RegionalMarketPerformance";
 import RecentEventsCarousel from "../dashboard-event/RecentEventsCarousel";
 
-// Hooks
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { AiInsightsSection } from "@/components/ai-insights/AiInsightsSection";
 
-// Mock Data
-import { aiInsightsMock } from "../../../data/dashboard-events/aiInsightsMock";
-import { mockMonthlyTrends } from "../../../data/dashboard-events/monthlyMock";
-import { regionalMarketMock } from "../../../data/dashboard-events/regionalMarketMock";
-import { recentEventsMock } from "../../../data/dashboard-events/eventsRecentsMock";
+import { aiInsightsMock } from "@/data/dashboard-events/aiInsightsMock";
+import { regionalMarketMock } from "@/data/dashboard-events/regionalMarketMock";
+import { useAuthStore } from "@/store/authStore";
+
+const defaultFilters: FiltersState = {
+  distributor: "",
+  rmm: "",
+  quarter: "",
+  dateRange: undefined,
+};
+
+const formatNumber = (value: number) => value.toLocaleString();
+const formatPercent = (value: number) => `${value.toFixed(1)}%`;
+
+const formatDelta = (current: number, previous?: number | null) => {
+  if (!previous || previous === 0) return "0%";
+  const diff = ((current - previous) / previous) * 100;
+  const sign = diff >= 0 ? "+" : "";
+  return `${sign}${diff.toFixed(1)}%`;
+};
 
 export default function DashboardIndex() {
-  const { metrics: gqlMetrics } = useDashboardData();
+  const [filters, setFilters] = useState<FiltersState>(defaultFilters);
+  const [fetchKey, setFetchKey] = useState(0);
+  const { tenantId } = useAuthStore();
+
+  const filtersInput = useMemo(() => {
+    const startDate = filters.dateRange?.from
+      ? format(filters.dateRange.from, "yyyy-MM-dd")
+      : null;
+    const endDate = filters.dateRange?.to
+      ? format(filters.dateRange.to, "yyyy-MM-dd")
+      : null;
+
+    const input = {
+      distributorId: filters.distributor || null,
+      rmmId: filters.rmm || null,
+      quarter: filters.quarter || null,
+      startDate,
+      endDate,
+    };
+
+    const hasValues = Object.values(input).some((value) => value);
+    return hasValues ? input : null;
+  }, [filters]);
+
+  const { dashboard, filterOptions } = useEventDashboardData(
+    tenantId || "",
+    filtersInput,
+    fetchKey
+  );
+
+  const metrics = dashboard.metrics;
+  const comparison = metrics.comparisonValues;
+  const comparisonLabel = metrics.comparisonPeriod
+    ? `vs ${metrics.comparisonPeriod}`
+    : "vs previous period";
+
+  const metricItems = [
+    {
+      key: "totalEvents",
+      title: "Total Events",
+      value: formatNumber(metrics.totalEvents),
+      change: formatDelta(metrics.totalEvents, comparison?.totalEvents),
+    },
+    {
+      key: "consumersSampled",
+      title: "Consumers Sampled",
+      value: formatNumber(metrics.consumersSampled),
+      change: formatDelta(
+        metrics.consumersSampled,
+        comparison?.consumersSampled
+      ),
+    },
+    {
+      key: "brandAwareness",
+      title: "Brand Awareness",
+      value: formatPercent(metrics.brandAwareness),
+      change: formatDelta(metrics.brandAwareness, comparison?.brandAwareness),
+    },
+    {
+      key: "purchaseIntent",
+      title: "Purchase Intent",
+      value: formatPercent(metrics.purchaseIntent),
+      change: formatDelta(metrics.purchaseIntent, comparison?.purchaseIntent),
+    },
+  ];
+
+  const monthlyTrends = dashboard.monthlyTrends.dataPoints.map((point) => ({
+    month: point.month,
+    consumers: point.consumersSampled,
+    purchases: point.eventsCount,
+    conversion: point.conversionRate,
+  }));
+
+  const recentEvents = (dashboard.recentEvents ?? []).map((event) => ({
+    title: event.name,
+    date: event.date,
+    rmm: event.location,
+    consumers: event.consumers,
+    intent: event.intentRate,
+    status: event.status,
+  }));
+
+  const distributors =
+    filterOptions?.distributors?.map((d) => ({
+      value: d.id,
+      label: d.name,
+    })) ?? [];
+
+  const rmmOptions =
+    filterOptions?.rmms?.map((r) => ({
+      value: r.id,
+      label: r.name,
+    })) ?? [];
+
+  const quarterOptions =
+    filterOptions?.quarters?.map((q) => ({
+      value: q.value,
+      label: q.label,
+    })) ?? [];
 
   return (
     <Layout>
@@ -35,23 +151,26 @@ export default function DashboardIndex() {
 
         {/* FILTERS */}
         <FiltersPanel
-          distributors={["John Doe", "Jane Smith"]}
-          rmmOptions={["Michael Brown", "Sarah Williams"]}
-          quarterOptions={["Q1 2025", "Q2 2025", "Q3 2025"]}
-          onApplyFilters={(filters) => console.log("Applied filters:", filters)}
+          distributors={distributors}
+          rmmOptions={rmmOptions}
+          quarterOptions={quarterOptions}
+          onApplyFilters={(nextFilters) => {
+            setFilters(nextFilters);
+            setFetchKey((key) => key + 1);
+          }}
         />
 
         {/* METRICS */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {Object.entries(gqlMetrics).map(([key, value]) => (
+          {metricItems.map((metric) => (
             <MetricCard
-              key={key}
-              metricKey={key}
-              title={key.replace(/([A-Z])/g, " $1")}
-              value={String(value)}
-              change="5%"
-              variant="success"
-              icon={<CalendarClockIcon className="text-blue-600" />}
+              key={metric.key}
+              metricKey={metric.key}
+              title={metric.title}
+              value={metric.value}
+              change={metric.change}
+              variant={metric.change.startsWith("-") ? "error" : "success"}
+              comparisonLabel={comparisonLabel}
             />
           ))}
         </section>
@@ -67,7 +186,7 @@ export default function DashboardIndex() {
             iconColor="text-blue-600"
             fixedHeight={true}
           >
-            <MonthlyTrendsChart data={mockMonthlyTrends} />
+            <MonthlyTrendsChart data={monthlyTrends} />
           </ChartCard>
         </section>
 
@@ -90,7 +209,7 @@ export default function DashboardIndex() {
 
         {/* PERFORMANCE INSIGHTS */}
         <section className="w-full">
-          <PerformanceInsights />
+          <PerformanceInsights data={dashboard.performanceInsights} />
         </section>
 
         <section className="w-full grid grid-cols-3 gap-6">
@@ -116,7 +235,7 @@ export default function DashboardIndex() {
         </section>
 
         <section className="w-full">
-          <RecentEventsCarousel events={recentEventsMock} />
+          <RecentEventsCarousel events={recentEvents} />
         </section>
       </main>
     </Layout>

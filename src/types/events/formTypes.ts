@@ -74,6 +74,7 @@ export interface EventFormValues {
   distributorLocationId?: string | null;
   retailerLocationId?: string | null;
   coordinates?: number[] | null;
+  timezoneId?: string | null;
 }
 
 // ------------------------------------
@@ -84,6 +85,7 @@ export interface EventFormProps {
   tenants?: Tenant[];
   requests?: RequestType[];
   eventTypes: EventType[];
+  timezones?: { id: string; name: string; code: string; offset: number }[];
   tenantId?: string;
   requestId?: string;
   clients?: CatalogItem[];

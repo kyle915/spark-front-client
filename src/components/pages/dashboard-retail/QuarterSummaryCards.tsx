@@ -1,5 +1,14 @@
 import { CalendarDays } from "lucide-react";
-import type { QuarterSummary } from "@/data/dashboard-retail/quarterSummaryMock";
+
+export type QuarterSummary = {
+  quarter: string;
+  months: string;
+  consumers: number;
+  purchases: number;
+  conversion: number;
+  color: string;
+  border: string;
+};
 
 export default function QuarterSummaryCards({
   data,

@@ -1,6 +1,17 @@
 import { Eye, ShoppingCart, CalendarDays, Target } from "lucide-react";
 
-const insights = [
+type InsightItem = {
+  id: number;
+  label: string;
+  main: string;
+  sub: string;
+  subColor: string;
+  icon: typeof Target;
+  borderFrom: string;
+  borderTo: string;
+};
+
+const defaultInsights: InsightItem[] = [
   {
     id: 1,
     label: "TOP CONVERTING MARKET",
@@ -14,7 +25,7 @@ const insights = [
   {
     id: 2,
     label: "HIGHEST WILLINGNESS TO BUY",
-    main: "Miami",
+    main: "Overall",
     sub: "71% willing to purchase",
     subColor: "text-emerald-600",
     icon: ShoppingCart,
@@ -24,7 +35,7 @@ const insights = [
   {
     id: 3,
     label: "STRONGEST BRAND AWARENESS",
-    main: "Los Angeles",
+    main: "Overall",
     sub: "40% awareness among consumers",
     subColor: "text-blue-600",
     icon: Eye,
@@ -43,7 +54,11 @@ const insights = [
   },
 ];
 
-export default function VerticalPerformanceInsights() {
+export default function VerticalPerformanceInsights({
+  insights = defaultInsights,
+}: {
+  insights?: InsightItem[];
+}) {
   return (
     <section className="space-y-4 w-full flex flex-col">
       <h2 className="text-xl font-bold flex items-center gap-2 justify-center">

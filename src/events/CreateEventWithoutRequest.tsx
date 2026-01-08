@@ -3,6 +3,8 @@ import Layout from "@/layout/Layout";
 import Loading from "@/shared/Loading";
 import CatalogsProvider from "@/shared/CatalogsProvider";
 import EventForm from "./components/EventForm";
+import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
+import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import type { EventFormValues } from "../types/events/formTypes";
 import { useMutation } from "react-relay/hooks";
 import { CreateEventMutation } from "@api/mutations/CreateEventMutation";
@@ -22,8 +24,13 @@ const CreateEventWithoutRequestContent = () => {
   const [locations, setLocations] = useState<
     Array<{ id: string; name: string }>
   >([]);
+  const [timezones, setTimezones] = useState<
+    Array<{ id: string; name: string; code: string; offset: number }>
+  >([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
+  const [loadingTimezones, setLoadingTimezones] = useState(false);
   const [locationsError, setLocationsError] = useState<Error | null>(null);
+  const [timezonesError, setTimezonesError] = useState<Error | null>(null);
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
   const [commitCreateEvent] =
@@ -33,11 +40,15 @@ const CreateEventWithoutRequestContent = () => {
     if (!tenantId) {
       setLocations([]);
       setLocationsError(null);
+      setTimezones([]);
+      setTimezonesError(null);
       return;
     }
 
     setLoadingLocations(true);
+    setLoadingTimezones(true);
     setLocationsError(null);
+    setTimezonesError(null);
 
     const subscription = fetchQuery<LocationsQueryType>(
       environment,
@@ -61,7 +72,32 @@ const CreateEventWithoutRequestContent = () => {
       complete: () => setLoadingLocations(false),
     });
 
-    return () => subscription.unsubscribe();
+    const tzSubscription = fetchQuery<TimezonesQueryType>(
+      environment,
+      TimezonesQuery,
+      {},
+      { fetchPolicy: "network-only" }
+    ).subscribe({
+      next: (data) => {
+        const parsed =
+          data.timezones?.edges?.flatMap((edge) =>
+            edge?.node ? [edge.node] : []
+          ) ?? [];
+        setTimezones(parsed);
+      },
+      error: (err: unknown) => {
+        const error = err instanceof Error ? err : new Error(String(err));
+        setTimezonesError(error);
+        setTimezones([]);
+        setLoadingTimezones(false);
+      },
+      complete: () => setLoadingTimezones(false),
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      tzSubscription.unsubscribe();
+    };
   }, [tenantId]);
 
   const handleSubmit = (formData: EventFormValues) => {
@@ -69,7 +105,8 @@ const CreateEventWithoutRequestContent = () => {
       !formData.eventTypeId ||
       !formData.startTime ||
       !formData.endTime ||
-      !formData.date
+      !formData.date ||
+      !formData.timezoneId
     ) {
       showAlert("Missing required fields for event creation", "error");
       return;
@@ -86,6 +123,7 @@ const CreateEventWithoutRequestContent = () => {
       address: formData.address,
       notes: formData.notes ?? "",
       isNational: formData.isNational ?? false,
+      timezoneId: formData.timezoneId ?? null,
       startTime:
         normalizeDateTime(formData.date ?? "", formData.startTime) ?? "",
       endTime: normalizeDateTime(formData.date ?? "", formData.endTime) ?? "",
@@ -130,6 +168,7 @@ const CreateEventWithoutRequestContent = () => {
     () => ({
       tenantId: tenantId ?? undefined,
       requestId: null,
+      timezoneId: null,
       date: "",
       notes: "",
       isNational: false,
@@ -156,25 +195,7 @@ const CreateEventWithoutRequestContent = () => {
 
           return (
             <div className="flex flex-col gap-4">
-              <div className="max-w-xl">
-                {/* <label className="label pb-1">
-                  <span className="label-text">Tenant</span>
-                </label>
-                <select
-                  className="select select-bordered w-full"
-                  value={tenantId ?? ""}
-                  onChange={(e) => setSelectedTenantId(e.target.value || null)}
-                >
-                  <option value="" disabled>
-                    Select tenant
-                  </option>
-                  {tenants.map((tenant) => (
-                    <option key={tenant.id} value={tenant.id}>
-                      {tenant.name}
-                    </option>
-                  ))}
-                </select> */}
-              </div>
+              <div className="max-w-xl"></div>
 
               {tenantId ? (
                 <CatalogsProvider
@@ -229,7 +250,14 @@ const CreateEventWithoutRequestContent = () => {
                             </span>
                           </div>
                         )}
-                        {loadingLocations && <Loading />}
+                        {timezonesError && (
+                          <div className="alert alert-warning">
+                            <span>
+                              Unable to load timezones: {timezonesError.message}
+                            </span>
+                          </div>
+                        )}
+                        {(loadingLocations || loadingTimezones) && <Loading />}
 
                         <EventForm
                           mode="create"
@@ -237,6 +265,7 @@ const CreateEventWithoutRequestContent = () => {
                           tenantId={tenantId}
                           distributors={distributors}
                           retailers={retailers}
+                          timezones={timezones}
                           requestStoreManagers={requestStoreManagers}
                           onSubmit={handleSubmit}
                           locations={locations}

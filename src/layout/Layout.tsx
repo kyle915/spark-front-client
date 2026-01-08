@@ -11,6 +11,8 @@ import ThemeToggle from "@shared/ThemeToggle";
 import { navigationMenuRoutes } from "@/routes/AppRoutes";
 import { useAuthStore } from "@/store/authStore";
 import { PageTransition } from "./PageTransition";
+import useTenantTheme from "@/hooks/useTenantTheme";
+import { type TenantColorScheme } from "@utils/tenantThemeConfig";
 
 type NavigationLink = {
   title?: string;
@@ -114,7 +116,7 @@ const SidebarItem = ({
 
   if (hasChildren && !collapsed) {
     return (
-      <div className="text-base-content">
+      <div className="text-base-content text-md">
         <button
           onClick={() => setExpanded((v) => !v)}
           className={`w-full flex items-center gap-3 py-2 ${leftPadding}
@@ -181,8 +183,13 @@ const SidebarItem = ({
 };
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
+    (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark"
+  );
+
   const [collapsed, setCollapsed] = useState(false);
   const { user } = useAuthStore();
+  const { tenantId } = useAuthStore();
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
   const avatarSrc = user?.image || null;
@@ -194,13 +201,31 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     navigate("/login");
   };
 
+  useTenantTheme({
+    tenantId,
+    colorScheme,
+    enabled: Boolean(tenantId),
+  });
+
+  useEffect(() => {
+    const saved = localStorage.getItem(
+      "@color-scheme"
+    ) as TenantColorScheme | null;
+
+    if (saved) setColorScheme(saved);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("@color-scheme", colorScheme);
+  }, [colorScheme]);
+
   const menuItems = navigationMenuRoutes.filter(
     (r) => r.title || r.path
   ) as NavigationLink[];
 
   return (
     <div className="flex h-screen bg-base-200 text-base-content">
-      <aside className="bg-base-100 border-r border-base-300 transition-all duration-300 flex flex-col h-screen min-h-0 overflow-hidden">
+      <aside className="bg-base-100 border-r border-base-300 flex flex-col h-screen min-h-0 overflow-hidden">
         {/* HEADER */}
         <div className="relative flex items-center justify-center p-4 border-b border-base-300">
           {!collapsed && (
@@ -222,7 +247,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* MENU */}
         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-          <ul className="menu p-3 space-y-1 w-full max-w-none">
+          <ul className="menu text-base p-3 space-y-1 w-full max-w-none">
             {menuItems.map((item) => (
               <SidebarItem
                 key={item.path ?? item.title}
@@ -246,7 +271,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </p>
                 <p className="text-xs opacity-60">Team</p>
               </div>
-              <ThemeToggle />
+              <ThemeToggle value={colorScheme} onChange={setColorScheme} />
             </>
           )}
         </div>

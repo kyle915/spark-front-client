@@ -12,8 +12,9 @@ import {
   MapIcon,
   MapPinIcon,
   UserGroupIcon,
+  AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/solid";
-import { TagIcon } from "lucide-react";
+import { Palette, TagIcon } from "lucide-react";
 
 // Dashboard
 import DashboardEvents from "@/components/pages/dashboard-event/DashboardEvent";
@@ -89,6 +90,9 @@ import SparkFormPage from "@/public/form/FormPage";
 
 // Calendar
 import CalendarConnection from "@/calendar/CalendarConnection";
+
+// Settings
+import ThemePage from "@/theme/ThemePage";
 
 /* -----------------------------------------------------------
    PUBLIC ROUTES (NO AUTH REQUIRED)
@@ -555,6 +559,27 @@ const CalendarLinks = {
 };
 
 /* -----------------------------------------------------------
+  SETTINGS
+----------------------------------------------------------- */
+const SettingsLinks = {
+  menu: [
+    {
+      path: "/customize-theme",
+      name: "Customize Theme",
+      component: <ThemePage />,
+      Icon: Palette,
+    },
+  ],
+  routes: [
+    {
+      path: "/customize-theme",
+      component: <ThemePage />,
+      isPublic: false,
+    },
+  ],
+};
+
+/* -----------------------------------------------------------
    EXPORT: SIDEBAR MENU
 ----------------------------------------------------------- */
 export const navigationMenuRoutes = [
@@ -599,6 +624,11 @@ export const navigationMenuRoutes = [
     path: "/connect-calendar", // Solo link, no submenu
     Icon: CalendarIcon,
   },
+  {
+    title: "Settings",
+    Icon: AdjustmentsHorizontalIcon,
+    links: SettingsLinks.menu,
+  },
 ];
 
 /* -----------------------------------------------------------
@@ -616,4 +646,5 @@ export const appRoutes = [
   ...CalendarLinks.routes,
   ...CompanyRoutes.routes,
   ...PublicRoutes.routes,
+  ...SettingsLinks.routes,
 ];
