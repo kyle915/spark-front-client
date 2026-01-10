@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Layout from "@/layout/Layout";
 import {
   useLazyLoadQuery,
@@ -22,16 +22,16 @@ import type { RecapRow } from "@/types/columnsTypes";
 import { createRecapColumns } from "@/utils/columns";
 import { CameraIcon } from "@heroicons/react/24/solid";
 import {
-  CheckCircleIcon,
+  // CheckCircleIcon,
   EyeIcon,
-  PencilIcon,
-  XCircleIcon,
+  // PencilIcon,
+  // XCircleIcon,
 } from "@heroicons/react/24/outline";
 
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { FilterIcon, FunnelXIcon } from "lucide-react";
-import { useAlertStore } from "@/store/alertStore";
+// import { useAlertStore } from "@/store/alertStore";
 
 const PAGE_SIZE = 10;
 
@@ -48,11 +48,11 @@ type RecapsTableContentProps = {
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;
   emptyMessage: string;
-  onApprove: (recap: RecapRow) => void;
-  onDecline: (recap: RecapRow) => void;
-  approvingId: string | null;
-  targetApproval: boolean | null;
-  isApproving: boolean;
+  // onApprove: (recap: RecapRow) => void;
+  // onDecline: (recap: RecapRow) => void;
+  // approvingId: string | null;
+  // targetApproval: boolean | null;
+  // isApproving: boolean;
 };
 
 const RecapsTableContent = ({
@@ -65,12 +65,12 @@ const RecapsTableContent = ({
   onPageLoaded,
   isNavigating,
   emptyMessage,
-  onApprove,
-  onDecline,
-  approvingId,
-  targetApproval,
-  isApproving,
-}: RecapsTableContentProps) => {
+}: // onApprove,
+// onDecline,
+// approvingId,
+// targetApproval,
+// isApproving,
+RecapsTableContentProps) => {
   const navigate = useNavigate();
   const data = usePreloadedQuery<RecapsQueryType>(RecapsQuery, queryReference);
   const connection = data.recaps;
@@ -100,19 +100,20 @@ const RecapsTableContent = ({
           <div className="flex gap-1">
             <button
               type="button"
-              className="btn btn-xs btn-ghost"
+              className="btn btn-xs btn-outline"
               onClick={() => navigate(`/recap/view/${row.uuid}`)}
             >
               <EyeIcon className="w-5 h-5" />
+              View
             </button>
-            <button
+            {/* <button
               type="button"
               className="btn btn-xs btn-ghost"
               onClick={() => navigate(`/recap/edit/${row.uuid}`)}
             >
               <PencilIcon className="w-5 h-5" />
-            </button>
-            <button
+            </button> */}
+            {/* <button
               type="button"
               className="btn btn-xs btn-outline btn-success tooltip disabled:text-success/50 hover:text-white"
               onClick={() => onApprove(row)}
@@ -143,7 +144,7 @@ const RecapsTableContent = ({
               ) : (
                 <XCircleIcon className="w-5 h-5" />
               )}
-            </button>
+            </button> */}
           </div>
         ),
       }}
@@ -167,17 +168,17 @@ type RecapsListInnerProps = {
 };
 
 const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
-  const showAlert = useAlertStore((state) => state.showAlert);
-  const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [targetApproval, setTargetApproval] = useState<boolean | null>(null);
-  const [commitApprove, isApproving] =
-    useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
+  // const showAlert = useAlertStore((state) => state.showAlert);
+  // const [approvingId, setApprovingId] = useState<string | null>(null);
+  // const [targetApproval, setTargetApproval] = useState<boolean | null>(null);
+  // const [commitApprove, isApproving] =
+  useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
   const {
     queryRef,
     displayPage,
     isNavigating,
     handlePageLoaded,
-    refresh,
+    // refresh,
     goNext,
     goPrevious,
     goToPage,
@@ -187,40 +188,40 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
     initialVariables: { filters },
   });
 
-  const handleSetRecapApproval = useCallback(
-    (recap: RecapRow, approved: boolean) => {
-      if (!recap.id) return;
+  // const handleSetRecapApproval = useCallback(
+  //   (recap: RecapRow, approved: boolean) => {
+  //     if (!recap.id) return;
 
-      setApprovingId(recap.id);
-      setTargetApproval(approved);
-      commitApprove({
-        variables: { input: { id: recap.id, approved } },
-        onCompleted: (response) => {
-          const payload = response.approveRecap;
-          if (payload.success) {
-            showAlert(
-              payload.message ?? "Recap updated successfully",
-              "success"
-            );
-            refresh();
-          } else {
-            showAlert(
-              payload.message ?? "Failed to update recap status",
-              "error"
-            );
-          }
-          setApprovingId(null);
-          setTargetApproval(null);
-        },
-        onError: (error) => {
-          showAlert(error.message, "error");
-          setApprovingId(null);
-          setTargetApproval(null);
-        },
-      });
-    },
-    [commitApprove, refresh, showAlert]
-  );
+  //     // setApprovingId(recap.id);
+  //     // setTargetApproval(approved);
+  //     commitApprove({
+  //       variables: { input: { id: recap.id, approved } },
+  //       onCompleted: (response) => {
+  //         const payload = response.approveRecap;
+  //         if (payload.success) {
+  //           showAlert(
+  //             payload.message ?? "Recap updated successfully",
+  //             "success"
+  //           );
+  //           refresh();
+  //         } else {
+  //           showAlert(
+  //             payload.message ?? "Failed to update recap status",
+  //             "error"
+  //           );
+  //         }
+  //         setApprovingId(null);
+  //         setTargetApproval(null);
+  //       },
+  //       onError: (error) => {
+  //         showAlert(error.message, "error");
+  //         setApprovingId(null);
+  //         setTargetApproval(null);
+  //       },
+  //     });
+  //   },
+  //   [commitApprove, refresh, showAlert]
+  // );
 
   return (
     <Suspense fallback={<Loading />}>
@@ -235,11 +236,11 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
           isNavigating={isNavigating}
           onPageLoaded={handlePageLoaded}
           emptyMessage={emptyMessage}
-          onApprove={(recap) => handleSetRecapApproval(recap, true)}
-          onDecline={(recap) => handleSetRecapApproval(recap, false)}
-          approvingId={approvingId}
-          targetApproval={targetApproval}
-          isApproving={isApproving}
+          // onApprove={(recap) => handleSetRecapApproval(recap, true)}
+          // onDecline={(recap) => handleSetRecapApproval(recap, false)}
+          // approvingId={approvingId}
+          // targetApproval={targetApproval}
+          // isApproving={isApproving}
         />
       ) : (
         <Loading />
