@@ -1,4 +1,4 @@
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import FormInputText from "@/shared/FormInputText";
@@ -12,6 +12,18 @@ import { XCircleIcon } from "@heroicons/react/24/outline";
 import { SaveIcon } from "lucide-react";
 import type { Path, PathValue } from "react-hook-form";
 import { useAutoTimezoneFromCoordinates } from "../hooks/useAutoTimezoneFromCoordinates";
+
+import { useMutation } from "react-relay/hooks";
+import { useAlertStore } from "@store/alertStore";
+
+import { CreateRequestStoreManagerMutation } from "@api/mutations/CreateRequestStoreManagerMutation";
+import type { CreateRequestStoreManagerMutation as CreateRequestStoreManagerMutationType } from "@api/mutations/__generated__/CreateRequestStoreManagerMutation.graphql";
+
+import { CreateDistributorMutation } from "@api/mutations/CreateDistributorMutation";
+import type { CreateDistributorMutation as CreateDistributorMutationType } from "@api/mutations/__generated__/CreateDistributorMutation.graphql";
+
+import { CreateRetailerMutation } from "@api/mutations/CreateRetailerMutation";
+import type { CreateRetailerMutation as CreateRetailerMutationType } from "@api/mutations/__generated__/CreateRetailerMutation.graphql";
 
 export interface RequestFormValues {
   name: string;
@@ -33,6 +45,9 @@ export interface RequestFormValues {
   retailerStoreContact?: string;
   storeManagerName?: string;
   storeManagerPhone?: string;
+  storeManagerId?: string | null;
+  distributorLocationId?: string | null;
+  retailerLocationId?: string | null;
   isTableNeeded?: boolean;
   tableSize?: string;
   products?: string[];
@@ -41,6 +56,9 @@ export interface RequestFormValues {
 interface CatalogItem {
   id: string;
   name: string;
+  email?: string | null;
+  address?: string | null;
+  phone?: string | null;
 }
 
 interface ProductItem {
@@ -68,6 +86,30 @@ interface RequestFormProps {
   timezones?: TimezoneItem[];
   productTypes?: CatalogItem[];
   products?: ProductItem[];
+  tenantId: string;
+  requestId?: string | null;
+
+  requestStoreManagers?: CatalogItem[];
+  locations?: CatalogItem[];
+
+  onRefetch?: (
+    key: "distributors" | "retailers" | "requestStoreManagers"
+  ) => void;
+
+  enableContactSection?: boolean;
+  contactMode?: "request" | "manual";
+  requestContactInfo?: Partial<
+    Pick<
+      RequestFormValues,
+      | "distributorName"
+      | "distributorEmail"
+      | "retailerName"
+      | "retailerAddress"
+      | "retailerStoreContact"
+      | "storeManagerName"
+      | "storeManagerPhone"
+    >
+  >;
 }
 
 export default function RequestForm({
@@ -80,6 +122,14 @@ export default function RequestForm({
   timezones = [],
   productTypes = [],
   products = [],
+  tenantId,
+  requestId = null,
+  requestStoreManagers = [],
+  onRefetch,
+  enableContactSection = false,
+  contactMode,
+  requestContactInfo,
+  locations = [],
 }: RequestFormProps) {
   const safeDefaultValues: RequestFormValues = {
     name: "",
@@ -101,7 +151,6 @@ export default function RequestForm({
     retailerStoreContact: "",
     storeManagerName: "",
     storeManagerPhone: "",
-
     isTableNeeded: false,
     tableSize: "",
     products: [],
@@ -109,13 +158,13 @@ export default function RequestForm({
     ...defaultValues,
   };
 
+  const { showAlert } = useAlertStore();
+
   // ========================
   // INITIALIZE FORM AND FORM STATE
   // ========================
-  const { handleSubmit, control, watch, setValue, reset, formState } =
-    useForm<RequestFormValues>({
-      defaultValues: safeDefaultValues,
-    });
+  const { handleSubmit, control, watch, setValue, reset, formState, trigger } =
+    useForm<RequestFormValues>({ defaultValues: safeDefaultValues });
 
   const isDirty = formState.isDirty;
 
@@ -125,6 +174,210 @@ export default function RequestForm({
   const selectedCoordinates = watch("coordinates");
   const selectedTimezoneId = watch("timezoneId");
 
+  /* ================= WATCH FOR SECTION ENTITIES ================= */
+  const distributorId = watch("distributorId");
+  const retailerId = watch("retailerId");
+  const storeManagerId = watch("storeManagerId");
+  const distributorLocationId = watch("distributorLocationId");
+  const retailerLocationId = watch("retailerLocationId");
+
+  /* ================= UI STATE ================= */
+  const [showDistributorLocation, setShowDistributorLocation] = useState(false);
+  const [showRetailerLocation, setShowRetailerLocation] = useState(false);
+  const [showStoreManagerCreate, setShowStoreManagerCreate] = useState(false);
+
+  const distributorsOptions = useMemo(
+    () =>
+      distributors.map((d) => ({
+        value: d.id,
+        label: d.email ? `${d.name} (${d.email})` : d.name,
+      })),
+    [distributors]
+  );
+
+  const retailersOptions = useMemo(
+    () =>
+      retailers.map((r) => ({
+        value: r.id,
+        label: r.address ? `${r.name} - ${r.address}` : r.name,
+      })),
+    [retailers]
+  );
+
+  const storeManagerOptions = useMemo(
+    () =>
+      (requestStoreManagers ?? []).map((m) => ({
+        value: m.id,
+        label: m.phone ? `${m.name} (${m.phone})` : m.name,
+      })),
+    [requestStoreManagers]
+  );
+
+  const [commitCreateDistributor, isCreatingDistributor] =
+    useMutation<CreateDistributorMutationType>(CreateDistributorMutation);
+
+  const [commitCreateRetailer, isCreatingRetailer] =
+    useMutation<CreateRetailerMutationType>(CreateRetailerMutation);
+
+  const [commitCreateStoreManager, isCreatingStoreManager] =
+    useMutation<CreateRequestStoreManagerMutationType>(
+      CreateRequestStoreManagerMutation
+    );
+
+  const manualFields = useWatch({ control });
+
+  const effectiveContactMode = useMemo(
+    () => contactMode ?? (requestContactInfo ? "request" : "manual"),
+    [contactMode, requestContactInfo]
+  );
+
+  const showContactSection = useMemo(() => {
+    if (enableContactSection !== undefined) return enableContactSection;
+    return Boolean(requestContactInfo);
+  }, [enableContactSection, requestContactInfo]);
+
+  const contactInfo = useMemo(() => {
+    if (effectiveContactMode === "request") return requestContactInfo ?? {};
+    return {
+      distributorName: manualFields.distributorName ?? null,
+      distributorEmail: manualFields.distributorEmail ?? null,
+      retailerName: manualFields.retailerName ?? null,
+      retailerAddress: manualFields.retailerAddress ?? null,
+      retailerStoreContact: manualFields.retailerStoreContact ?? null,
+      storeManagerName: manualFields.storeManagerName ?? null,
+      storeManagerPhone: manualFields.storeManagerPhone ?? null,
+    };
+  }, [effectiveContactMode, manualFields, requestContactInfo]);
+
+  const handleCreateDistributor = () => {
+    const { distributorName, distributorEmail } = contactInfo;
+
+    if (!tenantId) {
+      showAlert("Missing tenantId", "error");
+      return;
+    }
+
+    if (!distributorName || !distributorEmail || !distributorLocationId) {
+      showAlert("Missing distributor data.", "error");
+      return;
+    }
+
+    commitCreateDistributor({
+      variables: {
+        input: {
+          tenantId,
+          name: distributorName,
+          email: distributorEmail,
+          locationId: distributorLocationId,
+        },
+      },
+      onCompleted: (res) => {
+        const distributor = res.createDistributor?.distributor;
+        if (res.createDistributor?.success && distributor) {
+          setValue("distributorId", distributor.id, {
+            shouldDirty: true,
+            shouldTouch: true,
+          });
+          setShowDistributorLocation(false);
+          onRefetch?.("distributors");
+          showAlert(res.createDistributor.message, "success");
+        } else {
+          showAlert(res.createDistributor?.message ?? "Error", "error");
+        }
+      },
+      onError: (e) => showAlert(e.message, "error"),
+    });
+  };
+
+  const handleCreateRetailer = () => {
+    const { retailerName, retailerAddress, retailerStoreContact } = contactInfo;
+
+    if (!tenantId) {
+      showAlert("Missing tenantId", "error");
+      return;
+    }
+
+    if (!retailerName || !retailerAddress || !retailerLocationId) {
+      showAlert("Missing retailer data.", "error");
+      return;
+    }
+
+    commitCreateRetailer({
+      variables: {
+        input: {
+          tenantId,
+          name: retailerName,
+          address: retailerAddress,
+          storeContact: retailerStoreContact ?? "",
+          locationId: retailerLocationId,
+        },
+      },
+      onCompleted: (res) => {
+        const retailer = res.createRetailer?.retailer;
+        if (res.createRetailer?.success && retailer) {
+          setValue("retailerId", retailer.id, {
+            shouldDirty: true,
+            shouldTouch: true,
+          });
+          setShowRetailerLocation(false);
+          onRefetch?.("retailers");
+          showAlert(res.createRetailer.message, "success");
+        } else {
+          showAlert(res.createRetailer?.message ?? "Error", "error");
+        }
+      },
+      onError: (e) => showAlert(e.message, "error"),
+    });
+  };
+
+  const handleCreateStoreManager = async () => {
+    if (!tenantId) {
+      showAlert("Missing tenantId", "error");
+      return;
+    }
+
+    const isValid = await trigger(["storeManagerName", "storeManagerPhone"]);
+    if (!isValid) {
+      showAlert("Please complete store manager information.", "error");
+      return;
+    }
+
+    const { storeManagerName, storeManagerPhone } = contactInfo;
+    if (!storeManagerName || !storeManagerPhone) return;
+
+    commitCreateStoreManager({
+      variables: {
+        input: {
+          tenantId,
+          requestId: requestId ?? null,
+          name: storeManagerName,
+          phone: storeManagerPhone,
+        },
+      },
+      onCompleted: (res) => {
+        const manager = res.createRequestStoreManager?.requestStoreManager;
+        if (res.createRequestStoreManager?.success && manager) {
+          setValue("storeManagerId", manager.id, {
+            shouldDirty: true,
+            shouldTouch: true,
+          });
+          onRefetch?.("requestStoreManagers");
+          showAlert(res.createRequestStoreManager.message, "success");
+        } else {
+          showAlert(
+            res.createRequestStoreManager?.message ??
+              "Error creating store manager",
+            "error"
+          );
+        }
+      },
+      onError: (e) => showAlert(e.message, "error"),
+    });
+  };
+
+  // ========================
+  // EFFECT TO RESET FORM IN EDIT MODE WHEN DEFAULT VALUES CHANGE
+  // ========================
   useEffect(() => {
     if (mode === "edit" && Object.keys(defaultValues).length > 0) {
       reset({
@@ -321,111 +574,254 @@ export default function RequestForm({
             </div>
           </section>
 
-          {/* ENTITIES */}
-          <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
-            <div className="flex items-center justify-between">
-              <p className="font-semibold text-lg">Entities</p>
-              <span className="text-xs text-base-content/60">
-                Retailer & Distributor
-              </span>
-            </div>
+          {/* ================= ENTITIES ================= */}
+          {(mode === "create" || showContactSection) && (
+            <section className="space-y-6 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-lg">Event entities</p>
+                  <p className="text-sm text-base-content/60">
+                    Select existing records or create new ones if needed.
+                  </p>
+                </div>
+                <span className="text-xs text-base-content/60">
+                  Retailer & Distributor
+                </span>
+              </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {mode === "edit" ? (
-                <>
-                  <FormAutocomplete<RequestFormValues>
-                    name="retailerId"
-                    control={control}
-                    label="Retailer"
-                    placeholder="Search retailer..."
-                    options={retailers.map((r) => ({
-                      value: r.id,
-                      label: r.name,
-                    }))}
-                  />
-                  <FormAutocomplete<RequestFormValues>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
+                  <p className="font-medium">Distributor</p>
+
+                  <FormAutocomplete
                     name="distributorId"
                     control={control}
-                    label="Distributor"
+                    label="Select distributor"
                     placeholder="Search distributor..."
-                    options={distributors.map((d) => ({
-                      value: d.id,
-                      label: d.name,
-                    }))}
-                  />
-                </>
-              ) : (
-                <>
-                  <FormInputText<RequestFormValues>
-                    name="clientName"
-                    control={control}
-                    label="Client Name"
-                    placeholder="John Doe"
-                    rules={{ required: "Client Name is required" }}
-                  />
-                  <FormInputText<RequestFormValues>
-                    name="clientEmail"
-                    control={control}
-                    label="Client Email"
-                    placeholder="john.doe@example.com"
-                    rules={{ required: "Client Email is required" }}
+                    options={distributorsOptions}
                   />
 
-                  <FormInputText<RequestFormValues>
-                    name="distributorName"
+                  {!distributorId && (
+                    <div className="space-y-3">
+                      <p className="text-base-content/60">or</p>
+                      {!showDistributorLocation ? (
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-xs"
+                          onClick={() => setShowDistributorLocation(true)}
+                        >
+                          Create new distributor
+                        </button>
+                      ) : (
+                        <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormInputText
+                              name="distributorName"
+                              control={control}
+                              label="Distributor name"
+                              placeholder="Enter distributor name"
+                            />
+                            <FormInputText
+                              name="distributorEmail"
+                              control={control}
+                              label="Distributor email"
+                              placeholder="Enter distributor email"
+                            />
+                          </div>
+
+                          <FormAutocomplete
+                            name="distributorLocationId"
+                            control={control}
+                            label="Distributor location"
+                            placeholder="Select location"
+                            options={locations.map((l) => ({
+                              value: l.id,
+                              label: l.name,
+                            }))}
+                          />
+
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-xs"
+                              onClick={handleCreateDistributor}
+                              disabled={isCreatingDistributor}
+                            >
+                              Confirm distributor
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-xs"
+                              onClick={() => {
+                                setShowDistributorLocation(false);
+                                setValue("distributorLocationId", null);
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
+                  <p className="font-medium">Retailer</p>
+
+                  <FormAutocomplete
+                    name="retailerId"
                     control={control}
-                    label="Distributor Name"
-                    placeholder="Distributor Inc."
-                    rules={{ required: "Distributor Name is required" }}
-                  />
-                  <FormInputText<RequestFormValues>
-                    name="distributorEmail"
-                    control={control}
-                    label="Distributor Email"
-                    placeholder="distributor@example.com"
-                    rules={{ required: "Distributor Email is required" }}
+                    label="Select retailer"
+                    placeholder="Search retailer..."
+                    options={retailersOptions}
                   />
 
-                  <FormInputText<RequestFormValues>
-                    name="retailerName"
+                  {!retailerId && (
+                    <div className="space-y-3">
+                      <p className="text-base-content/60">or</p>
+                      {!showRetailerLocation ? (
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-xs"
+                          onClick={() => setShowRetailerLocation(true)}
+                        >
+                          Create new retailer
+                        </button>
+                      ) : (
+                        <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormInputText
+                              name="retailerName"
+                              control={control}
+                              label="Retailer name"
+                              placeholder="Enter retailer name"
+                            />
+                            <FormInputText
+                              name="retailerAddress"
+                              control={control}
+                              label="Retailer address"
+                              placeholder="Enter retailer address"
+                            />
+                            <FormInputText
+                              name="retailerStoreContact"
+                              control={control}
+                              label="Store contact"
+                              placeholder="Enter store contact"
+                            />
+                          </div>
+
+                          <FormAutocomplete
+                            name="retailerLocationId"
+                            control={control}
+                            label="Retailer location"
+                            placeholder="Select location"
+                            options={locations.map((l) => ({
+                              value: l.id,
+                              label: l.name,
+                            }))}
+                          />
+
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-xs"
+                              onClick={handleCreateRetailer}
+                              disabled={isCreatingRetailer}
+                            >
+                              Confirm retailer
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-xs"
+                              onClick={() => {
+                                setShowRetailerLocation(false);
+                                setValue("retailerLocationId", null);
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="col-span-2 space-y-4 rounded-xl bg-base-200/60 p-4">
+                  <p className="font-medium">Store manager</p>
+
+                  <FormAutocomplete
+                    name="storeManagerId"
                     control={control}
-                    label="Retailer Name"
-                    placeholder="Retailer LLC"
-                    rules={{ required: "Retailer Name is required" }}
-                  />
-                  <FormInputText<RequestFormValues>
-                    name="retailerAddress"
-                    control={control}
-                    label="Retailer Address"
-                    placeholder="123 Main St, City, Country"
-                    rules={{ required: "Retailer Address is required" }}
-                  />
-                  <FormInputText<RequestFormValues>
-                    name="retailerStoreContact"
-                    control={control}
-                    label="Retailer Store Contact"
-                    placeholder="(e.g. Store phone / contact)"
-                    rules={{ required: "Retailer Store Contact is required" }}
+                    label="Select store manager"
+                    placeholder="Search store manager..."
+                    options={storeManagerOptions}
                   />
 
-                  <FormInputText<RequestFormValues>
-                    name="storeManagerName"
-                    control={control}
-                    label="Store Manager Name"
-                    placeholder="Jane Smith"
-                    rules={{ required: "Store Manager Name is required" }}
-                  />
-                  <FormInputText<RequestFormValues>
-                    name="storeManagerPhone"
-                    control={control}
-                    label="Store Manager Phone"
-                    placeholder="+1 234 567 8900"
-                    rules={{ required: "Store Manager Phone is required" }}
-                  />
-                </>
-              )}
-            </div>
-          </section>
+                  {!storeManagerId && (
+                    <div className="space-y-3">
+                      <p className="text-base-content/60">or</p>
+                      {!showStoreManagerCreate ? (
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-xs"
+                          onClick={() => setShowStoreManagerCreate(true)}
+                        >
+                          Create new store manager
+                        </button>
+                      ) : (
+                        <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormInputText
+                              name="storeManagerName"
+                              control={control}
+                              label="Store manager name"
+                              placeholder="Enter name"
+                              rules={{
+                                required: "Store manager name is required",
+                              }}
+                            />
+                            <FormInputText
+                              name="storeManagerPhone"
+                              control={control}
+                              label="Store manager phone"
+                              placeholder="Enter phone"
+                              rules={{
+                                required: "Store manager phone is required",
+                              }}
+                            />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-xs"
+                              onClick={handleCreateStoreManager}
+                              disabled={isCreatingStoreManager}
+                            >
+                              Confirm store manager
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-xs"
+                              onClick={() => {
+                                setShowStoreManagerCreate(false);
+                                setValue("storeManagerName", "");
+                                setValue("storeManagerPhone", "");
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* DETAILS (CREATE ONLY) */}
           {mode === "create" && (
