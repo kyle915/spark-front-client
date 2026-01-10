@@ -1,10 +1,13 @@
 import ThemeToggle from "@/shared/ThemeToggle";
+import { useColorScheme } from "@/theme/hook/useColorScheme";
 
 export default function SparkFormLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { colorScheme, setColorScheme } = useColorScheme("dark");
+
   return (
     <div className="min-h-screen bg-base-200 flex flex-col">
       <div className="navbar bg-base-100 shadow-sm sticky top-0 z-20">
@@ -13,7 +16,7 @@ export default function SparkFormLayout({
         </div>
 
         <div className="flex-none">
-          <ThemeToggle />
+          <ThemeToggle value={colorScheme} onChange={setColorScheme} />
         </div>
       </div>
 

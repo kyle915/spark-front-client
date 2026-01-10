@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from "react-router";
 import { ChevronDown } from "lucide-react";
-import ThemeToggle from "../components/ui/ThemeToggle";
+import ThemeToggle from "@shared/ThemeToggle";
+import { useColorScheme } from "@/theme/hook/useColorScheme";
 
 
 type NavLinkItem = { to: string; label: string };
@@ -14,6 +15,7 @@ const defaultNavLinks: NavLinkItem[] = [
 
 export default function Navbar({ navLinks = defaultNavLinks }: { navLinks?: NavLinkItem[]; onOpenDrawer?: () => void }) {
   const location = useLocation();
+  const { colorScheme, setColorScheme } = useColorScheme("dark");
   const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${
       isActive
@@ -86,7 +88,7 @@ export default function Navbar({ navLinks = defaultNavLinks }: { navLinks?: NavL
           </div>
           
         </div>
-        <ThemeToggle />
+        <ThemeToggle value={colorScheme} onChange={setColorScheme} />
 
       </div>
     </header>
