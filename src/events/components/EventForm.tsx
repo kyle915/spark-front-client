@@ -31,12 +31,15 @@ import type { CreateDistributorMutation as CreateDistributorMutationType } from 
 import { CreateRetailerMutation } from "@api/mutations/CreateRetailerMutation";
 import type { CreateRetailerMutation as CreateRetailerMutationType } from "@api/mutations/__generated__/CreateRetailerMutation.graphql";
 
+import { useAutoTimezoneFromCoordinates } from "@/requests/hooks/useAutoTimezoneFromCoordinates";
+
 export default function EventForm({
   mode,
   eventTypes,
   tenantId,
   requestId,
   distributors = [],
+  timezones = [],
   retailers = [],
   requestStoreManagers = [],
   locations = [],
@@ -61,11 +64,10 @@ export default function EventForm({
     notes: "",
     isNational: false,
     coordinates: null,
-
+    timezoneId: null,
     distributorId: null,
     retailerId: null,
     storeManagerId: null,
-
     distributorName: "",
     distributorEmail: "",
     retailerName: "",
@@ -73,15 +75,13 @@ export default function EventForm({
     retailerStoreContact: "",
     storeManagerName: "",
     storeManagerPhone: "",
-
     distributorLocationId: null,
     retailerLocationId: null,
-
     ...defaultValues,
   };
 
   /* ================= FORM ================= */
-  const { handleSubmit, control, setValue, trigger, formState } =
+  const { handleSubmit, control, setValue, trigger, formState, watch } =
     useForm<EventFormValues>({
       defaultValues: safeDefaultValues,
     });
@@ -90,10 +90,20 @@ export default function EventForm({
   const isDirty = formState.isDirty;
 
   /* ================= WATCH ================= */
-
   const distributorId = useWatch({ control, name: "distributorId" });
   const retailerId = useWatch({ control, name: "retailerId" });
   const storeManagerId = useWatch({ control, name: "storeManagerId" });
+  const selectedCoordinates = watch("coordinates");
+  const selectedTimezoneId = watch("timezoneId");
+
+  useAutoTimezoneFromCoordinates<EventFormValues, "timezoneId">({
+    coordinates: selectedCoordinates,
+    timezoneId: selectedTimezoneId,
+    timezones,
+    setValue,
+    timezoneFieldName: "timezoneId",
+    initialFromBackend: Boolean(defaultValues?.timezoneId),
+  });
 
   const distributorLocationId = useWatch({
     control,
@@ -378,6 +388,25 @@ export default function EventForm({
                 rules={{
                   required: "Date is required",
                 }}
+              />
+
+              <FormAutocomplete
+                name="timezoneId"
+                control={control}
+                label="Timezone"
+                placeholder="Search timezone..."
+                options={timezones.map((tz) => {
+                  const sign = tz.offset >= 0 ? "+" : "-";
+                  const abs = Math.abs(tz.offset);
+                  const hours = String(Math.floor(abs / 60)).padStart(2, "0");
+                  const minutes = String(abs % 60).padStart(2, "0");
+
+                  return {
+                    value: tz.id,
+                    label: `${tz.name} - ${tz.code} (UTC${sign}${hours}:${minutes})`,
+                  };
+                })}
+                rules={{ required: "Timezone is required" }}
               />
 
               <FormInputTime

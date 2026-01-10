@@ -27,6 +27,7 @@
       "@routes/*": ["./src/routes/*"],
       "@types/*": ["./src/types/*"],
       "@utils/*": ["./src/utils/*"],
+      "react-color": ["./src/types/react-color"]
     },
 
     /* Linting */

@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Calendar } from "./calendar";
+import { Calendar } from "../../components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
@@ -9,11 +8,14 @@ import {
   PopoverContent,
 } from "../..//components/ui/popover";
 
-export function DateRangePicker() {
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: undefined,
-    to: undefined,
-  });
+interface DateRangePickerProps {
+  value?: DateRange;
+  onChange?: (range: DateRange | undefined) => void;
+}
+
+export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
+  const date = value ?? { from: undefined, to: undefined };
+  const setDate = onChange ?? (() => {});
 
   const formattedLabel = () => {
     if (!date?.from) return "Select Date Range";

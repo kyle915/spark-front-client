@@ -55,6 +55,7 @@ export interface RecapRow {
   id: string;
   uuid?: string | null;
   name: string;
+  approved?: boolean | null;
   eventId?: string | null;
   event?: NamedEntity | null;
   createdAt?: string | null;

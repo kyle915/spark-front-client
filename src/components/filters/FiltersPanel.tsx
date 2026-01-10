@@ -3,19 +3,24 @@ import { Funnel, ChevronDown } from "lucide-react";
 import { DateRangePicker } from "../ui/daterange-picker";
 import type { DateRange } from "react-day-picker";
 
-interface FiltersPanelProps {
-  distributors?: string[];
-  rmmOptions?: string[];
-  quarterOptions?: string[];
-  onApplyFilters?: (filters: FiltersState) => void;
-}
+export type FilterOption = {
+  value: string;
+  label: string;
+};
 
-type FiltersState = {
+export type FiltersState = {
   distributor: string;
   rmm: string;
   quarter: string;
   dateRange: DateRange | undefined;
 };
+
+interface FiltersPanelProps {
+  distributors?: FilterOption[];
+  rmmOptions?: FilterOption[];
+  quarterOptions?: FilterOption[];
+  onApplyFilters?: (filters: FiltersState) => void;
+}
 
 export default function FiltersPanel({
   distributors = [],
@@ -78,8 +83,8 @@ export default function FiltersPanel({
               >
                 <option value="">Select Distributor</option>
                 {distributors.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
+                  <option key={d.value} value={d.value}>
+                    {d.label}
                   </option>
                 ))}
               </select>
@@ -95,8 +100,8 @@ export default function FiltersPanel({
               >
                 <option value="">Select RMM</option>
                 {rmmOptions.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
+                  <option key={r.value} value={r.value}>
+                    {r.label}
                   </option>
                 ))}
               </select>
@@ -112,8 +117,8 @@ export default function FiltersPanel({
               >
                 <option value="">Select Quarter</option>
                 {quarterOptions.map((q) => (
-                  <option key={q} value={q}>
-                    {q}
+                  <option key={q.value} value={q.value}>
+                    {q.label}
                   </option>
                 ))}
               </select>
@@ -121,7 +126,10 @@ export default function FiltersPanel({
 
             {/* Date Range */}
             <div className="form-control">
-              <DateRangePicker />
+              <DateRangePicker
+                value={filters.dateRange}
+                onChange={(range) => handleChange("dateRange", range)}
+              />
             </div>
           </div>
 

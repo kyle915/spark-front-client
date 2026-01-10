@@ -81,7 +81,7 @@ const UsersTableContent = ({
             className="btn btn-xs btn-ghost"
             onClick={() => onEditUser(row)}
           >
-            <PencilIcon className="w-4 h-4 text-primary" />
+            <PencilIcon className="w-5 h-5" />
           </button>
         ),
       }}

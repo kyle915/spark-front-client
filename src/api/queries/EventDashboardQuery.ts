@@ -1,0 +1,69 @@
+import { graphql } from "react-relay";
+
+export const EventDashboardQuery = graphql`
+  query EventDashboardQuery($filters: EventDashboardFiltersInput) {
+    eventDashboard(filters: $filters) {
+      metrics {
+        totalEvents
+        consumersSampled
+        brandAwareness
+        purchaseIntent
+        comparisonPeriod
+        comparisonValues {
+          totalEvents
+          consumersSampled
+          brandAwareness
+          purchaseIntent
+        }
+      }
+      monthlyTrends {
+        dataPoints {
+          month
+          consumersSampled
+          willingToPurchase
+          conversionRate
+          eventsCount
+        }
+      }
+      performanceInsights {
+        knewAboutBrand
+        knewAboutBrandPercentage
+        willingToPurchase
+        willingToPurchasePercentage
+        bestMonth {
+          month
+          eventsCount
+          consumersCount
+        }
+        growthRate
+      }
+      recentEvents {
+        id
+        name
+        date
+        location
+        consumers
+        intentRate
+        status
+      }
+    }
+    eventDashboardFilterOptions {
+      distributors {
+        id
+        name
+      }
+      rmms {
+        id
+        name
+      }
+      quarters {
+        value
+        label
+      }
+      tenants {
+        id
+        name
+      }
+    }
+  }
+`;

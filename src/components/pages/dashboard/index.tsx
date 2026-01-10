@@ -28,6 +28,7 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { useEventsAnalytics } from "@/hooks/useEventsAnalytics";
 import { useRequestsAnalytics } from "@/hooks/useRequestsAnalytics";
 import type { RequestRow, NamedEntity } from "@/types/columnsTypes";
+import type { FilterOption } from "@/components/filters/FiltersPanel";
 
 export default function DashboardIndex() {
   const { metrics: gqlMetrics, events, requests } = useDashboardData();
@@ -63,6 +64,24 @@ export default function DashboardIndex() {
     };
   });
   const requestsAnalytics = useRequestsAnalytics(requestRows);
+  const distributorOptions: FilterOption[] = ["John Doe", "Jane Smith"].map(
+    (name) => ({
+      value: name,
+      label: name,
+    })
+  );
+  const rmmOptions: FilterOption[] = ["Michael Brown", "Sarah Williams"].map(
+    (name) => ({
+      value: name,
+      label: name,
+    })
+  );
+  const quarterOptions: FilterOption[] = ["Q1 2025", "Q2 2025", "Q3 2025"].map(
+    (quarter) => ({
+      value: quarter,
+      label: quarter,
+    })
+  );
 
   return (
     <Layout>
@@ -76,9 +95,9 @@ export default function DashboardIndex() {
 
         {/* FILTERS */}
         <FiltersPanel
-          distributors={["John Doe", "Jane Smith"]}
-          rmmOptions={["Michael Brown", "Sarah Williams"]}
-          quarterOptions={["Q1 2025", "Q2 2025", "Q3 2025"]}
+          distributors={distributorOptions}
+          rmmOptions={rmmOptions}
+          quarterOptions={quarterOptions}
           onApplyFilters={(filters) => console.log("Applied filters:", filters)}
         />
 

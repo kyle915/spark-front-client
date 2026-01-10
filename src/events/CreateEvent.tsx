@@ -8,6 +8,8 @@ import CatalogsProvider from "@shared/CatalogsProvider";
 import EventForm from "./components/EventForm";
 
 import { useAlertStore } from "@store/alertStore";
+import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
+import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 
 import { RequestUuidQuery } from "@api/queries/RequestUuidQuery";
 import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__generated__/RequestUuidQuery.graphql";
@@ -76,6 +78,26 @@ const CreateEventForm = ({ request }: FormProps) => {
   const navigate = useNavigate();
   const { showAlert } = useAlertStore();
 
+  // ========================
+  // QUERIES
+  // ========================
+  const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
+    TimezonesQuery,
+    {},
+    { fetchPolicy: "store-and-network" }
+  );
+
+  const timeZones = timezonesData.timezones.edges.map((e) => e.node);
+
+  const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
+    filters: { tenantId: request.tenantId },
+  });
+
+  const locations = locationsData.locations.edges.map((e) => e.node);
+
+  // ========================
+  // MUTATIONS
+  // ========================
   const [commitCreateEvent] =
     useMutation<CreateEventMutationType>(CreateEventMutation);
 
@@ -86,12 +108,6 @@ const CreateEventForm = ({ request }: FormProps) => {
   const [commitUpdateRequest] = useMutation<UpdateRequestMutationType>(
     UpdateRequestMutation
   );
-
-  const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
-    filters: { tenantId: request.tenantId },
-  });
-
-  const locations = locationsData.locations.edges.map((e) => e.node);
 
   const eventTypeFilters = useMemo(
     () => ({ tenantId: request.tenantId }),
@@ -236,6 +252,7 @@ const CreateEventForm = ({ request }: FormProps) => {
     startTime: request.startTime ?? undefined,
     endTime: request.endTime ?? undefined,
     coordinates: request.coordinates.map((coord) => coord) ?? undefined,
+    timezoneId: request.timezone?.id ?? null,
     distributorId: request.distributor?.id,
     retailerId: request.retailer?.id,
     storeManagerName:
@@ -278,6 +295,7 @@ const CreateEventForm = ({ request }: FormProps) => {
             tenantId={request.tenantId}
             requestId={request.id}
             distributors={distributors}
+            timezones={timeZones}
             retailers={retailers}
             requestStoreManagers={requestStoreManagers}
             requestContactInfo={requestContactInfo}

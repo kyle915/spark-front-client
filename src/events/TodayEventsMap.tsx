@@ -50,7 +50,7 @@ const EventsMapLayer = ({
 }: {
   coordinates: number[];
   range: number;
-  unit: "KILOMETERS" | "MILES";
+  unit: "MILES";
 }) => {
   const { tenantId } = useAuthStore();
 
@@ -118,8 +118,8 @@ const EventsMapLayer = ({
 // =========================
 const TodayEventsMap = () => {
   const [center, setCenter] = useState<[number, number]>([19.4326, -99.1332]);
-  const [range, setRange] = useState(10);
-  const [unit, setUnit] = useState<"KILOMETERS" | "MILES">("KILOMETERS");
+  const [range, setRange] = useState(35);
+  const unit = "MILES";
 
   // ===== Actions =====
   const locateUser = () => {
@@ -132,10 +132,7 @@ const TodayEventsMap = () => {
     locateUser();
   }, []);
 
-  const radius = useMemo(
-    () => (unit === "KILOMETERS" ? range * 1000 : range * 1609.34),
-    [range, unit]
-  );
+  const radius = useMemo(() => range * 1609.34, [range]);
 
   return (
     <Layout>
@@ -180,38 +177,17 @@ const TodayEventsMap = () => {
                     <div className="flex justify-between items-center text-xs text-base-content/60">
                       <span>Radius</span>
                       <span className="font-medium text-base-content">
-                        {range} {unit === "KILOMETERS" ? "km" : "mi"}
+                        {range} miles
                       </span>
                     </div>
                     <input
                       type="range"
-                      min={1}
-                      max={100}
+                      min={35}
+                      max={75}
                       value={range}
                       onChange={(e) => setRange(Number(e.target.value))}
                       className="range range-primary range-sm"
                     />
-                  </div>
-                  {/* UNIT SELECTOR */}
-                  <div className="flex items-center justify-end">
-                    <div className="join">
-                      <button
-                        className={`btn btn-sm join-item ${
-                          unit === "KILOMETERS" ? "btn-primary" : "btn-ghost"
-                        }`}
-                        onClick={() => setUnit("KILOMETERS")}
-                      >
-                        Km
-                      </button>
-                      <button
-                        className={`btn btn-sm join-item ${
-                          unit === "MILES" ? "btn-primary" : "btn-ghost"
-                        }`}
-                        onClick={() => setUnit("MILES")}
-                      >
-                        Mi
-                      </button>
-                    </div>
                   </div>
                 </div>
               </div>
