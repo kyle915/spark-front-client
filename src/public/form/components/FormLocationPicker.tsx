@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Controller } from "react-hook-form";
 import type { LatLngExpression } from "leaflet";
 import { Marker, useMap } from "react-leaflet";
-import type { Control } from "react-hook-form";
+import type { Control, UseFormSetValue } from "react-hook-form";
 import type { SparkFormData } from "../schema/schema";
 import * as L from "leaflet";
 
@@ -20,7 +20,8 @@ const defaultMarkerIcon = L.icon({
 });
 
 interface Props {
-  control: Control<SparkFormData, any, SparkFormData>;
+  control: Control<SparkFormData>;
+  setValue: UseFormSetValue<SparkFormData>;
   nameLat: keyof SparkFormData;
   nameLng: keyof SparkFormData;
   label?: string;
@@ -48,21 +49,36 @@ export default function FormLocationPicker({
   nameLng,
   label = "Select location",
   height = "h-[320px]",
+  setValue,
 }: Props) {
   const [initialPosition, setInitialPosition] =
     useState<LatLngExpression>(FALLBACK_POSITION);
 
   // Detect real user location
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setValue(nameLat, FALLBACK_POSITION[0]);
+      setValue(nameLng, FALLBACK_POSITION[1]);
+      setInitialPosition(FALLBACK_POSITION);
+      return;
+    }
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setInitialPosition([pos.coords.latitude, pos.coords.longitude]);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        setValue(nameLat, lat);
+        setValue(nameLng, lng);
+        setInitialPosition([lat, lng]);
       },
-      () => setInitialPosition(FALLBACK_POSITION)
+      () => {
+        setValue(nameLat, FALLBACK_POSITION[0]);
+        setValue(nameLng, FALLBACK_POSITION[1]);
+        setInitialPosition(FALLBACK_POSITION);
+      }
     );
-  }, []);
+  }, [nameLat, nameLng, setValue]);
 
   return (
     <div className="space-y-3 w-full">
