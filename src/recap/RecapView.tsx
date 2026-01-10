@@ -38,8 +38,8 @@ const Gallery3DCard = ({
 }) => (
   <div className="hover-3d cursor-pointer" onClick={onClick}>
     {/* content */}
-    <figure className="w-full h-80 overflow-hidden rounded-2xl bg-base-200">
-      <img src={src} alt={alt} className="w-full h-full object-cover" />
+    <figure className="w-full aspect-[4/3] overflow-hidden rounded-2xl bg-base-200">
+      <img src={src} alt={alt} className="w-full h-full object-contain" />
     </figure>
 
     {/* 8 empty divs required for DaisyUI 3D */}
@@ -78,6 +78,27 @@ const RecapView = () => {
     [recap?.recapFiles]
   );
 
+  // images by category
+  const imagesByCategory = useMemo(() => {
+    if (!imageFiles) return {};
+
+    return imageFiles.reduce<Record<string, typeof imageFiles>>((acc, file) => {
+      const categoryName = file.fileRecapCategory?.name ?? "Uncategorized";
+
+      if (!acc[categoryName]) {
+        acc[categoryName] = [];
+      }
+
+      acc[categoryName].push(file);
+      return acc;
+    }, {});
+  }, [imageFiles]);
+
+  const flatImages = useMemo(
+    () => Object.values(imagesByCategory).flat(),
+    [imagesByCategory]
+  );
+
   if (!uuid) {
     return (
       <Layout>
@@ -100,7 +121,6 @@ const RecapView = () => {
   // ======================================================
   // CONTROLS
   // ======================================================
-  const openPreview = (idx: number) => setPreviewIndex(idx);
   const closePreview = () => setPreviewIndex(null);
 
   // ======================================================
@@ -124,7 +144,7 @@ const RecapView = () => {
     recap.productsSold !== null || recap.totalEarnings !== null;
 
   const currentPreview =
-    imageFiles && previewIndex !== null && imageFiles[previewIndex];
+    flatImages && previewIndex !== null && flatImages[previewIndex];
 
   return (
     <Layout>
@@ -326,32 +346,54 @@ const RecapView = () => {
           {/* ======================================================
           GALLERY
       ====================================================== */}
+
           <div className="card bg-base-300/50 mb-8">
-            <div className="card-body">
-              {/* HEADER */}
-              <div className="flex items-center justify-between mb-4">
+            <div className="card-body space-y-8">
+              <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Event Gallery</h2>
                 <span className="text-sm text-base-content/60">
-                  {imageFiles?.length} photos
+                  {flatImages.length} photos
                 </span>
               </div>
 
-              {/* CONTENT */}
-              {imageFiles?.length === 0 ? (
+              {Object.keys(imagesByCategory).length === 0 ? (
                 <div className="alert alert-info">
                   No images uploaded for this recap.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {imageFiles?.map((file, idx) => (
-                    <Gallery3DCard
-                      key={file.id}
-                      src={file.file ?? ""}
-                      alt={file.name}
-                      onClick={() => openPreview(idx)}
-                    />
-                  ))}
-                </div>
+                Object.entries(imagesByCategory).map(
+                  ([categoryName, files]) => (
+                    <div key={categoryName} className="space-y-4">
+                      {/* CATEGORY HEADER */}
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold">
+                          {categoryName}
+                        </h3>
+                        <span className="badge badge-outline">
+                          {files.length}
+                        </span>
+                      </div>
+
+                      {/* CATEGORY GRID */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {files.map((file) => {
+                          const globalIndex = flatImages.findIndex(
+                            (f) => f.id === file.id
+                          );
+
+                          return (
+                            <Gallery3DCard
+                              key={file.id}
+                              src={file.file ?? ""}
+                              alt={file.name}
+                              onClick={() => setPreviewIndex(globalIndex)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )
+                )
               )}
             </div>
           </div>
