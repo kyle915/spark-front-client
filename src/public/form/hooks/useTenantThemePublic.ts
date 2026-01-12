@@ -3,6 +3,8 @@ import { gqlRequest } from "@/public/api/graphqlClient";
 import { QUERY_PUBLIC_TENANT_THEME } from "@/public/api/queries/PublicThemeTenant.query";
 
 import {
+  buildThemeDefaults,
+  applyCssVariables,
   mapTenantColorSchemeToEnum,
   type TenantColorScheme,
 } from "@/utils/tenantThemeConfig";
@@ -21,7 +23,7 @@ export type TenantThemePublic = {
 };
 
 type TenantThemePublicResponse = {
-  tenantThemePublic: TenantThemePublic;
+  tenantThemePublic: TenantThemePublic | null;
 };
 
 export function useTenantTheme({
@@ -34,10 +36,13 @@ export function useTenantTheme({
   const [error, setError] = useState<string | null>(null);
 
   /* =====================================================
-   * Fetch Theme
+   * Fetch Theme (optional)
    * ===================================================== */
   useEffect(() => {
-    if (!slug || !enabled) return;
+    if (!slug || !enabled) {
+      setTheme(null);
+      return;
+    }
 
     let isMounted = true;
 
@@ -59,6 +64,7 @@ export function useTenantTheme({
         }
       } catch (err) {
         if (isMounted) {
+          setTheme(null); // ⬅️ fallback garantizado
           setError((err as Error).message);
         }
       } finally {
@@ -76,21 +82,18 @@ export function useTenantTheme({
   }, [slug, colorScheme, enabled]);
 
   /* =====================================================
-   * Apply CSS Variables
+   * Apply Theme (SIEMPRE)
    * ===================================================== */
   useEffect(() => {
-    if (!theme?.cssVariables) return;
+    const effectiveColorScheme = theme?.colorScheme ?? colorScheme;
 
-    const root = document.documentElement;
+    const cssVariables = buildThemeDefaults(effectiveColorScheme, theme);
 
-    // HTML color-scheme (browser native)
-    root.setAttribute("color-scheme", theme.colorScheme ?? colorScheme);
+    // Browser native color scheme
+    document.documentElement.setAttribute("color-scheme", effectiveColorScheme);
 
-    Object.entries(theme.cssVariables).forEach(([key, value]) => {
-      if (typeof value === "string") {
-        root.style.setProperty(key, value);
-      }
-    });
+    // DaisyUI / Tailwind variables
+    applyCssVariables(cssVariables);
   }, [theme, colorScheme]);
 
   return {
