@@ -34,19 +34,13 @@ export default function SparkFormLayout({
     localStorage.setItem("@color-scheme", colorScheme);
   }, [colorScheme]);
 
-  /* =====================================================
-   * BLOCK RENDER UNTIL THEME IS READY
-   * ===================================================== */
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-base-200">
-        <span className="loading loading-spinner loading-lg" />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-base-200 flex flex-col">
+      {loading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-base-200/60">
+          <span className="loading loading-spinner loading-lg" />
+        </div>
+      )}
       <div className="navbar bg-base-100 shadow-sm sticky top-0 z-20">
         <div className="flex-1">
           <h1 className="font-bold text-lg">Spark Request Form</h1>

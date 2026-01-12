@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import Layout from "@/layout/Layout";
 import {
   useLazyLoadQuery,
@@ -15,8 +15,10 @@ import { EventsQuery } from "@/api/queries/EventsQuery";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import type { EventsQuery as EventsQueryType } from "@/api/queries/__generated__/EventsQuery.graphql";
 import type { RecapsQuery as RecapsQueryType } from "@/api/queries/__generated__/RecapsQuery.graphql";
-import { ApproveRecapMutation } from "@api/mutations/ApproveRecapMutation";
-import type { ApproveRecapMutation as ApproveRecapMutationType } from "@api/mutations/__generated__/ApproveRecapMutation.graphql";
+// import { ApproveRecapMutation } from "@api/mutations/ApproveRecapMutation";
+// import type { ApproveRecapMutation as ApproveRecapMutationType } from "@api/mutations/__generated__/ApproveRecapMutation.graphql";
+import { GenerateRecapPdfMutation } from "@/api/mutations/GenerateRecapPdfMutation";
+import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@api/mutations/__generated__/GenerateRecapPdfMutation.graphql";
 import type { PreloadedQuery } from "react-relay";
 import type { RecapRow } from "@/types/columnsTypes";
 import { createRecapColumns } from "@/utils/columns";
@@ -24,6 +26,7 @@ import { CameraIcon } from "@heroicons/react/24/solid";
 import {
   // CheckCircleIcon,
   EyeIcon,
+  ArrowDownTrayIcon,
   // PencilIcon,
   // XCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -31,7 +34,7 @@ import {
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { FilterIcon, FunnelXIcon } from "lucide-react";
-// import { useAlertStore } from "@/store/alertStore";
+import { useAlertStore } from "@/store/alertStore";
 
 const PAGE_SIZE = 10;
 
@@ -48,6 +51,9 @@ type RecapsTableContentProps = {
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;
   emptyMessage: string;
+  exportingId: string | null;
+  isExporting: boolean;
+  onExportPdf: (recap: RecapRow) => void;
   // onApprove: (recap: RecapRow) => void;
   // onDecline: (recap: RecapRow) => void;
   // approvingId: string | null;
@@ -65,6 +71,9 @@ const RecapsTableContent = ({
   onPageLoaded,
   isNavigating,
   emptyMessage,
+  exportingId,
+  isExporting,
+  onExportPdf,
 }: // onApprove,
 // onDecline,
 // approvingId,
@@ -97,7 +106,7 @@ RecapsTableContentProps) => {
       customActions={{
         headerLabel: "Actions",
         render: (row) => (
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             <button
               type="button"
               className="btn btn-xs btn-outline"
@@ -106,6 +115,24 @@ RecapsTableContentProps) => {
               <EyeIcon className="w-5 h-5" />
               View
             </button>
+
+            <button
+              type="button"
+              className="btn btn-xs btn-outline text-info disabled:text-info/50"
+              onClick={() => onExportPdf(row)}
+              disabled={isExporting}
+              aria-label="Export recap PDF"
+            >
+              {isExporting && exportingId === row.id ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <>
+                  <ArrowDownTrayIcon className="w-5 h-5" />
+                  Export PDF
+                </>
+              )}
+            </button>
+
             {/* <button
               type="button"
               className="btn btn-xs btn-ghost"
@@ -168,11 +195,15 @@ type RecapsListInnerProps = {
 };
 
 const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
-  // const showAlert = useAlertStore((state) => state.showAlert);
+  const showAlert = useAlertStore((state) => state.showAlert);
   // const [approvingId, setApprovingId] = useState<string | null>(null);
   // const [targetApproval, setTargetApproval] = useState<boolean | null>(null);
   // const [commitApprove, isApproving] =
-  useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
+  // useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [commitGeneratePdf, isExporting] =
+    useMutation<GenerateRecapPdfMutationType>(GenerateRecapPdfMutation);
+
   const {
     queryRef,
     displayPage,
@@ -223,6 +254,49 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
   //   [commitApprove, refresh, showAlert]
   // );
 
+  const handleExportPdf = useCallback(
+    (recap: RecapRow) => {
+      if (!recap.id) return;
+
+      setExportingId(recap.id);
+      commitGeneratePdf({
+        variables: { input: { id: recap.id } },
+        onCompleted: (response) => {
+          const payload = response.generateRecapPdf;
+          if (payload.success) {
+            const fileUrl = payload.recapFile?.file;
+            if (fileUrl) {
+              const newTab = window.open(
+                fileUrl,
+                "_blank",
+                "noopener,noreferrer"
+              );
+              if (!newTab) {
+                window.location.assign(fileUrl);
+                showAlert("Popup blocked. Opened PDF in this tab.", "warning");
+              } else {
+                showAlert(
+                  payload.message ?? "PDF generated successfully",
+                  "success"
+                );
+              }
+            } else {
+              showAlert("PDF generated but file URL is missing", "warning");
+            }
+          } else {
+            showAlert(payload.message ?? "Failed to generate PDF", "error");
+          }
+          setExportingId(null);
+        },
+        onError: (error) => {
+          showAlert(error.message, "error");
+          setExportingId(null);
+        },
+      });
+    },
+    [commitGeneratePdf, showAlert]
+  );
+
   return (
     <Suspense fallback={<Loading />}>
       {queryRef ? (
@@ -241,6 +315,9 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
           // approvingId={approvingId}
           // targetApproval={targetApproval}
           // isApproving={isApproving}
+          onExportPdf={handleExportPdf}
+          exportingId={exportingId}
+          isExporting={isExporting}
         />
       ) : (
         <Loading />

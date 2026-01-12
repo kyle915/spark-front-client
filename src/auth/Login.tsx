@@ -9,6 +9,7 @@ import { useNavigate } from "react-router";
 import { useAuthStore } from "@store/authStore";
 import { register } from "@api/auth/register";
 import type { RegisterFormFields } from "@/types/auth";
+import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
 type FormData = {
   username: string;
   password: string;
@@ -20,6 +21,9 @@ const Login = () => {
   const { showAlert } = useAlertStore();
   const [isLogin, setIsLogin] = useState(true);
   const [fade, setFade] = useState(true);
+  const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
+    (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark"
+  );
 
   const handleSwitch = () => {
     setFade(false);
@@ -133,9 +137,9 @@ const Login = () => {
           </div>
         </div>
 
-        <div className="hidden lg:flex w-1/2 items-center justify-center bg-gradient-to-br from-primary to-secondary relative">
+        <div className="hidden lg:flex w-1/2 items-center justify-center bg-linear-to-br from-primary to-secondary relative">
           <div className="absolute top-4 right-4 z-20">
-            <ThemeToggle />
+            <ThemeToggle value={colorScheme} onChange={setColorScheme} />
           </div>
 
           <div className="absolute inset-0 bg-primary"></div>

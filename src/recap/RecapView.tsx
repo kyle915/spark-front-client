@@ -38,7 +38,7 @@ const Gallery3DCard = ({
 }) => (
   <div className="hover-3d cursor-pointer" onClick={onClick}>
     {/* content */}
-    <figure className="w-full aspect-[4/3] overflow-hidden rounded-2xl bg-base-200">
+    <figure className="w-full aspect-4/3 overflow-hidden rounded-2xl bg-base-200">
       <img src={src} alt={alt} className="w-full h-full object-contain" />
     </figure>
 
