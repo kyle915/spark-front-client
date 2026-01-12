@@ -23,7 +23,6 @@ export default function Navbar({
   onColorSchemeChange: (value: TenantColorScheme) => void;
 }) {
   const location = useLocation();
-  const { colorScheme, setColorScheme } = useColorScheme("dark");
   const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${
       isActive
