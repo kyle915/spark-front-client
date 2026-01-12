@@ -140,6 +140,7 @@ const Login = () => {
         <div className="hidden lg:flex w-1/2 items-center justify-center bg-linear-to-br from-primary to-secondary relative">
           <div className="absolute top-4 right-4 z-20">
             <ThemeToggle value={colorScheme} onChange={setColorScheme} />
+            <ThemeToggle value={colorScheme} onChange={setColorScheme} />
           </div>
 
           <div className="absolute inset-0 bg-primary"></div>

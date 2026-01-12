@@ -48,6 +48,7 @@ export default function SparkFormLayout({
 
         <div className="flex-none">
           <ThemeToggle value={colorScheme} onChange={setColorScheme} />
+          <ThemeToggle value={colorScheme} onChange={setColorScheme} />
         </div>
       </div>
 
