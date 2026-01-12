@@ -76,10 +76,10 @@ import {
 } from "@/catalogs/Retailers";
 
 // Recap
-import CreateRecap from "@/recap/CreateRecap";
+// import CreateRecap from "@/recap/CreateRecap";
 import RecapList from "@/recap/RecapsList";
 import RecapView from "@/recap/RecapView";
-import EditRecap from "@/recap/EditRecap";
+// import EditRecap from "@/recap/EditRecap";
 
 // User
 import UsersList from "@/users/UsersList";
@@ -268,15 +268,15 @@ const ProductLinks = {
 ----------------------------------------------------------- */
 const RecapLinks = {
   menu: [
-    { path: "/recap/create", name: "Create", Icon: PlusCircleIcon },
+    // { path: "/recap/create", name: "Create", Icon: PlusCircleIcon },
     { path: "/recap/list", name: "List", Icon: Bars4Icon },
   ],
 
   routes: [
-    { path: "/recap/create", component: <CreateRecap />, isPublic: false },
+    // { path: "/recap/create", component: <CreateRecap />, isPublic: false },
     { path: "/recap/list", component: <RecapList />, isPublic: false },
     { path: "/recap/view/:uuid", component: <RecapView />, isPublic: false },
-    { path: "/recap/edit/:uuid", component: <EditRecap />, isPublic: false },
+    // { path: "/recap/edit/:uuid", component: <EditRecap />, isPublic: false },
   ],
 };
 

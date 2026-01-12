@@ -94,6 +94,10 @@ export const RecapQuery = graphql`
         file
         fileTypeId
         createdAt
+        fileRecapCategory {
+          id
+          name
+        }
       }
       requestStoreManagers {
         id

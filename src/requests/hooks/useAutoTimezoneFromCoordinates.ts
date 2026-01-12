@@ -114,6 +114,15 @@ export function useAutoTimezoneFromCoordinates<
         const regionName = resolveRegionName(timezoneName);
 
         const resolvedTimezone =
+          // 1️⃣ IANA → región + offset (PRIORIDAD MÁXIMA)
+          (regionName && offsetMinutes !== null
+            ? timezones.find(
+                (tz) =>
+                  normalize(tz.name)?.startsWith(normalize(regionName) || "") &&
+                  tz.offset === offsetMinutes
+              )
+            : null) ??
+          // 2️⃣ Abbreviation + offset
           (normalizedAbbr && offsetMinutes !== null
             ? timezones.find(
                 (tz) =>
@@ -121,21 +130,13 @@ export function useAutoTimezoneFromCoordinates<
                   tz.offset === offsetMinutes
               )
             : null) ??
+          // 3️⃣ Abbreviation only
           (normalizedAbbr
             ? timezones.find((tz) => normalize(tz.code) === normalizedAbbr)
             : null) ??
+          // 4️⃣ IANA full name match
           (normalizedName
             ? timezones.find((tz) => normalize(tz.name) === normalizedName)
-            : null) ??
-          (regionName && offsetMinutes !== null
-            ? timezones.find(
-                (tz) =>
-                  normalize(tz.name) === normalize(regionName) &&
-                  tz.offset === offsetMinutes
-              )
-            : null) ??
-          (offsetMinutes !== null
-            ? timezones.find((tz) => tz.offset === offsetMinutes)
             : null);
 
         if (!resolvedTimezone) return;

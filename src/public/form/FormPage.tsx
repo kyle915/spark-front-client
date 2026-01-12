@@ -37,7 +37,7 @@ export default function SparkFormPage() {
   // }
 
   return (
-    <SparkFormLayout>
+    <SparkFormLayout slug={slug}>
       <SparkForm
         // clients={clients}
         requestTypes={requestTypes}

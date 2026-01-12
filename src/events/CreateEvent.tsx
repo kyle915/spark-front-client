@@ -14,8 +14,8 @@ import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__genera
 import { RequestUuidQuery } from "@api/queries/RequestUuidQuery";
 import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__generated__/RequestUuidQuery.graphql";
 
-import { LocationsQuery } from "@api/queries/LocationsQuery";
-import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
+// import { LocationsQuery } from "@api/queries/LocationsQuery";
+// import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
 
 import { CreateEventMutation } from "@api/mutations/CreateEventMutation";
 import type { CreateEventMutation as CreateEventMutationType } from "@api/mutations/__generated__/CreateEventMutation.graphql";
@@ -89,11 +89,11 @@ const CreateEventForm = ({ request }: FormProps) => {
 
   const timeZones = timezonesData.timezones.edges.map((e) => e.node);
 
-  const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
-    filters: { tenantId: request.tenantId },
-  });
+  // const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
+  //   filters: { tenantId: request.tenantId },
+  // });
 
-  const locations = locationsData.locations.edges.map((e) => e.node);
+  // const locations = locationsData.locations.edges.map((e) => e.node);
 
   // ========================
   // MUTATIONS
@@ -114,35 +114,35 @@ const CreateEventForm = ({ request }: FormProps) => {
     [request.tenantId]
   );
 
-  const getLegacyField = useMemo(
-    () => (field: string) => {
-      const value = (request as Record<string, unknown>)[field];
-      return typeof value === "string" ? value : null;
-    },
-    [request]
-  );
+  // const getLegacyField = useMemo(
+  //   () => (field: string) => {
+  //     const value = (request as Record<string, unknown>)[field];
+  //     return typeof value === "string" ? value : null;
+  //   },
+  //   [request]
+  // );
 
-  const requestContactInfo = useMemo(
-    () => ({
-      distributorName:
-        getLegacyField("distributorName") ?? request.distributor?.name ?? null,
-      distributorEmail:
-        getLegacyField("distributorEmail") ??
-        request.distributor?.email ??
-        null,
-      retailerName:
-        getLegacyField("retailerName") ?? request.retailer?.name ?? null,
-      retailerAddress:
-        getLegacyField("retailerAddress") ?? request.retailer?.address ?? null,
-      retailerStoreContact:
-        getLegacyField("retailerStoreContact") ??
-        request.retailer?.storeContact ??
-        null,
-      storeManagerName: getLegacyField("storeManagerName") ?? null,
-      storeManagerPhone: getLegacyField("storeManagerPhone") ?? null,
-    }),
-    [request, getLegacyField]
-  );
+  // const requestContactInfo = useMemo(
+  //   () => ({
+  //     distributorName:
+  //       getLegacyField("distributorName") ?? request.distributor?.name ?? null,
+  //     distributorEmail:
+  //       getLegacyField("distributorEmail") ??
+  //       request.distributor?.email ??
+  //       null,
+  //     retailerName:
+  //       getLegacyField("retailerName") ?? request.retailer?.name ?? null,
+  //     retailerAddress:
+  //       getLegacyField("retailerAddress") ?? request.retailer?.address ?? null,
+  //     retailerStoreContact:
+  //       getLegacyField("retailerStoreContact") ??
+  //       request.retailer?.storeContact ??
+  //       null,
+  //     storeManagerName: getLegacyField("storeManagerName") ?? null,
+  //     storeManagerPhone: getLegacyField("storeManagerPhone") ?? null,
+  //   }),
+  //   [request, getLegacyField]
+  // );
 
   const shouldUpdateRequest = (data: EventFormValues) => {
     return (
@@ -158,8 +158,6 @@ const CreateEventForm = ({ request }: FormProps) => {
       showAlert("Missing required fields", "error");
       return;
     }
-
-    console.log("Creating event with data:", data);
 
     commitCreateEvent({
       variables: {
@@ -217,24 +215,20 @@ const CreateEventForm = ({ request }: FormProps) => {
       variables: {
         input: {
           id: request.id,
-          name: request.name ?? data.name,
-          date: request.date ?? dateFormat(data.date ?? "") ?? "",
+          address: data.address ?? request.address,
+          coordinates: data.coordinates ?? request.coordinates ?? [],
+          date: data.date ?? dateFormat(data.date ?? "") ?? request.date,
+          name: data.name ?? request.name,
           startTime: normalizeDateTime(data.date ?? "", data.startTime) ?? "",
           endTime: normalizeDateTime(data.date ?? "", data.endTime) ?? "",
-          address: request.address ?? data.address,
-          coordinates: data.coordinates ?? request.coordinates ?? [],
-          timezoneId: request.timezone.id,
+          timezoneId: data.timezoneId ?? request.timezone.id,
           requestTypeId: request.requestType.id,
-          distributorId: data.distributorId ?? "",
-          retailerId: data.retailerId ?? "",
-          storeManagerName:
-            data.storeManagerName ?? requestContactInfo.storeManagerName ?? "",
-          storeManagerPhone:
-            data.storeManagerPhone ??
-            requestContactInfo.storeManagerPhone ??
-            "",
-          details: [],
-          products: [],
+          distributorId: request.distributor?.id ?? "",
+          retailerId: request.retailer?.id ?? "",
+          storeManagerName: request.storeManagerName ?? "",
+          storeManagerPhone: request.storeManagerPhone ?? "",
+          details: [], // faltan en el request.
+          products: [], // faltan en el request.
         },
       },
       onCompleted: ({ updateRequest }) => {
@@ -248,20 +242,22 @@ const CreateEventForm = ({ request }: FormProps) => {
   const defaultValues: Partial<EventFormValues> = {
     name: request.name ?? "",
     address: request.address ?? "",
+    tenant: request.tenantId,
+    eventTypeId: request.requestType?.id ?? "",
     date: request.date ?? "",
     startTime: request.startTime ?? undefined,
     endTime: request.endTime ?? undefined,
-    coordinates: request.coordinates.map((coord) => coord) ?? undefined,
-    timezoneId: request.timezone?.id ?? null,
-    distributorId: request.distributor?.id,
-    retailerId: request.retailer?.id,
-    storeManagerName:
-      requestContactInfo.storeManagerName ??
-      requestContactInfo.retailerStoreContact ??
-      undefined,
-    storeManagerPhone: requestContactInfo.storeManagerPhone ?? undefined,
     notes: "",
+    coordinates: request.coordinates.map((coord) => coord) ?? undefined,
     isNational: false,
+    timezoneId: request.timezone?.id ?? null,
+    // distributorId: request.distributor?.id,
+    // retailerId: request.retailer?.id,
+    // storeManagerName:
+    //   requestContactInfo.storeManagerName ??
+    //   requestContactInfo.retailerStoreContact ??
+    //   undefined,
+    // storeManagerPhone: requestContactInfo.storeManagerPhone ?? undefined,
   };
 
   return (
@@ -277,12 +273,12 @@ const CreateEventForm = ({ request }: FormProps) => {
     >
       {({
         eventTypes,
-        distributors,
-        retailers,
-        requestStoreManagers,
+        // distributors,
+        // retailers,
+        // requestStoreManagers,
         loading,
         errors,
-        refetch,
+        // refetch,
       }) => {
         if (Object.values(loading).some(Boolean)) return <Loading />;
         if (Object.values(errors).some(Boolean))
@@ -293,16 +289,16 @@ const CreateEventForm = ({ request }: FormProps) => {
             mode="create"
             eventTypes={eventTypes}
             tenantId={request.tenantId}
-            requestId={request.id}
-            distributors={distributors}
+            // requestId={request.id}
+            // distributors={distributors}
             timezones={timeZones}
-            retailers={retailers}
-            requestStoreManagers={requestStoreManagers}
-            requestContactInfo={requestContactInfo}
-            locations={locations}
+            // retailers={retailers}
+            // requestStoreManagers={requestStoreManagers}
+            // requestContactInfo={requestContactInfo}
+            // locations={locations}
             defaultValues={defaultValues}
             onSubmit={handleSubmit}
-            onRefetch={refetch}
+            // onRefetch={refetch}
           />
         );
       }}
