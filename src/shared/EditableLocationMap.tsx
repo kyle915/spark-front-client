@@ -55,7 +55,7 @@ interface Props {
 const getThemeVariant = (themeName: string | null): keyof typeof TILE_LAYERS =>
   themeName === themes.dark ? "dark" : "light";
 
-const DEFAULT_CENTER: LatLngExpression = [19.4326, -99.1332]; // Mexico City
+const DEFAULT_CENTER: LatLngExpression = [40.758, -73.9855]; // New York City
 
 interface MapClickHandlerProps {
   onMapClick: (lat: number, lng: number) => void;
