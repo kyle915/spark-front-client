@@ -227,8 +227,8 @@ const CreateEventForm = ({ request }: FormProps) => {
           retailerId: request.retailer?.id ?? "",
           storeManagerName: request.storeManagerName ?? "",
           storeManagerPhone: request.storeManagerPhone ?? "",
-          // details: // faltan en el request.
-          // products: [] // faltan en el request.
+          details: [], // faltan en el request.
+          products: [], // faltan en el request.
         },
       },
       onCompleted: ({ updateRequest }) => {

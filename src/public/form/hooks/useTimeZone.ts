@@ -51,8 +51,15 @@ function formatTimeZoneLabel(tz: TimeZone) {
   return `${tz.name}${code}${offset}`;
 }
 
+export interface PublicTimeZone {
+  id: string;
+  name: string;
+  code: string;
+  offset: number;
+}
+
 export function usePublicTimeZones() {
-  const [timeZones, setTimeZones] = useState<TimeZone[]>([]);
+  const [timeZones, setTimeZones] = useState<PublicTimeZone[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,6 +70,8 @@ export function usePublicTimeZones() {
           (tz) => ({
             ...tz,
             name: formatTimeZoneLabel(tz),
+            code: tz.code ?? "",
+            offset: tz.offset ? Number(tz.offset) : 0,
           })
         );
         setTimeZones(formattedTimeZones);

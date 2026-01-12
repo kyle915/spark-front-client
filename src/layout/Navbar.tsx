@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router";
 import { ChevronDown } from "lucide-react";
-import ThemeToggle from "../components/ui/ThemeToggle";
-
+import ThemeToggle from "@/shared/ThemeToggle";
+import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
 
 type NavLinkItem = { to: string; label: string };
 
@@ -12,7 +12,16 @@ const defaultNavLinks: NavLinkItem[] = [
   { to: "/retail-recaps", label: "Retail Recaps" },
 ];
 
-export default function Navbar({ navLinks = defaultNavLinks }: { navLinks?: NavLinkItem[]; onOpenDrawer?: () => void }) {
+export default function Navbar({
+  navLinks = defaultNavLinks,
+  colorScheme,
+  onColorSchemeChange,
+}: {
+  navLinks?: NavLinkItem[];
+  onOpenDrawer?: () => void;
+  colorScheme: "light" | "dark";
+  onColorSchemeChange: (value: TenantColorScheme) => void;
+}) {
   const location = useLocation();
   const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${
@@ -23,27 +32,24 @@ export default function Navbar({ navLinks = defaultNavLinks }: { navLinks?: NavL
   const dropdownLinkClassName = ({ isActive }: { isActive: boolean }) =>
     isActive ? "font-semibold text-primary" : "";
 
-  const currentDashboard =
-    location.pathname.startsWith("/dashboard-event")
-      ? "Event Dashboard"
-      : "Retail Dashboard";
+  const currentDashboard = location.pathname.startsWith("/dashboard-event")
+    ? "Event Dashboard"
+    : "Retail Dashboard";
 
   return (
     <header className="sticky mb-0 md:mb-5 top-0 z-50 w-full border-b backdrop-blur-xs bg-white/90 border-gray-200 dark:bg-gray-900/90 dark:border-gray-800 transition-colors duration-300">
       <div className="mx-auto p-3 sm:px-5 flex justify-between items-center">
-        
         {/* Logo */}
-        <h1 className="text-1xl text-gray-900 dark:text-white font-bold">Spark</h1>
+        <h1 className="text-1xl text-gray-900 dark:text-white font-bold">
+          Spark
+        </h1>
 
         {/* Center nav */}
         <nav className="flex justify-center flex-1">
           <ul className="menu menu-horizontal px-1 space-x-2">
             {navLinks.map((link) => (
               <li key={link.to}>
-                <NavLink
-                  to={link.to}
-                  className={navLinkClassName}
-                >
+                <NavLink to={link.to} className={navLinkClassName}>
                   {link.label}
                 </NavLink>
               </li>
@@ -67,10 +73,7 @@ export default function Navbar({ navLinks = defaultNavLinks }: { navLinks?: NavL
               className="dropdown-content menu p-2 shadow-lg bg-base-100 rounded-box w-52 border border-base-300"
             >
               <li>
-                <NavLink
-                  to="/dashboard"
-                  className={dropdownLinkClassName}
-                >
+                <NavLink to="/dashboard" className={dropdownLinkClassName}>
                   Retail Dashboard
                 </NavLink>
               </li>
@@ -84,10 +87,8 @@ export default function Navbar({ navLinks = defaultNavLinks }: { navLinks?: NavL
               </li>
             </ul>
           </div>
-          
         </div>
-        <ThemeToggle />
-
+        <ThemeToggle value={colorScheme} onChange={onColorSchemeChange} />
       </div>
     </header>
   );
