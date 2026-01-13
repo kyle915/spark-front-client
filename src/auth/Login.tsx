@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AuthForm from "@auth/components/AuthForm";
 import RegisterForm from "@auth/components/RegisterForm";
 import bgImage from "../assets/background.png";
@@ -9,7 +9,11 @@ import { useNavigate } from "react-router";
 import { useAuthStore } from "@store/authStore";
 import { register } from "@api/auth/register";
 import type { RegisterFormFields } from "@/types/auth";
-import { useColorScheme } from "@/theme/hook/useColorScheme";
+import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
+import {
+  buildThemeDefaults,
+  applyCssVariables,
+} from "@/utils/tenantThemeConfig";
 type FormData = {
   username: string;
   password: string;
@@ -21,7 +25,18 @@ const Login = () => {
   const { showAlert } = useAlertStore();
   const [isLogin, setIsLogin] = useState(true);
   const [fade, setFade] = useState(true);
-  const { colorScheme, setColorScheme } = useColorScheme("dark");
+  const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
+    (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark"
+  );
+
+  useEffect(() => {
+    const cssVars = buildThemeDefaults(colorScheme);
+
+    applyCssVariables(cssVars);
+
+    document.documentElement.setAttribute("data-theme", colorScheme);
+    localStorage.setItem("@color-scheme", colorScheme);
+  }, [colorScheme]);
 
   const handleSwitch = () => {
     setFade(false);
@@ -135,7 +150,7 @@ const Login = () => {
           </div>
         </div>
 
-        <div className="hidden lg:flex w-1/2 items-center justify-center bg-gradient-to-br from-primary to-secondary relative">
+        <div className="hidden lg:flex w-1/2 items-center justify-center bg-linear-to-br from-primary to-secondary relative">
           <div className="absolute top-4 right-4 z-20">
             <ThemeToggle value={colorScheme} onChange={setColorScheme} />
           </div>

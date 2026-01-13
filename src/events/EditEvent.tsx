@@ -12,6 +12,8 @@ import { UpdateEventMutation } from "@/api/mutations/UpdateEventMutation";
 import type { UpdateEventMutation as UpdateEventMutationType } from "@/api/mutations/__generated__/UpdateEventMutation.graphql";
 import { LocationsQuery } from "@/api/queries/LocationsQuery";
 import type { LocationsQuery as LocationsQueryType } from "@/api/queries/__generated__/LocationsQuery.graphql";
+import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
+import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import { useAlertStore } from "@/store/alertStore";
 
 type EditEventContentProps = {
@@ -21,8 +23,6 @@ type EditEventContentProps = {
 const EditEventContent = ({ uuid }: EditEventContentProps) => {
   const data = useLazyLoadQuery<EventUuidQueryType>(EventUuidQuery, { uuid });
   const event = data.event;
-
-  console.log("Event data:", event);
 
   const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
     filters: { tenantId: event?.tenantId },
@@ -37,6 +37,14 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
     () => (event?.tenantId ? { tenantId: event.tenantId } : undefined),
     [event?.tenantId]
   );
+
+  const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
+    TimezonesQuery,
+    {},
+    { fetchPolicy: "store-and-network" }
+  );
+
+  const timeZones = timezonesData.timezones.edges.map((e) => e.node);
 
   if (!event) {
     return (
@@ -59,6 +67,8 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
           name: formData.name,
           eventTypeId: formData.eventTypeId,
           requestId: event.request?.id ?? "",
+          timezoneId: formData.timezoneId,
+          coordinates: formData.coordinates ?? [],
           address: formData.address,
           notes: formData.notes ?? "",
           isNational: formData.isNational ?? false,
@@ -85,6 +95,7 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
     name: event.name ?? "",
     address: event.address ?? "",
     startTime: event.startTime ?? undefined,
+    timezoneId: event.timezone?.id ?? undefined,
     endTime: event.endTime ?? undefined,
     notes: event.notes ?? "",
     date: event.date ?? undefined,
@@ -113,6 +124,7 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
             <EventForm
               mode="edit"
               eventTypes={eventTypes}
+              timezones={timeZones}
               onSubmit={handleSubmit}
               defaultValues={defaultValues}
               locations={locations}

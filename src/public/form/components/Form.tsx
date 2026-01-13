@@ -37,6 +37,8 @@ interface SparkFormProps {
   timeZones: {
     id: string;
     name: string;
+    code: string;
+    offset: number;
   }[];
 }
 
@@ -70,7 +72,13 @@ export default function SparkForm(props: SparkFormProps) {
       title: "Basic Information",
       description: "Tell us about the visit",
       validate: () => trigger(stepFields.step1),
-      content: <Step1Basic control={control} timeZones={timeZones} />,
+      content: (
+        <Step1Basic
+          control={control}
+          timeZones={timeZones}
+          setValue={setValue}
+        />
+      ),
     },
     {
       title: "Products",

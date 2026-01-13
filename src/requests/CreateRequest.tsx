@@ -15,12 +15,15 @@ import type { ProductTypesQuery as ProductTypesQueryType } from "@api/queries/__
 import type { ProductsQuery as ProductsQueryType } from "@api/queries/__generated__/ProductsQuery.graphql";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import type { RequestMutation } from "@api/mutations/__generated__/RequestMutation.graphql";
+import { LocationsQuery } from "@api/queries/LocationsQuery";
+import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
 
 import { useAlertStore } from "@store/alertStore";
 // import { useAuthStore } from "@store/authStore";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { dateFormat } from "@/public/form/utils/toDate";
+import CatalogsProvider from "@/shared/CatalogsProvider";
 
 interface CreateRequestFormProps {
   tenantId: string;
@@ -53,6 +56,12 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
     {},
     { fetchPolicy: "store-and-network" }
   );
+
+  const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
+    filters: { tenantId: tenantId },
+  });
+
+  const locations = locationsData.locations.edges.map((e) => e.node);
 
   // ========================
   // MUTATION
@@ -153,15 +162,35 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
     return <Loading />;
   }
 
+  const filters = { tenantId: tenantId };
+
   return (
-    <RequestForm
-      mode="create"
-      onSubmit={handleSubmit}
-      requestTypes={requestTypes}
-      timezones={timezones}
-      productTypes={productTypes}
-      products={products}
-    />
+    <CatalogsProvider
+      retailers
+      retailersFilters={filters}
+      distributors
+      distributorsFilters={filters}
+      requestStoreManagers
+      requestStoreManagersFilters={filters}
+    >
+      {({ retailers, distributors, requestStoreManagers }) => (
+        <RequestForm
+          mode="create"
+          onSubmit={handleSubmit}
+          requestTypes={requestTypes}
+          timezones={timezones}
+          productTypes={productTypes}
+          products={products}
+          tenantId={tenantId}
+          retailers={retailers}
+          distributors={distributors}
+          locations={locations}
+          requestStoreManagers={requestStoreManagers}
+          enableContactSection={true}
+          contactMode="manual"
+        />
+      )}
+    </CatalogsProvider>
   );
 };
 

@@ -42,10 +42,6 @@ export const JobsQuery = graphql`
             id
             name
           }
-          company {
-            __typename
-            id
-          }
           event {
             __typename
             id

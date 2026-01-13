@@ -2,7 +2,10 @@ import { useEffect } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { TenantThemeQuery } from "@/api/queries/TenantThemeQuery";
 import type { TenantThemeQuery as TenantThemeQueryType } from "@api/queries/__generated__/TenantThemeQuery.graphql";
+
 import {
+  buildThemeDefaults,
+  applyCssVariables,
   mapTenantColorSchemeToEnum,
   type TenantColorScheme,
 } from "@/utils/tenantThemeConfig";
@@ -19,6 +22,7 @@ export const useTenantTheme = ({
   enabled = true,
 }: UseTenantThemeOptions) => {
   const shouldFetch = Boolean(tenantId) && enabled;
+
   const colorSchemeEnum = mapTenantColorSchemeToEnum(colorScheme);
 
   const data = useLazyLoadQuery<TenantThemeQueryType>(
@@ -34,17 +38,20 @@ export const useTenantTheme = ({
 
   const theme = shouldFetch ? data.tenantTheme : null;
 
+  /* =====================================================
+   * Apply Theme (SIEMPRE)
+   * ===================================================== */
   useEffect(() => {
-    if (!theme?.cssVariables) return;
+    const effectiveColorScheme =
+      (theme?.colorScheme as TenantColorScheme) ?? colorScheme;
 
-    const root = document.documentElement;
-    root.setAttribute("color-scheme", colorScheme);
+    const cssVariables = buildThemeDefaults(effectiveColorScheme, theme);
 
-    Object.entries(theme.cssVariables).forEach(([key, value]) => {
-      if (typeof value === "string") {
-        root.style.setProperty(key, value);
-      }
-    });
+    // Browser native hint (scrollbars, inputs, etc.)
+    document.documentElement.setAttribute("color-scheme", effectiveColorScheme);
+
+    // DaisyUI / Tailwind
+    applyCssVariables(cssVariables);
   }, [theme, colorScheme]);
 
   return {

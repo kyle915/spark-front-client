@@ -26,7 +26,7 @@ const metricIcons: Record<string, React.ReactNode> = {
   totalRequests: <ClipboardList />,
   totalClients: <UsersRound />,
   totalDistributors: <Building2 />,
-  totalConsumersSampled: <UsersRound />,
+  consumersSampled: <UsersRound />,
   totalPurchases: <ShoppingCart className="text-green-500" />,
   overallConversionRate: <Target className="text-purple-500" />,
   totalDemos: <BarChart3 className="text-yellow-500" />,

@@ -11,6 +11,8 @@ import { UpdateRequestMutation } from "@api/mutations/UpdateRequestMutation";
 import type { UpdateRequestMutation as UpdateRequestMutationType } from "@api/mutations/__generated__/UpdateRequestMutation.graphql";
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
+import { LocationsQuery } from "@api/queries/LocationsQuery";
+import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
 import { useAlertStore } from "@store/alertStore";
 
 type EditRequestContentProps = {
@@ -32,6 +34,12 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     {},
     { fetchPolicy: "store-and-network" }
   );
+
+  const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
+    filters: { tenantId: request?.tenantId },
+  });
+
+  const locations = locationsData.locations.edges.map((e) => e.node);
 
   if (!request) {
     return (
@@ -89,6 +97,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     retailerId: request.retailer?.id ?? null,
     distributorId: request.distributor?.id ?? null,
     requestTypeId: request.requestType?.id ?? null,
+    // storeManagerId: request.storeManager?.id ?? null, // Falta en el query request.graphql
   };
 
   const filters = { tenantId: request.tenantId };
@@ -97,27 +106,51 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
   return (
     <>
       <CatalogsProvider
-        clients={true}
+        clients
         clientsFilters={filters}
-        retailers={true}
+        retailers
         retailersFilters={filters}
-        distributors={true}
+        distributors
         distributorsFilters={filters}
-        requestTypes={true}
+        requestTypes
         requestTypesFilters={filters}
+        requestStoreManagers
+        requestStoreManagersFilters={filters}
       >
-        {(catalogs) => (
-          <RequestForm
-            onSubmit={handleSubmit}
-            mode="edit"
-            defaultValues={defaultValues}
-            clients={catalogs.clients}
-            retailers={catalogs.retailers}
-            distributors={catalogs.distributors}
-            requestTypes={catalogs.requestTypes}
-            timezones={timezones}
-          />
-        )}
+        {({
+          clients,
+          retailers,
+          distributors,
+          requestTypes,
+          requestStoreManagers,
+          loading,
+          errors,
+          refetch,
+        }) => {
+          if (Object.values(loading).some(Boolean)) return <Loading />;
+          if (Object.values(errors).some(Boolean))
+            return <div className="alert alert-error">Catalog error</div>;
+
+          return (
+            <RequestForm
+              mode="edit"
+              tenantId={request.tenantId}
+              requestId={request.id}
+              defaultValues={defaultValues}
+              onSubmit={handleSubmit}
+              clients={clients}
+              retailers={retailers}
+              distributors={distributors}
+              requestTypes={requestTypes}
+              timezones={timezones}
+              locations={locations}
+              requestStoreManagers={requestStoreManagers}
+              enableContactSection={true}
+              contactMode="manual"
+              onRefetch={refetch}
+            />
+          );
+        }}
       </CatalogsProvider>
     </>
   );
