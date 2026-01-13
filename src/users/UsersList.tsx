@@ -19,7 +19,6 @@ import { UpdateUserMutation } from "@/api/mutations/UpdateUserMutation";
 import type { UpdateUserMutation as UpdateUserMutationType } from "@/api/mutations/__generated__/UpdateUserMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
 import { PencilIcon, UserGroupIcon } from "@heroicons/react/24/outline";
-import FormAutocomplete from "@shared/FormAutocomplete";
 import { fetchQuery, graphql } from "react-relay";
 import type { GraphQLTaggedNode } from "react-relay";
 import environment from "@api/relay/environment";
@@ -160,12 +159,6 @@ type EditUserFormValues = {
   tenantId: string | null;
 };
 
-const roleOptions: Array<{ label: string; value: RoleFilterOption }> = [
-  { label: "All roles", value: "all" },
-  { label: "Client", value: "CLIENT" },
-  { label: "Ambassador", value: "AMBASSADOR" },
-  { label: "Spark", value: "SPARK" },
-];
 const normalizeRoleName = (name?: string | null): RoleValue | null => {
   if (!name) return null;
   const upper = name.toUpperCase();
