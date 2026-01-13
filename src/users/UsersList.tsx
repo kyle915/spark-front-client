@@ -166,13 +166,6 @@ const roleOptions: Array<{ label: string; value: RoleFilterOption }> = [
   { label: "Ambassador", value: "AMBASSADOR" },
   { label: "Spark", value: "SPARK" },
 ];
-const roleOptionsNoAll = roleOptions.filter(
-  (option) => option.value !== "all"
-) as Array<{
-  label: string;
-  value: RoleValue;
-}>;
-
 const normalizeRoleName = (name?: string | null): RoleValue | null => {
   if (!name) return null;
   const upper = name.toUpperCase();
@@ -217,7 +210,7 @@ const UsersList = () => {
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [currentRoleLabel, setCurrentRoleLabel] = useState<string | null>(null);
+  const [, setCurrentRoleLabel] = useState<string | null>(null);
 
   useEffect(() => {
     if (profileFile) {
@@ -350,7 +343,7 @@ const UsersList = () => {
 
   const onSubmitEdit = async (values: EditUserFormValues) => {
     if (!editingUser?.id) return;
-    const roleToSend = values.role ?? normalizeRoleName(currentRoleLabel);
+    const roleToSend: RoleValue = "CLIENT";
     const tenantId =
       roleToSend === "CLIENT" ? values.tenantId || undefined : undefined;
 
@@ -377,7 +370,7 @@ const UsersList = () => {
           firstName: values.firstName,
           lastName: values.lastName,
           email: values.email,
-          role: roleToSend ?? undefined,
+          role: roleToSend,
           tenantId,
           image: imageBlob,
         },
@@ -454,6 +447,7 @@ const UsersList = () => {
               placeholder="e.g., demo@email.com"
               label="Filter by Email"
             />
+            {/*
             <FormAutocomplete
               control={control}
               name="role"
@@ -461,6 +455,7 @@ const UsersList = () => {
               options={roleOptions}
               placeholder="Select a role"
             />
+            */}
           </div>
         </div>
 
@@ -510,6 +505,7 @@ const UsersList = () => {
                     rules={{ required: "Email is required" }}
                   />
                 </div>
+                {/*
                 <FormAutocomplete
                   control={editControl}
                   name="role"
@@ -528,6 +524,7 @@ const UsersList = () => {
                     available options; leave unchanged or pick a new one.
                   </div>
                 ) : null}
+                */}
 
                 <label className="form-control md:col-span-2">
                   <div className="label pb-1">
