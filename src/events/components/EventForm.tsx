@@ -1,5 +1,5 @@
-import { Controller, useForm, useWatch } from "react-hook-form";
-import { useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+// import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 
 import type {
@@ -19,17 +19,17 @@ import { ArrowLeftIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { PencilIcon } from "@heroicons/react/24/solid";
 import { SaveIcon } from "lucide-react";
 
-import { useMutation } from "react-relay/hooks";
-import { useAlertStore } from "@store/alertStore";
+// import { useMutation } from "react-relay/hooks";
+// import { useAlertStore } from "@store/alertStore";
 
-import { CreateRequestStoreManagerMutation } from "@api/mutations/CreateRequestStoreManagerMutation";
-import type { CreateRequestStoreManagerMutation as CreateRequestStoreManagerMutationType } from "@api/mutations/__generated__/CreateRequestStoreManagerMutation.graphql";
+// import { CreateRequestStoreManagerMutation } from "@api/mutations/CreateRequestStoreManagerMutation";
+// import type { CreateRequestStoreManagerMutation as CreateRequestStoreManagerMutationType } from "@api/mutations/__generated__/CreateRequestStoreManagerMutation.graphql";
 
-import { CreateDistributorMutation } from "@api/mutations/CreateDistributorMutation";
-import type { CreateDistributorMutation as CreateDistributorMutationType } from "@api/mutations/__generated__/CreateDistributorMutation.graphql";
+// import { CreateDistributorMutation } from "@api/mutations/CreateDistributorMutation";
+// import type { CreateDistributorMutation as CreateDistributorMutationType } from "@api/mutations/__generated__/CreateDistributorMutation.graphql";
 
-import { CreateRetailerMutation } from "@api/mutations/CreateRetailerMutation";
-import type { CreateRetailerMutation as CreateRetailerMutationType } from "@api/mutations/__generated__/CreateRetailerMutation.graphql";
+// import { CreateRetailerMutation } from "@api/mutations/CreateRetailerMutation";
+// import type { CreateRetailerMutation as CreateRetailerMutationType } from "@api/mutations/__generated__/CreateRetailerMutation.graphql";
 
 import { useAutoTimezoneFromCoordinates } from "@/requests/hooks/useAutoTimezoneFromCoordinates";
 
@@ -37,21 +37,21 @@ export default function EventForm({
   mode,
   eventTypes,
   tenantId,
-  requestId,
-  distributors = [],
+  // requestId,
+  // distributors = [],
   timezones = [],
-  retailers = [],
-  requestStoreManagers = [],
-  locations = [],
-  requestContactInfo,
-  enableContactSection,
-  contactMode,
+  // retailers = [],
+  // requestStoreManagers = [],
+  // locations = [],
+  // requestContactInfo,
+  // enableContactSection,
+  // contactMode,
   onSubmit,
   defaultValues = {},
-  onRefetch,
-}: EventFormProps) {
+}: // onRefetch,
+EventFormProps) {
   const navigate = useNavigate();
-  const { showAlert } = useAlertStore();
+  // const { showAlert } = useAlertStore();
 
   const safeDefaultValues: EventFormValues = {
     name: "",
@@ -65,23 +65,23 @@ export default function EventForm({
     isNational: false,
     coordinates: null,
     timezoneId: null,
-    distributorId: null,
-    retailerId: null,
-    storeManagerId: null,
-    distributorName: "",
-    distributorEmail: "",
-    retailerName: "",
-    retailerAddress: "",
-    retailerStoreContact: "",
-    storeManagerName: "",
-    storeManagerPhone: "",
-    distributorLocationId: null,
-    retailerLocationId: null,
+    // distributorId: null,
+    // retailerId: null,
+    // storeManagerId: null,
+    // distributorName: "",
+    // distributorEmail: "",
+    // retailerName: "",
+    // retailerAddress: "",
+    // retailerStoreContact: "",
+    // storeManagerName: "",
+    // storeManagerPhone: "",
+    // distributorLocationId: null,
+    // retailerLocationId: null,
     ...defaultValues,
   };
 
   /* ================= FORM ================= */
-  const { handleSubmit, control, setValue, trigger, formState, watch } =
+  const { handleSubmit, control, setValue, formState, watch } =
     useForm<EventFormValues>({
       defaultValues: safeDefaultValues,
     });
@@ -90,9 +90,9 @@ export default function EventForm({
   const isDirty = formState.isDirty;
 
   /* ================= WATCH ================= */
-  const distributorId = useWatch({ control, name: "distributorId" });
-  const retailerId = useWatch({ control, name: "retailerId" });
-  const storeManagerId = useWatch({ control, name: "storeManagerId" });
+  // const distributorId = useWatch({ control, name: "distributorId" });
+  // const retailerId = useWatch({ control, name: "retailerId" });
+  // const storeManagerId = useWatch({ control, name: "storeManagerId" });
   const selectedCoordinates = watch("coordinates");
   const selectedTimezoneId = watch("timezoneId");
 
@@ -105,195 +105,195 @@ export default function EventForm({
     initialFromBackend: Boolean(defaultValues?.timezoneId),
   });
 
-  const distributorLocationId = useWatch({
-    control,
-    name: "distributorLocationId",
-  });
-  const retailerLocationId = useWatch({
-    control,
-    name: "retailerLocationId",
-  });
+  // const distributorLocationId = useWatch({
+  //   control,
+  //   name: "distributorLocationId",
+  // });
+  // const retailerLocationId = useWatch({
+  //   control,
+  //   name: "retailerLocationId",
+  // });
 
-  const manualFields = useWatch({ control });
+  // const manualFields = useWatch({ control });
 
   /* ================= UI STATE ================= */
-  const [showDistributorLocation, setShowDistributorLocation] = useState(false);
-  const [showRetailerLocation, setShowRetailerLocation] = useState(false);
-  const [showStoreManagerCreate, setShowStoreManagerCreate] = useState(false);
+  // const [showDistributorLocation, setShowDistributorLocation] = useState(false);
+  // const [showRetailerLocation, setShowRetailerLocation] = useState(false);
+  // const [showStoreManagerCreate, setShowStoreManagerCreate] = useState(false);
 
   /* ================= CONTACT MODE ================= */
-  const effectiveContactMode = useMemo(
-    () => contactMode ?? (requestContactInfo ? "request" : "manual"),
-    [contactMode, requestContactInfo]
-  );
+  // const effectiveContactMode = useMemo(
+  //   () => contactMode ?? (requestContactInfo ? "request" : "manual"),
+  //   [contactMode, requestContactInfo]
+  // );
 
-  const showContactSection = useMemo(() => {
-    if (enableContactSection !== undefined) return enableContactSection;
-    return Boolean(requestContactInfo);
-  }, [enableContactSection, requestContactInfo]);
+  // const showContactSection = useMemo(() => {
+  //   if (enableContactSection !== undefined) return enableContactSection;
+  //   return Boolean(requestContactInfo);
+  // }, [enableContactSection, requestContactInfo]);
 
-  const contactInfo = useMemo(() => {
-    if (effectiveContactMode === "request") return requestContactInfo ?? {};
-    return {
-      distributorName: manualFields.distributorName ?? null,
-      distributorEmail: manualFields.distributorEmail ?? null,
-      retailerName: manualFields.retailerName ?? null,
-      retailerAddress: manualFields.retailerAddress ?? null,
-      retailerStoreContact: manualFields.retailerStoreContact ?? null,
-      storeManagerName: manualFields.storeManagerName ?? null,
-      storeManagerPhone: manualFields.storeManagerPhone ?? null,
-    };
-  }, [effectiveContactMode, manualFields, requestContactInfo]);
+  // const contactInfo = useMemo(() => {
+  //   if (effectiveContactMode === "request") return requestContactInfo ?? {};
+  //   return {
+  //     distributorName: manualFields.distributorName ?? null,
+  //     distributorEmail: manualFields.distributorEmail ?? null,
+  //     retailerName: manualFields.retailerName ?? null,
+  //     retailerAddress: manualFields.retailerAddress ?? null,
+  //     retailerStoreContact: manualFields.retailerStoreContact ?? null,
+  //     storeManagerName: manualFields.storeManagerName ?? null,
+  //     storeManagerPhone: manualFields.storeManagerPhone ?? null,
+  //   };
+  // }, [effectiveContactMode, manualFields, requestContactInfo]);
 
   /* ================= OPTIONS ================= */
-  const distributorsOptions = useMemo(
-    () =>
-      distributors.map((d) => ({
-        value: d.id,
-        label: d.email ? `${d.name} (${d.email})` : d.name,
-      })),
-    [distributors]
-  );
+  // const distributorsOptions = useMemo(
+  //   () =>
+  //     distributors.map((d) => ({
+  //       value: d.id,
+  //       label: d.email ? `${d.name} (${d.email})` : d.name,
+  //     })),
+  //   [distributors]
+  // );
 
-  const retailersOptions = useMemo(
-    () =>
-      retailers.map((r) => ({
-        value: r.id,
-        label: r.address ? `${r.name} - ${r.address}` : r.name,
-      })),
-    [retailers]
-  );
+  // const retailersOptions = useMemo(
+  //   () =>
+  //     retailers.map((r) => ({
+  //       value: r.id,
+  //       label: r.address ? `${r.name} - ${r.address}` : r.name,
+  //     })),
+  //   [retailers]
+  // );
 
-  const storeManagerOptions = useMemo(
-    () =>
-      requestStoreManagers.map((m) => ({
-        value: m.id,
-        label: m.phone ? `${m.name} (${m.phone})` : m.name,
-      })),
-    [requestStoreManagers]
-  );
+  // const storeManagerOptions = useMemo(
+  //   () =>
+  //     requestStoreManagers.map((m) => ({
+  //       value: m.id,
+  //       label: m.phone ? `${m.name} (${m.phone})` : m.name,
+  //     })),
+  //   [requestStoreManagers]
+  // );
 
   /* ================= MUTATIONS ================= */
-  const [commitCreateDistributor, isCreatingDistributor] =
-    useMutation<CreateDistributorMutationType>(CreateDistributorMutation);
+  // const [commitCreateDistributor, isCreatingDistributor] =
+  //   useMutation<CreateDistributorMutationType>(CreateDistributorMutation);
 
-  const [commitCreateRetailer, isCreatingRetailer] =
-    useMutation<CreateRetailerMutationType>(CreateRetailerMutation);
+  // const [commitCreateRetailer, isCreatingRetailer] =
+  //   useMutation<CreateRetailerMutationType>(CreateRetailerMutation);
 
-  const [commitCreateStoreManager, isCreatingStoreManager] =
-    useMutation<CreateRequestStoreManagerMutationType>(
-      CreateRequestStoreManagerMutation
-    );
+  // const [commitCreateStoreManager, isCreatingStoreManager] =
+  //   useMutation<CreateRequestStoreManagerMutationType>(
+  //     CreateRequestStoreManagerMutation
+  //   );
 
   /* ================= HANDLERS ================= */
-  const handleCreateDistributor = () => {
-    const { distributorName, distributorEmail } = contactInfo;
+  // const handleCreateDistributor = () => {
+  //   const { distributorName, distributorEmail } = contactInfo;
 
-    if (!distributorName || !distributorEmail || !distributorLocationId) {
-      showAlert("Missing distributor data.", "error");
-      return;
-    }
+  //   if (!distributorName || !distributorEmail || !distributorLocationId) {
+  //     showAlert("Missing distributor data.", "error");
+  //     return;
+  //   }
 
-    commitCreateDistributor({
-      variables: {
-        input: {
-          tenantId,
-          name: distributorName,
-          email: distributorEmail,
-          locationId: distributorLocationId,
-        },
-      },
-      onCompleted: (res) => {
-        const distributor = res.createDistributor?.distributor;
-        if (res.createDistributor?.success && distributor) {
-          setValue("distributorId", distributor.id);
-          setShowDistributorLocation(false);
-          onRefetch?.("distributors");
-          showAlert(res.createDistributor.message, "success");
-        } else {
-          showAlert(res.createDistributor?.message ?? "Error", "error");
-        }
-      },
-      onError: (e) => showAlert(e.message, "error"),
-    });
-  };
+  //   commitCreateDistributor({
+  //     variables: {
+  //       input: {
+  //         tenantId,
+  //         name: distributorName,
+  //         email: distributorEmail,
+  //         locationId: distributorLocationId,
+  //       },
+  //     },
+  //     onCompleted: (res) => {
+  //       const distributor = res.createDistributor?.distributor;
+  //       if (res.createDistributor?.success && distributor) {
+  //         setValue("distributorId", distributor.id);
+  //         setShowDistributorLocation(false);
+  //         onRefetch?.("distributors");
+  //         showAlert(res.createDistributor.message, "success");
+  //       } else {
+  //         showAlert(res.createDistributor?.message ?? "Error", "error");
+  //       }
+  //     },
+  //     onError: (e) => showAlert(e.message, "error"),
+  //   });
+  // };
 
-  const handleCreateRetailer = () => {
-    const { retailerName, retailerAddress, retailerStoreContact } = contactInfo;
+  // const handleCreateRetailer = () => {
+  //   const { retailerName, retailerAddress, retailerStoreContact } = contactInfo;
 
-    if (!retailerName || !retailerAddress || !retailerLocationId) {
-      showAlert("Missing retailer data.", "error");
-      return;
-    }
+  //   if (!retailerName || !retailerAddress || !retailerLocationId) {
+  //     showAlert("Missing retailer data.", "error");
+  //     return;
+  //   }
 
-    commitCreateRetailer({
-      variables: {
-        input: {
-          tenantId,
-          name: retailerName,
-          address: retailerAddress,
-          storeContact: retailerStoreContact ?? "",
-          locationId: retailerLocationId,
-        },
-      },
-      onCompleted: (res) => {
-        const retailer = res.createRetailer?.retailer;
-        if (res.createRetailer?.success && retailer) {
-          setValue("retailerId", retailer.id);
-          setShowRetailerLocation(false);
-          onRefetch?.("retailers");
-          showAlert(res.createRetailer.message, "success");
-        } else {
-          showAlert(res.createRetailer?.message ?? "Error", "error");
-        }
-      },
-      onError: (e) => showAlert(e.message, "error"),
-    });
-  };
+  //   commitCreateRetailer({
+  //     variables: {
+  //       input: {
+  //         tenantId,
+  //         name: retailerName,
+  //         address: retailerAddress,
+  //         storeContact: retailerStoreContact ?? "",
+  //         locationId: retailerLocationId,
+  //       },
+  //     },
+  //     onCompleted: (res) => {
+  //       const retailer = res.createRetailer?.retailer;
+  //       if (res.createRetailer?.success && retailer) {
+  //         setValue("retailerId", retailer.id);
+  //         setShowRetailerLocation(false);
+  //         onRefetch?.("retailers");
+  //         showAlert(res.createRetailer.message, "success");
+  //       } else {
+  //         showAlert(res.createRetailer?.message ?? "Error", "error");
+  //       }
+  //     },
+  //     onError: (e) => showAlert(e.message, "error"),
+  //   });
+  // };
 
-  const handleCreateStoreManager = async () => {
-    const isValid = await trigger(["storeManagerName", "storeManagerPhone"]);
+  // const handleCreateStoreManager = async () => {
+  //   const isValid = await trigger(["storeManagerName", "storeManagerPhone"]);
 
-    if (!isValid) {
-      showAlert("Please complete store manager information.", "error");
-      return;
-    }
+  //   if (!isValid) {
+  //     showAlert("Please complete store manager information.", "error");
+  //     return;
+  //   }
 
-    const { storeManagerName, storeManagerPhone } = contactInfo;
+  //   const { storeManagerName, storeManagerPhone } = contactInfo;
 
-    if (!storeManagerName || !storeManagerPhone) return;
+  //   if (!storeManagerName || !storeManagerPhone) return;
 
-    commitCreateStoreManager({
-      variables: {
-        input: {
-          tenantId,
-          requestId: requestId ?? null,
-          name: storeManagerName,
-          phone: storeManagerPhone,
-        },
-      },
-      onCompleted: (res) => {
-        const manager = res.createRequestStoreManager?.requestStoreManager;
+  //   commitCreateStoreManager({
+  //     variables: {
+  //       input: {
+  //         tenantId,
+  //         requestId: requestId ?? null,
+  //         name: storeManagerName,
+  //         phone: storeManagerPhone,
+  //       },
+  //     },
+  //     onCompleted: (res) => {
+  //       const manager = res.createRequestStoreManager?.requestStoreManager;
 
-        if (res.createRequestStoreManager?.success && manager) {
-          setValue("storeManagerId", manager.id, {
-            shouldDirty: true,
-            shouldTouch: true,
-          });
+  //       if (res.createRequestStoreManager?.success && manager) {
+  //         setValue("storeManagerId", manager.id, {
+  //           shouldDirty: true,
+  //           shouldTouch: true,
+  //         });
 
-          onRefetch?.("requestStoreManagers");
-          showAlert(res.createRequestStoreManager.message, "success");
-        } else {
-          showAlert(
-            res.createRequestStoreManager?.message ??
-              "Error creating store manager",
-            "error"
-          );
-        }
-      },
-      onError: (e) => showAlert(e.message, "error"),
-    });
-  };
+  //         onRefetch?.("requestStoreManagers");
+  //         showAlert(res.createRequestStoreManager.message, "success");
+  //       } else {
+  //         showAlert(
+  //           res.createRequestStoreManager?.message ??
+  //             "Error creating store manager",
+  //           "error"
+  //         );
+  //       }
+  //     },
+  //     onError: (e) => showAlert(e.message, "error"),
+  //   });
+  // };
 
   /* ================= RENDER ================= */
   return (
@@ -436,9 +436,8 @@ export default function EventForm({
           </section>
 
           {/* ================= ENTITIES ================= */}
-          {(mode === "create" || showContactSection) && (
+          {/* {(mode === "create" || showContactSection) && (
             <section className="space-y-6 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
-              {/* HEADER */}
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-semibold text-lg">Event entities</p>
@@ -452,11 +451,9 @@ export default function EventForm({
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {/* ================= DISTRIBUTOR ================= */}
                 <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
                   <p className="font-medium">Distributor</p>
 
-                  {/* SELECT */}
                   <FormAutocomplete
                     name="distributorId"
                     control={control}
@@ -465,7 +462,6 @@ export default function EventForm({
                     options={distributorsOptions}
                   />
 
-                  {/* CREATE TOGGLE */}
                   {!distributorId && (
                     <div className="space-y-3">
                       <p className="text-base-content/60">or</p>
@@ -531,11 +527,9 @@ export default function EventForm({
                   )}
                 </div>
 
-                {/* ================= RETAILER ================= */}
                 <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
                   <p className="font-medium">Retailer</p>
 
-                  {/* SELECT */}
                   <FormAutocomplete
                     name="retailerId"
                     control={control}
@@ -544,7 +538,6 @@ export default function EventForm({
                     options={retailersOptions}
                   />
 
-                  {/* CREATE TOGGLE */}
                   {!retailerId && (
                     <div className="space-y-3">
                       <p className="text-base-content/60">or</p>
@@ -616,11 +609,9 @@ export default function EventForm({
                   )}
                 </div>
 
-                {/* ================= STORE MANAGER ================= */}
                 <div className="col-span-2 space-y-4 rounded-xl bg-base-200/60 p-4">
                   <p className="font-medium">Store manager</p>
 
-                  {/* SELECT */}
                   <FormAutocomplete
                     name="storeManagerId"
                     control={control}
@@ -629,7 +620,6 @@ export default function EventForm({
                     options={storeManagerOptions}
                   />
 
-                  {/* CREATE TOGGLE */}
                   {!storeManagerId && (
                     <div className="space-y-3">
                       <p className="text-base-content/60">or</p>
@@ -692,7 +682,7 @@ export default function EventForm({
                 </div>
               </div>
             </section>
-          )}
+          )} */}
 
           {/* ================= EVENT DETAILS ================= */}
           <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">

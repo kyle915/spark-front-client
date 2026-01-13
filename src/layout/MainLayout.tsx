@@ -1,12 +1,18 @@
 // src/layout/MainLayout.tsx
 import { Outlet } from "react-router";
 import Navbar from "../layout/Navbar";
+import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
+import { useState } from "react";
 
 export default function MainLayout() {
+  const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
+    (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark"
+  );
+
   return (
     <div className="min-h-screen flex flex-col bg-base-100 text-base-content">
       {/* Navbar DaisyUI */}
-      <Navbar />
+      <Navbar colorScheme={colorScheme} onColorSchemeChange={setColorScheme} />
 
       {/* Main content area */}
       <main className="flex-1 container mx-auto px-6 py-8">

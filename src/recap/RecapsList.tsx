@@ -15,17 +15,20 @@ import { EventsQuery } from "@/api/queries/EventsQuery";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import type { EventsQuery as EventsQueryType } from "@/api/queries/__generated__/EventsQuery.graphql";
 import type { RecapsQuery as RecapsQueryType } from "@/api/queries/__generated__/RecapsQuery.graphql";
-import { ApproveRecapMutation } from "@api/mutations/ApproveRecapMutation";
-import type { ApproveRecapMutation as ApproveRecapMutationType } from "@api/mutations/__generated__/ApproveRecapMutation.graphql";
+// import { ApproveRecapMutation } from "@api/mutations/ApproveRecapMutation";
+// import type { ApproveRecapMutation as ApproveRecapMutationType } from "@api/mutations/__generated__/ApproveRecapMutation.graphql";
+import { GenerateRecapPdfMutation } from "@/api/mutations/GenerateRecapPdfMutation";
+import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@api/mutations/__generated__/GenerateRecapPdfMutation.graphql";
 import type { PreloadedQuery } from "react-relay";
 import type { RecapRow } from "@/types/columnsTypes";
 import { createRecapColumns } from "@/utils/columns";
 import { CameraIcon } from "@heroicons/react/24/solid";
 import {
-  CheckCircleIcon,
+  // CheckCircleIcon,
   EyeIcon,
-  PencilIcon,
-  XCircleIcon,
+  ArrowDownTrayIcon,
+  // PencilIcon,
+  // XCircleIcon,
 } from "@heroicons/react/24/outline";
 
 import { useNavigate } from "react-router";
@@ -48,11 +51,14 @@ type RecapsTableContentProps = {
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;
   emptyMessage: string;
-  onApprove: (recap: RecapRow) => void;
-  onDecline: (recap: RecapRow) => void;
-  approvingId: string | null;
-  targetApproval: boolean | null;
-  isApproving: boolean;
+  exportingId: string | null;
+  isExporting: boolean;
+  onExportPdf: (recap: RecapRow) => void;
+  // onApprove: (recap: RecapRow) => void;
+  // onDecline: (recap: RecapRow) => void;
+  // approvingId: string | null;
+  // targetApproval: boolean | null;
+  // isApproving: boolean;
 };
 
 const RecapsTableContent = ({
@@ -65,12 +71,15 @@ const RecapsTableContent = ({
   onPageLoaded,
   isNavigating,
   emptyMessage,
-  onApprove,
-  onDecline,
-  approvingId,
-  targetApproval,
-  isApproving,
-}: RecapsTableContentProps) => {
+  exportingId,
+  isExporting,
+  onExportPdf,
+}: // onApprove,
+// onDecline,
+// approvingId,
+// targetApproval,
+// isApproving,
+RecapsTableContentProps) => {
   const navigate = useNavigate();
   const data = usePreloadedQuery<RecapsQueryType>(RecapsQuery, queryReference);
   const connection = data.recaps;
@@ -97,22 +106,41 @@ const RecapsTableContent = ({
       customActions={{
         headerLabel: "Actions",
         render: (row) => (
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             <button
               type="button"
-              className="btn btn-xs btn-ghost"
+              className="btn btn-xs btn-outline"
               onClick={() => navigate(`/recap/view/${row.uuid}`)}
             >
               <EyeIcon className="w-5 h-5" />
+              View
             </button>
+
             <button
+              type="button"
+              className="btn btn-xs btn-outline text-info disabled:text-info/50"
+              onClick={() => onExportPdf(row)}
+              disabled={isExporting}
+              aria-label="Export recap PDF"
+            >
+              {isExporting && exportingId === row.id ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <>
+                  <ArrowDownTrayIcon className="w-5 h-5" />
+                  Export PDF
+                </>
+              )}
+            </button>
+
+            {/* <button
               type="button"
               className="btn btn-xs btn-ghost"
               onClick={() => navigate(`/recap/edit/${row.uuid}`)}
             >
               <PencilIcon className="w-5 h-5" />
-            </button>
-            <button
+            </button> */}
+            {/* <button
               type="button"
               className="btn btn-xs btn-outline btn-success tooltip disabled:text-success/50 hover:text-white"
               onClick={() => onApprove(row)}
@@ -143,7 +171,7 @@ const RecapsTableContent = ({
               ) : (
                 <XCircleIcon className="w-5 h-5" />
               )}
-            </button>
+            </button> */}
           </div>
         ),
       }}
@@ -168,16 +196,20 @@ type RecapsListInnerProps = {
 
 const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
   const showAlert = useAlertStore((state) => state.showAlert);
-  const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [targetApproval, setTargetApproval] = useState<boolean | null>(null);
-  const [commitApprove, isApproving] =
-    useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
+  // const [approvingId, setApprovingId] = useState<string | null>(null);
+  // const [targetApproval, setTargetApproval] = useState<boolean | null>(null);
+  // const [commitApprove, isApproving] =
+  // useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const [commitGeneratePdf, isExporting] =
+    useMutation<GenerateRecapPdfMutationType>(GenerateRecapPdfMutation);
+
   const {
     queryRef,
     displayPage,
     isNavigating,
     handlePageLoaded,
-    refresh,
+    // refresh,
     goNext,
     goPrevious,
     goToPage,
@@ -187,39 +219,82 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
     initialVariables: { filters },
   });
 
-  const handleSetRecapApproval = useCallback(
-    (recap: RecapRow, approved: boolean) => {
+  // const handleSetRecapApproval = useCallback(
+  //   (recap: RecapRow, approved: boolean) => {
+  //     if (!recap.id) return;
+
+  //     // setApprovingId(recap.id);
+  //     // setTargetApproval(approved);
+  //     commitApprove({
+  //       variables: { input: { id: recap.id, approved } },
+  //       onCompleted: (response) => {
+  //         const payload = response.approveRecap;
+  //         if (payload.success) {
+  //           showAlert(
+  //             payload.message ?? "Recap updated successfully",
+  //             "success"
+  //           );
+  //           refresh();
+  //         } else {
+  //           showAlert(
+  //             payload.message ?? "Failed to update recap status",
+  //             "error"
+  //           );
+  //         }
+  //         setApprovingId(null);
+  //         setTargetApproval(null);
+  //       },
+  //       onError: (error) => {
+  //         showAlert(error.message, "error");
+  //         setApprovingId(null);
+  //         setTargetApproval(null);
+  //       },
+  //     });
+  //   },
+  //   [commitApprove, refresh, showAlert]
+  // );
+
+  const handleExportPdf = useCallback(
+    (recap: RecapRow) => {
       if (!recap.id) return;
 
-      setApprovingId(recap.id);
-      setTargetApproval(approved);
-      commitApprove({
-        variables: { input: { id: recap.id, approved } },
+      setExportingId(recap.id);
+      commitGeneratePdf({
+        variables: { input: { id: recap.id } },
         onCompleted: (response) => {
-          const payload = response.approveRecap;
+          const payload = response.generateRecapPdf;
           if (payload.success) {
-            showAlert(
-              payload.message ?? "Recap updated successfully",
-              "success"
-            );
-            refresh();
+            const fileUrl = payload.recapFile?.file;
+            if (fileUrl) {
+              const newTab = window.open(
+                fileUrl,
+                "_blank",
+                "noopener,noreferrer"
+              );
+              if (!newTab) {
+                window.location.assign(fileUrl);
+                showAlert("Popup blocked. Opened PDF in this tab.", "warning");
+              } else {
+                showAlert(
+                  payload.message ?? "PDF generated successfully",
+                  "success"
+                );
+              }
+            } else {
+              showAlert("PDF generated but file URL is missing", "warning");
+            }
           } else {
-            showAlert(
-              payload.message ?? "Failed to update recap status",
-              "error"
-            );
+            showAlert(payload.message ?? "Failed to generate PDF", "error");
           }
-          setApprovingId(null);
-          setTargetApproval(null);
+          setExportingId(null);
         },
         onError: (error) => {
           showAlert(error.message, "error");
-          setApprovingId(null);
-          setTargetApproval(null);
+          setExportingId(null);
         },
       });
     },
-    [commitApprove, refresh, showAlert]
+    [commitGeneratePdf, showAlert]
   );
 
   return (
@@ -235,11 +310,14 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
           isNavigating={isNavigating}
           onPageLoaded={handlePageLoaded}
           emptyMessage={emptyMessage}
-          onApprove={(recap) => handleSetRecapApproval(recap, true)}
-          onDecline={(recap) => handleSetRecapApproval(recap, false)}
-          approvingId={approvingId}
-          targetApproval={targetApproval}
-          isApproving={isApproving}
+          // onApprove={(recap) => handleSetRecapApproval(recap, true)}
+          // onDecline={(recap) => handleSetRecapApproval(recap, false)}
+          // approvingId={approvingId}
+          // targetApproval={targetApproval}
+          // isApproving={isApproving}
+          onExportPdf={handleExportPdf}
+          exportingId={exportingId}
+          isExporting={isExporting}
         />
       ) : (
         <Loading />

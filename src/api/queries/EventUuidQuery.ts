@@ -14,6 +14,11 @@ export const EventUuidQuery = graphql`
       isNational
       date
       notes
+      timezone {
+        id
+        name
+        code
+      }
       request {
         __typename
         id

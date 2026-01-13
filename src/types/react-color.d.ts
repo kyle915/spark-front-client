@@ -1,11 +1,27 @@
-import * as React from "react";
+declare module "react-color" {
+  import * as React from "react";
 
-export type ColorResult = {
-  hex: string;
-};
+  export interface ColorResult {
+    hex: string;
+    rgb: {
+      r: number;
+      g: number;
+      b: number;
+      a?: number;
+    };
+    hsl: {
+      h: number;
+      s: number;
+      l: number;
+      a?: number;
+    };
+  }
 
-export const SketchPicker: React.ComponentType<{
-  color?: string;
-  onChange?: (color: ColorResult) => void;
-  disableAlpha?: boolean;
-}>;
+  export interface SketchPickerProps {
+    color?: string;
+    onChange?: (color: ColorResult) => void;
+    disableAlpha?: boolean;
+  }
+
+  export class SketchPicker extends React.Component<SketchPickerProps> {}
+}
