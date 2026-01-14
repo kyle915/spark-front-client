@@ -1,11 +1,15 @@
 import Layout from "@/layout/Layout";
 import { RecapQuery } from "@/api/queries/RecapQuery";
 import type { RecapQuery as RecapQueryType } from "@/api/queries/__generated__/RecapQuery.graphql";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { GenerateRecapPdfMutation } from "@api/mutations/GenerateRecapPdfMutation";
+import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@api/mutations/__generated__/GenerateRecapPdfMutation.graphql";
+import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, useNavigate, Link } from "react-router";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { formatDate, formatTime } from "@/utils";
 import { ArrowLeftIcon, MapPinHouse } from "lucide-react";
+import { useAlertStore } from "@store/alertStore";
+//
 
 const KpiCardContainer = ({
   title,
@@ -61,6 +65,9 @@ const RecapView = () => {
   const { uuid } = useParams();
   const navigate = useNavigate();
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const showAlert = useAlertStore((state) => state.showAlert);
+  const [commitGeneratePdf, isExporting] =
+    useMutation<GenerateRecapPdfMutationType>(GenerateRecapPdfMutation);
 
   const recapData = useLazyLoadQuery<RecapQueryType>(
     RecapQuery,
@@ -73,7 +80,10 @@ const RecapView = () => {
   const imageFiles = useMemo(
     () =>
       recap?.recapFiles.filter(
-        (f) => f.file && !/\.(pdf|docx?|xlsx?|csv|txt)$/i.test(f.file)
+        (f) =>
+          f.file &&
+          f.fileTypeId !== "1" && // omit PDF
+          !/\.(pdf|docx?|xlsx?|csv|txt)$/i.test(f.file)
       ),
     [recap?.recapFiles]
   );
@@ -98,6 +108,44 @@ const RecapView = () => {
     () => Object.values(imagesByCategory).flat(),
     [imagesByCategory]
   );
+
+  // export pdf
+  const handleExportPdf = useCallback(() => {
+    if (!recap?.id) return;
+
+    commitGeneratePdf({
+      variables: { input: { id: recap.id } },
+      onCompleted: (response) => {
+        const payload = response.generateRecapPdf;
+        if (payload.success) {
+          const fileUrl = payload.recapFile?.file;
+          if (fileUrl) {
+            const newTab = window.open(
+              fileUrl,
+              "_blank",
+              "noopener,noreferrer"
+            );
+            if (!newTab) {
+              window.location.assign(fileUrl);
+              showAlert("Popup blocked. Opened PDF in this tab.", "warning");
+            } else {
+              showAlert(
+                payload.message ?? "PDF generated successfully",
+                "success"
+              );
+            }
+          } else {
+            showAlert("PDF generated but file URL is missing", "warning");
+          }
+        } else {
+          showAlert(payload.message ?? "Failed to generate PDF", "error");
+        }
+      },
+      onError: (error) => {
+        showAlert(error.message, "error");
+      },
+    });
+  }, [commitGeneratePdf, recap?.id, showAlert]);
 
   if (!uuid) {
     return (
@@ -212,10 +260,26 @@ const RecapView = () => {
                 </div>
 
                 {/* RIGHT – CTA */}
-                <div className="flex items-start">
+                <div className="flex items-center gap-3">
+                  <button
+                    className="btn btn-outline btn-sm rounded-full px-6"
+                    onClick={handleExportPdf}
+                    disabled={isExporting}
+                  >
+                    {isExporting ? (
+                      <>
+                        <span className="loading loading-spinner loading-xs mr-2" />
+                        Exporting...
+                      </>
+                    ) : (
+                      "Export PDF"
+                    )}
+                  </button>
+
                   <button
                     className="btn btn-primary btn-sm rounded-full px-6"
                     onClick={() => navigate(`/recap/edit/${recap.uuid}`)}
+                    disabled={isExporting}
                   >
                     Activation
                   </button>

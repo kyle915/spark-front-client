@@ -180,7 +180,7 @@ const CreateUser = () => {
         const payload = response.createUser;
         if (payload?.success) {
           showAlert(payload.message ?? "User created", "success");
-          navigate("/users/list");
+          navigate("/users/list", { state: { refresh: true } });
         } else {
           showAlert(payload?.message ?? "Error creating user", "error");
         }
