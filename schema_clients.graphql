@@ -42,6 +42,21 @@ input ActiveAmbassadorFiltersInput {
   name: String = null
 }
 
+input AddAmbassadorsToGroupInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  jobId: ID = null
+  groupId: ID!
+  ambassadorIds: [ID!]!
+}
+
+type AddAmbassadorsToGroupResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  members: [UserGroup!]
+}
+
 """
 Ambassador(id, uuid, rating, address, coordinates, is_active, user, created_by, updated_by, created_at, updated_at)
 """
@@ -189,8 +204,6 @@ type AmbassadorGroupCountableEdge {
 
 input AmbassadorGroupFiltersInput {
   search: String = null
-  jobId: ID = null
-  jobUuid: ID = null
 }
 
 type AmbassadorGroupResponse {
@@ -290,6 +303,7 @@ input AmbassadorJobFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   status: AmbassadorJobStatusFilter = null
+  statuses: [AmbassadorJobStatusFilter!] = null
   statusId: ID = null
   statusSlug: String = null
 }
@@ -298,6 +312,7 @@ enum AmbassadorJobStatusFilter {
   APPROVED
   DECLINED
   PENDING
+  INVITED
 }
 
 input AmbassadorNoteFiltersInput {
@@ -688,6 +703,15 @@ type AttendanceTypeDetailResponse {
   attendanceType: AttendanceType
 }
 
+input BaseRegisterInput {
+  clientMutationId: ID = null
+  firstName: String!
+  email: String!
+  password1: String!
+  password2: String!
+  image: String = null
+}
+
 type BestMonth {
   month: String!
   eventsCount: Int!
@@ -698,6 +722,14 @@ type BestRecapMonth {
   month: String!
   recapsCount: Int!
   consumersCount: Int!
+}
+
+input ChangeUserPasswordInput {
+  clientMutationId: ID = null
+  id: ID = null
+  uuid: ID = null
+  password1: String!
+  password2: String!
 }
 
 """
@@ -739,17 +771,6 @@ input ClientFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
-}
-
-input ClientRegisterInput {
-  clientMutationId: ID = null
-  firstName: String!
-  email: String!
-  password1: String!
-  password2: String!
-  image: String = null
-  role: UserRoleEnum!
-  tenantId: ID = null
 }
 
 enum ColorSchemeEnum {
@@ -1501,6 +1522,19 @@ input CreateStatusInput {
   slug: String = null
 }
 
+input CreateTenantInput {
+  clientMutationId: ID = null
+  name: String!
+  image: String = null
+}
+
+type CreateTenantResponse {
+  success: Boolean!
+  message: String!
+  tenant: TenantType
+  clientMutationId: ID
+}
+
 input CreateTimeZoneInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -2141,6 +2175,7 @@ input JobFiltersInput {
   tenantId: ID = null
   eventId: ID = null
   status: JobStatusFilter = null
+  statuses: [JobStatusFilter!] = null
 }
 
 """
@@ -2322,8 +2357,10 @@ type JobRequirementTypeDetailResponse {
 }
 
 enum JobStatusFilter {
-  OPEN
-  CLOSED
+  PENDING
+  APPROVED
+  DECLINED
+  INVITED
 }
 
 """
@@ -2444,9 +2481,9 @@ type MonthlyPerformanceTrend {
 }
 
 type Mutation {
+  createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
   createEvent(input: CreateEventInput!): EventDetailResponse!
   updateEvent(input: UpdateEventInput!): EventDetailResponse!
-  createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
   createEventType(input: CreateEventTypeInput!): EventTypeDetailResponse!
   updateEventType(input: UpdateEventTypeInput!): EventTypeDetailResponse!
   createEventStatus(input: CreateEventStatusInput!): EventStatusDetailResponse!
@@ -2482,11 +2519,14 @@ type Mutation {
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
   generateRecapPdf(input: GenerateRecapPdfInput!): RecapFileDetailResponse!
-  register(input: ClientRegisterInput!): RegisterResponse!
+  register(input: BaseRegisterInput!): RegisterResponse!
   socialAuthGoogle(input: GoogleSocialAuthInput!): SocialAuthResponse!
   socialAuthApple(input: AppleSocialAuthInput!): SocialAuthResponse!
+  createTenant(input: CreateTenantInput!): CreateTenantResponse!
+  updateTenant(input: UpdateTenantInput!): UpdateTenantResponse!
   createUser(input: CreateUserInput!): RegisterResponse!
   updateUser(input: UpdateUserInput!): UpdateUserResponse!
+  changeUserPassword(input: ChangeUserPasswordInput!): UpdateUserResponse!
   connectGoogleCalendar(input: ConnectGoogleCalendarInput!): ConnectGoogleCalendarResponse!
   googleCalendarCallback(input: GoogleCalendarCallbackInput!): GoogleCalendarCallbackResponse!
   disconnectGoogleCalendar(input: DisconnectGoogleCalendarInput!): DisconnectGoogleCalendarResponse!
@@ -2584,6 +2624,8 @@ type Mutation {
   createAmbassadorGroup(input: CreateAmbassadorGroupInput!): AmbassadorGroupResponse!
   updateAmbassadorGroup(input: UpdateAmbassadorGroupInput!): AmbassadorGroupResponse!
   deleteAmbassadorGroup(input: DeleteAmbassadorGroupInput!): AmbassadorGroupResponse!
+  addAmbassadorsToGroup(input: AddAmbassadorsToGroupInput!): AddAmbassadorsToGroupResponse!
+  removeAmbassadorsFromGroup(input: RemoveAmbassadorsFromGroupInput!): AmbassadorGroupResponse!
 }
 
 type MutationNormalOutput {
@@ -2842,7 +2884,7 @@ type Query {
   activeAmbassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: ActiveAmbassadorFiltersInput = null): AmbassadorCountableConnection!
   ambassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
   ambassador(id: ID = null, uuid: ID = null): Ambassador
-  ambassadorProfile(id: ID = null, uuid: ID = null): AmbassadorProfile
+  ambassadorProfile(id: ID = null, uuid: ID = null, userId: ID = null): AmbassadorProfile
   ambassadorReviews(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorReviewFiltersInput = null): AmbassadorReviewTypeCountableConnection!
   ambassadorReview(reviewId: ID!): AmbassadorReviewType
   ambassadorNotes(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorNoteFiltersInput = null): AmbassadorNoteTypeCountableConnection!
@@ -2869,6 +2911,7 @@ type Query {
   healthcheck: String!
   me: CustomUserType!
   user(id: ID = null, uuid: ID = null): CustomUserType!
+  tenant(id: ID = null, uuid: ID = null): TenantType!
   users(filters: UserFiltersInput = null, first: Int = null, after: String = null, last: Int = null, before: String = null): CustomUserTypeCountableConnection!
   tenants(userUuid: ID = null, filters: TenantFiltersInput = null, first: Int = null, after: String = null, last: Int = null, before: String = null): TenantTypeCountableConnection!
   ambassadorJobStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): StatusCountableConnection!
@@ -3267,6 +3310,13 @@ type RegisterResponse {
   clientMutationId: ID
 }
 
+input RemoveAmbassadorsFromGroupInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  groupId: ID!
+  userGroupIds: [ID!]!
+}
+
 """
 Request(id, uuid, name, date, start_time, end_time, address, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, created_by, updated_by, created_at, updated_at)
 """
@@ -3298,6 +3348,7 @@ type Request implements Node {
   date: String
   startTime: String
   endTime: String
+  storeManagers: [RequestStoreManager!]!
 }
 
 type RequestCountableConnection {
@@ -4314,6 +4365,20 @@ input UpdateStatusInput {
   name: String!
   slug: String = null
   id: ID!
+}
+
+input UpdateTenantInput {
+  clientMutationId: ID = null
+  id: ID!
+  name: String = null
+  image: String = null
+}
+
+type UpdateTenantResponse {
+  success: Boolean!
+  message: String!
+  tenant: TenantType
+  clientMutationId: ID
 }
 
 input UpdateTimeZoneInput {
