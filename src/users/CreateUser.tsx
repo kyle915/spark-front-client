@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import FormInputText from "@shared/FormInputText";
-import FormAutocomplete from "@shared/FormAutocomplete";
 import { useMutation } from "react-relay/hooks";
 import { CreateUserMutation } from "@/api/mutations/CreateUserMutation";
 import type { CreateUserMutation as CreateUserMutationType } from "@/api/mutations/__generated__/CreateUserMutation.graphql";
@@ -26,12 +25,6 @@ type CreateUserFormValues = {
   role: RoleOption | null;
   tenantId?: string;
 };
-
-const roleOptions = [
-  { label: "Client", value: "CLIENT" },
-  { label: "Ambassador", value: "AMBASSADOR" },
-  { label: "Spark", value: "SPARK" },
-];
 
 const CreateUser = () => {
   const { tenantId } = useAuthStore();
@@ -66,7 +59,7 @@ const CreateUser = () => {
       email: "",
       password1: "",
       password2: "",
-      role: null,
+      role: "CLIENT",
       tenantId: tenantId || "",
     },
   });
@@ -145,18 +138,14 @@ const CreateUser = () => {
   };
 
   const onSubmit = async (values: CreateUserFormValues) => {
-    if (!values.role) {
-      showAlert("Role is required", "warning");
-      return;
-    }
-
     if (values.password1 !== values.password2) {
       showAlert("Passwords do not match", "warning");
       return;
     }
 
+    const roleToSend: RoleOption = "CLIENT";
     const tenantId =
-      values.role === "CLIENT" ? values.tenantId || undefined : undefined;
+      roleToSend === "CLIENT" ? values.tenantId || undefined : undefined;
 
     let imageBlob: string | undefined;
 
@@ -182,7 +171,7 @@ const CreateUser = () => {
           email: values.email,
           password1: values.password1,
           password2: values.password2,
-          role: values.role,
+          role: roleToSend,
           tenantId,
           image: imageBlob,
         },
@@ -191,7 +180,7 @@ const CreateUser = () => {
         const payload = response.createUser;
         if (payload?.success) {
           showAlert(payload.message ?? "User created", "success");
-          navigate("/users/list");
+          navigate("/users/list", { state: { refresh: true } });
         } else {
           showAlert(payload?.message ?? "Error creating user", "error");
         }
@@ -226,9 +215,6 @@ const CreateUser = () => {
                     <h1>Create User</h1>
                   </span>
                 </div>
-                <p className="text-base-content/70 text-sm mt-2">
-                  Assign a role and tenant (for Client users).
-                </p>
               </div>
             </div>
 
@@ -279,6 +265,7 @@ const CreateUser = () => {
                   }}
                 />
 
+                {/*
                 <FormAutocomplete
                   control={control}
                   name="role"
@@ -287,6 +274,7 @@ const CreateUser = () => {
                   placeholder="Select role"
                   rules={{ required: "Role is required" }}
                 />
+                */}
               </div>
             </section>
 
@@ -357,7 +345,7 @@ const CreateUser = () => {
                 ) : (
                   <>
                     <SaveIcon className="w-4 h-4" />
-                    Create Recap
+                    Create User
                   </>
                 )}
               </button>

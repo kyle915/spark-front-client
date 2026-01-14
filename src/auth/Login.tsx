@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AuthForm from "@auth/components/AuthForm";
 import RegisterForm from "@auth/components/RegisterForm";
 import bgImage from "../assets/background.png";
@@ -10,6 +10,10 @@ import { useAuthStore } from "@store/authStore";
 import { register } from "@api/auth/register";
 import type { RegisterFormFields } from "@/types/auth";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
+import {
+  buildThemeDefaults,
+  applyCssVariables,
+} from "@/utils/tenantThemeConfig";
 type FormData = {
   username: string;
   password: string;
@@ -24,6 +28,15 @@ const Login = () => {
   const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
     (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark"
   );
+
+  useEffect(() => {
+    const cssVars = buildThemeDefaults(colorScheme);
+
+    applyCssVariables(cssVars);
+
+    document.documentElement.setAttribute("data-theme", colorScheme);
+    localStorage.setItem("@color-scheme", colorScheme);
+  }, [colorScheme]);
 
   const handleSwitch = () => {
     setFade(false);

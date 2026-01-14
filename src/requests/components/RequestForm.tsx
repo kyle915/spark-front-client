@@ -436,6 +436,8 @@ export default function RequestForm({
     });
   };
 
+  console.log(selectedCoordinates);
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full">
       <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">

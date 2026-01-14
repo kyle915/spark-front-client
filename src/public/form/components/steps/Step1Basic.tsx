@@ -33,9 +33,11 @@ export function Step1Basic({
       ? [latitude, longitude]
       : null;
 
+  console.log(selectedCoordinates);
+
   useAutoTimezoneFromCoordinates<SparkFormData, "timeZoneId">({
     coordinates: selectedCoordinates,
-    timezoneId,
+    timezoneId: timezoneId,
     timezones: timeZones,
     setValue,
     timezoneFieldName: "timeZoneId",

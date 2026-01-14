@@ -58,6 +58,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         error: error.message || "Error logging in",
         loading: false,
       });
+      throw error;
     }
   },
 
