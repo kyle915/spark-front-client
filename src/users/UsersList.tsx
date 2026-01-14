@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router";
 import { useForm } from "react-hook-form";
 import { usePreloadedQuery } from "react-relay/hooks";
 import type { PreloadedQuery } from "react-relay";
@@ -17,13 +18,16 @@ import FormInputText from "@shared/FormInputText";
 import { useMutation } from "react-relay/hooks";
 import { UpdateUserMutation } from "@/api/mutations/UpdateUserMutation";
 import type { UpdateUserMutation as UpdateUserMutationType } from "@/api/mutations/__generated__/UpdateUserMutation.graphql";
+import { ChangeUserPasswordMutation } from "@/api/mutations/ChangeUserPasswordMutation";
+import type { ChangeUserPasswordMutation as ChangeUserPasswordMutationType } from "@/api/mutations/__generated__/ChangeUserPasswordMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
 import { PencilIcon, UserGroupIcon } from "@heroicons/react/24/outline";
 import { fetchQuery, graphql } from "react-relay";
 import type { GraphQLTaggedNode } from "react-relay";
 import environment from "@api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
-import { FilterIcon, FunnelXIcon } from "lucide-react";
+import { FilterIcon, FunnelXIcon, KeyIcon } from "lucide-react";
+import FormInputPassword from "@/shared/FormInputPassword";
 
 const PAGE_SIZE = 10;
 
@@ -37,6 +41,7 @@ type UsersTableContentProps = {
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;
   onEditUser: (user: UserRow) => void;
+  onChangePassword: (user: UserRow) => void;
 };
 
 const UsersTableContent = ({
@@ -49,6 +54,7 @@ const UsersTableContent = ({
   onPageLoaded,
   isNavigating,
   onEditUser,
+  onChangePassword,
 }: UsersTableContentProps) => {
   const data = usePreloadedQuery<UsersQueryType>(UsersQuery, queryReference);
   const connection = data.users;
@@ -75,13 +81,24 @@ const UsersTableContent = ({
       customActions={{
         headerLabel: "Actions",
         render: (row) => (
-          <button
-            type="button"
-            className="btn btn-xs btn-ghost"
-            onClick={() => onEditUser(row)}
-          >
-            <PencilIcon className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className="btn btn-xs btn-ghost"
+              onClick={() => onEditUser(row)}
+            >
+              <PencilIcon className="w-5 h-5" />
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-xs btn-ghost tooltip"
+              onClick={() => onChangePassword(row)}
+              data-tip="Change password"
+            >
+              <KeyIcon className="w-4 h-4 text-primary" />
+            </button>
+          </div>
         ),
       }}
     />
@@ -91,6 +108,7 @@ const UsersTableContent = ({
 type UsersListInnerProps = {
   filters?: UsersQueryType["variables"]["filters"];
   onEditUser: (user: UserRow) => void;
+  onChangePassword: (user: UserRow) => void;
   onReady?: (refreshFn: () => void) => void;
 };
 
@@ -98,6 +116,7 @@ const UsersListInner = ({
   filters,
   onEditUser,
   onReady,
+  onChangePassword,
 }: UsersListInnerProps) => {
   const {
     queryRef,
@@ -133,6 +152,7 @@ const UsersListInner = ({
           isNavigating={isNavigating}
           onPageLoaded={handlePageLoaded}
           onEditUser={onEditUser}
+          onChangePassword={onChangePassword}
         />
       ) : (
         <Loading />
@@ -168,8 +188,22 @@ const normalizeRoleName = (name?: string | null): RoleValue | null => {
   return null;
 };
 
+type ChangePasswordFormValues = {
+  password1: string;
+  password2: string;
+};
+
 const UsersList = () => {
   const { tenantId } = useAuthStore();
+  const location = useLocation();
+
+  // Refresh list if navigated with refresh state
+  useEffect(() => {
+    if (location.state?.refresh && refreshListRef.current) {
+      refreshListRef.current();
+    }
+  }, [location.state]);
+
   const { control, watch, reset } = useForm<FormValues>({
     defaultValues: {
       name: "",
@@ -196,8 +230,23 @@ const UsersList = () => {
     },
   });
 
+  const {
+    control: passwordControl,
+    handleSubmit: handlePasswordSubmit,
+    reset: resetPasswordForm,
+    watch: watchPassword,
+    formState: { isSubmitting: isChangingPassword },
+  } = useForm<ChangePasswordFormValues>({
+    defaultValues: {
+      password1: "",
+      password2: "",
+    },
+  });
+
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [passwordUser, setPasswordUser] = useState<UserRow | null>(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const refreshListRef = useRef<(() => void) | null>(null);
   const [profileFile, setProfileFile] = useState<File | null>(null);
@@ -218,6 +267,9 @@ const UsersList = () => {
   const { showAlert } = useAlertStore();
   const [commitUpdate] =
     useMutation<UpdateUserMutationType>(UpdateUserMutation);
+  const [commitChangePassword] = useMutation<ChangeUserPasswordMutationType>(
+    ChangeUserPasswordMutation
+  );
 
   const selectedName = watch("name");
   const selectedEmail = watch("email");
@@ -314,9 +366,16 @@ const UsersList = () => {
     selectedTenant ?? ""
   }-${refreshKey}`;
 
+  const password1Value = watchPassword("password1");
+
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingUser(null);
+  };
+
+  const closePasswordModal = () => {
+    setIsPasswordModalOpen(false);
+    setPasswordUser(null);
   };
 
   const handleEditUser = (user: UserRow) => {
@@ -332,6 +391,15 @@ const UsersList = () => {
     setProfileFile(null);
     setCurrentRoleLabel(user.role?.name ?? null);
     setIsModalOpen(true);
+  };
+
+  const handleChangePassword = (user: UserRow) => {
+    setPasswordUser(user);
+    resetPasswordForm({
+      password1: "",
+      password2: "",
+    });
+    setIsPasswordModalOpen(true);
   };
 
   const onSubmitEdit = async (values: EditUserFormValues) => {
@@ -387,6 +455,35 @@ const UsersList = () => {
         showAlert(error.message, "error");
         setIsUploading(false);
       },
+    });
+  };
+
+  const onSubmitPassword = async (values: ChangePasswordFormValues) => {
+    if (!passwordUser?.id) return;
+
+    // for loading submission state
+    return new Promise<void>(() => {
+      commitChangePassword({
+        variables: {
+          input: {
+            id: passwordUser.id,
+            password1: values.password1,
+            password2: values.password2,
+          },
+        },
+        onCompleted: (response) => {
+          const payload = response.changeUserPassword;
+          if (payload?.success) {
+            showAlert(payload.message ?? "Password updated", "success");
+            closePasswordModal();
+          } else {
+            showAlert(payload?.message ?? "Error updating password", "error");
+          }
+        },
+        onError: (error) => {
+          showAlert(error.message, "error");
+        },
+      });
     });
   };
 
@@ -456,6 +553,7 @@ const UsersList = () => {
           key={listKey}
           filters={filters}
           onEditUser={handleEditUser}
+          onChangePassword={handleChangePassword}
           onReady={(refreshFn) => {
             refreshListRef.current = refreshFn;
           }}
@@ -581,6 +679,65 @@ const UsersList = () => {
           </div>
           <form method="dialog" className="modal-backdrop">
             <button type="button" onClick={closeModal}>
+              close
+            </button>
+          </form>
+        </dialog>
+      ) : null}
+
+      {isPasswordModalOpen && passwordUser ? (
+        <dialog open className="modal">
+          <div className="modal-box max-w-lg">
+            <h3 className="font-bold text-lg mb-2">Change Password</h3>
+            <p className="text-sm text-base-content/70 mb-4">
+              Set a new password for {passwordUser.firstName}{" "}
+              {passwordUser.lastName}.
+            </p>
+
+            <form
+              className="space-y-4"
+              onSubmit={handlePasswordSubmit(onSubmitPassword)}
+            >
+              <FormInputPassword
+                control={passwordControl}
+                name="password1"
+                label="New Password"
+                rules={{ required: "Password is required" }}
+              />
+              <FormInputPassword
+                control={passwordControl}
+                name="password2"
+                label="Confirm Password"
+                rules={{
+                  required: "Confirm password is required",
+                  validate: (value) =>
+                    value === password1Value || "Passwords do not match",
+                }}
+              />
+
+              <div className="modal-action">
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={closePasswordModal}
+                  disabled={isChangingPassword}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={`btn btn-primary ${
+                    isChangingPassword ? "loading" : ""
+                  }`}
+                  disabled={isChangingPassword}
+                >
+                  {isChangingPassword ? "Updating..." : "Update Password"}
+                </button>
+              </div>
+            </form>
+          </div>
+          <form method="dialog" className="modal-backdrop">
+            <button type="button" onClick={closePasswordModal}>
               close
             </button>
           </form>

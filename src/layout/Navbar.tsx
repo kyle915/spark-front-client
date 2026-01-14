@@ -24,10 +24,9 @@ export default function Navbar({
 }) {
   const location = useLocation();
   const navLinkClassName = ({ isActive }: { isActive: boolean }) =>
-    `px-3 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${
-      isActive
-        ? "border-b-2 border-primary text-primary"
-        : "text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+    `px-3 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${isActive
+      ? "border-b-2 border-primary text-primary"
+      : "text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
     }`;
   const dropdownLinkClassName = ({ isActive }: { isActive: boolean }) =>
     isActive ? "font-semibold text-primary" : "";

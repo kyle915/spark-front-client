@@ -97,9 +97,8 @@ const Login = () => {
         <div className="flex flex-col justify-center items-center w-full lg:w-1/2 bg-base-100 px-8 sm:px-12 md:px-16 py-10 rounded-l-3xl transition-all duration-300 ease-in-out">
           <div
             key={isLogin ? "login" : "signup"}
-            className={`w-full max-w-sm transition-opacity duration-500 ease-in-out ${
-              fade ? "opacity-100" : "opacity-0"
-            }`}
+            className={`w-full max-w-sm transition-opacity duration-500 ease-in-out ${fade ? "opacity-100" : "opacity-0"
+              }`}
           >
             <h1 className="text-3xl font-bold text-base-content mb-2">
               {isLogin ? "Login" : "Sign Up"}
