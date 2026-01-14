@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router";
 import { useForm } from "react-hook-form";
 import { usePreloadedQuery } from "react-relay/hooks";
 import type { PreloadedQuery } from "react-relay";
@@ -194,6 +195,15 @@ type ChangePasswordFormValues = {
 
 const UsersList = () => {
   const { tenantId } = useAuthStore();
+  const location = useLocation();
+
+  // Refresh list if navigated with refresh state
+  useEffect(() => {
+    if (location.state?.refresh && refreshListRef.current) {
+      refreshListRef.current();
+    }
+  }, [location.state]);
+
   const { control, watch, reset } = useForm<FormValues>({
     defaultValues: {
       name: "",
