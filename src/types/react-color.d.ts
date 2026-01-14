@@ -23,5 +23,5 @@ declare module "react-color" {
     disableAlpha?: boolean;
   }
 
-  export class SketchPicker extends React.Component<SketchPickerProps> {}
+  export class SketchPicker extends React.Component<SketchPickerProps> { }
 }
