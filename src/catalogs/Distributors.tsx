@@ -396,7 +396,7 @@ export const EditDistributor = () => {
       <DistributorForm
         defaultValues={{
           name: distributor.name,
-          email: distributor.email,
+          email: distributor.email ?? "",
           tenantId: distributor.tenantId,
           locationId: distributor.location?.id ?? "",
         }}

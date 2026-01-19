@@ -1,5 +1,6 @@
 export * from "./usePublicClients";
 export * from "./usePublicDistributors";
+export * from "./usePublicLocations";
 export * from "./usePublicProducts";
 export * from "./usePublicProductTypes";
 export * from "./usePublicRequestTypes";
