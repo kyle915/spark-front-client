@@ -8,6 +8,11 @@ input AcceptAmbassadorInvitationInput {
   coordinates: [Float!] = null
 }
 
+input AcceptByTokenInput {
+  clientMutationId: ID = null
+  token: String!
+}
+
 type AcceptInvitationResponse {
   success: Boolean!
   message: String!
@@ -125,6 +130,7 @@ type AmbassadorEventTypeCountableEdge {
 
 input AmbassadorEventsFiltersInput {
   ambassadorUuid: ID = null
+  eventId: ID = null
   types: [ID!] = null
   statuses: [AmbassadorEventStatus!] = null
   startDate: String = null
@@ -628,6 +634,7 @@ input AttendanceFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   jobId: ID = null
+  ambassadorJobId: ID = null
   eventId: ID = null
   attendanceStatusId: ID = null
   sourceId: ID = null
@@ -703,15 +710,6 @@ type AttendanceTypeDetailResponse {
   attendanceType: AttendanceType
 }
 
-input BaseRegisterInput {
-  clientMutationId: ID = null
-  firstName: String!
-  email: String!
-  password1: String!
-  password2: String!
-  image: String = null
-}
-
 type BestMonth {
   month: String!
   eventsCount: Int!
@@ -771,6 +769,17 @@ input ClientFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
+}
+
+input ClientRegisterInput {
+  clientMutationId: ID = null
+  firstName: String!
+  email: String!
+  password1: String!
+  password2: String!
+  image: String = null
+  role: UserRoleEnum!
+  tenantId: ID = null
 }
 
 enum ColorSchemeEnum {
@@ -1103,6 +1112,17 @@ input CreateAmbassadorToAmbassadorReviewInput {
   description: String!
   rate: Float!
   ambassadorId: ID!
+}
+
+input CreateAmbassadorWithUserInput {
+  clientMutationId: ID = null
+  firstName: String!
+  email: String!
+  password1: String!
+  password2: String!
+  address: String = null
+  coordinates: [Float!] = null
+  isActive: Boolean = null
 }
 
 input CreateAttendanceInput {
@@ -1522,19 +1542,6 @@ input CreateStatusInput {
   slug: String = null
 }
 
-input CreateTenantInput {
-  clientMutationId: ID = null
-  name: String!
-  image: String = null
-}
-
-type CreateTenantResponse {
-  success: Boolean!
-  message: String!
-  tenant: TenantType
-  clientMutationId: ID
-}
-
 input CreateTimeZoneInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -1709,7 +1716,7 @@ type Distributor implements Node {
   id: ID!
   uuid: String!
   name: String!
-  email: String!
+  email: String
   tenantId: ID!
   location: Location
   createdAt: String!
@@ -1741,6 +1748,7 @@ input DistributorFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
+  locationId: ID = null
 }
 
 type DistributorOption {
@@ -2398,7 +2406,7 @@ type JobTitleDetailResponse {
 }
 
 """
-Location(id, uuid, name, code, zip, tenant, created_by, updated_by, created_at, updated_at)
+Location(id, uuid, name, code, zip, tenant, state, created_by, updated_by, created_at, updated_at)
 """
 type Location implements Node {
   """The Globally Unique ID of this object"""
@@ -2481,9 +2489,9 @@ type MonthlyPerformanceTrend {
 }
 
 type Mutation {
-  createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
   createEvent(input: CreateEventInput!): EventDetailResponse!
   updateEvent(input: UpdateEventInput!): EventDetailResponse!
+  createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
   createEventType(input: CreateEventTypeInput!): EventTypeDetailResponse!
   updateEventType(input: UpdateEventTypeInput!): EventTypeDetailResponse!
   createEventStatus(input: CreateEventStatusInput!): EventStatusDetailResponse!
@@ -2519,11 +2527,9 @@ type Mutation {
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
   generateRecapPdf(input: GenerateRecapPdfInput!): RecapFileDetailResponse!
-  register(input: BaseRegisterInput!): RegisterResponse!
+  register(input: ClientRegisterInput!): RegisterResponse!
   socialAuthGoogle(input: GoogleSocialAuthInput!): SocialAuthResponse!
   socialAuthApple(input: AppleSocialAuthInput!): SocialAuthResponse!
-  createTenant(input: CreateTenantInput!): CreateTenantResponse!
-  updateTenant(input: UpdateTenantInput!): UpdateTenantResponse!
   createUser(input: CreateUserInput!): RegisterResponse!
   updateUser(input: UpdateUserInput!): UpdateUserResponse!
   changeUserPassword(input: ChangeUserPasswordInput!): UpdateUserResponse!
@@ -2592,8 +2598,10 @@ type Mutation {
   applyAmbassadorEvent(eventId: ID!, ambassadorId: ID = null): ApplyAmbassadorEventResponse!
   applyAmbassadorJob(jobId: ID!): ApplyAmbassadorJobResponse!
   createPublicAmbassador(input: CreatePublicAmbassadorInput!): PublicAmbassadorCreationResponse!
+  createAmbassadorWithUser(input: CreateAmbassadorWithUserInput!): PublicAmbassadorCreationResponse!
   createAmbassadorInvitation(input: CreateAmbassadorInvitationInput!): AmbassadorInvitationResponse!
   acceptAmbassadorInvitation(input: AcceptAmbassadorInvitationInput!): AcceptInvitationResponse!
+  acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
   createAmbassador(input: CreateAmbassadorInput!): CreateAmbassadorResponse!
   updateAmbassador(input: UpdateAmbassadorInput!): UpdateAmbassadorResponse!
@@ -2845,10 +2853,10 @@ type Query {
   publicClients(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): ClientCountableConnection!
   clients(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ClientFiltersInput = null): ClientCountableConnection!
   client(id: ID = null, uuid: ID = null): Client
-  publicDistributors(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): DistributorCountableConnection!
+  publicDistributors(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: DistributorFiltersInput = null): DistributorCountableConnection!
   distributors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: DistributorFiltersInput = null): DistributorCountableConnection!
   distributor(id: ID = null, uuid: ID = null): Distributor
-  publicRetailer(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): RetailerCountableConnection!
+  publicRetailers(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RetailerFiltersInput = null): RetailerCountableConnection!
   retailers(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RetailerFiltersInput = null): RetailerCountableConnection!
   retailer(id: ID = null, uuid: ID = null): Retailer
   publicProductTypes(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): ProductTypeCountableConnection!
@@ -2866,6 +2874,7 @@ type Query {
   request(id: ID = null, uuid: ID = null): Request
   requestStoreManagers(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestStoreManagerFiltersInput = null): RequestStoreManagerCountableConnection!
   requestStoreManager(id: ID = null, uuid: ID = null): RequestStoreManager
+  publicLocations(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): LocationCountableConnection!
   locations(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: LocationFiltersInput = null): LocationCountableConnection!
   location(id: ID = null, uuid: ID = null): Location
   timezones(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): TimeZoneCountableConnection!
@@ -2881,7 +2890,7 @@ type Query {
   ambassadorEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorEventsFiltersInput = null): AmbassadorEventTypeCountableConnection!
   sentInvitations(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorInvitationFiltersInput = null): AmbassadorInvitationTypeCountableConnection!
   availableAmbassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
-  activeAmbassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: ActiveAmbassadorFiltersInput = null): AmbassadorCountableConnection!
+  activeAmbassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ActiveAmbassadorFiltersInput = null): AmbassadorCountableConnection!
   ambassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
   ambassador(id: ID = null, uuid: ID = null): Ambassador
   ambassadorProfile(id: ID = null, uuid: ID = null, userId: ID = null): AmbassadorProfile
@@ -2909,6 +2918,7 @@ type Query {
   tenantThemePublic(requestUrlName: String!, colorScheme: ColorSchemeEnum! = DARK): TenantThemeType
   tenantTheme(tenantId: ID!, colorScheme: ColorSchemeEnum! = DARK): TenantThemeType
   healthcheck: String!
+  tenantPublic(requestUrlName: String!): TenantType
   me: CustomUserType!
   user(id: ID = null, uuid: ID = null): CustomUserType!
   tenant(id: ID = null, uuid: ID = null): TenantType!
@@ -3516,8 +3526,8 @@ type Retailer implements Node {
   id: ID!
   uuid: String!
   name: String!
-  address: String!
-  storeContact: String!
+  address: String
+  storeContact: String
   tenantId: ID!
   location: Location
   createdAt: String!
@@ -3549,6 +3559,7 @@ input RetailerFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
+  locationId: ID = null
 }
 
 type RetailerOption {
@@ -4365,20 +4376,6 @@ input UpdateStatusInput {
   name: String!
   slug: String = null
   id: ID!
-}
-
-input UpdateTenantInput {
-  clientMutationId: ID = null
-  id: ID!
-  name: String = null
-  image: String = null
-}
-
-type UpdateTenantResponse {
-  success: Boolean!
-  message: String!
-  tenant: TenantType
-  clientMutationId: ID
 }
 
 input UpdateTimeZoneInput {

@@ -1,8 +1,8 @@
 // import { graphql } from "react-relay";
 
 // export const PublicDistributorsQuery = graphql`
-//   query PublicDistributorsQuery($requestUrlName: String!) {
-//     publicDistributors(requestUrlName: $requestUrlName) {
+//   query PublicDistributorsQuery($requestUrlName: String!, $filters: DistributorFiltersInput) {
+//     publicDistributors(requestUrlName: $requestUrlName, filters: $filters) {
 //       edges {
 //         node {
 //           __typename
@@ -10,6 +10,10 @@
 //           uuid
 //           name
 //           tenantId
+//           location {
+//             id
+//             name
+//           }
 //         }
 //       }
 //     }
@@ -17,14 +21,18 @@
 // `;
 
 export const PUBLIC_DISTRIBUTORS_QUERY = `
-  query PublicDistributorsQuery($requestUrlName: String!) {
-    publicDistributors(requestUrlName: $requestUrlName) {
+  query PublicDistributorsQuery($requestUrlName: String!, $filters: DistributorFiltersInput) {
+    publicDistributors(requestUrlName: $requestUrlName, filters: $filters) {
       edges { 
         node {
           id
           uuid
           name
           tenantId
+          location {
+            id
+            name
+          }
         }
       }
     } 

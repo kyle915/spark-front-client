@@ -14,6 +14,7 @@ export const useSparkForm = () =>
     defaultValues: {
       distributorId: "",
       retailerId: "",
+      locationId: "",
       address: "",
       latitude: undefined,
       longitude: undefined,
