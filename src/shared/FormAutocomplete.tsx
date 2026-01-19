@@ -16,6 +16,7 @@ interface FormAutocompleteProps<T extends FieldValues> {
     placeholder?: string;
     rules?: RegisterOptions<T, Path<T>>;
     disabled?: boolean;
+    onSearch?: (value: string) => void;
 }
 
 const FormAutocomplete = <T extends FieldValues>({
@@ -26,6 +27,7 @@ const FormAutocomplete = <T extends FieldValues>({
     placeholder = "Search or select an option",
     rules,
     disabled = false,
+    onSearch,
 }: FormAutocompleteProps<T>) => {
     const {
         field,
@@ -49,6 +51,7 @@ const FormAutocomplete = <T extends FieldValues>({
     // Reset search term when value changes programmatically
     useEffect(() => {
         setSearchTerm("");
+        onSearch?.("");
     }, [field.value]);
 
     // Filter options based on search term
@@ -120,7 +123,9 @@ const FormAutocomplete = <T extends FieldValues>({
                     type="text"
                     value={isOpen ? searchTerm : displayValue}
                     onChange={(e) => {
-                        setSearchTerm(e.target.value);
+                        const nextValue = e.target.value;
+                        setSearchTerm(nextValue);
+                        onSearch?.(nextValue);
                         setIsOpen(true);
                         setHighlightedIndex(-1);
                     }}
@@ -141,6 +146,7 @@ const FormAutocomplete = <T extends FieldValues>({
                                 e.stopPropagation();
                                 field.onChange(null);
                                 setSearchTerm("");
+                                onSearch?.("");
                                 setIsOpen(false);
                             }}
                             className="p-1 hover:bg-base-200 rounded-full text-base-content/50 hover:text-base-content transition-colors"
