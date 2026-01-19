@@ -439,8 +439,8 @@ export const EditRetailer = () => {
       <RetailerForm
         defaultValues={{
           name: retailer.name,
-          address: retailer.address,
-          storeContact: retailer.storeContact,
+          address: retailer.address ?? "",
+          storeContact: retailer.storeContact ?? "",
           tenantId: retailer.tenantId,
           locationId: retailer.location?.id ?? "",
         }}

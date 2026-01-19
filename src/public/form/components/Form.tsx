@@ -12,13 +12,28 @@ interface SparkFormProps {
     id: string;
     name: string;
   }[];
+  locations: {
+    id: string;
+    name: string;
+  }[];
+  onLocationSearch: (value: string) => void;
+  onLocationChange: (value: string) => void;
+  onRetailerSearch: (value: string) => void;
   distributors: {
     id: string;
     name: string;
+    location?: {
+      id: string;
+      name: string;
+    } | null;
   }[];
   retailers: {
     id: string;
     name: string;
+    location?: {
+      id: string;
+      name: string;
+    } | null;
   }[];
   products: {
     id: string;
@@ -46,6 +61,10 @@ export default function SparkForm(props: SparkFormProps) {
   const {
     // clients,
     requestTypes,
+    locations,
+    onLocationSearch,
+    onLocationChange,
+    onRetailerSearch,
     products,
     productTypes,
     distributors,
@@ -101,6 +120,10 @@ export default function SparkForm(props: SparkFormProps) {
           control={control}
           setValue={setValue}
           requestTypes={requestTypes}
+          locations={locations}
+          onLocationSearch={onLocationSearch}
+          onLocationChange={onLocationChange}
+          onRetailerSearch={onRetailerSearch}
           distributors={distributors}
           retailers={retailers}
         />
