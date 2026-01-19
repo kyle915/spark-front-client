@@ -567,6 +567,11 @@ type ApproveAmbassadorResponse {
   ambassador: Ambassador
 }
 
+input ApproveEventInput {
+  clientMutationId: ID = null
+  id: ID!
+}
+
 input ApproveRecapInput {
   clientMutationId: ID = null
   id: ID!
@@ -584,6 +589,11 @@ type ApproveRequestResponse {
   clientMutationId: ID
   request: Request
   event: Event
+}
+
+input ArchiveEventInput {
+  clientMutationId: ID = null
+  id: ID!
 }
 
 """
@@ -710,6 +720,15 @@ type AttendanceTypeDetailResponse {
   attendanceType: AttendanceType
 }
 
+input BaseRegisterInput {
+  clientMutationId: ID = null
+  firstName: String!
+  email: String!
+  password1: String!
+  password2: String!
+  image: String = null
+}
+
 type BestMonth {
   month: String!
   eventsCount: Int!
@@ -769,17 +788,6 @@ input ClientFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
-}
-
-input ClientRegisterInput {
-  clientMutationId: ID = null
-  firstName: String!
-  email: String!
-  password1: String!
-  password2: String!
-  image: String = null
-  role: UserRoleEnum!
-  tenantId: ID = null
 }
 
 enum ColorSchemeEnum {
@@ -1542,6 +1550,19 @@ input CreateStatusInput {
   slug: String = null
 }
 
+input CreateTenantInput {
+  clientMutationId: ID = null
+  name: String!
+  image: String = null
+}
+
+type CreateTenantResponse {
+  success: Boolean!
+  message: String!
+  tenant: TenantType
+  clientMutationId: ID
+}
+
 input CreateTimeZoneInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -1895,6 +1916,8 @@ type EventStatusDetailResponse {
 enum EventStatusFilterEnum {
   APPROVED
   DECLINED
+  SUSPENDED
+  ARCHIVED
   PENDING
 }
 
@@ -2489,9 +2512,12 @@ type MonthlyPerformanceTrend {
 }
 
 type Mutation {
+  createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
   createEvent(input: CreateEventInput!): EventDetailResponse!
   updateEvent(input: UpdateEventInput!): EventDetailResponse!
-  createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
+  suspendEvent(input: SuspendEventInput!): EventDetailResponse!
+  archiveEvent(input: ArchiveEventInput!): EventDetailResponse!
+  approveEvent(input: ApproveEventInput!): EventDetailResponse!
   createEventType(input: CreateEventTypeInput!): EventTypeDetailResponse!
   updateEventType(input: UpdateEventTypeInput!): EventTypeDetailResponse!
   createEventStatus(input: CreateEventStatusInput!): EventStatusDetailResponse!
@@ -2527,9 +2553,11 @@ type Mutation {
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
   generateRecapPdf(input: GenerateRecapPdfInput!): RecapFileDetailResponse!
-  register(input: ClientRegisterInput!): RegisterResponse!
+  register(input: BaseRegisterInput!): RegisterResponse!
   socialAuthGoogle(input: GoogleSocialAuthInput!): SocialAuthResponse!
   socialAuthApple(input: AppleSocialAuthInput!): SocialAuthResponse!
+  createTenant(input: CreateTenantInput!): CreateTenantResponse!
+  updateTenant(input: UpdateTenantInput!): UpdateTenantResponse!
   createUser(input: CreateUserInput!): RegisterResponse!
   updateUser(input: UpdateUserInput!): UpdateUserResponse!
   changeUserPassword(input: ChangeUserPasswordInput!): UpdateUserResponse!
@@ -2918,7 +2946,6 @@ type Query {
   tenantThemePublic(requestUrlName: String!, colorScheme: ColorSchemeEnum! = DARK): TenantThemeType
   tenantTheme(tenantId: ID!, colorScheme: ColorSchemeEnum! = DARK): TenantThemeType
   healthcheck: String!
-  tenantPublic(requestUrlName: String!): TenantType
   me: CustomUserType!
   user(id: ID = null, uuid: ID = null): CustomUserType!
   tenant(id: ID = null, uuid: ID = null): TenantType!
@@ -3763,6 +3790,11 @@ type StatusDetailResponse {
   status: Status
 }
 
+input SuspendEventInput {
+  clientMutationId: ID = null
+  id: ID!
+}
+
 input TenantFiltersInput {
   name: String = null
   requestUrlName: String = null
@@ -4376,6 +4408,20 @@ input UpdateStatusInput {
   name: String!
   slug: String = null
   id: ID!
+}
+
+input UpdateTenantInput {
+  clientMutationId: ID = null
+  id: ID!
+  name: String = null
+  image: String = null
+}
+
+type UpdateTenantResponse {
+  success: Boolean!
+  message: String!
+  tenant: TenantType
+  clientMutationId: ID
 }
 
 input UpdateTimeZoneInput {

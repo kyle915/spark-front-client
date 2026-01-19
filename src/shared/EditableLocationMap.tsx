@@ -1,12 +1,19 @@
 import type { FC } from "react";
-import { useCallback, useEffect, useState } from "react";
-import { MapContainer, Marker, TileLayer, useMapEvents } from "react-leaflet";
-import type { LatLngExpression } from "leaflet";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  MapContainer,
+  Marker,
+  TileLayer,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
+import type { LatLngExpression, Map as LeafletMap } from "leaflet";
 import * as L from "leaflet";
 import markerIconUrl from "leaflet/dist/images/marker-icon.png?url";
 import markerIcon2xUrl from "leaflet/dist/images/marker-icon-2x.png?url";
 import markerShadowUrl from "leaflet/dist/images/marker-shadow.png?url";
 import { themes } from "@utils/index";
+import MapSearchControl from "./MapSearchControl";
 
 type CoordinateValue = number | string | null | undefined;
 
@@ -55,7 +62,7 @@ interface Props {
 const getThemeVariant = (themeName: string | null): keyof typeof TILE_LAYERS =>
   themeName === themes.dark ? "dark" : "light";
 
-const DEFAULT_CENTER: LatLngExpression = [40.758, -73.9855]; // New York City
+const DEFAULT_CENTER: LatLngExpression = [40.7128, -74.006]; // New York City
 
 interface MapClickHandlerProps {
   onMapClick: (lat: number, lng: number) => void;
@@ -70,6 +77,19 @@ const MapClickHandler: FC<MapClickHandlerProps> = ({ onMapClick }) => {
   return null;
 };
 
+const FlyToMarker: FC<{ position: LatLngExpression }> = ({ position }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    map.whenReady(() => {
+      const nextZoom = Math.max(map.getZoom(), 13);
+      map.flyTo(position, nextZoom);
+    });
+  }, [map, position]);
+
+  return null;
+};
+
 const EditableLocationMap: FC<Props> = ({
   coordinates,
   onChange,
@@ -80,9 +100,13 @@ const EditableLocationMap: FC<Props> = ({
       getThemeVariant(
         typeof document !== "undefined"
           ? document.documentElement.getAttribute("data-theme")
-          : null
-      )
+          : null,
+      ),
   );
+  const [mapInstance, setMapInstance] = useState<LeafletMap | null>(null);
+  const handleMapRef = useCallback((map: LeafletMap | null) => {
+    setMapInstance(map);
+  }, []);
 
   useEffect(() => {
     if (typeof document === "undefined") {
@@ -118,23 +142,32 @@ const EditableLocationMap: FC<Props> = ({
 
   const hasValidCoordinates =
     coordinates && !Number.isNaN(lat) && !Number.isNaN(lng);
-  const position: LatLngExpression = hasValidCoordinates
-    ? [lat, lng]
-    : DEFAULT_CENTER;
+  const position: LatLngExpression = useMemo(
+    () => (hasValidCoordinates ? [lat, lng] : DEFAULT_CENTER),
+    [hasValidCoordinates, lat, lng],
+  );
+  const [markerPosition, setMarkerPosition] =
+    useState<LatLngExpression>(position);
+
+  useEffect(() => {
+    setMarkerPosition(position);
+  }, [position]);
 
   const handleMapClick = useCallback(
     (clickedLat: number, clickedLng: number) => {
       if (onChange) {
         onChange([clickedLat, clickedLng]);
       }
+      setMarkerPosition([clickedLat, clickedLng]);
     },
-    [onChange]
+    [onChange],
   );
 
   const handleClear = useCallback(() => {
     if (onChange) {
       onChange(null);
     }
+    setMarkerPosition(DEFAULT_CENTER);
   }, [onChange]);
 
   const tileLayer = TILE_LAYERS[themeVariant];
@@ -144,7 +177,6 @@ const EditableLocationMap: FC<Props> = ({
       <div className="flex items-center justify-between">
         <label className="label">
           <span className="label-text">Coordinates</span>
-          <span className="label-text-alt">(Click on the map to set)</span>
         </label>
         {hasValidCoordinates && (
           <button
@@ -157,15 +189,14 @@ const EditableLocationMap: FC<Props> = ({
         )}
       </div>
       <div
-        className={`rounded-2xl overflow-hidden border border-base-100/20 ${
-          themeVariant === "dark" ? "leaflet-theme-dark" : ""
-        }`}
+        className={`relative z-0 rounded-2xl overflow-hidden border border-base-100/20 ${themeVariant === "dark" ? "leaflet-theme-dark" : ""}`}
       >
         <MapContainer
-          center={position}
+          center={markerPosition}
           zoom={zoom}
           scrollWheelZoom
           className="h-64 w-full"
+          ref={handleMapRef}
         >
           <TileLayer
             key={tileLayer.url}
@@ -173,10 +204,18 @@ const EditableLocationMap: FC<Props> = ({
             url={tileLayer.url}
           />
           <MapClickHandler onMapClick={handleMapClick} />
-          {hasValidCoordinates && (
-            <Marker position={[lat, lng]} icon={markerIcon} />
+          <FlyToMarker position={markerPosition} />
+          {markerPosition && (
+            <Marker position={markerPosition} icon={markerIcon} />
           )}
         </MapContainer>
+        <MapSearchControl
+          map={mapInstance}
+          onSelect={(result) => {
+            handleMapClick(result.lat, result.lng);
+          }}
+          placeholder="Search location"
+        />
       </div>
       {hasValidCoordinates && (
         <p className="text-sm text-base-content/70">

@@ -1,4 +1,5 @@
 import ThemeToggle from "@/shared/ThemeToggle";
+import useTenantPublic from "../hooks/useTenantPublic";
 import useTenantThemePublic from "../hooks/useTenantThemePublic";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
 import { useEffect, useState } from "react";
@@ -11,20 +12,27 @@ export default function SparkFormLayout({
   slug: string;
 }) {
   const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
-    (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark"
+    (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark",
   );
 
-  const { loading } = useTenantThemePublic({
+  const {
+    tenant,
+    hasImage,
+    loading: loadingTenant,
+  } = useTenantPublic({
+    slug,
+  });
+
+  const { loading: loadingTheme } = useTenantThemePublic({
     slug,
     colorScheme,
   });
 
-  /* =====================================================
-   * Load persisted scheme (client-only)
-   * ===================================================== */
+  const loading = loadingTenant || loadingTheme;
+
   useEffect(() => {
     const saved = localStorage.getItem(
-      "@color-scheme"
+      "@color-scheme",
     ) as TenantColorScheme | null;
 
     if (saved) setColorScheme(saved);
@@ -41,13 +49,35 @@ export default function SparkFormLayout({
           <span className="loading loading-spinner loading-lg" />
         </div>
       )}
-      <div className="navbar bg-base-100 shadow-sm sticky top-0 z-20">
-        <div className="flex-1">
-          <h1 className="font-bold text-lg">Spark Request Form</h1>
-        </div>
 
-        <div className="flex-none">
-          <ThemeToggle value={colorScheme} onChange={setColorScheme} />
+      <div className="navbar bg-base-100 shadow-sm sticky top-0 z-20">
+        <div className="grid grid-cols-3 items-center w-full px-4">
+          {/* LEFT: Logo */}
+          <div className="flex items-center gap-3 justify-start">
+            <img
+              src={hasImage ? tenant!.image! : "/logo.svg"}
+              alt="Tenant logo"
+              className="h-8 w-auto object-contain app-logo-public"
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (!img.src.endsWith("/logo.svg")) {
+                  img.src = "/logo.svg";
+                }
+              }}
+            />
+          </div>
+
+          {/* CENTER: Title */}
+          <div className="flex justify-center">
+            <h1 className="font-semibold text-lg tracking-tight">
+              Spark Request Form
+            </h1>
+          </div>
+
+          {/* RIGHT: Actions */}
+          <div className="flex justify-end">
+            <ThemeToggle value={colorScheme} onChange={setColorScheme} />
+          </div>
         </div>
       </div>
 
