@@ -34,6 +34,8 @@ import {
 import { CalendarDaysIcon } from "@heroicons/react/24/solid";
 import { useAlertStore } from "@/store/alertStore";
 import ConfirmationModal from "@/shared/ConfirmationModal";
+import { toEventStatusFilterEnum } from "@/events/eventStatusFilter";
+import type { EventStatusFilterEnum } from "@api/queries/__generated__/EventsQuery.graphql";
 
 const PAGE_SIZE = 10;
 
@@ -98,7 +100,7 @@ type EventsListInnerProps = {
   filters?: {
     tenantId?: string;
     eventTypeId?: string;
-    eventStatusId?: string;
+    eventStatus?: EventStatusFilterEnum;
     requestId?: string;
     date?: string;
   };
@@ -395,7 +397,14 @@ const EventsListInner = ({ filters }: EventsListInnerProps) => {
 const EventsList = () => {
   const { tenantId } = useAuthStore();
 
-  const { control, watch, reset } = useForm({
+  type EventsListFiltersForm = {
+    eventType: string;
+    status: EventStatusFilterEnum | "";
+    request: string;
+    date: string;
+  };
+
+  const { control, watch, reset } = useForm<EventsListFiltersForm>({
     defaultValues: {
       // tenant: "",
       eventType: "",
@@ -413,7 +422,7 @@ const EventsList = () => {
   const filters = {
     tenantId: tenantId || undefined,
     eventTypeId: selectedEventType || undefined,
-    eventStatusId: selectedStatus || undefined,
+    eventStatus: selectedStatus || undefined,
     requestId: selectedRequest || undefined,
     date: selectedDate || undefined,
   };
@@ -494,10 +503,12 @@ const EventsList = () => {
                   control={control}
                   name="status"
                   label="Filter by Status"
-                  options={catalogs.eventStatuses.map((s) => ({
-                    label: s.name,
-                    value: s.id,
-                  }))}
+                  options={catalogs.eventStatuses.flatMap((status) => {
+                    const enumValue = toEventStatusFilterEnum(status);
+                    return enumValue
+                      ? [{ label: status.name, value: enumValue }]
+                      : [];
+                  })}
                   placeholder="Search status..."
                 />
                 <FormAutocomplete
