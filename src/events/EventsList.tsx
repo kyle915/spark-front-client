@@ -397,7 +397,14 @@ const EventsListInner = ({ filters }: EventsListInnerProps) => {
 const EventsList = () => {
   const { tenantId } = useAuthStore();
 
-  const { control, watch, reset } = useForm({
+  type EventsListFiltersForm = {
+    eventType: string;
+    status: EventStatusFilterEnum | "";
+    request: string;
+    date: string;
+  };
+
+  const { control, watch, reset } = useForm<EventsListFiltersForm>({
     defaultValues: {
       // tenant: "",
       eventType: "",

@@ -180,7 +180,13 @@ const TodayEventsInner = ({ filters }: TodayEventsInnerProps) => {
 
 const TodayEvents = () => {
   const { tenantId } = useAuthStore();
-  const { control, watch, reset } = useForm({
+  type TodayEventsFiltersForm = {
+    eventType: string;
+    status: EventStatusFilterEnum | "";
+    request: string;
+  };
+
+  const { control, watch, reset } = useForm<TodayEventsFiltersForm>({
     defaultValues: {
       // tenant: "",
       eventType: "",
