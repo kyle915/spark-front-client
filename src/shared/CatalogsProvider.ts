@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { fetchQuery, type GraphQLTaggedNode } from "react-relay";
 
-import { useAuthStore } from "@/store/authStore";
-
 import type { EventStatus, EventType } from "../types/events/formTypes";
 import environment from "@api/relay/environment";
 import { EventTypeQuery } from "@api/queries/EventTypeQuery";
@@ -52,7 +50,7 @@ export interface RequestStoreManagerItem {
   name: string;
   phone: string;
   uuid?: string;
-  requestId?: string | null;
+  requestId?: string;
 }
 type CatalogsProviderProps = {
   children: (catalogs: CatalogsState) => ReactNode;
@@ -75,6 +73,10 @@ type CatalogsProviderProps = {
   requestsFilters?: RequestsQueryType["variables"]["filters"];
   requestStoreManagers?: boolean;
   requestStoreManagersFilters?: RequestStoreManagersQueryType["variables"]["filters"];
+  rateTypes?: boolean;
+  rateTypesFilters?: {
+    tenantId?: string | null;
+  };
 };
 
 type CatalogsState = {
@@ -88,6 +90,7 @@ type CatalogsState = {
   tenants: CatalogItem[];
   requests: CatalogItem[];
   requestStoreManagers: RequestStoreManagerItem[];
+  rateTypes: CatalogItem[];
   loading: {
     eventTypes: boolean;
     eventStatuses: boolean;
@@ -99,6 +102,7 @@ type CatalogsState = {
     tenants: boolean;
     requests: boolean;
     requestStoreManagers: boolean;
+    rateTypes: boolean;
   };
   errors: {
     eventTypes: Error | null;
@@ -111,6 +115,7 @@ type CatalogsState = {
     tenants: Error | null;
     requests: Error | null;
     requestStoreManagers: Error | null;
+    rateTypes: Error | null;
   };
   refetch: (key: keyof CatalogsState) => void;
 };
@@ -126,6 +131,7 @@ const createInitialState = (): CatalogsState => ({
   tenants: [],
   requests: [],
   requestStoreManagers: [],
+  rateTypes: [],
   loading: {
     eventTypes: false,
     eventStatuses: false,
@@ -137,6 +143,7 @@ const createInitialState = (): CatalogsState => ({
     tenants: false,
     requests: false,
     requestStoreManagers: false,
+    rateTypes: false,
   },
   errors: {
     eventTypes: null,
@@ -149,6 +156,7 @@ const createInitialState = (): CatalogsState => ({
     tenants: null,
     requests: null,
     requestStoreManagers: null,
+    rateTypes: null,
   },
   refetch: () => {},
 });
@@ -175,8 +183,12 @@ const parseTenants = (response: TenantsQueryType["response"]) =>
 const parseRequests = (response: RequestsQueryType["response"]) =>
   parseConnection(response.requests);
 const parseRequestStoreManagers = (
-  response: RequestStoreManagersQueryType["response"]
-) => parseConnection(response.requestStoreManagers);
+  response: RequestStoreManagersQueryType["response"],
+) =>
+  parseConnection(response.requestStoreManagers).map((manager) => ({
+    ...manager,
+    requestId: manager.requestId ?? undefined,
+  }));
 
 const REQUESTS_PAGE_SIZE_FOR_FILTERS = 100;
 
@@ -202,68 +214,50 @@ const CatalogsProvider = ({
   requestStoreManagers = false,
   requestStoreManagersFilters,
 }: CatalogsProviderProps) => {
-  const { tenantId } = useAuthStore();
   const [state, setState] = useState<CatalogsState>(() => createInitialState());
 
-  // tenant filter for requests
-  const withTenantForRequests = <
-    T extends Record<string, unknown> | null | undefined
-  >(
-    filters: T
-  ): Record<string, unknown> => {
-    if (!tenantId) return (filters ?? {}) as Record<string, unknown>;
-
-    return {
-      ...(filters ?? {}),
-      tenantId,
-    };
-  };
-
-  // Filter requests by tenant always
-  const requestsFiltersMemo = useMemo(
-    () => withTenantForRequests(requestsFilters),
-    [requestsFilters]
-  );
-  const retailersFiltersMemo = useMemo(
-    () => withTenantForRequests(retailersFilters) ?? {},
-    [retailersFilters]
-  );
-  const distributorsFiltersMemo = useMemo(
-    () => withTenantForRequests(distributorsFilters) ?? {},
-    [distributorsFilters]
-  );
-
-  // Memoized filters
   const eventTypeFiltersMemo = useMemo(
     () => eventTypesFilters ?? {},
-    [eventTypesFilters]
+    [eventTypesFilters],
   );
   const eventStatusFiltersMemo = useMemo(
     () => eventStatusesFilters ?? {},
-    [eventStatusesFilters]
+    [eventStatusesFilters],
   );
   const clientsFiltersMemo = useMemo(
     () => clientsFilters ?? {},
-    [clientsFilters]
+    [clientsFilters],
   );
-
+  const retailersFiltersMemo = useMemo(
+    () => retailersFilters ?? {},
+    [retailersFilters],
+  );
+  const distributorsFiltersMemo = useMemo(
+    () => distributorsFilters ?? {},
+    [distributorsFilters],
+  );
   const requestTypesFiltersMemo = useMemo(
     () => requestTypesFilters ?? {},
-    [requestTypesFilters]
+    [requestTypesFilters],
   );
   const requestStatusesFiltersMemo = useMemo(
     () => requestStatusesFilters ?? {},
-    [requestStatusesFilters]
+    [requestStatusesFilters],
   );
-
+  const requestsFiltersMemo = useMemo(
+    () => requestsFilters ?? {},
+    [requestsFilters],
+  );
   const requestStoreManagersFiltersMemo = useMemo(
     () => requestStoreManagersFilters ?? {},
-    [requestStoreManagersFilters]
+    [requestStoreManagersFilters],
   );
+
   const requestsVariablesMemo = useMemo(
     () => ({ first: REQUESTS_PAGE_SIZE_FOR_FILTERS }),
-    []
+    [],
   );
+
   const emptyFilters = useMemo(() => ({}), []);
 
   const [refreshTriggers, setRefreshTriggers] = useState<
@@ -280,22 +274,22 @@ const CatalogsProvider = ({
   // Helper to create fetch effect
   const useCatalogEffect = <
     TQuery extends { response: unknown; variables: Record<string, unknown> },
-    TItem
+    TItem,
   >(
     isEnabled: boolean,
     filters: QueryFilters<TQuery>,
     query: GraphQLTaggedNode,
     key: keyof CatalogsState & string,
     parser: (data: TQuery["response"]) => TItem[],
-    extraVariables?: Record<string, unknown>
+    extraVariables?: Record<string, unknown>,
   ) => {
     const variables = useMemo(
       () =>
         ({
           ...(filters ? { filters } : {}),
           ...(extraVariables ?? {}),
-        } as TQuery["variables"]),
-      [filters, extraVariables]
+        }) as TQuery["variables"],
+      [filters, extraVariables],
     );
 
     const refreshTrigger = refreshTriggers[key] || 0;
@@ -323,7 +317,7 @@ const CatalogsProvider = ({
       subscription = fetchQuery<TQuery>(
         environment,
         query,
-        variables
+        variables,
       ).subscribe({
         next: (response) => {
           if (!isActive) return;
@@ -364,7 +358,7 @@ const CatalogsProvider = ({
     eventTypeFiltersMemo,
     EventTypeQuery,
     "eventTypes",
-    parseEventTypes
+    parseEventTypes,
   );
 
   useCatalogEffect<EventStatusesQueryType, EventStatus>(
@@ -372,7 +366,7 @@ const CatalogsProvider = ({
     eventStatusFiltersMemo,
     EventStatusesQuery,
     "eventStatuses",
-    parseEventStatuses
+    parseEventStatuses,
   );
 
   useCatalogEffect<ClientsQueryType, CatalogItem>(
@@ -380,23 +374,23 @@ const CatalogsProvider = ({
     clientsFiltersMemo,
     ClientsQuery,
     "clients",
-    parseClients
+    parseClients,
   );
 
   useCatalogEffect<RetailersQueryType, CatalogItem>(
-    retailers || !!tenantId,
+    retailers,
     retailersFiltersMemo,
     RetailersQuery,
     "retailers",
-    parseRetailers
+    parseRetailers,
   );
 
   useCatalogEffect<DistributorsQueryType, CatalogItem>(
-    distributors || !!tenantId,
+    distributors,
     distributorsFiltersMemo,
     DistributorsQuery,
     "distributors",
-    parseDistributors
+    parseDistributors,
   );
 
   useCatalogEffect<RequestTypesQueryType, CatalogItem>(
@@ -404,7 +398,7 @@ const CatalogsProvider = ({
     requestTypesFiltersMemo,
     RequestTypesQuery,
     "requestTypes",
-    parseRequestTypes
+    parseRequestTypes,
   );
 
   useCatalogEffect<RequestStatusesQueryType, CatalogItem>(
@@ -412,7 +406,7 @@ const CatalogsProvider = ({
     requestStatusesFiltersMemo,
     RequestStatusesQuery,
     "requestStatuses",
-    parseRequestStatuses
+    parseRequestStatuses,
   );
 
   useCatalogEffect<TenantsQueryType, CatalogItem>(
@@ -420,24 +414,23 @@ const CatalogsProvider = ({
     emptyFilters,
     TenantsQuery,
     "tenants",
-    parseTenants
+    parseTenants,
   );
 
   useCatalogEffect<RequestsQueryType, CatalogItem>(
-    requests || !!tenantId,
+    requests,
     requestsFiltersMemo,
     RequestsQuery,
     "requests",
     parseRequests,
-    requestsVariablesMemo
+    requestsVariablesMemo,
   );
-
   useCatalogEffect<RequestStoreManagersQueryType, RequestStoreManagerItem>(
     requestStoreManagers,
     requestStoreManagersFiltersMemo,
     RequestStoreManagersQuery,
     "requestStoreManagers",
-    parseRequestStoreManagers
+    parseRequestStoreManagers,
   );
 
   return children({ ...state, refetch });

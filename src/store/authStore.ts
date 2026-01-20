@@ -3,12 +3,18 @@ import { login as loginService } from "@api/auth/login";
 import { fetchMe, type MeUser } from "@api/auth/me";
 import { themes } from "@/utils";
 
+type TenantMeta = {
+  logo?: string | null;
+  requestUrlName?: string | null;
+};
+
 interface AuthState {
   user: MeUser | null;
   token: string | null;
   refreshToken: string | null;
   tenantUuid: string | null;
   tenantId: string | null;
+  tenantMeta: TenantMeta | null;
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
@@ -19,6 +25,13 @@ interface AuthState {
   loadFromStorage: () => void;
   setTenantUuid: (uuid: string | null) => void;
   setTenantId: (id: string | null) => void;
+  setTenant: (
+    tenantUuid: string,
+    tenantId: string,
+    logo?: string | null,
+    requestUrlName?: string | null
+  ) => void;
+  clearTenant: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -27,6 +40,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   refreshToken: null,
   tenantUuid: null,
   tenantId: null,
+  tenantMeta: null,
   isAuthenticated: false,
   loading: false,
   error: null,
@@ -49,16 +63,17 @@ export const useAuthStore = create<AuthState>((set) => ({
         token: authToken,
         refreshToken,
         tenantUuid: null,
+        tenantMeta: null,
         isAuthenticated: true,
         loading: false,
       });
     } catch (err) {
-      const error = err as Error;
+      const message = err instanceof Error ? err.message : "Error logging in";
       set({
-        error: error.message || "Error logging in",
+        error: message,
         loading: false,
       });
-      throw error;
+      throw new Error(message);
     }
   },
 
@@ -92,12 +107,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     localStorage.removeItem("@token");
     localStorage.removeItem("@refreshToken");
+
     localStorage.removeItem("@tenantUuid");
+    localStorage.removeItem("@tenantId");
+    localStorage.removeItem("@tenantLogo");
+    localStorage.removeItem("@tenantRequestUrlName");
+
     set({
       user: null,
       token: null,
       refreshToken: null,
       tenantUuid: null,
+      tenantId: null,
+      tenantMeta: null,
       isAuthenticated: false,
       error: null,
     });
@@ -107,6 +129,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     const token = localStorage.getItem("@token");
     const refreshToken = localStorage.getItem("@refreshToken");
     const tenantUuid = localStorage.getItem("@tenantUuid");
+    const tenantId = localStorage.getItem("@tenantId");
+    const logo = localStorage.getItem("@tenantLogo");
+    const requestUrlName = localStorage.getItem("@tenantRequestUrlName");
+
     const theme = localStorage.getItem("@theme") || themes.light;
     document.documentElement.setAttribute("data-theme", theme);
     if (token) {
@@ -118,6 +144,11 @@ export const useAuthStore = create<AuthState>((set) => ({
           refreshToken,
           tenantUuid,
           isAuthenticated: true,
+          tenantId,
+          tenantMeta: {
+            logo,
+            requestUrlName,
+          },
         });
       } catch (err) {
         const error = err as Error;
@@ -129,11 +160,50 @@ export const useAuthStore = create<AuthState>((set) => ({
           token: null,
           refreshToken: null,
           tenantUuid: null,
+          tenantMeta: null,
+          tenantId: null,
           isAuthenticated: false,
         });
       }
     }
   },
+
+  setTenant: (
+    tenantUuid: string,
+    tenantId: string,
+    logo?: string | null,
+    requestUrlName?: string | null
+  ) => {
+    localStorage.setItem("@tenantUuid", tenantUuid);
+    localStorage.setItem("@tenantId", tenantId);
+
+    if (logo) localStorage.setItem("@tenantLogo", logo);
+    if (requestUrlName)
+      localStorage.setItem("@tenantRequestUrlName", requestUrlName);
+
+    set({
+      tenantUuid,
+      tenantId,
+      tenantMeta: {
+        logo,
+        requestUrlName,
+      },
+    });
+  },
+
+  clearTenant: () => {
+    localStorage.removeItem("@tenantUuid");
+    localStorage.removeItem("@tenantId");
+    localStorage.removeItem("@tenantLogo");
+    localStorage.removeItem("@tenantRequestUrlName");
+
+    set({
+      tenantUuid: null,
+      tenantId: null,
+      tenantMeta: null,
+    });
+  },
+
   setTenantUuid: (uuid) => {
     if (uuid) {
       localStorage.setItem("@tenantUuid", uuid);
