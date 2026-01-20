@@ -17,6 +17,8 @@ import { useForm } from "react-hook-form";
 import CatalogsProvider from "@/shared/CatalogsProvider";
 import FormAutocomplete from "@/shared/FormAutocomplete";
 import { useAuthStore } from "@/store/authStore";
+import { toEventStatusFilterEnum } from "@/events/eventStatusFilter";
+import type { EventStatusFilterEnum } from "@api/queries/__generated__/EventsQuery.graphql";
 
 //Icons
 import {
@@ -93,7 +95,7 @@ type TodayEventsInnerProps = {
   filters?: {
     tenantId?: string;
     eventTypeId?: string;
-    eventStatusId?: string;
+    eventStatus?: EventStatusFilterEnum;
     requestId?: string;
   };
 };
@@ -194,7 +196,7 @@ const TodayEvents = () => {
   const filters = {
     tenantId: tenantId || undefined,
     eventTypeId: selectedEventType || undefined,
-    eventStatusId: selectedStatus || undefined,
+    eventStatus: selectedStatus || undefined,
     requestId: selectedRequest || undefined,
   };
 
@@ -277,10 +279,12 @@ const TodayEvents = () => {
                   control={control}
                   name="status"
                   label="Filter by Status"
-                  options={catalogs.eventStatuses.map((s) => ({
-                    label: s.name,
-                    value: s.id,
-                  }))}
+                  options={catalogs.eventStatuses.flatMap((status) => {
+                    const enumValue = toEventStatusFilterEnum(status);
+                    return enumValue
+                      ? [{ label: status.name, value: enumValue }]
+                      : [];
+                  })}
                   placeholder="Search status..."
                 />
                 <FormAutocomplete

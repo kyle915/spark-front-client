@@ -276,13 +276,13 @@ const RecapView = () => {
                     )}
                   </button>
 
-                  <button
+                  {/* <button
                     className="btn btn-primary btn-sm rounded-full px-6"
-                    onClick={() => navigate(`/recap/edit/${recap.uuid}`)}
-                    disabled={isExporting}
+                  onClick={() => navigate(`/recap/edit/${recap.uuid}`)}
+                  disabled={isExporting}
                   >
                     Activation
-                  </button>
+                  </button> */}
                 </div>
               </div>
             </div>
