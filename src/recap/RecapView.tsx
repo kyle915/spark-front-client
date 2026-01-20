@@ -4,7 +4,7 @@ import type { RecapQuery as RecapQueryType } from "@/api/queries/__generated__/R
 import { GenerateRecapPdfMutation } from "@api/mutations/GenerateRecapPdfMutation";
 import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@api/mutations/__generated__/GenerateRecapPdfMutation.graphql";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { useParams, useNavigate, Link } from "react-router";
+import { useParams, Link } from "react-router";
 import { useCallback, useMemo, useState } from "react";
 import { formatDate, formatTime } from "@/utils";
 import { ArrowLeftIcon, MapPinHouse } from "lucide-react";
@@ -63,7 +63,6 @@ const Gallery3DCard = ({
 // ======================================================
 const RecapView = () => {
   const { uuid } = useParams();
-  const navigate = useNavigate();
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const showAlert = useAlertStore((state) => state.showAlert);
   const [commitGeneratePdf, isExporting] =
@@ -276,13 +275,13 @@ const RecapView = () => {
                     )}
                   </button>
 
-                  <button
+                  {/* <button
                     className="btn btn-primary btn-sm rounded-full px-6"
-                    onClick={() => navigate(`/recap/edit/${recap.uuid}`)}
-                    disabled={isExporting}
+                  onClick={() => navigate(`/recap/edit/${recap.uuid}`)}
+                  disabled={isExporting}
                   >
                     Activation
-                  </button>
+                  </button> */}
                 </div>
               </div>
             </div>

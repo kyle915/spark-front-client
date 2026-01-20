@@ -1,4 +1,4 @@
-import React, { type ReactNode, useState, useEffect } from "react";
+import React, { type ReactNode, useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router";
 import {
   ChevronLeftIcon,
@@ -10,9 +10,11 @@ import {
 import ThemeToggle from "@shared/ThemeToggle";
 import { navigationMenuRoutes } from "@/routes/AppRoutes";
 import { useAuthStore } from "@/store/authStore";
+import { useAlertStore } from "@/store/alertStore";
 import { PageTransition } from "./PageTransition";
 import useTenantTheme from "@/hooks/useTenantTheme";
 import { type TenantColorScheme } from "@utils/tenantThemeConfig";
+import { Clipboard, ExternalLink } from "lucide-react";
 
 type NavigationLink = {
   title?: string;
@@ -121,11 +123,10 @@ const SidebarItem = ({
           onClick={() => setExpanded((v) => !v)}
           className={`w-full flex items-center gap-3 py-2 ${leftPadding}
               rounded-lg transition min-w-0 overflow-hidden
-              ${
-                sectionActive
-                  ? "bg-primary/10 text-primary"
-                  : "hover:bg-base-300"
-              }`}
+              ${sectionActive
+              ? "bg-primary/10 text-primary"
+              : "hover:bg-base-300"
+            }`}
         >
           <div className="flex items-center gap-3 min-w-0">
             {item.Icon && (
@@ -165,11 +166,10 @@ const SidebarItem = ({
       <Link
         to={item.path ?? "#"}
         className={`flex items-center gap-3 py-2 px-3 rounded-lg transition min-w-0
-                    ${
-                      sectionActive
-                        ? "bg-primary/10 text-primary font-semibold"
-                        : "hover:bg-base-300"
-                    }`}
+                    ${sectionActive
+            ? "bg-primary/10 text-primary font-semibold"
+            : "hover:bg-base-300"
+          }`}
       >
         {item.Icon && <item.Icon className="w-5 h-5 text-primary shrink-0" />}
         {!collapsed && (
@@ -189,12 +189,37 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const [collapsed, setCollapsed] = useState(false);
   const { user } = useAuthStore();
+  const { tenantMeta } = useAuthStore();
   const { tenantId } = useAuthStore();
+  const { showAlert } = useAlertStore();
   const logout = useAuthStore((state) => state.logout);
   const navigate = useNavigate();
   const avatarSrc = user?.image || null;
   const location = useLocation();
   const pathname = location.pathname;
+
+  const publicFormUrl = useMemo(() => {
+    const requestUrlName = tenantMeta?.requestUrlName?.trim();
+    if (!requestUrlName) return null;
+
+    return `${window.location.origin}/spark-form/${requestUrlName}`;
+  }, [tenantMeta?.requestUrlName]);
+
+  const copyPublicFormUrl = async () => {
+    if (!publicFormUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(publicFormUrl);
+      showAlert("Link copied to clipboard", "success");
+    } catch {
+      showAlert("Error al copiar el link", "error");
+    }
+  };
+
+  const openPublicFormUrl = () => {
+    if (!publicFormUrl) return;
+    window.open(publicFormUrl, "_blank", "noopener,noreferrer");
+  };
 
   const onLogout = () => {
     logout();
@@ -228,13 +253,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <aside className="bg-base-100 border-r border-base-300 flex flex-col h-screen min-h-0 overflow-hidden">
         {/* HEADER */}
         <div className="relative flex items-center justify-center p-4 border-b border-base-300">
-          {!collapsed && (
-            <img src="/logo.svg" alt="Logo" className="h-8 w-auto app-logo" />
-          )}
+          {!collapsed &&
+            (tenantMeta?.logo ? (
+              <img
+                src={tenantMeta.logo}
+                alt={tenantMeta.requestUrlName ?? "Tenant logo"}
+                className="h-8 w-auto app-logo object-contain"
+              />
+            ) : (
+              <img
+                src="/logo.svg"
+                alt="Default logo"
+                className="h-8 w-auto app-logo"
+              />
+            ))}
           <button
-            className={`btn btn-ghost btn-sm text-primary ${
-              collapsed ? "" : "absolute right-4"
-            }`}
+            className={`btn btn-ghost btn-sm text-primary ${collapsed ? "" : "absolute right-4"
+              }`}
             onClick={() => setCollapsed(!collapsed)}
           >
             {collapsed ? (
@@ -278,7 +313,42 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </aside>
 
       <div className="flex flex-col flex-1 min-w-0">
-        <header className="flex justify-end items-center bg-base-100 border-b border-base-300 h-16 px-6 sticky top-0 z-30 text-base-content">
+        <header className="flex justify-between items-center bg-base-100 border-b border-base-300 h-16 px-6 sticky top-0 z-30 text-base-content">
+          {/* LEFT: path + requestUrl */}
+          <div className="flex items-center gap-2 text-sm font-medium text-base-content/70">
+            {publicFormUrl && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-base-200 border border-base-300 text-sm">
+                {/* LABEL */}
+                <span className="text-base-content/60">Form link</span>
+
+                {/* VALUE */}
+                <span className="font-medium text-primary truncate max-w-[180px]">
+                  {tenantMeta?.requestUrlName}
+                </span>
+
+                {/* ACTIONS */}
+                <div className="flex items-center gap-1 ml-1">
+                  <button
+                    onClick={copyPublicFormUrl}
+                    className="btn btn-xs btn-ghost text-primary"
+                    title="Copiar link del formulario"
+                  >
+                    <Clipboard className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={openPublicFormUrl}
+                    className="btn btn-xs btn-ghost text-primary"
+                    title="Abrir formulario"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT: user + logout */}
           <div className="flex items-center gap-4">
             <UserAvatar src={avatarSrc} user={user} />
 

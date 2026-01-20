@@ -1,5 +1,5 @@
 import { Controller, useForm, useWatch } from "react-hook-form";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import FormInputText from "@/shared/FormInputText";
 import FormInputTime from "@/shared/FormInputTime";
@@ -25,6 +25,13 @@ import type { CreateDistributorMutation as CreateDistributorMutationType } from 
 import { CreateRetailerMutation } from "@api/mutations/CreateRetailerMutation";
 import type { CreateRetailerMutation as CreateRetailerMutationType } from "@api/mutations/__generated__/CreateRetailerMutation.graphql";
 
+import { DistributorsQuery } from "@api/queries/DistributorsQuery";
+import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__generated__/DistributorsQuery.graphql";
+import { RetailersQuery } from "@api/queries/RetailersQuery";
+import type { RetailersQuery as RetailersQueryType } from "@api/queries/__generated__/RetailersQuery.graphql";
+
+import { useEntitiesByLocation } from "../hooks/useEntitiesByLocation";
+
 export interface RequestFormValues {
   name: string;
   date: string;
@@ -38,6 +45,7 @@ export interface RequestFormValues {
   requestTypeId?: string | null;
   clientName?: string;
   clientEmail?: string;
+  entitiesLocationId?: string | null;
   distributorName?: string;
   distributorEmail?: string;
   retailerName?: string;
@@ -88,12 +96,11 @@ interface RequestFormProps {
   products?: ProductItem[];
   tenantId: string;
   requestId?: string | null;
-
   requestStoreManagers?: CatalogItem[];
   locations?: CatalogItem[];
 
   onRefetch?: (
-    key: "distributors" | "retailers" | "requestStoreManagers"
+    key: "distributors" | "retailers" | "requestStoreManagers",
   ) => void;
 
   enableContactSection?: boolean;
@@ -180,29 +187,47 @@ export default function RequestForm({
   const storeManagerId = watch("storeManagerId");
   const distributorLocationId = watch("distributorLocationId");
   const retailerLocationId = watch("retailerLocationId");
+  const selectedEntitiesLocationId = useWatch({
+    control,
+    name: "entitiesLocationId",
+  });
+
+  /* ================= DISTRIBUTORS AND RETAILERS ================= */
+  const extractDistributors = useCallback(
+    (data: DistributorsQueryType["response"]) =>
+      data.distributors?.edges?.flatMap((e) => (e?.node ? [e.node] : [])) ?? [],
+    [],
+  );
+
+  const distributorsHook = useEntitiesByLocation<
+    CatalogItem,
+    DistributorsQueryType
+  >({
+    tenantId,
+    entitiesLocationId: selectedEntitiesLocationId ?? null,
+    initialItems: distributors,
+    queryDocument: DistributorsQuery,
+    extractNodes: extractDistributors,
+  });
+
+  const extractRetailers = useCallback(
+    (data: RetailersQueryType["response"]) =>
+      data.retailers?.edges?.flatMap((e) => (e?.node ? [e.node] : [])) ?? [],
+    [],
+  );
+
+  const retailersHook = useEntitiesByLocation<CatalogItem, RetailersQueryType>({
+    tenantId,
+    entitiesLocationId: selectedEntitiesLocationId ?? null,
+    initialItems: retailers,
+    queryDocument: RetailersQuery,
+    extractNodes: extractRetailers,
+  });
 
   /* ================= UI STATE ================= */
   const [showDistributorLocation, setShowDistributorLocation] = useState(false);
   const [showRetailerLocation, setShowRetailerLocation] = useState(false);
   const [showStoreManagerCreate, setShowStoreManagerCreate] = useState(false);
-
-  const distributorsOptions = useMemo(
-    () =>
-      distributors.map((d) => ({
-        value: d.id,
-        label: d.email ? `${d.name} (${d.email})` : d.name,
-      })),
-    [distributors]
-  );
-
-  const retailersOptions = useMemo(
-    () =>
-      retailers.map((r) => ({
-        value: r.id,
-        label: r.address ? `${r.name} - ${r.address}` : r.name,
-      })),
-    [retailers]
-  );
 
   const storeManagerOptions = useMemo(
     () =>
@@ -210,7 +235,7 @@ export default function RequestForm({
         value: m.id,
         label: m.phone ? `${m.name} (${m.phone})` : m.name,
       })),
-    [requestStoreManagers]
+    [requestStoreManagers],
   );
 
   const [commitCreateDistributor, isCreatingDistributor] =
@@ -221,14 +246,14 @@ export default function RequestForm({
 
   const [commitCreateStoreManager, isCreatingStoreManager] =
     useMutation<CreateRequestStoreManagerMutationType>(
-      CreateRequestStoreManagerMutation
+      CreateRequestStoreManagerMutation,
     );
 
   const manualFields = useWatch({ control });
 
   const effectiveContactMode = useMemo(
     () => contactMode ?? (requestContactInfo ? "request" : "manual"),
-    [contactMode, requestContactInfo]
+    [contactMode, requestContactInfo],
   );
 
   const showContactSection = useMemo(() => {
@@ -367,7 +392,7 @@ export default function RequestForm({
           showAlert(
             res.createRequestStoreManager?.message ??
               "Error creating store manager",
-            "error"
+            "error",
           );
         }
       },
@@ -419,7 +444,7 @@ export default function RequestForm({
     if (current.includes(productId)) {
       noteSet(
         "products",
-        current.filter((id) => id !== productId)
+        current.filter((id) => id !== productId),
       );
     } else {
       noteSet("products", [...current, productId]);
@@ -428,7 +453,7 @@ export default function RequestForm({
 
   const noteSet = <TFieldName extends Path<RequestFormValues>>(
     name: TFieldName,
-    value: PathValue<RequestFormValues, TFieldName>
+    value: PathValue<RequestFormValues, TFieldName>,
   ) => {
     setValue(name, value, {
       shouldDirty: true,
@@ -436,7 +461,14 @@ export default function RequestForm({
     });
   };
 
-  console.log(selectedCoordinates);
+  const locationOptions = useMemo(
+    () =>
+      locations.map((location) => ({
+        value: location.id,
+        label: location.name,
+      })),
+    [locations],
+  );
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full">
@@ -481,7 +513,7 @@ export default function RequestForm({
                   <PencilIcon className="w-6 h-6" />
                   <h1>
                     {mode === "edit"
-                      ? defaultValues?.name ?? "Edit Request"
+                      ? (defaultValues?.name ?? "Edit Request")
                       : "Create Request"}
                   </h1>
                 </span>
@@ -591,6 +623,17 @@ export default function RequestForm({
                 </span>
               </div>
 
+              <div className="mt-4 max-w-sm">
+                <FormAutocomplete<RequestFormValues>
+                  name="entitiesLocationId"
+                  control={control}
+                  label="Location"
+                  placeholder="Select location..."
+                  options={locationOptions}
+                  disabled={!tenantId}
+                />
+              </div>
+
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
                   <p className="font-medium">Distributor</p>
@@ -600,7 +643,11 @@ export default function RequestForm({
                     control={control}
                     label="Select distributor"
                     placeholder="Search distributor..."
-                    options={distributorsOptions}
+                    options={distributorsHook.items.map((d) => ({
+                      value: d.id,
+                      label: d.name,
+                    }))}
+                    onSearch={distributorsHook.setSearchTerm}
                   />
 
                   {!distributorId && (
@@ -676,7 +723,11 @@ export default function RequestForm({
                     control={control}
                     label="Select retailer"
                     placeholder="Search retailer..."
-                    options={retailersOptions}
+                    options={retailersHook.items.map((r) => ({
+                      value: r.id,
+                      label: r.name,
+                    }))}
+                    onSearch={retailersHook.setSearchTerm}
                   />
 
                   {!retailerId && (

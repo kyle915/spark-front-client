@@ -150,6 +150,10 @@ body {
   transition: filter 0.2s ease;
 }
 
+.app-logo-public {
+  transition: filter 0.2s ease;
+}
+
 html[color-scheme="dark"] {
   color-scheme: dark;
 }
@@ -159,6 +163,10 @@ html[color-scheme="light"] {
 }
 
 html[color-scheme="dark"] .app-logo {
+  filter: brightness(0) invert(1);
+}
+
+html[color-scheme="dark"] .app-logo-public {
   filter: brightness(0) invert(1);
 }
 
