@@ -1,30 +1,33 @@
 import { useCallback } from "react";
 import { useAuthStore } from "@store/authStore";
 
+type SelectTenantPayload = {
+  tenantUuid: string;
+  tenantId: string;
+  logo?: string | null;
+  requestUrlName?: string | null;
+};
+
 export function useTenantSelection() {
   const tenantUuid = useAuthStore((state) => state.tenantUuid);
   const tenantId = useAuthStore((state) => state.tenantId);
+  const tenantMeta = useAuthStore((state) => state.tenantMeta);
 
-  const setTenantUuid = useAuthStore((state) => state.setTenantUuid);
-  const setTenantId = useAuthStore((state) => state.setTenantId);
+  const setTenant = useAuthStore((state) => state.setTenant);
+  const clearTenantStore = useAuthStore((state) => state.clearTenant);
 
   const selectTenant = useCallback(
-    (uuid: string, id: string) => {
-      setTenantUuid(uuid);
-      setTenantId(id);
+    ({ tenantUuid, tenantId, logo, requestUrlName }: SelectTenantPayload) => {
+      setTenant(tenantUuid, tenantId, logo, requestUrlName);
     },
-    [setTenantUuid, setTenantId]
+    [setTenant]
   );
-
-  const clearTenant = useCallback(() => {
-    setTenantUuid(null);
-    setTenantId(null);
-  }, [setTenantUuid, setTenantId]);
 
   return {
     tenantUuid,
     tenantId,
+    tenantMeta,
     selectTenant,
-    clearTenant,
+    clearTenant: clearTenantStore,
   };
 }

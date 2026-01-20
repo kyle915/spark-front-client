@@ -1,4 +1,4 @@
-import { Suspense, useCallback, type ReactNode } from "react";
+import { Suspense, useCallback, useState, type ReactNode } from "react";
 import DataTableRelay from "@/shared/DataTableRelay";
 import Layout from "@/layout/Layout";
 import { EventsQuery } from "@api/queries/EventsQuery";
@@ -8,7 +8,7 @@ import {
   useRelayPagination,
   type PageLoadedPayload,
 } from "@/hooks/useRelayPagination";
-import { usePreloadedQuery } from "react-relay/hooks";
+import { useMutation, usePreloadedQuery } from "react-relay/hooks";
 import type { PreloadedQuery } from "react-relay";
 import type { EventRow } from "../types/columnsTypes";
 import { eventColumns } from "@utils/columns";
@@ -18,11 +18,22 @@ import CatalogsProvider from "@shared/CatalogsProvider";
 import FormAutocomplete from "@shared/FormAutocomplete";
 import FormDatePicker from "@/shared/FormDatePicker";
 import { useAuthStore } from "@/store/authStore";
+import { SuspendEventMutation } from "@api/mutations/SuspendEventMutation";
+import { ArchiveEventMutation } from "@api/mutations/ArchiveEventMutation";
+import { ApproveEventMutation } from "@api/mutations/ApproveEventMutation";
 
 //Icons
 import { EyeIcon, PencilIcon } from "@heroicons/react/24/outline";
-import { FilterIcon, FunnelXIcon } from "lucide-react";
+import {
+  Archive,
+  CheckCircleIcon,
+  FilterIcon,
+  FunnelXIcon,
+  PauseCircleIcon,
+} from "lucide-react";
 import { CalendarDaysIcon } from "@heroicons/react/24/solid";
+import { useAlertStore } from "@/store/alertStore";
+import ConfirmationModal from "@/shared/ConfirmationModal";
 
 const PAGE_SIZE = 10;
 
@@ -99,6 +110,7 @@ const EventsListInner = ({ filters }: EventsListInnerProps) => {
     displayPage,
     isNavigating,
     handlePageLoaded,
+    refresh,
     goNext,
     goPrevious,
     goToPage,
@@ -109,13 +121,23 @@ const EventsListInner = ({ filters }: EventsListInnerProps) => {
   });
 
   const navigate = useNavigate();
+  const showAlert = useAlertStore((state) => state.showAlert);
+  const [commitSuspend, isSuspending] = useMutation<any>(SuspendEventMutation);
+  const [commitArchive, isArchiving] = useMutation<any>(ArchiveEventMutation);
+  const [commitApprove, isApproving] = useMutation<any>(ApproveEventMutation);
+  const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [eventToSuspend, setEventToSuspend] = useState<EventRow | null>(null);
+  const [eventToArchive, setEventToArchive] = useState<EventRow | null>(null);
+  const [eventToApprove, setEventToApprove] = useState<EventRow | null>(null);
 
   const handleViewEvent = useCallback(
     (dataEvent: EventRow) => {
       console.info("Viewing request", dataEvent.uuid);
       navigate(`/event/view/${dataEvent.uuid}`);
     },
-    [navigate]
+    [navigate],
   );
 
   const handleEditEvent = useCallback(
@@ -123,33 +145,232 @@ const EventsListInner = ({ filters }: EventsListInnerProps) => {
       console.info("Editing event", dataEvent.uuid);
       navigate(`/event/edit/${dataEvent.uuid}`);
     },
-    [navigate]
+    [navigate],
   );
 
+  const handleSuspendClick = useCallback((dataEvent: EventRow) => {
+    setEventToSuspend(dataEvent);
+    setIsSuspendModalOpen(true);
+  }, []);
+
+  const handleArchiveClick = useCallback((dataEvent: EventRow) => {
+    setEventToArchive(dataEvent);
+    setIsArchiveModalOpen(true);
+  }, []);
+
+  const handleApproveClick = useCallback((dataEvent: EventRow) => {
+    setEventToApprove(dataEvent);
+    setIsApproveModalOpen(true);
+  }, []);
+
+  const handleConfirmSuspend = useCallback(() => {
+    if (!eventToSuspend?.id) {
+      console.error("Event ID is missing");
+      return;
+    }
+    commitSuspend({
+      variables: {
+        input: {
+          id: eventToSuspend.id,
+        },
+      },
+      onCompleted: (response) => {
+        if (response.suspendEvent?.success) {
+          showAlert("Event suspended successfully", "success");
+          refresh();
+        } else {
+          showAlert(
+            `Error: ${response.suspendEvent?.message ?? "Unable to suspend event"}`,
+            "error",
+          );
+        }
+      },
+      onError: (error) => {
+        showAlert(`Error suspending event: ${error.message}`, "error");
+      },
+    });
+  }, [commitSuspend, eventToSuspend, refresh, showAlert]);
+
+  const handleConfirmArchive = useCallback(() => {
+    if (!eventToArchive?.id) {
+      console.error("Event ID is missing");
+      return;
+    }
+    commitArchive({
+      variables: {
+        input: {
+          id: eventToArchive.id,
+        },
+      },
+      onCompleted: (response) => {
+        if (response.archiveEvent?.success) {
+          showAlert("Event archived successfully", "success");
+          refresh();
+        } else {
+          showAlert(
+            `Error: ${response.archiveEvent?.message ?? "Unable to archive event"}`,
+            "error",
+          );
+        }
+      },
+      onError: (error) => {
+        showAlert(`Error archiving event: ${error.message}`, "error");
+      },
+    });
+  }, [commitArchive, eventToArchive, refresh, showAlert]);
+
+  const handleConfirmApprove = useCallback(() => {
+    if (!eventToApprove?.id) {
+      console.error("Event ID is missing");
+      return;
+    }
+    commitApprove({
+      variables: {
+        input: {
+          id: eventToApprove.id,
+        },
+      },
+      onCompleted: (response) => {
+        if (response.approveEvent?.success) {
+          showAlert("Event approved successfully", "success");
+          refresh();
+        } else {
+          showAlert(
+            `Error: ${response.approveEvent?.message ?? "Unable to approve event"}`,
+            "error",
+          );
+        }
+      },
+      onError: (error) => {
+        showAlert(`Error approving event: ${error.message}`, "error");
+      },
+    });
+  }, [commitApprove, eventToApprove, refresh, showAlert]);
+
+  const handleCloseSuspendModal = useCallback(() => {
+    setIsSuspendModalOpen(false);
+    setEventToSuspend(null);
+  }, []);
+
+  const handleCloseArchiveModal = useCallback(() => {
+    setIsArchiveModalOpen(false);
+    setEventToArchive(null);
+  }, []);
+
+  const handleCloseApproveModal = useCallback(() => {
+    setIsApproveModalOpen(false);
+    setEventToApprove(null);
+  }, []);
+
   const renderEventsActions = useCallback(
-    (dataEvent: EventRow) => (
-      <div className="flex gap-2">
-        <button
-          type="button"
-          className="btn btn-xs btn-ghost"
-          onClick={() => handleViewEvent(dataEvent)}
-        >
-          <EyeIcon className="w-5 h-5" />
-        </button>
-        <button
-          type="button"
-          className="btn btn-xs btn-ghost"
-          onClick={() => handleEditEvent(dataEvent)}
-        >
-          <PencilIcon className="w-5 h-5" />
-        </button>
-      </div>
-    ),
-    [handleEditEvent, handleViewEvent]
+    (dataEvent: EventRow) => {
+      const statusSlug = dataEvent.status?.slug?.toLowerCase();
+      const statusName = dataEvent.status?.name?.toLowerCase();
+      const isSuspended =
+        statusSlug === "suspended" ||
+        statusName === "suspended" ||
+        statusName === "suspendido";
+      const isArchived =
+        statusSlug === "archived" ||
+        statusName === "archived" ||
+        statusName === "archivado";
+      const isApproved =
+        statusSlug === "approved" ||
+        statusName === "approved" ||
+        statusName === "aprobado";
+      return (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="btn btn-xs btn-ghost"
+            onClick={() => handleViewEvent(dataEvent)}
+          >
+            <EyeIcon className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            className="btn btn-xs btn-ghost"
+            onClick={() => handleEditEvent(dataEvent)}
+          >
+            <PencilIcon className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            className={`btn btn-xs btn-ghost tooltip ${isApproved ? "text-success/50 btn-disabled" : "text-success"}`}
+            data-tip={isApproved ? "Already approved" : "Approve event"}
+            onClick={() => handleApproveClick(dataEvent)}
+            disabled={isApproved || isApproving}
+            aria-label="Approve event"
+          >
+            <CheckCircleIcon className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            className={`btn btn-xs btn-ghost tooltip ${isSuspended ? "text-warning/50 btn-disabled" : "text-warning"}`}
+            data-tip={isSuspended ? "Already suspended" : "Suspend event"}
+            onClick={() => handleSuspendClick(dataEvent)}
+            disabled={isSuspended || isSuspending}
+            aria-label="Suspend event"
+          >
+            <PauseCircleIcon className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            className={`btn btn-xs btn-ghost tooltip ${isArchived ? "text-error/50 btn-disabled" : "text-error"}`}
+            data-tip={isArchived ? "Already archived" : "Archive event"}
+            onClick={() => handleArchiveClick(dataEvent)}
+            disabled={isArchived || isArchiving}
+            aria-label="Archive event"
+          >
+            <Archive className="w-5 h-5" />
+          </button>
+        </div>
+      );
+    },
+    [
+      handleEditEvent,
+      handleViewEvent,
+      handleApproveClick,
+      handleSuspendClick,
+      handleArchiveClick,
+      isApproving,
+      isSuspending,
+      isArchiving,
+    ],
   );
 
   return (
     <>
+      <ConfirmationModal
+        isOpen={isApproveModalOpen}
+        onClose={handleCloseApproveModal}
+        onConfirm={handleConfirmApprove}
+        title="Approve Event"
+        message={`Are you sure you want to approve the event "${eventToApprove?.name || ""}"?`}
+        confirmText="Approve"
+        cancelText="Cancel"
+        confirmButtonClass="btn-success"
+      />
+      <ConfirmationModal
+        isOpen={isSuspendModalOpen}
+        onClose={handleCloseSuspendModal}
+        onConfirm={handleConfirmSuspend}
+        title="Suspend Event"
+        message={`Are you sure you want to suspend the event "${eventToSuspend?.name || ""}"?`}
+        confirmText="Suspend"
+        cancelText="Cancel"
+        confirmButtonClass="btn-warning"
+      />
+      <ConfirmationModal
+        isOpen={isArchiveModalOpen}
+        onClose={handleCloseArchiveModal}
+        onConfirm={handleConfirmArchive}
+        title="Archive Event"
+        message={`Are you sure you want to archive the event "${eventToArchive?.name || ""}"?`}
+        confirmText="Archive"
+        cancelText="Cancel"
+        confirmButtonClass="btn-error"
+      />
       <Suspense fallback={<Loading />}>
         {queryRef ? (
           <EventsTableContent

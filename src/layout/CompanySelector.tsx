@@ -12,6 +12,7 @@ type Company = {
   uuid: string;
   name: string;
   logo?: string | null;
+  requestUrlName?: string | null;
 };
 
 type TenantEdge = TenantQueryType["response"]["tenants"]["edges"][number];
@@ -48,14 +49,21 @@ export default function CompanySelector() {
               id: tenant.id,
               uuid: String(tenant.uuid),
               name: tenant.name,
-              logo: null,
+              logo: tenant.image,
+              requestUrlName: tenant.requestUrlName,
             };
           }) ?? [];
 
         // 👉 CASO: SOLO UN TENANT → AUTOSELECT + REDIRECT
         if (tenantCompanies.length === 1) {
           const [company] = tenantCompanies;
-          selectTenant(company.uuid, company.id);
+          selectTenant({
+            tenantUuid: company.uuid,
+            tenantId: company.id,
+            logo: company.logo,
+            requestUrlName: company.requestUrlName,
+          });
+
           navigate(from, { replace: true });
           return;
         }
@@ -111,7 +119,12 @@ export default function CompanySelector() {
           <div
             key={company.id}
             onClick={() => {
-              selectTenant(company.uuid, company.id);
+              selectTenant({
+                tenantUuid: company.uuid,
+                tenantId: company.id,
+                logo: company.logo,
+                requestUrlName: company.requestUrlName,
+              });
               navigate(`/dashboard/${company.uuid}`);
             }}
             className="card bg-base-200 shadow-xl cursor-pointer transition transform hover:scale-105 border-2 border-transparent hover:border-primary"
