@@ -216,15 +216,15 @@ export default function DashboardIndex() {
           <div className="col-span-1">
             <GoalsProgressSection
               goals={[
-                { label: "Events Target", current: 130, target: 200 },
-                { label: "Consumer Sampling", current: 12500, target: 25000 },
-                { label: "Brand Awareness", current: 40, target: 50 },
-                { label: "Purchase Intent", current: 65.4, target: 75 },
-                { label: "Female Participation", current: 58, target: 65 },
-                { label: "First-Time Buyers", current: 62, target: 70 },
-                { label: "First-Time Buyers-2", current: 62, target: 70 },
-                { label: "First-Time Buyers-3", current: 62, target: 70 },
-                { label: "First-Time Buyers-4", current: 62, target: 70 },
+                { label: "Events Target", current: 0, target: 200 },
+                { label: "Consumer Sampling", current: 0, target: 25000 },
+                { label: "Brand Awareness", current: 0, target: 50 },
+                { label: "Purchase Intent", current: 0, target: 75 },
+                { label: "Female Participation", current: 0, target: 65 },
+                { label: "First-Time Buyers", current: 0, target: 70 },
+                { label: "First-Time Buyers-2", current: 0, target: 70 },
+                { label: "First-Time Buyers-3", current: 0, target: 70 },
+                { label: "First-Time Buyers-4", current: 0, target: 70 },
               ]}
             />
           </div>
