@@ -25,7 +25,7 @@ export default memo(function GoalsProgressSection({
 
   return (
     <ChartCard
-      title="2025 Goals Progress"
+      title="2026 Goals Progress"
       icon={Gauge}
       iconColor="text-primary"
       fixedHeight
