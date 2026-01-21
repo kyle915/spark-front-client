@@ -30,6 +30,7 @@ interface CreateRequestFormProps {
 }
 
 const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
+  console.log("TENANT", tenantId)
   // ========================
   // QUERIES
   // ========================
@@ -110,6 +111,9 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
           coordinates: (formData.coordinates ?? []) as readonly number[],
           timezoneId: formData.timezoneId!,
           requestTypeId: formData.requestTypeId!,
+          distributorId: formData.distributorId ?? null,
+          retailerId: formData.retailerId ?? null,
+          storeManagerId: formData.storeManagerId ?? null,
 
           // Create-only fields
           clientName: formData.clientName!,
