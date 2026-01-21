@@ -13,7 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 import type { RequestUuidQuery$data } from "@api/queries/__generated__/RequestUuidQuery.graphql";
 import LocationMap from "@shared/LocationMap";
-import { formatDate, formatTime } from "@utils/index";
+import { formatDate, formatTimeLiteral } from "@utils/index";
 
 type Request = NonNullable<RequestUuidQuery$data["request"]>;
 
@@ -105,8 +105,8 @@ const RequestCard: React.FC<Props> = ({ request }) => {
           <div className="flex items-center gap-2">
             <ClockIcon className="w-4 h-4 opacity-60" />
             <span className="font-medium">
-              {formatTime(request.startTime ?? null)} –{" "}
-              {formatTime(request.endTime ?? null)}
+              {formatTimeLiteral(request.startTime ?? null)} –{" "}
+              {formatTimeLiteral(request.endTime ?? null)}
             </span>
           </div>
 
