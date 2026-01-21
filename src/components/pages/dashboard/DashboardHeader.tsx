@@ -6,7 +6,7 @@ interface DashboardHeaderProps {
 const DashboardHeader = ({ quarterLabel, title }: DashboardHeaderProps) => {
   const readableRange = quarterLabel
     ? quarterLabel // en Spark no usamos getQuarterDateRangeLabel aún
-    : "January - December 2025";
+    : "January - December 2026";
 
   return (
     <div className="space-y-6">

@@ -111,7 +111,7 @@ function ReachConversionChart({ data }: { data: ReachConversionItem[] }) {
         position: "right",
         beginAtZero: true,
         min: 0,
-        max: 35,
+        max: 100,
         ticks: {
           color: textColor,
           callback: (v) => `${v}%`,
