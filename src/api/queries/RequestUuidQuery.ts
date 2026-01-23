@@ -1,71 +1,102 @@
 import { graphql } from "react-relay";
 
 export const RequestUuidQuery = graphql`
-query RequestUuidQuery($uuid: ID!) {
-  request(uuid: $uuid) {
-    __typename
-    id
-    uuid
-    name
-    date
-    startTime
-    endTime
-    address
-    coordinates
-    clientName
-    clientEmail
-    distributorName
-    distributorEmail
-    retailerName
-    retailerAddress
-    retailerStoreContact
-    storeManagerName
-    storeManagerPhone
-    client {
+  query RequestUuidQuery($uuid: ID!) {
+    request(uuid: $uuid) {
       __typename
       id
       uuid
       name
-      email
-    }
-    distributor {
-      __typename
-      id
-      uuid
-      name
-      email
-    }
-    retailer {
-      __typename
-      id
-      uuid
-      name
+      date
+      startTime
+      endTime
       address
-      storeContact
+      coordinates
+      clientName
+      clientEmail
+      distributorName
+      distributorEmail
+      retailerName
+      retailerAddress
+      retailerStoreContact
+      storeManagerName
+      storeManagerPhone
+      client {
+        __typename
+        id
+        uuid
+        name
+        email
+      }
+      distributor {
+        __typename
+        id
+        uuid
+        name
+        email
+        location {
+          id
+          name
+          code
+          zip
+          state {
+            id
+            name
+            code
+          }
+        }
+      }
+      retailer {
+        __typename
+        id
+        uuid
+        name
+        address
+        storeContact
+        location {
+          id
+          name
+          code
+          zip
+          state {
+            id
+            name
+            code
+          }
+        }
+      }
+      requestType {
+        __typename
+        id
+        uuid
+        name
+      }
+      status {
+        __typename
+        id
+        uuid
+        name
+      }
+      timezone {
+        __typename
+        id
+        uuid
+        name
+        code
+        offset
+      }
+      products {
+        id
+        name
+        image
+        productType {
+          id
+          name
+        }
+      }
+      tenantId
+      createdAt
+      updatedAt
     }
-    requestType {
-      __typename
-      id
-      uuid
-      name
-    }
-    status {
-      __typename
-      id
-      uuid
-      name
-    }
-    timezone {
-      __typename
-      id
-      uuid
-      name
-      code
-      offset
-    }
-    tenantId
-    createdAt
-    updatedAt
   }
-}
 `;

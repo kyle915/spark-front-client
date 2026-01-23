@@ -177,13 +177,13 @@ const RequestsLinks = {
 ----------------------------------------------------------- */
 const EventsLinks = {
   menu: [
+    { path: "/events/list", name: "List", Icon: Bars4Icon },
     {
       path: "/event/create",
       name: "Create",
       component: <CreateEventWithoutRequest />,
       Icon: PlusCircleIcon,
     },
-    { path: "/events/list", name: "List", Icon: Bars4Icon },
     { path: "/events/today", name: "Today", Icon: CalendarIcon },
     { path: "/events/map", name: "Map", Icon: MapIcon },
   ],
@@ -245,8 +245,8 @@ const UsersLinks = {
 ----------------------------------------------------------- */
 const ProductLinks = {
   menu: [
-    { path: "/products/create-product", name: "Create", Icon: PlusCircleIcon },
     { path: "/products/products-list", name: "List", Icon: Bars4Icon },
+    { path: "/products/create-product", name: "Create", Icon: PlusCircleIcon },
   ],
 
   routes: [
@@ -268,8 +268,8 @@ const ProductLinks = {
 ----------------------------------------------------------- */
 const RecapLinks = {
   menu: [
-    // { path: "/recap/create", name: "Create", Icon: PlusCircleIcon },
     { path: "/recap/list", name: "List", Icon: Bars4Icon },
+    // { path: "/recap/create", name: "Create", Icon: PlusCircleIcon },
   ],
 
   routes: [
