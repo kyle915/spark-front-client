@@ -82,7 +82,11 @@ export default function CompanySelector() {
     };
   }, [user?.uuid, logout, navigate, from, selectTenant]);
 
-  // 👉 Si estamos redirigiendo automáticamente
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-base-100 flex items-center justify-center">
@@ -91,11 +95,14 @@ export default function CompanySelector() {
     );
   }
 
-  // 👉 Si no hay compañías (caso raro pero posible)
   if (!companies.length) {
     return (
-      <div className="min-h-screen bg-base-100 flex items-center justify-center text-base-content">
-        <p>No companies associated with this account.</p>
+      <div className="min-h-screen bg-base-100 flex flex-col items-center justify-center gap-4 text-base-content">
+        <p className="text-lg">No companies associated with this account.</p>
+
+        <button onClick={handleLogout} className="btn btn-outline btn-error">
+          Logout
+        </button>
       </div>
     );
   }
