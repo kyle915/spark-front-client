@@ -360,7 +360,7 @@ const EventCard: React.FC<Props> = ({ event }) => {
                 <div>
                   <p className="text-xs uppercase opacity-60">Retailer State</p>
                   <p className="font-medium">
-                    {event.retailer?.location?.state?.name ??
+                    {request?.retailer?.location?.state?.name ??
                       "No retailer state"}
                   </p>
                 </div>
@@ -370,13 +370,15 @@ const EventCard: React.FC<Props> = ({ event }) => {
                     Retailer Location
                   </p>
                   <p className="font-medium">
-                    {event.retailer?.location?.name ?? "—"}
+                    {request?.retailer?.location?.name ?? "—"}
                   </p>
                 </div>
 
                 <div>
                   <p className="text-xs uppercase opacity-60">Retailer</p>
-                  <p className="font-medium">{event.retailer?.name ?? "—"}</p>
+                  <p className="font-medium">
+                    {request?.retailer?.name ?? "—"}
+                  </p>
                 </div>
 
                 <div>
@@ -384,7 +386,7 @@ const EventCard: React.FC<Props> = ({ event }) => {
                     Distributor State
                   </p>
                   <p className="font-medium">
-                    {event.distributor?.location?.state?.name ??
+                    {request?.distributor?.location?.state?.name ??
                       "No distributor state"}
                   </p>
                 </div>
@@ -394,14 +396,14 @@ const EventCard: React.FC<Props> = ({ event }) => {
                     Distributor Location
                   </p>
                   <p className="font-medium">
-                    {event.distributor?.location?.name ?? "—"}
+                    {request?.distributor?.location?.name ?? "—"}
                   </p>
                 </div>
 
                 <div>
                   <p className="text-xs uppercase opacity-60">Distributor</p>
                   <p className="font-medium">
-                    {event.distributor?.name ?? "—"}
+                    {request?.distributor?.name ?? "—"}
                   </p>
                 </div>
               </div>
