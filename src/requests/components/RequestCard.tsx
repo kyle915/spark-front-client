@@ -13,7 +13,13 @@ import {
 } from "@heroicons/react/24/outline";
 import type { RequestUuidQuery$data } from "@api/queries/__generated__/RequestUuidQuery.graphql";
 import LocationMap from "@shared/LocationMap";
-import { formatDate, formatTimeLiteral } from "@utils/index";
+import {
+  formatDate,
+  formatTime,
+  extractDatePart,
+  extractTimePart,
+  buildDateTimeWithOffset,
+} from "@utils/index";
 
 type Request = NonNullable<RequestUuidQuery$data["request"]>;
 
@@ -24,6 +30,15 @@ interface Props {
 const RequestCard: React.FC<Props> = ({ request }) => {
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const browserTimezone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+    [],
+  );
+  const browserOffsetMinutes = useMemo(
+    () => -new Date().getTimezoneOffset(),
+    [],
+  );
+  const requestTimezone = request.timezone ?? null;
 
   const ITEMS_PER_PAGE = 8;
 
@@ -53,6 +68,62 @@ const RequestCard: React.FC<Props> = ({ request }) => {
   useEffect(() => {
     setCurrentPage(1);
   }, [productTypeFilter]);
+
+  // timezone utils
+  const ensureDateTimeWithOffset = (
+    value: string | null,
+    tz = requestTimezone,
+  ) => {
+    if (!value) return null;
+    const hasOffset = /([+-]\d{2}:?\d{2}|Z)$/.test(value);
+    if (hasOffset) return value;
+
+    const datePart =
+      extractDatePart(value) ?? extractDatePart(request.date ?? null) ?? null;
+    const timePart = extractTimePart(value);
+    if (
+      !datePart ||
+      !timePart ||
+      tz?.offset === undefined ||
+      tz?.offset === null
+    )
+      return value;
+
+    return buildDateTimeWithOffset(datePart, timePart, tz.offset);
+  };
+
+  const formatLocalDate = (value: string | null) => {
+    const normalized = ensureDateTimeWithOffset(value);
+    if (!normalized) return "-";
+    const dateObj = new Date(normalized);
+    if (Number.isNaN(dateObj.getTime())) return normalized;
+    return new Intl.DateTimeFormat(undefined, {
+      timeZone: browserTimezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(dateObj);
+  };
+
+  const formatLocalTime = (value: string | null) => {
+    const normalized = ensureDateTimeWithOffset(value);
+    if (!normalized) return "-";
+    const dateObj = new Date(normalized);
+    if (Number.isNaN(dateObj.getTime())) return normalized;
+    return new Intl.DateTimeFormat(undefined, {
+      timeZone: browserTimezone,
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(dateObj);
+  };
+
+  const formatBrowserTimezoneLabel = () => {
+    const sign = browserOffsetMinutes >= 0 ? "+" : "-";
+    const absOffsetMinutes = Math.abs(browserOffsetMinutes);
+    const hours = String(Math.floor(absOffsetMinutes / 60)).padStart(2, "0");
+    const minutes = String(absOffsetMinutes % 60).padStart(2, "0");
+    return `${browserTimezone} (UTC${sign}${hours}:${minutes})`;
+  };
 
   return (
     <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
@@ -137,8 +208,8 @@ const RequestCard: React.FC<Props> = ({ request }) => {
           <div className="flex items-center gap-2">
             <ClockIcon className="w-4 h-4 opacity-60" />
             <span className="font-medium">
-              {formatTimeLiteral(request.startTime ?? null)} –{" "}
-              {formatTimeLiteral(request.endTime ?? null)}
+              {formatTime(request.startTime ?? null)} –{" "}
+              {formatTime(request.endTime ?? null)}
             </span>
           </div>
 
@@ -262,7 +333,7 @@ const RequestCard: React.FC<Props> = ({ request }) => {
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-lg">Your current timezone</p>
                 <span className="badge badge-outline">
-                  {Intl.DateTimeFormat().resolvedOptions().timeZone}
+                  {formatBrowserTimezoneLabel()}
                 </span>
               </div>
 
@@ -272,7 +343,7 @@ const RequestCard: React.FC<Props> = ({ request }) => {
                     Date (your zone)
                   </p>
                   <p className="font-medium">
-                    {formatDate(request.startTime ?? null)}
+                    {formatLocalDate(request.date ?? null)}
                   </p>
                 </div>
 
@@ -281,7 +352,7 @@ const RequestCard: React.FC<Props> = ({ request }) => {
                     Start (your zone)
                   </p>
                   <p className="font-medium">
-                    {formatTimeLiteral(request.startTime ?? null)}
+                    {formatLocalTime(request.startTime ?? null)}
                   </p>
                 </div>
               </div>
@@ -335,8 +406,8 @@ const RequestCard: React.FC<Props> = ({ request }) => {
                   </select>
 
                   {/* COUNT */}
-                  <span className="badge badge-outline">
-                    {filteredProducts.length} products
+                  <span className="badge badge-outline px-3 py-2 text-sm whitespace-nowrap">
+                    {request.products?.length ?? 0} products
                   </span>
                 </div>
               </div>

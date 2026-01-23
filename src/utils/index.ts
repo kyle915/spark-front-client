@@ -49,3 +49,70 @@ export const formatTimeLiteral = (value: string | null) => {
     "0",
   )} ${period}`;
 };
+
+const DATE_REGEX = /(\d{4}-\d{2}-\d{2})/;
+const TIME_REGEX = /(\d{1,2}:\d{2})(?::\d{2})?/;
+
+export const extractDatePart = (value: string | null | undefined) => {
+  if (!value) return null;
+  const match = value.match(DATE_REGEX);
+  if (match) return match[1];
+
+  const parsed = new Date(value);
+  if (isNaN(parsed.getTime())) return null;
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+export const extractTimePart = (value: string | null | undefined) => {
+  if (!value) return null;
+  const match = value.match(TIME_REGEX);
+  if (match) {
+    const [hour, minute] = match[1].split(":");
+    return `${String(Number(hour)).padStart(2, "0")}:${minute}`;
+  }
+  return null;
+};
+
+export const combineDateAndTime = (
+  dateValue: string | null | undefined,
+  timeValue: string | null | undefined,
+) => {
+  const datePart = extractDatePart(dateValue) ?? (dateValue ?? "").trim();
+  const timePart = extractTimePart(timeValue);
+
+  if (!timePart) return "";
+  if (!datePart) return timePart;
+
+  return `${datePart} ${timePart}`;
+};
+
+export const buildDateTimeWithOffset = (
+  dateValue: string | null | undefined,
+  timeValue: string | null | undefined,
+  offsetMinutes: number | null | undefined,
+) => {
+  const combined = combineDateAndTime(dateValue, timeValue);
+  if (!combined) return "";
+  if (offsetMinutes === undefined || offsetMinutes === null) {
+    return combined.includes("T") ? combined : combined.replace(" ", "T");
+  }
+
+  const [datePart, timePartRaw] = combined.includes("T")
+    ? combined.split("T")
+    : combined.split(" ");
+  const timePart = timePartRaw.includes(":")
+    ? timePartRaw
+    : `${timePartRaw}:00`;
+  const sign = offsetMinutes >= 0 ? "+" : "-";
+  const abs = Math.abs(offsetMinutes);
+  const hours = Math.floor(abs / 60)
+    .toString()
+    .padStart(2, "0");
+  const minutes = (abs % 60).toString().padStart(2, "0");
+
+  return `${datePart}T${timePart}${sign}${hours}:${minutes}`;
+};
