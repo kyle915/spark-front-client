@@ -7,17 +7,20 @@ export const EventUuidQuery = graphql`
       id
       uuid
       name
+      date
       coordinates
       startTime
       endTime
       address
       isNational
-      date
       notes
       timezone {
+        __typename
         id
+        uuid
         name
         code
+        offset
       }
       request {
         __typename
@@ -28,6 +31,14 @@ export const EventUuidQuery = graphql`
         startTime
         address
         coordinates
+        timezone {
+          __typename
+          id
+          uuid
+          name
+          code
+          offset
+        }
         client {
           __typename
           id
@@ -39,12 +50,34 @@ export const EventUuidQuery = graphql`
           id
           uuid
           name
+          location {
+            id
+            name
+            code
+            zip
+            state {
+              id
+              name
+              code
+            }
+          }
         }
         retailer {
           __typename
           id
           uuid
           name
+          location {
+            id
+            name
+            code
+            zip
+            state {
+              id
+              name
+              code
+            }
+          }
         }
         requestType {
           __typename

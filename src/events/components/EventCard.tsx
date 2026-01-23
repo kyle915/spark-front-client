@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Link } from "react-router";
 import {
   ArrowLeftIcon,
@@ -14,7 +14,13 @@ import {
 } from "@heroicons/react/24/outline";
 import type { EventUuidQuery$data } from "@/api/queries/__generated__/EventUuidQuery.graphql";
 import LocationMap from "@/shared/LocationMap";
-import { formatDate, formatTime } from "@/utils";
+import {
+  formatDate,
+  formatTime,
+  extractDatePart,
+  extractTimePart,
+  buildDateTimeWithOffset,
+} from "@/utils";
 import { MapPinHouseIcon } from "lucide-react";
 
 type Event = NonNullable<EventUuidQuery$data["event"]>;
@@ -22,6 +28,11 @@ type Event = NonNullable<EventUuidQuery$data["event"]>;
 interface Props {
   event: Event;
 }
+
+type TimezoneInfo =
+  | Event["timezone"]
+  | NonNullable<Event["request"]>["timezone"]
+  | null;
 
 const EventCard: React.FC<Props> = ({ event }) => {
   const {
@@ -37,6 +48,89 @@ const EventCard: React.FC<Props> = ({ event }) => {
     status,
     request,
   } = event;
+  const eventTimezone: TimezoneInfo = request?.timezone ?? null;
+
+  // const formatTimezone = (tz: TimezoneInfo) => {
+  //   if (!tz) return "N/A";
+  //   const sign = tz.offset >= 0 ? "+" : "-";
+  //   const absOffsetMinutes = Math.abs(tz.offset);
+  //   const hours = String(Math.floor(absOffsetMinutes / 60)).padStart(2, "0");
+  //   const minutes = String(absOffsetMinutes % 60).padStart(2, "0");
+  //   return `${tz.name}-${tz.code} (UTC${sign}${hours}:${minutes})`;
+  // };
+
+  const browserTimezone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+    [],
+  );
+  const browserOffsetMinutes = useMemo(
+    () => -new Date().getTimezoneOffset(),
+    [],
+  );
+
+  const ensureDateTimeWithOffset = (
+    value: string | null,
+    fallbackDate: string | null,
+    tz: TimezoneInfo,
+  ) => {
+    if (!value) return null;
+    const hasOffset = /([+-]\\d{2}:?\\d{2}|Z)$/.test(value);
+    if (hasOffset) return value;
+
+    const datePart =
+      extractDatePart(value) ?? extractDatePart(fallbackDate) ?? null;
+    const timePart = extractTimePart(value);
+    if (
+      !datePart ||
+      !timePart ||
+      tz?.offset === undefined ||
+      tz?.offset === null
+    )
+      return value;
+
+    return buildDateTimeWithOffset(datePart, timePart, tz.offset);
+  };
+
+  const formatLocalDate = (value: string | null) => {
+    const normalized = ensureDateTimeWithOffset(
+      value,
+      request?.date ?? null,
+      eventTimezone,
+    );
+    if (!normalized) return "-";
+    const dateObj = new Date(normalized);
+    if (Number.isNaN(dateObj.getTime())) return normalized;
+    return new Intl.DateTimeFormat(undefined, {
+      timeZone: browserTimezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(dateObj);
+  };
+
+  const formatLocalDateTime = (value: string | null) => {
+    const normalized = ensureDateTimeWithOffset(
+      value,
+      request?.date ?? null,
+      eventTimezone,
+    );
+    if (!normalized) return "-";
+    const dateObj = new Date(normalized);
+    if (Number.isNaN(dateObj.getTime())) return normalized;
+    return new Intl.DateTimeFormat(undefined, {
+      timeZone: browserTimezone,
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(dateObj);
+  };
+
+  const formatBrowserTimezoneLabel = () => {
+    const sign = browserOffsetMinutes >= 0 ? "+" : "-";
+    const absOffsetMinutes = Math.abs(browserOffsetMinutes);
+    const hours = String(Math.floor(absOffsetMinutes / 60)).padStart(2, "0");
+    const minutes = String(absOffsetMinutes % 60).padStart(2, "0");
+    return `${browserTimezone} (UTC${sign}${hours}:${minutes})`;
+  };
 
   return (
     <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
@@ -88,10 +182,10 @@ const EventCard: React.FC<Props> = ({ event }) => {
                     status?.name === "Pending"
                       ? "badge-warning"
                       : status?.name === "Approved"
-                      ? "badge-success"
-                      : status?.name === "Cancelled"
-                      ? "badge-error"
-                      : "badge-neutral"
+                        ? "badge-success"
+                        : status?.name === "Cancelled"
+                          ? "badge-error"
+                          : "badge-neutral"
                   }
                 `}
               >
@@ -144,9 +238,8 @@ const EventCard: React.FC<Props> = ({ event }) => {
 
         {/* ================= MAIN GRID ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-stretch">
-          {/* LEFT */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* BASIC INFORMATION */}
+          {/* BASIC INFORMATION */}
+          <div className="xl:col-span-2 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
               <p className="font-semibold text-lg">Basic Information</p>
 
@@ -181,8 +274,10 @@ const EventCard: React.FC<Props> = ({ event }) => {
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* EVENT + REQUEST DETAILS */}
+          {/* EVENT + REQUEST DETAILS */}
+          <div className="xl:col-span-2 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
               <p className="font-semibold text-lg">Event & Request Details</p>
 
@@ -224,8 +319,99 @@ const EventCard: React.FC<Props> = ({ event }) => {
             </div>
           </div>
 
+          {/* TIMEZONE INFORMATION */}
+          <div className="xl:col-span-4 space-y-8">
+            <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-lg">Your current timezone</p>
+                <span className="badge badge-outline">
+                  {formatBrowserTimezoneLabel()}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-xs uppercase opacity-60">
+                    Date (your zone)
+                  </p>
+                  <p className="font-medium">
+                    {formatLocalDate(event.startTime ?? null)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase opacity-60">
+                    Start (your zone)
+                  </p>
+                  <p className="font-medium">
+                    {formatLocalDateTime(event.startTime ?? null)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* LOCATION INFORMATION */}
+          <div className="xl:col-span-4 space-y-8">
+            <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
+              <p className="font-semibold text-lg">Location Information</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <p className="text-xs uppercase opacity-60">Retailer State</p>
+                  <p className="font-medium">
+                    {request?.retailer?.location?.state?.name ??
+                      "No retailer state"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase opacity-60">
+                    Retailer Location
+                  </p>
+                  <p className="font-medium">
+                    {request?.retailer?.location?.name ?? "—"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase opacity-60">Retailer</p>
+                  <p className="font-medium">
+                    {request?.retailer?.name ?? "—"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase opacity-60">
+                    Distributor State
+                  </p>
+                  <p className="font-medium">
+                    {request?.distributor?.location?.state?.name ??
+                      "No distributor state"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase opacity-60">
+                    Distributor Location
+                  </p>
+                  <p className="font-medium">
+                    {request?.distributor?.location?.name ?? "—"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase opacity-60">Distributor</p>
+                  <p className="font-medium">
+                    {request?.distributor?.name ?? "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* RIGHT / MAP */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-4">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 h-full flex flex-col justify-center">
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-lg">Location</p>
