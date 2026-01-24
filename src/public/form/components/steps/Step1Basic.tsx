@@ -50,14 +50,14 @@ export function Step1Basic({
         name="name"
         label="Full Name"
         control={control}
-        placeholder="John Doe"
+        placeholder="Full Name"
       />
 
       <FormInputText
         name="requestorEmail"
         label="Requestor Email"
         control={control}
-        placeholder="name@example.com"
+        placeholder="Requestor Email"
         type="email"
       />
 
