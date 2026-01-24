@@ -3,6 +3,7 @@ import { graphql } from "react-relay";
 export const EventsQuery = graphql`
   query EventsQuery(
     $filters: EventFiltersInput
+    $q: String
     $first: Int
     $after: String
     $last: Int
@@ -10,6 +11,7 @@ export const EventsQuery = graphql`
   ) {
     events(
       filters: $filters
+      q: $q
       first: $first
       after: $after
       last: $last
@@ -68,6 +70,7 @@ export const EventsQuery = graphql`
             id
             uuid
             name
+            slug
           }
         }
       }

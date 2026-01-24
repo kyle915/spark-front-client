@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import {
   ArrowLeftIcon,
@@ -13,7 +13,13 @@ import {
 } from "@heroicons/react/24/outline";
 import type { RequestUuidQuery$data } from "@api/queries/__generated__/RequestUuidQuery.graphql";
 import LocationMap from "@shared/LocationMap";
-import { formatDate, formatTime } from "@utils/index";
+import {
+  formatDate,
+  formatTime,
+  extractDatePart,
+  extractTimePart,
+  buildDateTimeWithOffset,
+} from "@utils/index";
 
 type Request = NonNullable<RequestUuidQuery$data["request"]>;
 
@@ -22,6 +28,103 @@ interface Props {
 }
 
 const RequestCard: React.FC<Props> = ({ request }) => {
+  const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const browserTimezone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+    [],
+  );
+  const browserOffsetMinutes = useMemo(
+    () => -new Date().getTimezoneOffset(),
+    [],
+  );
+  const requestTimezone = request.timezone ?? null;
+
+  const ITEMS_PER_PAGE = 8;
+
+  const productTypes = useMemo(() => {
+    const types = request.products
+      ?.map((p) => p.productType?.name)
+      .filter(Boolean) as string[];
+
+    return Array.from(new Set(types));
+  }, [request.products]);
+
+  const filteredProducts = React.useMemo(() => {
+    if (productTypeFilter === "all") return request.products ?? [];
+
+    return (request.products ?? []).filter(
+      (p) => p.productType?.name === productTypeFilter,
+    );
+  }, [request.products, productTypeFilter]);
+
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+
+  const paginatedProducts = React.useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredProducts.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredProducts, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [productTypeFilter]);
+
+  // timezone utils
+  const ensureDateTimeWithOffset = (
+    value: string | null,
+    tz = requestTimezone,
+  ) => {
+    if (!value) return null;
+    const hasOffset = /([+-]\d{2}:?\d{2}|Z)$/.test(value);
+    if (hasOffset) return value;
+
+    const datePart =
+      extractDatePart(value) ?? extractDatePart(request.date ?? null) ?? null;
+    const timePart = extractTimePart(value);
+    if (
+      !datePart ||
+      !timePart ||
+      tz?.offset === undefined ||
+      tz?.offset === null
+    )
+      return value;
+
+    return buildDateTimeWithOffset(datePart, timePart, tz.offset);
+  };
+
+  const formatLocalDate = (value: string | null) => {
+    const normalized = ensureDateTimeWithOffset(value);
+    if (!normalized) return "-";
+    const dateObj = new Date(normalized);
+    if (Number.isNaN(dateObj.getTime())) return normalized;
+    return new Intl.DateTimeFormat(undefined, {
+      timeZone: browserTimezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(dateObj);
+  };
+
+  const formatLocalTime = (value: string | null) => {
+    const normalized = ensureDateTimeWithOffset(value);
+    if (!normalized) return "-";
+    const dateObj = new Date(normalized);
+    if (Number.isNaN(dateObj.getTime())) return normalized;
+    return new Intl.DateTimeFormat(undefined, {
+      timeZone: browserTimezone,
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(dateObj);
+  };
+
+  const formatBrowserTimezoneLabel = () => {
+    const sign = browserOffsetMinutes >= 0 ? "+" : "-";
+    const absOffsetMinutes = Math.abs(browserOffsetMinutes);
+    const hours = String(Math.floor(absOffsetMinutes / 60)).padStart(2, "0");
+    const minutes = String(absOffsetMinutes % 60).padStart(2, "0");
+    return `${browserTimezone} (UTC${sign}${hours}:${minutes})`;
+  };
+
   return (
     <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
       <div className="p-8 md:p-10 space-y-8">
@@ -72,10 +175,10 @@ const RequestCard: React.FC<Props> = ({ request }) => {
                   request.status?.name === "Pending"
                     ? "badge-warning"
                     : request.status?.name === "Approved"
-                    ? "badge-success"
-                    : request.status?.name === "Declined"
-                    ? "badge-error"
-                    : "badge-neutral"
+                      ? "badge-success"
+                      : request.status?.name === "Declined"
+                        ? "badge-error"
+                        : "badge-neutral"
                 }
                 `}
               >
@@ -124,9 +227,8 @@ const RequestCard: React.FC<Props> = ({ request }) => {
         </div>
 
         {/* ================= MAIN GRID ================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* LEFT */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+          <div className="xl:col-span-2 space-y-8">
             {/* BASIC INFORMATION */}
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
               <p className="font-semibold text-lg">Basic Information</p>
@@ -166,8 +268,99 @@ const RequestCard: React.FC<Props> = ({ request }) => {
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* REQUEST DETAILS */}
+          {/* LOCATION INFORMATION */}
+          <div className="xl:col-span-2 space-y-8">
+            <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
+              <p className="font-semibold text-lg">Location Information</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <p className="text-xs uppercase opacity-60">Retailer State</p>
+                  <p className="font-medium">
+                    {request.retailer?.location?.state?.name ??
+                      "No retailer state"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase opacity-60">
+                    Retailer Location
+                  </p>
+                  <p className="font-medium">
+                    {request.retailer?.location?.name ?? "—"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase opacity-60">Retailer</p>
+                  <p className="font-medium">{request.retailer?.name ?? "—"}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase opacity-60">
+                    Distributor State
+                  </p>
+                  <p className="font-medium">
+                    {request.distributor?.location?.state?.name ??
+                      "No distributor state"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase opacity-60">
+                    Distributor Location
+                  </p>
+                  <p className="font-medium">
+                    {request.distributor?.location?.name ?? "—"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase opacity-60">Distributor</p>
+                  <p className="font-medium">
+                    {request.distributor?.name ?? "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* TIMEZONE INFORMATION */}
+          <div className="xl:col-span-2 space-y-8">
+            <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-lg">Your current timezone</p>
+                <span className="badge badge-outline">
+                  {formatBrowserTimezoneLabel()}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-xs uppercase opacity-60">
+                    Date (your zone)
+                  </p>
+                  <p className="font-medium">
+                    {formatLocalDate(request.date ?? null)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase opacity-60">
+                    Start (your zone)
+                  </p>
+                  <p className="font-medium">
+                    {formatLocalTime(request.startTime ?? null)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* REQUEST DETAILS */}
+          <div className="xl:col-span-2 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
               <p className="font-semibold text-lg">Request Details</p>
 
@@ -191,8 +384,89 @@ const RequestCard: React.FC<Props> = ({ request }) => {
             </div>
           </div>
 
-          {/* RIGHT / MAP */}
-          <div className="lg:col-span-1">
+          {/* PRODUCTS */}
+          <div className="xl:col-span-4 space-y-8">
+            <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <p className="font-semibold text-lg">Request Products</p>
+
+                <div className="flex items-center gap-3">
+                  {/* FILTER */}
+                  <select
+                    className="select select-sm select-bordered"
+                    value={productTypeFilter}
+                    onChange={(e) => setProductTypeFilter(e.target.value)}
+                  >
+                    <option value="all">All Types</option>
+                    {productTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* COUNT */}
+                  <span className="badge badge-outline px-3 py-2 text-sm whitespace-nowrap">
+                    {request.products?.length ?? 0} products
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {paginatedProducts.map((p) => (
+                  <div
+                    key={p.id}
+                    className="rounded-xl bg-base-200 p-4 flex gap-4"
+                  >
+                    <div className="w-16 h-16 rounded-lg bg-base-100 flex items-center justify-center text-xs opacity-60">
+                      {p.image ? (
+                        <img
+                          src={p.image}
+                          className="object-cover rounded-lg"
+                        />
+                      ) : (
+                        "No img"
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="font-medium">{p.name}</p>
+                      <p className="text-sm text-base-content/60">
+                        {p.productType?.name}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-4">
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((p) => p - 1)}
+                  >
+                    Prev
+                  </button>
+
+                  <span className="text-sm opacity-60">
+                    Page {currentPage} of {totalPages}
+                  </span>
+
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* MAP SECTION */}
+          <div className="lg:col-span-4">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-4 sticky top-6">
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-lg">Location</p>
@@ -213,18 +487,16 @@ const RequestCard: React.FC<Props> = ({ request }) => {
                 Tip: Use the Edit button to update schedule, account or
                 location.
               </p>
+              <p>
+                Last updated:{" "}
+                {new Date(request.updatedAt).toLocaleString(undefined, {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </p>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* FOOTER */}
-      <div className="mx-8 mb-8 opacity-60 text-sm">
-        Last updated:{" "}
-        {new Date(request.updatedAt).toLocaleString(undefined, {
-          dateStyle: "medium",
-          timeStyle: "short",
-        })}
       </div>
     </div>
   );

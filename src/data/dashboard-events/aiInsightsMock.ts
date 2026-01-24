@@ -14,42 +14,55 @@ export const aiInsightsMock: AIInsightItem[] = [
   // CUSTOMER FEEDBACK
   // ===========================
   {
-    id: "fb-001",
+    id: "cf-001",
     category: "Customer Feedback",
     priority: "High",
-    title: "Increasing Complaints About Response Speed",
+    title: "Flavor exceeds expectations for a low-calorie soda",
     summary:
-      "Customer feedback indicates recurring frustration with slow service response times during peak hours.",
+      "",
     description:
-      "Multiple users reported delays in support when requests accumulate. AI detected a 32% increase in negative sentiment related to waiting times.",
+      "Consumers consistently report being positively surprised by the flavor quality, noting that the drinks do not taste like traditional “diet” or “health” sodas. Flavors are perceived as bold, clean, and smooth, often compared favorably to classic sodas.",
     recommendation:
-      "Introduce automated triage and expand peak-hour staffing windows.",
+      "",
     iconLucide: "MessageSquare",
   },
   {
-    id: "fb-002",
+    id: "cf-002",
     category: "Customer Feedback",
     priority: "Medium",
-    title: "High Satisfaction With Technician Professionalism",
+    title: "Health benefits drive re-entry into the soda category",
     summary:
-      "Clients consistently praise technicians for professionalism and clear communication.",
+      "",
     description:
-      "Sentiment analysis shows an 18% increase in praise keywords such as 'helpful', 'kind', and 'clear explanations'.",
+      "Consumers consistently report being positively surprised by the flavor quality, noting that the drinks do not taste like traditional “diet” or “health” sodas. Flavors are perceived as bold, clean, and smooth, often compared favorably to classic sodas.",
     recommendation:
-      "Highlight technician communication strengths in marketing and onboarding content.",
-    iconLucide: "UserCheck",
+      "",
+    iconLucide: "Hourglass",
   },
   {
-    id: "fb-003",
+    id: "cf-003",
+    category: "Customer Feedback",
+    priority: "Medium",
+    title: "Health benefits drive re-entry into the soda category",
+    summary:
+      "",
+    description:
+      "Several consumers who previously avoided soda due to sugar or calories expressed excitement about finding a flavorful, low-calorie alternative that fits their health goals.",
+    recommendation:
+      "",
+    iconLucide: "Mic",
+  },
+  {
+    id: "cf-004",
     category: "Customer Feedback",
     priority: "Low",
-    title: "Requests for More Flexible Scheduling",
+    title: "Brand attracts, flavor converts",
     summary:
-      "Some customers suggested adding weekend or late-evening appointment options.",
+      "",
     description:
-      "AI detected a pattern in comments from working professionals who prefer more flexible service windows.",
-    recommendation: "Pilot extended service hours in urban areas.",
-    iconLucide: "CalendarClock",
+      "Branding initially captures attention, but flavor experience is the primary driver of trust and purchase intent.",
+    recommendation: "",
+    iconLucide: "Smartphone",
   },
 
   // ===========================

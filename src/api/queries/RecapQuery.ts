@@ -12,11 +12,21 @@ export const RecapQuery = graphql`
       totalEngagements
       productsSold
       totalEarnings
+      accountSpendAmount
+      job {
+        id
+        uuid
+        name
+      }
       event {
         id
         uuid
         name
         tenantId
+        tenant {
+          id
+          name
+        }
         startTime
         endTime
         address
@@ -34,6 +44,11 @@ export const RecapQuery = graphql`
           endTime
           address
           id
+          retailer {
+            id
+            uuid
+            name
+          }
         }
       }
       consumerEngagements {
@@ -93,11 +108,12 @@ export const RecapQuery = graphql`
         approved
         file
         fileTypeId
-        createdAt
+        fileRecapCategoryId
         fileRecapCategory {
           id
           name
         }
+        createdAt
       }
       requestStoreManagers {
         id

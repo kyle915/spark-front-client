@@ -4,6 +4,7 @@ import type { FieldPath } from "react-hook-form";
 export const stepFields: Record<string, FieldPath<SparkFormData>[]> = {
   step1: [
     "name",
+    "requestorEmail",
     "date",
     "start_time",
     "end_time",

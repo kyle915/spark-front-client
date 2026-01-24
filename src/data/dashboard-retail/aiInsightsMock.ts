@@ -17,54 +17,53 @@ export const aiInsightsMockV2: AIInsightItem[] = [
     id: "cf-001",
     category: "Customer Feedback",
     priority: "High",
-    title: "Live chat support outperforms email",
+    title: "Flavor exceeds expectations for a low-calorie soda",
     summary:
-      "Customers engaging via live chat report 36% higher satisfaction than those using email.",
+      "",
     description:
-      "Recent analysis shows that users who contact support through live chat demonstrate significantly better satisfaction versus those who rely on email channels.",
+      "Consumers consistently report being positively surprised by the flavor quality, noting that the drinks do not taste like traditional “diet” or “health” sodas. Flavors are perceived as bold, clean, and smooth, often compared favorably to classic sodas.",
     recommendation:
-      "Expand live chat availability and promote it as primary channel.",
+      "",
     iconLucide: "MessageSquare",
   },
   {
     id: "cf-002",
     category: "Customer Feedback",
     priority: "Medium",
-    title: "Delayed first responses reduce satisfaction",
+    title: "Health benefits drive re-entry into the soda category",
     summary:
-      "Tickets with first responses after 12 hours receive 45% more negative reviews.",
+      "",
     description:
-      "Users expect immediate acknowledgment; delays beyond 12 hours sharply increase negative feedback.",
+      "Consumers consistently report being positively surprised by the flavor quality, noting that the drinks do not taste like traditional “diet” or “health” sodas. Flavors are perceived as bold, clean, and smooth, often compared favorably to classic sodas.",
     recommendation:
-      "Automate first-response acknowledgments and monitor agent queues.",
+      "",
     iconLucide: "Hourglass",
   },
   {
     id: "cf-003",
     category: "Customer Feedback",
     priority: "Medium",
-    title: "Tone of support agent impacts perception",
+    title: "Health benefits drive re-entry into the soda category",
     summary:
-      "Empathetic language in replies correlates with a 29% improvement in satisfaction.",
+      "",
     description:
-      "AI identified that tone and warmth significantly influence customer experience ratings.",
+      "Several consumers who previously avoided soda due to sugar or calories expressed excitement about finding a flavorful, low-calorie alternative that fits their health goals.",
     recommendation:
-      "Provide micro-training modules on empathetic communication.",
+      "",
     iconLucide: "Mic",
   },
   {
     id: "cf-004",
     category: "Customer Feedback",
     priority: "Low",
-    title: "Mobile app feedback trending positive",
+    title: "Brand attracts, flavor converts",
     summary:
-      "Mobile app feedback shows a 21% increase in positive ratings for the mobile experience.",
+      "",
     description:
-      "More users report satisfaction with navigation, performance, and stability of the mobile version.",
-    recommendation: "Continue iteration on mobile-first UX improvements.",
+      "Branding initially captures attention, but flavor experience is the primary driver of trust and purchase intent.",
+    recommendation: "",
     iconLucide: "Smartphone",
   },
-
   // ============================================================
   // METRIC BEHAVIOR & TRENDS
   // ============================================================
