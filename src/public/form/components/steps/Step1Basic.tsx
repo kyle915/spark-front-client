@@ -53,6 +53,14 @@ export function Step1Basic({
         placeholder="John Doe"
       />
 
+      <FormInputText
+        name="requestorEmail"
+        label="Requestor Email"
+        control={control}
+        placeholder="name@example.com"
+        type="email"
+      />
+
       <FormDatePicker
         name="date"
         label="Visit Date"

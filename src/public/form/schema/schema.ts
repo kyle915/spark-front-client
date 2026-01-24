@@ -51,6 +51,10 @@ export const sparkFormSchema = yup.object({
     }),
   start_time: yup.string().required("Start time is required"),
   name: yup.string().required("Name is required"),
+  requestorEmail: yup
+    .string()
+    .email("Invalid email format")
+    .required("Requestor email is required"),
   skus: yup
     .array()
     .of(yup.string().required())
