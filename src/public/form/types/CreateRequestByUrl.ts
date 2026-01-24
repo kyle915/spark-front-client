@@ -17,6 +17,7 @@ export interface CreateRequestInput {
   endTime: string;
   address: string;
   coordinates: number[];
+  requestorEmail: string;
 
   // CLIENT (not collected in UI, sent as placeholder)
   clientName: string;

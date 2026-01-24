@@ -31,6 +31,7 @@ export function buildPayload(values: SparkFormData): CreateRequestInput {
     endTime: buildDateTime(values.date, values.end_time),
     address: values.address,
     coordinates: [Number(values.latitude), Number(values.longitude)],
+    requestorEmail: values.requestorEmail,
     // Backend still requires client fields even though UI no longer collects them.
     clientName: CLIENT_PLACEHOLDER.name,
     clientEmail: CLIENT_PLACEHOLDER.email,

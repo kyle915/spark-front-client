@@ -24,6 +24,7 @@ export const useSparkForm = () =>
       distributorEmail: "",
       start_time: "",
       name: "",
+      requestorEmail: "",
       request_type: "",
       retailer: "",
       retailerAddress: "",
