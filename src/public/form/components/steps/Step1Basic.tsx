@@ -50,14 +50,14 @@ export function Step1Basic({
         name="name"
         label="Full Name"
         control={control}
-        placeholder="John Doe"
+        placeholder="Full Name"
       />
 
       <FormInputText
         name="requestorEmail"
         label="Requestor Email"
         control={control}
-        placeholder="name@example.com"
+        placeholder="Requestor Email"
         type="email"
       />
 
@@ -67,6 +67,17 @@ export function Step1Basic({
         placeholder="MM/DD/YYYY"
         control={control}
         minToday={true}
+      />
+
+      <FormSelect
+        name="timeZoneId"
+        label="Time Zone"
+        control={control}
+        options={timeZones.map((tz) => ({
+          value: tz.id,
+          label: tz.name,
+        }))}
+        placeholder="Select your time zone"
       />
 
       <FormInputTime
@@ -82,20 +93,6 @@ export function Step1Basic({
         control={control}
         placeholder="HH:MM AM/PM"
       />
-
-      {/* TIME ZONE SELECTOR */}
-      <div className="col-span-2">
-        <FormSelect
-          name="timeZoneId"
-          label="Time Zone"
-          control={control}
-          options={timeZones.map((tz) => ({
-            value: tz.id,
-            label: tz.name,
-          }))}
-          placeholder="Select your time zone"
-        />
-      </div>
 
       <div className="col-span-2">
         <FormLocationPicker
