@@ -617,7 +617,7 @@ const EventsList = () => {
                     onClick={() => refreshRef.current?.()}
                   >
                     <ArrowPathIcon className="w-4 h-4" />
-                    Refresh
+                    Reload
                   </button>
 
                   {Object.entries(watch()).some(([, value]) => value) && (
