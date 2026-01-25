@@ -3,7 +3,7 @@ import * as yup from "yup";
 export const sparkFormSchema = yup.object({
   distributorId: yup.string().optional().nullable(),
   retailerId: yup.string().optional().nullable(),
-  locationId: yup.string().optional().nullable(),
+  stateId: yup.string().optional().nullable(),
   address: yup.string().required("Address is required"),
   latitude: yup
     .number()

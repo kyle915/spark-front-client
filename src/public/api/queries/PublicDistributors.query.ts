@@ -13,6 +13,10 @@
 //           location {
 //             id
 //             name
+//             state {
+//               id
+//               name
+//             }
 //           }
 //         }
 //       }
@@ -32,6 +36,10 @@ export const PUBLIC_DISTRIBUTORS_QUERY = `
           location {
             id
             name
+            state {
+              id
+              name
+            }
           }
         }
       }
