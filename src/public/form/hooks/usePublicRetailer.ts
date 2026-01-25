@@ -9,6 +9,10 @@ interface Retailer {
   location?: {
     id: string;
     name: string;
+    state?: {
+      id: string;
+      name: string;
+    } | null;
   } | null;
 }
 
@@ -18,7 +22,7 @@ interface NodeRetailer {
 
 export function usePublicRetailer(
   requestUrlName: string,
-  locationId?: string,
+  stateId?: string,
   q?: string
 ) {
   const [retailers, setRetailers] = useState<Retailer[]>([]);
@@ -29,14 +33,14 @@ export function usePublicRetailer(
     setLoading(true);
     gqlRequest<NodeRetailer>(PUBLIC_RETAILER_QUERY, {
       requestUrlName,
-      filters: locationId ? { locationId } : null,
+      filters: stateId ? { stateId } : null,
       q,
     })
       .then((data) => {
         setRetailers(mapQuery(data.publicRetailers?.edges));
       })
       .finally(() => setLoading(false));
-  }, [requestUrlName, locationId, q]);
+  }, [requestUrlName, stateId, q]);
 
   return { retailers, loading };
 }

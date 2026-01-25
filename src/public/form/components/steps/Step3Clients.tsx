@@ -10,21 +10,21 @@ interface Step3NewProps {
   distributors: {
     id: string;
     name: string;
-    location?: { id: string; name: string } | null;
+    location?: { id: string; name: string; state?: { id: string; name: string } | null } | null;
   }[];
   retailers: {
     id: string;
     name: string;
-    location?: { id: string; name: string } | null;
+    location?: { id: string; name: string; state?: { id: string; name: string } | null } | null;
   }[];
-  onLocationSearch: (value: string) => void;
-  onLocationChange: (value: string) => void;
+  onStateSearch: (value: string) => void;
+  onStateChange: (value: string) => void;
   onRetailerSearch: (value: string) => void;
   requestTypes: {
     id: string;
     name: string;
   }[];
-  locations: {
+  states: {
     id: string;
     name: string;
   }[];
@@ -34,23 +34,23 @@ export function Step3Clients({
   control,
   setValue,
   requestTypes,
-  locations,
-  onLocationSearch,
-  onLocationChange,
+  states,
+  onStateSearch,
+  onStateChange,
   onRetailerSearch,
   distributors,
   retailers,
 }: Step3NewProps) {
   const [distributorQuery, setDistributorQuery] = useState("");
   const [requestTypeQuery, setRequestTypeQuery] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState<{
+  const [selectedState, setSelectedState] = useState<{
     id: string;
     name: string;
   } | null>(null);
   const [selectedRetailer, setSelectedRetailer] = useState<{
     id: string;
     name: string;
-    location?: { id: string; name: string } | null;
+    location?: { id: string; name: string; state?: { id: string; name: string } | null } | null;
   } | null>(null);
 
   const selectedDistributorId = useWatch({
@@ -63,9 +63,9 @@ export function Step3Clients({
     name: "retailerId",
   });
 
-  const selectedLocationId = useWatch({
+  const selectedStateId = useWatch({
     control,
-    name: "locationId",
+    name: "stateId",
   });
 
   useEffect(() => {
@@ -90,18 +90,18 @@ export function Step3Clients({
   }, [retailers, selectedRetailerId, setValue]);
 
   useEffect(() => {
-    if (!selectedLocationId) return;
+    if (!selectedStateId) return;
 
     if (selectedDistributorId) {
       const selected = distributors.find((d) => d.id === selectedDistributorId);
-      if (selected && selected.location?.id !== selectedLocationId) {
+      if (selected && selected.location?.state?.id !== selectedStateId) {
         setValue("distributorId", "", { shouldValidate: true });
       }
     }
 
     if (selectedRetailerId) {
       const selected = retailers.find((r) => r.id === selectedRetailerId);
-      if (selected && selected.location?.id !== selectedLocationId) {
+      if (selected && selected.location?.state?.id !== selectedStateId) {
         setValue("retailerId", "", { shouldValidate: true });
       }
     }
@@ -109,26 +109,26 @@ export function Step3Clients({
     distributors,
     retailers,
     selectedDistributorId,
-    selectedLocationId,
+    selectedStateId,
     selectedRetailerId,
     setValue,
   ]);
 
   useEffect(() => {
-    if (!selectedLocationId) {
-      setSelectedLocation(null);
+    if (!selectedStateId) {
+      setSelectedState(null);
       return;
     }
 
-    const match = locations.find((location) => location.id === selectedLocationId);
+    const match = states.find((state) => state.id === selectedStateId);
     if (match) {
-      setSelectedLocation(match);
+      setSelectedState(match);
     }
-  }, [locations, selectedLocationId]);
+  }, [states, selectedStateId]);
 
   useEffect(() => {
-    onLocationChange(selectedLocationId ?? "");
-  }, [onLocationChange, selectedLocationId]);
+    onStateChange(selectedStateId ?? "");
+  }, [onStateChange, selectedStateId]);
 
   const filteredRequestTypes = useMemo(() => {
     const q = requestTypeQuery.trim().toLowerCase();
@@ -138,31 +138,31 @@ export function Step3Clients({
 
   const filteredDistributors = useMemo(() => {
     const q = distributorQuery.trim().toLowerCase();
-    const byLocation = selectedLocationId
-      ? distributors.filter((d) => d.location?.id === selectedLocationId)
+    const byState = selectedStateId
+      ? distributors.filter((d) => d.location?.state?.id === selectedStateId)
       : distributors;
-    if (!q) return byLocation;
-    return byLocation.filter((d) => d.name.toLowerCase().includes(q));
-  }, [distributors, distributorQuery, selectedLocationId]);
+    if (!q) return byState;
+    return byState.filter((d) => d.name.toLowerCase().includes(q));
+  }, [distributors, distributorQuery, selectedStateId]);
 
-  const locationOptions = useMemo(() => {
-    if (!selectedLocation) return locations;
+  const stateOptions = useMemo(() => {
+    if (!selectedState) return states;
     return [
-      selectedLocation,
-      ...locations.filter((location) => location.id !== selectedLocation.id),
+      selectedState,
+      ...states.filter((state) => state.id !== selectedState.id),
     ];
-  }, [locations, selectedLocation]);
+  }, [states, selectedState]);
 
   const filteredRetailers = useMemo(() => {
-    const byLocation = selectedLocationId
-      ? retailers.filter((r) => r.location?.id === selectedLocationId)
+    const byState = selectedStateId
+      ? retailers.filter((r) => r.location?.state?.id === selectedStateId)
       : retailers;
-    if (!selectedRetailer) return byLocation;
+    if (!selectedRetailer) return byState;
     return [
       selectedRetailer,
-      ...byLocation.filter((r) => r.id !== selectedRetailer.id),
+      ...byState.filter((r) => r.id !== selectedRetailer.id),
     ];
-  }, [retailers, selectedLocationId, selectedRetailer]);
+  }, [retailers, selectedStateId, selectedRetailer]);
 
   return (
     <div className="space-y-10">
@@ -180,15 +180,15 @@ export function Step3Clients({
           onSearch={setRequestTypeQuery}
         />
         <FormAutocomplete
-          name="locationId"
-          label="Location"
+          name="stateId"
+          label="State"
           control={control}
-          options={locationOptions.map((location) => ({
-            value: location.id,
-            label: location.name,
+          options={stateOptions.map((state) => ({
+            value: state.id,
+            label: state.name,
           }))}
-          placeholder="Search location"
-          onSearch={onLocationSearch}
+          placeholder="Search state"
+          onSearch={onStateSearch}
         />
       </div>
       <div className="space-y-6 pt-4 border-t border-base-300">
