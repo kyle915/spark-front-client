@@ -14,6 +14,12 @@ import type { SparkFormData } from "../schema/schema";
 interface SideSummaryProps {
   values: SparkFormData;
   progress: number;
+  timeZones: {
+    id: string;
+    name: string;
+    code: string;
+    offset: number;
+  }[];
   productsFull: {
     id: string;
     name: string;
@@ -24,6 +30,7 @@ export default function SideSummary({
   values,
   progress,
   productsFull,
+  timeZones,
 }: SideSummaryProps) {
   const isComplete = progress >= 100;
 
@@ -32,6 +39,10 @@ export default function SideSummary({
     const found = productsFull.find((p) => p.id === id);
     return found ? found.name : id;
   });
+
+  const timeZoneName = timeZones.find(
+    (tz) => tz.id === values.timeZoneId,
+  )?.name;
 
   // STEP STATUS
   const steps = [
@@ -121,7 +132,7 @@ export default function SideSummary({
           <p>
             <span className="font-semibold">Time Zone:</span>{" "}
             {values.timeZoneId ? (
-              values.timeZoneId
+              timeZoneName
             ) : (
               <span className="opacity-50">Not set</span>
             )}

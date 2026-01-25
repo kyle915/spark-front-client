@@ -20,6 +20,7 @@ import {
   ClipboardDocumentListIcon,
 } from "@heroicons/react/24/solid";
 import FormInputText from "@/shared/FormInputText";
+import { PlusCircle } from "lucide-react";
 
 type RequestTypeFormValues = {
   name: string;
@@ -129,12 +130,12 @@ const RequestTypesTable = ({ tenantId }: { tenantId: string }) => {
   const data = useLazyLoadQuery<RequestTypesQueryType>(
     RequestTypesQuery,
     { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const requestTypes = useMemo(
     () => data.requestTypes.edges.map((edge) => edge.node),
-    [data]
+    [data],
   );
 
   return (
@@ -208,6 +209,7 @@ export const RequestTypesList = () => {
               className="btn btn-primary"
               onClick={() => navigate("/catalogs/request-types/create")}
             >
+              <PlusCircle className="w-4 h-4" />
               New Request Type
             </button>
           </div>
@@ -230,7 +232,7 @@ export const CreateRequestType = () => {
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
   const [commitCreate, isCreating] = useMutation<CreateRequestTypeMutationType>(
-    CreateRequestTypeMutation
+    CreateRequestTypeMutation,
   );
 
   const initialTenantId = tenantId || "";
@@ -272,12 +274,12 @@ export const EditRequestType = () => {
   const data = useLazyLoadQuery<RequestTypeByIdQueryType>(
     RequestTypeByIdQuery,
     { uuid: uuid ?? "" },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const requestType = data.requestType;
   const [commitUpdate, isUpdating] = useMutation<UpdateRequestTypeMutationType>(
-    UpdateRequestTypeMutation
+    UpdateRequestTypeMutation,
   );
 
   const handleSubmit = (values: RequestTypeFormValues) => {

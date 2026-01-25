@@ -18,6 +18,7 @@ import { useAuthStore } from "@/store/authStore";
 import { ArrowLeftIcon, CalendarDaysIcon } from "@heroicons/react/24/solid";
 import FormCheckbox from "@/shared/FormCheckbox";
 import FormInputText from "@/shared/FormInputText";
+import { PlusCircle } from "lucide-react";
 
 type EventTypeFormValues = {
   name: string;
@@ -139,12 +140,12 @@ const EventTypesTable = ({ tenantId }: { tenantId: string }) => {
   const data = useLazyLoadQuery<EventTypeQueryType>(
     EventTypeQuery,
     { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const eventTypes = useMemo(
     () => data.eventTypes.edges.map((edge) => edge.node),
-    [data]
+    [data],
   );
 
   return (
@@ -218,6 +219,7 @@ export const EventTypesList = () => {
             className="btn btn-primary"
             onClick={() => navigate("/catalogs/event-types/create")}
           >
+            <PlusCircle className="w-4 h-4" />
             New Event Type
           </button>
         </div>
@@ -239,7 +241,7 @@ export const CreateEventType = () => {
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
   const [commitCreate, isCreating] = useMutation<CreateEventTypeMutationType>(
-    CreateEventTypeMutation
+    CreateEventTypeMutation,
   );
 
   const initialTenantId = tenantId || "";
@@ -286,12 +288,12 @@ export const EditEventType = () => {
   const data = useLazyLoadQuery<EventTypeByIdQueryType>(
     EventTypeByIdQuery,
     { uuid: uuid ?? "" },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const eventType = data.eventType;
   const [commitUpdate, isUpdating] = useMutation<UpdateEventTypeMutationType>(
-    UpdateEventTypeMutation
+    UpdateEventTypeMutation,
   );
 
   const handleSubmit = (values: EventTypeFormValues) => {

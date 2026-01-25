@@ -74,3 +74,18 @@ export interface UserRow {
     name: string;
   } | null;
 }
+
+export interface DistributorRow {
+  id: string;
+  uuid?: string | null;
+  name: string;
+  email?: string | null;
+}
+
+export type RetailerRow = {
+  id: string;
+  uuid: string;
+  name: string;
+  address?: string | null;
+  storeContact?: string | null;
+};

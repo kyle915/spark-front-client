@@ -17,6 +17,7 @@ import { PencilIcon } from "@heroicons/react/24/outline";
 import { useAuthStore } from "@/store/authStore";
 import { ArrowLeftIcon, MapPinIcon } from "@heroicons/react/24/solid";
 import FormInputText from "@/shared/FormInputText";
+import { PlusCircle } from "lucide-react";
 
 type LocationFormValues = {
   name: string;
@@ -148,12 +149,12 @@ const LocationsTable = ({ tenantId }: { tenantId: string }) => {
   const data = useLazyLoadQuery<LocationsQueryType>(
     LocationsQuery,
     { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const locations = useMemo(
     () => data.locations.edges.map((edge) => edge.node),
-    [data]
+    [data],
   );
 
   return (
@@ -236,6 +237,7 @@ export const LocationsList = () => {
               className="btn btn-primary"
               onClick={() => navigate("/catalogs/locations/create")}
             >
+              <PlusCircle className="w-4 h-4" />
               New Location
             </button>
           </div>
@@ -258,7 +260,7 @@ export const CreateLocation = () => {
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
   const [commitCreate, isCreating] = useMutation<CreateLocationMutationType>(
-    CreateLocationMutation
+    CreateLocationMutation,
   );
 
   const initialTenantId = tenantId || "";
@@ -305,12 +307,12 @@ export const EditLocation = () => {
   const data = useLazyLoadQuery<LocationByIdQueryType>(
     LocationByIdQuery,
     { uuid: uuid ?? "" },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const location = data.location;
   const [commitUpdate, isUpdating] = useMutation<UpdateLocationMutationType>(
-    UpdateLocationMutation
+    UpdateLocationMutation,
   );
 
   const handleSubmit = (values: LocationFormValues) => {

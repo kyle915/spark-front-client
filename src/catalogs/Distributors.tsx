@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useForm, type Control } from "react-hook-form";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import LoadingButton from "@shared/LoadingButton";
 import { DistributorsQuery } from "@api/queries/DistributorsQuery";
@@ -15,11 +15,16 @@ import type { CreateDistributorMutation as CreateDistributorMutationType } from 
 import { UpdateDistributorMutation } from "@api/mutations/UpdateDistributorMutation";
 import type { UpdateDistributorMutation as UpdateDistributorMutationType } from "@api/mutations/__generated__/UpdateDistributorMutation.graphql";
 import { useAlertStore } from "@store/alertStore";
-import { PencilIcon } from "@heroicons/react/24/outline";
 import { useAuthStore } from "@/store/authStore";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { ArrowLeftIcon, UserGroupIcon } from "@heroicons/react/24/solid";
 import FormInputText from "@/shared/FormInputText";
 import FormAutocomplete from "@/shared/FormAutocomplete";
+import { PlusCircle } from "lucide-react";
+import { useRelayPagination } from "@/hooks/useRelayPagination";
+import Loading from "@/shared/Loading";
+import DistributorsTableContent from "./components/DistributorsTableContent";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 type DistributorFormValues = {
   name: string;
@@ -41,7 +46,7 @@ const TenantLocationSelect = ({
   const data = useLazyLoadQuery<LocationsQueryType>(
     LocationsQuery,
     { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const options = useMemo(
@@ -50,7 +55,7 @@ const TenantLocationSelect = ({
         label: edge.node.name,
         value: edge.node.id,
       })),
-    [data]
+    [data],
   );
 
   return (
@@ -188,98 +193,133 @@ const DistributorForm = ({
   );
 };
 
-const DistributorsTable = ({ tenantId }: { tenantId: string }) => {
-  const navigate = useNavigate();
-  const data = useLazyLoadQuery<DistributorsQueryType>(
-    DistributorsQuery,
-    { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
-  );
+const PAGE_SIZE = 10;
 
-  const distributors = useMemo(
-    () => data.distributors.edges.map((edge) => edge.node),
-    [data]
-  );
+export function DistributorsTable({
+  tenantId,
+  q,
+  onRefreshReady,
+}: {
+  tenantId: string;
+  q: string;
+  onRefreshReady?: (refreshFn: () => void) => void;
+}) {
+  const {
+    queryRef,
+    displayPage,
+    isNavigating,
+    handlePageLoaded,
+    goNext,
+    goPrevious,
+    goToPage,
+    refresh,
+  } = useRelayPagination<DistributorsQueryType>({
+    query: DistributorsQuery,
+    pageSize: PAGE_SIZE,
+    initialVariables: {
+      filters: { tenantId },
+      q: q || undefined,
+    },
+  });
+
+  // 🔑 Exponer refresh una sola vez
+  useEffect(() => {
+    onRefreshReady?.(refresh);
+  }, [onRefreshReady, refresh]);
 
   return (
-    <div className="card bg-base-100 shadow">
-      <div className="card-body">
-        <div className="overflow-x-auto">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {distributors.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={3}
-                    className="text-center text-sm text-base-content/70"
-                  >
-                    No distributors for this tenant.
-                  </td>
-                </tr>
-              )}
-              {distributors.map((distributor) => (
-                <tr key={distributor.id}>
-                  <td>{distributor.name}</td>
-                  <td>{distributor.email}</td>
-                  <td>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() =>
-                        navigate(
-                          `/catalogs/distributors/edit/${distributor.uuid}`
-                        )
-                      }
-                    >
-                      <PencilIcon className="w-4 h-4" />
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+    <Suspense fallback={<Loading />}>
+      {queryRef && (
+        <DistributorsTableContent
+          queryRef={queryRef}
+          currentPage={displayPage}
+          pageSize={PAGE_SIZE}
+          onNext={goNext}
+          onPrevious={goPrevious}
+          onGoToPage={goToPage}
+          onPageLoaded={handlePageLoaded}
+          isNavigating={isNavigating}
+        />
+      )}
+    </Suspense>
+  );
+}
+
+const DistributorsPage = () => {
+  const { tenantId } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawQ = searchParams.get("q") ?? "";
+
+  const q = useDebouncedValue(rawQ, 400);
+
+  const refreshRef = useRef<null | (() => void)>(null);
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-4 gap-2">
+        <input
+          className="input input-bordered input-sm w-64"
+          placeholder="Search distributors..."
+          value={rawQ}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              if (value) next.set("q", value);
+              else next.delete("q");
+              return next;
+            });
+          }}
+        />
+
+        <button
+          type="button"
+          className="btn btn-sm btn-outline gap-2"
+          onClick={() => refreshRef.current?.()}
+        >
+          <ArrowPathIcon className="w-4 h-4" />
+          Reload
+        </button>
       </div>
-    </div>
+
+      <DistributorsTable
+        key={q}
+        tenantId={tenantId ?? ""}
+        q={q}
+        onRefreshReady={(fn) => {
+          refreshRef.current = fn;
+        }}
+      />
+    </>
   );
 };
 
-export const DistributorsList = () => {
+export function DistributorsList() {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
 
   return (
     <Layout>
-      <div className="mb-4 flex items-center gap-4">
-        <div className="flex items-center w-full justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
-              <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                <UserGroupIcon className="w-8 h-8" />
-              </div>
-              <h1>Distributors</h1>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-3xl font-bold text-primary">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <UserGroupIcon className="w-8 h-8" />
             </div>
-            <p className="text-base-content/70">
-              Manage and organize your distributors.
-            </p>
+            <h1>Distributors</h1>
           </div>
-
-          <div>
-            <button
-              className="btn btn-primary"
-              onClick={() => navigate("/catalogs/distributors/create")}
-            >
-              New Product Type
-            </button>
-          </div>
+          <p className="text-base-content/70">
+            Manage and organize your distributors.
+          </p>
         </div>
+
+        <button
+          className="btn btn-primary"
+          onClick={() => navigate("/catalogs/distributors/create")}
+        >
+          <PlusCircle className="w-4 h-4" />
+          New Distributor
+        </button>
       </div>
 
       {!tenantId ? (
@@ -287,18 +327,18 @@ export const DistributorsList = () => {
           <span>Select a tenant to see the list.</span>
         </div>
       ) : (
-        <DistributorsTable tenantId={tenantId} />
+        <DistributorsPage />
       )}
     </Layout>
   );
-};
+}
 
 export const CreateDistributor = () => {
   const { tenantId } = useAuthStore();
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
   const [commitCreate, isCreating] = useMutation<CreateDistributorMutationType>(
-    CreateDistributorMutation
+    CreateDistributorMutation,
   );
 
   const initialTenantId = tenantId || "";
@@ -345,12 +385,12 @@ export const EditDistributor = () => {
   const data = useLazyLoadQuery<DistributorByIdQueryType>(
     DistributorByIdQuery,
     { uuid: uuid ?? "" },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const distributor = data.distributor;
   const [commitUpdate, isUpdating] = useMutation<UpdateDistributorMutationType>(
-    UpdateDistributorMutation
+    UpdateDistributorMutation,
   );
 
   const handleSubmit = (values: DistributorFormValues) => {
@@ -402,6 +442,7 @@ export const EditDistributor = () => {
         }}
         onSubmit={handleSubmit}
         submitLabel="Update"
+        mode="edit"
         isSubmitting={isUpdating}
       />
     </Layout>

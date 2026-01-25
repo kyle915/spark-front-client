@@ -62,7 +62,7 @@ const EventsMapLayer = ({
       unit,
       filters: { tenantId: tenantId || "" },
     },
-    { fetchPolicy: "store-or-network" }
+    { fetchPolicy: "store-or-network" },
   );
 
   const events = data.todayEventsCoordinates?.edges ?? [];
@@ -117,14 +117,14 @@ const EventsMapLayer = ({
 // PAGE
 // =========================
 const TodayEventsMap = () => {
-  const [center, setCenter] = useState<[number, number]>([19.4326, -99.1332]);
+  const [center, setCenter] = useState<[number, number]>([40.7128, -74.006]);
   const [range, setRange] = useState(35);
   const unit = "MILES";
 
   // ===== Actions =====
   const locateUser = () => {
     navigator.geolocation?.getCurrentPosition((pos) =>
-      setCenter([pos.coords.latitude, pos.coords.longitude])
+      setCenter([pos.coords.latitude, pos.coords.longitude]),
     );
   };
 

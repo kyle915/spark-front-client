@@ -152,6 +152,7 @@ export default function SparkForm(props: SparkFormProps) {
         values={values}
         progress={calculateProgress(values)}
         productsFull={products}
+        timeZones={timeZones}
       />
     </div>
   );

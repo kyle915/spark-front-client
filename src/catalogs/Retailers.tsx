@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useForm, type Control } from "react-hook-form";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import LoadingButton from "@/shared/LoadingButton";
 import { RetailersQuery } from "@/api/queries/RetailersQuery";
@@ -15,7 +15,8 @@ import type { CreateRetailerMutation as CreateRetailerMutationType } from "@/api
 import { UpdateRetailerMutation } from "@/api/mutations/UpdateRetailerMutation";
 import type { UpdateRetailerMutation as UpdateRetailerMutationType } from "@/api/mutations/__generated__/UpdateRetailerMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
-import { PencilIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { XCircleIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { useAuthStore } from "@/store/authStore";
 import {
   ArrowLeftIcon,
@@ -23,6 +24,11 @@ import {
 } from "@heroicons/react/24/solid";
 import FormAutocomplete from "@/shared/FormAutocomplete";
 import FormInputText from "@/shared/FormInputText";
+import { PlusCircle } from "lucide-react";
+import { useRelayPagination } from "@/hooks/useRelayPagination";
+import Loading from "@/shared/Loading";
+import { RetailersTableContent } from "./components/RetailersTableContent";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 type RetailerFormValues = {
   name: string;
@@ -45,7 +51,7 @@ const TenantLocationSelect = ({
   const data = useLazyLoadQuery<LocationsQueryType>(
     LocationsQuery,
     { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const locationOptions = useMemo(
@@ -54,7 +60,7 @@ const TenantLocationSelect = ({
         label: edge.node.name,
         value: edge.node.id,
       })),
-    [data]
+    [data],
   );
 
   return (
@@ -225,72 +231,108 @@ const RetailerForm = ({
   );
 };
 
-const RetailersTable = ({ tenantId }: { tenantId: string }) => {
-  const navigate = useNavigate();
-  const data = useLazyLoadQuery<RetailersQueryType>(
-    RetailersQuery,
-    { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
-  );
+const PAGE_SIZE = 10;
 
-  const retailers = useMemo(
-    () => data.retailers.edges.map((edge) => edge.node),
-    [data]
-  );
+export function RetailersTable({
+  tenantId,
+  q,
+  onRefreshReady,
+}: {
+  tenantId: string;
+  q: string;
+  onRefreshReady?: (refreshFn: () => void) => void;
+}) {
+  const {
+    queryRef,
+    displayPage,
+    isNavigating,
+    handlePageLoaded,
+    goNext,
+    goPrevious,
+    goToPage,
+    refresh,
+  } = useRelayPagination<RetailersQueryType>({
+    query: RetailersQuery,
+    pageSize: PAGE_SIZE,
+    initialVariables: {
+      filters: { tenantId },
+      q: q || undefined,
+    },
+  });
+
+  // 🔑 Exponer refresh al padre
+  useEffect(() => {
+    onRefreshReady?.(refresh);
+  }, [onRefreshReady, refresh]);
 
   return (
-    <div className="card bg-base-100 shadow">
-      <div className="card-body">
-        <div className="flex items-center justify-start">
-          <h2 className="card-title">Retailers</h2>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Address</th>
-                <th>Store Contact</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {retailers.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="text-center text-sm text-base-content/70"
-                  >
-                    No retailers for this tenant.
-                  </td>
-                </tr>
-              )}
-              {retailers.map((retailer) => (
-                <tr key={retailer.id}>
-                  <td>{retailer.name}</td>
-                  <td>{retailer.address}</td>
-                  <td>{retailer.storeContact}</td>
-                  <td>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() =>
-                        navigate(`/catalogs/retailers/edit/${retailer.uuid}`)
-                      }
-                    >
-                      <PencilIcon className="w-4 h-4" />
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <Suspense fallback={<Loading />}>
+      {queryRef ? (
+        <RetailersTableContent
+          queryRef={queryRef}
+          currentPage={displayPage}
+          pageSize={PAGE_SIZE}
+          onNext={goNext}
+          onPrevious={goPrevious}
+          onGoToPage={goToPage}
+          onPageLoaded={handlePageLoaded}
+          isNavigating={isNavigating}
+        />
+      ) : (
+        <Loading />
+      )}
+    </Suspense>
   );
-};
+}
+
+export function RetailersPage() {
+  const { tenantId } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawQ = searchParams.get("q") ?? "";
+
+  const q = useDebouncedValue(rawQ, 400);
+
+  const refreshRef = useRef<null | (() => void)>(null);
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-4 gap-2">
+        <input
+          className="input input-bordered input-sm w-64"
+          placeholder="Search retailers..."
+          value={rawQ}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              if (value) next.set("q", value);
+              else next.delete("q");
+              return next;
+            });
+          }}
+        />
+
+        <button
+          type="button"
+          className="btn btn-sm btn-outline gap-2"
+          onClick={() => refreshRef.current?.()}
+        >
+          <ArrowPathIcon className="w-4 h-4" />
+          Reload
+        </button>
+      </div>
+
+      <RetailersTable
+        key={q}
+        tenantId={tenantId ?? ""}
+        q={q}
+        onRefreshReady={(fn) => {
+          refreshRef.current = fn;
+        }}
+      />
+    </>
+  );
+}
 
 export const RetailersList = () => {
   const navigate = useNavigate();
@@ -317,6 +359,7 @@ export const RetailersList = () => {
               className="btn btn-primary"
               onClick={() => navigate("/catalogs/retailers/create")}
             >
+              <PlusCircle className="w-4 h-4" />
               New Retailer
             </button>
           </div>
@@ -328,7 +371,7 @@ export const RetailersList = () => {
           <span>Select a tenant to see the list.</span>
         </div>
       ) : (
-        <RetailersTable tenantId={tenantId} />
+        <RetailersPage />
       )}
     </Layout>
   );
@@ -339,7 +382,7 @@ export const CreateRetailer = () => {
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
   const [commitCreate, isCreating] = useMutation<CreateRetailerMutationType>(
-    CreateRetailerMutation
+    CreateRetailerMutation,
   );
 
   const initialTenantId = tenantId || "";
@@ -387,12 +430,12 @@ export const EditRetailer = () => {
   const data = useLazyLoadQuery<RetailerByIdQueryType>(
     RetailerByIdQuery,
     { uuid: uuid ?? "" },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const retailer = data.retailer;
   const [commitUpdate, isUpdating] = useMutation<UpdateRetailerMutationType>(
-    UpdateRetailerMutation
+    UpdateRetailerMutation,
   );
 
   const handleSubmit = (values: RetailerFormValues) => {

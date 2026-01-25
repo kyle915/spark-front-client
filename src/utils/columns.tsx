@@ -5,6 +5,8 @@ import type {
   TenantRow,
   RecapRow,
   UserRow,
+  DistributorRow,
+  RetailerRow,
 } from "@/types/columnsTypes";
 import { formatDate, formatTime } from "@/utils";
 
@@ -164,7 +166,7 @@ export const tenantColumns: Column<TenantRow>[] = [
 ];
 
 export const createRecapColumns = (
-  eventLookup: Record<string, string> = {}
+  eventLookup: Record<string, string> = {},
 ): Column<RecapRow>[] => [
   {
     key: "name",
@@ -200,5 +202,31 @@ export const userColumns: Column<UserRow>[] = [
     key: "role",
     label: "Role",
     render: (_value, row) => row.role?.name ?? "-",
+  },
+];
+
+export const distributorColumns: Column<DistributorRow>[] = [
+  {
+    key: "name",
+    label: "Name",
+  },
+  {
+    key: "email",
+    label: "Email",
+    render: (value) => value ?? "—",
+  },
+];
+
+export const retailerColumns: Column<RetailerRow>[] = [
+  { key: "name", label: "Name" },
+  {
+    key: "address",
+    label: "Address",
+    render: (value) => (value ? String(value) : "—"),
+  },
+  {
+    key: "storeContact",
+    label: "Store Contact",
+    render: (value) => (value ? String(value) : "—"),
   },
 ];

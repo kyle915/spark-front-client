@@ -14,7 +14,7 @@ import { UpdateProductTypeMutation } from "@api/mutations/UpdateProductTypeMutat
 import type { UpdateProductTypeMutation as UpdateProductTypeMutationType } from "@api/mutations/__generated__/UpdateProductTypeMutation.graphql";
 import { useAlertStore } from "@store/alertStore";
 import { useAuthStore } from "@/store/authStore";
-import { TagIcon } from "lucide-react";
+import { PlusCircle, TagIcon } from "lucide-react";
 import { PencilIcon } from "@heroicons/react/24/outline";
 import FormInputText from "@/shared/FormInputText";
 import { ArrowLeftIcon } from "@heroicons/react/24/solid";
@@ -126,12 +126,12 @@ const ProductTypesTable = ({ tenantId }: { tenantId: string }) => {
   const data = useLazyLoadQuery<ProductTypesQueryType>(
     ProductTypesQuery,
     { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const productTypes = useMemo(
     () => data.productTypes.edges.map((edge) => edge.node),
-    [data]
+    [data],
   );
 
   return (
@@ -205,6 +205,7 @@ export const ProductTypesList = () => {
               className="btn btn-primary"
               onClick={() => navigate("/catalogs/product-types/create")}
             >
+              <PlusCircle className="w-4 h-4" />
               New Product Type
             </button>
           </div>
@@ -228,7 +229,7 @@ export const CreateProductType = () => {
   const navigate = useNavigate();
 
   const [commitCreate, isCreating] = useMutation<CreateProductTypeMutationType>(
-    CreateProductTypeMutation
+    CreateProductTypeMutation,
   );
 
   const initialTenantId = tenantId || "";
@@ -270,13 +271,13 @@ export const EditProductType = () => {
   const data = useLazyLoadQuery<ProductTypeByIdQueryType>(
     ProductTypeByIdQuery,
     { uuid: uuid ?? "" },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const productType = data.productType;
 
   const [commitUpdate, isUpdating] = useMutation<UpdateProductTypeMutationType>(
-    UpdateProductTypeMutation
+    UpdateProductTypeMutation,
   );
 
   const handleSubmit = (values: ProductTypeFormValues) => {
