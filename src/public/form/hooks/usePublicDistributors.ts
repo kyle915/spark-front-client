@@ -9,6 +9,10 @@ interface Distributor {
   location?: {
     id: string;
     name: string;
+    state?: {
+      id: string;
+      name: string;
+    } | null;
   } | null;
 }
 
@@ -18,7 +22,7 @@ interface NodeDistributor {
 
 export function usePublicDistributors(
   requestUrlName: string,
-  locationId?: string
+  stateId?: string
 ) {
   const [distributors, setDistributors] = useState<Distributor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,13 +33,13 @@ export function usePublicDistributors(
     setLoading(true);
     gqlRequest<NodeDistributor>(PUBLIC_DISTRIBUTORS_QUERY, {
       requestUrlName,
-      filters: locationId ? { locationId } : null,
+      filters: stateId ? { stateId } : null,
     })
       .then((data) => {
         setDistributors(mapQuery(data.publicDistributors.edges));
       })
       .finally(() => setLoading(false));
-  }, [requestUrlName, locationId]);
+  }, [requestUrlName, stateId]);
 
   return { distributors, loading };
 }

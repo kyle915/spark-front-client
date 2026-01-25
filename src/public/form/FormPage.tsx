@@ -9,7 +9,7 @@ import {
   usePublicRequestTypes,
   usePublicTimeZones,
   usePublicDistributors,
-  usePublicLocations,
+  usePublicStates,
   usePublicRetailer,
 } from "./hooks";
 
@@ -17,8 +17,8 @@ export default function SparkFormPage() {
   const { tenantSlug } = useParams();
 
   const slug = tenantSlug ?? "";
-  const [locationQuery, setLocationQuery] = useState("");
-  const [selectedLocationId, setSelectedLocationId] = useState("");
+  const [stateQuery, setStateQuery] = useState("");
+  const [selectedStateId, setSelectedStateId] = useState("");
   const [retailerQuery, setRetailerQuery] = useState("");
 
   const { products } = usePublicProducts(slug);
@@ -26,13 +26,13 @@ export default function SparkFormPage() {
   const { requestTypes } = usePublicRequestTypes(slug);
   const { productTypes } = usePublicProductTypes(slug);
   const { timeZones } = usePublicTimeZones();
-  const { distributors } = usePublicDistributors(slug, selectedLocationId);
+  const { distributors } = usePublicDistributors(slug, selectedStateId);
   const { retailers } = usePublicRetailer(
     slug,
-    selectedLocationId,
+    selectedStateId,
     retailerQuery
   );
-  const { locations } = usePublicLocations(slug, locationQuery);
+  const { states } = usePublicStates(stateQuery);
 
   // if (
   //   !tenantSlug ||
@@ -51,9 +51,9 @@ export default function SparkFormPage() {
       <SparkForm
         // clients={clients}
         requestTypes={requestTypes}
-        locations={locations}
-        onLocationSearch={setLocationQuery}
-        onLocationChange={setSelectedLocationId}
+        states={states}
+        onStateSearch={setStateQuery}
+        onStateChange={setSelectedStateId}
         onRetailerSearch={setRetailerQuery}
         products={products}
         productTypes={productTypes}
