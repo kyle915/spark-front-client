@@ -89,3 +89,30 @@ export type RetailerRow = {
   address?: string | null;
   storeContact?: string | null;
 };
+
+export type ProductTypeRow = {
+  id: string;
+  uuid: string;
+  name: string;
+};
+
+export type EventTypeRow = {
+  id: string;
+  uuid: string;
+  name: string;
+  isDefault: boolean;
+};
+
+export type LocationRow = {
+  id: string;
+  uuid: string;
+  name: string;
+  code: string;
+  zip: string;
+};
+
+export type RequestTypeRow = {
+  id: string;
+  uuid: string;
+  name: string;
+};

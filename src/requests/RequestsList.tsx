@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useState } from "react";
+import { Suspense, useCallback, useState, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import Layout from "@/layout/Layout";
 import DataTableRelay from "@/shared/DataTableRelay";
@@ -33,6 +33,7 @@ import ConfirmationModal from "@/shared/ConfirmationModal";
 import { useAlertStore } from "@/store/alertStore";
 import { DeclineRequestMutation } from "@/api/mutations/DeclineRequestMutation";
 import FormDatePicker from "@/shared/FormDatePicker";
+import { ArrowPathIcon } from "@heroicons/react/24/solid";
 
 const PAGE_SIZE = 10;
 
@@ -61,7 +62,7 @@ const RequestsTableContent = ({
 }: RequestsTableContentProps) => {
   const data = usePreloadedQuery<RequestsQueryType>(
     RequestsQuery,
-    queryReference
+    queryReference,
   );
   const connection = data.requests;
 
@@ -105,16 +106,20 @@ type RequestsListInnerProps = {
     statusId?: string;
     date?: string;
   };
+  onRefreshReady?: (refreshFn: () => void) => void;
 };
 
-const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
+const RequestsListInner = ({
+  filters,
+  onRefreshReady,
+}: RequestsListInnerProps) => {
   const navigate = useNavigate();
   const showAlert = useAlertStore((state) => state.showAlert);
   const [commitDecline, isDeclineInFlight] =
     useMutation<DeclineRequestMutationType>(DeclineRequestMutation);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [requestToDecline, setRequestToDecline] = useState<RequestRow | null>(
-    null
+    null,
   );
 
   const {
@@ -132,26 +137,32 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
     initialVariables: { filters },
   });
 
+  useEffect(() => {
+    if (onRefreshReady) {
+      onRefreshReady(refresh);
+    }
+  }, [onRefreshReady, refresh]);
+
   const handleViewRequest = useCallback(
     (request: RequestRow) => {
       console.info("Viewing request", request.uuid);
       navigate(`/request/view/${request.uuid}`);
     },
-    [navigate]
+    [navigate],
   );
 
   const handleApproveRequest = useCallback(
     (request: RequestRow) => {
       navigate(`/event/create/${request.uuid}`);
     },
-    [navigate]
+    [navigate],
   );
 
   const handleEditRequest = useCallback(
     (request: RequestRow) => {
       navigate(`/request/edit/${request.uuid}`);
     },
-    [navigate]
+    [navigate],
   );
 
   const handleDeclineClick = useCallback((request: RequestRow) => {
@@ -242,7 +253,7 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
       handleEditRequest,
       handleDeclineClick,
       isDeclineInFlight,
-    ]
+    ],
   );
 
   return (
@@ -282,6 +293,7 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
 };
 
 const RequestsList = () => {
+  const refreshRef = useRef<(() => void) | null>(null);
   const { control, watch, reset } = useForm({
     defaultValues: {
       // tenant: "",
@@ -358,8 +370,17 @@ const RequestsList = () => {
                   </h2>
                 </div>
 
-                {Object.entries(watch()).some(([, value]) => value) && (
-                  <>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => refreshRef.current?.()}
+                  >
+                    <ArrowPathIcon className="w-4 h-4" />
+                    Refresh
+                  </button>
+
+                  {Object.entries(watch()).some(([, value]) => value) && (
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
@@ -368,8 +389,8 @@ const RequestsList = () => {
                       <FunnelXIcon className="w-4 h-4" />
                       Clear filters
                     </button>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -419,6 +440,7 @@ const RequestsList = () => {
               <RequestsListInner
                 key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedDate}`}
                 filters={filters}
+                onRefreshReady={(fn) => (refreshRef.current = fn)}
               />
             </div>
           </div>

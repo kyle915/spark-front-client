@@ -7,6 +7,10 @@ import type {
   UserRow,
   DistributorRow,
   RetailerRow,
+  ProductTypeRow,
+  EventTypeRow,
+  LocationRow,
+  RequestTypeRow,
 } from "@/types/columnsTypes";
 import { formatDate, formatTime } from "@/utils";
 
@@ -229,4 +233,38 @@ export const retailerColumns: Column<RetailerRow>[] = [
     label: "Store Contact",
     render: (value) => (value ? String(value) : "—"),
   },
+];
+
+export const productTypeColumns: Column<ProductTypeRow>[] = [
+  {
+    key: "name",
+    label: "Name",
+  },
+];
+
+export const eventTypeColumns: Column<EventTypeRow>[] = [
+  {
+    key: "name",
+    label: "Name",
+  },
+  {
+    key: "isDefault",
+    label: "Default",
+    render: (value) => (value ? "Yes" : "No"),
+  },
+];
+
+export const locationColumns: Column<LocationRow>[] = [
+  {
+    key: "name",
+    label: "Name",
+  },
+  {
+    key: "address",
+    label: "Address",
+  },
+];
+
+export const requestTypeColumns: Column<RequestTypeRow>[] = [
+  { key: "name", label: "Name" },
 ];

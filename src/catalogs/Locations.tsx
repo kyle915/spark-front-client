@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import LoadingButton from "@shared/LoadingButton";
 import { LocationsQuery } from "@api/queries/LocationsQuery";
@@ -13,11 +13,15 @@ import type { CreateLocationMutation as CreateLocationMutationType } from "@api/
 import { UpdateLocationMutation } from "@api/mutations/UpdateLocationMutation";
 import type { UpdateLocationMutation as UpdateLocationMutationType } from "@api/mutations/__generated__/UpdateLocationMutation.graphql";
 import { useAlertStore } from "@store/alertStore";
-import { PencilIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { useAuthStore } from "@/store/authStore";
 import { ArrowLeftIcon, MapPinIcon } from "@heroicons/react/24/solid";
 import FormInputText from "@/shared/FormInputText";
 import { PlusCircle } from "lucide-react";
+import { useRelayPagination } from "@/hooks/useRelayPagination";
+import Loading from "@/shared/Loading";
+import { LocationsTableContent } from "./components/LocationsTableContent";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 type LocationFormValues = {
   name: string;
@@ -144,72 +148,103 @@ const LocationForm = ({
   );
 };
 
-const LocationsTable = ({ tenantId }: { tenantId: string }) => {
-  const navigate = useNavigate();
-  const data = useLazyLoadQuery<LocationsQueryType>(
-    LocationsQuery,
-    { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" },
-  );
+const PAGE_SIZE = 10;
 
-  const locations = useMemo(
-    () => data.locations.edges.map((edge) => edge.node),
-    [data],
-  );
+export function LocationsTable({
+  tenantId,
+  q,
+  onRefreshReady,
+}: {
+  tenantId: string;
+  q: string;
+  onRefreshReady?: (fn: () => void) => void;
+}) {
+  const {
+    queryRef,
+    displayPage,
+    isNavigating,
+    handlePageLoaded,
+    goNext,
+    goPrevious,
+    goToPage,
+    refresh,
+  } = useRelayPagination<LocationsQueryType>({
+    query: LocationsQuery,
+    pageSize: PAGE_SIZE,
+    initialVariables: {
+      filters: { tenantId },
+      q: q || undefined,
+    },
+  });
+
+  useEffect(() => {
+    onRefreshReady?.(refresh);
+  }, [onRefreshReady, refresh]);
 
   return (
-    <div className="card bg-base-100 shadow">
-      <div className="card-body">
-        <div className="flex items-center justify-start">
-          <h2 className="card-title">Locations</h2>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Code</th>
-                <th>ZIP</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {locations.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="text-center text-sm text-base-content/70"
-                  >
-                    No locations for this tenant.
-                  </td>
-                </tr>
-              )}
-              {locations.map((location) => (
-                <tr key={location.id}>
-                  <td>{location.name}</td>
-                  <td>{location.code}</td>
-                  <td>{location.zip}</td>
-                  <td>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() =>
-                        navigate(`/catalogs/locations/edit/${location.uuid}`)
-                      }
-                    >
-                      <PencilIcon className="w-4 h-4" />
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <Suspense fallback={<Loading />}>
+      {queryRef && (
+        <LocationsTableContent
+          queryRef={queryRef}
+          currentPage={displayPage}
+          pageSize={PAGE_SIZE}
+          onNext={goNext}
+          onPrevious={goPrevious}
+          onGoToPage={goToPage}
+          onPageLoaded={handlePageLoaded}
+          isNavigating={isNavigating}
+        />
+      )}
+    </Suspense>
   );
-};
+}
+
+export function LocationsPage() {
+  const { tenantId } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawQ = searchParams.get("q") ?? "";
+  const q = useDebouncedValue(rawQ, 400);
+
+  const refreshRef = useRef<null | (() => void)>(null);
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-4 gap-2">
+        <input
+          className="input input-bordered input-sm w-64"
+          placeholder="Search locations..."
+          value={rawQ}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              if (value) next.set("q", value);
+              else next.delete("q");
+              return next;
+            });
+          }}
+        />
+
+        <button
+          className="btn btn-sm btn-outline gap-2"
+          onClick={() => refreshRef.current?.()}
+        >
+          <ArrowPathIcon className="w-4 h-4" />
+          Reload
+        </button>
+      </div>
+
+      <LocationsTable
+        key={q}
+        tenantId={tenantId ?? ""}
+        q={q}
+        onRefreshReady={(fn) => {
+          refreshRef.current = fn;
+        }}
+      />
+    </>
+  );
+}
 
 export const LocationsList = () => {
   const navigate = useNavigate();
@@ -249,7 +284,7 @@ export const LocationsList = () => {
           <span>Select a tenant to see the list.</span>
         </div>
       ) : (
-        <LocationsTable tenantId={tenantId} />
+        <LocationsPage />
       )}
     </Layout>
   );
