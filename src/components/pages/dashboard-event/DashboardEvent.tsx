@@ -150,15 +150,17 @@ export default function DashboardIndex() {
         <DashboardHeader title="Event Recap Dashboard" />
 
         {/* FILTERS */}
-        <FiltersPanel
-          distributors={distributors}
-          rmmOptions={rmmOptions}
-          quarterOptions={quarterOptions}
-          onApplyFilters={(nextFilters) => {
-            setFilters(nextFilters);
-            setFetchKey((key) => key + 1);
-          }}
-        />
+        <div className="relative z-40">
+          <FiltersPanel
+            distributors={distributors}
+            rmmOptions={rmmOptions}
+            quarterOptions={quarterOptions}
+            onApplyFilters={(nextFilters) => {
+              setFilters(nextFilters);
+              setFetchKey((key) => key + 1);
+            }}
+          />
+        </div>
 
         {/* METRICS */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

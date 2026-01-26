@@ -420,6 +420,7 @@ export default function RequestForm({
         retailerId: defaultValues.retailerId ?? null,
         distributorId: defaultValues.distributorId ?? null,
         requestTypeId: defaultValues.requestTypeId ?? null,
+        products: defaultValues.products ?? [],
       });
     }
   }, [mode, defaultValues, reset]);
@@ -913,8 +914,8 @@ export default function RequestForm({
             </section>
           )}
 
-          {/* PRODUCTS (CREATE ONLY) */}
-          {mode === "create" && products.length > 0 && (
+          {/* PRODUCTS */}
+          {products.length > 0 && (
             <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
               <div className="flex items-center justify-between gap-4">
                 <p className="font-semibold text-lg">Products</p>

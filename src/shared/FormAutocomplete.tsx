@@ -41,18 +41,31 @@ const FormAutocomplete = <T extends FieldValues>({
     const [searchTerm, setSearchTerm] = useState("");
     const [isOpen, setIsOpen] = useState(false);
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
+    const [selectedLabel, setSelectedLabel] = useState("");
     const dropdownRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Get the label for the selected value
     const selectedOption = options.find(opt => String(opt.value) === String(field.value));
-    const displayValue = selectedOption?.label || "";
+    const displayValue = selectedOption?.label || selectedLabel || "";
 
     // Reset search term when value changes programmatically
     useEffect(() => {
         setSearchTerm("");
         onSearch?.("");
     }, [field.value]);
+
+    // Keep a stable label even if the selected option is no longer in the options list.
+    useEffect(() => {
+        if (!field.value) {
+            setSelectedLabel("");
+            return;
+        }
+
+        if (selectedOption) {
+            setSelectedLabel(selectedOption.label);
+        }
+    }, [field.value, selectedOption]);
 
     // Filter options based on search term
     const filteredOptions = options.filter(option =>
@@ -74,6 +87,7 @@ const FormAutocomplete = <T extends FieldValues>({
 
     const handleSelect = (option: SelectOption) => {
         field.onChange(String(option.value));
+        setSelectedLabel(option.label);
         setSearchTerm("");
         setIsOpen(false);
         setHighlightedIndex(-1);
@@ -145,6 +159,7 @@ const FormAutocomplete = <T extends FieldValues>({
                             onClick={(e) => {
                                 e.stopPropagation();
                                 field.onChange(null);
+                                setSelectedLabel("");
                                 setSearchTerm("");
                                 onSearch?.("");
                                 setIsOpen(false);
