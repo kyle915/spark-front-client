@@ -7,9 +7,11 @@ import { RequestUuidQuery } from "@api/queries/RequestUuidQuery";
 import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__generated__/RequestUuidQuery.graphql";
 
 const RequestViewContent = ({ uuid }: { uuid: string }) => {
-  const { request } = useLazyLoadQuery<RequestUuidQueryType>(RequestUuidQuery, {
-    uuid,
-  });
+  const { request } = useLazyLoadQuery<RequestUuidQueryType>(
+    RequestUuidQuery,
+    { uuid },
+    { fetchPolicy: "store-and-network" },
+  );
 
   if (!request) {
     return <Layout>Request not found</Layout>;
