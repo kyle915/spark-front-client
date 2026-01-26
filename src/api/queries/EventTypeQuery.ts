@@ -1,11 +1,31 @@
-
 import { graphql } from "react-relay";
 
 export const EventTypeQuery = graphql`
-query EventTypeQuery($filters: EventTypeFiltersInput!) {
-    eventTypes(filters: $filters) {
-      edges{
-        node{
+  query EventTypeQuery(
+    $filters: EventTypeFiltersInput!
+    $first: Int
+    $after: String
+    $last: Int
+    $before: String
+    $q: String
+  ) {
+    eventTypes(
+      filters: $filters
+      first: $first
+      after: $after
+      last: $last
+      before: $before
+      q: $q
+    ) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+      edges {
+        node {
           __typename
           id
           uuid
@@ -16,4 +36,4 @@ query EventTypeQuery($filters: EventTypeFiltersInput!) {
       }
     }
   }
-  `;
+`;

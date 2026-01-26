@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import LoadingButton from "@shared/LoadingButton";
 import { ProductTypesQuery } from "@api/queries/ProductTypesQuery";
@@ -14,10 +14,13 @@ import { UpdateProductTypeMutation } from "@api/mutations/UpdateProductTypeMutat
 import type { UpdateProductTypeMutation as UpdateProductTypeMutationType } from "@api/mutations/__generated__/UpdateProductTypeMutation.graphql";
 import { useAlertStore } from "@store/alertStore";
 import { useAuthStore } from "@/store/authStore";
-import { TagIcon } from "lucide-react";
+import { PlusCircle, TagIcon } from "lucide-react";
 import { PencilIcon } from "@heroicons/react/24/outline";
 import FormInputText from "@/shared/FormInputText";
 import { ArrowLeftIcon } from "@heroicons/react/24/solid";
+import { useRelayPagination } from "@/hooks/useRelayPagination";
+import Loading from "@/shared/Loading";
+import { ProductTypesTableContent } from "./components/ProductTypesTableContent";
 
 type ProductTypeFormValues = {
   name: string;
@@ -121,64 +124,107 @@ const ProductTypeForm = ({
   );
 };
 
-const ProductTypesTable = ({ tenantId }: { tenantId: string }) => {
-  const navigate = useNavigate();
-  const data = useLazyLoadQuery<ProductTypesQueryType>(
-    ProductTypesQuery,
-    { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
-  );
+const PAGE_SIZE = 10;
 
-  const productTypes = useMemo(
-    () => data.productTypes.edges.map((edge) => edge.node),
-    [data]
-  );
+export function ProductTypesTable({
+  tenantId,
+  q,
+  onRefreshReady,
+}: {
+  tenantId: string;
+  q: string;
+  onRefreshReady?: (fn: () => void) => void;
+}) {
+  const {
+    queryRef,
+    displayPage,
+    isNavigating,
+    handlePageLoaded,
+    goNext,
+    goPrevious,
+    goToPage,
+    refresh,
+  } = useRelayPagination<ProductTypesQueryType>({
+    query: ProductTypesQuery,
+    pageSize: PAGE_SIZE,
+    initialVariables: {
+      filters: { tenantId },
+      q: q || undefined,
+    },
+  });
+
+  useEffect(() => {
+    onRefreshReady?.(refresh);
+  }, [onRefreshReady, refresh]);
 
   return (
-    <div className="card bg-base-100 shadow">
-      <div className="card-body">
-        <div className="overflow-x-auto">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {productTypes.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={2}
-                    className="text-center text-sm text-base-content/70"
-                  >
-                    No product types for this tenant.
-                  </td>
-                </tr>
-              )}
-              {productTypes.map((type) => (
-                <tr key={type.id}>
-                  <td>{type.name}</td>
-                  <td>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() =>
-                        navigate(`/catalogs/product-types/edit/${type.uuid}`)
-                      }
-                    >
-                      <PencilIcon className="w-4 h-4" />
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <Suspense fallback={<Loading />}>
+      {queryRef && (
+        <ProductTypesTableContent
+          queryRef={queryRef}
+          currentPage={displayPage}
+          pageSize={PAGE_SIZE}
+          onNext={goNext}
+          onPrevious={goPrevious}
+          onGoToPage={goToPage}
+          onPageLoaded={handlePageLoaded}
+          isNavigating={isNavigating}
+        />
+      )}
+    </Suspense>
   );
-};
+}
+
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+
+export function ProductTypesPage() {
+  const { tenantId } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawQ = searchParams.get("q") ?? "";
+  const q = useDebouncedValue(rawQ, 400);
+
+  const refreshRef = useRef<null | (() => void)>(null);
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-4 gap-2">
+        <input
+          className="input input-bordered input-sm w-64"
+          placeholder="Search product types..."
+          value={rawQ}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              if (value) next.set("q", value);
+              else next.delete("q");
+              return next;
+            });
+          }}
+        />
+
+        <button
+          type="button"
+          className="btn btn-sm btn-outline gap-2"
+          onClick={() => refreshRef.current?.()}
+        >
+          <ArrowPathIcon className="w-4 h-4" />
+          Reload
+        </button>
+      </div>
+
+      <ProductTypesTable
+        key={q}
+        tenantId={tenantId ?? ""}
+        q={q}
+        onRefreshReady={(fn) => {
+          refreshRef.current = fn;
+        }}
+      />
+    </>
+  );
+}
 
 export const ProductTypesList = () => {
   const navigate = useNavigate();
@@ -205,6 +251,7 @@ export const ProductTypesList = () => {
               className="btn btn-primary"
               onClick={() => navigate("/catalogs/product-types/create")}
             >
+              <PlusCircle className="w-4 h-4" />
               New Product Type
             </button>
           </div>
@@ -216,7 +263,7 @@ export const ProductTypesList = () => {
           <span>Select a tenant to see the list.</span>
         </div>
       ) : (
-        <ProductTypesTable tenantId={tenantId || ""} />
+        <ProductTypesPage />
       )}
     </Layout>
   );
@@ -228,7 +275,7 @@ export const CreateProductType = () => {
   const navigate = useNavigate();
 
   const [commitCreate, isCreating] = useMutation<CreateProductTypeMutationType>(
-    CreateProductTypeMutation
+    CreateProductTypeMutation,
   );
 
   const initialTenantId = tenantId || "";
@@ -270,13 +317,13 @@ export const EditProductType = () => {
   const data = useLazyLoadQuery<ProductTypeByIdQueryType>(
     ProductTypeByIdQuery,
     { uuid: uuid ?? "" },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const productType = data.productType;
 
   const [commitUpdate, isUpdating] = useMutation<UpdateProductTypeMutationType>(
-    UpdateProductTypeMutation
+    UpdateProductTypeMutation,
   );
 
   const handleSubmit = (values: ProductTypeFormValues) => {

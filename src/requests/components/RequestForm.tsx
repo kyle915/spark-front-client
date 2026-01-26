@@ -73,7 +73,7 @@ interface ProductItem {
   id: string;
   name: string;
   image?: string | null;
-  productType?: { id: string } | null;
+  productType?: { id: string; name: string } | null;
 }
 
 interface TimezoneItem {
@@ -118,6 +118,9 @@ interface RequestFormProps {
     >
   >;
 }
+
+// Pagination Products (Temporary)
+const PAGE_SIZE = 12;
 
 export default function RequestForm({
   mode,
@@ -166,6 +169,7 @@ export default function RequestForm({
   };
 
   const { showAlert } = useAlertStore();
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // ========================
   // INITIALIZE FORM AND FORM STATE
@@ -438,6 +442,15 @@ export default function RequestForm({
     if (!selectedProductType) return products;
     return products.filter((p) => p.productType?.id === selectedProductType);
   }, [products, selectedProductType]);
+
+  const visibleProducts = useMemo(
+    () => filteredProducts.slice(0, visibleCount),
+    [filteredProducts, visibleCount],
+  );
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [selectedProductType]);
 
   const toggleProduct = (productId: string) => {
     const current = selectedProducts;
@@ -922,8 +935,20 @@ export default function RequestForm({
                 </div>
               </div>
 
+              {selectedProductType && visibleProducts.length > 0 && (
+                <p className="text-xs text-base-content/60">
+                  Showing products of selected type
+                </p>
+              )}
+
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {filteredProducts.map((product) => (
+                {visibleProducts.length === 0 && (
+                  <p className="text-base-content/60 col-span-full">
+                    No products found.
+                  </p>
+                )}
+
+                {visibleProducts.map((product) => (
                   <div
                     key={product.id}
                     className={`card bg-base-100 shadow-sm border cursor-pointer transition-all ${
@@ -953,10 +978,36 @@ export default function RequestForm({
                       >
                         {product.name}
                       </h4>
+
+                      {product.productType?.name && (
+                        <span className="text-xs text-base-content/60 mt-1">
+                          {product.productType.name}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
+              <p className="text-xs text-base-content/60 text-center">
+                Showing {visibleProducts.length} of {filteredProducts.length}{" "}
+                products
+              </p>
+
+              {visibleCount < filteredProducts.length && (
+                <div className="flex justify-center pt-4">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() =>
+                      setVisibleCount((prev) =>
+                        Math.min(prev + PAGE_SIZE, filteredProducts.length),
+                      )
+                    }
+                  >
+                    Load more products
+                  </button>
+                </div>
+              )}
             </section>
           )}
 
