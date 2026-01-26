@@ -53,7 +53,6 @@ const updateChartTheme = () => {
   if (scales?.radialLinear) {
     scales.radialLinear.grid && (scales.radialLinear.grid.color = gridColor);
     scales.radialLinear.ticks && (scales.radialLinear.ticks.color = textColor);
-    scales.radialLinear.title && (scales.radialLinear.title.color = textColor);
   }
 
   const instances = (Chart as unknown as { instances?: unknown }).instances;
