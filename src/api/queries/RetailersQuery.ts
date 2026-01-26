@@ -6,9 +6,17 @@ export const RetailersQuery = graphql`
     $q: String
     $first: Int
     $after: String
+    $last: Int
+    $before: String
   ) {
-    retailers(filters: $filters, q: $q, first: $first, after: $after) {
-      totalCount
+    retailers(
+      filters: $filters
+      q: $q
+      first: $first
+      after: $after
+      last: $last
+      before: $before
+    ) {
       edges {
         cursor
         node {
@@ -18,6 +26,13 @@ export const RetailersQuery = graphql`
           name
           address
           storeContact
+          location {
+            state {
+              id
+              name
+              code
+            }
+          }
         }
       }
       pageInfo {
@@ -26,6 +41,7 @@ export const RetailersQuery = graphql`
         startCursor
         endCursor
       }
+      totalCount
     }
   }
 `;

@@ -6,16 +6,32 @@ export const DistributorsQuery = graphql`
     $q: String
     $first: Int
     $after: String
+    $last: Int
+    $before: String
   ) {
-    distributors(filters: $filters, q: $q, first: $first, after: $after) {
-      totalCount
+    distributors(
+      filters: $filters
+      q: $q
+      first: $first
+      after: $after
+      last: $last
+      before: $before
+    ) {
       edges {
         cursor
         node {
+          __typename
           id
           uuid
           name
           email
+          location {
+            state {
+              id
+              name
+              code
+            }
+          }
         }
       }
       pageInfo {
@@ -24,6 +40,7 @@ export const DistributorsQuery = graphql`
         startCursor
         endCursor
       }
+      totalCount
     }
   }
 `;
