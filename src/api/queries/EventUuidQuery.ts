@@ -79,6 +79,15 @@ export const EventUuidQuery = graphql`
             }
           }
         }
+        products {
+          id
+          name
+          image
+          productType {
+            id
+            name
+          }
+        }
         requestType {
           __typename
           id

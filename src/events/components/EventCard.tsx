@@ -351,6 +351,54 @@ const EventCard: React.FC<Props> = ({ event }) => {
             </div>
           </div>
 
+          {/* ================= PRODUCTS ================= */}
+          <div className="xl:col-span-4 space-y-8">
+            <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
+              <p className="font-semibold text-lg">Products</p>
+
+              {request?.products && request.products.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {request.products.map((product) => (
+                    <div
+                      key={product.id}
+                      className="flex items-center gap-4 rounded-xl bg-base-200/70 border border-base-100/20 p-4 hover:shadow-md transition"
+                    >
+                      {/* IMAGE / PLACEHOLDER */}
+                      <div className="w-14 h-14 rounded-lg bg-base-100/70 flex items-center justify-center">
+                        {product.image ? (
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        ) : (
+                          <TagIcon className="w-6 h-6 opacity-40" />
+                        )}
+                      </div>
+
+                      {/* INFO */}
+                      <div className="flex flex-col gap-1">
+                        <p className="font-medium leading-tight">
+                          {product.name}
+                        </p>
+
+                        {product.productType?.name && (
+                          <span className="badge badge-soft badge-outline badge-info w-fit text-xs">
+                            {product.productType.name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm opacity-60">
+                  No products associated with this request.
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* LOCATION INFORMATION */}
           <div className="xl:col-span-4 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
@@ -410,7 +458,6 @@ const EventCard: React.FC<Props> = ({ event }) => {
             </div>
           </div>
 
-          {/* RIGHT / MAP */}
           <div className="lg:col-span-4">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 h-full flex flex-col justify-center">
               <div className="flex items-center justify-between">

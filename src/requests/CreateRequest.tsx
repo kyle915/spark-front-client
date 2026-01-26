@@ -30,32 +30,32 @@ interface CreateRequestFormProps {
 }
 
 const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
-  console.log("TENANT", tenantId)
+  console.log("TENANT", tenantId);
   // ========================
   // QUERIES
   // ========================
   const requestTypesData = useLazyLoadQuery<RequestTypesQueryType>(
     RequestTypesQuery,
     { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const productTypesData = useLazyLoadQuery<ProductTypesQueryType>(
     ProductTypesQuery,
     { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const productsData = useLazyLoadQuery<ProductsQueryType>(
     ProductsQuery,
-    { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
+    { filters: { tenantId }, first: 100 },
+    { fetchPolicy: "store-and-network" },
   );
 
   const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
     TimezonesQuery,
     {},
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
@@ -68,7 +68,7 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
   // MUTATION
   // ========================
   const [commitCreateRequest, isCreating] = useMutation<RequestMutation>(
-    CreateRequestMutation
+    CreateRequestMutation,
   );
 
   const { showAlert } = useAlertStore();
@@ -152,7 +152,7 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
         } else {
           showAlert(
             response.createRequest?.message ?? "Error creating request",
-            "error"
+            "error",
           );
         }
       },

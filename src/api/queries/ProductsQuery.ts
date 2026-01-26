@@ -7,15 +7,17 @@ export const ProductsQuery = graphql`
     $last: Int
     $before: String
     $filters: ProductFiltersInput
+    $q: String
   ) {
-    products(first: $first, after: $after, last: $last, before: $before, filters: $filters) {
+    products(
+      first: $first
+      after: $after
+      last: $last
+      before: $before
+      filters: $filters
+      q: $q
+    ) {
       totalCount
-      pageInfo {
-        hasNextPage
-        hasPreviousPage
-        startCursor
-        endCursor
-      }
       edges {
         cursor
         node {
@@ -29,6 +31,12 @@ export const ProductsQuery = graphql`
             name
           }
         }
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
       }
     }
   }

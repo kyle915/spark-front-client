@@ -1,7 +1,7 @@
-import { useEffect, useMemo } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import LoadingButton from "@shared/LoadingButton";
 import { EventTypeQuery } from "@api/queries/EventTypeQuery";
@@ -13,11 +13,16 @@ import type { CreateEventTypeMutation as CreateEventTypeMutationType } from "@ap
 import { UpdateEventTypeMutation } from "@api/mutations/UpdateEventTypeMutation";
 import type { UpdateEventTypeMutation as UpdateEventTypeMutationType } from "@api/mutations/__generated__/UpdateEventTypeMutation.graphql";
 import { useAlertStore } from "@store/alertStore";
-import { PencilIcon } from "@heroicons/react/24/outline";
 import { useAuthStore } from "@/store/authStore";
 import { ArrowLeftIcon, CalendarDaysIcon } from "@heroicons/react/24/solid";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import FormCheckbox from "@/shared/FormCheckbox";
 import FormInputText from "@/shared/FormInputText";
+import { PlusCircle } from "lucide-react";
+import { useRelayPagination } from "@/hooks/useRelayPagination";
+import Loading from "@/shared/Loading";
+import { EventTypesTableContent } from "./components/EventTypesTableContent";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 type EventTypeFormValues = {
   name: string;
@@ -134,66 +139,103 @@ const EventTypeForm = ({
   );
 };
 
-const EventTypesTable = ({ tenantId }: { tenantId: string }) => {
-  const navigate = useNavigate();
-  const data = useLazyLoadQuery<EventTypeQueryType>(
-    EventTypeQuery,
-    { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
-  );
+const PAGE_SIZE = 10;
 
-  const eventTypes = useMemo(
-    () => data.eventTypes.edges.map((edge) => edge.node),
-    [data]
-  );
+export function EventTypesTable({
+  tenantId,
+  q,
+  onRefreshReady,
+}: {
+  tenantId: string;
+  q: string;
+  onRefreshReady?: (fn: () => void) => void;
+}) {
+  const {
+    queryRef,
+    displayPage,
+    isNavigating,
+    handlePageLoaded,
+    goNext,
+    goPrevious,
+    goToPage,
+    refresh,
+  } = useRelayPagination<EventTypeQueryType>({
+    query: EventTypeQuery,
+    pageSize: PAGE_SIZE,
+    initialVariables: {
+      filters: { tenantId },
+      q: q || undefined,
+    },
+  });
+
+  useEffect(() => {
+    onRefreshReady?.(refresh);
+  }, [onRefreshReady, refresh]);
 
   return (
-    <div className="card bg-base-100 shadow">
-      <div className="card-body">
-        <div className="overflow-x-auto">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Default</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {eventTypes.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={3}
-                    className="text-center text-sm text-base-content/70"
-                  >
-                    No event types for this tenant.
-                  </td>
-                </tr>
-              )}
-              {eventTypes.map((type) => (
-                <tr key={type.id}>
-                  <td>{type.name}</td>
-                  <td>{type.isDefault ? "Yes" : "No"}</td>
-                  <td>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() =>
-                        navigate(`/catalogs/event-types/edit/${type.uuid}`)
-                      }
-                    >
-                      <PencilIcon className="w-4 h-4" />
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <Suspense fallback={<Loading />}>
+      {queryRef && (
+        <EventTypesTableContent
+          queryRef={queryRef}
+          currentPage={displayPage}
+          pageSize={PAGE_SIZE}
+          onNext={goNext}
+          onPrevious={goPrevious}
+          onGoToPage={goToPage}
+          onPageLoaded={handlePageLoaded}
+          isNavigating={isNavigating}
+        />
+      )}
+    </Suspense>
   );
-};
+}
+
+export function EventTypesPage() {
+  const { tenantId } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawQ = searchParams.get("q") ?? "";
+  const q = useDebouncedValue(rawQ, 400);
+
+  const refreshRef = useRef<null | (() => void)>(null);
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-4 gap-2">
+        <input
+          className="input input-bordered input-sm w-64"
+          placeholder="Search event types..."
+          value={rawQ}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev);
+              if (value) next.set("q", value);
+              else next.delete("q");
+              return next;
+            });
+          }}
+        />
+
+        <button
+          className="btn btn-sm btn-outline gap-2"
+          onClick={() => refreshRef.current?.()}
+        >
+          <ArrowPathIcon className="w-4 h-4" />
+          Reload
+        </button>
+      </div>
+
+      <EventTypesTable
+        key={q}
+        tenantId={tenantId ?? ""}
+        q={q}
+        onRefreshReady={(fn) => {
+          refreshRef.current = fn;
+        }}
+      />
+    </>
+  );
+}
 
 export const EventTypesList = () => {
   const navigate = useNavigate();
@@ -218,6 +260,7 @@ export const EventTypesList = () => {
             className="btn btn-primary"
             onClick={() => navigate("/catalogs/event-types/create")}
           >
+            <PlusCircle className="w-4 h-4" />
             New Event Type
           </button>
         </div>
@@ -228,7 +271,7 @@ export const EventTypesList = () => {
           <span>Select a tenant to see the list.</span>
         </div>
       ) : (
-        <EventTypesTable tenantId={tenantId} />
+        <EventTypesPage />
       )}
     </Layout>
   );
@@ -239,7 +282,7 @@ export const CreateEventType = () => {
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
   const [commitCreate, isCreating] = useMutation<CreateEventTypeMutationType>(
-    CreateEventTypeMutation
+    CreateEventTypeMutation,
   );
 
   const initialTenantId = tenantId || "";
@@ -286,12 +329,12 @@ export const EditEventType = () => {
   const data = useLazyLoadQuery<EventTypeByIdQueryType>(
     EventTypeByIdQuery,
     { uuid: uuid ?? "" },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const eventType = data.eventType;
   const [commitUpdate, isUpdating] = useMutation<UpdateEventTypeMutationType>(
-    UpdateEventTypeMutation
+    UpdateEventTypeMutation,
   );
 
   const handleSubmit = (values: EventTypeFormValues) => {
