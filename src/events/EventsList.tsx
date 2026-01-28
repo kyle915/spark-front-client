@@ -54,12 +54,15 @@ type EventsTableContentProps = {
   queryReference: PreloadedQuery<EventsQueryType>;
   currentPage: number;
   pageSize: number;
-  onNext: (cursor: string) => void;
-  onPrevious: (cursor: string) => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onNextChunk?: () => void;
+  onPreviousChunk?: () => void;
   onGoToPage: (page: number) => void;
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;
   renderRowActions?: (row: EventRow) => ReactNode;
+  isPageReachable: (page: number) => boolean;
 };
 
 const EventsTableContent = ({
@@ -68,10 +71,13 @@ const EventsTableContent = ({
   pageSize,
   onNext,
   onPrevious,
+  onNextChunk,
+  onPreviousChunk,
   onGoToPage,
   onPageLoaded,
   isNavigating,
   renderRowActions,
+  isPageReachable,
 }: EventsTableContentProps) => {
   const data = usePreloadedQuery<EventsQueryType>(EventsQuery, queryReference);
   const connection = data.events;
@@ -92,6 +98,9 @@ const EventsTableContent = ({
       pageSize={pageSize}
       onNext={onNext}
       onPrevious={onPrevious}
+      onNextChunk={onNextChunk}
+      onPreviousChunk={onPreviousChunk}
+      isPageReachable={isPageReachable}
       onGoToPage={onGoToPage}
       isNavigating={isNavigating}
       onPageLoaded={onPageLoaded}
@@ -127,7 +136,10 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
     refresh,
     goNext,
     goPrevious,
+    goNextChunk,
+    goPreviousChunk,
     goToPage,
+    isPageReachable,
   } = useRelayPagination<EventsQueryType>({
     query: EventsQuery,
     pageSize: PAGE_SIZE,
@@ -399,10 +411,13 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
             pageSize={PAGE_SIZE}
             onNext={goNext}
             onPrevious={goPrevious}
+            onNextChunk={goNextChunk}
+            onPreviousChunk={goPreviousChunk}
             onGoToPage={goToPage}
             isNavigating={isNavigating}
             onPageLoaded={handlePageLoaded}
             renderRowActions={renderEventsActions}
+            isPageReachable={isPageReachable}
           />
         ) : (
           <Loading />
