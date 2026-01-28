@@ -5,7 +5,7 @@ import bgImage from "../assets/background.png";
 import { useForm } from "react-hook-form";
 import { useAlertStore } from "@store/alertStore";
 import ThemeToggle from "@/shared/ThemeToggle";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useAuthStore } from "@store/authStore";
 import { register } from "@api/auth/register";
 import type { RegisterFormFields } from "@/types/auth";
@@ -86,6 +86,8 @@ const Login = () => {
     }
   };
 
+  const currentYear = new Date().getFullYear();
+
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat p-4"
@@ -143,9 +145,25 @@ const Login = () => {
               )}
             </div>
 
-            <p className="text-xs text-base-content/40 mt-10 text-center">
-              ©2025 Ignite Productions. All rights reserved.
-            </p>
+            {/* <div className="mt-10 text-center space-y-2">
+              <p className="text-xs text-base-content/40">
+                ©{currentYear} Ignite Productions. All rights reserved.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <Link to="/privacy-policy" className="link link-primary text-xs">
+                  Privacy Policy
+                </Link>
+                <span className="text-xs text-base-content/40" aria-hidden="true">
+                  •
+                </span>
+                <Link
+                  to="/terms-of-service"
+                  className="link link-primary text-xs"
+                >
+                  Terms of Service
+                </Link>
+              </div>
+            </div> */}
           </div>
         </div>
 

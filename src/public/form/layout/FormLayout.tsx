@@ -3,6 +3,7 @@ import useTenantPublic from "../hooks/useTenantPublic";
 import useTenantThemePublic from "../hooks/useTenantThemePublic";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
 
 export default function SparkFormLayout({
   children,
@@ -11,6 +12,7 @@ export default function SparkFormLayout({
   children: React.ReactNode;
   slug: string;
 }) {
+  const currentYear = new Date().getFullYear();
   const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
     (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark",
   );
@@ -84,6 +86,20 @@ export default function SparkFormLayout({
       <div className="p-6 flex flex-col items-center flex-1 w-full">
         {children}
       </div>
+      {/* 
+      <footer className="footer footer-center p-4 bg-base-100 text-base-content/70">
+        <aside className="flex items-center gap-2 text-sm">
+          <span>© {currentYear} Spark</span>
+          <span aria-hidden="true">•</span>
+          <Link to="/privacy-policy" className="link link-primary">
+            Privacy Policy
+          </Link>
+          <span aria-hidden="true">•</span>
+          <Link to="/terms-of-service" className="link link-primary">
+            Terms of Service
+          </Link>
+        </aside>
+      </footer> */}
     </div>
   );
 }
