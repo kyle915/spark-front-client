@@ -41,12 +41,15 @@ type RequestsTableContentProps = {
   queryReference: PreloadedQuery<RequestsQueryType>;
   currentPage: number;
   pageSize: number;
-  onNext: (cursor: string) => void;
-  onPrevious: (cursor: string) => void;
-  onGoToPage: (page: number) => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onNextChunk?: () => void;
+  onPreviousChunk?: () => void;
+  onGoToPage?: (page: number) => void;
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;
   renderRowActions?: (row: RequestRow) => ReactNode;
+  isPageReachable: (page: number) => boolean;
 };
 
 const RequestsTableContent = ({
@@ -55,10 +58,13 @@ const RequestsTableContent = ({
   pageSize,
   onNext,
   onPrevious,
+  onNextChunk,
+  onPreviousChunk,
   onGoToPage,
   onPageLoaded,
   isNavigating,
   renderRowActions,
+  isPageReachable,
 }: RequestsTableContentProps) => {
   const data = usePreloadedQuery<RequestsQueryType>(
     RequestsQuery,
@@ -82,6 +88,9 @@ const RequestsTableContent = ({
       pageSize={pageSize}
       onNext={onNext}
       onPrevious={onPrevious}
+      onNextChunk={onNextChunk}
+      onPreviousChunk={onPreviousChunk}
+      isPageReachable={isPageReachable}
       onGoToPage={onGoToPage}
       isNavigating={isNavigating}
       onPageLoaded={onPageLoaded}
@@ -130,7 +139,10 @@ const RequestsListInner = ({
     refresh,
     goNext,
     goPrevious,
+    goNextChunk,
+    goPreviousChunk,
     goToPage,
+    isPageReachable,
   } = useRelayPagination<RequestsQueryType>({
     query: RequestsQuery,
     pageSize: PAGE_SIZE,
@@ -279,6 +291,9 @@ const RequestsListInner = ({
             pageSize={PAGE_SIZE}
             onNext={goNext}
             onPrevious={goPrevious}
+            onNextChunk={goNextChunk}
+            onPreviousChunk={goPreviousChunk}
+            isPageReachable={isPageReachable}
             onGoToPage={goToPage}
             isNavigating={isNavigating}
             onPageLoaded={handlePageLoaded}

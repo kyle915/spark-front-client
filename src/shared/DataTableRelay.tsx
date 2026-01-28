@@ -53,9 +53,12 @@ type DataTableRelayProps<T> = {
   totalPages?: number;
   pageSize?: number;
 
-  onNext: (afterCursor: string) => void;
-  onPrevious: (beforeCursor: string) => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onNextChunk?: () => void;
+  onPreviousChunk?: () => void;
   onGoToPage?: (page: number) => void;
+
   onPageLoaded?: (payload: {
     pageNumber: number;
     pageInfo: { startCursor: string | null; endCursor: string | null };
@@ -63,24 +66,29 @@ type DataTableRelayProps<T> = {
   }) => void;
 
   isNavigating?: boolean;
+  isRefreshing?: boolean;
   emptyState?: ReactNode;
   customActions?: CustomActionsConfig<T>;
+  onRefresh?: () => void;
+
+  isPageReachable?: (page: number) => boolean;
 };
 
-const MAX_SIMPLE_PAGES = 5;
+const PAGE_WINDOW = 3;
 
 const buildPaginationItems = (currentPage: number, totalPages: number) => {
-  const safeTotal = Math.max(totalPages, 1);
-  const safeCurrent = Math.min(Math.max(currentPage, 1), safeTotal);
   const items: Array<
     { type: "page"; value: number } | { type: "ellipsis"; key: string }
   > = [];
+
+  const safeTotal = Math.max(totalPages, 1);
+  const safeCurrent = Math.min(Math.max(currentPage, 1), safeTotal);
 
   const pushPage = (value: number) => {
     if (
       value < 1 ||
       value > safeTotal ||
-      items.some((item) => item.type === "page" && item.value === value)
+      items.some((i) => i.type === "page" && i.value === value)
     ) {
       return;
     }
@@ -92,40 +100,37 @@ const buildPaginationItems = (currentPage: number, totalPages: number) => {
     items.push({ type: "ellipsis", key });
   };
 
-  if (safeTotal <= MAX_SIMPLE_PAGES) {
-    for (let i = 1; i <= safeTotal; i += 1) {
-      pushPage(i);
-    }
-    return items;
-  }
-
+  // 🔹 Siempre mostrar primera página
   pushPage(1);
 
-  if (safeCurrent <= 3) {
-    for (let i = 2; i <= 4 && i < safeTotal; i += 1) {
-      pushPage(i);
-    }
-    pushEllipsis("right");
-  } else if (safeCurrent >= safeTotal - 2) {
+  const start = Math.max(2, safeCurrent - PAGE_WINDOW);
+  const end = Math.min(safeTotal - 1, safeCurrent + PAGE_WINDOW);
+
+  // 🔹 Ellipsis izquierda
+  if (start > 2) {
     pushEllipsis("left");
-    for (let i = safeTotal - 3; i < safeTotal; i += 1) {
-      pushPage(i);
-    }
-  } else {
-    pushEllipsis("left");
-    for (let i = safeCurrent - 1; i <= safeCurrent + 1; i += 1) {
-      pushPage(i);
-    }
+  }
+
+  // 🔹 Ventana central
+  for (let i = start; i <= end; i += 1) {
+    pushPage(i);
+  }
+
+  // 🔹 Ellipsis derecha
+  if (end < safeTotal - 1) {
     pushEllipsis("right");
   }
 
-  pushPage(safeTotal);
+  // 🔹 Siempre mostrar última página
+  if (safeTotal > 1) {
+    pushPage(safeTotal);
+  }
 
   return items;
 };
 
 const normalizePageInfo = (
-  info?: MaybeRelayPageInfo | null
+  info?: MaybeRelayPageInfo | null,
 ): RelayPageInfo => ({
   hasNextPage: info?.hasNextPage ?? false,
   hasPreviousPage: info?.hasPreviousPage ?? false,
@@ -142,26 +147,30 @@ export default function DataTableRelay<T>({
   currentPage,
   totalPages,
   pageSize = 10,
+
   onNext,
   onPrevious,
+  onNextChunk,
+  onPreviousChunk,
   onGoToPage,
+
   onPageLoaded,
   isNavigating = false,
+  isRefreshing = false,
   emptyState,
   customActions,
+  onRefresh,
+
+  isPageReachable,
 }: DataTableRelayProps<T>) {
   const connectionMeta = useMemo(() => {
-    if (!connection) {
-      return null;
-    }
+    if (!connection) return null;
 
     const rawEdges = connection.edges ? Array.from(connection.edges) : [];
     const resolvedEdges: RelayEdge<T>[] = [];
 
     rawEdges.forEach((edge, index) => {
-      if (!edge || !edge.node) {
-        return;
-      }
+      if (!edge || !edge.node) return;
       resolvedEdges.push({
         cursor: edge.cursor ?? `edge-${index}`,
         node: edge.node as T,
@@ -177,26 +186,25 @@ export default function DataTableRelay<T>({
 
   const resolvedEdges: RelayEdge<T>[] = edges ?? connectionMeta?.edges ?? [];
   const resolvedTotalCount = totalCount ?? connectionMeta?.totalCount ?? 0;
+
   const resolvedPageInfo = useMemo(
     () => normalizePageInfo(pageInfo ?? connectionMeta?.pageInfo ?? null),
-    [connectionMeta?.pageInfo, pageInfo]
+    [connectionMeta?.pageInfo, pageInfo],
   );
 
   const totalPagesSafe = useMemo(() => {
-    if (typeof totalPages === "number") {
-      return Math.max(totalPages, 1);
-    }
+    if (typeof totalPages === "number") return Math.max(totalPages, 1);
     const derived = Math.ceil(
-      pageSize > 0 ? resolvedTotalCount / pageSize : resolvedTotalCount
+      pageSize > 0 ? resolvedTotalCount / pageSize : resolvedTotalCount,
     );
     return Math.max(derived || 1, 1);
   }, [pageSize, resolvedTotalCount, totalPages]);
 
   const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPagesSafe);
-  const canGoDirect = Boolean(onGoToPage);
+
   const paginationItems = useMemo(
     () => buildPaginationItems(safeCurrentPage, totalPagesSafe),
-    [safeCurrentPage, totalPagesSafe]
+    [safeCurrentPage, totalPagesSafe],
   );
 
   useEffect(() => {
@@ -217,16 +225,28 @@ export default function DataTableRelay<T>({
     safeCurrentPage,
   ]);
 
-  if (!resolvedEdges.length && emptyState) {
-    return <>{emptyState}</>;
-  }
+  if (!resolvedEdges.length && emptyState) return <>{emptyState}</>;
 
   return (
     <div className="overflow-x-auto rounded-xl shadow-lg bg-base-100 p-4 space-y-4">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
         <span className="text-sm text-base-content font-medium">
           Total: {resolvedTotalCount}
         </span>
+
+        {onRefresh ? (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            aria-label="Reload"
+            title="Reload"
+          >
+            <span className={isRefreshing ? "loading loading-spinner" : ""} />
+            {!isRefreshing ? "↻" : null}
+          </button>
+        ) : null}
       </div>
 
       <table className="table table-zebra w-full">
@@ -245,28 +265,28 @@ export default function DataTableRelay<T>({
           {resolvedEdges.map(({ node }, index) => {
             const rowKey =
               (node as { id?: string | number } | undefined)?.id ?? index;
-            const safeNode = node;
+
             return (
               <tr key={rowKey} className="hover:bg-base-200">
                 {columns.map((col) => {
                   const key = col.key;
                   const value =
                     typeof key === "string"
-                      ? ((safeNode as Record<string, unknown>)[key] as
+                      ? ((node as Record<string, unknown>)[key] as
                           | T[keyof T]
                           | undefined)
-                      : safeNode[key];
+                      : node[key];
+
                   return (
                     <td key={String(col.key)}>
                       {col.render
-                        ? col.render(value, safeNode)
+                        ? col.render(value, node)
                         : (value as unknown as ReactNode)}
                     </td>
                   );
                 })}
-                {customActions ? (
-                  <td>{customActions.render(safeNode)}</td>
-                ) : null}
+
+                {customActions ? <td>{customActions.render(node)}</td> : null}
               </tr>
             );
           })}
@@ -274,13 +294,24 @@ export default function DataTableRelay<T>({
       </table>
 
       <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+        {onPreviousChunk ? (
+          <button
+            type="button"
+            onClick={onPreviousChunk}
+            disabled={isNavigating || safeCurrentPage <= 1}
+            className="btn btn-sm btn-ghost border border-base-300"
+            title="Previous chunk"
+          >
+            «
+          </button>
+        ) : null}
+
         <button
-          onClick={() =>
-            resolvedPageInfo.startCursor &&
-            onPrevious(resolvedPageInfo.startCursor)
-          }
+          type="button"
+          onClick={onPrevious}
           disabled={!resolvedPageInfo.hasPreviousPage || isNavigating}
           className="btn btn-sm btn-ghost border border-base-300"
+          title="Previous"
         >
           ‹
         </button>
@@ -291,32 +322,63 @@ export default function DataTableRelay<T>({
               …
             </span>
           ) : (
-            <button
-              key={item.value}
-              className={`btn btn-sm ${
-                item.value === safeCurrentPage
-                  ? "btn-primary"
-                  : "btn-ghost border border-base-300"
-              }`}
-              disabled={
-                item.value === safeCurrentPage || isNavigating || !canGoDirect
-              }
-              onClick={() => onGoToPage?.(item.value)}
-            >
-              {item.value}
-            </button>
-          )
+            (() => {
+              const isCurrent = item.value === safeCurrentPage;
+              const reachable = isPageReachable?.(item.value) ?? true;
+
+              return (
+                <button
+                  key={item.value}
+                  type="button"
+                  className={`btn btn-sm ${
+                    isCurrent
+                      ? "btn-primary"
+                      : reachable
+                        ? "btn-ghost border border-base-300"
+                        : "btn-ghost border border-base-300 opacity-40 cursor-not-allowed"
+                  }`}
+                  disabled={
+                    isCurrent || isNavigating || !onGoToPage || !reachable
+                  }
+                  title={
+                    !onGoToPage
+                      ? "Go to page is not enabled"
+                      : !reachable
+                        ? "Usa las flechas (o salto) para llegar a esta página"
+                        : "Go to page"
+                  }
+                  onClick={() => {
+                    if (!isCurrent && reachable) onGoToPage?.(item.value);
+                  }}
+                >
+                  {item.value}
+                </button>
+              );
+            })()
+          ),
         )}
 
         <button
-          onClick={() =>
-            resolvedPageInfo.endCursor && onNext(resolvedPageInfo.endCursor)
-          }
+          type="button"
+          onClick={onNext}
           disabled={!resolvedPageInfo.hasNextPage || isNavigating}
           className="btn btn-sm btn-ghost border border-base-300"
+          title="Next"
         >
           ›
         </button>
+
+        {onNextChunk ? (
+          <button
+            type="button"
+            onClick={onNextChunk}
+            disabled={isNavigating}
+            className="btn btn-sm btn-ghost border border-base-300"
+            title="Next chunk"
+          >
+            »
+          </button>
+        ) : null}
       </div>
     </div>
   );
