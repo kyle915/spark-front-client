@@ -52,8 +52,8 @@ type RecapsTableContentProps = {
   queryReference: PreloadedQuery<RecapsQueryType>;
   currentPage: number;
   pageSize: number;
-  onNext: (cursor: string | null) => void;
-  onPrevious: (cursor: string | null) => void;
+  onNext: () => void;
+  onPrevious: () => void;
   onGoToPage: (page: number) => void;
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;
