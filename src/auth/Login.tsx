@@ -143,9 +143,27 @@ const Login = () => {
               )}
             </div>
 
-            <p className="text-xs text-base-content/40 mt-10 text-center">
-              ©2025 Ignite Productions. All rights reserved.
-            </p>
+            {/*
+            <div className="mt-10 text-center space-y-2">
+              <p className="text-xs text-base-content/40">
+                ©{currentYear} Ignite Productions. All rights reserved.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <Link to="/privacy-policy" className="link link-primary text-xs">
+                  Privacy Policy
+                </Link>
+                <span className="text-xs text-base-content/40" aria-hidden="true">
+                  •
+                </span>
+                <Link
+                  to="/terms-of-service"
+                  className="link link-primary text-xs"
+                >
+                  Terms of Service
+                </Link>
+              </div>
+            </div>
+            */}
           </div>
         </div>
 
