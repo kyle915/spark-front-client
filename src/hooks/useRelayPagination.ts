@@ -257,7 +257,10 @@ export function useRelayPagination<TQuery extends OperationType>({
   }, [currentPage, goToPage]);
 
   const goNextChunk = useCallback(async () => {
-    const target = Math.min(totalPages, currentPage + CHUNK_SIZE);
+    const UI_JUMP = 5;
+
+    const target = Math.min(totalPages, currentPage + UI_JUMP);
+
     if (isNavigating || target === currentPage) return;
 
     const current = pageIndex[currentPage];
@@ -285,11 +288,14 @@ export function useRelayPagination<TQuery extends OperationType>({
   ]);
 
   const goPreviousChunk = useCallback(() => {
-    const target = Math.max(1, currentPage - CHUNK_SIZE);
+    const UI_JUMP = 5;
+
+    const target = Math.max(1, currentPage - UI_JUMP);
+
     if (isNavigating || target === currentPage) return;
 
     const after = pageIndex[target]?.after;
-    if (after === undefined) return; // no cacheado → no se puede
+    if (after === undefined) return;
 
     loadPage(target, after);
   }, [currentPage, isNavigating, pageIndex, loadPage]);

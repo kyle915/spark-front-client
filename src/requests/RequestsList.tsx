@@ -35,7 +35,7 @@ import { DeclineRequestMutation } from "@/api/mutations/DeclineRequestMutation";
 import FormDatePicker from "@/shared/FormDatePicker";
 import { ArrowPathIcon } from "@heroicons/react/24/solid";
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 2;
 
 type RequestsTableContentProps = {
   queryReference: PreloadedQuery<RequestsQueryType>;
