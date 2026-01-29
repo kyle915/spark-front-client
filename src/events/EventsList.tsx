@@ -42,7 +42,7 @@ import {
   FunnelXIcon,
   PauseCircleIcon,
 } from "lucide-react";
-import { ArrowPathIcon, CalendarDaysIcon } from "@heroicons/react/24/solid";
+import { CalendarDaysIcon } from "@heroicons/react/24/solid";
 import { useAlertStore } from "@/store/alertStore";
 import ConfirmationModal from "@/shared/ConfirmationModal";
 import { toEventStatusFilterEnum } from "@/events/eventStatusFilter";
