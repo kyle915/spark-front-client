@@ -87,6 +87,8 @@ import CreateUser from "@/users/CreateUser";
 
 // Public
 import SparkFormPage from "@/public/form/FormPage";
+import PrivacyPolicyView from "@/utils/PrivacyPolicyView";
+import TermsOfServiceView from "@/utils/TermsOfServiceView";
 
 // Calendar
 import CalendarConnection from "@/calendar/CalendarConnection";
@@ -102,6 +104,16 @@ const PublicRoutes = {
     {
       path: "/spark-form/:tenantSlug",
       component: <SparkFormPage />,
+      isPublic: true,
+    },
+    {
+      path: "/privacy-policy",
+      component: <PrivacyPolicyView />,
+      isPublic: true,
+    },
+    {
+      path: "/terms-of-service",
+      component: <TermsOfServiceView />,
       isPublic: true,
     },
   ],
