@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { Controller } from "react-hook-form";
 import type {
   Control,
@@ -28,7 +27,7 @@ export default function FormDatePicker<T extends FieldValues>({
   disabled = false,
   minToday = false,
 }: FormDatePickerProps<T>) {
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  // const buttonRef = useRef<HTMLButtonElement | null>(null);
   const popoverId = `${name}-popover`;
   const anchorVar = `--${name}`;
 
@@ -72,7 +71,6 @@ export default function FormDatePicker<T extends FieldValues>({
 
           {/* Popover Button */}
           <button
-            ref={buttonRef}
             type="button"
             disabled={disabled}
             popoverTarget={popoverId}
@@ -81,8 +79,10 @@ export default function FormDatePicker<T extends FieldValues>({
             }`}
             style={{ anchorName: anchorVar } as React.CSSProperties}
           >
-            <span className="text-gray-500">
-              {field.value ? formatDate(field.value) : `${placeholder}`}
+            <span
+              className={field.value ? "text-base-content" : "text-gray-500"}
+            >
+              {field.value ? formatDate(field.value) : placeholder}
             </span>
           </button>
 
@@ -90,7 +90,7 @@ export default function FormDatePicker<T extends FieldValues>({
           <div
             id={popoverId}
             popover="auto"
-            className="dropdown bg-base-100 rounded-box shadow-xl p-3 mt-2"
+            className="dropdown bg-base-100 rounded-box shadow-xl p-3 mt-2 w-[320px] overflow-hidden"
             style={{ positionAnchor: anchorVar } as React.CSSProperties}
           >
             <DayPicker
@@ -99,12 +99,35 @@ export default function FormDatePicker<T extends FieldValues>({
               onSelect={(date) => {
                 if (!date) return;
                 field.onChange(date.toISOString());
-                if (buttonRef.current)
-                  buttonRef.current.innerText = date.toLocaleDateString();
               }}
               disabled={minToday ? [{ before: new Date() }] : undefined}
               className="react-day-picker"
             />
+
+            {/* Footer actions */}
+            <div className="mt-2 flex justify-between border-t border-base-200 pt-2">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  field.onChange(today.toISOString());
+                }}
+              >
+                Today
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm text-error"
+                onClick={() => {
+                  field.onChange("");
+                }}
+              >
+                Clear
+              </button>
+            </div>
           </div>
 
           {/* Error text */}
