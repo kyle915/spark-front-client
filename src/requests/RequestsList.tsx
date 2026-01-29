@@ -40,12 +40,17 @@ type RequestsTableContentProps = {
   queryReference: PreloadedQuery<RequestsQueryType>;
   currentPage: number;
   pageSize: number;
-  onNext: (cursor: string) => void;
-  onPrevious: (cursor: string) => void;
-  onGoToPage: (page: number) => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onNextChunk?: () => void;
+  onPreviousChunk?: () => void;
+  onGoToPage?: (page: number) => void;
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;
   renderRowActions?: (row: RequestRow) => ReactNode;
+  isPageReachable: (page: number) => boolean;
+  onReload?: () => void;
+  isRefreshing?: boolean;
 };
 
 const RequestsTableContent = ({
@@ -54,14 +59,19 @@ const RequestsTableContent = ({
   pageSize,
   onNext,
   onPrevious,
+  onNextChunk,
+  onPreviousChunk,
   onGoToPage,
   onPageLoaded,
   isNavigating,
   renderRowActions,
+  isPageReachable,
+  onReload,
+  isRefreshing,
 }: RequestsTableContentProps) => {
   const data = usePreloadedQuery<RequestsQueryType>(
     RequestsQuery,
-    queryReference
+    queryReference,
   );
   const connection = data.requests;
 
@@ -81,7 +91,12 @@ const RequestsTableContent = ({
       pageSize={pageSize}
       onNext={onNext}
       onPrevious={onPrevious}
+      onNextChunk={onNextChunk}
+      onPreviousChunk={onPreviousChunk}
+      isPageReachable={isPageReachable}
       onGoToPage={onGoToPage}
+      onRefresh={onReload}
+      isRefreshing={isRefreshing}
       isNavigating={isNavigating}
       onPageLoaded={onPageLoaded}
       customActions={
@@ -105,6 +120,7 @@ type RequestsListInnerProps = {
     statusId?: string;
     date?: string;
   };
+  onRefreshReady?: (refreshFn: () => void) => void;
 };
 
 const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
@@ -114,7 +130,7 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
     useMutation<DeclineRequestMutationType>(DeclineRequestMutation);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [requestToDecline, setRequestToDecline] = useState<RequestRow | null>(
-    null
+    null,
   );
 
   const {
@@ -122,10 +138,14 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
     displayPage,
     isNavigating,
     handlePageLoaded,
+    isRefreshing,
     refresh,
     goNext,
     goPrevious,
+    goNextChunk,
+    goPreviousChunk,
     goToPage,
+    isPageReachable,
   } = useRelayPagination<RequestsQueryType>({
     query: RequestsQuery,
     pageSize: PAGE_SIZE,
@@ -137,21 +157,21 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
       console.info("Viewing request", request.uuid);
       navigate(`/request/view/${request.uuid}`);
     },
-    [navigate]
+    [navigate],
   );
 
   const handleApproveRequest = useCallback(
     (request: RequestRow) => {
       navigate(`/event/create/${request.uuid}`);
     },
-    [navigate]
+    [navigate],
   );
 
   const handleEditRequest = useCallback(
     (request: RequestRow) => {
       navigate(`/request/edit/${request.uuid}`);
     },
-    [navigate]
+    [navigate],
   );
 
   const handleDeclineClick = useCallback((request: RequestRow) => {
@@ -242,7 +262,7 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
       handleEditRequest,
       handleDeclineClick,
       isDeclineInFlight,
-    ]
+    ],
   );
 
   return (
@@ -268,9 +288,14 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
             pageSize={PAGE_SIZE}
             onNext={goNext}
             onPrevious={goPrevious}
+            onNextChunk={goNextChunk}
+            onPreviousChunk={goPreviousChunk}
+            isPageReachable={isPageReachable}
             onGoToPage={goToPage}
             isNavigating={isNavigating}
             onPageLoaded={handlePageLoaded}
+            onReload={refresh}
+            isRefreshing={isRefreshing}
             renderRowActions={renderRequestActions}
           />
         ) : (
@@ -358,8 +383,8 @@ const RequestsList = () => {
                   </h2>
                 </div>
 
-                {Object.entries(watch()).some(([, value]) => value) && (
-                  <>
+                <div className="flex gap-2">
+                  {Object.entries(watch()).some(([, value]) => value) && (
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
@@ -368,8 +393,8 @@ const RequestsList = () => {
                       <FunnelXIcon className="w-4 h-4" />
                       Clear filters
                     </button>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

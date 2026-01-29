@@ -9,6 +9,7 @@ import {
   mapTenantColorSchemeToEnum,
   type TenantColorScheme,
 } from "@/utils/tenantThemeConfig";
+import { themes } from "@/utils";
 
 type UseTenantThemeOptions = {
   tenantId: string | null | undefined;
@@ -52,6 +53,9 @@ export const useTenantTheme = ({
 
     // DaisyUI / Tailwind
     applyCssVariables(cssVariables);
+    const themeName = themes[effectiveColorScheme];
+    document.documentElement.setAttribute("data-theme", themeName);
+    localStorage.setItem("@theme", themeName);
   }, [theme, colorScheme]);
 
   return {

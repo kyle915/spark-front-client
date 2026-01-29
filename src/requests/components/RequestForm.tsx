@@ -59,6 +59,7 @@ export interface RequestFormValues {
   isTableNeeded?: boolean;
   tableSize?: string;
   products?: string[];
+  stateId?: string | null;
 }
 
 interface CatalogItem {
@@ -66,14 +67,15 @@ interface CatalogItem {
   name: string;
   email?: string | null;
   address?: string | null;
-  phone?: string | null;
+  storeContact?: string | null;
+  code?: string | null;
 }
 
 interface ProductItem {
   id: string;
   name: string;
   image?: string | null;
-  productType?: { id: string } | null;
+  productType?: { id: string; name: string } | null;
 }
 
 interface TimezoneItem {
@@ -81,6 +83,12 @@ interface TimezoneItem {
   name: string;
   code: string;
   offset: number;
+}
+
+interface StoreManagerItem {
+  id: string;
+  name: string;
+  phone: string;
 }
 
 interface RequestFormProps {
@@ -96,8 +104,10 @@ interface RequestFormProps {
   products?: ProductItem[];
   tenantId: string;
   requestId?: string | null;
-  requestStoreManagers?: CatalogItem[];
+  requestStoreManagers?: StoreManagerItem[];
   locations?: CatalogItem[];
+  states?: CatalogItem[];
+  onStateChange?: (stateId: string | null) => void;
 
   onRefetch?: (
     key: "distributors" | "retailers" | "requestStoreManagers",
@@ -119,6 +129,9 @@ interface RequestFormProps {
   >;
 }
 
+// Pagination Products (Temporary)
+const PAGE_SIZE = 12;
+
 export default function RequestForm({
   mode,
   onSubmit,
@@ -137,6 +150,8 @@ export default function RequestForm({
   contactMode,
   requestContactInfo,
   locations = [],
+  states = [],
+  onStateChange,
 }: RequestFormProps) {
   const safeDefaultValues: RequestFormValues = {
     name: "",
@@ -161,11 +176,12 @@ export default function RequestForm({
     isTableNeeded: false,
     tableSize: "",
     products: [],
-
+    stateId: null,
     ...defaultValues,
   };
 
   const { showAlert } = useAlertStore();
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // ========================
   // INITIALIZE FORM AND FORM STATE
@@ -187,6 +203,7 @@ export default function RequestForm({
   const storeManagerId = watch("storeManagerId");
   const distributorLocationId = watch("distributorLocationId");
   const retailerLocationId = watch("retailerLocationId");
+  const selectedStateId = watch("stateId");
   const selectedEntitiesLocationId = useWatch({
     control,
     name: "entitiesLocationId",
@@ -416,6 +433,7 @@ export default function RequestForm({
         retailerId: defaultValues.retailerId ?? null,
         distributorId: defaultValues.distributorId ?? null,
         requestTypeId: defaultValues.requestTypeId ?? null,
+        products: defaultValues.products ?? [],
       });
     }
   }, [mode, defaultValues, reset]);
@@ -439,6 +457,15 @@ export default function RequestForm({
     return products.filter((p) => p.productType?.id === selectedProductType);
   }, [products, selectedProductType]);
 
+  const visibleProducts = useMemo(
+    () => filteredProducts.slice(0, visibleCount),
+    [filteredProducts, visibleCount],
+  );
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [selectedProductType]);
+
   const toggleProduct = (productId: string) => {
     const current = selectedProducts;
     if (current.includes(productId)) {
@@ -460,6 +487,20 @@ export default function RequestForm({
       shouldTouch: true,
     });
   };
+
+  const stateOptions = useMemo(
+    () =>
+      states.map((state) => ({
+        value: state.id,
+        label: state.code ? `${state.name} (${state.code})` : state.name,
+        searchText: state.code ? `${state.name} ${state.code}` : state.name,
+      })),
+    [states],
+  );
+
+  useEffect(() => {
+    onStateChange?.(selectedStateId ?? null);
+  }, [onStateChange, selectedStateId]);
 
   const locationOptions = useMemo(
     () =>
@@ -623,12 +664,21 @@ export default function RequestForm({
                 </span>
               </div>
 
-              <div className="mt-4 max-w-sm">
+              <div className="flex items-center gap-4 mt-4 w-full">
+                <FormAutocomplete<RequestFormValues>
+                  name="stateId"
+                  control={control}
+                  label="State"
+                  placeholder="Select state..."
+                  options={stateOptions}
+                  disabled={!tenantId}
+                />
+
                 <FormAutocomplete<RequestFormValues>
                   name="entitiesLocationId"
                   control={control}
-                  label="Location"
-                  placeholder="Select location..."
+                  label="City"
+                  placeholder="Select city..."
                   options={locationOptions}
                   disabled={!tenantId}
                 />
@@ -900,8 +950,8 @@ export default function RequestForm({
             </section>
           )}
 
-          {/* PRODUCTS (CREATE ONLY) */}
-          {mode === "create" && products.length > 0 && (
+          {/* PRODUCTS */}
+          {products.length > 0 && (
             <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
               <div className="flex items-center justify-between gap-4">
                 <p className="font-semibold text-lg">Products</p>
@@ -922,8 +972,20 @@ export default function RequestForm({
                 </div>
               </div>
 
+              {selectedProductType && visibleProducts.length > 0 && (
+                <p className="text-xs text-base-content/60">
+                  Showing products of selected type
+                </p>
+              )}
+
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {filteredProducts.map((product) => (
+                {visibleProducts.length === 0 && (
+                  <p className="text-base-content/60 col-span-full">
+                    No products found.
+                  </p>
+                )}
+
+                {visibleProducts.map((product) => (
                   <div
                     key={product.id}
                     className={`card bg-base-100 shadow-sm border cursor-pointer transition-all ${
@@ -953,10 +1015,36 @@ export default function RequestForm({
                       >
                         {product.name}
                       </h4>
+
+                      {product.productType?.name && (
+                        <span className="text-xs text-base-content/60 mt-1">
+                          {product.productType.name}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
+              <p className="text-xs text-base-content/60 text-center">
+                Showing {visibleProducts.length} of {filteredProducts.length}{" "}
+                products
+              </p>
+
+              {visibleCount < filteredProducts.length && (
+                <div className="flex justify-center pt-4">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() =>
+                      setVisibleCount((prev) =>
+                        Math.min(prev + PAGE_SIZE, filteredProducts.length),
+                      )
+                    }
+                  >
+                    Load more products
+                  </button>
+                </div>
+              )}
             </section>
           )}
 

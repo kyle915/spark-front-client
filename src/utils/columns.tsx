@@ -5,6 +5,12 @@ import type {
   TenantRow,
   RecapRow,
   UserRow,
+  DistributorRow,
+  RetailerRow,
+  ProductTypeRow,
+  EventTypeRow,
+  LocationRow,
+  RequestTypeRow,
 } from "@/types/columnsTypes";
 import { formatDate, formatTime } from "@/utils";
 
@@ -164,7 +170,7 @@ export const tenantColumns: Column<TenantRow>[] = [
 ];
 
 export const createRecapColumns = (
-  eventLookup: Record<string, string> = {}
+  eventLookup: Record<string, string> = {},
 ): Column<RecapRow>[] => [
   {
     key: "name",
@@ -201,4 +207,64 @@ export const userColumns: Column<UserRow>[] = [
     label: "Role",
     render: (_value, row) => row.role?.name ?? "-",
   },
+];
+
+export const distributorColumns: Column<DistributorRow>[] = [
+  {
+    key: "name",
+    label: "Name",
+  },
+  {
+    key: "email",
+    label: "Email",
+    render: (value) => value ?? "—",
+  },
+];
+
+export const retailerColumns: Column<RetailerRow>[] = [
+  { key: "name", label: "Name" },
+  {
+    key: "address",
+    label: "Address",
+    render: (value) => (value ? String(value) : "—"),
+  },
+  {
+    key: "storeContact",
+    label: "Store Contact",
+    render: (value) => (value ? String(value) : "—"),
+  },
+];
+
+export const productTypeColumns: Column<ProductTypeRow>[] = [
+  {
+    key: "name",
+    label: "Name",
+  },
+];
+
+export const eventTypeColumns: Column<EventTypeRow>[] = [
+  {
+    key: "name",
+    label: "Name",
+  },
+  {
+    key: "isDefault",
+    label: "Default",
+    render: (value) => (value ? "Yes" : "No"),
+  },
+];
+
+export const locationColumns: Column<LocationRow>[] = [
+  {
+    key: "name",
+    label: "Name",
+  },
+  {
+    key: "address",
+    label: "Address",
+  },
+];
+
+export const requestTypeColumns: Column<RequestTypeRow>[] = [
+  { key: "name", label: "Name" },
 ];

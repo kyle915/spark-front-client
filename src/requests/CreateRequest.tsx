@@ -1,7 +1,10 @@
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Layout from "@/layout/Layout";
 import Loading from "@/shared/Loading";
 import RequestForm, { type RequestFormValues } from "./components/RequestForm";
+
+import { fetchQuery } from "react-relay";
+import environment from "@api/relay/environment";
 
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { RequestTypesQuery } from "@/api/queries/RequestTypesQuery";
@@ -9,14 +12,16 @@ import { ProductTypesQuery } from "@/api/queries/ProductTypesQuery";
 import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
+import { LocationsQuery } from "@api/queries/LocationsQuery";
+import { StatesQuery } from "@api/queries/StatesQuery";
 
 import type { RequestTypesQuery as RequestTypesQueryType } from "@api/queries/__generated__/RequestTypesQuery.graphql";
 import type { ProductTypesQuery as ProductTypesQueryType } from "@api/queries/__generated__/ProductTypesQuery.graphql";
 import type { ProductsQuery as ProductsQueryType } from "@api/queries/__generated__/ProductsQuery.graphql";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import type { RequestMutation } from "@api/mutations/__generated__/RequestMutation.graphql";
-import { LocationsQuery } from "@api/queries/LocationsQuery";
 import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
+import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/StatesQuery.graphql";
 
 import { useAlertStore } from "@store/alertStore";
 // import { useAuthStore } from "@store/authStore";
@@ -29,54 +34,110 @@ interface CreateRequestFormProps {
   tenantId: string;
 }
 
+type LocationNode = NonNullable<
+  NonNullable<LocationsQueryType["response"]["locations"]>["edges"][number]
+>["node"];
+
 const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
-  console.log("TENANT", tenantId)
+  const [selectedStateId, setSelectedStateId] = useState<string | null>(null);
+  const [locations, setLocations] = useState<LocationNode[]>([]);
+
   // ========================
   // QUERIES
   // ========================
   const requestTypesData = useLazyLoadQuery<RequestTypesQueryType>(
     RequestTypesQuery,
     { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const productTypesData = useLazyLoadQuery<ProductTypesQueryType>(
     ProductTypesQuery,
     { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const productsData = useLazyLoadQuery<ProductsQueryType>(
     ProductsQuery,
-    { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
+    { filters: { tenantId }, first: 100 },
+    { fetchPolicy: "store-and-network" },
   );
 
   const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
     TimezonesQuery,
     {},
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
-  const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
-    filters: { tenantId: tenantId },
-  });
+  // const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
+  //   filters: { tenantId: tenantId },
+  // });
 
-  const locations = locationsData.locations.edges.map((e) => e.node);
+  const statesData = useLazyLoadQuery<StatesQueryType>(
+    StatesQuery,
+    {},
+    { fetchPolicy: "store-and-network" },
+  );
 
   // ========================
   // MUTATION
   // ========================
   const [commitCreateRequest, isCreating] = useMutation<RequestMutation>(
-    CreateRequestMutation
+    CreateRequestMutation,
   );
 
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
 
   // ========================
+  // Events: State Change
+  // ========================
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadLocations = async () => {
+      if (!tenantId) {
+        setLocations([]);
+        return;
+      }
+
+      try {
+        const data: LocationsQueryType["response"] | null | undefined =
+          await fetchQuery<LocationsQueryType>(
+            environment,
+            LocationsQuery,
+            {
+              filters: {
+                tenantId,
+                ...(selectedStateId ? { stateId: selectedStateId } : {}),
+              },
+            },
+            { fetchPolicy: "network-only" },
+          ).toPromise();
+        const edges = data?.locations?.edges ?? [];
+        const nodes = edges.flatMap((edge) => (edge?.node ? [edge.node] : []));
+        if (!isCancelled) {
+          setLocations(nodes);
+        }
+      } catch {
+        if (!isCancelled) {
+          setLocations([]);
+        }
+      }
+    };
+
+    loadLocations();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [tenantId, selectedStateId]);
+
+  // ========================
   // DATA MAPPING
   // ========================
+  const states = statesData.states?.edges.map((e) => e.node) || [];
+
   const requestTypes =
     requestTypesData.requestTypes?.edges.map((e) => e.node) || [];
 
@@ -152,7 +213,7 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
         } else {
           showAlert(
             response.createRequest?.message ?? "Error creating request",
-            "error"
+            "error",
           );
         }
       },
@@ -187,6 +248,8 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
           products={products}
           tenantId={tenantId}
           retailers={retailers}
+          states={states}
+          onStateChange={setSelectedStateId}
           distributors={distributors}
           locations={locations}
           requestStoreManagers={requestStoreManagers}

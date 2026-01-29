@@ -35,8 +35,8 @@ type EventsTableContentProps = {
   queryReference: PreloadedQuery<TodayEventsQueryType>;
   currentPage: number;
   pageSize: number;
-  onNext: (cursor: string) => void;
-  onPrevious: (cursor: string) => void;
+  onNext: () => void;
+  onPrevious: () => void;
   onGoToPage: (page: number) => void;
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;

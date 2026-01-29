@@ -1,8 +1,18 @@
-import { Suspense, useCallback, useState, type ReactNode } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { fetchQuery } from "react-relay";
 import DataTableRelay from "@/shared/DataTableRelay";
 import Layout from "@/layout/Layout";
 import { EventsQuery } from "@api/queries/EventsQuery";
 import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
+import { StatesQuery } from "@api/queries/StatesQuery";
+import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/StatesQuery.graphql";
 import Loading from "@shared/Loading";
 import {
   useRelayPagination,
@@ -21,6 +31,7 @@ import { useAuthStore } from "@/store/authStore";
 import { SuspendEventMutation } from "@api/mutations/SuspendEventMutation";
 import { ArchiveEventMutation } from "@api/mutations/ArchiveEventMutation";
 import { ApproveEventMutation } from "@api/mutations/ApproveEventMutation";
+import environment from "@api/relay/environment";
 
 //Icons
 import { EyeIcon, PencilIcon } from "@heroicons/react/24/outline";
@@ -43,12 +54,17 @@ type EventsTableContentProps = {
   queryReference: PreloadedQuery<EventsQueryType>;
   currentPage: number;
   pageSize: number;
-  onNext: (cursor: string) => void;
-  onPrevious: (cursor: string) => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onNextChunk?: () => void;
+  onPreviousChunk?: () => void;
   onGoToPage: (page: number) => void;
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;
   renderRowActions?: (row: EventRow) => ReactNode;
+  isPageReachable: (page: number) => boolean;
+  onReload?: () => void;
+  isRefreshing?: boolean;
 };
 
 const EventsTableContent = ({
@@ -57,10 +73,15 @@ const EventsTableContent = ({
   pageSize,
   onNext,
   onPrevious,
+  onNextChunk,
+  onPreviousChunk,
   onGoToPage,
   onPageLoaded,
   isNavigating,
   renderRowActions,
+  isPageReachable,
+  onReload,
+  isRefreshing,
 }: EventsTableContentProps) => {
   const data = usePreloadedQuery<EventsQueryType>(EventsQuery, queryReference);
   const connection = data.events;
@@ -81,7 +102,12 @@ const EventsTableContent = ({
       pageSize={pageSize}
       onNext={onNext}
       onPrevious={onPrevious}
+      onNextChunk={onNextChunk}
+      onPreviousChunk={onPreviousChunk}
+      isPageReachable={isPageReachable}
       onGoToPage={onGoToPage}
+      onRefresh={onReload}
+      isRefreshing={isRefreshing}
       isNavigating={isNavigating}
       onPageLoaded={onPageLoaded}
       customActions={
@@ -104,18 +130,23 @@ type EventsListInnerProps = {
     requestId?: string;
     date?: string;
   };
+  onRefreshReady?: (refreshFn: () => void) => void;
 };
 
-const EventsListInner = ({ filters }: EventsListInnerProps) => {
+const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
   const {
     queryRef,
     displayPage,
     isNavigating,
     handlePageLoaded,
+    isRefreshing,
     refresh,
     goNext,
     goPrevious,
+    goNextChunk,
+    goPreviousChunk,
     goToPage,
+    isPageReachable,
   } = useRelayPagination<EventsQueryType>({
     query: EventsQuery,
     pageSize: PAGE_SIZE,
@@ -133,6 +164,12 @@ const EventsListInner = ({ filters }: EventsListInnerProps) => {
   const [eventToSuspend, setEventToSuspend] = useState<EventRow | null>(null);
   const [eventToArchive, setEventToArchive] = useState<EventRow | null>(null);
   const [eventToApprove, setEventToApprove] = useState<EventRow | null>(null);
+
+  useEffect(() => {
+    if (onRefreshReady) {
+      onRefreshReady(refresh);
+    }
+  }, [onRefreshReady, refresh]);
 
   const handleViewEvent = useCallback(
     (dataEvent: EventRow) => {
@@ -381,10 +418,15 @@ const EventsListInner = ({ filters }: EventsListInnerProps) => {
             pageSize={PAGE_SIZE}
             onNext={goNext}
             onPrevious={goPrevious}
+            onNextChunk={goNextChunk}
+            onPreviousChunk={goPreviousChunk}
             onGoToPage={goToPage}
             isNavigating={isNavigating}
             onPageLoaded={handlePageLoaded}
+            onReload={refresh}
+            isRefreshing={isRefreshing}
             renderRowActions={renderEventsActions}
+            isPageReachable={isPageReachable}
           />
         ) : (
           <Loading />
@@ -392,6 +434,37 @@ const EventsListInner = ({ filters }: EventsListInnerProps) => {
       </Suspense>
     </>
   );
+};
+
+type StateOption = {
+  value: string;
+  label: string;
+  searchText?: string;
+};
+
+type StateNode = {
+  id: string;
+  name: string;
+  code: string;
+};
+
+const buildStateOptions = (
+  edges?: ReadonlyArray<{ node?: StateNode | null } | null> | null,
+): StateOption[] => {
+  const states =
+    edges
+      ?.map((edge) => edge?.node)
+      .filter((node): node is StateNode => Boolean(node?.id))
+      .map((state) => {
+        const label = `${state.name} (${state.code})`;
+        return {
+          value: state.id,
+          label,
+          searchText: `${state.name} ${state.code}`,
+        };
+      }) ?? [];
+
+  return states.sort((a, b) => a.label.localeCompare(b.label));
 };
 
 const EventsList = () => {
@@ -402,6 +475,8 @@ const EventsList = () => {
     status: EventStatusFilterEnum | "";
     request: string;
     date: string;
+    retailerStateId: string;
+    distributorStateId: string;
   };
 
   const { control, watch, reset } = useForm<EventsListFiltersForm>({
@@ -411,6 +486,8 @@ const EventsList = () => {
       status: "",
       request: "",
       date: "",
+      retailerStateId: "",
+      distributorStateId: "",
     },
   });
   // const selectedTenant = watch("tenant");
@@ -418,6 +495,85 @@ const EventsList = () => {
   const selectedStatus = watch("status");
   const selectedRequest = watch("request");
   const selectedDate = watch("date");
+  const selectedRetailerStateId = watch("retailerStateId");
+  const selectedDistributorStateId = watch("distributorStateId");
+  const [retailerStateOptions, setRetailerStateOptions] = useState<
+    StateOption[]
+  >([]);
+  const [distributorStateOptions, setDistributorStateOptions] = useState<
+    StateOption[]
+  >([]);
+  const [retailerStateSearch, setRetailerStateSearch] = useState("");
+  const [distributorStateSearch, setDistributorStateSearch] = useState("");
+  const [isRetailerStateLoading, setIsRetailerStateLoading] = useState(false);
+  const [isDistributorStateLoading, setIsDistributorStateLoading] =
+    useState(false);
+  const retailerStateRequestIdRef = useRef(0);
+  const distributorStateRequestIdRef = useRef(0);
+
+  useEffect(() => {
+    const requestId = ++retailerStateRequestIdRef.current;
+    const q = retailerStateSearch.trim();
+    setIsRetailerStateLoading(true);
+
+    const subscription = fetchQuery<StatesQueryType>(
+      environment,
+      StatesQuery,
+      {
+        q: q || null,
+        first: 200,
+      },
+      { fetchPolicy: "network-only" },
+    ).subscribe({
+      next: (data) => {
+        if (retailerStateRequestIdRef.current !== requestId) return;
+        setRetailerStateOptions(buildStateOptions(data?.states?.edges));
+      },
+      error: () => {
+        if (retailerStateRequestIdRef.current !== requestId) return;
+        setRetailerStateOptions([]);
+        setIsRetailerStateLoading(false);
+      },
+      complete: () => {
+        if (retailerStateRequestIdRef.current !== requestId) return;
+        setIsRetailerStateLoading(false);
+      },
+    });
+
+    return () => subscription?.unsubscribe();
+  }, [retailerStateSearch]);
+
+  useEffect(() => {
+    const requestId = ++distributorStateRequestIdRef.current;
+    const q = distributorStateSearch.trim();
+    setIsDistributorStateLoading(true);
+
+    const subscription = fetchQuery<StatesQueryType>(
+      environment,
+      StatesQuery,
+      {
+        q: q || null,
+        first: 200,
+      },
+      { fetchPolicy: "network-only" },
+    ).subscribe({
+      next: (data) => {
+        if (distributorStateRequestIdRef.current !== requestId) return;
+        setDistributorStateOptions(buildStateOptions(data?.states?.edges));
+      },
+      error: () => {
+        if (distributorStateRequestIdRef.current !== requestId) return;
+        setDistributorStateOptions([]);
+        setIsDistributorStateLoading(false);
+      },
+      complete: () => {
+        if (distributorStateRequestIdRef.current !== requestId) return;
+        setIsDistributorStateLoading(false);
+      },
+    });
+
+    return () => subscription?.unsubscribe();
+  }, [distributorStateSearch]);
 
   const filters = {
     tenantId: tenantId || undefined,
@@ -425,6 +581,8 @@ const EventsList = () => {
     eventStatus: selectedStatus || undefined,
     requestId: selectedRequest || undefined,
     date: selectedDate || undefined,
+    retailerStateId: selectedRetailerStateId || undefined,
+    distributorStateId: selectedDistributorStateId || undefined,
   };
 
   const catalogFilters = undefined;
@@ -475,8 +633,8 @@ const EventsList = () => {
                   </h2>
                 </div>
 
-                {Object.entries(watch()).some(([, value]) => value) && (
-                  <>
+                <div className="flex gap-2">
+                  {Object.entries(watch()).some(([, value]) => value) && (
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
@@ -485,8 +643,8 @@ const EventsList = () => {
                       <FunnelXIcon className="w-4 h-4" />
                       Clear filters
                     </button>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormAutocomplete
@@ -521,6 +679,30 @@ const EventsList = () => {
                   }))}
                   placeholder="Search request..."
                 />
+                <FormAutocomplete
+                  control={control}
+                  name="retailerStateId"
+                  label="Filter by Retailer State"
+                  options={retailerStateOptions}
+                  placeholder={
+                    isRetailerStateLoading
+                      ? "Loading states..."
+                      : "Search state..."
+                  }
+                  onSearch={setRetailerStateSearch}
+                />
+                <FormAutocomplete
+                  control={control}
+                  name="distributorStateId"
+                  label="Filter by Distributor State"
+                  options={distributorStateOptions}
+                  placeholder={
+                    isDistributorStateLoading
+                      ? "Loading states..."
+                      : "Search state..."
+                  }
+                  onSearch={setDistributorStateSearch}
+                />
                 <FormDatePicker
                   control={control}
                   name="date"
@@ -531,7 +713,7 @@ const EventsList = () => {
             </div>
 
             <EventsListInner
-              key={`${selectedEventType}-${selectedStatus}-${selectedRequest}-${selectedDate}`}
+              key={`${selectedEventType}-${selectedStatus}-${selectedRequest}-${selectedRetailerStateId}-${selectedDistributorStateId}-${selectedDate}`}
               filters={filters}
             />
           </div>

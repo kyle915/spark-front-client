@@ -1,4 +1,11 @@
-import { Suspense, useCallback, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Layout from "@/layout/Layout";
 import {
   useLazyLoadQuery,
@@ -22,7 +29,7 @@ import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@
 import type { PreloadedQuery } from "react-relay";
 import type { RecapRow } from "@/types/columnsTypes";
 import { createRecapColumns } from "@/utils/columns";
-import { CameraIcon } from "@heroicons/react/24/solid";
+import { ArrowPathIcon, CameraIcon } from "@heroicons/react/24/solid";
 import {
   // CheckCircleIcon,
   EyeIcon,
@@ -45,8 +52,8 @@ type RecapsTableContentProps = {
   queryReference: PreloadedQuery<RecapsQueryType>;
   currentPage: number;
   pageSize: number;
-  onNext: (cursor: string | null) => void;
-  onPrevious: (cursor: string | null) => void;
+  onNext: () => void;
+  onPrevious: () => void;
   onGoToPage: (page: number) => void;
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;
@@ -192,9 +199,14 @@ type RecapsListInnerProps = {
     eventId?: string;
   };
   emptyMessage: string;
+  onRefreshReady?: (refreshFn: () => void) => void;
 };
 
-const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
+const RecapsListInner = ({
+  filters,
+  emptyMessage,
+  onRefreshReady,
+}: RecapsListInnerProps) => {
   const showAlert = useAlertStore((state) => state.showAlert);
   // const [approvingId, setApprovingId] = useState<string | null>(null);
   // const [targetApproval, setTargetApproval] = useState<boolean | null>(null);
@@ -209,7 +221,7 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
     displayPage,
     isNavigating,
     handlePageLoaded,
-    // refresh,
+    refresh,
     goNext,
     goPrevious,
     goToPage,
@@ -218,6 +230,12 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
     pageSize: PAGE_SIZE,
     initialVariables: { filters },
   });
+
+  useEffect(() => {
+    if (onRefreshReady) {
+      onRefreshReady(refresh);
+    }
+  }, [onRefreshReady, refresh]);
 
   // const handleSetRecapApproval = useCallback(
   //   (recap: RecapRow, approved: boolean) => {
@@ -269,7 +287,7 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
               const newTab = window.open(
                 fileUrl,
                 "_blank",
-                "noopener,noreferrer"
+                "noopener,noreferrer",
               );
               if (!newTab) {
                 window.location.assign(fileUrl);
@@ -277,7 +295,7 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
               } else {
                 showAlert(
                   payload.message ?? "PDF generated successfully",
-                  "success"
+                  "success",
                 );
               }
             } else {
@@ -294,7 +312,7 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
         },
       });
     },
-    [commitGeneratePdf, showAlert]
+    [commitGeneratePdf, showAlert],
   );
 
   return (
@@ -331,7 +349,7 @@ const RecapsListInner = ({ filters, emptyMessage }: RecapsListInnerProps) => {
 // ======================================================
 const RecapList = () => {
   const { tenantId } = useAuthStore();
-
+  const refreshRef = useRef<(() => void) | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string>("");
 
   // =========================
@@ -342,7 +360,7 @@ const RecapList = () => {
     {
       filters: { tenantId: tenantId || undefined },
     },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const eventOptions = useMemo(
@@ -359,7 +377,7 @@ const RecapList = () => {
             : edge.node.name,
         };
       }),
-    [eventsData]
+    [eventsData],
   );
 
   const filters = selectedEventId ? { eventId: selectedEventId } : undefined;
@@ -398,18 +416,29 @@ const RecapList = () => {
               </h2>
             </div>
 
-            {selectedEventId && (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => setSelectedEventId("")}
-                >
-                  <FunnelXIcon className="w-4 h-4" />
-                  Clear filters
-                </button>
-              </>
-            )}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => refreshRef.current?.()}
+              >
+                <ArrowPathIcon className="w-4 h-4" />
+                Refresh
+              </button>
+
+              {selectedEventId && (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setSelectedEventId("")}
+                  >
+                    <FunnelXIcon className="w-4 h-4" />
+                    Clear filters
+                  </button>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -441,6 +470,7 @@ const RecapList = () => {
             key={selectedEventId}
             filters={filters}
             emptyMessage={emptyMessage}
+            onRefreshReady={(fn) => (refreshRef.current = fn)}
           />
         </div>
       </div>

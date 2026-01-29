@@ -65,6 +65,14 @@ export const RequestUuidQuery = graphql`
           }
         }
       }
+      requestorEmail
+      createdBy {
+        firstName
+        lastName
+        image {
+          url
+        }
+      }
       requestType {
         __typename
         id

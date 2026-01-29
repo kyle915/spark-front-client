@@ -125,6 +125,17 @@ const RequestCard: React.FC<Props> = ({ request }) => {
     return `${browserTimezone} (UTC${sign}${hours}:${minutes})`;
   };
 
+  const createdByLabel = useMemo(() => {
+    const first = request.createdBy?.firstName?.trim();
+    const last = request.createdBy?.lastName?.trim();
+    const fullName = [first, last].filter(Boolean).join(" ");
+
+    if (fullName) return fullName;
+    if (request.requestorEmail) return request.requestorEmail;
+
+    return "Unknown";
+  }, [request.createdBy, request.requestorEmail]);
+
   return (
     <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
       <div className="p-8 md:p-10 space-y-8">
@@ -223,6 +234,28 @@ const RequestCard: React.FC<Props> = ({ request }) => {
           <div className="flex items-center gap-2">
             <MapPinIcon className="w-4 h-4 opacity-60" />
             <span className="font-medium">{request.address ?? "—"}</span>
+          </div>
+
+          {/* CREATED BY */}
+          <div className="flex items-center gap-3 ml-auto">
+            {request.createdBy?.image ? (
+              <img
+                src={request.createdBy?.image.url}
+                alt={createdByLabel}
+                className="w-7 h-7 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-base-100 flex items-center justify-center">
+                <UsersIcon className="w-4 h-4 opacity-60" />
+              </div>
+            )}
+
+            <span className="text-base-content/60 text-sm whitespace-nowrap">
+              Created by{" "}
+              <span className="font-medium text-base-content">
+                {createdByLabel}
+              </span>
+            </span>
           </div>
         </div>
 
