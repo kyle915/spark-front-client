@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useState, useEffect, useRef } from "react";
+import { Suspense, useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import Layout from "@/layout/Layout";
 import DataTableRelay from "@/shared/DataTableRelay";
@@ -33,7 +33,6 @@ import ConfirmationModal from "@/shared/ConfirmationModal";
 import { useAlertStore } from "@/store/alertStore";
 import { DeclineRequestMutation } from "@/api/mutations/DeclineRequestMutation";
 import FormDatePicker from "@/shared/FormDatePicker";
-import { ArrowPathIcon } from "@heroicons/react/24/solid";
 
 const PAGE_SIZE = 10;
 
@@ -41,12 +40,17 @@ type RequestsTableContentProps = {
   queryReference: PreloadedQuery<RequestsQueryType>;
   currentPage: number;
   pageSize: number;
-  onNext: (cursor: string) => void;
-  onPrevious: (cursor: string) => void;
-  onGoToPage: (page: number) => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onNextChunk?: () => void;
+  onPreviousChunk?: () => void;
+  onGoToPage?: (page: number) => void;
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;
   renderRowActions?: (row: RequestRow) => ReactNode;
+  isPageReachable: (page: number) => boolean;
+  onReload?: () => void;
+  isRefreshing?: boolean;
 };
 
 const RequestsTableContent = ({
@@ -55,10 +59,15 @@ const RequestsTableContent = ({
   pageSize,
   onNext,
   onPrevious,
+  onNextChunk,
+  onPreviousChunk,
   onGoToPage,
   onPageLoaded,
   isNavigating,
   renderRowActions,
+  isPageReachable,
+  onReload,
+  isRefreshing,
 }: RequestsTableContentProps) => {
   const data = usePreloadedQuery<RequestsQueryType>(
     RequestsQuery,
@@ -82,7 +91,12 @@ const RequestsTableContent = ({
       pageSize={pageSize}
       onNext={onNext}
       onPrevious={onPrevious}
+      onNextChunk={onNextChunk}
+      onPreviousChunk={onPreviousChunk}
+      isPageReachable={isPageReachable}
       onGoToPage={onGoToPage}
+      onRefresh={onReload}
+      isRefreshing={isRefreshing}
       isNavigating={isNavigating}
       onPageLoaded={onPageLoaded}
       customActions={
@@ -109,10 +123,7 @@ type RequestsListInnerProps = {
   onRefreshReady?: (refreshFn: () => void) => void;
 };
 
-const RequestsListInner = ({
-  filters,
-  onRefreshReady,
-}: RequestsListInnerProps) => {
+const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
   const navigate = useNavigate();
   const showAlert = useAlertStore((state) => state.showAlert);
   const [commitDecline, isDeclineInFlight] =
@@ -127,21 +138,19 @@ const RequestsListInner = ({
     displayPage,
     isNavigating,
     handlePageLoaded,
+    isRefreshing,
     refresh,
     goNext,
     goPrevious,
+    goNextChunk,
+    goPreviousChunk,
     goToPage,
+    isPageReachable,
   } = useRelayPagination<RequestsQueryType>({
     query: RequestsQuery,
     pageSize: PAGE_SIZE,
     initialVariables: { filters },
   });
-
-  useEffect(() => {
-    if (onRefreshReady) {
-      onRefreshReady(refresh);
-    }
-  }, [onRefreshReady, refresh]);
 
   const handleViewRequest = useCallback(
     (request: RequestRow) => {
@@ -279,9 +288,14 @@ const RequestsListInner = ({
             pageSize={PAGE_SIZE}
             onNext={goNext}
             onPrevious={goPrevious}
+            onNextChunk={goNextChunk}
+            onPreviousChunk={goPreviousChunk}
+            isPageReachable={isPageReachable}
             onGoToPage={goToPage}
             isNavigating={isNavigating}
             onPageLoaded={handlePageLoaded}
+            onReload={refresh}
+            isRefreshing={isRefreshing}
             renderRowActions={renderRequestActions}
           />
         ) : (
@@ -293,7 +307,6 @@ const RequestsListInner = ({
 };
 
 const RequestsList = () => {
-  const refreshRef = useRef<(() => void) | null>(null);
   const { control, watch, reset } = useForm({
     defaultValues: {
       // tenant: "",
@@ -371,15 +384,6 @@ const RequestsList = () => {
                 </div>
 
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-sm"
-                    onClick={() => refreshRef.current?.()}
-                  >
-                    <ArrowPathIcon className="w-4 h-4" />
-                    Reload
-                  </button>
-
                   {Object.entries(watch()).some(([, value]) => value) && (
                     <button
                       type="button"
@@ -440,7 +444,6 @@ const RequestsList = () => {
               <RequestsListInner
                 key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedDate}`}
                 filters={filters}
-                onRefreshReady={(fn) => (refreshRef.current = fn)}
               />
             </div>
           </div>

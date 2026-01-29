@@ -42,7 +42,7 @@ import {
   FunnelXIcon,
   PauseCircleIcon,
 } from "lucide-react";
-import { ArrowPathIcon, CalendarDaysIcon } from "@heroicons/react/24/solid";
+import { CalendarDaysIcon } from "@heroicons/react/24/solid";
 import { useAlertStore } from "@/store/alertStore";
 import ConfirmationModal from "@/shared/ConfirmationModal";
 import { toEventStatusFilterEnum } from "@/events/eventStatusFilter";
@@ -54,12 +54,17 @@ type EventsTableContentProps = {
   queryReference: PreloadedQuery<EventsQueryType>;
   currentPage: number;
   pageSize: number;
-  onNext: (cursor: string) => void;
-  onPrevious: (cursor: string) => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  onNextChunk?: () => void;
+  onPreviousChunk?: () => void;
   onGoToPage: (page: number) => void;
   onPageLoaded: (payload: PageLoadedPayload) => void;
   isNavigating: boolean;
   renderRowActions?: (row: EventRow) => ReactNode;
+  isPageReachable: (page: number) => boolean;
+  onReload?: () => void;
+  isRefreshing?: boolean;
 };
 
 const EventsTableContent = ({
@@ -68,10 +73,15 @@ const EventsTableContent = ({
   pageSize,
   onNext,
   onPrevious,
+  onNextChunk,
+  onPreviousChunk,
   onGoToPage,
   onPageLoaded,
   isNavigating,
   renderRowActions,
+  isPageReachable,
+  onReload,
+  isRefreshing,
 }: EventsTableContentProps) => {
   const data = usePreloadedQuery<EventsQueryType>(EventsQuery, queryReference);
   const connection = data.events;
@@ -92,7 +102,12 @@ const EventsTableContent = ({
       pageSize={pageSize}
       onNext={onNext}
       onPrevious={onPrevious}
+      onNextChunk={onNextChunk}
+      onPreviousChunk={onPreviousChunk}
+      isPageReachable={isPageReachable}
       onGoToPage={onGoToPage}
+      onRefresh={onReload}
+      isRefreshing={isRefreshing}
       isNavigating={isNavigating}
       onPageLoaded={onPageLoaded}
       customActions={
@@ -124,10 +139,14 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
     displayPage,
     isNavigating,
     handlePageLoaded,
+    isRefreshing,
     refresh,
     goNext,
     goPrevious,
+    goNextChunk,
+    goPreviousChunk,
     goToPage,
+    isPageReachable,
   } = useRelayPagination<EventsQueryType>({
     query: EventsQuery,
     pageSize: PAGE_SIZE,
@@ -399,10 +418,15 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
             pageSize={PAGE_SIZE}
             onNext={goNext}
             onPrevious={goPrevious}
+            onNextChunk={goNextChunk}
+            onPreviousChunk={goPreviousChunk}
             onGoToPage={goToPage}
             isNavigating={isNavigating}
             onPageLoaded={handlePageLoaded}
+            onReload={refresh}
+            isRefreshing={isRefreshing}
             renderRowActions={renderEventsActions}
+            isPageReachable={isPageReachable}
           />
         ) : (
           <Loading />
@@ -445,7 +469,6 @@ const buildStateOptions = (
 
 const EventsList = () => {
   const { tenantId } = useAuthStore();
-  const refreshRef = useRef<(() => void) | null>(null);
 
   type EventsListFiltersForm = {
     eventType: string;
@@ -611,15 +634,6 @@ const EventsList = () => {
                 </div>
 
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-sm"
-                    onClick={() => refreshRef.current?.()}
-                  >
-                    <ArrowPathIcon className="w-4 h-4" />
-                    Reload
-                  </button>
-
                   {Object.entries(watch()).some(([, value]) => value) && (
                     <button
                       type="button"
@@ -701,7 +715,6 @@ const EventsList = () => {
             <EventsListInner
               key={`${selectedEventType}-${selectedStatus}-${selectedRequest}-${selectedRetailerStateId}-${selectedDistributorStateId}-${selectedDate}`}
               filters={filters}
-              onRefreshReady={(fn) => (refreshRef.current = fn)}
             />
           </div>
         )}

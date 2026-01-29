@@ -11,6 +11,8 @@ import Login from "@/auth/Login";
 import PrivateRoute from "@routes/PrivateRoute";
 import { appRoutes } from "@/routes/AppRoutes";
 import TenantRoute from "@/layout/TenantGuard";
+import GoogleCalendarCallback from "@/auth/GoogleCalendarCallback";
+import VerifyAccount from "@/auth/VerifyAccount";
 
 const rootPath = "/";
 
@@ -26,6 +28,14 @@ const AppRouter = () => (
             <Login />
           </AuthRoute>
         }
+      />
+      <Route
+        path="/auth/google-calendar/callback"
+        element={<GoogleCalendarCallback />}
+      />
+      <Route
+        path="/verify-account"
+        element={<VerifyAccount />}
       />
       {appRoutes.map((props, key) => (
         <Route
