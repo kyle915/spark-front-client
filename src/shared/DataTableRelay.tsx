@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import type { Column } from "@/types/columnsTypes";
+import { ArrowPathIcon } from "@heroicons/react/24/solid";
 
 interface RelayPageInfo {
   hasNextPage: boolean;
@@ -100,28 +101,28 @@ const buildPaginationItems = (currentPage: number, totalPages: number) => {
     items.push({ type: "ellipsis", key });
   };
 
-  // 🔹 Siempre mostrar primera página
+  // Siempre mostrar primera página
   pushPage(1);
 
   const start = Math.max(2, safeCurrent - PAGE_WINDOW);
   const end = Math.min(safeTotal - 1, safeCurrent + PAGE_WINDOW);
 
-  // 🔹 Ellipsis izquierda
+  // Ellipsis izquierda
   if (start > 2) {
     pushEllipsis("left");
   }
 
-  // 🔹 Ventana central
+  // Ventana central
   for (let i = start; i <= end; i += 1) {
     pushPage(i);
   }
 
-  // 🔹 Ellipsis derecha
+  // Ellipsis derecha
   if (end < safeTotal - 1) {
     pushEllipsis("right");
   }
 
-  // 🔹 Siempre mostrar última página
+  // Siempre mostrar última página
   if (safeTotal > 1) {
     pushPage(safeTotal);
   }
@@ -237,14 +238,13 @@ export default function DataTableRelay<T>({
         {onRefresh ? (
           <button
             type="button"
-            className="btn btn-ghost btn-sm"
+            className="btn btn-outline btn-sm"
             onClick={onRefresh}
-            disabled={isRefreshing}
-            aria-label="Reload"
-            title="Reload"
           >
-            <span className={isRefreshing ? "loading loading-spinner" : ""} />
-            {!isRefreshing ? "↻" : null}
+            <ArrowPathIcon
+              className={isRefreshing ? "h-5 w-5 animate-spin" : "h-5 w-5"}
+            />
+            {isRefreshing ? "Reloading..." : "Reload"}
           </button>
         ) : null}
       </div>

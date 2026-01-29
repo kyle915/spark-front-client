@@ -59,6 +59,7 @@ export interface RequestFormValues {
   isTableNeeded?: boolean;
   tableSize?: string;
   products?: string[];
+  stateId?: string | null;
 }
 
 interface CatalogItem {
@@ -66,7 +67,8 @@ interface CatalogItem {
   name: string;
   email?: string | null;
   address?: string | null;
-  phone?: string | null;
+  storeContact?: string | null;
+  code?: string | null;
 }
 
 interface ProductItem {
@@ -83,6 +85,12 @@ interface TimezoneItem {
   offset: number;
 }
 
+interface StoreManagerItem {
+  id: string;
+  name: string;
+  phone: string;
+}
+
 interface RequestFormProps {
   mode: "create" | "edit";
   onSubmit: (data: RequestFormValues) => void;
@@ -96,8 +104,10 @@ interface RequestFormProps {
   products?: ProductItem[];
   tenantId: string;
   requestId?: string | null;
-  requestStoreManagers?: CatalogItem[];
+  requestStoreManagers?: StoreManagerItem[];
   locations?: CatalogItem[];
+  states?: CatalogItem[];
+  onStateChange?: (stateId: string | null) => void;
 
   onRefetch?: (
     key: "distributors" | "retailers" | "requestStoreManagers",
@@ -140,6 +150,8 @@ export default function RequestForm({
   contactMode,
   requestContactInfo,
   locations = [],
+  states = [],
+  onStateChange,
 }: RequestFormProps) {
   const safeDefaultValues: RequestFormValues = {
     name: "",
@@ -164,7 +176,7 @@ export default function RequestForm({
     isTableNeeded: false,
     tableSize: "",
     products: [],
-
+    stateId: null,
     ...defaultValues,
   };
 
@@ -191,6 +203,7 @@ export default function RequestForm({
   const storeManagerId = watch("storeManagerId");
   const distributorLocationId = watch("distributorLocationId");
   const retailerLocationId = watch("retailerLocationId");
+  const selectedStateId = watch("stateId");
   const selectedEntitiesLocationId = useWatch({
     control,
     name: "entitiesLocationId",
@@ -475,6 +488,20 @@ export default function RequestForm({
     });
   };
 
+  const stateOptions = useMemo(
+    () =>
+      states.map((state) => ({
+        value: state.id,
+        label: state.code ? `${state.name} (${state.code})` : state.name,
+        searchText: state.code ? `${state.name} ${state.code}` : state.name,
+      })),
+    [states],
+  );
+
+  useEffect(() => {
+    onStateChange?.(selectedStateId ?? null);
+  }, [onStateChange, selectedStateId]);
+
   const locationOptions = useMemo(
     () =>
       locations.map((location) => ({
@@ -637,12 +664,21 @@ export default function RequestForm({
                 </span>
               </div>
 
-              <div className="mt-4 max-w-sm">
+              <div className="flex items-center gap-4 mt-4 w-full">
+                <FormAutocomplete<RequestFormValues>
+                  name="stateId"
+                  control={control}
+                  label="State"
+                  placeholder="Select state..."
+                  options={stateOptions}
+                  disabled={!tenantId}
+                />
+
                 <FormAutocomplete<RequestFormValues>
                   name="entitiesLocationId"
                   control={control}
-                  label="Location"
-                  placeholder="Select location..."
+                  label="City"
+                  placeholder="Select city..."
                   options={locationOptions}
                   disabled={!tenantId}
                 />
