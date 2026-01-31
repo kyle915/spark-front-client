@@ -151,7 +151,7 @@ const RequestCard: React.FC<Props> = ({ request }) => {
         </div>
 
         {/* ================= HEADER ================= */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-base-100/20">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-base-100/20">
           <div>
             <p className="text-xs uppercase tracking-[0.5em] text-base-content/40">
               Request

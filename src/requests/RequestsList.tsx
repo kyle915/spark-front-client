@@ -15,7 +15,7 @@ import { useMutation, usePreloadedQuery } from "react-relay/hooks";
 import type { PreloadedQuery } from "react-relay";
 import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
-import CatalogsProvider from "@shared/CatalogsProvider";
+import CatalogsProvider, { type CatalogsState } from "@shared/CatalogsProvider";
 
 //Icons
 import {
@@ -307,6 +307,8 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
 };
 
 const RequestsList = () => {
+  const [retailerSearchTerm, setRetailerSearchTerm] = useState("");
+  const [distributorSearchTerm, setDistributorSearchTerm] = useState("");
   const { control, watch, reset } = useForm({
     defaultValues: {
       // tenant: "",
@@ -357,12 +359,18 @@ const RequestsList = () => {
         requestStatuses={true}
         clientsFilters={catalogFilters}
         retailersFilters={catalogFilters}
+        retailersQuery={retailerSearchTerm.trim() || null}
         distributorsFilters={catalogFilters}
+        distributorsQuery={distributorSearchTerm.trim() || null}
         requestStatusesFilters={catalogFilters}
       >
-        {(catalogs) => (
-          <div className="flex flex-col gap-4">
-            {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-base-200 rounded-lg">
+        {(catalogs) => {
+          const isLoading = (key: keyof CatalogsState["loading"]) =>
+            catalogs.loading[key];
+
+          return (
+            <div className="flex flex-col gap-4">
+              {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-base-200 rounded-lg">
               <FormSelect
                 control={control}
                 name="tenant"
@@ -374,80 +382,86 @@ const RequestsList = () => {
                 placeholder="Select a tenant"
               />
             </div> */}
-            <div className="rounded-xl  bg-base-100 p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-1">
-                  <FilterIcon className="w-4 h-4" />
-                  <h2 className="text-sm font-semibold text-base-content/70">
-                    Filters
-                  </h2>
+              <div className="rounded-xl  bg-base-100 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-1">
+                    <FilterIcon className="w-4 h-4" />
+                    <h2 className="text-sm font-semibold text-base-content/70">
+                      Filters
+                    </h2>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {Object.entries(watch()).some(([, value]) => value) && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => reset()}
+                      >
+                        <FunnelXIcon className="w-4 h-4" />
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex gap-2">
-                  {Object.entries(watch()).some(([, value]) => value) && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => reset()}
-                    >
-                      <FunnelXIcon className="w-4 h-4" />
-                      Clear filters
-                    </button>
-                  )}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <FormAutocomplete
+                    control={control}
+                    name="retailer"
+                    label="Retailer"
+                    options={catalogs.retailers.map((r) => ({
+                      label: r.name,
+                      value: r.id,
+                    }))}
+                    loading={isLoading("retailers")}
+                    placeholder="Search retailer..."
+                    onSearch={setRetailerSearchTerm}
+                  />
+
+                  <FormAutocomplete
+                    control={control}
+                    name="distributor"
+                    label="Distributor"
+                    options={catalogs.distributors.map((d) => ({
+                      label: d.name,
+                      value: d.id,
+                    }))}
+                    loading={isLoading("distributors")}
+                    placeholder="Search distributor..."
+                    onSearch={setDistributorSearchTerm}
+                  />
+
+                  <FormAutocomplete
+                    control={control}
+                    name="status"
+                    label="Status"
+                    options={catalogs.requestStatuses.map((s) => ({
+                      label: s.name,
+                      value: s.id,
+                    }))}
+                    loading={isLoading("requestStatuses")}
+                    placeholder="Search status..."
+                  />
+
+                  <FormDatePicker
+                    control={control}
+                    name="date"
+                    label="Filter by Date"
+                    placeholder="Select date"
+                  />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <FormAutocomplete
-                  control={control}
-                  name="retailer"
-                  label="Retailer"
-                  options={catalogs.retailers.map((r) => ({
-                    label: r.name,
-                    value: r.id,
-                  }))}
-                  placeholder="Search retailer..."
-                />
-
-                <FormAutocomplete
-                  control={control}
-                  name="distributor"
-                  label="Distributor"
-                  options={catalogs.distributors.map((d) => ({
-                    label: d.name,
-                    value: d.id,
-                  }))}
-                  placeholder="Search distributor..."
-                />
-
-                <FormAutocomplete
-                  control={control}
-                  name="status"
-                  label="Status"
-                  options={catalogs.requestStatuses.map((s) => ({
-                    label: s.name,
-                    value: s.id,
-                  }))}
-                  placeholder="Search status..."
-                />
-
-                <FormDatePicker
-                  control={control}
-                  name="date"
-                  label="Filter by Date"
-                  placeholder="Select date"
+              <div className="mt-2">
+                <RequestsListInner
+                  key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedDate}`}
+                  filters={filters}
                 />
               </div>
             </div>
-
-            <div className="mt-2">
-              <RequestsListInner
-                key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedDate}`}
-                filters={filters}
-              />
-            </div>
-          </div>
-        )}
+          );
+        }}
       </CatalogsProvider>
     </Layout>
   );
