@@ -1,4 +1,5 @@
 import { Suspense, useCallback, useState } from "react";
+import { useNavigate, useLocation } from "react-router";
 import type { ReactNode } from "react";
 import Layout from "@/layout/Layout";
 import DataTableRelay from "@/shared/DataTableRelay";
@@ -13,7 +14,6 @@ import {
 } from "@/hooks/useRelayPagination";
 import { useMutation, usePreloadedQuery } from "react-relay/hooks";
 import type { PreloadedQuery } from "react-relay";
-import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import CatalogsProvider, { type CatalogsState } from "@shared/CatalogsProvider";
 
@@ -119,11 +119,13 @@ type RequestsListInnerProps = {
     distributorId?: string;
     statusId?: string;
     date?: string;
+    edited?: boolean;
   };
   onRefreshReady?: (refreshFn: () => void) => void;
 };
 
 const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
+  const location = useLocation();
   const navigate = useNavigate();
   const showAlert = useAlertStore((state) => state.showAlert);
   const [commitDecline, isDeclineInFlight] =
@@ -154,10 +156,13 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
 
   const handleViewRequest = useCallback(
     (request: RequestRow) => {
-      console.info("Viewing request", request.uuid);
-      navigate(`/request/view/${request.uuid}`);
+      navigate(`/request/view/${request.uuid}`, {
+        state: {
+          from: location.pathname,
+        },
+      });
     },
-    [navigate],
+    [navigate, location.pathname],
   );
 
   const handleApproveRequest = useCallback(
@@ -306,7 +311,13 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
   );
 };
 
-const RequestsList = () => {
+type RequestsListProps = {
+  fixedFilters?: {
+    edited?: boolean;
+  };
+};
+
+const RequestsList = ({ fixedFilters }: RequestsListProps) => {
   const [retailerSearchTerm, setRetailerSearchTerm] = useState("");
   const [distributorSearchTerm, setDistributorSearchTerm] = useState("");
   const { control, watch, reset } = useForm({
@@ -327,12 +338,11 @@ const RequestsList = () => {
   const selectedDate = watch("date");
 
   const filters = {
-    // tenantId: selectedTenant || undefined,
-    // clientId: selectedClient || undefined,
     retailerId: selectedRetailer || undefined,
     distributorId: selectedDistributor || undefined,
     statusId: selectedStatus || undefined,
     date: selectedDate || undefined,
+    ...fixedFilters,
   };
 
   const catalogFilters = undefined;
@@ -342,12 +352,18 @@ const RequestsList = () => {
       <div className="mb-4 flex flex-col gap-2">
         <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
           <div className="p-2 rounded-xl bg-primary/10 text-primary">
-            <ClipboardDocumentListIcon className="w-8 h-8" />
+            {fixedFilters?.edited ? (
+              <PencilIcon className="w-8 h-8" />
+            ) : (
+              <ClipboardDocumentListIcon className="w-8 h-8" />
+            )}
           </div>
-          <h1>All Requests</h1>
+          <h1>{fixedFilters?.edited ? "Edited Requests" : "All Requests"}</h1>
         </div>
         <p className="text-base-content/70">
-          Manage and browse all requests in the system.
+          {fixedFilters?.edited
+            ? "Manage and review all edited requests submitted within the system."
+            : "Manage and review all requests submitted within the system."}
         </p>
       </div>
 
