@@ -158,7 +158,7 @@ const RequestsLinks = {
   menu: [
     { path: "/requests/create", name: "Create", Icon: PlusCircleIcon },
     { path: "/requests/list", name: "List", Icon: Bars4Icon },
-    { path: "/requests/edited", name: "Requests Edited", Icon: PencilIcon },
+    { path: "/requests/edited", name: "Edited Requests", Icon: PencilIcon },
   ],
 
   routes: [
@@ -202,7 +202,7 @@ const EventsLinks = {
       Icon: PlusCircleIcon,
     },
     { path: "/events/list", name: "List", Icon: Bars4Icon },
-    { path: "/events/edited", name: "Events Edited", Icon: PencilIcon },
+    { path: "/events/edited", name: "Edited Events", Icon: PencilIcon },
     { path: "/events/today", name: "Today", Icon: CalendarIcon },
     { path: "/events/map", name: "Map", Icon: MapIcon },
   ],
