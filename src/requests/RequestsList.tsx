@@ -121,7 +121,6 @@ type RequestsListInnerProps = {
     date?: string;
     edited?: boolean;
   };
-  onRefreshReady?: (refreshFn: () => void) => void;
 };
 
 const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
