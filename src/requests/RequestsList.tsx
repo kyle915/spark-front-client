@@ -31,6 +31,7 @@ import FormAutocomplete from "@/shared/FormAutocomplete";
 import type { DeclineRequestMutation as DeclineRequestMutationType } from "@api/mutations/__generated__/DeclineRequestMutation.graphql";
 import ConfirmationModal from "@/shared/ConfirmationModal";
 import { useAlertStore } from "@/store/alertStore";
+import { useAuthStore } from "@/store/authStore";
 import { DeclineRequestMutation } from "@/api/mutations/DeclineRequestMutation";
 import FormDatePicker from "@/shared/FormDatePicker";
 
@@ -317,6 +318,7 @@ type RequestsListProps = {
 };
 
 const RequestsList = ({ fixedFilters }: RequestsListProps) => {
+  const { tenantId } = useAuthStore();
   const [retailerSearchTerm, setRetailerSearchTerm] = useState("");
   const [distributorSearchTerm, setDistributorSearchTerm] = useState("");
   const { control, watch, reset } = useForm({
@@ -337,6 +339,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
   const selectedDate = watch("date");
 
   const filters = {
+    tenantId: tenantId || undefined,
     retailerId: selectedRetailer || undefined,
     distributorId: selectedDistributor || undefined,
     statusId: selectedStatus || undefined,
@@ -344,7 +347,9 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
     ...fixedFilters,
   };
 
-  const catalogFilters = undefined;
+  const catalogFilters = {
+    tenantId: tenantId || undefined,
+  };
 
   return (
     <Layout>
