@@ -27,6 +27,7 @@ type Event = NonNullable<EventUuidQuery$data["event"]>;
 
 interface Props {
   event: Event;
+  backTo?: string;
 }
 
 type TimezoneInfo =
@@ -34,7 +35,7 @@ type TimezoneInfo =
   | NonNullable<Event["request"]>["timezone"]
   | null;
 
-const EventCard: React.FC<Props> = ({ event }) => {
+const EventCard: React.FC<Props> = ({ event, backTo }) => {
   const {
     uuid,
     name,
@@ -138,7 +139,7 @@ const EventCard: React.FC<Props> = ({ event }) => {
         {/* ================= BACK BUTTON ================= */}
         <div>
           <Link
-            to="/events/list"
+            to={backTo ?? "/events/list"}
             className="inline-flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition"
           >
             <ArrowLeftIcon className="w-4 h-4" />

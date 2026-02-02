@@ -14,7 +14,7 @@ import {
   UserGroupIcon,
   AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/solid";
-import { Palette, TagIcon } from "lucide-react";
+import { Palette, PencilIcon, TagIcon } from "lucide-react";
 
 // Dashboard
 import DashboardEvents from "@/components/pages/dashboard-event/DashboardEvent";
@@ -156,8 +156,9 @@ const DashboardLinks = {
 ----------------------------------------------------------- */
 const RequestsLinks = {
   menu: [
-    { path: "/requests/list", name: "List", Icon: Bars4Icon },
     { path: "/requests/create", name: "Create", Icon: PlusCircleIcon },
+    { path: "/requests/list", name: "List", Icon: Bars4Icon },
+    { path: "/requests/edited", name: "Edited Requests", Icon: PencilIcon },
   ],
 
   routes: [
@@ -181,6 +182,11 @@ const RequestsLinks = {
       component: <EditRequest />,
       isPublic: false,
     },
+    {
+      path: "/requests/edited",
+      component: <RequestsList fixedFilters={{ edited: true }} />,
+      isPublic: false,
+    },
   ],
 };
 
@@ -189,19 +195,25 @@ const RequestsLinks = {
 ----------------------------------------------------------- */
 const EventsLinks = {
   menu: [
-    { path: "/events/list", name: "List", Icon: Bars4Icon },
     {
       path: "/event/create",
       name: "Create",
       component: <CreateEventWithoutRequest />,
       Icon: PlusCircleIcon,
     },
+    { path: "/events/list", name: "List", Icon: Bars4Icon },
+    { path: "/events/edited", name: "Edited Events", Icon: PencilIcon },
     { path: "/events/today", name: "Today", Icon: CalendarIcon },
     { path: "/events/map", name: "Map", Icon: MapIcon },
   ],
 
   routes: [
     { path: "/events/list", component: <EventsList />, isPublic: false },
+    {
+      path: "/events/edited",
+      component: <EventsList fixedFilters={{ edited: true }} />,
+      isPublic: false,
+    },
     { path: "/events/today", component: <TodayEvents />, isPublic: false },
     { path: "/events/map", component: <TodayEventsMap />, isPublic: false },
     {

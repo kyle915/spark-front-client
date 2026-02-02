@@ -1,4 +1,5 @@
 import { Suspense, useCallback, useState } from "react";
+import { useNavigate, useLocation } from "react-router";
 import type { ReactNode } from "react";
 import Layout from "@/layout/Layout";
 import DataTableRelay from "@/shared/DataTableRelay";
@@ -13,9 +14,8 @@ import {
 } from "@/hooks/useRelayPagination";
 import { useMutation, usePreloadedQuery } from "react-relay/hooks";
 import type { PreloadedQuery } from "react-relay";
-import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
-import CatalogsProvider from "@shared/CatalogsProvider";
+import CatalogsProvider, { type CatalogsState } from "@shared/CatalogsProvider";
 
 //Icons
 import {
@@ -31,6 +31,7 @@ import FormAutocomplete from "@/shared/FormAutocomplete";
 import type { DeclineRequestMutation as DeclineRequestMutationType } from "@api/mutations/__generated__/DeclineRequestMutation.graphql";
 import ConfirmationModal from "@/shared/ConfirmationModal";
 import { useAlertStore } from "@/store/alertStore";
+import { useAuthStore } from "@/store/authStore";
 import { DeclineRequestMutation } from "@/api/mutations/DeclineRequestMutation";
 import FormDatePicker from "@/shared/FormDatePicker";
 
@@ -119,11 +120,12 @@ type RequestsListInnerProps = {
     distributorId?: string;
     statusId?: string;
     date?: string;
+    edited?: boolean;
   };
-  onRefreshReady?: (refreshFn: () => void) => void;
 };
 
 const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
+  const location = useLocation();
   const navigate = useNavigate();
   const showAlert = useAlertStore((state) => state.showAlert);
   const [commitDecline, isDeclineInFlight] =
@@ -154,10 +156,13 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
 
   const handleViewRequest = useCallback(
     (request: RequestRow) => {
-      console.info("Viewing request", request.uuid);
-      navigate(`/request/view/${request.uuid}`);
+      navigate(`/request/view/${request.uuid}`, {
+        state: {
+          from: location.pathname,
+        },
+      });
     },
-    [navigate],
+    [navigate, location.pathname],
   );
 
   const handleApproveRequest = useCallback(
@@ -306,7 +311,16 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
   );
 };
 
-const RequestsList = () => {
+type RequestsListProps = {
+  fixedFilters?: {
+    edited?: boolean;
+  };
+};
+
+const RequestsList = ({ fixedFilters }: RequestsListProps) => {
+  const { tenantId } = useAuthStore();
+  const [retailerSearchTerm, setRetailerSearchTerm] = useState("");
+  const [distributorSearchTerm, setDistributorSearchTerm] = useState("");
   const { control, watch, reset } = useForm({
     defaultValues: {
       // tenant: "",
@@ -325,27 +339,35 @@ const RequestsList = () => {
   const selectedDate = watch("date");
 
   const filters = {
-    // tenantId: selectedTenant || undefined,
-    // clientId: selectedClient || undefined,
+    tenantId: tenantId || undefined,
     retailerId: selectedRetailer || undefined,
     distributorId: selectedDistributor || undefined,
     statusId: selectedStatus || undefined,
     date: selectedDate || undefined,
+    ...fixedFilters,
   };
 
-  const catalogFilters = undefined;
+  const catalogFilters = {
+    tenantId: tenantId || undefined,
+  };
 
   return (
     <Layout>
       <div className="mb-4 flex flex-col gap-2">
         <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
           <div className="p-2 rounded-xl bg-primary/10 text-primary">
-            <ClipboardDocumentListIcon className="w-8 h-8" />
+            {fixedFilters?.edited ? (
+              <PencilIcon className="w-8 h-8" />
+            ) : (
+              <ClipboardDocumentListIcon className="w-8 h-8" />
+            )}
           </div>
-          <h1>All Requests</h1>
+          <h1>{fixedFilters?.edited ? "Edited Requests" : "All Requests"}</h1>
         </div>
         <p className="text-base-content/70">
-          Manage and browse all requests in the system.
+          {fixedFilters?.edited
+            ? "Manage and review all edited requests submitted within the system."
+            : "Manage and review all requests submitted within the system."}
         </p>
       </div>
 
@@ -357,12 +379,18 @@ const RequestsList = () => {
         requestStatuses={true}
         clientsFilters={catalogFilters}
         retailersFilters={catalogFilters}
+        retailersQuery={retailerSearchTerm.trim() || null}
         distributorsFilters={catalogFilters}
+        distributorsQuery={distributorSearchTerm.trim() || null}
         requestStatusesFilters={catalogFilters}
       >
-        {(catalogs) => (
-          <div className="flex flex-col gap-4">
-            {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-base-200 rounded-lg">
+        {(catalogs) => {
+          const isLoading = (key: keyof CatalogsState["loading"]) =>
+            catalogs.loading[key];
+
+          return (
+            <div className="flex flex-col gap-4">
+              {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-base-200 rounded-lg">
               <FormSelect
                 control={control}
                 name="tenant"
@@ -374,80 +402,86 @@ const RequestsList = () => {
                 placeholder="Select a tenant"
               />
             </div> */}
-            <div className="rounded-xl  bg-base-100 p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-1">
-                  <FilterIcon className="w-4 h-4" />
-                  <h2 className="text-sm font-semibold text-base-content/70">
-                    Filters
-                  </h2>
+              <div className="rounded-xl  bg-base-100 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-1">
+                    <FilterIcon className="w-4 h-4" />
+                    <h2 className="text-sm font-semibold text-base-content/70">
+                      Filters
+                    </h2>
+                  </div>
+
+                  <div className="flex gap-2">
+                    {Object.entries(watch()).some(([, value]) => value) && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => reset()}
+                      >
+                        <FunnelXIcon className="w-4 h-4" />
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex gap-2">
-                  {Object.entries(watch()).some(([, value]) => value) && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => reset()}
-                    >
-                      <FunnelXIcon className="w-4 h-4" />
-                      Clear filters
-                    </button>
-                  )}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <FormAutocomplete
+                    control={control}
+                    name="retailer"
+                    label="Retailer"
+                    options={catalogs.retailers.map((r) => ({
+                      label: r.name,
+                      value: r.id,
+                    }))}
+                    loading={isLoading("retailers")}
+                    placeholder="Search retailer..."
+                    onSearch={setRetailerSearchTerm}
+                  />
+
+                  <FormAutocomplete
+                    control={control}
+                    name="distributor"
+                    label="Distributor"
+                    options={catalogs.distributors.map((d) => ({
+                      label: d.name,
+                      value: d.id,
+                    }))}
+                    loading={isLoading("distributors")}
+                    placeholder="Search distributor..."
+                    onSearch={setDistributorSearchTerm}
+                  />
+
+                  <FormAutocomplete
+                    control={control}
+                    name="status"
+                    label="Status"
+                    options={catalogs.requestStatuses.map((s) => ({
+                      label: s.name,
+                      value: s.id,
+                    }))}
+                    loading={isLoading("requestStatuses")}
+                    placeholder="Search status..."
+                  />
+
+                  <FormDatePicker
+                    control={control}
+                    name="date"
+                    label="Filter by Date"
+                    placeholder="Select date"
+                  />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <FormAutocomplete
-                  control={control}
-                  name="retailer"
-                  label="Retailer"
-                  options={catalogs.retailers.map((r) => ({
-                    label: r.name,
-                    value: r.id,
-                  }))}
-                  placeholder="Search retailer..."
-                />
-
-                <FormAutocomplete
-                  control={control}
-                  name="distributor"
-                  label="Distributor"
-                  options={catalogs.distributors.map((d) => ({
-                    label: d.name,
-                    value: d.id,
-                  }))}
-                  placeholder="Search distributor..."
-                />
-
-                <FormAutocomplete
-                  control={control}
-                  name="status"
-                  label="Status"
-                  options={catalogs.requestStatuses.map((s) => ({
-                    label: s.name,
-                    value: s.id,
-                  }))}
-                  placeholder="Search status..."
-                />
-
-                <FormDatePicker
-                  control={control}
-                  name="date"
-                  label="Filter by Date"
-                  placeholder="Select date"
+              <div className="mt-2">
+                <RequestsListInner
+                  key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedDate}`}
+                  filters={filters}
                 />
               </div>
             </div>
-
-            <div className="mt-2">
-              <RequestsListInner
-                key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedDate}`}
-                filters={filters}
-              />
-            </div>
-          </div>
-        )}
+          );
+        }}
       </CatalogsProvider>
     </Layout>
   );
