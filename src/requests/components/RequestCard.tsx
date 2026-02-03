@@ -25,9 +25,10 @@ type Request = NonNullable<RequestUuidQuery$data["request"]>;
 
 interface Props {
   request: Request;
+  backTo?: string;
 }
 
-const RequestCard: React.FC<Props> = ({ request }) => {
+const RequestCard: React.FC<Props> = ({ request, backTo }) => {
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const browserTimezone = useMemo(
@@ -142,7 +143,7 @@ const RequestCard: React.FC<Props> = ({ request }) => {
         {/* ================= BACK BUTTON ================= */}
         <div>
           <Link
-            to="/requests/list"
+            to={backTo ?? "/requests/list"}
             className="inline-flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition"
           >
             <ArrowLeftIcon className="w-4 h-4" />
@@ -151,7 +152,7 @@ const RequestCard: React.FC<Props> = ({ request }) => {
         </div>
 
         {/* ================= HEADER ================= */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-base-100/20">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-base-100/20">
           <div>
             <p className="text-xs uppercase tracking-[0.5em] text-base-content/40">
               Request
