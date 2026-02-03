@@ -22,7 +22,7 @@ import { useMutation, usePreloadedQuery } from "react-relay/hooks";
 import type { PreloadedQuery } from "react-relay";
 import type { EventRow } from "../types/columnsTypes";
 import { eventColumns } from "@utils/columns";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
 import CatalogsProvider from "@shared/CatalogsProvider";
 import FormAutocomplete from "@shared/FormAutocomplete";
@@ -129,6 +129,7 @@ type EventsListInnerProps = {
     eventStatus?: EventStatusFilterEnum;
     requestId?: string;
     date?: string;
+    edited?: boolean;
   };
   onRefreshReady?: (refreshFn: () => void) => void;
 };
@@ -152,7 +153,7 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
     pageSize: PAGE_SIZE,
     initialVariables: { filters },
   });
-
+  const location = useLocation();
   const navigate = useNavigate();
   const showAlert = useAlertStore((state) => state.showAlert);
   const [commitSuspend, isSuspending] = useMutation<any>(SuspendEventMutation);
@@ -173,18 +174,20 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
 
   const handleViewEvent = useCallback(
     (dataEvent: EventRow) => {
-      console.info("Viewing request", dataEvent.uuid);
-      navigate(`/event/view/${dataEvent.uuid}`);
+      navigate(`/event/view/${dataEvent.uuid}`, {
+        state: { from: location.pathname },
+      });
     },
-    [navigate],
+    [navigate, location.pathname],
   );
 
   const handleEditEvent = useCallback(
     (dataEvent: EventRow) => {
-      console.info("Editing event", dataEvent.uuid);
-      navigate(`/event/edit/${dataEvent.uuid}`);
+      navigate(`/event/edit/${dataEvent.uuid}`, {
+        state: { from: location.pathname },
+      });
     },
-    [navigate],
+    [navigate, location.pathname],
   );
 
   const handleSuspendClick = useCallback((dataEvent: EventRow) => {
@@ -467,7 +470,13 @@ const buildStateOptions = (
   return states.sort((a, b) => a.label.localeCompare(b.label));
 };
 
-const EventsList = () => {
+type EventsListProps = {
+  fixedFilters?: {
+    edited?: boolean;
+  };
+};
+
+const EventsList = ({ fixedFilters }: EventsListProps) => {
   const { tenantId } = useAuthStore();
 
   type EventsListFiltersForm = {
@@ -583,6 +592,7 @@ const EventsList = () => {
     date: selectedDate || undefined,
     retailerStateId: selectedRetailerStateId || undefined,
     distributorStateId: selectedDistributorStateId || undefined,
+    ...fixedFilters,
   };
 
   const catalogFilters = undefined;
@@ -592,12 +602,18 @@ const EventsList = () => {
       <div className="mb-4 flex flex-col gap-2">
         <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
           <div className="p-2 rounded-xl bg-primary/10 text-primary">
-            <CalendarDaysIcon className="w-8 h-8" />
+            {fixedFilters?.edited ? (
+              <PencilIcon className="w-8 h-8" />
+            ) : (
+              <CalendarDaysIcon className="w-8 h-8" />
+            )}
           </div>
-          <h1>All Events</h1>
+          <h1>{fixedFilters?.edited ? "Edited Events" : "All Events"}</h1>
         </div>
         <p className="text-base-content/70">
-          Manage and browse all events in the system.
+          {fixedFilters?.edited
+            ? "List of events that have been edited."
+            : "List of all events in the system."}
         </p>
       </div>
 

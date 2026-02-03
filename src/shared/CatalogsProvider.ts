@@ -24,6 +24,9 @@ import { RequestsQuery } from "@api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { RequestStoreManagersQuery } from "@api/queries/RequestStoreManagersQuery";
 import type { RequestStoreManagersQuery as RequestStoreManagersQueryType } from "@api/queries/__generated__/RequestStoreManagersQuery.graphql";
+import { RateTypesQuery } from "@/api/queries/RateTypesQuery";
+import { StatesQuery } from "@/api/queries/StatesQuery";
+import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/StatesQuery.graphql";
 
 type Connection<Node> = {
   edges?: ReadonlyArray<{
@@ -62,8 +65,10 @@ type CatalogsProviderProps = {
   clientsFilters?: ClientsQueryType["variables"]["filters"];
   retailers?: boolean;
   retailersFilters?: RetailersQueryType["variables"]["filters"];
+  retailersQuery?: string | null;
   distributors?: boolean;
   distributorsFilters?: DistributorsQueryType["variables"]["filters"];
+  distributorsQuery?: string | null;
   requestTypes?: boolean;
   requestTypesFilters?: RequestTypesQueryType["variables"]["filters"];
   tenants?: boolean;
@@ -77,6 +82,7 @@ type CatalogsProviderProps = {
   rateTypesFilters?: {
     tenantId?: string | null;
   };
+  states?: boolean;
 };
 
 type CatalogsState = {
@@ -91,6 +97,7 @@ type CatalogsState = {
   requests: CatalogItem[];
   requestStoreManagers: RequestStoreManagerItem[];
   rateTypes: CatalogItem[];
+  states: CatalogItem[];
   loading: {
     eventTypes: boolean;
     eventStatuses: boolean;
@@ -103,6 +110,7 @@ type CatalogsState = {
     requests: boolean;
     requestStoreManagers: boolean;
     rateTypes: boolean;
+    states: boolean;
   };
   errors: {
     eventTypes: Error | null;
@@ -116,6 +124,7 @@ type CatalogsState = {
     requests: Error | null;
     requestStoreManagers: Error | null;
     rateTypes: Error | null;
+    states: Error | null;
   };
   refetch: (key: keyof CatalogsState) => void;
 };
@@ -132,6 +141,7 @@ const createInitialState = (): CatalogsState => ({
   requests: [],
   requestStoreManagers: [],
   rateTypes: [],
+  states: [],
   loading: {
     eventTypes: false,
     eventStatuses: false,
@@ -144,6 +154,7 @@ const createInitialState = (): CatalogsState => ({
     requests: false,
     requestStoreManagers: false,
     rateTypes: false,
+    states: false,
   },
   errors: {
     eventTypes: null,
@@ -157,6 +168,7 @@ const createInitialState = (): CatalogsState => ({
     requests: null,
     requestStoreManagers: null,
     rateTypes: null,
+    states: null,
   },
   refetch: () => {},
 });
@@ -191,6 +203,32 @@ const parseRequestStoreManagers = (
   }));
 
 const REQUESTS_PAGE_SIZE_FOR_FILTERS = 100;
+const RATE_TYPES_PAGE_SIZE_FOR_FILTERS = 100;
+
+type RateTypeNode = CatalogItem & {
+  tenantId?: string | null;
+};
+
+type RateTypesQueryType = {
+  response: {
+    rateTypes: Connection<RateTypeNode>;
+  };
+  variables: {
+    first?: number;
+    after?: string;
+    last?: number;
+    before?: string;
+    q?: string | null;
+    filters?: {
+      tenantId?: string | null;
+    };
+  };
+};
+
+const parseRateTypes = (response: RateTypesQueryType["response"]) =>
+  parseConnection(response.rateTypes);
+const parseStates = (response: StatesQueryType["response"]) =>
+  parseConnection(response.states);
 
 const CatalogsProvider = ({
   children,
@@ -202,8 +240,10 @@ const CatalogsProvider = ({
   clientsFilters,
   retailers = false,
   retailersFilters,
+  retailersQuery,
   distributors = false,
   distributorsFilters,
+  distributorsQuery,
   requestTypes = false,
   requestTypesFilters,
   tenants = false,
@@ -213,6 +253,9 @@ const CatalogsProvider = ({
   requestsFilters,
   requestStoreManagers = false,
   requestStoreManagersFilters,
+  rateTypes = false,
+  rateTypesFilters,
+  states = false,
 }: CatalogsProviderProps) => {
   const [state, setState] = useState<CatalogsState>(() => createInitialState());
 
@@ -232,9 +275,25 @@ const CatalogsProvider = ({
     () => retailersFilters ?? {},
     [retailersFilters],
   );
+  const retailersQueryMemo = useMemo(
+    () => retailersQuery ?? null,
+    [retailersQuery],
+  );
+  const retailersVariablesMemo = useMemo(
+    () => ({ q: retailersQueryMemo }),
+    [retailersQueryMemo],
+  );
   const distributorsFiltersMemo = useMemo(
     () => distributorsFilters ?? {},
     [distributorsFilters],
+  );
+  const distributorsQueryMemo = useMemo(
+    () => distributorsQuery ?? null,
+    [distributorsQuery],
+  );
+  const distributorsVariablesMemo = useMemo(
+    () => ({ q: distributorsQueryMemo }),
+    [distributorsQueryMemo],
   );
   const requestTypesFiltersMemo = useMemo(
     () => requestTypesFilters ?? {},
@@ -252,12 +311,18 @@ const CatalogsProvider = ({
     () => requestStoreManagersFilters ?? {},
     [requestStoreManagersFilters],
   );
-
+  const rateTypesFiltersMemo = useMemo(
+    () => rateTypesFilters ?? {},
+    [rateTypesFilters],
+  );
   const requestsVariablesMemo = useMemo(
     () => ({ first: REQUESTS_PAGE_SIZE_FOR_FILTERS }),
     [],
   );
-
+  const rateTypesVariablesMemo = useMemo(
+    () => ({ first: RATE_TYPES_PAGE_SIZE_FOR_FILTERS }),
+    [],
+  );
   const emptyFilters = useMemo(() => ({}), []);
 
   const [refreshTriggers, setRefreshTriggers] = useState<
@@ -383,6 +448,7 @@ const CatalogsProvider = ({
     RetailersQuery,
     "retailers",
     parseRetailers,
+    retailersVariablesMemo,
   );
 
   useCatalogEffect<DistributorsQueryType, CatalogItem>(
@@ -391,6 +457,7 @@ const CatalogsProvider = ({
     DistributorsQuery,
     "distributors",
     parseDistributors,
+    distributorsVariablesMemo,
   );
 
   useCatalogEffect<RequestTypesQueryType, CatalogItem>(
@@ -431,6 +498,21 @@ const CatalogsProvider = ({
     RequestStoreManagersQuery,
     "requestStoreManagers",
     parseRequestStoreManagers,
+  );
+  useCatalogEffect<RateTypesQueryType, CatalogItem>(
+    rateTypes,
+    rateTypesFiltersMemo,
+    RateTypesQuery,
+    "rateTypes",
+    parseRateTypes,
+    rateTypesVariablesMemo,
+  );
+  useCatalogEffect<StatesQueryType, CatalogItem>(
+    states,
+    emptyFilters,
+    StatesQuery,
+    "states",
+    parseStates,
   );
 
   return children({ ...state, refetch });
