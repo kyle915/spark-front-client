@@ -13,13 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 import type { RequestUuidQuery$data } from "@api/queries/__generated__/RequestUuidQuery.graphql";
 import LocationMap from "@shared/LocationMap";
-import {
-  formatDate,
-  formatTime,
-  extractDatePart,
-  extractTimePart,
-  buildDateTimeWithOffset,
-} from "@utils/index";
+import { formatDate, formatTime } from "@utils/index";
 
 type Request = NonNullable<RequestUuidQuery$data["request"]>;
 
@@ -39,7 +33,6 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
     () => -new Date().getTimezoneOffset(),
     [],
   );
-  const requestTimezone = request.timezone ?? null;
 
   const ITEMS_PER_PAGE = 8;
 
@@ -70,34 +63,10 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
     setCurrentPage(1);
   }, [productTypeFilter]);
 
-  // timezone utils
-  const ensureDateTimeWithOffset = (
-    value: string | null,
-    tz = requestTimezone,
-  ) => {
-    if (!value) return null;
-    const hasOffset = /([+-]\d{2}:?\d{2}|Z)$/.test(value);
-    if (hasOffset) return value;
-
-    const datePart =
-      extractDatePart(value) ?? extractDatePart(request.date ?? null) ?? null;
-    const timePart = extractTimePart(value);
-    if (
-      !datePart ||
-      !timePart ||
-      tz?.offset === undefined ||
-      tz?.offset === null
-    )
-      return value;
-
-    return buildDateTimeWithOffset(datePart, timePart, tz.offset);
-  };
-
   const formatLocalDate = (value: string | null) => {
-    const normalized = ensureDateTimeWithOffset(value);
-    if (!normalized) return "-";
-    const dateObj = new Date(normalized);
-    if (Number.isNaN(dateObj.getTime())) return normalized;
+    if (!value) return "-";
+    const dateObj = new Date(value);
+    if (Number.isNaN(dateObj.getTime())) return value;
     return new Intl.DateTimeFormat(undefined, {
       timeZone: browserTimezone,
       year: "numeric",
@@ -107,10 +76,9 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
   };
 
   const formatLocalTime = (value: string | null) => {
-    const normalized = ensureDateTimeWithOffset(value);
-    if (!normalized) return "-";
-    const dateObj = new Date(normalized);
-    if (Number.isNaN(dateObj.getTime())) return normalized;
+    if (!value) return "-";
+    const dateObj = new Date(value);
+    if (Number.isNaN(dateObj.getTime())) return value;
     return new Intl.DateTimeFormat(undefined, {
       timeZone: browserTimezone,
       hour: "2-digit",

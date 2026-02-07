@@ -6,7 +6,7 @@ import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, Link } from "react-router";
 import { useCallback, useMemo, useState } from "react";
-import { formatDate, formatTime } from "@/utils";
+import { formatDate, formatLocalDateTime } from "@/utils";
 import {
   ArrowLeftIcon,
   Calendar,
@@ -246,13 +246,22 @@ const RecapView = () => {
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-base-content/70">
                     <div className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
-                      {formatDate(recap.event?.request?.date ?? null)}
+                      {formatDate(
+                        recap.event?.date ??
+                        recap.event?.request?.date ??
+                        null,
+                      )}
                     </div>
 
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
-                      {formatTime(recap.event?.startTime ?? null)} –{" "}
-                      {formatTime(recap.event?.endTime ?? null)}
+                      {formatLocalDateTime(recap.event?.startTime ?? null, {
+                        hour12: true,
+                      })}{" "}
+                      –{" "}
+                      {formatLocalDateTime(recap.event?.endTime ?? null, {
+                        hour12: true,
+                      })}
                     </div>
 
                     {recap.event?.address && (
