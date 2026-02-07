@@ -24,11 +24,6 @@ interface Props {
   backTo?: string;
 }
 
-type TimezoneInfo =
-  | Event["timezone"]
-  | NonNullable<Event["request"]>["timezone"]
-  | null;
-
 const EventCard: React.FC<Props> = ({ event, backTo }) => {
   const {
     uuid,
