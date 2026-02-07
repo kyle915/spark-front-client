@@ -27,7 +27,8 @@ import { UpdateRequestMutation } from "@api/mutations/UpdateRequestMutation";
 import type { UpdateRequestMutation as UpdateRequestMutationType } from "@api/mutations/__generated__/UpdateRequestMutation.graphql";
 
 import type { EventFormValues } from "../types/events/formTypes";
-import { normalizeDateTime, dateFormat } from "@/public/form/utils/toDate";
+import { dateFormat } from "@/public/form/utils/toDate";
+import { buildDateTimeWithOffset, extractDatePart, extractTimePart } from "@/utils";
 
 /* ================= Page ================= */
 const CreateEventPage = () => {
@@ -146,11 +147,11 @@ const CreateEventForm = ({ request }: FormProps) => {
 
   const shouldUpdateRequest = (data: EventFormValues) => {
     return (
-      data.distributorId !== request.distributor?.id ||
-      data.retailerId !== request.retailer?.id ||
       Boolean(data.storeManagerName || data.storeManagerPhone)
     );
   };
+
+  console.log("REQUEST", request)
 
   /* ================= Mutation ================= */
   const runCreateEvent = (data: EventFormValues) => {
@@ -159,18 +160,41 @@ const CreateEventForm = ({ request }: FormProps) => {
       return;
     }
 
+    const timezone =
+      timeZones.find((tz) => tz.id === data.timezoneId) ?? null;
+    const offsetMinutes = timezone?.offset ?? null;
+    const dateValue = dateFormat(data.date);
+    const normalizedDate = dateValue
+      ? buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes)
+      : "";
+
     commitCreateEvent({
       variables: {
         input: {
           name: data.name,
-          date: dateFormat(data.date),
+          date: normalizedDate,
           eventTypeId: data.eventTypeId,
           requestId: request.id,
           address: data.address,
           notes: data.notes ?? "",
           isNational: data.isNational ?? false,
-          startTime: normalizeDateTime(data.date ?? "", data.startTime) ?? "",
-          endTime: normalizeDateTime(data.date ?? "", data.endTime) ?? "",
+          timezoneId: data.timezoneId ?? request.timezone?.id ?? null,
+          distributorId: request.distributor?.id ?? null,
+          retailerId: request.retailer?.id ?? null,
+          startTime: dateValue
+            ? buildDateTimeWithOffset(
+              dateValue,
+              data.startTime,
+              offsetMinutes,
+            )
+            : "",
+          endTime: dateValue
+            ? buildDateTimeWithOffset(
+              dateValue,
+              data.endTime,
+              offsetMinutes,
+            )
+            : "",
           coordinates: data.coordinates ?? request.coordinates ?? undefined,
           tenantId: request.tenantId,
         },
@@ -211,16 +235,36 @@ const CreateEventForm = ({ request }: FormProps) => {
       return;
     }
 
+    const timezone =
+      timeZones.find((tz) => tz.id === data.timezoneId) ??
+      request.timezone ??
+      null;
+    const offsetMinutes = timezone?.offset ?? null;
+    const dateValue = dateFormat(data.date ?? request.date ?? "");
+    const normalizedDate = dateValue
+      ? buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes)
+      : "";
+
     commitUpdateRequest({
       variables: {
         input: {
           id: request.id,
           address: data.address ?? request.address,
           coordinates: data.coordinates ?? request.coordinates ?? [],
-          date: data.date ?? dateFormat(data.date ?? "") ?? request.date,
+          date: normalizedDate,
           name: data.name ?? request.name,
-          startTime: normalizeDateTime(data.date ?? "", data.startTime) ?? "",
-          endTime: normalizeDateTime(data.date ?? "", data.endTime) ?? "",
+          startTime:
+            dateValue && data.startTime
+              ? buildDateTimeWithOffset(
+                dateValue,
+                data.startTime,
+                offsetMinutes,
+              )
+              : "",
+          endTime:
+            dateValue && data.endTime
+              ? buildDateTimeWithOffset(dateValue, data.endTime, offsetMinutes)
+              : "",
           timezoneId: data.timezoneId ?? request.timezone.id,
           requestTypeId: request.requestType.id,
           distributorId: request.distributor?.id ?? "",
@@ -239,20 +283,26 @@ const CreateEventForm = ({ request }: FormProps) => {
   };
 
   /* ================= Default Values ================= */
+  const defaultDate = extractDatePart(request.date ?? "") ?? request.date ?? "";
+  const defaultStartTime =
+    extractTimePart(request.startTime ?? "") ?? request.startTime ?? undefined;
+  const defaultEndTime =
+    extractTimePart(request.endTime ?? "") ?? request.endTime ?? undefined;
+
   const defaultValues: Partial<EventFormValues> = {
     name: request.name ?? "",
     address: request.address ?? "",
     tenant: request.tenantId,
     eventTypeId: request.requestType?.id ?? "",
-    date: request.date ?? "",
-    startTime: request.startTime ?? undefined,
-    endTime: request.endTime ?? undefined,
+    date: defaultDate,
+    startTime: defaultStartTime,
+    endTime: defaultEndTime,
     notes: "",
     coordinates: request.coordinates.map((coord) => coord) ?? undefined,
     isNational: false,
     timezoneId: request.timezone?.id ?? null,
-    // distributorId: request.distributor?.id,
-    // retailerId: request.retailer?.id,
+    distributorId: request.distributor?.id ?? null,
+    retailerId: request.retailer?.id ?? null,
     // storeManagerName:
     //   requestContactInfo.storeManagerName ??
     //   requestContactInfo.retailerStoreContact ??
@@ -298,7 +348,7 @@ const CreateEventForm = ({ request }: FormProps) => {
             // locations={locations}
             defaultValues={defaultValues}
             onSubmit={handleSubmit}
-            // onRefetch={refetch}
+          // onRefetch={refetch}
           />
         );
       }}

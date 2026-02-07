@@ -80,7 +80,7 @@ export default function SparkForm(props: SparkFormProps) {
   const { handleSubmit, loading } = useSparkSubmit(tenantId, () => {
     reset();
     setResetSignal(Math.random());
-  });
+  }, timeZones);
 
   // useEffect(() => {
   //   if (tenantId) setValue("tenant", tenantId);

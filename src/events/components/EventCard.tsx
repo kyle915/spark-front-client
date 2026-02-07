@@ -14,13 +14,7 @@ import {
 } from "@heroicons/react/24/outline";
 import type { EventUuidQuery$data } from "@/api/queries/__generated__/EventUuidQuery.graphql";
 import LocationMap from "@/shared/LocationMap";
-import {
-  formatDate,
-  formatTime,
-  extractDatePart,
-  extractTimePart,
-  buildDateTimeWithOffset,
-} from "@/utils";
+import { formatDate, formatLocalDateTime, formatTime } from "@/utils";
 import { MapPinHouseIcon } from "lucide-react";
 
 type Event = NonNullable<EventUuidQuery$data["event"]>;
@@ -29,11 +23,6 @@ interface Props {
   event: Event;
   backTo?: string;
 }
-
-type TimezoneInfo =
-  | Event["timezone"]
-  | NonNullable<Event["request"]>["timezone"]
-  | null;
 
 const EventCard: React.FC<Props> = ({ event, backTo }) => {
   const {
@@ -49,7 +38,6 @@ const EventCard: React.FC<Props> = ({ event, backTo }) => {
     status,
     request,
   } = event;
-  const eventTimezone: TimezoneInfo = request?.timezone ?? null;
 
   // const formatTimezone = (tz: TimezoneInfo) => {
   //   if (!tz) return "N/A";
@@ -69,38 +57,10 @@ const EventCard: React.FC<Props> = ({ event, backTo }) => {
     [],
   );
 
-  const ensureDateTimeWithOffset = (
-    value: string | null,
-    fallbackDate: string | null,
-    tz: TimezoneInfo,
-  ) => {
-    if (!value) return null;
-    const hasOffset = /([+-]\\d{2}:?\\d{2}|Z)$/.test(value);
-    if (hasOffset) return value;
-
-    const datePart =
-      extractDatePart(value) ?? extractDatePart(fallbackDate) ?? null;
-    const timePart = extractTimePart(value);
-    if (
-      !datePart ||
-      !timePart ||
-      tz?.offset === undefined ||
-      tz?.offset === null
-    )
-      return value;
-
-    return buildDateTimeWithOffset(datePart, timePart, tz.offset);
-  };
-
   const formatLocalDate = (value: string | null) => {
-    const normalized = ensureDateTimeWithOffset(
-      value,
-      request?.date ?? null,
-      eventTimezone,
-    );
-    if (!normalized) return "-";
-    const dateObj = new Date(normalized);
-    if (Number.isNaN(dateObj.getTime())) return normalized;
+    if (!value) return "-";
+    const dateObj = new Date(value);
+    if (Number.isNaN(dateObj.getTime())) return value;
     return new Intl.DateTimeFormat(undefined, {
       timeZone: browserTimezone,
       year: "numeric",
@@ -109,21 +69,8 @@ const EventCard: React.FC<Props> = ({ event, backTo }) => {
     }).format(dateObj);
   };
 
-  const formatLocalDateTime = (value: string | null) => {
-    const normalized = ensureDateTimeWithOffset(
-      value,
-      request?.date ?? null,
-      eventTimezone,
-    );
-    if (!normalized) return "-";
-    const dateObj = new Date(normalized);
-    if (Number.isNaN(dateObj.getTime())) return normalized;
-    return new Intl.DateTimeFormat(undefined, {
-      timeZone: browserTimezone,
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(dateObj);
-  };
+  const formatEventLocalTime = (value: string | null) =>
+    formatLocalDateTime(value, { timeZone: browserTimezone });
 
   const formatBrowserTimezoneLabel = () => {
     const sign = browserOffsetMinutes >= 0 ? "+" : "-";
@@ -179,14 +126,13 @@ const EventCard: React.FC<Props> = ({ event, backTo }) => {
               <span
                 className={`
                   badge badge-soft badge-lg gap-2 font-semibold
-                  ${
-                    status?.name === "Pending"
-                      ? "badge-warning"
-                      : status?.name === "Approved"
-                        ? "badge-success"
-                        : status?.name === "Cancelled"
-                          ? "badge-error"
-                          : "badge-neutral"
+                  ${status?.name === "Pending"
+                    ? "badge-warning"
+                    : status?.name === "Approved"
+                      ? "badge-success"
+                      : status?.name === "Cancelled"
+                        ? "badge-error"
+                        : "badge-neutral"
                   }
                 `}
               >
@@ -345,7 +291,7 @@ const EventCard: React.FC<Props> = ({ event, backTo }) => {
                     Start (your zone)
                   </p>
                   <p className="font-medium">
-                    {formatLocalDateTime(event.startTime ?? null)}
+                    {formatEventLocalTime(event.startTime ?? null)}
                   </p>
                 </div>
               </div>
