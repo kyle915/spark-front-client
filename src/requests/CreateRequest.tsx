@@ -28,6 +28,7 @@ import { useAlertStore } from "@store/alertStore";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { dateFormat } from "@/public/form/utils/toDate";
+import { buildDateTimeWithOffset } from "@utils/index";
 import CatalogsProvider from "@/shared/CatalogsProvider";
 
 interface CreateRequestFormProps {
@@ -148,25 +149,30 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
 
   const timezones = timezonesData.timezones?.edges.map((e) => e.node) || [];
 
-  const buildDateTime = (date: string, time: string) => {
-    return `${date} ${time}:00`;
-  };
-
   // ========================
   // SUBMIT
   // ========================
   const handleSubmit = (formData: RequestFormValues) => {
+    const timezone =
+      timezones.find((tz) => tz.id === formData.timezoneId) ?? null;
+    const offsetMinutes = timezone?.offset ?? null;
+    const dateValue = dateFormat(formData.date);
+
     commitCreateRequest({
       variables: {
         input: {
           tenantId: tenantId,
           name: formData.name,
-          date: dateFormat(formData.date),
+          date: buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes),
           startTime: formData.startTime
-            ? buildDateTime(dateFormat(formData.date), formData.startTime)
+            ? buildDateTimeWithOffset(
+                dateValue,
+                formData.startTime,
+                offsetMinutes,
+              )
             : "",
           endTime: formData.endTime
-            ? buildDateTime(dateFormat(formData.date), formData.endTime)
+            ? buildDateTimeWithOffset(dateValue, formData.endTime, offsetMinutes)
             : "",
           address: formData.address,
           coordinates: (formData.coordinates ?? []) as readonly number[],

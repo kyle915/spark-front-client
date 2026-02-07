@@ -33,7 +33,14 @@ export const RecapsQuery = graphql`
             id
             uuid
             name
+            date
             startTime
+            timezone {
+              id
+              name
+              code
+              offset
+            }
           }
           approved
           createdAt

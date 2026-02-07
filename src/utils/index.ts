@@ -5,6 +5,11 @@ export const themes: Record<"light" | "dark", string> = {
 
 export const formatDate = (value: string | null) => {
   if (!value) return "-";
+  const datePart = extractDatePart(value);
+  if (datePart) {
+    const date = new Date(`${datePart}T00:00:00`);
+    return isNaN(date.getTime()) ? datePart : date.toLocaleDateString();
+  }
   const date = new Date(value);
   return isNaN(date.getTime()) ? value : date.toLocaleDateString();
 };
@@ -15,6 +20,21 @@ export const formatTime = (value: string | null) => {
   return isNaN(date.getTime())
     ? value
     : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
+
+export const formatLocalDateTime = (
+  value: string | null,
+  options?: { timeZone?: string; hour12?: boolean },
+) => {
+  if (!value) return "-";
+  const dateObj = new Date(value);
+  if (Number.isNaN(dateObj.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    timeZone: options?.timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: options?.hour12,
+  }).format(dateObj);
 };
 
 export const formatTimeWithOffset = (
@@ -99,6 +119,9 @@ export const buildDateTimeWithOffset = (
   if (!combined) return "";
   if (offsetMinutes === undefined || offsetMinutes === null) {
     return combined.includes("T") ? combined : combined.replace(" ", "T");
+  }
+  if (!combined.includes("T") && !combined.includes(" ")) {
+    return combined;
   }
 
   const [datePart, timePartRaw] = combined.includes("T")

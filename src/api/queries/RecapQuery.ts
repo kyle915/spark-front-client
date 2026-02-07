@@ -22,11 +22,18 @@ export const RecapQuery = graphql`
         id
         uuid
         name
+        date
         tenantId
         tenant {
           id
           name
         }
+        timezone {
+              id
+              name
+              code
+              offset
+            }
         startTime
         endTime
         address
