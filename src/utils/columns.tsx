@@ -184,9 +184,26 @@ export const createRecapColumns = (
       },
     },
     {
-      key: "createdAt",
-      label: "Created At",
-      render: (_value, row) => formatDate(row.createdAt ?? null),
+      key: "retailerState",
+      label: "State",
+      render: (_value, row) =>
+        row.event?.retailer?.location?.state?.name,
+    },
+    {
+      key: "retailerLocation",
+      label: "Location",
+      render: (_value, row) =>
+        row.event?.retailer?.location?.name ?? "-",
+    },
+    {
+      key: "eventAddress",
+      label: "Event Address",
+      render: (_value, row) => row.event?.address ?? "-",
+    },
+    {
+      key: "eventDate",
+      label: "Event Date",
+      render: (_value, row) => formatDate(row.event?.date ?? null),
     },
   ];
 
