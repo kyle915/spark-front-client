@@ -90,7 +90,7 @@ export default function SideSummary({
     <motion.aside
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="w-full md:w-80 p-6 rounded-2xl bg-base-100/80 backdrop-blur-xl shadow-lg border border-base-300/40 sticky top-4 space-y-8"
+      className="hidden sm:block w-full md:w-80 p-4 sm:p-6 rounded-2xl bg-base-100/80 backdrop-blur-xl shadow-lg border border-base-300/40 md:sticky md:top-4 space-y-6 sm:space-y-8"
     >
       {/* HEADER */}
       <div className="space-y-1">

@@ -102,7 +102,7 @@ export default function FormDatePicker<T extends FieldValues>({
           <div
             id={popoverId}
             popover="auto"
-            className="dropdown bg-base-100 rounded-box shadow-xl p-3 mt-2 w-[320px] overflow-hidden"
+            className="dropdown bg-base-100 rounded-box shadow-xl p-3 mt-2 w-[calc(100vw-2.5rem)] sm:w-[320px] max-w-full overflow-hidden"
             style={{ positionAnchor: anchorVar } as React.CSSProperties}
           >
             <DayPicker
