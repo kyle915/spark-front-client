@@ -138,7 +138,7 @@ export default function SparkForm(props: SparkFormProps) {
   ];
 
   return (
-    <div className="flex flex-col md:flex-row gap-8">
+    <div className="flex flex-col md:flex-row gap-8 w-full max-w-6xl">
       <div className="flex-1">
         <FormWizard
           steps={steps}

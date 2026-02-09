@@ -94,7 +94,7 @@ export function Step1Basic({
         placeholder="HH:MM AM/PM"
       />
 
-      <div className="col-span-2">
+      <div className="md:col-span-2">
         <FormLocationPicker
           control={control}
           nameLat="latitude"
@@ -104,7 +104,7 @@ export function Step1Basic({
         />
       </div>
 
-      <div className="col-span-2">
+      <div className="md:col-span-2">
         <FormTextarea
           name="address"
           label="Address"
