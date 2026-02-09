@@ -366,7 +366,6 @@ const RecapList = () => {
   const eventAddressInput = watch("eventAddress");
   const selectedEventId = watch("eventId") ?? "";
 
-  console.log("EVENT", eventAddress)
   useEffect(() => {
     const handle = window.setTimeout(() => {
       setEventAddress(eventAddressInput?.trim() ?? "");
@@ -482,8 +481,8 @@ const RecapList = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="w-full sm:w-64">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <div className="w-full max-w-sm">
               <FormAutocomplete
                 name="eventId"
                 control={control}
@@ -494,7 +493,7 @@ const RecapList = () => {
                 onSearch={setEventSearchInput}
               />
             </div>
-            <div className="w-full sm:w-64">
+            <div className="w-full max-w-sm">
               <FormInputText
                 name="eventAddress"
                 control={control}
