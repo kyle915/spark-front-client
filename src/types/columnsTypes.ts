@@ -33,6 +33,7 @@ export interface EventRow {
   id: string;
   uuid?: string | null;
   name: string;
+  date?: string | null;
   startTime?: string | null;
   endTime?: string | null;
   address?: string | null;

@@ -1,6 +1,6 @@
 import { Suspense, useMemo } from "react";
 import Layout from "@/layout/Layout";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import Loading from "@/shared/Loading";
 import CatalogsProvider from "@/shared/CatalogsProvider";
 import EventForm from "./components/EventForm";
@@ -23,6 +23,7 @@ type EditEventContentProps = {
 };
 
 const EditEventContent = ({ uuid }: EditEventContentProps) => {
+  const navigate = useNavigate();
   const data = useLazyLoadQuery<EventUuidQueryType>(EventUuidQuery, { uuid });
   const event = data.event;
 
@@ -107,6 +108,7 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
       onCompleted: (response) => {
         if (response.updateEvent?.success) {
           showAlert(response.updateEvent.message, "success");
+          navigate(`/event/view/${event.uuid ?? uuid}`);
         } else {
           showAlert(response.updateEvent.message, "error");
         }
