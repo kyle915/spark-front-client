@@ -43,18 +43,22 @@ export default function FormWizard({
   const prev = () => setCurrent((c) => Math.max(0, c - 1));
 
   return (
-    <div className="w-full md:w-[760px] mx-auto space-y-6">
+    <div className="w-full max-w-[760px] mx-auto space-y-6">
       <WizardProgressBar step={current} total={total} />
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{steps[current].title}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">
+            {steps[current].title}
+          </h1>
           {steps[current].description && (
-            <p className="opacity-60 text-sm">{steps[current].description}</p>
+            <p className="opacity-60 text-xs sm:text-sm">
+              {steps[current].description}
+            </p>
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap sm:justify-end">
           {steps.map((_, i) => (
             <div
               key={i}
@@ -65,7 +69,7 @@ export default function FormWizard({
         </div>
       </div>
 
-      <div className="relative min-h-[300px]">
+      <div className="relative min-h-[240px] sm:min-h-[300px]">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}
@@ -74,7 +78,7 @@ export default function FormWizard({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.28, layout: { duration: 0.25 } }}
-            className="card bg-base-100 p-8 shadow-xl rounded-2xl border border-base-300/50"
+            className="card bg-base-100 p-5 sm:p-6 md:p-8 shadow-xl rounded-2xl border border-base-300/50"
           >
             {steps[current].content}
           </motion.div>
@@ -91,7 +95,7 @@ export default function FormWizard({
         )}
 
         <button
-          className="btn btn-primary px-8"
+          className="btn btn-primary px-6 sm:px-8"
           onClick={next}
           disabled={loadingSubmit}
         >
