@@ -33,6 +33,7 @@ export const RecapsQuery = graphql`
             id
             uuid
             name
+            address
             date
             startTime
             timezone {
@@ -40,6 +41,22 @@ export const RecapsQuery = graphql`
               name
               code
               offset
+            }
+            retailer {
+              id
+              uuid
+              name
+              location {
+                id
+                uuid
+                name
+                state {
+                  id
+                  uuid
+                  name
+                  code
+                }
+              }
             }
           }
           approved

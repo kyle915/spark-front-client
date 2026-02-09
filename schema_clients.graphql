@@ -3330,6 +3330,7 @@ input RecapFiltersInput {
   clientMutationId: ID = null
   eventId: ID = null
   retailerId: ID = null
+  eventAddress: String = null
   edited: Boolean = null
 }
 
