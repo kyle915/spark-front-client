@@ -33,6 +33,7 @@ export interface EventRow {
   id: string;
   uuid?: string | null;
   name: string;
+  date?: string | null;
   startTime?: string | null;
   endTime?: string | null;
   address?: string | null;
@@ -57,7 +58,20 @@ export interface RecapRow {
   name: string;
   approved?: boolean | null;
   eventId?: string | null;
-  event?: NamedEntity | null;
+  event?:
+    | (NamedEntity & {
+        address?: string | null;
+        retailer?: {
+          location?: {
+            name?: string | null;
+            state?: {
+              name?: string | null;
+              code?: string | null;
+            } | null;
+          } | null;
+        } | null;
+      })
+    | null;
   createdAt?: string | null;
 }
 

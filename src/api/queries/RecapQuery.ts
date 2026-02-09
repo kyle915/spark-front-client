@@ -11,6 +11,8 @@ export const RecapQuery = graphql`
       approved
       totalEngagements
       productsSold
+      totalCansSold
+      totalPacksSold
       totalEarnings
       accountSpendAmount
       job {
