@@ -51,13 +51,13 @@ export default function SparkFormLayout({
       )}
 
       <div className="navbar bg-base-100 shadow-sm sticky top-0 z-20">
-        <div className="grid grid-cols-1 sm:grid-cols-[auto,1fr,auto] items-center w-full px-3 sm:px-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 items-center w-full px-4">
           {/* LEFT: Logo */}
           <div className="flex items-center gap-3 justify-center sm:justify-start">
             <img
               src={hasImage ? tenant!.image! : "/logo.svg"}
               alt="Tenant logo"
-              className="h-8 w-auto object-contain app-logo-public"
+              className={`h-8 w-auto object-contain app-logo-public ${hasImage ? "" : "app-logo-public-default"}`}
               onError={(e) => {
                 const img = e.currentTarget;
                 if (!img.src.endsWith("/logo.svg")) {
@@ -69,7 +69,7 @@ export default function SparkFormLayout({
 
           {/* CENTER: Title */}
           <div className="hidden sm:flex justify-center">
-            <h1 className="font-semibold text-base sm:text-lg tracking-tight text-center leading-tight">
+            <h1 className="font-semibold text-lg tracking-tight">
               Spark Request Form
             </h1>
           </div>
@@ -81,7 +81,7 @@ export default function SparkFormLayout({
         </div>
       </div>
 
-      <div className="px-4 py-6 sm:px-6 flex flex-col items-center flex-1 w-full">
+      <div className="p-6 flex flex-col items-center flex-1 w-full">
         {children}
       </div>
       {/*
