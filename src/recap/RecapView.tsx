@@ -94,36 +94,63 @@ const RecapView = () => {
 
   const recap = recapData?.recap ?? null;
 
-  const imageFiles = useMemo(
-    () =>
-      recap?.recapFiles.filter(
-        (f) =>
-          f.file &&
-          f.fileTypeId !== "1" && // omit PDF
-          !/\.(pdf|docx?|xlsx?|csv|txt)$/i.test(f.file),
-      ),
-    [recap?.recapFiles],
+  console.log("RECAP", recap);
+
+  const recapFiles = recap?.recapFiles ?? [];
+
+  const isImageFile = useCallback((file: (typeof recapFiles)[number]) => {
+    if (!file.file) return false;
+
+    return (
+      file.fileTypeId !== "1" && // omit PDF
+      !/\.(pdf|docx?|xlsx?|csv|txt)$/i.test(file.file)
+    );
+  }, []);
+
+  const isPdfFile = useCallback(
+    (file: (typeof recapFiles)[number]) =>
+      !!file.file &&
+      (file.fileTypeId === "1" || /\.pdf$/i.test(file.file)),
+    [],
   );
 
-  // images by category
-  const imagesByCategory = useMemo(() => {
-    if (!imageFiles) return {};
+  // categories ordered by fileRecapCategory (name)
+  const categories = useMemo(() => {
+    if (recapFiles.length === 0) return [];
 
-    return imageFiles.reduce<Record<string, typeof imageFiles>>((acc, file) => {
+    const categoryMap = new Map<
+      string,
+      { name: string; files: typeof recapFiles }
+    >();
+
+    recapFiles.forEach((file) => {
       const categoryName = file.fileRecapCategory?.name ?? "Uncategorized";
 
-      if (!acc[categoryName]) {
-        acc[categoryName] = [];
+      if (!categoryMap.has(categoryName)) {
+        categoryMap.set(categoryName, { name: categoryName, files: [] });
       }
 
-      acc[categoryName].push(file);
-      return acc;
-    }, {});
-  }, [imageFiles]);
+      categoryMap.get(categoryName)!.files.push(file);
+    });
+
+    return Array.from(categoryMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+    );
+  }, [recapFiles]);
+
+  const categoriesWithImages = useMemo(
+    () =>
+      categories.map((category) => ({
+        ...category,
+        imageFiles: category.files.filter(isImageFile),
+        pdfFiles: category.files.filter(isPdfFile),
+      })),
+    [categories, isImageFile, isPdfFile],
+  );
 
   const flatImages = useMemo(
-    () => Object.values(imagesByCategory).flat(),
-    [imagesByCategory],
+    () => categoriesWithImages.flatMap((category) => category.imageFiles),
+    [categoriesWithImages],
   );
 
   // export pdf
@@ -597,27 +624,30 @@ const RecapView = () => {
                 </span>
               </div>
 
-              {Object.keys(imagesByCategory).length === 0 ? (
+              {categoriesWithImages.length === 0 ? (
                 <div className="alert alert-info">
                   No images uploaded for this recap.
                 </div>
               ) : (
-                Object.entries(imagesByCategory).map(
-                  ([categoryName, files]) => (
-                    <div key={categoryName} className="space-y-4">
-                      {/* CATEGORY HEADER */}
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-lg font-semibold">
-                          {categoryName}
-                        </h3>
-                        <span className="badge badge-outline">
-                          {files.length}
-                        </span>
-                      </div>
+                categoriesWithImages.map((category) => (
+                  <div key={category.name} className="space-y-4">
+                    {/* CATEGORY HEADER */}
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-semibold">
+                        {category.name}
+                      </h3>
+                      <span className="badge badge-outline">
+                        {category.imageFiles.length}
+                      </span>
+                    </div>
 
-                      {/* CATEGORY GRID */}
+                    {category.imageFiles.length === 0 ? (
+                      <p className="text-sm text-base-content/60">
+                        No images in this category.
+                      </p>
+                    ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {files.map((file) => {
+                        {category.imageFiles.map((file) => {
                           const globalIndex = flatImages.findIndex(
                             (f) => f.id === file.id,
                           );
@@ -632,9 +662,45 @@ const RecapView = () => {
                           );
                         })}
                       </div>
-                    </div>
-                  ),
-                )
+                    )}
+
+                    {category.pdfFiles.length > 0 && (
+                      <div className="space-y-4">
+                        <h4 className="text-base font-semibold">PDFs</h4>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {category.pdfFiles.map((file) => (
+                            <div
+                              key={file.id}
+                              className="border border-base-200 rounded-xl p-4 space-y-3"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="font-medium">
+                                  {file.name || "PDF"}
+                                </p>
+                                <a
+                                  className="btn btn-outline btn-xs rounded-full"
+                                  href={file.file ?? ""}
+                                  download
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  Download
+                                </a>
+                              </div>
+                              <div className="w-full aspect-[4/3] rounded-lg overflow-hidden border border-base-300 bg-base-100">
+                                <iframe
+                                  src={file.file ?? ""}
+                                  title={file.name || "PDF preview"}
+                                  className="w-full h-full"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
               )}
             </div>
           </div>
