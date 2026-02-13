@@ -115,15 +115,14 @@ const RecapView = () => {
   );
 
   // categories ordered by fileRecapCategory (name)
+  type RecapFile = (typeof recapFiles)[number];
+
   const categories = useMemo(() => {
     if (recapFiles.length === 0) return [];
 
-    const categoryMap = new Map<
-      string,
-      { name: string; files: typeof recapFiles }
-    >();
+    const categoryMap = new Map<string, { name: string; files: RecapFile[] }>();
 
-    recapFiles.forEach((file) => {
+    recapFiles.forEach((file: RecapFile) => {
       const categoryName = file.fileRecapCategory?.name ?? "Uncategorized";
 
       if (!categoryMap.has(categoryName)) {
