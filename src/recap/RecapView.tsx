@@ -109,8 +109,7 @@ const RecapView = () => {
 
   const isPdfFile = useCallback(
     (file: (typeof recapFiles)[number]) =>
-      !!file.file &&
-      (file.fileTypeId === "1" || /\.pdf$/i.test(file.file)),
+      !!file.file && /\.pdf$/i.test(file.file),
     [],
   );
 
