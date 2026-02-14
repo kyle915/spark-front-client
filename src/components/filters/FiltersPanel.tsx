@@ -44,7 +44,6 @@ export default function FiltersPanel({
   onApplyFilters,
 }: FiltersPanelProps) {
   const tenantId = useAuthStore((state) => state.tenantId);
-  console.log("TENANT", tenantId)
   const [isOpen, setIsOpen] = useState(false);
   const { control, register, watch, setValue, handleSubmit } =
     useForm<FiltersFormValues>({
