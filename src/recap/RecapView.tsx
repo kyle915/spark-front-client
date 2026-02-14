@@ -5,7 +5,7 @@ import { GenerateRecapPdfMutation } from "@api/mutations/GenerateRecapPdfMutatio
 import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@api/mutations/__generated__/GenerateRecapPdfMutation.graphql";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, Link } from "react-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDate, formatLocalDateTime } from "@/utils";
 import {
   ArrowLeftIcon,
@@ -221,6 +221,47 @@ const RecapView = () => {
   // CONTROLS
   // ======================================================
   const closePreview = () => setPreviewIndex(null);
+  const goNext = useCallback(() => {
+    if (!flatImages.length) return;
+    setPreviewIndex((current) => {
+      if (current === null) return 0;
+      return (current + 1) % flatImages.length;
+    });
+  }, [flatImages.length]);
+
+  const goPrev = useCallback(() => {
+    if (!flatImages.length) return;
+    setPreviewIndex((current) => {
+      if (current === null) return flatImages.length - 1;
+      return (current - 1 + flatImages.length) % flatImages.length;
+    });
+  }, [flatImages.length]);
+
+  useEffect(() => {
+    if (previewIndex === null) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        goNext();
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        goPrev();
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closePreview();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [closePreview, goNext, goPrev, previewIndex]);
 
   // ======================================================
   // DATA NORMALIZATION FROM API
@@ -843,6 +884,8 @@ const RecapView = () => {
                 file: currentPreview.file ?? "",
               }}
               onClose={closePreview}
+              onNext={goNext}
+              onPrev={goPrev}
             />
           )}
         </div>
