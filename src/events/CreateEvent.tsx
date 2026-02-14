@@ -151,8 +151,6 @@ const CreateEventForm = ({ request }: FormProps) => {
     );
   };
 
-  console.log("REQUEST", request)
-
   /* ================= Mutation ================= */
   const runCreateEvent = (data: EventFormValues) => {
     if (!data.eventTypeId || !data.startTime || !data.endTime || !data.date) {
