@@ -79,7 +79,5 @@ export function usePublicTimeZones() {
       .finally(() => setLoading(false));
   }, []);
 
-  console.log("usePublicTimeZones", { timeZones, loading });
-
   return { timeZones, loading };
 }

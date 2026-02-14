@@ -117,6 +117,11 @@ export const RecapQuery = graphql`
         approved
         file
         fileTypeId
+        fileType {
+          id
+          name
+          extension
+        }
         fileRecapCategoryId
         fileRecapCategory {
           id
