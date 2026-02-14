@@ -94,23 +94,32 @@ const RecapView = () => {
 
   const recap = recapData?.recap ?? null;
 
-  console.log("RECAP", recap);
-
   const recapFiles = recap?.recapFiles ?? [];
 
-  const isImageFile = useCallback((file: (typeof recapFiles)[number]) => {
-    if (!file.file) return false;
-
-    return (
-      file.fileTypeId !== "1" && // omit PDF
-      !/\.(pdf|docx?|xlsx?|csv|txt)$/i.test(file.file)
-    );
-  }, []);
+  const getFileLabel = useCallback(
+    (file: (typeof recapFiles)[number]) =>
+      `${file.file ?? ""} ${file.name ?? ""}`,
+    [],
+  );
 
   const isPdfFile = useCallback(
-    (file: (typeof recapFiles)[number]) =>
-      !!file.file && /\.pdf$/i.test(file.file),
-    [],
+    (file: (typeof recapFiles)[number]) => {
+      if (!file.file) return false;
+      const extension = file.fileType?.extension?.toLowerCase() ?? "";
+      if (extension) return extension === "pdf";
+      return /\.pdf$/i.test(getFileLabel(file));
+    },
+    [getFileLabel],
+  );
+
+  const isImageFile = useCallback(
+    (file: (typeof recapFiles)[number]) => {
+      if (!file.file) return false;
+      const extension = file.fileType?.extension?.toLowerCase() ?? "";
+      if (extension) return extension === "img";
+      return !/\.(pdf|docx?|xlsx?|csv|txt)$/i.test(getFileLabel(file));
+    },
+    [getFileLabel],
   );
 
   // categories ordered by fileRecapCategory (name)
