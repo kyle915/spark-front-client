@@ -64,7 +64,7 @@ export function Step1Basic({
         label="Visit Date"
         placeholder="MM/DD/YYYY"
         control={control}
-        minToday={true}
+        minDaysFromToday={2}
       />
 
       <FormSelect
