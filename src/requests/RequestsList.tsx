@@ -23,6 +23,7 @@ import {
   CheckCircleIcon,
   PencilIcon,
   XCircleIcon,
+  CalendarDaysIcon,
   ClipboardDocumentListIcon,
   FunnelIcon as FilterIcon,
 } from "@heroicons/react/24/outline";
@@ -319,6 +320,7 @@ type RequestsListProps = {
 
 const RequestsList = ({ fixedFilters }: RequestsListProps) => {
   const { tenantId } = useAuthStore();
+  const navigate = useNavigate();
   const [retailerSearchTerm, setRetailerSearchTerm] = useState("");
   const [distributorSearchTerm, setDistributorSearchTerm] = useState("");
   const { control, watch, reset } = useForm({
@@ -353,17 +355,30 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
 
   return (
     <Layout>
-      <div className="mb-4 flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
-          <div className="p-2 rounded-xl bg-primary/10 text-primary">
-            {fixedFilters?.edited ? (
-              <PencilIcon className="w-8 h-8" />
-            ) : (
-              <ClipboardDocumentListIcon className="w-8 h-8" />
-            )}
+      <div className="mb-6 flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              {fixedFilters?.edited ? (
+                <PencilIcon className="w-8 h-8" />
+              ) : (
+                <ClipboardDocumentListIcon className="w-8 h-8" />
+              )}
+            </div>
+            <h1>{fixedFilters?.edited ? "Edited Requests" : "All Requests"}</h1>
           </div>
-          <h1>{fixedFilters?.edited ? "Edited Requests" : "All Requests"}</h1>
+
+          {/* BOTÓN CREAR EVENTO */}
+          <button
+            type="button"
+            onClick={() => navigate("/event/create")}
+            className="btn btn-primary btn-sm gap-2"
+          >
+            <CalendarDaysIcon className="w-4 h-4" />
+            Create Event
+          </button>
         </div>
+
         <p className="text-base-content/70">
           {fixedFilters?.edited
             ? "Manage and review all edited requests submitted within the system."

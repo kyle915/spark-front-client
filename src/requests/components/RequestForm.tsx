@@ -7,6 +7,7 @@ import FormAutocomplete from "@/shared/FormAutocomplete";
 import FormDatePicker from "@/shared/FormDatePicker";
 import EditableLocationMap from "@/shared/EditableLocationMap";
 import FormCheckbox from "@/shared/FormCheckbox";
+import FormTextarea from "@/shared/FormTextarea";
 import { ArrowLeftIcon, PencilIcon } from "@heroicons/react/24/solid";
 import { XCircleIcon } from "@heroicons/react/24/outline";
 import { SaveIcon } from "lucide-react";
@@ -60,6 +61,7 @@ export interface RequestFormValues {
   tableSize?: string;
   products?: string[];
   stateId?: string | null;
+  notes?: string | null;
 }
 
 interface CatalogItem {
@@ -177,6 +179,7 @@ export default function RequestForm({
     tableSize: "",
     products: [],
     stateId: null,
+    notes: "",
     ...defaultValues,
   };
 
@@ -204,6 +207,7 @@ export default function RequestForm({
   const distributorLocationId = watch("distributorLocationId");
   const retailerLocationId = watch("retailerLocationId");
   const selectedStateId = watch("stateId");
+  const notesValue = watch("notes") || "";
   const selectedEntitiesLocationId = useWatch({
     control,
     name: "entitiesLocationId",
@@ -434,6 +438,7 @@ export default function RequestForm({
         distributorId: defaultValues.distributorId ?? null,
         requestTypeId: defaultValues.requestTypeId ?? null,
         products: defaultValues.products ?? [],
+        notes: defaultValues.notes ?? "",
       });
     }
   }, [mode, defaultValues, reset]);
@@ -928,26 +933,57 @@ export default function RequestForm({
 
           {/* DETAILS (CREATE ONLY) */}
           {mode === "create" && (
-            <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
-              <p className="font-semibold text-lg">Details</p>
-              <div className="grid grid-cols-1 gap-4">
-                <FormCheckbox<RequestFormValues>
-                  name="isTableNeeded"
-                  control={control}
-                  label="Table Needed?"
-                />
-                {isTableNeeded && (
-                  <FormInputText<RequestFormValues>
-                    name="tableSize"
+            <>
+              <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+                <p className="font-semibold text-lg">Details</p>
+                <div className="grid grid-cols-1 gap-4">
+                  <FormCheckbox<RequestFormValues>
+                    name="isTableNeeded"
                     control={control}
-                    label="Table Size"
-                    placeholder="Enter table size"
-                    type="number"
-                    rules={{ required: "Table Size is required" }}
+                    label="Table Needed?"
                   />
-                )}
-              </div>
-            </section>
+                  {isTableNeeded && (
+                    <FormInputText<RequestFormValues>
+                      name="tableSize"
+                      control={control}
+                      label="Table Size"
+                      placeholder="Enter table size"
+                      type="number"
+                      rules={{ required: "Table Size is required" }}
+                    />
+                  )}
+                </div>
+              </section>
+
+              {/* NOTES */}
+              <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-lg">Notes</p>
+                  <span
+                    className={`text-xs ${
+                      notesValue.length > 280
+                        ? "text-error"
+                        : "text-base-content/60"
+                    }`}
+                  >
+                    {notesValue.length}/300
+                  </span>
+                </div>
+
+                <FormTextarea<RequestFormValues>
+                  name="notes"
+                  control={control}
+                  label="Additional Notes"
+                  placeholder="Enter any additional details or instructions..."
+                  rules={{
+                    maxLength: {
+                      value: 300,
+                      message: "Notes cannot exceed 300 characters",
+                    },
+                  }}
+                />
+              </section>
+            </>
           )}
 
           {/* PRODUCTS */}

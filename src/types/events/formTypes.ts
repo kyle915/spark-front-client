@@ -13,13 +13,13 @@ export interface RequestType {
   uuid?: string;
 }
 
-export interface CatalogItem {
+interface CatalogItem {
   id: string;
   name: string;
-  uuid?: string;
   email?: string | null;
   address?: string | null;
   storeContact?: string | null;
+  code?: string | null;
 }
 
 export interface RequestStoreManagerItem {
@@ -75,6 +75,8 @@ export interface EventFormValues {
   retailerLocationId?: string | null;
   coordinates?: number[] | null;
   timezoneId?: string | null;
+  stateId: string | null;
+  entitiesLocationId?: string | null;
 }
 
 // ------------------------------------
@@ -86,11 +88,13 @@ export interface EventFormProps {
   requests?: RequestType[];
   eventTypes: EventType[];
   timezones?: { id: string; name: string; code: string; offset: number }[];
-  tenantId?: string;
+  tenantId: string;
   requestId?: string;
   clients?: CatalogItem[];
   distributors?: CatalogItem[];
   retailers?: CatalogItem[];
+  states?: CatalogItem[];
+  onStateChange?: (stateId: string | null) => void;
   requestStoreManagers?: RequestStoreManagerItem[];
   locations?: Location[];
   requestContactInfo?: RequestContactInfo;
@@ -99,7 +103,7 @@ export interface EventFormProps {
   onSubmit: (data: EventFormValues) => void;
   defaultValues?: Partial<EventFormValues>;
   onRefetch?: (
-    key: "distributors" | "retailers" | "clients" | "requestStoreManagers"
+    key: "distributors" | "retailers" | "clients" | "requestStoreManagers",
   ) => void;
 }
 
