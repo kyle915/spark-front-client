@@ -261,6 +261,8 @@ const CreateEventWithoutRequestContent = () => {
                           enableContactSection
                           contactMode="manual"
                           onRefetch={refetch}
+                          showRequestField={true}
+                          showAssociateRequestToggle={true}
                         />
                       </div>
                     );

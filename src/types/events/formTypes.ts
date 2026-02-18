@@ -77,6 +77,9 @@ export interface EventFormValues {
   timezoneId?: string | null;
   stateId: string | null;
   entitiesLocationId?: string | null;
+  associateRequest?: boolean;
+  requestLoading?: boolean;
+  onRequestSearch?: (query: string) => void;
 }
 
 // ------------------------------------
@@ -92,6 +95,8 @@ export interface EventFormProps {
   requestId?: string;
   clients?: CatalogItem[];
   distributors?: CatalogItem[];
+  showRequestField?: boolean;
+  showAssociateRequestToggle?: boolean;
   retailers?: CatalogItem[];
   states?: CatalogItem[];
   onStateChange?: (stateId: string | null) => void;

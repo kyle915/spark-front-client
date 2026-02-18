@@ -36,6 +36,9 @@ import type { CreateRequestStoreManagerMutation as CreateRequestStoreManagerMuta
 import { CreateDistributorMutation } from "@api/mutations/CreateDistributorMutation";
 import type { CreateDistributorMutation as CreateDistributorMutationType } from "@api/mutations/__generated__/CreateDistributorMutation.graphql";
 
+import { RequestsQuery } from "@api/queries/RequestsQuery";
+import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+
 import { CreateRetailerMutation } from "@api/mutations/CreateRetailerMutation";
 import type { CreateRetailerMutation as CreateRetailerMutationType } from "@api/mutations/__generated__/CreateRetailerMutation.graphql";
 import { useAutoTimezoneFromCoordinates } from "@/requests/hooks/useAutoTimezoneFromCoordinates";
@@ -60,6 +63,8 @@ export default function EventForm({
   distributors = [],
   timezones = [],
   retailers = [],
+  showRequestField = false,
+  showAssociateRequestToggle = true,
   states = [],
   requestStoreManagers = [],
   requestContactInfo,
@@ -105,6 +110,62 @@ EventFormProps) {
   const [loadingLocations, setLoadingLocations] = useState(false);
   const { showAlert } = useAlertStore();
 
+  const [requestSearchTerm, setRequestSearchTerm] = useState("");
+  const [requests, setRequests] = useState<
+    Array<{ id: string; title: string }>
+  >([]);
+  const [requestLoading, setRequestLoading] = useState(false);
+
+  useEffect(() => {
+    if (!tenantId || !showRequestField) {
+      setRequests([]);
+      return;
+    }
+
+    const q = requestSearchTerm.trim();
+    setRequestLoading(true);
+
+    const subscription = fetchQuery<RequestsQueryType>(
+      environment,
+      RequestsQuery,
+      {
+        first: 50,
+        q: q || null,
+        filters: { tenantId },
+      },
+      { fetchPolicy: "network-only" },
+    ).subscribe({
+      next: (response) => {
+        const parsed =
+          response.requests?.edges?.flatMap((edge) =>
+            edge?.node ? [{ id: edge.node.id, title: edge.node.name }] : [],
+          ) ?? [];
+
+        setRequests(parsed);
+      },
+      error: (err: unknown) => {
+        const error = err instanceof Error ? err : new Error(String(err));
+        console.error("Error fetching requests:", error);
+        setRequests([]);
+        setRequestLoading(false);
+      },
+      complete: () => setRequestLoading(false),
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [tenantId, requestSearchTerm, showRequestField]);
+
+  const requestOptions = useMemo(
+    () =>
+      requests.map((request) => ({
+        value: request.id,
+        label: request.title,
+      })),
+    [requests],
+  );
+
   // ========================
   // INITIALIZE FORM AND FORM STATE
   // ========================
@@ -120,6 +181,7 @@ EventFormProps) {
   // ========================
   const selectedTimezoneId = watch("timezoneId");
   const selectedCoordinates = watch("coordinates");
+  const associateRequest = watch("associateRequest");
 
   useAutoTimezoneFromCoordinates<EventFormValues, "timezoneId">({
     coordinates: selectedCoordinates,
@@ -129,6 +191,15 @@ EventFormProps) {
     timezoneFieldName: "timezoneId",
     initialFromBackend: Boolean(defaultValues?.timezoneId),
   });
+
+  useEffect(() => {
+    if (!showRequestField) return;
+    if (associateRequest) return;
+    setValue("requestId", null, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [associateRequest, setValue, showRequestField]);
 
   // ========================
   // WATCH FOR SECTION ENTITIES
@@ -473,6 +544,48 @@ EventFormProps) {
 
           {/* ================= BASIC INFORMATION ================= */}
           <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+            {showRequestField ? (
+              <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-lg">Associate Request</p>
+                    <p className="text-sm text-base-content/60">
+                      Link this event to an existing request.
+                    </p>
+                  </div>
+
+                  {showAssociateRequestToggle && (
+                    <FormCheckbox<EventFormValues>
+                      name="associateRequest"
+                      control={control}
+                      label="Enable"
+                    />
+                  )}
+                </div>
+
+                <div
+                  className={`transition-all duration-300 ${
+                    showAssociateRequestToggle && !associateRequest
+                      ? "opacity-50 pointer-events-none"
+                      : "opacity-100"
+                  }`}
+                >
+                  <FormAutocomplete<EventFormValues>
+                    name="requestId"
+                    control={control}
+                    label="Request"
+                    placeholder="Search request..."
+                    options={requestOptions}
+                    loading={requestLoading}
+                    onSearch={setRequestSearchTerm}
+                    disabled={
+                      showAssociateRequestToggle ? !associateRequest : false
+                    }
+                  />
+                </div>
+              </section>
+            ) : null}
+
             <div className="flex items-center justify-between">
               <p className="font-semibold text-lg">Basic Information</p>
               <span className="text-xs text-base-content/60">

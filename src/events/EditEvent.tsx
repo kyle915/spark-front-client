@@ -16,7 +16,11 @@ import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import { useAlertStore } from "@/store/alertStore";
 import { dateFormat } from "@/public/form/utils/toDate";
-import { buildDateTimeWithOffset, extractDatePart, extractTimePart } from "@/utils";
+import {
+  buildDateTimeWithOffset,
+  extractDatePart,
+  extractTimePart,
+} from "@/utils";
 
 type EditEventContentProps = {
   uuid: string;
@@ -38,13 +42,13 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
 
   const eventTypeFilters = useMemo(
     () => (event?.tenantId ? { tenantId: event.tenantId } : undefined),
-    [event?.tenantId]
+    [event?.tenantId],
   );
 
   const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
     TimezonesQuery,
     {},
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const timeZones = timezonesData.timezones.edges.map((e) => e.node);
@@ -141,7 +145,15 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
   return (
     <>
       <CatalogsProvider eventTypes eventTypesFilters={eventTypeFilters}>
-        {({ eventTypes, loading, errors, refetch }) => {
+        {({
+          eventTypes,
+          loading,
+          errors,
+          refetch,
+          distributors,
+          retailers,
+          requestStoreManagers,
+        }) => {
           if (loading.eventTypes) {
             return <Loading />;
           }
@@ -158,11 +170,20 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
             <EventForm
               mode="edit"
               eventTypes={eventTypes}
+              tenantId={event.tenantId ?? ""}
+              distributors={distributors}
+              retailers={retailers}
               timezones={timeZones}
+              requestStoreManagers={requestStoreManagers}
               onSubmit={handleSubmit}
+              // states={states}
               defaultValues={defaultValues}
+              enableContactSection
+              contactMode="manual"
               locations={locations}
               onRefetch={refetch}
+              showRequestField={true}
+              showAssociateRequestToggle={true}
             />
           );
         }}
