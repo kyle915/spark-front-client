@@ -173,6 +173,13 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
     [navigate],
   );
 
+  const handleCreateEvent = useCallback(
+    (request: RequestRow) => {
+      navigate(`/event/create/${request.uuid}`);
+    },
+    [navigate],
+  );
+
   const handleEditRequest = useCallback(
     (request: RequestRow) => {
       navigate(`/request/edit/${request.uuid}`);
@@ -219,8 +226,10 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
     (request: RequestRow) => {
       const statusSlug = request.status?.slug?.toLowerCase();
       const statusName = request.status?.name?.toLowerCase();
-      const isApproved = statusName === "approved" || statusName === "aprobado";
+      const isApproved = statusName === "approved";
       const isDeclined = statusSlug === "decline";
+      const hasEvent = Boolean(request.event?.id);
+      const canCreateEvent = isApproved && !hasEvent;
 
       return (
         <div className="flex gap-2">
@@ -238,6 +247,15 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
             onClick={() => handleEditRequest(request)}
           >
             <PencilIcon className="w-5 h-5" />
+          </button>
+
+          <button
+            type="button"
+            className={`btn btn-xs btn-outline btn-info tooltip ${!canCreateEvent && "disabled:text-info/50 hover:text-white"}`}
+            data-tip="Create Event from Request"
+            onClick={() => handleCreateEvent(request)}
+          >
+            <CalendarDaysIcon className="w-5 h-5" />
           </button>
 
           <button
@@ -265,6 +283,7 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
     [
       handleApproveRequest,
       handleViewRequest,
+      handleCreateEvent,
       handleEditRequest,
       handleDeclineClick,
       isDeclineInFlight,
