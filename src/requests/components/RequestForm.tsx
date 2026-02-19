@@ -111,9 +111,8 @@ interface RequestFormProps {
   tenantId: string;
   requestId?: string | null;
   requestStoreManagers?: StoreManagerItem[];
-  locations?: CatalogItem[];
+  // locations?: CatalogItem[];
   states?: CatalogItem[];
-  onStateChange?: (stateId: string | null) => void;
 
   onRefetch?: (
     key: "distributors" | "retailers" | "requestStoreManagers",
@@ -156,7 +155,6 @@ export default function RequestForm({
   contactMode,
   requestContactInfo,
   states = [],
-  onStateChange,
 }: RequestFormProps) {
   const safeDefaultValues: RequestFormValues = {
     name: "",
@@ -571,10 +569,6 @@ export default function RequestForm({
       })),
     [states],
   );
-
-  useEffect(() => {
-    onStateChange?.(selectedStateId ?? null);
-  }, [onStateChange, selectedStateId]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full">
