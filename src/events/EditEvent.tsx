@@ -10,8 +10,6 @@ import type { EventUuidQuery as EventUuidQueryType } from "@/api/queries/__gener
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { UpdateEventMutation } from "@/api/mutations/UpdateEventMutation";
 import type { UpdateEventMutation as UpdateEventMutationType } from "@/api/mutations/__generated__/UpdateEventMutation.graphql";
-import { LocationsQuery } from "@/api/queries/LocationsQuery";
-import type { LocationsQuery as LocationsQueryType } from "@/api/queries/__generated__/LocationsQuery.graphql";
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import { StatesQuery } from "@/api/queries/StatesQuery";
@@ -41,11 +39,6 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
   const data = useLazyLoadQuery<EventUuidQueryType>(EventUuidQuery, { uuid });
   const event = data.event;
 
-  const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
-    filters: { tenantId: event?.tenantId },
-  });
-  const locations = locationsData.locations.edges.map((e) => e.node);
-
   const [commitUpdateEvent] =
     useMutation<UpdateEventMutationType>(UpdateEventMutation);
   const { showAlert } = useAlertStore();
@@ -58,7 +51,7 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
   const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
     TimezonesQuery,
     {},
-    { fetchPolicy: "store-and-network" },
+    { fetchPolicy: "store-or-network" },
   );
 
   const timeZones = timezonesData.timezones.edges.map((e) => e.node);
@@ -66,7 +59,7 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
   const statesData = useLazyLoadQuery<StatesQueryType>(
     StatesQuery,
     {},
-    { fetchPolicy: "store-and-network" },
+    { fetchPolicy: "store-or-network" },
   );
 
   const states = statesData.states?.edges.map((e) => e.node) || [];
@@ -107,7 +100,6 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
           timezoneId: formData.timezoneId,
           coordinates: formData.coordinates ?? [],
           address: formData.address,
-
           distributorId: formData.distributorId ?? null,
           retailerId: formData.retailerId ?? null,
           notes: formData.notes ?? "",
@@ -229,7 +221,6 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
               defaultValues={defaultValues}
               enableContactSection
               contactMode="manual"
-              locations={locations}
               onRefetch={refetch}
               showRequestField={true}
               showAssociateRequestToggle={true}

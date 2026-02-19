@@ -73,11 +73,6 @@ EventFormProps) {
   const renderCountRef = useRef(0);
   renderCountRef.current++;
 
-  console.log(
-    `%c[EventForm] render #${renderCountRef.current}`,
-    "color: orange; font-weight: bold;",
-  );
-
   const safeDefaultValues: EventFormValues = {
     name: "",
     address: "",
