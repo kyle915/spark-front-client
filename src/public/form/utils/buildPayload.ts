@@ -31,11 +31,7 @@ export function buildPayload(
     date: normalizedDate,
     startTime:
       dateValue && values.start_time
-        ? buildDateTimeWithOffset(
-            dateValue,
-            values.start_time,
-            offsetMinutes,
-          )
+        ? buildDateTimeWithOffset(dateValue, values.start_time, offsetMinutes)
         : "",
     endTime:
       dateValue && values.end_time
@@ -58,6 +54,7 @@ export function buildPayload(
     storeManagerPhone: values.storeManagerContact,
     requestTypeId: values.request_type,
     timezoneId: values.timeZoneId,
+    notes: values.notes ?? "",
     products: values.skus.map((id) => ({
       productId: id,
     })),
