@@ -22,6 +22,40 @@ export const EventUuidQuery = graphql`
         code
         offset
       }
+      distributor {
+        __typename
+        id
+        uuid
+        name
+        location {
+          id
+          name
+          code
+          zip
+          state {
+            id
+            name
+            code
+          }
+        }
+      }
+      retailer {
+        __typename
+        id
+        uuid
+        name
+        location {
+          id
+          name
+          code
+          zip
+          state {
+            id
+            name
+            code
+          }
+        }
+      }
       request {
         __typename
         id

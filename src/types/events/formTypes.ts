@@ -63,9 +63,6 @@ export interface EventFormValues {
   retailerAddress?: string | null;
   retailerStoreContact?: string | null;
   retailerId?: string | null;
-  storeManagerId?: string | null;
-  storeManagerName?: string | null;
-  storeManagerPhone?: string | null;
   startTime?: string | null;
   endTime?: string | null;
   address: string;
@@ -92,7 +89,6 @@ export interface EventFormProps {
   eventTypes: EventType[];
   timezones?: { id: string; name: string; code: string; offset: number }[];
   tenantId: string;
-  requestId?: string;
   clients?: CatalogItem[];
   distributors?: CatalogItem[];
   showRequestField?: boolean;
@@ -100,16 +96,13 @@ export interface EventFormProps {
   retailers?: CatalogItem[];
   states?: CatalogItem[];
   onStateChange?: (stateId: string | null) => void;
-  requestStoreManagers?: RequestStoreManagerItem[];
   locations?: Location[];
   requestContactInfo?: RequestContactInfo;
   enableContactSection?: boolean;
   contactMode?: "request" | "manual";
   onSubmit: (data: EventFormValues) => void;
   defaultValues?: Partial<EventFormValues>;
-  onRefetch?: (
-    key: "distributors" | "retailers" | "clients" | "requestStoreManagers",
-  ) => void;
+  onRefetch?: (key: "distributors" | "retailers" | "clients") => void;
 }
 
 export interface RequestContactInfo {

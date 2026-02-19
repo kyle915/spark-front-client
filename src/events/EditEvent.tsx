@@ -1,4 +1,4 @@
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useRef } from "react";
 import Layout from "@/layout/Layout";
 import { useNavigate, useParams } from "react-router";
 import Loading from "@/shared/Loading";
@@ -14,6 +14,8 @@ import { LocationsQuery } from "@/api/queries/LocationsQuery";
 import type { LocationsQuery as LocationsQueryType } from "@/api/queries/__generated__/LocationsQuery.graphql";
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
+import { StatesQuery } from "@/api/queries/StatesQuery";
+import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/StatesQuery.graphql";
 import { useAlertStore } from "@/store/alertStore";
 import { dateFormat } from "@/public/form/utils/toDate";
 import {
@@ -27,6 +29,14 @@ type EditEventContentProps = {
 };
 
 const EditEventContent = ({ uuid }: EditEventContentProps) => {
+  const renderCountRef = useRef(0);
+  renderCountRef.current++;
+
+  console.log(
+    `%c[EditEventContent] render #${renderCountRef.current}`,
+    "color: cyan; font-weight: bold;",
+  );
+
   const navigate = useNavigate();
   const data = useLazyLoadQuery<EventUuidQueryType>(EventUuidQuery, { uuid });
   const event = data.event;
@@ -52,6 +62,14 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
   );
 
   const timeZones = timezonesData.timezones.edges.map((e) => e.node);
+
+  const statesData = useLazyLoadQuery<StatesQueryType>(
+    StatesQuery,
+    {},
+    { fetchPolicy: "store-and-network" },
+  );
+
+  const states = statesData.states?.edges.map((e) => e.node) || [];
 
   if (!event) {
     return (
@@ -83,10 +101,15 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
           id: event.id,
           name: formData.name,
           eventTypeId: formData.eventTypeId,
-          requestId: event.request?.id ?? "",
+          requestId: formData.associateRequest
+            ? (formData.requestId ?? event.request?.id ?? "")
+            : null,
           timezoneId: formData.timezoneId,
           coordinates: formData.coordinates ?? [],
           address: formData.address,
+
+          distributorId: formData.distributorId ?? null,
+          retailerId: formData.retailerId ?? null,
           notes: formData.notes ?? "",
           isNational: formData.isNational ?? false,
           startTime:
@@ -140,6 +163,34 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
     isNational: event.isNational ?? false,
     coordinates: event.coordinates?.map((coord) => coord) ?? undefined,
     eventTypeId: event.eventType?.id,
+    requestId: event.request?.id ?? undefined,
+    associateRequest: Boolean(event.request),
+    distributorId:
+      event.distributor?.id ?? event.request?.distributor?.id ?? undefined,
+    retailerId: event.retailer?.id ?? event.request?.retailer?.id ?? undefined,
+    stateId:
+      event.retailer?.location?.state?.id ??
+      event.distributor?.location?.state?.id ??
+      event.request?.retailer?.location?.state?.id ??
+      event.request?.distributor?.location?.state?.id ??
+      undefined,
+
+    entitiesLocationId:
+      event.retailer?.location?.id ??
+      event.distributor?.location?.id ??
+      event.request?.retailer?.location?.id ??
+      event.request?.distributor?.location?.id ??
+      undefined,
+
+    distributorLocationId:
+      event.distributor?.location?.id ??
+      event.request?.distributor?.location?.id ??
+      undefined,
+
+    retailerLocationId:
+      event.retailer?.location?.id ??
+      event.request?.retailer?.location?.id ??
+      undefined,
   };
 
   return (
@@ -152,7 +203,6 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
           refetch,
           distributors,
           retailers,
-          requestStoreManagers,
         }) => {
           if (loading.eventTypes) {
             return <Loading />;
@@ -174,9 +224,8 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
               distributors={distributors}
               retailers={retailers}
               timezones={timeZones}
-              requestStoreManagers={requestStoreManagers}
               onSubmit={handleSubmit}
-              // states={states}
+              states={states}
               defaultValues={defaultValues}
               enableContactSection
               contactMode="manual"
