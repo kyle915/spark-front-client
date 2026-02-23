@@ -280,17 +280,14 @@ const RecapView = () => {
   const statusLabel = recap.approved ? "Approved" : "Pending";
 
   // Sales
-  const productsSold = recap.productsSold ?? 0;
   const totalCansSold = recap.totalCansSold ?? 0;
   const totalPacksSold = recap.totalPacksSold ?? 0;
-  const totalEarnings = recap.totalEarnings ?? 0;
+  const productsSold = totalCansSold + totalPacksSold;
 
   // Flags
   const hasSalesData =
-    recap.productsSold !== null ||
     recap.totalCansSold !== null ||
-    recap.totalPacksSold !== null ||
-    recap.totalEarnings !== null;
+    recap.totalPacksSold !== null;
 
   const currentPreview =
     flatImages && previewIndex !== null && flatImages[previewIndex];
@@ -513,18 +510,12 @@ const RecapView = () => {
                       <span className="font-medium">{productsSold}</span>
                     </div>
                     <div className="flex justify-between text-sm border rounded-lg p-3">
-                      <span>Total Cans Sold</span>
+                      <span>Single Cans Sold</span>
                       <span className="font-medium">{totalCansSold}</span>
                     </div>
                     <div className="flex justify-between text-sm border rounded-lg p-3">
-                      <span>Total Packs Sold</span>
+                      <span>Multi Packs Sold</span>
                       <span className="font-medium">{totalPacksSold}</span>
-                    </div>
-                    <div className="flex justify-between text-sm border rounded-lg p-3">
-                      <span>Total Earnings</span>
-                      <span className="font-medium">
-                        ${totalEarnings.toFixed(2)}
-                      </span>
                     </div>
                     {accountSpend !== null ? (
                       <div className="flex justify-between text-sm border rounded-lg p-3">
