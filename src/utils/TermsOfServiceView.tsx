@@ -11,7 +11,7 @@ const groupArrayContent = (items: string[]): GroupedItem[] => {
   const grouped: GroupedItem[] = [];
   let currentSubsection: { title: string; items: string[] } | null = null;
 
-  items.forEach((item) => {
+  for (const item of items) {
     if (subsectionPattern.test(item)) {
       if (currentSubsection) {
         grouped.push({
@@ -22,16 +22,16 @@ const groupArrayContent = (items: string[]): GroupedItem[] => {
       }
 
       currentSubsection = { title: item, items: [] };
-      return;
+      continue;
     }
 
     if (currentSubsection) {
       currentSubsection.items.push(item);
-      return;
+      continue;
     }
 
     grouped.push({ type: "item", text: item });
-  });
+  }
 
   if (currentSubsection) {
     grouped.push({

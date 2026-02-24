@@ -118,7 +118,7 @@ const Login = () => {
               />
             )}
 
-            {/* <div className="text-center text-sm mt-6">
+            <div className="text-center text-sm mt-6">
               {isLogin ? (
                 <>
                   Not registered yet?{" "}
@@ -143,7 +143,7 @@ const Login = () => {
                 </>
               )}
 
-            </div> */}
+            </div>
           
             <div className="mt-10 text-center space-y-2">
               <p className="text-xs text-base-content/40">
