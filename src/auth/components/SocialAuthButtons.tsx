@@ -5,7 +5,7 @@ const SocialAuthButtons = () => (
         <div className="flex flex-col gap-4 w-full max-w-sm mx-auto mt-10">
             <GoogleButton isLogin />
         </div>
-        <button
+        {/* <button
             type="button"
             className="btn btn-neutral w-full rounded-full py-3 flex items-center justify-center gap-2"
         >
@@ -16,7 +16,7 @@ const SocialAuthButtons = () => (
                 />
             </svg>
             "Sign in with Apple"
-        </button>
+        </button> */}
     </>
 )
 

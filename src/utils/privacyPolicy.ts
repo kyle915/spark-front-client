@@ -1,142 +1,268 @@
 export const privacyPolicy = {
-  title: "Privacy Policy",
-  platform: "Spark",
-  company: "Ignite Productions",
-  website: "https://www.igniteproductions.co",
+  title: "PRIVACY POLICY",
+  platform: "SPARK BY IGNITE",
+  company: "Ignite Productions LLC",
+  website: "www.igniteproductions.co",
+  effectiveDate: "February 23, 2026",
+  lastUpdated: "February 23, 2026",
   introduction:
-    'Spark is a digital platform operated by Ignite Productions, a veteran-owned event staffing agency specializing in brand ambassador services and marketing activations across the United States. We respect your privacy and are committed to protecting the personal information you share with us through this platform and related websites. This Privacy Policy explains how information is collected, used, disclosed, and safeguarded when you access or interact with Spark.',
+    'Ignite Productions LLC ("Ignite," "we," "us," or "our"), a Nevada limited liability company and Veteran-Owned Small Business (VOSB), operates Spark by Ignite ("Spark" or the "Platform"), a proprietary field marketing operations and reporting system.',
 
   sections: [
     {
-      id: "information_we_collect",
-      title: "Information We Collect",
-      content: {
-        personal_information: [
-          "Full name",
-          "Email address",
-          "Phone number",
-          "Company name",
-          "Profile, staffing, availability, or application-related information"
-        ],
-        automatically_collected_information: [
-          "IP address",
-          "Device and browser information",
-          "Operating system",
-          "Pages viewed and interaction data"
-        ]
-      }
-    },
-
-    {
-      id: "legal_basis_gdpr",
-      title: "Legal Basis for Processing (GDPR)",
+      id: "introduction",
+      title: "1. Introduction",
       content: [
-        "Performance of a contract or to take steps prior to entering into a contract",
-        "Legitimate business interests related to staffing operations and platform improvement",
-        "Compliance with legal obligations",
-        "Consent, where explicitly obtained"
-      ]
+        "This Privacy Policy explains how we collect, use, store, process, disclose, and protect personal information in connection with the Platform.",
+        "By creating an account, accessing, or using Spark, you consent to the practices described in this Privacy Policy.",
+        "This Privacy Policy is incorporated by reference into the Spark by Ignite Terms of Service.",
+      ],
     },
-
+    {
+      id: "information_we_collect",
+      title: "2. Information We Collect",
+      content: {
+        "Spark is designed for brand ambassadors, field marketing personnel, independent contractors, and authorized client users. We collect the following categories of information": [],
+        "A. Personal Identification Information": [
+          "First Name",
+          "Last Name",
+          "Phone Number",
+          "Residential or Mailing Address",
+          "State",
+          "Market (user-input field)",
+          "T-Shirt Size",
+        ],
+        "B. Precise Location Information (GPS)": [
+          "When users engage the clock-in or clock-out functionality, and throughout scheduled activation windows, Spark collects precise GPS coordinates from the user's mobile device.",
+          "Location data is collected:",
+          "At clock-in",
+          "Periodically throughout the scheduled activation window",
+          "At clock-out",
+          "For up to fifteen (15) minutes after the scheduled activation end time if the user does not clock out",
+          "Location data is not collected outside of scheduled activation windows.",
+          "Spark does not engage in continuous background surveillance beyond the active activation verification window described above.",
+        ],
+        "C. Workforce & Assignment Data": [
+          "Scheduled activations and assignments",
+          "Clock-in and clock-out timestamps",
+          "Activation completion status",
+          "Performance metrics and KPIs",
+          "Post-event recaps and proof-of-performance materials",
+          "Photos and videos uploaded through the Platform",
+        ],
+        "D. Technical & Device Data": [
+          "IP address",
+          "Device type and identifiers",
+          "Operating system",
+          "App usage logs and session data",
+          "Browser type (for web-based access)",
+        ],
+        "E. Communications": [
+          "Support requests and correspondence",
+          "In-app notifications and messages",
+        ],
+      },
+    },
     {
       id: "how_we_use_information",
-      title: "How We Use Your Information",
+      title: "3. How We Use Information",
       content: [
-        "Operate, manage, and maintain the Spark platform",
-        "Respond to inquiries related to event staffing, brand ambassador services, and marketing activations",
-        "Evaluate, manage, and coordinate staffing applications, availability, and assignments",
-        "Communicate regarding campaigns, schedules, confirmations, payments, or service updates",
-        "Improve platform functionality, services, and user experience",
-        "Analyze usage trends and platform performance",
-        "Comply with legal, contractual, and regulatory obligations"
-      ]
+        "Create and manage user accounts",
+        "Assign markets, campaigns, and activation opportunities",
+        "Coordinate staffing and scheduling",
+        "Verify on-site presence at assigned activation locations",
+        "Prevent timekeeping fraud and ensure compensation accuracy",
+        "Generate operational dashboards, reports, and analytics",
+        "Provide real-time field reporting to clients and management",
+        "Ensure compliance with contractual, venue, and regulatory requirements",
+        "Improve Platform functionality and user experience",
+        "Respond to support requests",
+        "Enforce our Terms of Service and this Privacy Policy",
+        "Comply with legal obligations",
+      ],
     },
-
     {
-      id: "cookies",
-      title: "Cookies and Tracking Technologies",
-      content:
-        "Spark may use cookies and similar tracking technologies to ensure proper platform functionality, enhance user experience, and analyze traffic. Where required by law, cookie consent will be obtained. You may disable cookies through your browser settings; however, some features of the platform may not function as intended."
-    },
-
-    {
-      id: "disclosure",
-      title: "Disclosure of Your Information",
+      id: "gps_location_tracking_disclosure",
+      title: "4. GPS & Location Tracking Disclosure",
       content: [
-        "We do not sell personal information",
-        "We do not share personal information for cross-context behavioral advertising",
-        "We may share information with Ignite Productions and its clients strictly as necessary to deliver event staffing and marketing activation services",
-        "We may share information with trusted vendors or service providers under confidentiality obligations",
-        "We may disclose information when required by law, regulation, subpoena, or legal process",
-        "We may disclose information to protect the rights, property, or safety of Spark, Ignite Productions, users, clients, or others"
-      ]
+        "Spark collects precise GPS coordinates during scheduled activation windows for workforce verification, fraud prevention, compensation accuracy, client reporting, and compliance documentation.",
+        "We do NOT:",
+        "Continuously track users outside of scheduled activation windows",
+        "Track users when the app is not in active use during a scheduled activation",
+        "Sell or monetize precise geolocation data",
+        "If a user fails to clock out, GPS collection will automatically disable fifteen (15) minutes after the scheduled activation end time.",
+        "Enabling location services is required to use the Platform and participate in assignments. Users who decline location permissions will be unable to use timekeeping features and may be ineligible for assignments requiring on-site verification.",
+        "Users may disable location permissions through their device settings at any time; however, doing so will prevent use of the clock-in/clock-out functionality.",
+      ],
     },
-
+    {
+      id: "legal_basis_gdpr",
+      title: "5. Legal Basis for Processing (GDPR)",
+      content: [
+        "Where applicable under the General Data Protection Regulation, processing is based on:",
+        "Performance of a contract: Processing necessary to fulfill our contractual obligations.",
+        "Legitimate business interests: Workforce management, fraud prevention, operational integrity, and Platform improvement.",
+        "Legal compliance: Processing required to comply with applicable laws and regulations.",
+        "Consent: For location tracking and other processing where consent is required by applicable law.",
+      ],
+    },
+    {
+      id: "cookies_and_tracking_technologies",
+      title: "6. Cookies & Tracking Technologies",
+      content: [
+        "Spark uses cookies and similar tracking technologies to:",
+        "Maintain secure login sessions and authentication",
+        "Improve Platform functionality and performance",
+        "Analyze usage patterns and optimize user experience",
+        "Enhance security and reliability",
+        "Users may adjust cookie settings through browser or device controls; however, certain Platform features may not function properly without cookies.",
+      ],
+    },
+    {
+      id: "data_sharing",
+      title: "7. Data Sharing",
+      content: [
+        "We may share personal information with the following categories of recipients:",
+        "Cloud hosting and infrastructure providers: For Platform operation and data storage.",
+        "Payroll and workforce management systems: For compensation processing.",
+        "Analytics providers: For Platform performance monitoring and improvement.",
+        "Professional advisors: Legal counsel, accountants, and consultants as necessary.",
+        "Clients: Activation-related performance data and reporting as required by service agreements.",
+        "Government authorities: If required by law, regulation, legal process, or enforceable governmental request.",
+        "All third-party service providers are contractually obligated to protect personal information.",
+        "Ignite does not sell personal information.",
+      ],
+    },
+    {
+      id: "aggregated_and_de_identified_data",
+      title: "8. Aggregated & De-Identified Data",
+      content: [
+        "Ignite may aggregate, anonymize, or de-identify data collected through the Platform.",
+        "Ignite may use, license, distribute, or commercialize such aggregated data for any lawful business purpose, including:",
+        "Industry benchmarking",
+        "Market research and analytics products",
+        "Performance trend analysis",
+        "Product development and improvement",
+        "Case studies and marketing materials (unless otherwise agreed in writing)",
+        "Aggregated data will not identify any individual person.",
+        "Ignite does not sell personal information.",
+      ],
+    },
     {
       id: "data_retention",
-      title: "Data Retention",
-      content:
-        "Personal information is retained only for as long as necessary to fulfill the purposes outlined in this Privacy Policy, unless a longer retention period is required or permitted by law."
-    },
-
-    {
-      id: "data_security",
-      title: "Data Security",
-      content:
-        "We implement reasonable administrative, technical, and physical safeguards designed to protect your personal information. However, no method of transmission over the Internet or electronic storage is completely secure."
-    },
-
-    {
-      id: "gdpr_rights",
-      title: "Your Rights Under GDPR",
+      title: "9. Data Retention",
       content: [
-        "Right to access your personal data",
-        "Right to rectification of inaccurate data",
-        "Right to erasure (right to be forgotten)",
-        "Right to restriction of processing",
-        "Right to data portability",
-        "Right to object to processing",
-        "Right to withdraw consent at any time",
-        "Right to lodge a complaint with a supervisory authority"
-      ]
+        "We retain personal information:",
+        "For the duration of the user's active relationship with Ignite",
+        "As required by applicable payroll, tax, labor, and employment laws",
+        "As necessary for compliance, audit, and dispute resolution purposes",
+        "As needed to enforce our agreements and protect our legal rights",
+        "Location data and workforce records may be retained for audit, compliance, and legal defense purposes for a period consistent with applicable statute of limitations and regulatory requirements.",
+        "Upon termination of the user relationship, data may be deleted or anonymized in accordance with our internal retention policies, subject to legal and regulatory obligations.",
+      ],
     },
-
+    {
+      id: "data_subject_requests",
+      title: "10. Data Subject Requests",
+      content: [
+        "Users may request access to, correction of, or deletion of their personal information by contacting us at the email address below.",
+        "We may require identity verification before fulfilling requests.",
+        "We may retain certain information as necessary to comply with legal obligations, payroll requirements, tax obligations, dispute resolution, fraud prevention, and legitimate business purposes.",
+        "Requests will be processed in accordance with applicable law and responded to within the timeframes required by the relevant jurisdiction.",
+      ],
+    },
+    {
+      id: "security_measures",
+      title: "11. Security Measures",
+      content: [
+        "We implement commercially reasonable administrative, technical, and physical safeguards designed to protect personal information, including precise location data, from unauthorized access, use, alteration, and disclosure.",
+        "However, no electronic transmission or storage system can be guaranteed to be 100% secure.",
+        "Ignite does not guarantee absolute security of data.",
+        "In the event of a data security incident involving personal information, Ignite will provide notice as required by applicable law.",
+      ],
+    },
     {
       id: "california_privacy_rights",
-      title: "California Privacy Rights (CCPA / CPRA)",
+      title: "12. California Privacy Rights (CCPA / CPRA)",
       content: [
-        "Right to know what personal information is collected, used, disclosed, or shared",
-        "Right to request deletion of personal information",
-        "Right to correct inaccurate personal information",
-        "Right to opt out of the sale or sharing of personal information (if applicable)",
-        "Right to limit the use of sensitive personal information (if applicable)",
-        "Right to not receive discriminatory treatment for exercising privacy rights",
-        "Requests will be responded to within 45 days, as required by law"
-      ]
+        "California residents have the right to:",
+        "Know what categories of personal information are collected and for what purpose",
+        "Request access to specific personal information collected",
+        "Request correction of inaccurate personal information",
+        "Request deletion of personal information (subject to legal exceptions)",
+        "Opt out of the sale of personal information",
+        "Ignite does not sell personal information.",
+        "Under the CCPA/CPRA, precise geolocation is classified as sensitive personal information.",
+        "Ignite collects precise geolocation solely for the business purposes described in this Privacy Policy.",
+        "To exercise your California privacy rights, contact us at the email address provided below.",
+      ],
     },
-
     {
-      id: "third_party_links",
-      title: "Third-Party Links",
+      id: "additional_state_privacy_rights",
+      title: "13. Additional State Privacy Rights",
+      content: [
+        "Residents of Colorado, Connecticut, Virginia, Utah, and other states with comprehensive privacy laws may have additional rights, including:",
+        "Access to personal data",
+        "Correction of inaccuracies",
+        "Deletion of personal data",
+        "Restriction of or objection to processing",
+        "Data portability",
+        "Withdrawal of consent where applicable",
+        "To exercise these rights, contact us using the information provided below. We will respond in accordance with the applicable law.",
+      ],
+    },
+    {
+      id: "international_data_transfers",
+      title: "14. International Data Transfers",
       content:
-        "Spark may contain links to third-party websites or services. We are not responsible for the privacy practices or content of those third-party sites."
+        "Data may be processed in the United States and other jurisdictions where Ignite or its service providers operate. Where required by applicable law, appropriate safeguards are used to protect personal information during international transfers.",
     },
-
     {
-      id: "policy_changes",
-      title: "Changes to This Privacy Policy",
+      id: "childrens_privacy",
+      title: "15. Children's Privacy",
       content:
-        "We reserve the right to update this Privacy Policy at any time. Updates will be effective upon posting within the Spark platform."
+        "Spark is not directed to individuals under 18 years of age. We do not knowingly collect personal information from minors. If we become aware that personal information has been collected from a minor, we will take steps to delete such information promptly.",
     },
-
     {
-      id: "contact",
-      title: "Contact Us",
-      content: {
-        platform: "Spark",
-        company: "Ignite Productions",
-        website: "https://www.igniteproductions.co"
-      }
-    }
-  ]
+      id: "accessibility",
+      title: "16. Accessibility",
+      content:
+        "Ignite is committed to making Spark accessible to individuals with disabilities and strives to substantially conform to WCAG 2.1 Level AA standards where reasonably practicable. If you require accessibility accommodations related to your personal data or use of Spark, please contact us at the email address below.",
+    },
+    {
+      id: "workforce_classification_notice",
+      title: "17. Workforce Classification Notice",
+      content: [
+        "Users may participate as independent contractors or employees of Ignite, depending on jurisdiction and assignment structure.",
+        "Personal information may be processed in connection with payroll, tax, and workforce compliance obligations as applicable to the user's classification.",
+        "Employment or contractor status is governed by a separate written agreement and is not determined by this Privacy Policy.",
+      ],
+    },
+    {
+      id: "third_party_services",
+      title: "18. Third-Party Services",
+      content:
+        "The Platform may integrate with or contain links to third-party services, websites, or applications. Ignite does not control and is not responsible for the privacy practices of third-party services. We encourage users to review the privacy policies of any third-party services they interact with.",
+    },
+    {
+      id: "changes_to_this_policy",
+      title: "19. Changes to This Policy",
+      content:
+        "We may update this Privacy Policy periodically to reflect changes in our practices, technology, legal requirements, or business operations. Updated versions will be posted with a revised effective date. Material changes may be communicated through the Platform, email notification, or other reasonable means. Your continued use of the Platform after changes constitutes acceptance of the updated Privacy Policy.",
+    },
+    {
+      id: "contact_information",
+      title: "20. Contact Information",
+      content: [
+        "Company: Ignite Productions LLC",
+        "Email: events@igniteproductions.co",
+        "Privacy Inquiries: events@igniteproductions.co",
+        "Phone: 310.266.8648",
+        "Website: www.igniteproductions.co",
+      ],
+    },
+  ],
+
+  legalNote:
+    "This Privacy Policy should be reviewed by licensed legal counsel in your operating state(s) before publication. Confirm data storage locations, subprocessor details, and alignment with your Terms of Service and Independent Contractor Agreement.",
 } as const;

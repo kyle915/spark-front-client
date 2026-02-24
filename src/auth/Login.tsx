@@ -5,7 +5,7 @@ import bgImage from "../assets/background.png";
 import { useForm } from "react-hook-form";
 import { useAlertStore } from "@store/alertStore";
 import ThemeToggle from "@/shared/ThemeToggle";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useAuthStore } from "@store/authStore";
 import { register } from "@api/auth/register";
 import type { RegisterFormFields } from "@/types/auth";
@@ -20,11 +20,12 @@ type FormData = {
 };
 
 const Login = () => {
+  const currentYear = new Date().getFullYear();
   const navigate = useNavigate();
   const { login } = useAuthStore();
   const { showAlert } = useAlertStore();
-  const [isLogin, setIsLogin] = useState(true);
-  const [fade, setFade] = useState(true);
+  const [isLogin] = useState(true);
+  const [fade] = useState(true);
   const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
     (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark"
   );
@@ -38,13 +39,13 @@ const Login = () => {
     localStorage.setItem("@color-scheme", colorScheme);
   }, [colorScheme]);
 
-  const handleSwitch = () => {
-    setFade(false);
-    setTimeout(() => {
-      setIsLogin(!isLogin);
-      setFade(true);
-    }, 200);
-  };
+  // const handleSwitch = () => {
+  //   setFade(false);
+  //   setTimeout(() => {
+  //     setIsLogin(!isLogin);
+  //     setFade(true);
+  //   }, 200);
+  // };
 
   const { control, handleSubmit } = useForm<FormData>({
     defaultValues: {
@@ -117,7 +118,7 @@ const Login = () => {
               />
             )}
 
-            <div className="text-center text-sm mt-6">
+            {/* <div className="text-center text-sm mt-6">
               {isLogin ? (
                 <>
                   Not registered yet?{" "}
@@ -141,9 +142,9 @@ const Login = () => {
                   </button>
                 </>
               )}
-            </div>
 
-            {/*
+            </div> */}
+          
             <div className="mt-10 text-center space-y-2">
               <p className="text-xs text-base-content/40">
                 ©{currentYear} Ignite Productions. All rights reserved.
@@ -163,7 +164,7 @@ const Login = () => {
                 </Link>
               </div>
             </div>
-            */}
+           
           </div>
         </div>
 
