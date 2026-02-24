@@ -344,9 +344,10 @@ const CreateEventForm = ({ request }: FormProps) => {
             // requestStoreManagers={requestStoreManagers}
             // requestContactInfo={requestContactInfo}
             // locations={locations}
+            showIsNational={false}
             defaultValues={defaultValues}
             onSubmit={handleSubmit}
-          // onRefetch={refetch}
+            // onRefetch={refetch}
           />
         );
       }}

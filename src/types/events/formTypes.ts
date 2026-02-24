@@ -98,6 +98,7 @@ export interface EventFormProps {
   contactMode?: "request" | "manual";
   onSubmit: (data: EventFormValues) => void;
   defaultValues?: Partial<EventFormValues>;
+  showIsNational?: boolean;
   onRefetch?: (
     key: "distributors" | "retailers" | "clients" | "requestStoreManagers"
   ) => void;

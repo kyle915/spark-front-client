@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -10,8 +10,15 @@ import {
 import type { TooltipItem } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { Store } from "lucide-react";
+import { fetchQuery } from "react-relay";
+import { useForm } from "react-hook-form";
 import ChartCard from "@/components/charts/ChartCard";
+import environment from "@/api/relay/environment";
+import { DistributorsQuery } from "@/api/queries/DistributorsQuery";
+import type { DistributorsQuery as DistributorsQueryType } from "@/api/queries/__generated__/DistributorsQuery.graphql";
 import { useThemeMode } from "@/hooks/useThemeMode";
+import FormAutocomplete from "@/shared/FormAutocomplete";
+import { useAuthStore } from "@/store/authStore";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
@@ -22,13 +29,45 @@ export type RetailAccount = {
   color: string;
 };
 
+type DistributorOption = {
+  value: string;
+  label: string;
+};
+
+type DistributorFilterValues = {
+  distributor: string | null;
+};
+
+type DistributorConnection = DistributorsQueryType["response"]["distributors"];
+type DistributorNode = DistributorConnection["edges"][number]["node"];
+
 export default memo(function RetailAccountsPerformance({
   data,
+  distributors = [],
+  selectedDistributor = "",
+  onDistributorChange,
 }: {
   data: RetailAccount[];
+  distributors?: DistributorOption[];
+  selectedDistributor?: string;
+  onDistributorChange?: (value: string) => void;
 }) {
+  const tenantId = useAuthStore((state) => state.tenantId);
   const [filter, setFilter] = useState<"top10" | "all">("top10");
   const [search, setSearch] = useState("");
+  const [distributorSearch, setDistributorSearch] = useState("");
+  const [isLoadingDistributors, setIsLoadingDistributors] = useState(false);
+  const [distributorOptions, setDistributorOptions] =
+    useState<DistributorOption[]>(distributors);
+  const distributorRequestIdRef = useRef(0);
+  const isSyncingFromPropsRef = useRef(false);
+  const lastSelectedDistributorRef = useRef(selectedDistributor);
+  const { control, watch, setValue, getValues } = useForm<DistributorFilterValues>({
+    defaultValues: {
+      distributor: selectedDistributor || "",
+    },
+  });
+  const selectedDistributorValue = watch("distributor");
 
   const [isDark] = useThemeMode();
 
@@ -39,6 +78,96 @@ export default memo(function RetailAccountsPerformance({
     }),
     [isDark]
   );
+
+  const loadDistributors = useCallback(
+    async (searchQuery: string) => {
+      const requestId = ++distributorRequestIdRef.current;
+      setIsLoadingDistributors(true);
+
+      try {
+        let after: string | null = null;
+        const allNodes: DistributorNode[] = [];
+
+        while (true) {
+          const response: DistributorsQueryType["response"] | null | undefined =
+            await fetchQuery<DistributorsQueryType>(
+              environment,
+              DistributorsQuery,
+              {
+                filters: tenantId ? { tenantId } : {},
+                q: searchQuery || null,
+                first: 100,
+                after,
+              }
+            ).toPromise();
+
+          if (distributorRequestIdRef.current !== requestId) return;
+
+          const connection: DistributorConnection | undefined =
+            response?.distributors;
+          const nodes =
+            connection?.edges
+              .map((edge: DistributorConnection["edges"][number]) => edge.node)
+              .filter(
+                (node: DistributorNode | null | undefined): node is DistributorNode =>
+                  Boolean(node)
+              ) ?? [];
+
+          allNodes.push(...nodes);
+
+          const hasNextPage = connection?.pageInfo?.hasNextPage;
+          const endCursor: string | null = connection?.pageInfo?.endCursor ?? null;
+          if (!hasNextPage || !endCursor) break;
+          after = endCursor;
+        }
+
+        const options = allNodes.map((node) => ({
+          value: node.id,
+          label: node.name ?? node.email ?? node.id,
+        }));
+
+        setDistributorOptions(options);
+      } catch {
+        if (distributorRequestIdRef.current !== requestId) return;
+        setDistributorOptions(distributors);
+      } finally {
+        if (distributorRequestIdRef.current === requestId) {
+          setIsLoadingDistributors(false);
+        }
+      }
+    },
+    [distributors, tenantId]
+  );
+
+  useEffect(() => {
+    const nextValue = selectedDistributor || "";
+    const currentValue = getValues("distributor") ?? "";
+    if (currentValue === nextValue) {
+      lastSelectedDistributorRef.current = nextValue;
+      return;
+    }
+
+    isSyncingFromPropsRef.current = true;
+    lastSelectedDistributorRef.current = nextValue;
+    setValue("distributor", nextValue);
+  }, [getValues, selectedDistributor, setValue]);
+
+  useEffect(() => {
+    if (isSyncingFromPropsRef.current) {
+      isSyncingFromPropsRef.current = false;
+      return;
+    }
+
+    const nextValue = selectedDistributorValue ?? "";
+    if (nextValue === lastSelectedDistributorRef.current) return;
+
+    lastSelectedDistributorRef.current = nextValue;
+    onDistributorChange?.(nextValue);
+  }, [onDistributorChange, selectedDistributorValue]);
+
+  useEffect(() => {
+    void loadDistributors(distributorSearch.trim());
+  }, [distributorSearch, loadDistributors]);
 
   // Filtering & Sorting
   const filteredData = useMemo(() => {
@@ -56,6 +185,10 @@ export default memo(function RetailAccountsPerformance({
 
     return rows;
   }, [data, filter, search]);
+  const distributorAutocompleteOptions = useMemo(
+    () => [{ value: "", label: "All Distributors" }, ...distributorOptions],
+    [distributorOptions]
+  );
 
   const chartData = {
     labels: filteredData.map((a) => a.name),
@@ -125,17 +258,21 @@ export default memo(function RetailAccountsPerformance({
           <option value="all">All Accounts</option>
         </select>
 
-        <select
-          className="select select-bordered select-sm w-40"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as "top10" | "all")}
-        >
-          <option value="all">All Distributor</option>
-          <option value="alStraubl">Straub</option>
-          <option value="JohnLenore">John Lenore</option>
-          <option value="NevBev">Nev Bev</option>
-          <option value="AB1Sylmar">AB1 Sylmar</option>
-        </select>
+        <FormAutocomplete<DistributorFilterValues>
+          control={control}
+          name="distributor"
+          label=""
+          options={distributorAutocompleteOptions}
+          onSearch={setDistributorSearch}
+          loading={isLoadingDistributors}
+          placeholder={
+            isLoadingDistributors
+              ? "Loading distributors..."
+              : "Search distributor..."
+          }
+          containerClassName="w-64 [&_.label]:hidden"
+          inputClassName="input-sm"
+        />
 
         {/* Search */}
         <input

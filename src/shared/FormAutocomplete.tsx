@@ -16,13 +16,16 @@ type SelectOption = {
 interface FormAutocompleteProps<T extends FieldValues> {
   name: Path<T>;
   control: Control<T>;
-  label: string;
+  label?: string;
   options: SelectOption[];
   placeholder?: string;
   rules?: RegisterOptions<T, Path<T>>;
   disabled?: boolean;
   onSearch?: (value: string) => void;
   loading?: boolean;
+  containerClassName?: string;
+  inputClassName?: string;
+  showClear?: boolean;
 }
 
 const FormAutocomplete = <T extends FieldValues>({
@@ -35,6 +38,9 @@ const FormAutocomplete = <T extends FieldValues>({
   disabled = false,
   onSearch,
   loading = false,
+  containerClassName = "",
+  inputClassName = "",
+  showClear = true,
 }: FormAutocompleteProps<T>) => {
   const {
     field,
@@ -139,10 +145,12 @@ const FormAutocomplete = <T extends FieldValues>({
   };
 
   return (
-    <div className="form-control w-full" ref={dropdownRef}>
-      <label className="label">
-        <span className="label-text">{label}</span>
-      </label>
+    <div className={`form-control w-full ${containerClassName}`} ref={dropdownRef}>
+      {label ? (
+        <label className="label">
+          <span className="label-text">{label}</span>
+        </label>
+      ) : null}
       <div className="relative">
         <input
           ref={inputRef}
@@ -161,7 +169,7 @@ const FormAutocomplete = <T extends FieldValues>({
           placeholder={placeholder}
           className={`input input-bordered w-full pr-12 ${
             error ? "input-error" : ""
-          } ${loading ? "cursor-wait" : ""}`}
+          } ${loading ? "cursor-wait" : ""} ${inputClassName}`}
           autoComplete="off"
         />
 
@@ -171,7 +179,7 @@ const FormAutocomplete = <T extends FieldValues>({
             <span className="loading loading-spinner loading-sm text-primary" />
           )}
 
-          {field.value && !disabled && !loading && (
+          {showClear && field.value && !disabled && !loading && (
             <button
               type="button"
               onClick={(e) => {
