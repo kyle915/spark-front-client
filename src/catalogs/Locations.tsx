@@ -27,7 +27,6 @@ type LocationFormValues = {
   name: string;
   code: string;
   zip: string;
-  tenantId: string;
 };
 
 type LocationFormProps = {
@@ -100,7 +99,7 @@ const LocationForm = ({
                 control={control}
                 name="name"
                 label="Location Name"
-                placeholder="e.g., Managua Central"
+                placeholder="e.g., New York"
                 rules={{
                   required: "Name is required",
                   minLength: {
@@ -114,7 +113,7 @@ const LocationForm = ({
                 control={control}
                 name="code"
                 label="Location Code"
-                placeholder="e.g., MNG-01"
+                placeholder="e.g., NY"
                 rules={{
                   required: "Code is required",
                 }}
@@ -151,11 +150,11 @@ const LocationForm = ({
 const PAGE_SIZE = 10;
 
 export function LocationsTable({
-  tenantId,
+  // tenantId,
   q,
   onRefreshReady,
 }: {
-  tenantId: string;
+  // tenantId: string;
   q: string;
   onRefreshReady?: (fn: () => void) => void;
 }) {
@@ -172,7 +171,7 @@ export function LocationsTable({
     query: LocationsQuery,
     pageSize: PAGE_SIZE,
     initialVariables: {
-      filters: { tenantId },
+      // filters: { tenantId },
       q: q || undefined,
     },
   });
@@ -200,7 +199,7 @@ export function LocationsTable({
 }
 
 export function LocationsPage() {
-  const { tenantId } = useAuthStore();
+  // const { tenantId } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawQ = searchParams.get("q") ?? "";
   const q = useDebouncedValue(rawQ, 400);
@@ -236,7 +235,7 @@ export function LocationsPage() {
 
       <LocationsTable
         key={q}
-        tenantId={tenantId ?? ""}
+        // tenantId={tenantId ?? ""}
         q={q}
         onRefreshReady={(fn) => {
           refreshRef.current = fn;
@@ -291,14 +290,11 @@ export const LocationsList = () => {
 };
 
 export const CreateLocation = () => {
-  const { tenantId } = useAuthStore();
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
   const [commitCreate, isCreating] = useMutation<CreateLocationMutationType>(
     CreateLocationMutation,
   );
-
-  const initialTenantId = tenantId || "";
 
   const handleSubmit = (values: LocationFormValues) => {
     commitCreate({
@@ -325,7 +321,6 @@ export const CreateLocation = () => {
           name: "",
           code: "",
           zip: "",
-          tenantId: initialTenantId,
         }}
         onSubmit={handleSubmit}
         submitLabel="Create"
@@ -360,7 +355,6 @@ export const EditLocation = () => {
           name: values.name,
           code: values.code,
           zip: values.zip,
-          tenantId: values.tenantId,
         },
       },
       onCompleted: (response) => {
@@ -395,7 +389,6 @@ export const EditLocation = () => {
           name: location.name,
           code: location.code,
           zip: location.zip,
-          tenantId: location.tenantId,
         }}
         onSubmit={handleSubmit}
         submitLabel="Update"

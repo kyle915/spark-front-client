@@ -127,7 +127,6 @@ const CreateEventForm = ({ request }: FormProps) => {
             LocationsQuery,
             {
               filters: {
-                tenantId: request.tenantId,
                 ...(selectedStateId ? { stateId: selectedStateId } : {}),
               },
             },

@@ -238,7 +238,6 @@ export default function RequestForm({
           LocationsQuery,
           {
             filters: {
-              tenantId,
               ...(selectedStateId ? { stateId: selectedStateId } : {}),
             },
           },

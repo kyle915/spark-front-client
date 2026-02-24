@@ -128,7 +128,7 @@ EventFormProps) {
       {
         first: 50,
         q: q || null,
-        filters: { tenantId },
+        // filters: { tenantId },
       },
       { fetchPolicy: "network-only" },
     ).subscribe({
@@ -229,7 +229,6 @@ EventFormProps) {
           LocationsQuery,
           {
             filters: {
-              tenantId,
               ...(selectedStateId ? { stateId: selectedStateId } : {}),
             },
           },
