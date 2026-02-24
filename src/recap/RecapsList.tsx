@@ -42,6 +42,9 @@ import { useNavigate } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { FilterIcon, FunnelXIcon } from "lucide-react";
 import { useAlertStore } from "@/store/alertStore";
+import { useForm } from "react-hook-form";
+import FormInputText from "@/shared/FormInputText";
+import FormAutocomplete from "@/shared/FormAutocomplete";
 
 const PAGE_SIZE = 10;
 
@@ -82,11 +85,11 @@ const RecapsTableContent = ({
   isExporting,
   onExportPdf,
 }: // onApprove,
-// onDecline,
-// approvingId,
-// targetApproval,
-// isApproving,
-RecapsTableContentProps) => {
+  // onDecline,
+  // approvingId,
+  // targetApproval,
+  // isApproving,
+  RecapsTableContentProps) => {
   const navigate = useNavigate();
   const data = usePreloadedQuery<RecapsQueryType>(RecapsQuery, queryReference);
   const connection = data.recaps;
@@ -197,6 +200,7 @@ RecapsTableContentProps) => {
 type RecapsListInnerProps = {
   filters?: {
     eventId?: string;
+    eventAddress?: string;
   };
   emptyMessage: string;
   onRefreshReady?: (refreshFn: () => void) => void;
@@ -350,7 +354,31 @@ const RecapsListInner = ({
 const RecapList = () => {
   const { tenantId } = useAuthStore();
   const refreshRef = useRef<(() => void) | null>(null);
-  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [eventAddress, setEventAddress] = useState<string>("");
+  const [eventSearchInput, setEventSearchInput] = useState<string>("");
+  const [eventSearch, setEventSearch] = useState<string>("");
+  const { control, watch, setValue } = useForm<{
+    eventAddress: string;
+    eventId: string | null;
+  }>({
+    defaultValues: { eventAddress: "", eventId: null },
+  });
+  const eventAddressInput = watch("eventAddress");
+  const selectedEventId = watch("eventId") ?? "";
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setEventAddress(eventAddressInput?.trim() ?? "");
+    }, 500);
+    return () => window.clearTimeout(handle);
+  }, [eventAddressInput]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setEventSearch(eventSearchInput.trim());
+    }, 500);
+    return () => window.clearTimeout(handle);
+  }, [eventSearchInput]);
 
   // =========================
   // EVENTS (FROM TENANT)
@@ -359,6 +387,7 @@ const RecapList = () => {
     EventsQuery,
     {
       filters: { tenantId: tenantId || undefined },
+      q: eventSearch || undefined,
     },
     { fetchPolicy: "store-and-network" },
   );
@@ -380,7 +409,13 @@ const RecapList = () => {
     [eventsData],
   );
 
-  const filters = selectedEventId ? { eventId: selectedEventId } : undefined;
+  const filters =
+    selectedEventId || eventAddress
+      ? {
+        eventId: selectedEventId || undefined,
+        eventAddress: eventAddress || undefined,
+      }
+      : undefined;
 
   const emptyMessage = selectedEventId
     ? "No recaps found for this event."
@@ -426,12 +461,17 @@ const RecapList = () => {
                 Refresh
               </button>
 
-              {selectedEventId && (
+              {(selectedEventId || eventAddress) && (
                 <>
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
-                    onClick={() => setSelectedEventId("")}
+                    onClick={() => {
+                      setValue("eventId", null);
+                      setEventAddress("");
+                      setValue("eventAddress", "");
+                      setEventSearchInput("");
+                    }}
                   >
                     <FunnelXIcon className="w-4 h-4" />
                     Clear filters
@@ -441,24 +481,25 @@ const RecapList = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="form-control w-full sm:w-64">
-              <label className="label pb-1">
-                <span className="label-text">Event</span>
-              </label>
-              <select
-                className="select select-bordered w-full rounded-full"
-                value={selectedEventId}
-                onChange={(e) => setSelectedEventId(e.target.value)}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <div className="w-full max-w-sm">
+              <FormAutocomplete
+                name="eventId"
+                control={control}
+                label="Event"
+                options={eventOptions}
+                placeholder="Search event"
                 disabled={eventOptions.length === 0}
-              >
-                <option value="">All events</option>
-                {eventOptions.map((event) => (
-                  <option key={event.value} value={event.value}>
-                    {event.label}
-                  </option>
-                ))}
-              </select>
+                onSearch={setEventSearchInput}
+              />
+            </div>
+            <div className="w-full max-w-sm">
+              <FormInputText
+                name="eventAddress"
+                control={control}
+                label="Event Address"
+                placeholder="Search address"
+              />
             </div>
           </div>
         </div>
@@ -467,7 +508,7 @@ const RecapList = () => {
           TABLE
       ========================= */}
           <RecapsListInner
-            key={selectedEventId}
+            key={`${selectedEventId}::${eventAddress}`}
             filters={filters}
             emptyMessage={emptyMessage}
             onRefreshReady={(fn) => (refreshRef.current = fn)}

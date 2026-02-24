@@ -1,6 +1,6 @@
 import { Suspense, useMemo } from "react";
 import Layout from "@/layout/Layout";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import Loading from "@/shared/Loading";
 import CatalogsProvider from "@/shared/CatalogsProvider";
 import EventForm from "./components/EventForm";
@@ -15,12 +15,15 @@ import type { LocationsQuery as LocationsQueryType } from "@/api/queries/__gener
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import { useAlertStore } from "@/store/alertStore";
+import { dateFormat } from "@/public/form/utils/toDate";
+import { buildDateTimeWithOffset, extractDatePart, extractTimePart } from "@/utils";
 
 type EditEventContentProps = {
   uuid: string;
 };
 
 const EditEventContent = ({ uuid }: EditEventContentProps) => {
+  const navigate = useNavigate();
   const data = useLazyLoadQuery<EventUuidQueryType>(EventUuidQuery, { uuid });
   const event = data.event;
 
@@ -60,6 +63,16 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
       return;
     }
 
+    const timezone =
+      timeZones.find((tz) => tz.id === formData.timezoneId) ??
+      event.timezone ??
+      null;
+    const offsetMinutes = timezone?.offset ?? null;
+    const dateValue = dateFormat(formData.date ?? event.date ?? "");
+    const normalizedDate = dateValue
+      ? buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes)
+      : "";
+
     commitUpdateEvent({
       variables: {
         input: {
@@ -72,15 +85,30 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
           address: formData.address,
           notes: formData.notes ?? "",
           isNational: formData.isNational ?? false,
-          startTime: formData.startTime,
-          endTime: formData.endTime,
+          startTime:
+            dateValue && formData.startTime
+              ? buildDateTimeWithOffset(
+                  dateValue,
+                  formData.startTime,
+                  offsetMinutes,
+                )
+              : "",
+          endTime:
+            dateValue && formData.endTime
+              ? buildDateTimeWithOffset(
+                  dateValue,
+                  formData.endTime,
+                  offsetMinutes,
+                )
+              : "",
           tenantId: event.tenantId,
-          date: formData.date ?? event.date ?? "",
+          date: normalizedDate,
         },
       },
       onCompleted: (response) => {
         if (response.updateEvent?.success) {
           showAlert(response.updateEvent.message, "success");
+          navigate(`/event/view/${event.uuid ?? uuid}`);
         } else {
           showAlert(response.updateEvent.message, "error");
         }
@@ -91,14 +119,20 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
     });
   };
 
+  const defaultDate = extractDatePart(event.date ?? "") ?? event.date ?? "";
+  const defaultStartTime =
+    extractTimePart(event.startTime ?? "") ?? event.startTime ?? undefined;
+  const defaultEndTime =
+    extractTimePart(event.endTime ?? "") ?? event.endTime ?? undefined;
+
   const defaultValues: Partial<EventFormValues> = {
     name: event.name ?? "",
     address: event.address ?? "",
-    startTime: event.startTime ?? undefined,
+    startTime: defaultStartTime,
     timezoneId: event.timezone?.id ?? undefined,
-    endTime: event.endTime ?? undefined,
+    endTime: defaultEndTime,
     notes: event.notes ?? "",
-    date: event.date ?? undefined,
+    date: defaultDate,
     isNational: event.isNational ?? false,
     coordinates: event.coordinates?.map((coord) => coord) ?? undefined,
     eventTypeId: event.eventType?.id,

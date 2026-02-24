@@ -11,6 +11,8 @@ export const RecapQuery = graphql`
       approved
       totalEngagements
       productsSold
+      totalCansSold
+      totalPacksSold
       totalEarnings
       accountSpendAmount
       job {
@@ -22,11 +24,18 @@ export const RecapQuery = graphql`
         id
         uuid
         name
+        date
         tenantId
         tenant {
           id
           name
         }
+        timezone {
+              id
+              name
+              code
+              offset
+            }
         startTime
         endTime
         address
@@ -108,6 +117,11 @@ export const RecapQuery = graphql`
         approved
         file
         fileTypeId
+        fileType {
+          id
+          name
+          extension
+        }
         fileRecapCategoryId
         fileRecapCategory {
           id

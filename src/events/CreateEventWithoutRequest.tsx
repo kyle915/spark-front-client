@@ -16,7 +16,8 @@ import { LocationsQuery } from "@/api/queries/LocationsQuery";
 import type { LocationsQuery as LocationsQueryType } from "@/api/queries/__generated__/LocationsQuery.graphql";
 import environment from "@/api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
-import { normalizeDateTime, dateFormat } from "@/public/form/utils/toDate";
+import { dateFormat } from "@/public/form/utils/toDate";
+import { buildDateTimeWithOffset } from "@/utils";
 
 const CreateEventWithoutRequestContent = () => {
   const { tenantId } = useAuthStore();
@@ -117,6 +118,14 @@ const CreateEventWithoutRequestContent = () => {
       return;
     }
 
+    const timezone =
+      timezones.find((tz) => tz.id === formData.timezoneId) ?? null;
+    const offsetMinutes = timezone?.offset ?? null;
+    const dateValue = dateFormat(formData.date);
+    const normalizedDate = dateValue
+      ? buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes)
+      : "";
+
     const input: Record<string, unknown> = {
       name: formData.name,
       eventTypeId: formData.eventTypeId,
@@ -125,10 +134,23 @@ const CreateEventWithoutRequestContent = () => {
       isNational: formData.isNational ?? false,
       timezoneId: formData.timezoneId ?? null,
       startTime:
-        normalizeDateTime(formData.date ?? "", formData.startTime) ?? "",
-      endTime: normalizeDateTime(formData.date ?? "", formData.endTime) ?? "",
+        dateValue && formData.startTime
+          ? buildDateTimeWithOffset(
+              dateValue,
+              formData.startTime,
+              offsetMinutes,
+            )
+          : "",
+      endTime:
+        dateValue && formData.endTime
+          ? buildDateTimeWithOffset(
+              dateValue,
+              formData.endTime,
+              offsetMinutes,
+            )
+          : "",
       tenantId: tenantId,
-      date: dateFormat(formData.date),
+      date: normalizedDate,
     };
 
     if (formData.coordinates && formData.coordinates.length === 2) {

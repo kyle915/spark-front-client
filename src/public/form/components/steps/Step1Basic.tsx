@@ -33,8 +33,6 @@ export function Step1Basic({
       ? [latitude, longitude]
       : null;
 
-  console.log(selectedCoordinates);
-
   useAutoTimezoneFromCoordinates<SparkFormData, "timeZoneId">({
     coordinates: selectedCoordinates,
     timezoneId: timezoneId,
@@ -66,7 +64,7 @@ export function Step1Basic({
         label="Visit Date"
         placeholder="MM/DD/YYYY"
         control={control}
-        minToday={true}
+        minDaysFromToday={2}
       />
 
       <FormSelect
@@ -94,7 +92,7 @@ export function Step1Basic({
         placeholder="HH:MM AM/PM"
       />
 
-      <div className="col-span-2">
+      <div className="md:col-span-2">
         <FormLocationPicker
           control={control}
           nameLat="latitude"
@@ -104,7 +102,7 @@ export function Step1Basic({
         />
       </div>
 
-      <div className="col-span-2">
+      <div className="md:col-span-2">
         <FormTextarea
           name="address"
           label="Address"

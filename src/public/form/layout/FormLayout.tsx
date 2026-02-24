@@ -51,13 +51,13 @@ export default function SparkFormLayout({
       )}
 
       <div className="navbar bg-base-100 shadow-sm sticky top-0 z-20">
-        <div className="grid grid-cols-3 items-center w-full px-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 items-center w-full px-4">
           {/* LEFT: Logo */}
-          <div className="flex items-center gap-3 justify-start">
+          <div className="flex items-center gap-3 justify-center sm:justify-start">
             <img
               src={hasImage ? tenant!.image! : "/logo.svg"}
               alt="Tenant logo"
-              className="h-8 w-auto object-contain app-logo-public"
+              className={`h-8 w-auto object-contain app-logo-public ${hasImage ? "" : "app-logo-public-default"}`}
               onError={(e) => {
                 const img = e.currentTarget;
                 if (!img.src.endsWith("/logo.svg")) {
@@ -68,14 +68,14 @@ export default function SparkFormLayout({
           </div>
 
           {/* CENTER: Title */}
-          <div className="flex justify-center">
+          <div className="hidden sm:flex justify-center">
             <h1 className="font-semibold text-lg tracking-tight">
               Spark Request Form
             </h1>
           </div>
 
           {/* RIGHT: Actions */}
-          <div className="flex justify-end">
+          <div className="hidden sm:flex justify-end">
             <ThemeToggle value={colorScheme} onChange={setColorScheme} />
           </div>
         </div>

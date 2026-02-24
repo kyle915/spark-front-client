@@ -48,7 +48,7 @@ export default function FormLocationPicker({
   nameLat,
   nameLng,
   label = "Select location",
-  height = "h-[320px]",
+  height = "h-56 sm:h-64 md:h-[320px]",
   setValue,
 }: Props) {
   const [initialPosition, setInitialPosition] =

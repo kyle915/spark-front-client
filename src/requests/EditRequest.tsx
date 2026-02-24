@@ -18,6 +18,12 @@ import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import type { ProductTypesQuery as ProductTypesQueryType } from "@api/queries/__generated__/ProductTypesQuery.graphql";
 import type { ProductsQuery as ProductsQueryType } from "@api/queries/__generated__/ProductsQuery.graphql";
 import { useAlertStore } from "@store/alertStore";
+import { dateFormat } from "@/public/form/utils/toDate";
+import {
+  buildDateTimeWithOffset,
+  extractDatePart,
+  extractTimePart,
+} from "@utils/index";
 
 type EditRequestContentProps = {
   uuid: string;
@@ -68,14 +74,28 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
   }
 
   const handleSubmit = (formData: RequestFormValues) => {
+    const timezones = timezonesData.timezones?.edges.map((e) => e.node) || [];
+    const timezone =
+      timezones.find((tz) => tz.id === formData.timezoneId) ?? null;
+    const offsetMinutes = timezone?.offset ?? null;
+    const dateValue = dateFormat(formData.date);
+
     commitUpdateRequest({
       variables: {
         input: {
           id: request.id,
           name: formData.name,
-          date: formData.date,
-          startTime: formData.startTime || "00:00",
-          endTime: formData.endTime || "00:00",
+          date: buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes),
+          startTime: formData.startTime
+            ? buildDateTimeWithOffset(
+                dateValue,
+                formData.startTime,
+                offsetMinutes,
+              )
+            : "",
+          endTime: formData.endTime
+            ? buildDateTimeWithOffset(dateValue, formData.endTime, offsetMinutes)
+            : "",
           address: formData.address,
           coordinates: (formData.coordinates ?? []) as readonly number[],
           timezoneId: formData.timezoneId ?? "",
@@ -107,11 +127,19 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     });
   };
 
+  const defaultDate = extractDatePart(request.date ?? "") ?? request.date ?? "";
+  const defaultStartTime =
+    extractTimePart(request.startTime ?? "") ??
+    request.startTime ??
+    undefined;
+  const defaultEndTime =
+    extractTimePart(request.endTime ?? "") ?? request.endTime ?? undefined;
+
   const defaultValues: Partial<RequestFormValues> = {
     name: request.name ?? "",
-    date: request.date ?? "",
-    startTime: request.startTime ?? "",
-    endTime: request.endTime ?? "",
+    date: defaultDate,
+    startTime: defaultStartTime,
+    endTime: defaultEndTime,
     address: request.address ?? "",
     coordinates: request.coordinates?.length ? [...request.coordinates] : null,
     timezoneId: request.timezone?.id ?? null,
