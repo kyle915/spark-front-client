@@ -406,6 +406,7 @@ export default function DashboardRetail() {
               distributors={distributors}
               selectedDistributor={filters.distributor}
               onDistributorChange={(value) => {
+                if (filters.distributor === value) return;
                 setFilters((prev) => ({ ...prev, distributor: value }));
                 setFetchKey((key) => key + 1);
               }}
@@ -431,7 +432,16 @@ export default function DashboardRetail() {
 
         <section className="w-full grid grid-cols-2 gap-6">
           <div className="col-span-1">
-            <RetailAccountsPerformance data={retailAccounts} />
+            <RetailAccountsPerformance
+              data={retailAccounts}
+              distributors={distributors}
+              selectedDistributor={filters.distributor}
+              onDistributorChange={(value) => {
+                if (filters.distributor === value) return;
+                setFilters((prev) => ({ ...prev, distributor: value }));
+                setFetchKey((key) => key + 1);
+              }}
+            />
           </div>
 
           <div className="col-span-1">
