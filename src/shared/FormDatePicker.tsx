@@ -17,6 +17,7 @@ interface FormDatePickerProps<T extends FieldValues> {
   rules?: RegisterOptions<T, Path<T>>;
   disabled?: boolean;
   minToday?: boolean;
+  minDaysFromToday?: number;
 }
 
 export default function FormDatePicker<T extends FieldValues>({
@@ -27,6 +28,7 @@ export default function FormDatePicker<T extends FieldValues>({
   rules,
   disabled = false,
   minToday = false,
+  minDaysFromToday,
 }: FormDatePickerProps<T>) {
   // const buttonRef = useRef<HTMLButtonElement | null>(null);
   const popoverId = `${name}-popover`;
@@ -35,6 +37,17 @@ export default function FormDatePicker<T extends FieldValues>({
   // Rules TypeScript compliance
   const combinedRules: RegisterOptions<T, Path<T>> = {
     ...rules,
+  };
+
+  const minimumDaysFromToday =
+    typeof minDaysFromToday === "number" ? minDaysFromToday : minToday ? 0 : null;
+
+  const getMinimumDate = () => {
+    if (minimumDaysFromToday === null) return null;
+    const minDate = new Date();
+    minDate.setHours(0, 0, 0, 0);
+    minDate.setDate(minDate.getDate() + minimumDaysFromToday);
+    return minDate;
   };
 
   // Optional minToday validation
@@ -48,7 +61,7 @@ export default function FormDatePicker<T extends FieldValues>({
     return extractDatePart(value) ?? value;
   };
 
-  if (minToday) {
+  if (minimumDaysFromToday !== null) {
     combinedRules.validate = (value: string) => {
       if (!value) return "Please select a valid date";
       const datePart = toDatePart(value);
@@ -56,10 +69,10 @@ export default function FormDatePicker<T extends FieldValues>({
 
       const [year, month, day] = datePart.split("-").map(Number);
       const selected = new Date(year, month - 1, day).setHours(0, 0, 0, 0);
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).setHours(0, 0, 0, 0);
+      const minimumDate = getMinimumDate();
 
-      return selected >= today || "Date cannot be earlier than today";
+      if (!minimumDate) return true;
+      return selected >= minimumDate.getTime() || "Date cannot be earlier than allowed";
     };
   }
 
@@ -119,7 +132,11 @@ export default function FormDatePicker<T extends FieldValues>({
                 const day = String(date.getDate()).padStart(2, "0");
                 field.onChange(`${year}-${month}-${day}`);
               }}
-              disabled={minToday ? [{ before: new Date() }] : undefined}
+              disabled={
+                minimumDaysFromToday !== null
+                  ? [{ before: getMinimumDate() ?? new Date() }]
+                  : undefined
+              }
               className="react-day-picker"
             />
 
@@ -129,14 +146,15 @@ export default function FormDatePicker<T extends FieldValues>({
                 type="button"
                 className="btn btn-ghost btn-sm"
                 onClick={() => {
-                  const today = new Date();
-                  const year = today.getFullYear();
-                  const month = String(today.getMonth() + 1).padStart(2, "0");
-                  const day = String(today.getDate()).padStart(2, "0");
+                  const minimumDate = getMinimumDate();
+                  const targetDate = minimumDate ?? new Date();
+                  const year = targetDate.getFullYear();
+                  const month = String(targetDate.getMonth() + 1).padStart(2, "0");
+                  const day = String(targetDate.getDate()).padStart(2, "0");
                   field.onChange(`${year}-${month}-${day}`);
                 }}
               >
-                Today
+                {minimumDaysFromToday && minimumDaysFromToday > 0 ? "Earliest" : "Today"}
               </button>
 
               <button

@@ -661,6 +661,7 @@ export default function RequestForm({
                 control={control}
                 label="Date"
                 placeholder="MM/DD/YYYY"
+                minDaysFromToday={2}
                 rules={{ required: "Date is required" }}
               />
 
