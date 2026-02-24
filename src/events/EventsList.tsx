@@ -29,9 +29,13 @@ import FormAutocomplete from "@shared/FormAutocomplete";
 import FormDatePicker from "@/shared/FormDatePicker";
 import { useAuthStore } from "@/store/authStore";
 import { SuspendEventMutation } from "@api/mutations/SuspendEventMutation";
+import type { SuspendEventMutation as SuspendEventMutationType } from "@api/mutations/__generated__/SuspendEventMutation.graphql";
 import { ArchiveEventMutation } from "@api/mutations/ArchiveEventMutation";
+import type { ArchiveEventMutation as ArchiveEventMutationType } from "@api/mutations/__generated__/ArchiveEventMutation.graphql";
 import { ApproveEventMutation } from "@api/mutations/ApproveEventMutation";
+import type { ApproveEventMutation as ApproveEventMutationType } from "@api/mutations/__generated__/ApproveEventMutation.graphql";
 import { DeclineEventMutation } from "@api/mutations/DeclineEventMutation";
+import type { DeclineEventMutation as DeclineEventMutationType } from "@api/mutations/__generated__/DeclineEventMutation.graphql";
 import environment from "@api/relay/environment";
 
 //Icons
@@ -158,10 +162,14 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const showAlert = useAlertStore((state) => state.showAlert);
-  const [commitSuspend, isSuspending] = useMutation(SuspendEventMutation);
-  const [commitArchive, isArchiving] = useMutation(ArchiveEventMutation);
-  const [commitApprove, isApproving] = useMutation(ApproveEventMutation);
-  const [commitDecline, isDeclining] = useMutation(DeclineEventMutation);
+  const [commitSuspend, isSuspending] =
+    useMutation<SuspendEventMutationType>(SuspendEventMutation);
+  const [commitArchive, isArchiving] =
+    useMutation<ArchiveEventMutationType>(ArchiveEventMutation);
+  const [commitApprove, isApproving] =
+    useMutation<ApproveEventMutationType>(ApproveEventMutation);
+  const [commitDecline, isDeclining] =
+    useMutation<DeclineEventMutationType>(DeclineEventMutation);
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
