@@ -34,13 +34,6 @@ const defaultFilters: FiltersState = {
 
 const formatNumber = (value: number) => value.toLocaleString();
 const formatPercent = (value: number) => `${value.toFixed(1)}%`;
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-
 const formatDelta = (current: number, previous?: number | null) => {
   if (!previous || previous === 0) return "0%";
   const diff = ((current - previous) / previous) * 100;
@@ -223,15 +216,6 @@ export default function DashboardRetail() {
       value: formatPercent(metrics.conversionRate),
       change: formatDelta(metrics.conversionRate, comparison?.conversionRate),
     },
-    {
-      key: "revenueGenerated",
-      title: "Revenue Generated",
-      value: formatCurrency(metrics.revenueGenerated),
-      change: formatDelta(
-        metrics.revenueGenerated,
-        comparison?.revenueGenerated
-      ),
-    },
   ];
 
   const monthlyTrends = dashboard.monthlyTrends.dataPoints.map((point) => ({
@@ -370,7 +354,7 @@ export default function DashboardRetail() {
           }}
         />
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
           {metricItems.map((metric) => (
             <MetricCard
               key={metric.key}
