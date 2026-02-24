@@ -1,6 +1,13 @@
-import { memo, useState, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DollarSign } from "lucide-react";
+import { fetchQuery } from "react-relay";
+import { useForm } from "react-hook-form";
 import ChartCard from "@/components/charts/ChartCard";
+import environment from "@/api/relay/environment";
+import { DistributorsQuery } from "@/api/queries/DistributorsQuery";
+import type { DistributorsQuery as DistributorsQueryType } from "@/api/queries/__generated__/DistributorsQuery.graphql";
+import FormAutocomplete from "@/shared/FormAutocomplete";
+import { useAuthStore } from "@/store/authStore";
 
 type MarketRow = {
   market: string;
@@ -12,7 +19,7 @@ type MarketRow = {
 };
 
 const filterOptions = [
-  "All Markets",
+  "All Retails",
   "Top 10 by Efficiency",
   "Top 10 by Conversion",
   "Top 10 by Purchases",
@@ -21,7 +28,15 @@ const filterOptions = [
 type DistributorOption = {
   value: string;
   label: string;
+  searchText?: string;
 };
+
+type DistributorFilterValues = {
+  distributor: string | null;
+};
+
+type DistributorConnection = DistributorsQueryType["response"]["distributors"];
+type DistributorNode = DistributorConnection["edges"][number]["node"];
 
 function filterMarkets(data: MarketRow[], filter: string): MarketRow[] {
   switch (filter) {
@@ -52,9 +67,115 @@ export default memo(function MarketPerformanceTable({
   selectedDistributor?: string;
   onDistributorChange?: (value: string) => void;
 }) {
-  const [filter, setFilter] = useState<string>("All Markets");
+  const tenantId = useAuthStore((state) => state.tenantId);
+  const [filter, setFilter] = useState<string>("All Retails");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
+  const [distributorSearch, setDistributorSearch] = useState("");
+  const [isLoadingDistributors, setIsLoadingDistributors] = useState(false);
+  const [distributorOptions, setDistributorOptions] =
+    useState<DistributorOption[]>(distributors);
+  const distributorRequestIdRef = useRef(0);
+  const isSyncingFromPropsRef = useRef(false);
+  const lastSelectedDistributorRef = useRef(selectedDistributor);
+  const { control, watch, setValue, getValues } = useForm<DistributorFilterValues>({
+    defaultValues: {
+      distributor: selectedDistributor || "",
+    },
+  });
+  const selectedDistributorValue = watch("distributor");
+
+  const loadDistributors = useCallback(
+    async (searchQuery: string) => {
+      const requestId = ++distributorRequestIdRef.current;
+      setIsLoadingDistributors(true);
+
+      try {
+        let after: string | null = null;
+        const allNodes: DistributorNode[] = [];
+
+        while (true) {
+          const response: DistributorsQueryType["response"] | null | undefined =
+            await fetchQuery<DistributorsQueryType>(
+            environment,
+            DistributorsQuery,
+            {
+              filters: tenantId ? { tenantId } : {},
+              q: searchQuery || null,
+              first: 100,
+              after,
+            }
+          ).toPromise();
+
+          if (distributorRequestIdRef.current !== requestId) return;
+
+          const connection: DistributorConnection | undefined =
+            response?.distributors;
+          const nodes =
+            connection?.edges
+              .map((edge: DistributorConnection["edges"][number]) => edge.node)
+              .filter(
+                (node: DistributorNode | null | undefined): node is DistributorNode =>
+                  Boolean(node)
+              ) ?? [];
+
+          allNodes.push(...nodes);
+
+          const hasNextPage = connection?.pageInfo?.hasNextPage;
+          const endCursor: string | null = connection?.pageInfo?.endCursor ?? null;
+          if (!hasNextPage || !endCursor) break;
+          after = endCursor;
+        }
+
+        const options = allNodes.map((node) => ({
+          value: node.id,
+          label: node.name ?? node.email ?? node.id,
+          searchText: [node.name, node.email].filter(Boolean).join(" "),
+        }));
+
+        setDistributorOptions(options);
+      } catch {
+        if (distributorRequestIdRef.current !== requestId) return;
+        setDistributorOptions(distributors);
+      } finally {
+        if (distributorRequestIdRef.current === requestId) {
+          setIsLoadingDistributors(false);
+        }
+      }
+    },
+    [distributors, tenantId]
+  );
+
+  useEffect(() => {
+    const nextValue = selectedDistributor || "";
+    const currentValue = getValues("distributor") ?? "";
+    if (currentValue === nextValue) {
+      lastSelectedDistributorRef.current = nextValue;
+      return;
+    }
+
+    isSyncingFromPropsRef.current = true;
+    lastSelectedDistributorRef.current = nextValue;
+    setValue("distributor", nextValue);
+  }, [getValues, selectedDistributor, setValue]);
+
+  useEffect(() => {
+    if (isSyncingFromPropsRef.current) {
+      isSyncingFromPropsRef.current = false;
+      return;
+    }
+
+    const nextValue = selectedDistributorValue ?? "";
+    if (nextValue === lastSelectedDistributorRef.current) return;
+
+    lastSelectedDistributorRef.current = nextValue;
+    onDistributorChange?.(nextValue);
+    setPage(1);
+  }, [onDistributorChange, selectedDistributorValue]);
+
+  useEffect(() => {
+    void loadDistributors(distributorSearch.trim());
+  }, [distributorSearch, loadDistributors]);
 
   // Filter + Search
   const processedData = useMemo(() => {
@@ -73,6 +194,10 @@ export default memo(function MarketPerformanceTable({
   const start = (page - 1) * rowsPerPage;
   const end = start + rowsPerPage;
   const pageRows = processedData.slice(start, end);
+  const distributorAutocompleteOptions = useMemo(
+    () => [{ value: "", label: "All Distributors" }, ...distributorOptions],
+    [distributorOptions]
+  );
 
   return (
     <ChartCard
@@ -96,21 +221,20 @@ export default memo(function MarketPerformanceTable({
             <option key={f}>{f}</option>
           ))}
         </select>
-        <select
-          className="select select-bordered w-full md:max-w-xs"
-          value={selectedDistributor}
-          onChange={(e) => {
-            onDistributorChange?.(e.target.value);
-            setPage(1);
-          }}
-        >
-          <option value="">All Distributors</option>
-          {distributors.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </select>
+        <FormAutocomplete<DistributorFilterValues>
+          control={control}
+          name="distributor"
+          label=""
+          options={distributorAutocompleteOptions}
+          onSearch={setDistributorSearch}
+          loading={isLoadingDistributors}
+          placeholder={
+            isLoadingDistributors
+              ? "Loading distributors..."
+              : "Search distributor..."
+          }
+          containerClassName="w-full md:max-w-xs [&_.label]:hidden"
+        />
         {/* Search */}
         <input
           type="text"
@@ -129,7 +253,7 @@ export default memo(function MarketPerformanceTable({
         <table className="table w-full text-base-content">
           <thead>
             <tr className="border-b border-base-300 text-sm font-semibold">
-              <th>Market</th>
+              <th>Retails</th>
               <th>Consumers</th>
               <th>Purchases</th>
               <th>Conversion</th>
@@ -157,8 +281,8 @@ export default memo(function MarketPerformanceTable({
                         m.conversion >= 30
                           ? "#16a34a"
                           : m.conversion >= 20
-                          ? "#60a5fa"
-                          : "#9ca3af",
+                            ? "#60a5fa"
+                            : "#9ca3af",
                     }}
                   >
                     {m.conversion}%

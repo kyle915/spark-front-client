@@ -12,6 +12,7 @@ import FormInputTime from "@shared/FormInputTime";
 import FormAutocomplete from "@shared/FormAutocomplete";
 import FormDatePicker from "@shared/FormDatePicker";
 import EditableLocationMap from "@shared/EditableLocationMap";
+import FormAddressSearch from "@shared/FormAddressSearch";
 import FormCheckbox from "@shared/FormCheckbox";
 import FormTextarea from "@shared/FormTextarea";
 
@@ -48,6 +49,7 @@ export default function EventForm({
   // contactMode,
   onSubmit,
   defaultValues = {},
+  showIsNational = true,
 }: // onRefetch,
 EventFormProps) {
   const navigate = useNavigate();
@@ -424,12 +426,18 @@ EventFormProps) {
               />
 
               <div className="md:col-span-2">
-                <FormInputText
+                <FormAddressSearch<EventFormValues>
                   name="address"
                   control={control}
                   label="Address"
                   placeholder="Event address"
                   rules={{ required: "Address is required" }}
+                  onSelect={(result) => {
+                    setValue("coordinates", [result.lat, result.lng], {
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    });
+                  }}
                 />
               </div>
             </div>
@@ -690,11 +698,13 @@ EventFormProps) {
 
             <div className="grid grid-cols-1 gap-4">
               <FormTextarea name="notes" control={control} label="Notes" />
-              <FormCheckbox
-                name="isNational"
-                control={control}
-                label="Is National?"
-              />
+              {showIsNational && (
+                <FormCheckbox
+                  name="isNational"
+                  control={control}
+                  label="Is National?"
+                />
+              )}
             </div>
           </section>
 

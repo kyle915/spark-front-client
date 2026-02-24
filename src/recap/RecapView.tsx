@@ -276,7 +276,6 @@ const RecapView = () => {
   const notWillingToPurchase = engagement?.notWillingConsumers ?? 0;
 
   const totalEngagements = recap.totalEngagements ?? 0;
-  const accountSpend = recap.accountSpendAmount; // puede ser null
   const statusLabel = recap.approved ? "Approved" : "Pending";
 
   // Sales
@@ -517,21 +516,6 @@ const RecapView = () => {
                       <span>Multi Packs Sold</span>
                       <span className="font-medium">{totalPacksSold}</span>
                     </div>
-                    {accountSpend !== null ? (
-                      <div className="flex justify-between text-sm border rounded-lg p-3">
-                        <span>Account Spend</span>
-                        <span className="font-medium">
-                          ${accountSpend?.toFixed(2)}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex justify-between text-sm border rounded-lg p-3">
-                        <span>Account Spend</span>
-                        <span className="font-medium">
-                          <em className="text-base-content/60">N/A</em>
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </>
               )}

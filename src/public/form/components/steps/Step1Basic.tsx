@@ -1,7 +1,7 @@
 import FormInputText from "@/shared/FormInputText";
 import FormDatePicker from "@/shared/FormDatePicker";
 import FormInputTime from "@/shared/FormInputTime";
-import FormTextarea from "@/shared/FormTextarea";
+import FormAddressSearch from "@/shared/FormAddressSearch";
 import FormLocationPicker from "../FormLocationPicker";
 import FormSelect from "@/shared/FormSelect";
 import { useWatch, type Control, type UseFormSetValue } from "react-hook-form";
@@ -103,11 +103,21 @@ export function Step1Basic({
       </div>
 
       <div className="md:col-span-2">
-        <FormTextarea
+        <FormAddressSearch<SparkFormData>
           name="address"
           label="Address"
           control={control}
           placeholder="Street, city, and store reference"
+          onSelect={(result) => {
+            setValue("latitude", result.lat, {
+              shouldDirty: true,
+              shouldTouch: true,
+            });
+            setValue("longitude", result.lng, {
+              shouldDirty: true,
+              shouldTouch: true,
+            });
+          }}
         />
       </div>
     </div>
