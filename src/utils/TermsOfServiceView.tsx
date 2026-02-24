@@ -1,13 +1,73 @@
 import { termsOfService } from "@/utils/TermsOfService";
 import { useNavigate } from "react-router";
 
+const subsectionPattern = /^\d+\.\d+\s+/;
+
+type GroupedItem =
+  | { type: "item"; text: string }
+  | { type: "subsection"; title: string; items: string[] };
+
+const groupArrayContent = (items: string[]): GroupedItem[] => {
+  const grouped: GroupedItem[] = [];
+  let currentSubsection: { title: string; items: string[] } | null = null;
+
+  items.forEach((item) => {
+    if (subsectionPattern.test(item)) {
+      if (currentSubsection) {
+        grouped.push({
+          type: "subsection",
+          title: currentSubsection.title,
+          items: currentSubsection.items,
+        });
+      }
+
+      currentSubsection = { title: item, items: [] };
+      return;
+    }
+
+    if (currentSubsection) {
+      currentSubsection.items.push(item);
+      return;
+    }
+
+    grouped.push({ type: "item", text: item });
+  });
+
+  if (currentSubsection) {
+    grouped.push({
+      type: "subsection",
+      title: currentSubsection.title,
+      items: currentSubsection.items,
+    });
+  }
+
+  return grouped;
+};
+
 const renderContent = (content: string | string[]) => {
   if (Array.isArray(content)) {
+    const groupedItems = groupArrayContent(content);
+
     return (
-      <ul className="list-disc pl-5 space-y-1 text-sm text-base-content/80">
-        {content.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
+      <ul className="list-disc pl-5 space-y-2 text-sm text-base-content/80">
+        {groupedItems.map((item, index) => {
+          if (item.type === "subsection") {
+            return (
+              <li key={`${item.title}-${index}`} className="space-y-1">
+                <p>{item.title}</p>
+                {item.items.length > 0 && (
+                  <ul className="list-disc pl-5 space-y-1">
+                    {item.items.map((subItem, subIndex) => (
+                      <li key={`${item.title}-${subIndex}`}>{subItem}</li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          }
+
+          return <li key={`${item.text}-${index}`}>{item.text}</li>;
+        })}
       </ul>
     );
   }
@@ -45,9 +105,18 @@ export default function TermsOfServiceView() {
               <h1 className="text-3xl font-bold text-base-content">
                 {termsOfService.title}
               </h1>
+              <p className="text-sm text-base-content/70">
+                Effective Date: {termsOfService.effectiveDate}
+              </p>
+              <p className="text-sm text-base-content/70">
+                Last Updated: {termsOfService.lastUpdated}
+              </p>
+              <p className="text-sm text-base-content/70">
+                {termsOfService.website}
+              </p>
             </div>
             <p className="text-sm leading-relaxed text-base-content/80">
-              {termsOfService.scope}
+              {termsOfService.introduction}
             </p>
           </div>
         </div>
@@ -88,13 +157,10 @@ export default function TermsOfServiceView() {
         ))}
 
         <div className="card bg-base-100 shadow-sm border border-base-300">
-          <div className="card-body space-y-2">
-            <h2 className="text-base font-semibold">Contact</h2>
-            <div className="text-sm text-base-content/80 space-y-1">
-              <p>{termsOfService.contact.platform}</p>
-              <p>{termsOfService.contact.company}</p>
-              <p>{termsOfService.contact.website}</p>
-            </div>
+          <div className="card-body">
+            <p className="text-sm leading-relaxed text-base-content/80">
+              {termsOfService.legalNote}
+            </p>
           </div>
         </div>
       </div>

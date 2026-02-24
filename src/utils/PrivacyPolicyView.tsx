@@ -72,6 +72,12 @@ export default function PrivacyPolicyView() {
                 {privacyPolicy.title}
               </h1>
               <p className="text-sm text-base-content/70">
+                Effective Date: {privacyPolicy.effectiveDate}
+              </p>
+              <p className="text-sm text-base-content/70">
+                Last Updated: {privacyPolicy.lastUpdated}
+              </p>
+              <p className="text-sm text-base-content/70">
                 {privacyPolicy.website}
               </p>
             </div>
@@ -115,6 +121,14 @@ export default function PrivacyPolicyView() {
             </div>
           </section>
         ))}
+
+        <div className="card bg-base-100 shadow-sm border border-base-300">
+          <div className="card-body">
+            <p className="text-sm leading-relaxed text-base-content/80">
+              {privacyPolicy.legalNote}
+            </p>
+          </div>
+        </div>
 
       </div>
     </div>
