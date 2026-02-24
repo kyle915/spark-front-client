@@ -24,8 +24,8 @@ const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuthStore();
   const { showAlert } = useAlertStore();
-  const [isLogin, setIsLogin] = useState(true);
-  const [fade, setFade] = useState(true);
+  const [isLogin] = useState(true);
+  const [fade] = useState(true);
   const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
     (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark"
   );
@@ -39,13 +39,13 @@ const Login = () => {
     localStorage.setItem("@color-scheme", colorScheme);
   }, [colorScheme]);
 
-  const handleSwitch = () => {
-    setFade(false);
-    setTimeout(() => {
-      setIsLogin(!isLogin);
-      setFade(true);
-    }, 200);
-  };
+  // const handleSwitch = () => {
+  //   setFade(false);
+  //   setTimeout(() => {
+  //     setIsLogin(!isLogin);
+  //     setFade(true);
+  //   }, 200);
+  // };
 
   const { control, handleSubmit } = useForm<FormData>({
     defaultValues: {
@@ -118,7 +118,7 @@ const Login = () => {
               />
             )}
 
-            <div className="text-center text-sm mt-6">
+            {/* <div className="text-center text-sm mt-6">
               {isLogin ? (
                 <>
                   Not registered yet?{" "}
@@ -143,7 +143,7 @@ const Login = () => {
                 </>
               )}
 
-            </div>
+            </div> */}
           
             <div className="mt-10 text-center space-y-2">
               <p className="text-xs text-base-content/40">
