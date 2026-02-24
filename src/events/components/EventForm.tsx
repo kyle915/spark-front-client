@@ -48,6 +48,7 @@ export default function EventForm({
   // contactMode,
   onSubmit,
   defaultValues = {},
+  showIsNational = true,
 }: // onRefetch,
 EventFormProps) {
   const navigate = useNavigate();
@@ -690,11 +691,13 @@ EventFormProps) {
 
             <div className="grid grid-cols-1 gap-4">
               <FormTextarea name="notes" control={control} label="Notes" />
-              <FormCheckbox
-                name="isNational"
-                control={control}
-                label="Is National?"
-              />
+              {showIsNational && (
+                <FormCheckbox
+                  name="isNational"
+                  control={control}
+                  label="Is National?"
+                />
+              )}
             </div>
           </section>
 

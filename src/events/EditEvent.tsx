@@ -159,6 +159,7 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
               mode="edit"
               eventTypes={eventTypes}
               timezones={timeZones}
+              showIsNational={false}
               onSubmit={handleSubmit}
               defaultValues={defaultValues}
               locations={locations}
