@@ -34,13 +34,6 @@ const defaultFilters: FiltersState = {
 
 const formatNumber = (value: number) => value.toLocaleString();
 const formatPercent = (value: number) => `${value.toFixed(1)}%`;
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-
 const formatDelta = (current: number, previous?: number | null) => {
   if (!previous || previous === 0) return "0%";
   const diff = ((current - previous) / previous) * 100;
@@ -78,7 +71,7 @@ const monthLookup = new Map(
         .toLowerCase(),
       index,
     ],
-  ])
+  ]),
 );
 
 const getMonthIndex = (value: string) => {
@@ -96,7 +89,7 @@ const buildQuarterSummaries = (
     month: string;
     consumersSampled: number;
     purchases: number;
-  }>
+  }>,
 ): QuarterSummary[] => {
   const buckets = new Map<
     string,
@@ -192,7 +185,7 @@ export default function DashboardRetail() {
   const { dashboard, filterOptions } = useRecapDashboardData(
     tenantId || "",
     filtersInput,
-    fetchKey
+    fetchKey,
   );
 
   const metrics = dashboard.metrics;
@@ -208,7 +201,7 @@ export default function DashboardRetail() {
       value: formatNumber(metrics.totalConsumersSampled),
       change: formatDelta(
         metrics.totalConsumersSampled,
-        comparison?.totalConsumersSampled
+        comparison?.totalConsumersSampled,
       ),
     },
     {
@@ -222,15 +215,6 @@ export default function DashboardRetail() {
       title: "Overall Conversion Rate",
       value: formatPercent(metrics.conversionRate),
       change: formatDelta(metrics.conversionRate, comparison?.conversionRate),
-    },
-    {
-      key: "revenueGenerated",
-      title: "Revenue Generated",
-      value: formatCurrency(metrics.revenueGenerated),
-      change: formatDelta(
-        metrics.revenueGenerated,
-        comparison?.revenueGenerated
-      ),
     },
   ];
 
@@ -269,11 +253,11 @@ export default function DashboardRetail() {
       consumers: point.consumers,
       conversion: point.conversion,
       color: colorPalette[index % colorPalette.length],
-    })
+    }),
   );
 
   const quarterSummaries = buildQuarterSummaries(
-    dashboard.monthlyTrends.dataPoints
+    dashboard.monthlyTrends.dataPoints,
   );
 
   const topMarket = dashboard.marketAnalysis.dataPoints.reduce(
@@ -281,7 +265,7 @@ export default function DashboardRetail() {
       if (!best) return current;
       return current.conversion > best.conversion ? current : best;
     },
-    null as (typeof dashboard.marketAnalysis.dataPoints)[number] | null
+    null as (typeof dashboard.marketAnalysis.dataPoints)[number] | null,
   );
 
   const insights = [
@@ -302,7 +286,7 @@ export default function DashboardRetail() {
       label: "HIGHEST WILLINGNESS TO BUY",
       main: "Overall",
       sub: `${formatPercent(
-        dashboard.performanceInsights.willingToPurchasePercentage
+        dashboard.performanceInsights.willingToPurchasePercentage,
       )} willing to purchase`,
       subColor: "text-emerald-600",
       icon: UsersRound,
@@ -314,7 +298,7 @@ export default function DashboardRetail() {
       label: "STRONGEST BRAND AWARENESS",
       main: "Overall",
       sub: `${formatPercent(
-        dashboard.performanceInsights.brandAwarenessPercentage
+        dashboard.performanceInsights.brandAwarenessPercentage,
       )} awareness among consumers`,
       subColor: "text-blue-600",
       icon: UsersRound,
@@ -370,7 +354,7 @@ export default function DashboardRetail() {
           }}
         />
 
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
           {metricItems.map((metric) => (
             <MetricCard
               key={metric.key}
@@ -383,9 +367,6 @@ export default function DashboardRetail() {
             />
           ))}
         </section>
-
-        {/* AI INSIGHTS */}
-        <AiInsightsSection insights={aiInsightsMockV2} isLoading={false} />
 
         {/* MONTHLY PERFORMANCE */}
         <section className="w-full">
@@ -406,6 +387,7 @@ export default function DashboardRetail() {
               distributors={distributors}
               selectedDistributor={filters.distributor}
               onDistributorChange={(value) => {
+                if (filters.distributor === value) return;
                 setFilters((prev) => ({ ...prev, distributor: value }));
                 setFetchKey((key) => key + 1);
               }}
@@ -431,7 +413,16 @@ export default function DashboardRetail() {
 
         <section className="w-full grid grid-cols-2 gap-6">
           <div className="col-span-1">
-            <RetailAccountsPerformance data={retailAccounts} />
+            <RetailAccountsPerformance
+              data={retailAccounts}
+              distributors={distributors}
+              selectedDistributor={filters.distributor}
+              onDistributorChange={(value) => {
+                if (filters.distributor === value) return;
+                setFilters((prev) => ({ ...prev, distributor: value }));
+                setFetchKey((key) => key + 1);
+              }}
+            />
           </div>
 
           <div className="col-span-1">
@@ -442,6 +433,9 @@ export default function DashboardRetail() {
         <section className="w-full">
           <QuarterSummaryCards data={quarterSummaries} />
         </section>
+
+        {/* AI INSIGHTS */}
+        <AiInsightsSection insights={aiInsightsMockV2} isLoading={false} />
       </main>
     </Layout>
   );

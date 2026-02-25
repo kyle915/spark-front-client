@@ -1,13 +1,7 @@
 import type { FC, SyntheticEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import type { Map as LeafletMap } from "leaflet";
-
-export type PhotonResult = {
-  lat: number;
-  lng: number;
-  label: string;
-  description: string;
-};
+import { type PhotonResult, searchPhotonLocations } from "./mapSearch";
 
 interface MapSearchControlProps {
   map: LeafletMap | null;
@@ -16,24 +10,6 @@ interface MapSearchControlProps {
   minLength?: number;
   debounceMs?: number;
 }
-
-const PHOTON_ENDPOINT = "https://photon.komoot.io/api/";
-
-const buildDescription = (props: Record<string, unknown>): string => {
-  const parts = [
-    props.name,
-    props.street,
-    props.housenumber,
-    props.district,
-    props.city,
-    props.state,
-    props.country,
-  ]
-    .map((value) => (typeof value === "string" ? value : null))
-    .filter(Boolean);
-
-  return parts.join(", ");
-};
 
 const MapSearchControl: FC<MapSearchControlProps> = ({
   map,
@@ -70,48 +46,7 @@ const MapSearchControl: FC<MapSearchControlProps> = ({
         setLoading(true);
         setError(null);
 
-        const response = await fetch(
-          `${PHOTON_ENDPOINT}?q=${encodeURIComponent(query)}&limit=5&lang=en`,
-          {
-            signal: controller.signal,
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`);
-        }
-
-        const data = await response.json();
-        const features: unknown[] = Array.isArray(data?.features)
-          ? data.features
-          : [];
-        const parsed: PhotonResult[] = features
-          .map((feature: any) => {
-            const coords = feature?.geometry?.coordinates;
-            const props = feature?.properties ?? {};
-            const lng = Number.parseFloat(coords?.[0]);
-            const lat = Number.parseFloat(coords?.[1]);
-
-            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-              return null;
-            }
-
-            const label =
-              typeof props.name === "string" && props.name.length > 0
-                ? props.name
-                : buildDescription(props) || "Unknown location";
-
-            return {
-              lat,
-              lng,
-              label,
-              description: buildDescription(props),
-            };
-          })
-          .filter((value: PhotonResult | null): value is PhotonResult =>
-            Boolean(value)
-          );
-
+        const parsed = await searchPhotonLocations(query, controller.signal);
         setResults(parsed);
       } catch (err) {
         if (controller.signal.aborted) return;

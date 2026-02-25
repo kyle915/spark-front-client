@@ -106,6 +106,7 @@ export interface EventFormProps {
   requestContactInfo?: RequestContactInfo;
   enableContactSection?: boolean;
   onRefetch?: (key: "distributors" | "retailers" | "clients") => void;
+  showIsNational?: boolean;
 }
 
 export interface RequestContactInfo {

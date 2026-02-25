@@ -5,11 +5,14 @@ import bgImage from "../assets/background.png";
 import { useForm } from "react-hook-form";
 import { useAlertStore } from "@store/alertStore";
 import ThemeToggle from "@/shared/ThemeToggle";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useAuthStore } from "@store/authStore";
 import { register } from "@api/auth/register";
 import type { RegisterFormFields } from "@/types/auth";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
+import sparkLogoDark from "../assets/spark_logo_dark.png";
+import sparkLogoLight from "../assets/spark_logo_light.png";
+import { themes } from "@/utils";
 import {
   buildThemeDefaults,
   applyCssVariables,
@@ -20,31 +23,35 @@ type FormData = {
 };
 
 const Login = () => {
+  const currentYear = new Date().getFullYear();
   const navigate = useNavigate();
   const { login } = useAuthStore();
   const { showAlert } = useAlertStore();
-  const [isLogin, setIsLogin] = useState(true);
-  const [fade, setFade] = useState(true);
+  const [isLogin] = useState(true);
+  const [fade] = useState(true);
   const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
     (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark"
   );
 
   useEffect(() => {
     const cssVars = buildThemeDefaults(colorScheme);
+    const themeName = themes[colorScheme];
 
     applyCssVariables(cssVars);
 
-    document.documentElement.setAttribute("data-theme", colorScheme);
+    document.documentElement.setAttribute("color-scheme", colorScheme);
+    document.documentElement.setAttribute("data-theme", themeName);
     localStorage.setItem("@color-scheme", colorScheme);
+    localStorage.setItem("@theme", themeName);
   }, [colorScheme]);
 
-  const handleSwitch = () => {
-    setFade(false);
-    setTimeout(() => {
-      setIsLogin(!isLogin);
-      setFade(true);
-    }, 200);
-  };
+  // const handleSwitch = () => {
+  //   setFade(false);
+  //   setTimeout(() => {
+  //     setIsLogin(!isLogin);
+  //     setFade(true);
+  //   }, 200);
+  // };
 
   const { control, handleSubmit } = useForm<FormData>({
     defaultValues: {
@@ -100,6 +107,11 @@ const Login = () => {
             className={`w-full max-w-sm transition-opacity duration-500 ease-in-out ${fade ? "opacity-100" : "opacity-0"
               }`}
           >
+            <img
+                src={colorScheme === "dark" ? sparkLogoLight : sparkLogoDark}
+                alt="Spark logo"
+                className="h-16 mb-6 mx-auto"
+            />
             <h1 className="text-3xl font-bold text-base-content mb-2">
               {isLogin ? "Login" : "Sign Up"}
             </h1>
@@ -117,7 +129,7 @@ const Login = () => {
               />
             )}
 
-            <div className="text-center text-sm mt-6">
+            {/* <div className="text-center text-sm mt-6">
               {isLogin ? (
                 <>
                   Not registered yet?{" "}
@@ -141,9 +153,9 @@ const Login = () => {
                   </button>
                 </>
               )}
-            </div>
 
-            {/*
+            </div> */}
+          
             <div className="mt-10 text-center space-y-2">
               <p className="text-xs text-base-content/40">
                 ©{currentYear} Ignite Productions. All rights reserved.
@@ -163,7 +175,7 @@ const Login = () => {
                 </Link>
               </div>
             </div>
-            */}
+           
           </div>
         </div>
 

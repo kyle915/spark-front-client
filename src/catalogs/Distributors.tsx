@@ -34,18 +34,14 @@ type DistributorFormValues = {
 };
 
 type TenantLocationSelectProps = {
-  tenantId: string;
   control: Control<DistributorFormValues>;
   name?: string;
 };
 
-const TenantLocationSelect = ({
-  tenantId,
-  control,
-}: TenantLocationSelectProps) => {
+const TenantLocationSelect = ({ control }: TenantLocationSelectProps) => {
   const data = useLazyLoadQuery<LocationsQueryType>(
     LocationsQuery,
-    { filters: { tenantId } },
+    {},
     { fetchPolicy: "store-and-network" },
   );
 
@@ -172,7 +168,6 @@ const DistributorForm = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <TenantLocationSelect
-                tenantId={tenantId}
                 control={control}
                 name="locationId"
               />

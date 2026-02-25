@@ -260,6 +260,7 @@ const CreateEventWithoutRequestContent = () => {
                           defaultValues={defaultValues}
                           enableContactSection
                           contactMode="manual"
+                          showIsNational={false}
                           onRefetch={refetch}
                           showRequestField={true}
                           showAssociateRequestToggle={true}

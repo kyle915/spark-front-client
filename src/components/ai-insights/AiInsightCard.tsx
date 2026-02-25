@@ -1,5 +1,6 @@
+import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { MessageSquare, TrendingUp, Package } from "lucide-react";
+import { MessageSquare, TrendingUp, Package, ChevronDown } from "lucide-react";
 import { cn } from "../../lib/utils";
 import type { AIInsightItem } from "./types";
 
@@ -33,6 +34,8 @@ const priorityUI = {
 };
 
 export function AiInsightCard({ insight, compact = false }: Props) {
+  const [expanded, setExpanded] = useState(false);
+
   const Icon: LucideIcon =
     { MessageSquare, TrendingUp, Package }[insight.iconLucide] ?? MessageSquare;
 
@@ -43,38 +46,61 @@ export function AiInsightCard({ insight, compact = false }: Props) {
       className={cn(
         "card rounded-xl transition-all duration-300",
         "bg-base-100 text-base-content border border-base-300/60",
-        "shadow-sm hover:shadow-lg",
-        "hover:-translate-y-0.5",
+        "shadow-sm hover:shadow-lg hover:-translate-y-0.5",
         style.border,
         style.bg,
-        style.hoverBg
+        style.hoverBg,
       )}
     >
       <div className={cn("card-body", compact ? "p-4 gap-3" : "p-6 gap-4")}>
-        {/* TOP ROW */}
+        {/* HEADER ROW */}
         <div className="flex items-center justify-between">
           <span
             className={cn(
               "px-3 py-1 text-xs font-semibold rounded-md border",
-              style.badge
+              style.badge,
             )}
           >
             {insight.priority} Priority
           </span>
 
-          <div
-            className={cn(
-              "w-9 h-9 rounded-full flex items-center justify-center shadow-sm transition-colors",
-              style.iconWrapper
-            )}
-          >
-            <Icon size={20} />
+          <div className="flex items-center gap-2">
+            <div
+              className={cn(
+                "w-9 h-9 rounded-full flex items-center justify-center shadow-sm",
+                style.iconWrapper,
+              )}
+            >
+              <Icon size={18} />
+            </div>
+
+            {/* Expand Toggle */}
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="btn btn-ghost btn-xs"
+            >
+              <ChevronDown
+                size={18}
+                className={cn(
+                  "transition-transform duration-300",
+                  expanded && "rotate-180",
+                )}
+              />
+            </button>
           </div>
         </div>
 
         <h4 className="font-semibold text-base">{insight.title}</h4>
 
-        <p className="text-sm text-base-content/70">{insight.description}</p>
+        {/* DESCRIPTION */}
+        <div
+          className={cn(
+            "text-sm text-base-content/70 transition-all duration-300",
+            !expanded && "line-clamp-3",
+          )}
+        >
+          {insight.description}
+        </div>
 
         <span className="text-xs opacity-50">AI generated insight</span>
       </div>

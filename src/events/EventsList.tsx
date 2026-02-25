@@ -29,12 +29,18 @@ import FormAutocomplete from "@shared/FormAutocomplete";
 import FormDatePicker from "@/shared/FormDatePicker";
 import { useAuthStore } from "@/store/authStore";
 import { SuspendEventMutation } from "@api/mutations/SuspendEventMutation";
+import type { SuspendEventMutation as SuspendEventMutationType } from "@api/mutations/__generated__/SuspendEventMutation.graphql";
 import { ArchiveEventMutation } from "@api/mutations/ArchiveEventMutation";
+import type { ArchiveEventMutation as ArchiveEventMutationType } from "@api/mutations/__generated__/ArchiveEventMutation.graphql";
 import { ApproveEventMutation } from "@api/mutations/ApproveEventMutation";
+import type { ApproveEventMutation as ApproveEventMutationType } from "@api/mutations/__generated__/ApproveEventMutation.graphql";
+import { DeclineEventMutation } from "@api/mutations/DeclineEventMutation";
+import type { DeclineEventMutation as DeclineEventMutationType } from "@api/mutations/__generated__/DeclineEventMutation.graphql";
 import environment from "@api/relay/environment";
 
 //Icons
 import { EyeIcon, PencilIcon } from "@heroicons/react/24/outline";
+import { XCircleIcon } from "@heroicons/react/24/solid";
 import {
   Archive,
   CheckCircleIcon,
@@ -131,10 +137,15 @@ type EventsListInnerProps = {
     date?: string;
     edited?: boolean;
   };
+  isArchivedView?: boolean;
   onRefreshReady?: (refreshFn: () => void) => void;
 };
 
-const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
+const EventsListInner = ({
+  filters,
+  isArchivedView,
+  onRefreshReady,
+}: EventsListInnerProps) => {
   const {
     queryRef,
     displayPage,
@@ -156,15 +167,22 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const showAlert = useAlertStore((state) => state.showAlert);
-  const [commitSuspend, isSuspending] = useMutation<any>(SuspendEventMutation);
-  const [commitArchive, isArchiving] = useMutation<any>(ArchiveEventMutation);
-  const [commitApprove, isApproving] = useMutation<any>(ApproveEventMutation);
+  const [commitSuspend, isSuspending] =
+    useMutation<SuspendEventMutationType>(SuspendEventMutation);
+  const [commitArchive, isArchiving] =
+    useMutation<ArchiveEventMutationType>(ArchiveEventMutation);
+  const [commitApprove, isApproving] =
+    useMutation<ApproveEventMutationType>(ApproveEventMutation);
+  const [commitDecline, isDeclining] =
+    useMutation<DeclineEventMutationType>(DeclineEventMutation);
   const [isSuspendModalOpen, setIsSuspendModalOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
   const [eventToSuspend, setEventToSuspend] = useState<EventRow | null>(null);
   const [eventToArchive, setEventToArchive] = useState<EventRow | null>(null);
   const [eventToApprove, setEventToApprove] = useState<EventRow | null>(null);
+  const [eventToDecline, setEventToDecline] = useState<EventRow | null>(null);
 
   useEffect(() => {
     if (onRefreshReady) {
@@ -203,6 +221,11 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
   const handleApproveClick = useCallback((dataEvent: EventRow) => {
     setEventToApprove(dataEvent);
     setIsApproveModalOpen(true);
+  }, []);
+
+  const handleDeclineClick = useCallback((dataEvent: EventRow) => {
+    setEventToDecline(dataEvent);
+    setIsDeclineModalOpen(true);
   }, []);
 
   const handleConfirmSuspend = useCallback(() => {
@@ -289,6 +312,34 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
     });
   }, [commitApprove, eventToApprove, refresh, showAlert]);
 
+  const handleConfirmDecline = useCallback(() => {
+    if (!eventToDecline?.id) {
+      console.error("Event ID is missing");
+      return;
+    }
+    commitDecline({
+      variables: {
+        input: {
+          id: eventToDecline.id,
+        },
+      },
+      onCompleted: (response) => {
+        if (response.declineEvent?.success) {
+          showAlert("Event declined successfully", "success");
+          refresh();
+        } else {
+          showAlert(
+            `Error: ${response.declineEvent?.message ?? "Unable to decline event"}`,
+            "error",
+          );
+        }
+      },
+      onError: (error) => {
+        showAlert(`Error declining event: ${error.message}`, "error");
+      },
+    });
+  }, [commitDecline, eventToDecline, refresh, showAlert]);
+
   const handleCloseSuspendModal = useCallback(() => {
     setIsSuspendModalOpen(false);
     setEventToSuspend(null);
@@ -302,6 +353,11 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
   const handleCloseApproveModal = useCallback(() => {
     setIsApproveModalOpen(false);
     setEventToApprove(null);
+  }, []);
+
+  const handleCloseDeclineModal = useCallback(() => {
+    setIsDeclineModalOpen(false);
+    setEventToDecline(null);
   }, []);
 
   const renderEventsActions = useCallback(
@@ -320,6 +376,10 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
         statusSlug === "approved" ||
         statusName === "approved" ||
         statusName === "aprobado";
+      const isDeclined =
+        statusSlug === "declined" ||
+        statusName === "declined" ||
+        statusName === "declinado";
       return (
         <div className="flex gap-2">
           <button
@@ -336,36 +396,50 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
           >
             <PencilIcon className="w-5 h-5" />
           </button>
-          <button
-            type="button"
-            className={`btn btn-xs btn-ghost tooltip ${isApproved ? "text-success/50 btn-disabled" : "text-success"}`}
-            data-tip={isApproved ? "Already approved" : "Approve event"}
-            onClick={() => handleApproveClick(dataEvent)}
-            disabled={isApproved || isApproving}
-            aria-label="Approve event"
-          >
-            <CheckCircleIcon className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            className={`btn btn-xs btn-ghost tooltip ${isSuspended ? "text-warning/50 btn-disabled" : "text-warning"}`}
-            data-tip={isSuspended ? "Already suspended" : "Suspend event"}
-            onClick={() => handleSuspendClick(dataEvent)}
-            disabled={isSuspended || isSuspending}
-            aria-label="Suspend event"
-          >
-            <PauseCircleIcon className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            className={`btn btn-xs btn-ghost tooltip ${isArchived ? "text-error/50 btn-disabled" : "text-error"}`}
-            data-tip={isArchived ? "Already archived" : "Archive event"}
-            onClick={() => handleArchiveClick(dataEvent)}
-            disabled={isArchived || isArchiving}
-            aria-label="Archive event"
-          >
-            <Archive className="w-5 h-5" />
-          </button>
+          {isArchivedView ? null : (
+            <>
+              <button
+                type="button"
+                className={`btn btn-xs btn-ghost tooltip ${isApproved ? "text-success/50 btn-disabled" : "text-success"}`}
+                data-tip={isApproved ? "Already approved" : "Approve event"}
+                onClick={() => handleApproveClick(dataEvent)}
+                disabled={isApproved || isApproving}
+                aria-label="Approve event"
+              >
+                <CheckCircleIcon className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                className={`btn btn-xs btn-ghost tooltip ${isDeclined ? "text-error/50 btn-disabled" : "text-error"}`}
+                data-tip={isDeclined ? "Already declined" : "Decline event"}
+                onClick={() => handleDeclineClick(dataEvent)}
+                disabled={isDeclined || isDeclining}
+                aria-label="Decline event"
+              >
+                <XCircleIcon className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                className={`btn btn-xs btn-ghost tooltip ${isSuspended ? "text-warning/50 btn-disabled" : "text-warning"}`}
+                data-tip={isSuspended ? "Already suspended" : "Suspend event"}
+                onClick={() => handleSuspendClick(dataEvent)}
+                disabled={isSuspended || isSuspending}
+                aria-label="Suspend event"
+              >
+                <PauseCircleIcon className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                className={`btn btn-xs btn-ghost tooltip ${isArchived ? "text-error/50 btn-disabled" : "text-error"}`}
+                data-tip={isArchived ? "Already archived" : "Archive event"}
+                onClick={() => handleArchiveClick(dataEvent)}
+                disabled={isArchived || isArchiving}
+                aria-label="Archive event"
+              >
+                <Archive className="w-5 h-5" />
+              </button>
+            </>
+          )}
         </div>
       );
     },
@@ -373,11 +447,14 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
       handleEditEvent,
       handleViewEvent,
       handleApproveClick,
+      handleDeclineClick,
       handleSuspendClick,
       handleArchiveClick,
       isApproving,
+      isDeclining,
       isSuspending,
       isArchiving,
+      isArchivedView,
     ],
   );
 
@@ -402,6 +479,16 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
         confirmText="Suspend"
         cancelText="Cancel"
         confirmButtonClass="btn-warning"
+      />
+      <ConfirmationModal
+        isOpen={isDeclineModalOpen}
+        onClose={handleCloseDeclineModal}
+        onConfirm={handleConfirmDecline}
+        title="Decline Event"
+        message={`Are you sure you want to decline the event "${eventToDecline?.name || ""}"?`}
+        confirmText="Decline"
+        cancelText="Cancel"
+        confirmButtonClass="btn-error"
       />
       <ConfirmationModal
         isOpen={isArchiveModalOpen}
@@ -473,6 +560,7 @@ const buildStateOptions = (
 type EventsListProps = {
   fixedFilters?: {
     edited?: boolean;
+    archived?: boolean;
   };
 };
 
@@ -584,37 +672,54 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
     return () => subscription?.unsubscribe();
   }, [distributorStateSearch]);
 
+  const derivedStatus =
+    fixedFilters?.archived === true ? "ARCHIVED" : selectedStatus || undefined;
+
   const filters = {
     tenantId: tenantId || undefined,
     eventTypeId: selectedEventType || undefined,
-    eventStatus: selectedStatus || undefined,
+    eventStatus: derivedStatus,
     requestId: selectedRequest || undefined,
     date: selectedDate || undefined,
     retailerStateId: selectedRetailerStateId || undefined,
     distributorStateId: selectedDistributorStateId || undefined,
-    ...fixedFilters,
+    edited: fixedFilters?.edited || undefined,
   };
 
   const catalogFilters = undefined;
+
+  // Layout helpers
+  const isEditedView = fixedFilters?.edited;
+  const isArchivedView = fixedFilters?.archived;
+
+  const pageTitle = isEditedView
+    ? "Edited Events"
+    : isArchivedView
+      ? "Archived Events"
+      : "All Events";
+
+  const pageDescription = isEditedView
+    ? "List of events that have been edited."
+    : isArchivedView
+      ? "List of archived events in the system."
+      : "List of all events in the system.";
 
   return (
     <Layout>
       <div className="mb-4 flex flex-col gap-2">
         <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
           <div className="p-2 rounded-xl bg-primary/10 text-primary">
-            {fixedFilters?.edited ? (
+            {isEditedView ? (
               <PencilIcon className="w-8 h-8" />
+            ) : isArchivedView ? (
+              <Archive className="w-8 h-8" />
             ) : (
               <CalendarDaysIcon className="w-8 h-8" />
             )}
           </div>
-          <h1>{fixedFilters?.edited ? "Edited Events" : "All Events"}</h1>
+          <h1>{pageTitle}</h1>
         </div>
-        <p className="text-base-content/70">
-          {fixedFilters?.edited
-            ? "List of events that have been edited."
-            : "List of all events in the system."}
-        </p>
+        <p className="text-base-content/70 p-2">{pageDescription}</p>
       </div>
 
       <CatalogsProvider
@@ -673,18 +778,22 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
                   }))}
                   placeholder="Search event type..."
                 />
-                <FormAutocomplete
-                  control={control}
-                  name="status"
-                  label="Filter by Status"
-                  options={catalogs.eventStatuses.flatMap((status) => {
-                    const enumValue = toEventStatusFilterEnum(status);
-                    return enumValue
-                      ? [{ label: status.name, value: enumValue }]
-                      : [];
-                  })}
-                  placeholder="Search status..."
-                />
+
+                {!fixedFilters?.archived ? (
+                  <FormAutocomplete
+                    control={control}
+                    name="status"
+                    label="Filter by Status"
+                    options={catalogs.eventStatuses.flatMap((status) => {
+                      const enumValue = toEventStatusFilterEnum(status);
+                      return enumValue
+                        ? [{ label: status.name, value: enumValue }]
+                        : [];
+                    })}
+                    placeholder="Search status..."
+                  />
+                ) : null}
+
                 <FormAutocomplete
                   control={control}
                   name="request"
@@ -731,6 +840,7 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
             <EventsListInner
               key={`${selectedEventType}-${selectedStatus}-${selectedRequest}-${selectedRetailerStateId}-${selectedDistributorStateId}-${selectedDate}`}
               filters={filters}
+              isArchivedView={isArchivedView}
             />
           </div>
         )}

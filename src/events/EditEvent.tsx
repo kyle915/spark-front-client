@@ -216,6 +216,7 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
               distributors={distributors}
               retailers={retailers}
               timezones={timeZones}
+              showIsNational={false}
               onSubmit={handleSubmit}
               states={states}
               defaultValues={defaultValues}

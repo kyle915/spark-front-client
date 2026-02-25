@@ -4,7 +4,7 @@ import type { RecapQuery as RecapQueryType } from "@/api/queries/__generated__/R
 import { GenerateRecapPdfMutation } from "@api/mutations/GenerateRecapPdfMutation";
 import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@api/mutations/__generated__/GenerateRecapPdfMutation.graphql";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { useParams, Link } from "react-router";
+import { useParams, Link, useSearchParams } from "react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDate, formatLocalDateTime } from "@/utils";
 import {
@@ -85,6 +85,7 @@ const RecapView = () => {
   // ======================================================
 
   const { uuid } = useParams();
+  const [searchParams] = useSearchParams();
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const showAlert = useAlertStore((state) => state.showAlert);
 
@@ -103,6 +104,20 @@ const RecapView = () => {
 
   const recap = recapData?.recap ?? null;
   const recapFiles = useMemo(() => recap?.recapFiles ?? [], [recap]);
+
+  const backToListUrl = useMemo(() => {
+    const pageRaw = Number(searchParams.get("fromPage") ?? "1");
+    const page = Number.isFinite(pageRaw) && pageRaw > 0
+      ? Math.floor(pageRaw)
+      : 1;
+    const after = searchParams.get("fromAfter");
+
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    if (after) params.set("after", after);
+
+    return `/recap/list?${params.toString()}`;
+  }, [searchParams]);
 
   // ======================================================
   // FILE HELPERS
@@ -310,13 +325,13 @@ const RecapView = () => {
   const productsSold = recap.productsSold ?? 0;
   const totalCansSold = recap.totalCansSold ?? 0;
   const totalPacksSold = recap.totalPacksSold ?? 0;
-  const totalEarnings = recap.totalEarnings ?? 0;
+  // const totalEarnings = recap.totalEarnings ?? 0;
 
   const hasSalesData =
     recap.productsSold !== null ||
     recap.totalCansSold !== null ||
-    recap.totalPacksSold !== null ||
-    recap.totalEarnings !== null;
+    recap.totalPacksSold !== null;
+  // recap.totalEarnings !== null;
 
   const currentPreview =
     flatImages && previewIndex !== null ? flatImages[previewIndex] : null;
@@ -327,7 +342,7 @@ const RecapView = () => {
         <div className="p-4 md:p-10 space-y-8">
           <div>
             <Link
-              to="/recap/list"
+              to={backToListUrl}
               className="inline-flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition"
             >
               <ArrowLeftIcon className="w-4 h-4" />
@@ -544,12 +559,12 @@ const RecapView = () => {
                       <span>Total Packs Sold</span>
                       <span className="font-medium">{totalPacksSold}</span>
                     </div>
-                    <div className="flex justify-between text-sm border rounded-lg p-3">
+                    {/* <div className="flex justify-between text-sm border rounded-lg p-3">
                       <span>Total Earnings</span>
                       <span className="font-medium">
                         ${totalEarnings.toFixed(2)}
                       </span>
-                    </div>
+                    </div> */}
                     {accountSpend !== null ? (
                       <div className="flex justify-between text-sm border rounded-lg p-3">
                         <span>Account Spend</span>

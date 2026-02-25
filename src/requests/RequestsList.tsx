@@ -135,6 +135,7 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
   const [requestToDecline, setRequestToDecline] = useState<RequestRow | null>(
     null,
   );
+  const [declineReason, setDeclineReason] = useState("");
 
   const {
     queryRef,
@@ -197,10 +198,13 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
       console.error("Request ID is missing");
       return;
     }
+    const normalizedDeclineReason = declineReason.trim() || null;
+
     commitDecline({
       variables: {
         input: {
           id: requestToDecline.id,
+          declineReason: normalizedDeclineReason,
         },
       },
       onCompleted: (response) => {
@@ -215,11 +219,12 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
         showAlert(`Error declining request: ${error.message}`, "error");
       },
     });
-  }, [requestToDecline, commitDecline, showAlert, refresh]);
+  }, [requestToDecline, declineReason, commitDecline, showAlert, refresh]);
 
   const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setRequestToDecline(null);
+    setDeclineReason("");
   }, []);
 
   const renderRequestActions = useCallback(
@@ -227,7 +232,7 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
       const statusSlug = request.status?.slug?.toLowerCase();
       const statusName = request.status?.name?.toLowerCase();
       const isApproved = statusName === "approved";
-      const isDeclined = statusSlug === "decline";
+      const isDeclined = statusSlug === "declined";
       const hasEvent = Boolean(request.event?.id);
       const canCreateEvent = isApproved && !hasEvent;
 
@@ -303,7 +308,22 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
         confirmText="Decline"
         cancelText="Cancel"
         confirmButtonClass="btn-error"
-      />
+      >
+        <div className="pb-4">
+          <label className="form-control w-full">
+            <span className="label">
+              <span className="label-text">Decline reason</span>
+            </span>
+            <textarea
+              className="textarea textarea-bordered w-full"
+              rows={4}
+              value={declineReason}
+              onChange={(event) => setDeclineReason(event.target.value)}
+              placeholder="Write the reason for declining this request..."
+            />
+          </label>
+        </div>
+      </ConfirmationModal>
 
       <Suspense fallback={<Loading />}>
         {queryRef ? (

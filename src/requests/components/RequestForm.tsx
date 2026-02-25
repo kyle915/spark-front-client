@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import FormInputText from "@/shared/FormInputText";
 import FormInputTime from "@/shared/FormInputTime";
 import FormAutocomplete from "@/shared/FormAutocomplete";
+import FormAddressSearch from "@/shared/FormAddressSearch";
 import FormDatePicker from "@/shared/FormDatePicker";
 import EditableLocationMap from "@/shared/EditableLocationMap";
 import FormCheckbox from "@/shared/FormCheckbox";
@@ -697,12 +698,15 @@ export default function RequestForm({
               />
 
               <div className="md:col-span-2">
-                <FormInputText<RequestFormValues>
+                <FormAddressSearch<RequestFormValues>
                   name="address"
                   placeholder="Enter address"
                   control={control}
                   label="Address"
                   rules={{ required: "Address is required" }}
+                  onSelect={(result) => {
+                    noteSet("coordinates", [result.lat, result.lng]);
+                  }}
                 />
               </div>
             </div>

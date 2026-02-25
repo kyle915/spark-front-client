@@ -22,6 +22,7 @@ export const RequestUuidQuery = graphql`
       retailerStoreContact
       storeManagerName
       storeManagerPhone
+      declineReason
       client {
         __typename
         id
@@ -68,6 +69,13 @@ export const RequestUuidQuery = graphql`
       }
       requestorEmail
       createdBy {
+        firstName
+        lastName
+        image {
+          url
+        }
+      }
+      approvedBy {
         firstName
         lastName
         image {
