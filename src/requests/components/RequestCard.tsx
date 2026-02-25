@@ -383,6 +383,17 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
                   </p>
                 </div>
               </div>
+
+              {request.declineReason?.trim() && (
+                <div>
+                  <p className="text-xs uppercase opacity-60">
+                    Decline Reason
+                  </p>
+                  <p className="font-medium whitespace-pre-wrap">
+                    {request.declineReason}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

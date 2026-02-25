@@ -21,6 +21,7 @@ export const RequestUuidQuery = graphql`
       retailerStoreContact
       storeManagerName
       storeManagerPhone
+      declineReason
       client {
         __typename
         id
