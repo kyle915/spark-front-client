@@ -19,8 +19,10 @@ import {
 } from "@/hooks/useRelayPagination";
 import Loading from "@/shared/Loading";
 import { EventsQuery } from "@/api/queries/EventsQuery";
+import { StatesQuery } from "@/api/queries/StatesQuery";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import type { EventsQuery as EventsQueryType } from "@/api/queries/__generated__/EventsQuery.graphql";
+import type { StatesQuery as StatesQueryType } from "@/api/queries/__generated__/StatesQuery.graphql";
 import type { RecapsQuery as RecapsQueryType } from "@/api/queries/__generated__/RecapsQuery.graphql";
 // import { ApproveRecapMutation } from "@api/mutations/ApproveRecapMutation";
 // import type { ApproveRecapMutation as ApproveRecapMutationType } from "@api/mutations/__generated__/ApproveRecapMutation.graphql";
@@ -45,6 +47,7 @@ import { useAlertStore } from "@/store/alertStore";
 import { useForm } from "react-hook-form";
 import FormInputText from "@/shared/FormInputText";
 import FormAutocomplete from "@/shared/FormAutocomplete";
+import FormDatePicker from "@/shared/FormDatePicker";
 
 const PAGE_SIZE = 10;
 
@@ -211,6 +214,8 @@ type RecapsListInnerProps = {
   filters?: {
     eventId?: string;
     eventAddress?: string;
+    stateId?: string;
+    eventDate?: string;
   };
   emptyMessage: string;
   onRefreshReady?: (refreshFn: () => void) => void;
@@ -383,14 +388,25 @@ const RecapList = () => {
   const [eventAddress, setEventAddress] = useState<string>("");
   const [eventSearchInput, setEventSearchInput] = useState<string>("");
   const [eventSearch, setEventSearch] = useState<string>("");
+  const [stateSearchInput, setStateSearchInput] = useState<string>("");
+  const [stateSearch, setStateSearch] = useState<string>("");
   const { control, watch, setValue } = useForm<{
     eventAddress: string;
     eventId: string | null;
+    stateId: string | null;
+    eventDate: string;
   }>({
-    defaultValues: { eventAddress: "", eventId: null },
+    defaultValues: {
+      eventAddress: "",
+      eventId: null,
+      stateId: null,
+      eventDate: "",
+    },
   });
   const eventAddressInput = watch("eventAddress");
   const selectedEventId = watch("eventId") ?? "";
+  const selectedStateId = watch("stateId") ?? "";
+  const selectedEventDate = watch("eventDate") ?? "";
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -406,6 +422,13 @@ const RecapList = () => {
     return () => window.clearTimeout(handle);
   }, [eventSearchInput]);
 
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setStateSearch(stateSearchInput.trim());
+    }, 500);
+    return () => window.clearTimeout(handle);
+  }, [stateSearchInput]);
+
   // =========================
   // EVENTS (FROM TENANT)
   // =========================
@@ -414,6 +437,15 @@ const RecapList = () => {
     {
       filters: { tenantId: tenantId || undefined },
       q: eventSearch || undefined,
+    },
+    { fetchPolicy: "store-and-network" },
+  );
+
+  const statesData = useLazyLoadQuery<StatesQueryType>(
+    StatesQuery,
+    {
+      q: stateSearch || undefined,
+      first: 200,
     },
     { fetchPolicy: "store-and-network" },
   );
@@ -435,15 +467,26 @@ const RecapList = () => {
     [eventsData],
   );
 
+  const stateOptions = useMemo(
+    () =>
+      statesData.states.edges.map((edge) => ({
+        value: edge.node.id,
+        label: edge.node.name,
+      })),
+    [statesData],
+  );
+
   const filters =
-    selectedEventId || eventAddress
+    selectedEventId || eventAddress || selectedStateId || selectedEventDate
       ? {
         eventId: selectedEventId || undefined,
         eventAddress: eventAddress || undefined,
+        stateId: selectedStateId || undefined,
+        eventDate: selectedEventDate || undefined,
       }
       : undefined;
 
-  const emptyMessage = selectedEventId
+  const emptyMessage = selectedEventId || selectedStateId || selectedEventDate
     ? "No recaps found for this event."
     : "No recaps found.";
 
@@ -487,16 +530,22 @@ const RecapList = () => {
                 Refresh
               </button>
 
-              {(selectedEventId || eventAddress) && (
+              {(selectedEventId ||
+                eventAddress ||
+                selectedStateId ||
+                selectedEventDate) && (
                 <>
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
                     onClick={() => {
                       setValue("eventId", null);
+                      setValue("stateId", null);
+                      setValue("eventDate", "");
                       setEventAddress("");
                       setValue("eventAddress", "");
                       setEventSearchInput("");
+                      setStateSearchInput("");
                     }}
                   >
                     <FunnelXIcon className="w-4 h-4" />
@@ -520,11 +569,30 @@ const RecapList = () => {
               />
             </div>
             <div className="w-full max-w-sm">
+              <FormAutocomplete
+                name="stateId"
+                control={control}
+                label="State"
+                options={stateOptions}
+                placeholder="Search state"
+                disabled={stateOptions.length === 0}
+                onSearch={setStateSearchInput}
+              />
+            </div>
+            <div className="w-full max-w-sm">
               <FormInputText
                 name="eventAddress"
                 control={control}
                 label="Event Address"
                 placeholder="Search address"
+              />
+            </div>
+            <div className="w-full max-w-sm">
+              <FormDatePicker
+                name="eventDate"
+                control={control}
+                label="Event Date"
+                placeholder="MM/DD/YYYY"
               />
             </div>
           </div>
@@ -534,7 +602,7 @@ const RecapList = () => {
           TABLE
       ========================= */}
           <RecapsListInner
-            key={`${selectedEventId}::${eventAddress}`}
+            key={`${selectedEventId}::${selectedStateId}::${eventAddress}::${selectedEventDate}`}
             filters={filters}
             emptyMessage={emptyMessage}
             onRefreshReady={(fn) => (refreshRef.current = fn)}
