@@ -69,7 +69,7 @@ export default function FormWizard({
         </div>
       </div>
 
-      <div className="relative min-h-[240px] sm:min-h-[300px]">
+      <div className="relative min-h-60 sm:min-h-[300px]">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}

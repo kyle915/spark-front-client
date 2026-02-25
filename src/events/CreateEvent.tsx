@@ -1,4 +1,4 @@
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 
@@ -7,15 +7,20 @@ import Loading from "@shared/Loading";
 import CatalogsProvider from "@shared/CatalogsProvider";
 import EventForm from "./components/EventForm";
 
+import { fetchQuery } from "react-relay";
+import environment from "@api/relay/environment";
+
 import { useAlertStore } from "@store/alertStore";
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
+import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/StatesQuery.graphql";
+import { StatesQuery } from "@api/queries/StatesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 
 import { RequestUuidQuery } from "@api/queries/RequestUuidQuery";
 import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__generated__/RequestUuidQuery.graphql";
 
-// import { LocationsQuery } from "@api/queries/LocationsQuery";
-// import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
+import { LocationsQuery } from "@api/queries/LocationsQuery";
+import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
 
 import { CreateEventMutation } from "@api/mutations/CreateEventMutation";
 import type { CreateEventMutation as CreateEventMutationType } from "@api/mutations/__generated__/CreateEventMutation.graphql";
@@ -28,7 +33,11 @@ import type { UpdateRequestMutation as UpdateRequestMutationType } from "@api/mu
 
 import type { EventFormValues } from "../types/events/formTypes";
 import { dateFormat } from "@/public/form/utils/toDate";
-import { buildDateTimeWithOffset, extractDatePart, extractTimePart } from "@/utils";
+import {
+  buildDateTimeWithOffset,
+  extractDatePart,
+  extractTimePart,
+} from "@/utils";
 
 /* ================= Page ================= */
 const CreateEventPage = () => {
@@ -75,9 +84,15 @@ type FormProps = {
   request: NonNullable<RequestUuidQueryType["response"]["request"]>;
 };
 
+type LocationNode = NonNullable<
+  NonNullable<LocationsQueryType["response"]["locations"]>["edges"][number]
+>["node"];
+
 const CreateEventForm = ({ request }: FormProps) => {
   const navigate = useNavigate();
   const { showAlert } = useAlertStore();
+  const [locations, setLocations] = useState<LocationNode[]>([]);
+  const [selectedStateId, setSelectedStateId] = useState<string | null>(null);
 
   // ========================
   // QUERIES
@@ -85,16 +100,60 @@ const CreateEventForm = ({ request }: FormProps) => {
   const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
     TimezonesQuery,
     {},
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
   const timeZones = timezonesData.timezones.edges.map((e) => e.node);
 
-  // const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
-  //   filters: { tenantId: request.tenantId },
-  // });
+  const statesData = useLazyLoadQuery<StatesQueryType>(
+    StatesQuery,
+    {},
+    { fetchPolicy: "store-and-network" },
+  );
 
-  // const locations = locationsData.locations.edges.map((e) => e.node);
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadLocations = async () => {
+      if (!request?.tenantId) {
+        setLocations([]);
+        return;
+      }
+
+      try {
+        const data: LocationsQueryType["response"] | null | undefined =
+          await fetchQuery<LocationsQueryType>(
+            environment,
+            LocationsQuery,
+            {
+              filters: {
+                ...(selectedStateId ? { stateId: selectedStateId } : {}),
+              },
+            },
+            { fetchPolicy: "network-only" },
+          ).toPromise();
+
+        const edges = data?.locations?.edges ?? [];
+        const nodes = edges.flatMap((edge) => (edge?.node ? [edge.node] : []));
+
+        if (!isCancelled) {
+          setLocations(nodes);
+        }
+      } catch {
+        if (!isCancelled) {
+          setLocations([]);
+        }
+      }
+    };
+
+    loadLocations();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [request?.tenantId, selectedStateId]);
+
+  const states = statesData.states?.edges.map((e) => e.node) || [];
 
   // ========================
   // MUTATIONS
@@ -103,52 +162,20 @@ const CreateEventForm = ({ request }: FormProps) => {
     useMutation<CreateEventMutationType>(CreateEventMutation);
 
   const [commitApproveRequest] = useMutation<ApproveRequestMutationType>(
-    ApproveRequestMutation
+    ApproveRequestMutation,
   );
 
   const [commitUpdateRequest] = useMutation<UpdateRequestMutationType>(
-    UpdateRequestMutation
+    UpdateRequestMutation,
   );
 
   const eventTypeFilters = useMemo(
     () => ({ tenantId: request.tenantId }),
-    [request.tenantId]
+    [request.tenantId],
   );
 
-  // const getLegacyField = useMemo(
-  //   () => (field: string) => {
-  //     const value = (request as Record<string, unknown>)[field];
-  //     return typeof value === "string" ? value : null;
-  //   },
-  //   [request]
-  // );
-
-  // const requestContactInfo = useMemo(
-  //   () => ({
-  //     distributorName:
-  //       getLegacyField("distributorName") ?? request.distributor?.name ?? null,
-  //     distributorEmail:
-  //       getLegacyField("distributorEmail") ??
-  //       request.distributor?.email ??
-  //       null,
-  //     retailerName:
-  //       getLegacyField("retailerName") ?? request.retailer?.name ?? null,
-  //     retailerAddress:
-  //       getLegacyField("retailerAddress") ?? request.retailer?.address ?? null,
-  //     retailerStoreContact:
-  //       getLegacyField("retailerStoreContact") ??
-  //       request.retailer?.storeContact ??
-  //       null,
-  //     storeManagerName: getLegacyField("storeManagerName") ?? null,
-  //     storeManagerPhone: getLegacyField("storeManagerPhone") ?? null,
-  //   }),
-  //   [request, getLegacyField]
-  // );
-
   const shouldUpdateRequest = (data: EventFormValues) => {
-    return (
-      Boolean(data.storeManagerName || data.storeManagerPhone)
-    );
+    return Boolean(data.storeManagerName || data.storeManagerPhone);
   };
 
   /* ================= Mutation ================= */
@@ -158,8 +185,7 @@ const CreateEventForm = ({ request }: FormProps) => {
       return;
     }
 
-    const timezone =
-      timeZones.find((tz) => tz.id === data.timezoneId) ?? null;
+    const timezone = timeZones.find((tz) => tz.id === data.timezoneId) ?? null;
     const offsetMinutes = timezone?.offset ?? null;
     const dateValue = dateFormat(data.date);
     const normalizedDate = dateValue
@@ -180,18 +206,10 @@ const CreateEventForm = ({ request }: FormProps) => {
           distributorId: request.distributor?.id ?? null,
           retailerId: request.retailer?.id ?? null,
           startTime: dateValue
-            ? buildDateTimeWithOffset(
-              dateValue,
-              data.startTime,
-              offsetMinutes,
-            )
+            ? buildDateTimeWithOffset(dateValue, data.startTime, offsetMinutes)
             : "",
           endTime: dateValue
-            ? buildDateTimeWithOffset(
-              dateValue,
-              data.endTime,
-              offsetMinutes,
-            )
+            ? buildDateTimeWithOffset(dateValue, data.endTime, offsetMinutes)
             : "",
           coordinates: data.coordinates ?? request.coordinates ?? undefined,
           tenantId: request.tenantId,
@@ -211,7 +229,7 @@ const CreateEventForm = ({ request }: FormProps) => {
             } else {
               showAlert(
                 approveRequest?.message ?? "Error approving request",
-                "error"
+                "error",
               );
             }
           },
@@ -254,10 +272,10 @@ const CreateEventForm = ({ request }: FormProps) => {
           startTime:
             dateValue && data.startTime
               ? buildDateTimeWithOffset(
-                dateValue,
-                data.startTime,
-                offsetMinutes,
-              )
+                  dateValue,
+                  data.startTime,
+                  offsetMinutes,
+                )
               : "",
           endTime:
             dateValue && data.endTime
@@ -321,9 +339,9 @@ const CreateEventForm = ({ request }: FormProps) => {
     >
       {({
         eventTypes,
-        // distributors,
-        // retailers,
-        // requestStoreManagers,
+        distributors,
+        retailers,
+        requestStoreManagers,
         loading,
         errors,
         // refetch,
@@ -338,10 +356,10 @@ const CreateEventForm = ({ request }: FormProps) => {
             eventTypes={eventTypes}
             tenantId={request.tenantId}
             // requestId={request.id}
-            // distributors={distributors}
+            distributors={distributors}
             timezones={timeZones}
-            // retailers={retailers}
-            // requestStoreManagers={requestStoreManagers}
+            retailers={retailers}
+            requestStoreManagers={requestStoreManagers}
             // requestContactInfo={requestContactInfo}
             // locations={locations}
             showIsNational={false}

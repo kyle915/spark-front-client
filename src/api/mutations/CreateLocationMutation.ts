@@ -12,7 +12,6 @@ export const CreateLocationMutation = graphql`
         name
         code
         zip
-        tenantId
       }
     }
   }

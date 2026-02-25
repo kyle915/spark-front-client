@@ -8,7 +8,6 @@ export const LocationByIdQuery = graphql`
       name
       code
       zip
-      tenantId
     }
   }
 `;
