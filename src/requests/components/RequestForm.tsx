@@ -7,6 +7,7 @@ import FormAutocomplete from "@/shared/FormAutocomplete";
 import FormDatePicker from "@/shared/FormDatePicker";
 import EditableLocationMap from "@/shared/EditableLocationMap";
 import FormCheckbox from "@/shared/FormCheckbox";
+import FormTextarea from "@/shared/FormTextarea";
 import { ArrowLeftIcon, PencilIcon } from "@heroicons/react/24/solid";
 import { XCircleIcon } from "@heroicons/react/24/outline";
 import { SaveIcon } from "lucide-react";
@@ -15,6 +16,9 @@ import { useAutoTimezoneFromCoordinates } from "../hooks/useAutoTimezoneFromCoor
 
 import { useMutation } from "react-relay/hooks";
 import { useAlertStore } from "@store/alertStore";
+
+import { LocationsQuery } from "@api/queries/LocationsQuery";
+import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
 
 import { CreateRequestStoreManagerMutation } from "@api/mutations/CreateRequestStoreManagerMutation";
 import type { CreateRequestStoreManagerMutation as CreateRequestStoreManagerMutationType } from "@api/mutations/__generated__/CreateRequestStoreManagerMutation.graphql";
@@ -29,8 +33,9 @@ import { DistributorsQuery } from "@api/queries/DistributorsQuery";
 import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__generated__/DistributorsQuery.graphql";
 import { RetailersQuery } from "@api/queries/RetailersQuery";
 import type { RetailersQuery as RetailersQueryType } from "@api/queries/__generated__/RetailersQuery.graphql";
-
 import { useEntitiesByLocation } from "../hooks/useEntitiesByLocation";
+import { fetchQuery } from "relay-runtime";
+import environment from "@/api/relay/environment";
 
 export interface RequestFormValues {
   name: string;
@@ -60,6 +65,7 @@ export interface RequestFormValues {
   tableSize?: string;
   products?: string[];
   stateId?: string | null;
+  notes?: string | null;
 }
 
 interface CatalogItem {
@@ -105,9 +111,8 @@ interface RequestFormProps {
   tenantId: string;
   requestId?: string | null;
   requestStoreManagers?: StoreManagerItem[];
-  locations?: CatalogItem[];
+  // locations?: CatalogItem[];
   states?: CatalogItem[];
-  onStateChange?: (stateId: string | null) => void;
 
   onRefetch?: (
     key: "distributors" | "retailers" | "requestStoreManagers",
@@ -149,9 +154,7 @@ export default function RequestForm({
   enableContactSection = false,
   contactMode,
   requestContactInfo,
-  locations = [],
   states = [],
-  onStateChange,
 }: RequestFormProps) {
   const safeDefaultValues: RequestFormValues = {
     name: "",
@@ -177,16 +180,24 @@ export default function RequestForm({
     tableSize: "",
     products: [],
     stateId: null,
+    notes: "",
+    distributorLocationId: null,
+    retailerLocationId: null,
+    entitiesLocationId: null,
     ...defaultValues,
   };
 
   const { showAlert } = useAlertStore();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [locations, setLocations] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
 
   // ========================
   // INITIALIZE FORM AND FORM STATE
   // ========================
-  const { handleSubmit, control, watch, setValue, reset, formState, trigger } =
+  const { handleSubmit, control, watch, setValue, formState, trigger } =
     useForm<RequestFormValues>({ defaultValues: safeDefaultValues });
 
   const isDirty = formState.isDirty;
@@ -204,10 +215,69 @@ export default function RequestForm({
   const distributorLocationId = watch("distributorLocationId");
   const retailerLocationId = watch("retailerLocationId");
   const selectedStateId = watch("stateId");
-  const selectedEntitiesLocationId = useWatch({
-    control,
-    name: "entitiesLocationId",
-  });
+  const notesValue = watch("notes") || "";
+  const selectedEntitiesLocationId = watch("entitiesLocationId");
+
+  // ========================
+  // DISTRIBUTORS AND RETAILERS
+  // ========================
+  useEffect(() => {
+    if (!tenantId) {
+      setLocations([]);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadLocations = async () => {
+      setLoadingLocations(true);
+
+      try {
+        const data = await fetchQuery<LocationsQueryType>(
+          environment,
+          LocationsQuery,
+          {
+            filters: {
+              ...(selectedStateId ? { stateId: selectedStateId } : {}),
+            },
+          },
+          { fetchPolicy: "network-only" },
+        ).toPromise();
+
+        const parsed =
+          data?.locations?.edges?.flatMap((edge) =>
+            edge?.node ? [edge.node] : [],
+          ) ?? [];
+
+        if (!isCancelled) {
+          setLocations(parsed);
+        }
+      } catch {
+        if (!isCancelled) {
+          setLocations([]);
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoadingLocations(false);
+        }
+      }
+    };
+
+    loadLocations();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [tenantId, selectedStateId]);
+
+  const locationOptions = useMemo(
+    () =>
+      locations.map((location) => ({
+        value: location.id,
+        label: location.name,
+      })),
+    [locations],
+  );
 
   /* ================= DISTRIBUTORS AND RETAILERS ================= */
   const extractDistributors = useCallback(
@@ -420,23 +490,24 @@ export default function RequestForm({
   // ========================
   // EFFECT TO RESET FORM IN EDIT MODE WHEN DEFAULT VALUES CHANGE
   // ========================
-  useEffect(() => {
-    if (mode === "edit" && Object.keys(defaultValues).length > 0) {
-      reset({
-        name: defaultValues.name ?? "",
-        date: defaultValues.date ?? "",
-        startTime: defaultValues.startTime ?? "",
-        endTime: defaultValues.endTime ?? "",
-        address: defaultValues.address ?? "",
-        coordinates: defaultValues.coordinates ?? null,
-        timezoneId: defaultValues.timezoneId ?? null,
-        retailerId: defaultValues.retailerId ?? null,
-        distributorId: defaultValues.distributorId ?? null,
-        requestTypeId: defaultValues.requestTypeId ?? null,
-        products: defaultValues.products ?? [],
-      });
-    }
-  }, [mode, defaultValues, reset]);
+  // useEffect(() => {
+  //   if (mode === "edit" && Object.keys(defaultValues).length > 0) {
+  //     reset({
+  //       name: defaultValues.name ?? "",
+  //       date: defaultValues.date ?? "",
+  //       startTime: defaultValues.startTime ?? "",
+  //       endTime: defaultValues.endTime ?? "",
+  //       address: defaultValues.address ?? "",
+  //       coordinates: defaultValues.coordinates ?? null,
+  //       timezoneId: defaultValues.timezoneId ?? null,
+  //       retailerId: defaultValues.retailerId ?? null,
+  //       distributorId: defaultValues.distributorId ?? null,
+  //       requestTypeId: defaultValues.requestTypeId ?? null,
+  //       products: defaultValues.products ?? [],
+  //       notes: defaultValues.notes ?? "",
+  //     });
+  //   }
+  // }, [mode, defaultValues, reset]);
 
   useAutoTimezoneFromCoordinates<RequestFormValues, "timezoneId">({
     coordinates: selectedCoordinates,
@@ -496,19 +567,6 @@ export default function RequestForm({
         searchText: state.code ? `${state.name} ${state.code}` : state.name,
       })),
     [states],
-  );
-
-  useEffect(() => {
-    onStateChange?.(selectedStateId ?? null);
-  }, [onStateChange, selectedStateId]);
-
-  const locationOptions = useMemo(
-    () =>
-      locations.map((location) => ({
-        value: location.id,
-        label: location.name,
-      })),
-    [locations],
   );
 
   return (
@@ -680,8 +738,9 @@ export default function RequestForm({
                   control={control}
                   label="City"
                   placeholder="Select city..."
+                  loading={loadingLocations}
                   options={locationOptions}
-                  disabled={!tenantId}
+                  disabled={!tenantId || loadingLocations}
                 />
               </div>
 
@@ -927,29 +986,56 @@ export default function RequestForm({
             </section>
           )}
 
-          {/* DETAILS (CREATE ONLY) */}
-          {mode === "create" && (
-            <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
-              <p className="font-semibold text-lg">Details</p>
-              <div className="grid grid-cols-1 gap-4">
-                <FormCheckbox<RequestFormValues>
-                  name="isTableNeeded"
+          {/* DETAILS  */}
+          <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+            <p className="font-semibold text-lg">Details</p>
+            <div className="grid grid-cols-1 gap-4">
+              <FormCheckbox<RequestFormValues>
+                name="isTableNeeded"
+                control={control}
+                label="Table Needed?"
+              />
+              {isTableNeeded && (
+                <FormInputText<RequestFormValues>
+                  name="tableSize"
                   control={control}
-                  label="Table Needed?"
+                  label="Table Size"
+                  placeholder="Enter table size"
+                  type="number"
+                  rules={{ required: "Table Size is required" }}
                 />
-                {isTableNeeded && (
-                  <FormInputText<RequestFormValues>
-                    name="tableSize"
-                    control={control}
-                    label="Table Size"
-                    placeholder="Enter table size"
-                    type="number"
-                    rules={{ required: "Table Size is required" }}
-                  />
-                )}
-              </div>
-            </section>
-          )}
+              )}
+            </div>
+          </section>
+
+          {/* NOTES */}
+          <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-lg">Notes</p>
+              <span
+                className={`text-xs ${
+                  notesValue.length > 280
+                    ? "text-error"
+                    : "text-base-content/60"
+                }`}
+              >
+                {notesValue.length}/300
+              </span>
+            </div>
+
+            <FormTextarea<RequestFormValues>
+              name="notes"
+              control={control}
+              label="Additional Notes"
+              placeholder="Enter any additional details or instructions..."
+              rules={{
+                maxLength: {
+                  value: 300,
+                  message: "Notes cannot exceed 300 characters",
+                },
+              }}
+            />
+          </section>
 
           {/* PRODUCTS */}
           {products.length > 0 && (

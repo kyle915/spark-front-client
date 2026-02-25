@@ -4,16 +4,16 @@ import Loading from "@/shared/Loading";
 import CatalogsProvider from "@/shared/CatalogsProvider";
 import EventForm from "./components/EventForm";
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
+import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/StatesQuery.graphql";
+import { StatesQuery } from "@api/queries/StatesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import type { EventFormValues } from "../types/events/formTypes";
-import { useMutation } from "react-relay/hooks";
+import { useMutation, useLazyLoadQuery } from "react-relay/hooks";
 import { CreateEventMutation } from "@api/mutations/CreateEventMutation";
 import type { CreateEventMutation as CreateEventMutationType } from "@api/mutations/__generated__/CreateEventMutation.graphql";
 import { useAlertStore } from "@store/alertStore";
 import { useNavigate } from "react-router";
 import { fetchQuery } from "react-relay";
-import { LocationsQuery } from "@/api/queries/LocationsQuery";
-import type { LocationsQuery as LocationsQueryType } from "@/api/queries/__generated__/LocationsQuery.graphql";
 import environment from "@/api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
 import { dateFormat } from "@/public/form/utils/toDate";
@@ -22,67 +22,45 @@ import { buildDateTimeWithOffset } from "@/utils";
 const CreateEventWithoutRequestContent = () => {
   const { tenantId } = useAuthStore();
   //   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
-  const [locations, setLocations] = useState<
-    Array<{ id: string; name: string }>
-  >([]);
+
   const [timezones, setTimezones] = useState<
     Array<{ id: string; name: string; code: string; offset: number }>
   >([]);
-  const [loadingLocations, setLoadingLocations] = useState(false);
   const [loadingTimezones, setLoadingTimezones] = useState(false);
-  const [locationsError, setLocationsError] = useState<Error | null>(null);
   const [timezonesError, setTimezonesError] = useState<Error | null>(null);
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
   const [commitCreateEvent] =
     useMutation<CreateEventMutationType>(CreateEventMutation);
 
+  const statesData = useLazyLoadQuery<StatesQueryType>(
+    StatesQuery,
+    {},
+    { fetchPolicy: "store-and-network" },
+  );
+
+  const states = statesData.states?.edges.map((e) => e.node) || [];
+
   useEffect(() => {
     if (!tenantId) {
-      setLocations([]);
-      setLocationsError(null);
       setTimezones([]);
       setTimezonesError(null);
       return;
     }
 
-    setLoadingLocations(true);
     setLoadingTimezones(true);
-    setLocationsError(null);
     setTimezonesError(null);
-
-    const subscription = fetchQuery<LocationsQueryType>(
-      environment,
-      LocationsQuery,
-      { filters: { tenantId: tenantId } },
-      { fetchPolicy: "network-only" }
-    ).subscribe({
-      next: (data) => {
-        const parsed =
-          data.locations?.edges?.flatMap((edge) =>
-            edge?.node ? [edge.node] : []
-          ) ?? [];
-        setLocations(parsed);
-      },
-      error: (err: unknown) => {
-        const error = err instanceof Error ? err : new Error(String(err));
-        setLocationsError(error);
-        setLocations([]);
-        setLoadingLocations(false);
-      },
-      complete: () => setLoadingLocations(false),
-    });
 
     const tzSubscription = fetchQuery<TimezonesQueryType>(
       environment,
       TimezonesQuery,
       {},
-      { fetchPolicy: "network-only" }
+      { fetchPolicy: "network-only" },
     ).subscribe({
       next: (data) => {
         const parsed =
           data.timezones?.edges?.flatMap((edge) =>
-            edge?.node ? [edge.node] : []
+            edge?.node ? [edge.node] : [],
           ) ?? [];
         setTimezones(parsed);
       },
@@ -96,7 +74,6 @@ const CreateEventWithoutRequestContent = () => {
     });
 
     return () => {
-      subscription.unsubscribe();
       tzSubscription.unsubscribe();
     };
   }, [tenantId]);
@@ -143,11 +120,7 @@ const CreateEventWithoutRequestContent = () => {
           : "",
       endTime:
         dateValue && formData.endTime
-          ? buildDateTimeWithOffset(
-              dateValue,
-              formData.endTime,
-              offsetMinutes,
-            )
+          ? buildDateTimeWithOffset(dateValue, formData.endTime, offsetMinutes)
           : "",
       tenantId: tenantId,
       date: normalizedDate,
@@ -176,7 +149,7 @@ const CreateEventWithoutRequestContent = () => {
         } else {
           showAlert(
             response.createEvent?.message ?? "Error creating event",
-            "error"
+            "error",
           );
         }
       },
@@ -196,7 +169,7 @@ const CreateEventWithoutRequestContent = () => {
       isNational: false,
       coordinates: undefined,
     }),
-    [tenantId]
+    [tenantId],
   );
 
   return (
@@ -265,13 +238,6 @@ const CreateEventWithoutRequestContent = () => {
                     }
                     return (
                       <div className="flex flex-col gap-4">
-                        {locationsError && (
-                          <div className="alert alert-warning">
-                            <span>
-                              Unable to load locations: {locationsError.message}
-                            </span>
-                          </div>
-                        )}
                         {timezonesError && (
                           <div className="alert alert-warning">
                             <span>
@@ -279,7 +245,7 @@ const CreateEventWithoutRequestContent = () => {
                             </span>
                           </div>
                         )}
-                        {(loadingLocations || loadingTimezones) && <Loading />}
+                        {loadingTimezones && <Loading />}
 
                         <EventForm
                           mode="create"
@@ -290,11 +256,13 @@ const CreateEventWithoutRequestContent = () => {
                           timezones={timezones}
                           requestStoreManagers={requestStoreManagers}
                           onSubmit={handleSubmit}
-                          locations={locations}
+                          states={states}
                           defaultValues={defaultValues}
                           enableContactSection
                           contactMode="manual"
                           onRefetch={refetch}
+                          showRequestField={true}
+                          showAssociateRequestToggle={true}
                         />
                       </div>
                     );

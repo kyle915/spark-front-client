@@ -1,4 +1,6 @@
-import { Controller, useForm } from "react-hook-form";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { Controller, useForm, useWatch } from "react-hook-form";
 // import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 
@@ -6,6 +8,9 @@ import type {
   EventFormValues,
   EventFormProps,
 } from "../../types/events/formTypes";
+
+import { fetchQuery, useMutation } from "react-relay";
+import environment from "@api/relay/environment";
 
 import FormInputText from "@shared/FormInputText";
 import FormInputTime from "@shared/FormInputTime";
@@ -19,45 +24,61 @@ import { ArrowLeftIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { PencilIcon } from "@heroicons/react/24/solid";
 import { SaveIcon } from "lucide-react";
 
-// import { useMutation } from "react-relay/hooks";
-// import { useAlertStore } from "@store/alertStore";
+import { LocationsQuery } from "@api/queries/LocationsQuery";
+import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
 
-// import { CreateRequestStoreManagerMutation } from "@api/mutations/CreateRequestStoreManagerMutation";
-// import type { CreateRequestStoreManagerMutation as CreateRequestStoreManagerMutationType } from "@api/mutations/__generated__/CreateRequestStoreManagerMutation.graphql";
+import { DistributorsQuery } from "@api/queries/DistributorsQuery";
+import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__generated__/DistributorsQuery.graphql";
+import { RetailersQuery } from "@api/queries/RetailersQuery";
+import type { RetailersQuery as RetailersQueryType } from "@api/queries/__generated__/RetailersQuery.graphql";
 
-// import { CreateDistributorMutation } from "@api/mutations/CreateDistributorMutation";
-// import type { CreateDistributorMutation as CreateDistributorMutationType } from "@api/mutations/__generated__/CreateDistributorMutation.graphql";
+import { CreateDistributorMutation } from "@api/mutations/CreateDistributorMutation";
+import type { CreateDistributorMutation as CreateDistributorMutationType } from "@api/mutations/__generated__/CreateDistributorMutation.graphql";
 
-// import { CreateRetailerMutation } from "@api/mutations/CreateRetailerMutation";
-// import type { CreateRetailerMutation as CreateRetailerMutationType } from "@api/mutations/__generated__/CreateRetailerMutation.graphql";
+import { RequestsQuery } from "@api/queries/RequestsQuery";
+import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 
+import { CreateRetailerMutation } from "@api/mutations/CreateRetailerMutation";
+import type { CreateRetailerMutation as CreateRetailerMutationType } from "@api/mutations/__generated__/CreateRetailerMutation.graphql";
 import { useAutoTimezoneFromCoordinates } from "@/requests/hooks/useAutoTimezoneFromCoordinates";
+import { useEntitiesByLocation } from "@/requests/hooks/useEntitiesByLocation";
+import { useAlertStore } from "@/store/alertStore";
+
+interface CatalogItem {
+  id: string;
+  name: string;
+  email?: string | null;
+  address?: string | null;
+  storeContact?: string | null;
+  code?: string | null;
+}
 
 export default function EventForm({
   mode,
   eventTypes,
   tenantId,
-  // requestId,
-  // distributors = [],
+  distributors = [],
   timezones = [],
-  // retailers = [],
-  // requestStoreManagers = [],
-  // locations = [],
-  // requestContactInfo,
-  // enableContactSection,
-  // contactMode,
+  retailers = [],
+  showRequestField = false,
+  showAssociateRequestToggle = true,
+  states = [],
+  requestContactInfo,
+  contactMode,
   onSubmit,
   defaultValues = {},
-}: // onRefetch,
+  onRefetch,
+}: //,
 EventFormProps) {
-  const navigate = useNavigate();
-  // const { showAlert } = useAlertStore();
+  const renderCountRef = useRef(0);
+  renderCountRef.current++;
 
   const safeDefaultValues: EventFormValues = {
     name: "",
     address: "",
     tenant: tenantId || "",
     eventTypeId: null,
+    requestId: null,
     date: "",
     startTime: "",
     endTime: "",
@@ -65,36 +86,99 @@ EventFormProps) {
     isNational: false,
     coordinates: null,
     timezoneId: null,
-    // distributorId: null,
-    // retailerId: null,
-    // storeManagerId: null,
-    // distributorName: "",
-    // distributorEmail: "",
-    // retailerName: "",
-    // retailerAddress: "",
-    // retailerStoreContact: "",
-    // storeManagerName: "",
-    // storeManagerPhone: "",
-    // distributorLocationId: null,
-    // retailerLocationId: null,
+    distributorId: null,
+    retailerId: null,
+    distributorName: "",
+    distributorEmail: "",
+    retailerName: "",
+    retailerAddress: "",
+    retailerStoreContact: "",
+    distributorLocationId: null,
+    retailerLocationId: null,
+    stateId: null,
+    entitiesLocationId: null,
     ...defaultValues,
   };
 
-  /* ================= FORM ================= */
+  const navigate = useNavigate();
+  const [locations, setLocations] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
+  const { showAlert } = useAlertStore();
+
+  const [requestSearchTerm, setRequestSearchTerm] = useState("");
+  const [requests, setRequests] = useState<
+    Array<{ id: string; title: string }>
+  >([]);
+  const [requestLoading, setRequestLoading] = useState(false);
+
+  useEffect(() => {
+    if (!tenantId || !showRequestField) {
+      setRequests([]);
+      return;
+    }
+
+    const q = requestSearchTerm.trim();
+    setRequestLoading(true);
+
+    const subscription = fetchQuery<RequestsQueryType>(
+      environment,
+      RequestsQuery,
+      {
+        first: 50,
+        q: q || null,
+        // filters: { tenantId },
+      },
+      { fetchPolicy: "network-only" },
+    ).subscribe({
+      next: (response) => {
+        const parsed =
+          response.requests?.edges?.flatMap((edge) =>
+            edge?.node ? [{ id: edge.node.id, title: edge.node.name }] : [],
+          ) ?? [];
+
+        setRequests(parsed);
+      },
+      error: (err: unknown) => {
+        const error = err instanceof Error ? err : new Error(String(err));
+        console.error("Error fetching requests:", error);
+        setRequests([]);
+        setRequestLoading(false);
+      },
+      complete: () => setRequestLoading(false),
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [tenantId, requestSearchTerm, showRequestField]);
+
+  const requestOptions = useMemo(
+    () =>
+      requests.map((request) => ({
+        value: request.id,
+        label: request.title,
+      })),
+    [requests],
+  );
+
+  // ========================
+  // INITIALIZE FORM AND FORM STATE
+  // ========================
   const { handleSubmit, control, setValue, formState, watch } =
     useForm<EventFormValues>({
       defaultValues: safeDefaultValues,
     });
 
-  /* ================= WATCH IF HAVE CHANGES ================= */
   const isDirty = formState.isDirty;
 
-  /* ================= WATCH ================= */
-  // const distributorId = useWatch({ control, name: "distributorId" });
-  // const retailerId = useWatch({ control, name: "retailerId" });
-  // const storeManagerId = useWatch({ control, name: "storeManagerId" });
-  const selectedCoordinates = watch("coordinates");
+  // ========================
+  // WATCHERS FOR COORDINATES & TIMEZONE AND HOOK
+  // ========================
   const selectedTimezoneId = watch("timezoneId");
+  const selectedCoordinates = watch("coordinates");
+  const associateRequest = watch("associateRequest");
 
   useAutoTimezoneFromCoordinates<EventFormValues, "timezoneId">({
     coordinates: selectedCoordinates,
@@ -105,195 +189,240 @@ EventFormProps) {
     initialFromBackend: Boolean(defaultValues?.timezoneId),
   });
 
-  // const distributorLocationId = useWatch({
-  //   control,
-  //   name: "distributorLocationId",
-  // });
-  // const retailerLocationId = useWatch({
-  //   control,
-  //   name: "retailerLocationId",
-  // });
+  useEffect(() => {
+    if (!showRequestField) return;
+    if (associateRequest) return;
+    setValue("requestId", null, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [associateRequest, setValue, showRequestField]);
 
-  // const manualFields = useWatch({ control });
+  // ========================
+  // WATCH FOR SECTION ENTITIES
+  // ========================
+  const distributorId = watch("distributorId");
+  const retailerId = watch("retailerId");
+  const selectedStateId = watch("stateId");
+  const selectedEntitiesLocationId = watch("entitiesLocationId");
+  const distributorLocationId = watch("distributorLocationId");
+  const retailerLocationId = watch("retailerLocationId");
+  const notesValue = watch("notes") || "";
+
+  // ========================
+  // DISTRIBUTORS AND RETAILERS
+  // ========================
+  useEffect(() => {
+    if (!tenantId) {
+      setLocations([]);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadLocations = async () => {
+      setLoadingLocations(true);
+
+      try {
+        const data = await fetchQuery<LocationsQueryType>(
+          environment,
+          LocationsQuery,
+          {
+            filters: {
+              ...(selectedStateId ? { stateId: selectedStateId } : {}),
+            },
+          },
+          { fetchPolicy: "network-only" },
+        ).toPromise();
+
+        const parsed =
+          data?.locations?.edges?.flatMap((edge) =>
+            edge?.node ? [edge.node] : [],
+          ) ?? [];
+
+        if (!isCancelled) {
+          setLocations(parsed);
+        }
+      } catch {
+        if (!isCancelled) {
+          setLocations([]);
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoadingLocations(false);
+        }
+      }
+    };
+
+    loadLocations();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [tenantId, selectedStateId]);
+
+  const stateOptions = useMemo(
+    () =>
+      states.map((state) => ({
+        value: state.id,
+        label: state.code ? `${state.name} (${state.code})` : state.name,
+        searchText: state.code ? `${state.name} ${state.code}` : state.name,
+      })),
+    [states],
+  );
+
+  const locationOptions = useMemo(
+    () =>
+      locations.map((location) => ({
+        value: location.id,
+        label: location.name,
+      })),
+    [locations],
+  );
+
+  const extractDistributors = useCallback(
+    (data: DistributorsQueryType["response"]) =>
+      data.distributors?.edges?.flatMap((e) => (e?.node ? [e.node] : [])) ?? [],
+    [],
+  );
+
+  const distributorsHook = useEntitiesByLocation<
+    CatalogItem,
+    DistributorsQueryType
+  >({
+    tenantId,
+    entitiesLocationId:
+      selectedEntitiesLocationId ?? defaultValues.entitiesLocationId ?? null,
+    initialItems: distributors,
+    selectedId: distributorId,
+    queryDocument: DistributorsQuery,
+    extractNodes: extractDistributors,
+  });
+
+  const extractRetailers = useCallback(
+    (data: RetailersQueryType["response"]) =>
+      data.retailers?.edges?.flatMap((e) => (e?.node ? [e.node] : [])) ?? [],
+    [],
+  );
+
+  const retailersHook = useEntitiesByLocation<CatalogItem, RetailersQueryType>({
+    tenantId,
+    entitiesLocationId:
+      selectedEntitiesLocationId ?? defaultValues.entitiesLocationId ?? null,
+    initialItems: retailers,
+    selectedId: retailerId,
+    queryDocument: RetailersQuery,
+    extractNodes: extractRetailers,
+  });
 
   /* ================= UI STATE ================= */
-  // const [showDistributorLocation, setShowDistributorLocation] = useState(false);
-  // const [showRetailerLocation, setShowRetailerLocation] = useState(false);
-  // const [showStoreManagerCreate, setShowStoreManagerCreate] = useState(false);
+  const [showDistributorLocation, setShowDistributorLocation] = useState(false);
+  const [showRetailerLocation, setShowRetailerLocation] = useState(false);
 
-  /* ================= CONTACT MODE ================= */
-  // const effectiveContactMode = useMemo(
-  //   () => contactMode ?? (requestContactInfo ? "request" : "manual"),
-  //   [contactMode, requestContactInfo]
-  // );
+  const [commitCreateDistributor, isCreatingDistributor] =
+    useMutation<CreateDistributorMutationType>(CreateDistributorMutation);
 
-  // const showContactSection = useMemo(() => {
-  //   if (enableContactSection !== undefined) return enableContactSection;
-  //   return Boolean(requestContactInfo);
-  // }, [enableContactSection, requestContactInfo]);
+  const [commitCreateRetailer, isCreatingRetailer] =
+    useMutation<CreateRetailerMutationType>(CreateRetailerMutation);
 
-  // const contactInfo = useMemo(() => {
-  //   if (effectiveContactMode === "request") return requestContactInfo ?? {};
-  //   return {
-  //     distributorName: manualFields.distributorName ?? null,
-  //     distributorEmail: manualFields.distributorEmail ?? null,
-  //     retailerName: manualFields.retailerName ?? null,
-  //     retailerAddress: manualFields.retailerAddress ?? null,
-  //     retailerStoreContact: manualFields.retailerStoreContact ?? null,
-  //     storeManagerName: manualFields.storeManagerName ?? null,
-  //     storeManagerPhone: manualFields.storeManagerPhone ?? null,
-  //   };
-  // }, [effectiveContactMode, manualFields, requestContactInfo]);
+  const manualFields = useWatch({ control });
 
-  /* ================= OPTIONS ================= */
-  // const distributorsOptions = useMemo(
-  //   () =>
-  //     distributors.map((d) => ({
-  //       value: d.id,
-  //       label: d.email ? `${d.name} (${d.email})` : d.name,
-  //     })),
-  //   [distributors]
-  // );
+  const effectiveContactMode = useMemo(
+    () => contactMode ?? (requestContactInfo ? "request" : "manual"),
+    [contactMode, requestContactInfo],
+  );
 
-  // const retailersOptions = useMemo(
-  //   () =>
-  //     retailers.map((r) => ({
-  //       value: r.id,
-  //       label: r.address ? `${r.name} - ${r.address}` : r.name,
-  //     })),
-  //   [retailers]
-  // );
+  const contactInfo = useMemo(() => {
+    if (effectiveContactMode === "request") return requestContactInfo ?? {};
+    return {
+      distributorName: manualFields.distributorName ?? null,
+      distributorEmail: manualFields.distributorEmail ?? null,
+      retailerName: manualFields.retailerName ?? null,
+      retailerAddress: manualFields.retailerAddress ?? null,
+      retailerStoreContact: manualFields.retailerStoreContact ?? null,
+    };
+  }, [effectiveContactMode, manualFields, requestContactInfo]);
 
-  // const storeManagerOptions = useMemo(
-  //   () =>
-  //     requestStoreManagers.map((m) => ({
-  //       value: m.id,
-  //       label: m.phone ? `${m.name} (${m.phone})` : m.name,
-  //     })),
-  //   [requestStoreManagers]
-  // );
+  const handleCreateDistributor = () => {
+    const { distributorName, distributorEmail } = contactInfo;
 
-  /* ================= MUTATIONS ================= */
-  // const [commitCreateDistributor, isCreatingDistributor] =
-  //   useMutation<CreateDistributorMutationType>(CreateDistributorMutation);
+    if (!tenantId) {
+      showAlert("Missing tenantId", "error");
+      return;
+    }
 
-  // const [commitCreateRetailer, isCreatingRetailer] =
-  //   useMutation<CreateRetailerMutationType>(CreateRetailerMutation);
+    if (!distributorName || !distributorEmail || !distributorLocationId) {
+      showAlert("Missing distributor data.", "error");
+      return;
+    }
 
-  // const [commitCreateStoreManager, isCreatingStoreManager] =
-  //   useMutation<CreateRequestStoreManagerMutationType>(
-  //     CreateRequestStoreManagerMutation
-  //   );
+    commitCreateDistributor({
+      variables: {
+        input: {
+          tenantId,
+          name: distributorName,
+          email: distributorEmail,
+          locationId: distributorLocationId,
+        },
+      },
+      onCompleted: (res) => {
+        const distributor = res.createDistributor?.distributor;
+        if (res.createDistributor?.success && distributor) {
+          setValue("distributorId", distributor.id, {
+            shouldDirty: true,
+            shouldTouch: true,
+          });
+          setShowDistributorLocation(false);
+          onRefetch?.("distributors");
+          showAlert(res.createDistributor.message, "success");
+        } else {
+          showAlert(res.createDistributor?.message ?? "Error", "error");
+        }
+      },
+      onError: (e) => showAlert(e.message, "error"),
+    });
+  };
 
-  /* ================= HANDLERS ================= */
-  // const handleCreateDistributor = () => {
-  //   const { distributorName, distributorEmail } = contactInfo;
+  const handleCreateRetailer = () => {
+    const { retailerName, retailerAddress, retailerStoreContact } = contactInfo;
 
-  //   if (!distributorName || !distributorEmail || !distributorLocationId) {
-  //     showAlert("Missing distributor data.", "error");
-  //     return;
-  //   }
+    if (!tenantId) {
+      showAlert("Missing tenantId", "error");
+      return;
+    }
 
-  //   commitCreateDistributor({
-  //     variables: {
-  //       input: {
-  //         tenantId,
-  //         name: distributorName,
-  //         email: distributorEmail,
-  //         locationId: distributorLocationId,
-  //       },
-  //     },
-  //     onCompleted: (res) => {
-  //       const distributor = res.createDistributor?.distributor;
-  //       if (res.createDistributor?.success && distributor) {
-  //         setValue("distributorId", distributor.id);
-  //         setShowDistributorLocation(false);
-  //         onRefetch?.("distributors");
-  //         showAlert(res.createDistributor.message, "success");
-  //       } else {
-  //         showAlert(res.createDistributor?.message ?? "Error", "error");
-  //       }
-  //     },
-  //     onError: (e) => showAlert(e.message, "error"),
-  //   });
-  // };
+    if (!retailerName || !retailerAddress || !retailerLocationId) {
+      showAlert("Missing retailer data.", "error");
+      return;
+    }
 
-  // const handleCreateRetailer = () => {
-  //   const { retailerName, retailerAddress, retailerStoreContact } = contactInfo;
-
-  //   if (!retailerName || !retailerAddress || !retailerLocationId) {
-  //     showAlert("Missing retailer data.", "error");
-  //     return;
-  //   }
-
-  //   commitCreateRetailer({
-  //     variables: {
-  //       input: {
-  //         tenantId,
-  //         name: retailerName,
-  //         address: retailerAddress,
-  //         storeContact: retailerStoreContact ?? "",
-  //         locationId: retailerLocationId,
-  //       },
-  //     },
-  //     onCompleted: (res) => {
-  //       const retailer = res.createRetailer?.retailer;
-  //       if (res.createRetailer?.success && retailer) {
-  //         setValue("retailerId", retailer.id);
-  //         setShowRetailerLocation(false);
-  //         onRefetch?.("retailers");
-  //         showAlert(res.createRetailer.message, "success");
-  //       } else {
-  //         showAlert(res.createRetailer?.message ?? "Error", "error");
-  //       }
-  //     },
-  //     onError: (e) => showAlert(e.message, "error"),
-  //   });
-  // };
-
-  // const handleCreateStoreManager = async () => {
-  //   const isValid = await trigger(["storeManagerName", "storeManagerPhone"]);
-
-  //   if (!isValid) {
-  //     showAlert("Please complete store manager information.", "error");
-  //     return;
-  //   }
-
-  //   const { storeManagerName, storeManagerPhone } = contactInfo;
-
-  //   if (!storeManagerName || !storeManagerPhone) return;
-
-  //   commitCreateStoreManager({
-  //     variables: {
-  //       input: {
-  //         tenantId,
-  //         requestId: requestId ?? null,
-  //         name: storeManagerName,
-  //         phone: storeManagerPhone,
-  //       },
-  //     },
-  //     onCompleted: (res) => {
-  //       const manager = res.createRequestStoreManager?.requestStoreManager;
-
-  //       if (res.createRequestStoreManager?.success && manager) {
-  //         setValue("storeManagerId", manager.id, {
-  //           shouldDirty: true,
-  //           shouldTouch: true,
-  //         });
-
-  //         onRefetch?.("requestStoreManagers");
-  //         showAlert(res.createRequestStoreManager.message, "success");
-  //       } else {
-  //         showAlert(
-  //           res.createRequestStoreManager?.message ??
-  //             "Error creating store manager",
-  //           "error"
-  //         );
-  //       }
-  //     },
-  //     onError: (e) => showAlert(e.message, "error"),
-  //   });
-  // };
+    commitCreateRetailer({
+      variables: {
+        input: {
+          tenantId,
+          name: retailerName,
+          address: retailerAddress,
+          storeContact: retailerStoreContact ?? "",
+          locationId: retailerLocationId,
+        },
+      },
+      onCompleted: (res) => {
+        const retailer = res.createRetailer?.retailer;
+        if (res.createRetailer?.success && retailer) {
+          setValue("retailerId", retailer.id, {
+            shouldDirty: true,
+            shouldTouch: true,
+          });
+          setShowRetailerLocation(false);
+          onRefetch?.("retailers");
+          showAlert(res.createRetailer.message, "success");
+        } else {
+          showAlert(res.createRetailer?.message ?? "Error", "error");
+        }
+      },
+      onError: (e) => showAlert(e.message, "error"),
+    });
+  };
 
   /* ================= RENDER ================= */
   return (
@@ -303,13 +432,14 @@ EventFormProps) {
           {/* ================= HEADER ================= */}
           <div className="flex flex-col gap-5  border-b border-base-100/20">
             <div className="flex items-center justify-between gap-4">
-              <Link
-                to="/events/list"
-                className="inline-flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition"
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="inline-flex items-center cursor-pointer gap-2 text-sm opacity-70 hover:opacity-100 transition"
               >
                 <ArrowLeftIcon className="w-4 h-4" />
-                Back to list
-              </Link>
+                Back
+              </button>
 
               <div className="flex items-center gap-2">
                 <button
@@ -337,7 +467,7 @@ EventFormProps) {
                   <PencilIcon className="w-6 h-6" />
                   <h1>
                     {mode === "edit"
-                      ? defaultValues?.name ?? "Edit Event"
+                      ? (defaultValues?.name ?? "Edit Event")
                       : "Create Event"}
                   </h1>
                 </span>
@@ -352,6 +482,54 @@ EventFormProps) {
 
           {/* ================= BASIC INFORMATION ================= */}
           <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+            {showRequestField ? (
+              <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-lg">Associate Request</p>
+                    <p className="text-sm text-base-content/60">
+                      Link this event to an existing request.
+                    </p>
+                  </div>
+
+                  {showAssociateRequestToggle && (
+                    <FormCheckbox<EventFormValues>
+                      name="associateRequest"
+                      control={control}
+                      label="Enable"
+                    />
+                  )}
+                </div>
+
+                <div
+                  className={`transition-all duration-300 ${
+                    showAssociateRequestToggle && !associateRequest
+                      ? "opacity-50 pointer-events-none"
+                      : "opacity-100"
+                  }`}
+                >
+                  <FormAutocomplete<EventFormValues>
+                    name="requestId"
+                    control={control}
+                    label="Request"
+                    placeholder="Search request..."
+                    options={requestOptions}
+                    loading={requestLoading}
+                    onSearch={setRequestSearchTerm}
+                    disabled={
+                      showAssociateRequestToggle ? !associateRequest : false
+                    }
+                  />
+
+                  {associateRequest && defaultValues?.requestId && (
+                    <div className="text-xs text-success mt-1">
+                      ✓ This event is linked to an existing request
+                    </div>
+                  )}
+                </div>
+              </section>
+            ) : null}
+
             <div className="flex items-center justify-between">
               <p className="font-semibold text-lg">Basic Information</p>
               <span className="text-xs text-base-content/60">
@@ -436,266 +614,248 @@ EventFormProps) {
           </section>
 
           {/* ================= ENTITIES ================= */}
-          {/* {(mode === "create" || showContactSection) && (
-            <section className="space-y-6 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-lg">Event entities</p>
-                  <p className="text-sm text-base-content/60">
-                    Select existing records or create new ones if needed.
-                  </p>
-                </div>
-                <span className="text-xs text-base-content/60">
-                  Retailer & Distributor
-                </span>
+          <section className="space-y-6 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-semibold text-lg">Event entities</p>
+                <p className="text-sm text-base-content/60">
+                  Select existing records or create new ones if needed.
+                </p>
+              </div>
+              <span className="text-xs text-base-content/60">
+                Retailer & Distributor
+              </span>
+            </div>
+
+            <div className="flex items-center gap-4 mt-4 w-full">
+              <FormAutocomplete<EventFormValues>
+                name="stateId"
+                control={control}
+                label="State"
+                placeholder="Select state..."
+                options={stateOptions}
+                disabled={!tenantId}
+              />
+
+              <FormAutocomplete<EventFormValues>
+                name="entitiesLocationId"
+                control={control}
+                label="City"
+                placeholder="Select city..."
+                loading={loadingLocations}
+                options={locationOptions}
+                disabled={!tenantId || loadingLocations}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
+                <p className="font-medium">Distributor</p>
+
+                <FormAutocomplete
+                  name="distributorId"
+                  control={control}
+                  label="Select distributor"
+                  placeholder="Search distributor..."
+                  options={distributorsHook.items.map((d) => ({
+                    value: d.id,
+                    label: d.name,
+                  }))}
+                  onSearch={distributorsHook.setSearchTerm}
+                />
+
+                {!distributorId && (
+                  <div className="space-y-3">
+                    <p className="text-base-content/60">or</p>
+                    {!showDistributorLocation ? (
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-xs"
+                        onClick={() => setShowDistributorLocation(true)}
+                      >
+                        Create new distributor
+                      </button>
+                    ) : (
+                      <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormInputText
+                            name="distributorName"
+                            control={control}
+                            label="Distributor name"
+                            placeholder="Enter distributor name"
+                          />
+                          <FormInputText
+                            name="distributorEmail"
+                            control={control}
+                            label="Distributor email"
+                            placeholder="Enter distributor email"
+                          />
+                        </div>
+
+                        <FormAutocomplete
+                          name="distributorLocationId"
+                          control={control}
+                          label="Distributor location"
+                          placeholder="Select location"
+                          options={locations.map((l) => ({
+                            value: l.id,
+                            label: l.name,
+                          }))}
+                        />
+
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-xs"
+                            onClick={handleCreateDistributor}
+                            disabled={isCreatingDistributor}
+                          >
+                            Confirm distributor
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs"
+                            onClick={() => {
+                              setShowDistributorLocation(false);
+                              setValue("distributorLocationId", null);
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
-                  <p className="font-medium">Distributor</p>
+              <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
+                <p className="font-medium">Retailer</p>
 
-                  <FormAutocomplete
-                    name="distributorId"
-                    control={control}
-                    label="Select distributor"
-                    placeholder="Search distributor..."
-                    options={distributorsOptions}
-                  />
+                <FormAutocomplete
+                  name="retailerId"
+                  control={control}
+                  label="Select retailer"
+                  placeholder="Search retailer..."
+                  options={retailersHook.items.map((r) => ({
+                    value: r.id,
+                    label: r.name,
+                  }))}
+                  onSearch={retailersHook.setSearchTerm}
+                />
 
-                  {!distributorId && (
-                    <div className="space-y-3">
-                      <p className="text-base-content/60">or</p>
-                      {!showDistributorLocation ? (
-                        <button
-                          type="button"
-                          className="btn btn-outline btn-xs"
-                          onClick={() => setShowDistributorLocation(true)}
-                        >
-                          Create new distributor
-                        </button>
-                      ) : (
-                        <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormInputText
-                              name="distributorName"
-                              control={control}
-                              label="Distributor name"
-                              placeholder="Enter distributor name"
-                            />
-                            <FormInputText
-                              name="distributorEmail"
-                              control={control}
-                              label="Distributor email"
-                              placeholder="Enter distributor email"
-                            />
-                          </div>
-
-                          <FormAutocomplete
-                            name="distributorLocationId"
+                {!retailerId && (
+                  <div className="space-y-3">
+                    <p className="text-base-content/60">or</p>
+                    {!showRetailerLocation ? (
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-xs"
+                        onClick={() => setShowRetailerLocation(true)}
+                      >
+                        Create new retailer
+                      </button>
+                    ) : (
+                      <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormInputText
+                            name="retailerName"
                             control={control}
-                            label="Distributor location"
-                            placeholder="Select location"
-                            options={locations.map((l) => ({
-                              value: l.id,
-                              label: l.name,
-                            }))}
+                            label="Retailer name"
+                            placeholder="Enter retailer name"
                           />
-
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-xs"
-                              onClick={handleCreateDistributor}
-                              disabled={isCreatingDistributor}
-                            >
-                              Confirm distributor
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-ghost btn-xs"
-                              onClick={() => {
-                                setShowDistributorLocation(false);
-                                setValue("distributorLocationId", null);
-                              }}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
-                  <p className="font-medium">Retailer</p>
-
-                  <FormAutocomplete
-                    name="retailerId"
-                    control={control}
-                    label="Select retailer"
-                    placeholder="Search retailer..."
-                    options={retailersOptions}
-                  />
-
-                  {!retailerId && (
-                    <div className="space-y-3">
-                      <p className="text-base-content/60">or</p>
-                      {!showRetailerLocation ? (
-                        <button
-                          type="button"
-                          className="btn btn-outline btn-xs"
-                          onClick={() => setShowRetailerLocation(true)}
-                        >
-                          Create new retailer
-                        </button>
-                      ) : (
-                        <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormInputText
-                              name="retailerName"
-                              control={control}
-                              label="Retailer name"
-                              placeholder="Enter retailer name"
-                            />
-                            <FormInputText
-                              name="retailerAddress"
-                              control={control}
-                              label="Retailer address"
-                              placeholder="Enter retailer address"
-                            />
-                            <FormInputText
-                              name="retailerStoreContact"
-                              control={control}
-                              label="Store contact"
-                              placeholder="Enter store contact"
-                            />
-                          </div>
-
-                          <FormAutocomplete
-                            name="retailerLocationId"
+                          <FormInputText
+                            name="retailerAddress"
                             control={control}
-                            label="Retailer location"
-                            placeholder="Select location"
-                            options={locations.map((l) => ({
-                              value: l.id,
-                              label: l.name,
-                            }))}
+                            label="Retailer address"
+                            placeholder="Enter retailer address"
                           />
-
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-xs"
-                              onClick={handleCreateRetailer}
-                              disabled={isCreatingRetailer}
-                            >
-                              Confirm retailer
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-ghost btn-xs"
-                              onClick={() => {
-                                setShowRetailerLocation(false);
-                                setValue("retailerLocationId", null);
-                              }}
-                            >
-                              Cancel
-                            </button>
-                          </div>
+                          <FormInputText
+                            name="retailerStoreContact"
+                            control={control}
+                            label="Store contact"
+                            placeholder="Enter store contact"
+                          />
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
 
-                <div className="col-span-2 space-y-4 rounded-xl bg-base-200/60 p-4">
-                  <p className="font-medium">Store manager</p>
+                        <FormAutocomplete
+                          name="retailerLocationId"
+                          control={control}
+                          label="Retailer location"
+                          placeholder="Select location"
+                          options={locations.map((l) => ({
+                            value: l.id,
+                            label: l.name,
+                          }))}
+                        />
 
-                  <FormAutocomplete
-                    name="storeManagerId"
-                    control={control}
-                    label="Select store manager"
-                    placeholder="Search store manager..."
-                    options={storeManagerOptions}
-                  />
-
-                  {!storeManagerId && (
-                    <div className="space-y-3">
-                      <p className="text-base-content/60">or</p>
-                      {!showStoreManagerCreate ? (
-                        <button
-                          type="button"
-                          className="btn btn-outline btn-xs"
-                          onClick={() => setShowStoreManagerCreate(true)}
-                        >
-                          Create new store manager
-                        </button>
-                      ) : (
-                        <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormInputText
-                              name="storeManagerName"
-                              control={control}
-                              label="Store manager name"
-                              placeholder="Enter name"
-                              rules={{
-                                required: "Store manager name is required",
-                              }}
-                            />
-                            <FormInputText
-                              name="storeManagerPhone"
-                              control={control}
-                              label="Store manager phone"
-                              placeholder="Enter phone"
-                              rules={{
-                                required: "Store manager phone is required",
-                              }}
-                            />
-                          </div>
-
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-xs"
-                              onClick={handleCreateStoreManager}
-                              disabled={isCreatingStoreManager}
-                            >
-                              Confirm store manager
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-ghost btn-xs"
-                              onClick={() => {
-                                setShowStoreManagerCreate(false);
-                                setValue("storeManagerName", "");
-                                setValue("storeManagerPhone", "");
-                              }}
-                            >
-                              Cancel
-                            </button>
-                          </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-xs"
+                            onClick={handleCreateRetailer}
+                            disabled={isCreatingRetailer}
+                          >
+                            Confirm retailer
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-xs"
+                            onClick={() => {
+                              setShowRetailerLocation(false);
+                              setValue("retailerLocationId", null);
+                            }}
+                          >
+                            Cancel
+                          </button>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            </section>
-          )} */}
+            </div>
+          </section>
 
           {/* ================= EVENT DETAILS ================= */}
           <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
             <p className="font-semibold text-lg">Event Details</p>
 
             <div className="grid grid-cols-1 gap-4">
-              <FormTextarea name="notes" control={control} label="Notes" />
               <FormCheckbox
                 name="isNational"
                 control={control}
                 label="Is National?"
               />
             </div>
+          </section>
+
+          <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-lg">Notes</p>
+              <span
+                className={`text-xs ${
+                  notesValue.length > 280
+                    ? "text-error"
+                    : "text-base-content/60"
+                }`}
+              >
+                {notesValue.length}/300
+              </span>
+            </div>
+
+            <FormTextarea
+              name="notes"
+              control={control}
+              label="Additional Notes"
+              placeholder="Enter any additional details or instructions..."
+              rules={{
+                maxLength: {
+                  value: 300,
+                  message: "Notes cannot exceed 300 characters",
+                },
+              }}
+            />
           </section>
 
           {/* ================= LOCATION ================= */}

@@ -80,11 +80,20 @@ const Gallery3DCard = ({
 // PAGE
 // ======================================================
 const RecapView = () => {
+  // ======================================================
+  // PARAMS & STATE
+  // ======================================================
+
   const { uuid } = useParams();
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const showAlert = useAlertStore((state) => state.showAlert);
+
   const [commitGeneratePdf, isExporting] =
     useMutation<GenerateRecapPdfMutationType>(GenerateRecapPdfMutation);
+
+  // ======================================================
+  // DATA FETCH
+  // ======================================================
 
   const recapData = useLazyLoadQuery<RecapQueryType>(
     RecapQuery,
@@ -93,8 +102,11 @@ const RecapView = () => {
   );
 
   const recap = recapData?.recap ?? null;
+  const recapFiles = useMemo(() => recap?.recapFiles ?? [], [recap]);
 
-  const recapFiles = recap?.recapFiles ?? [];
+  // ======================================================
+  // FILE HELPERS
+  // ======================================================
 
   const getFileLabel = useCallback(
     (file: (typeof recapFiles)[number]) =>
@@ -122,7 +134,10 @@ const RecapView = () => {
     [getFileLabel],
   );
 
-  // categories ordered by fileRecapCategory (name)
+  // ======================================================
+  // CATEGORIES
+  // ======================================================
+
   type RecapFile = (typeof recapFiles)[number];
 
   const categories = useMemo(() => {
@@ -130,7 +145,7 @@ const RecapView = () => {
 
     const categoryMap = new Map<string, { name: string; files: RecapFile[] }>();
 
-    recapFiles.forEach((file: RecapFile) => {
+    recapFiles.forEach((file) => {
       const categoryName = file.fileRecapCategory?.name ?? "Uncategorized";
 
       if (!categoryMap.has(categoryName)) {
@@ -160,7 +175,60 @@ const RecapView = () => {
     [categoriesWithImages],
   );
 
-  // export pdf
+  // ======================================================
+  // IMAGE CONTROLS
+  // ======================================================
+
+  const closePreview = useCallback(() => {
+    setPreviewIndex(null);
+  }, []);
+
+  const goNext = useCallback(() => {
+    if (!flatImages.length) return;
+
+    setPreviewIndex((current) => {
+      if (current === null) return 0;
+      return (current + 1) % flatImages.length;
+    });
+  }, [flatImages.length]);
+
+  const goPrev = useCallback(() => {
+    if (!flatImages.length) return;
+
+    setPreviewIndex((current) => {
+      if (current === null) return flatImages.length - 1;
+      return (current - 1 + flatImages.length) % flatImages.length;
+    });
+  }, [flatImages.length]);
+
+  useEffect(() => {
+    if (previewIndex === null) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        goNext();
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        goPrev();
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closePreview();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [closePreview, goNext, goPrev, previewIndex]);
+
+  // ======================================================
+  // EXPORT PDF
+  // ======================================================
+
   const handleExportPdf = useCallback(() => {
     if (!recap?.id) return;
 
@@ -168,14 +236,17 @@ const RecapView = () => {
       variables: { input: { id: recap.id } },
       onCompleted: (response) => {
         const payload = response.generateRecapPdf;
+
         if (payload.success) {
           const fileUrl = payload.recapFile?.file;
+
           if (fileUrl) {
             const newTab = window.open(
               fileUrl,
               "_blank",
               "noopener,noreferrer",
             );
+
             if (!newTab) {
               window.location.assign(fileUrl);
               showAlert("Popup blocked. Opened PDF in this tab.", "warning");
@@ -198,6 +269,10 @@ const RecapView = () => {
     });
   }, [commitGeneratePdf, recap?.id, showAlert]);
 
+  // ======================================================
+  // EARLY RETURNS
+  // ======================================================
+
   if (!uuid) {
     return (
       <Layout>
@@ -214,61 +289,14 @@ const RecapView = () => {
     );
   }
 
+  // ======================================================
+  // DATA NORMALIZATION
+  // ======================================================
+
   const storeManagers = recap.requestStoreManagers ?? [];
   const ambassadors = recap.ambassadors ?? [];
 
-  // ======================================================
-  // CONTROLS
-  // ======================================================
-  const closePreview = () => setPreviewIndex(null);
-  const goNext = useCallback(() => {
-    if (!flatImages.length) return;
-    setPreviewIndex((current) => {
-      if (current === null) return 0;
-      return (current + 1) % flatImages.length;
-    });
-  }, [flatImages.length]);
-
-  const goPrev = useCallback(() => {
-    if (!flatImages.length) return;
-    setPreviewIndex((current) => {
-      if (current === null) return flatImages.length - 1;
-      return (current - 1 + flatImages.length) % flatImages.length;
-    });
-  }, [flatImages.length]);
-
-  useEffect(() => {
-    if (previewIndex === null) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        goNext();
-        return;
-      }
-
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        goPrev();
-        return;
-      }
-
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closePreview();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [closePreview, goNext, goPrev, previewIndex]);
-
-  // ======================================================
-  // DATA NORMALIZATION FROM API
-  // ======================================================
-
   const engagement = recap.consumerEngagements?.[0] ?? null;
-
   const totalConsumers = engagement?.totalConsumer ?? 0;
   const firstTimeConsumers = engagement?.firstTimeConsumers ?? 0;
   const brandAwareConsumers = engagement?.brandAwareConsumers ?? 0;
@@ -276,16 +304,14 @@ const RecapView = () => {
   const notWillingToPurchase = engagement?.notWillingConsumers ?? 0;
 
   const totalEngagements = recap.totalEngagements ?? 0;
-  const accountSpend = recap.accountSpendAmount; // puede ser null
+  const accountSpend = recap.accountSpendAmount;
   const statusLabel = recap.approved ? "Approved" : "Pending";
 
-  // Sales
   const productsSold = recap.productsSold ?? 0;
   const totalCansSold = recap.totalCansSold ?? 0;
   const totalPacksSold = recap.totalPacksSold ?? 0;
   const totalEarnings = recap.totalEarnings ?? 0;
 
-  // Flags
   const hasSalesData =
     recap.productsSold !== null ||
     recap.totalCansSold !== null ||
@@ -293,7 +319,7 @@ const RecapView = () => {
     recap.totalEarnings !== null;
 
   const currentPreview =
-    flatImages && previewIndex !== null && flatImages[previewIndex];
+    flatImages && previewIndex !== null ? flatImages[previewIndex] : null;
 
   return (
     <Layout>
@@ -327,9 +353,7 @@ const RecapView = () => {
                     <div className="flex items-center gap-1">
                       <Calendar className="w-4 h-4" />
                       {formatDate(
-                        recap.event?.date ??
-                        recap.event?.request?.date ??
-                        null,
+                        recap.event?.date ?? recap.event?.request?.date ?? null,
                       )}
                     </div>
 
@@ -681,9 +705,7 @@ const RecapView = () => {
                   <div key={category.name} className="space-y-4">
                     {/* CATEGORY HEADER */}
                     <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold">
-                        {category.name}
-                      </h3>
+                      <h3 className="text-lg font-semibold">{category.name}</h3>
                       <span className="badge badge-outline">
                         {category.imageFiles.length}
                       </span>
@@ -735,7 +757,7 @@ const RecapView = () => {
                                   Download
                                 </a>
                               </div>
-                              <div className="w-full aspect-[4/3] rounded-lg overflow-hidden border border-base-300 bg-base-100">
+                              <div className="w-full aspect-4/3 rounded-lg overflow-hidden border border-base-300 bg-base-100">
                                 <iframe
                                   src={file.file ?? ""}
                                   title={file.name || "PDF preview"}

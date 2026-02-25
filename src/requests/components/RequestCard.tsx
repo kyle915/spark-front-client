@@ -15,6 +15,24 @@ import type { RequestUuidQuery$data } from "@api/queries/__generated__/RequestUu
 import LocationMap from "@shared/LocationMap";
 import { formatDate, formatTime } from "@utils/index";
 
+type InfoItemProps = {
+  label: string;
+  value: React.ReactNode;
+  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+};
+
+function InfoItem({ label, value, Icon }: InfoItemProps) {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs uppercase opacity-60">{label}</p>
+      <p className="font-medium flex items-center gap-2">
+        <Icon className="w-4 h-4 opacity-60" />
+        <span className="truncate">{value}</span>
+      </p>
+    </div>
+  );
+}
+
 type Request = NonNullable<RequestUuidQuery$data["request"]>;
 
 interface Props {
@@ -206,7 +224,7 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
           </div>
 
           {/* CREATED BY */}
-          <div className="flex items-center gap-3 ml-auto">
+          <div className="hidden md:flex items-center gap-3 ml-auto">
             {request.createdBy?.image ? (
               <img
                 src={request.createdBy?.image.url}
@@ -229,165 +247,150 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
         </div>
 
         {/* ================= MAIN GRID ================= */}
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-          <div className="xl:col-span-2 space-y-8">
-            {/* BASIC INFORMATION */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-8 items-start">
+          {/* BASIC INFORMATION */}
+          <div className="xl:col-span-6 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
               <p className="font-semibold text-lg">Basic Information</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <p className="text-xs uppercase opacity-60">Account Name</p>
-                  <p className="font-medium flex items-center gap-2">
-                    <BuildingOfficeIcon className="w-4 h-4 opacity-60" />
-                    {request.retailer?.name ?? "Unknown"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Distributor"
+                  value={request.distributor?.name ?? "Unknown"}
+                  Icon={UsersIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">Distributor</p>
-                  <p className="font-medium flex items-center gap-2">
-                    <UsersIcon className="w-4 h-4 opacity-60" />
-                    {request.distributor?.name ?? "Unknown"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs uppercase opacity-60">Address</p>
-                  <p className="font-medium flex items-center gap-2">
-                    <MapPinIcon className="w-4 h-4 opacity-60" />
-                    {request.address ?? "—"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs uppercase opacity-60">Timezone</p>
-                  <p className="font-medium">
-                    {request.timezone
+                <InfoItem
+                  label="Request Timezone"
+                  value={
+                    request.timezone
                       ? `${request.timezone.name} (${request.timezone.code})`
-                      : "No timezone"}
-                  </p>
-                </div>
+                      : "No timezone"
+                  }
+                  Icon={ClockIcon}
+                />
+
+                <InfoItem
+                  label="Created by"
+                  value={createdByLabel}
+                  Icon={UsersIcon}
+                />
+
+                <InfoItem
+                  label="Requestor email"
+                  value={request.requestorEmail ?? "—"}
+                  Icon={UsersIcon}
+                />
               </div>
             </div>
           </div>
 
           {/* LOCATION INFORMATION */}
-          <div className="xl:col-span-2 space-y-8">
+          <div className="xl:col-span-6 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
               <p className="font-semibold text-lg">Location Information</p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <p className="text-xs uppercase opacity-60">Retailer State</p>
-                  <p className="font-medium">
-                    {request.retailer?.location?.state?.name ??
-                      "No retailer state"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Retailer State"
+                  value={request.retailer?.location?.state?.name ?? "—"}
+                  Icon={MapPinIcon}
+                />
+                <InfoItem
+                  label="Retailer Location"
+                  value={request.retailer?.location?.name ?? "—"}
+                  Icon={MapPinIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">
-                    Retailer Location
-                  </p>
-                  <p className="font-medium">
-                    {request.retailer?.location?.name ?? "—"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Retailer Zip"
+                  value={request.retailer?.location?.zip ?? "—"}
+                  Icon={MapPinIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">Retailer</p>
-                  <p className="font-medium">{request.retailer?.name ?? "—"}</p>
-                </div>
+                <InfoItem
+                  label="Distributor State"
+                  value={request.distributor?.location?.state?.name ?? "—"}
+                  Icon={MapPinIcon}
+                />
+                <InfoItem
+                  label="Distributor Location"
+                  value={request.distributor?.location?.name ?? "—"}
+                  Icon={MapPinIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">
-                    Distributor State
-                  </p>
-                  <p className="font-medium">
-                    {request.distributor?.location?.state?.name ??
-                      "No distributor state"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs uppercase opacity-60">
-                    Distributor Location
-                  </p>
-                  <p className="font-medium">
-                    {request.distributor?.location?.name ?? "—"}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-xs uppercase opacity-60">Distributor</p>
-                  <p className="font-medium">
-                    {request.distributor?.name ?? "—"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Distributor Zip"
+                  value={request.distributor?.location?.zip ?? "—"}
+                  Icon={MapPinIcon}
+                />
               </div>
             </div>
           </div>
 
           {/* TIMEZONE INFORMATION */}
-          <div className="xl:col-span-2 space-y-8">
+          <div className="col-span-1 md:col-span-2 xl:col-span-12 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-lg">Your current timezone</p>
-                <span className="badge badge-outline">
+                <span className="badge badge-outline max-w-full truncate">
                   {formatBrowserTimezoneLabel()}
                 </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <p className="text-xs uppercase opacity-60">
-                    Date (your zone)
-                  </p>
-                  <p className="font-medium">
-                    {formatLocalDate(request.date ?? null)}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Request Date"
+                  value={formatLocalDate(request.date ?? null)}
+                  Icon={CalendarIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">
-                    Start (your zone)
-                  </p>
-                  <p className="font-medium">
-                    {formatLocalTime(request.startTime ?? null)}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Request Time"
+                  value={`${formatLocalTime(request.startTime ?? null)} – ${formatLocalTime(
+                    request.endTime ?? null,
+                  )}`}
+                  Icon={ClockIcon}
+                />
               </div>
             </div>
           </div>
 
           {/* REQUEST DETAILS */}
-          <div className="xl:col-span-2 space-y-8">
+          <div className="col-span-1 md:col-span-2 xl:col-span-12 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
               <p className="font-semibold text-lg">Request Details</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <p className="text-xs uppercase opacity-60">Request Type</p>
-                  <p className="font-medium flex items-center gap-2">
-                    <TagIcon className="w-4 h-4 opacity-60" />
-                    {request.requestType?.name ?? "Unknown"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Request Type"
+                  value={request.requestType?.name ?? "Unknown"}
+                  Icon={TagIcon}
+                />
+                <InfoItem
+                  label="Status"
+                  value={request.status?.name ?? "Unknown"}
+                  Icon={CheckCircleIcon}
+                />
+              </div>
+            </div>
+          </div>
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">Status</p>
-                  <p className="font-medium flex items-center gap-2">
-                    <CheckCircleIcon className="w-4 h-4 opacity-60" />
-                    {request.status?.name ?? "Unknown"}
-                  </p>
-                </div>
+          {/* ================= EVENT NOTES ================= */}
+          <div className="col-span-1 md:col-span-2 xl:col-span-12 space-y-8">
+            <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-4">
+              <p className="font-semibold text-lg">Event Notes</p>
+
+              <div className="rounded-xl bg-base-200/70 border border-base-100/20 p-4">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                  {request.notes ?? "No notes provided."}
+                </p>
               </div>
             </div>
           </div>
 
           {/* PRODUCTS */}
-          <div className="xl:col-span-4 space-y-8">
+          <div className="col-span-1 md:col-span-2 xl:col-span-12 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <p className="font-semibold text-lg">Request Products</p>
@@ -468,14 +471,14 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
           </div>
 
           {/* MAP SECTION */}
-          <div className="lg:col-span-4">
+          <div className="col-span-1 md:col-span-2 xl:col-span-12 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-4 sticky top-6">
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-lg">Location</p>
                 <span className="text-xs opacity-60">
-                  {request.coordinates
+                  {request.coordinates.length
                     ? `${request.coordinates[0]}, ${request.coordinates[1]}`
-                    : "—"}
+                    : "No coordinates provided"}
                 </span>
               </div>
 

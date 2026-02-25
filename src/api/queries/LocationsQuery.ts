@@ -2,7 +2,7 @@ import { graphql } from "react-relay";
 
 export const LocationsQuery = graphql`
   query LocationsQuery(
-    $filters: LocationFiltersInput!
+    $filters: LocationFiltersInput
     $q: String
     $first: Int
     $after: String

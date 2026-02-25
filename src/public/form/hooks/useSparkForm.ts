@@ -4,12 +4,8 @@ import { sparkFormSchema } from "../schema/schema";
 import type { SparkFormData } from "../schema/schema";
 
 export const useSparkForm = () =>
-  useForm<SparkFormData, any, SparkFormData>({
-    resolver: yupResolver(sparkFormSchema) as Resolver<
-      SparkFormData,
-      any,
-      SparkFormData
-    >,
+  useForm<SparkFormData>({
+    resolver: yupResolver(sparkFormSchema) as Resolver<SparkFormData>,
 
     defaultValues: {
       distributorId: "",
@@ -32,6 +28,7 @@ export const useSparkForm = () =>
       end_time: "",
       storeManagerContact: "",
       storeManagerName: "",
+      notes: "",
       // tenant: "",
       timeZoneId: "",
       skus: [],
