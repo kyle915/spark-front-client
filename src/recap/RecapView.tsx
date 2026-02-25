@@ -102,7 +102,7 @@ const RecapView = () => {
   );
 
   const recap = recapData?.recap ?? null;
-  const recapFiles = recap?.recapFiles ?? [];
+  const recapFiles = useMemo(() => recap?.recapFiles ?? [], [recap]);
 
   // ======================================================
   // FILE HELPERS
