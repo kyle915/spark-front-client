@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 interface ConfirmationModalProps {
     isOpen: boolean;
@@ -9,6 +9,7 @@ interface ConfirmationModalProps {
     confirmText?: string;
     cancelText?: string;
     confirmButtonClass?: string;
+    children?: ReactNode;
 }
 
 const ConfirmationModal = ({
@@ -20,6 +21,7 @@ const ConfirmationModal = ({
     confirmText = "Confirm",
     cancelText = "Cancel",
     confirmButtonClass = "btn-primary",
+    children,
 }: ConfirmationModalProps) => {
     const modalRef = useRef<HTMLDialogElement>(null);
 
@@ -48,6 +50,7 @@ const ConfirmationModal = ({
             <div className="modal-box">
                 <h3 className="font-bold text-lg">{title}</h3>
                 <p className="py-4">{message}</p>
+                {children}
                 <div className="modal-action">
                     <button
                         type="button"

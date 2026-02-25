@@ -31,6 +31,8 @@ type UseRelayPaginationOptions<TQuery extends OperationType> = {
   query: GraphQLTaggedNode;
   pageSize?: number;
   initialVariables?: Partial<TQuery["variables"]>;
+  initialPage?: number;
+  initialAfter?: string | null;
 };
 
 type UseRelayPaginationResult<TQuery extends OperationType> = {
@@ -38,6 +40,7 @@ type UseRelayPaginationResult<TQuery extends OperationType> = {
   displayPage: number;
   isNavigating: boolean;
   isRefreshing: boolean;
+  currentAfterCursor: string | null;
   handlePageLoaded: (payload: PageLoadedPayload) => void;
   refresh: () => void;
   goToPage: (page: number) => void;
@@ -55,12 +58,16 @@ export function useRelayPagination<TQuery extends OperationType>({
   query,
   pageSize = DEFAULT_PAGE_SIZE,
   initialVariables = {},
+  initialPage = 1,
+  initialAfter = null,
 }: UseRelayPaginationOptions<TQuery>): UseRelayPaginationResult<TQuery> {
   const environment = useRelayEnvironment();
   const [queryRef, loadQuery] = useQueryLoader<TQuery>(query);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [displayPage, setDisplayPage] = useState(1);
+  const safeInitialPage = Math.max(1, initialPage);
+
+  const [currentPage, setCurrentPage] = useState(safeInitialPage);
+  const [displayPage, setDisplayPage] = useState(safeInitialPage);
   const [totalPages, setTotalPages] = useState(1);
 
   const [isNavigating, setIsNavigating] = useState(false);
@@ -70,9 +77,23 @@ export function useRelayPagination<TQuery extends OperationType>({
     TQuery["variables"] | null
   >(null);
 
-  const [pageIndex, setPageIndex] = useState<Record<number, PageCursorIndex>>({
-    1: { after: null, startCursor: null, endCursor: null },
-  });
+  const [pageIndex, setPageIndex] = useState<Record<number, PageCursorIndex>>(
+    () => {
+      const initialIndex: Record<number, PageCursorIndex> = {
+        1: { after: null, startCursor: null, endCursor: null },
+      };
+
+      if (safeInitialPage > 1) {
+        initialIndex[safeInitialPage] = {
+          after: initialAfter,
+          startCursor: null,
+          endCursor: null,
+        };
+      }
+
+      return initialIndex;
+    },
+  );
 
   const mergeVariables = useCallback(
     (vars: Partial<TQuery["variables"]>): TQuery["variables"] =>
@@ -112,11 +133,18 @@ export function useRelayPagination<TQuery extends OperationType>({
       loadWithTracking(
         mergeVariables({
           first: pageSize,
-          after: null,
+          after: safeInitialPage > 1 ? initialAfter : null,
         }),
       );
     }
-  }, [queryRef, mergeVariables, loadWithTracking, pageSize]);
+  }, [
+    initialAfter,
+    loadWithTracking,
+    mergeVariables,
+    pageSize,
+    queryRef,
+    safeInitialPage,
+  ]);
 
   const handlePageLoaded = useCallback(
     ({ pageNumber, pageInfo, totalCount }: PageLoadedPayload) => {
@@ -327,6 +355,7 @@ export function useRelayPagination<TQuery extends OperationType>({
     displayPage,
     isNavigating,
     isRefreshing,
+    currentAfterCursor: pageIndex[currentPage]?.after ?? null,
     handlePageLoaded,
     refresh,
     goToPage,
