@@ -137,10 +137,15 @@ type EventsListInnerProps = {
     date?: string;
     edited?: boolean;
   };
+  isArchivedView?: boolean;
   onRefreshReady?: (refreshFn: () => void) => void;
 };
 
-const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
+const EventsListInner = ({
+  filters,
+  isArchivedView,
+  onRefreshReady,
+}: EventsListInnerProps) => {
   const {
     queryRef,
     displayPage,
@@ -391,46 +396,50 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
           >
             <PencilIcon className="w-5 h-5" />
           </button>
-          <button
-            type="button"
-            className={`btn btn-xs btn-ghost tooltip ${isApproved ? "text-success/50 btn-disabled" : "text-success"}`}
-            data-tip={isApproved ? "Already approved" : "Approve event"}
-            onClick={() => handleApproveClick(dataEvent)}
-            disabled={isApproved || isApproving}
-            aria-label="Approve event"
-          >
-            <CheckCircleIcon className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            className={`btn btn-xs btn-ghost tooltip ${isDeclined ? "text-error/50 btn-disabled" : "text-error"}`}
-            data-tip={isDeclined ? "Already declined" : "Decline event"}
-            onClick={() => handleDeclineClick(dataEvent)}
-            disabled={isDeclined || isDeclining}
-            aria-label="Decline event"
-          >
-            <XCircleIcon className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            className={`btn btn-xs btn-ghost tooltip ${isSuspended ? "text-warning/50 btn-disabled" : "text-warning"}`}
-            data-tip={isSuspended ? "Already suspended" : "Suspend event"}
-            onClick={() => handleSuspendClick(dataEvent)}
-            disabled={isSuspended || isSuspending}
-            aria-label="Suspend event"
-          >
-            <PauseCircleIcon className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            className={`btn btn-xs btn-ghost tooltip ${isArchived ? "text-error/50 btn-disabled" : "text-error"}`}
-            data-tip={isArchived ? "Already archived" : "Archive event"}
-            onClick={() => handleArchiveClick(dataEvent)}
-            disabled={isArchived || isArchiving}
-            aria-label="Archive event"
-          >
-            <Archive className="w-5 h-5" />
-          </button>
+          {isArchivedView ? null : (
+            <>
+              <button
+                type="button"
+                className={`btn btn-xs btn-ghost tooltip ${isApproved ? "text-success/50 btn-disabled" : "text-success"}`}
+                data-tip={isApproved ? "Already approved" : "Approve event"}
+                onClick={() => handleApproveClick(dataEvent)}
+                disabled={isApproved || isApproving}
+                aria-label="Approve event"
+              >
+                <CheckCircleIcon className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                className={`btn btn-xs btn-ghost tooltip ${isDeclined ? "text-error/50 btn-disabled" : "text-error"}`}
+                data-tip={isDeclined ? "Already declined" : "Decline event"}
+                onClick={() => handleDeclineClick(dataEvent)}
+                disabled={isDeclined || isDeclining}
+                aria-label="Decline event"
+              >
+                <XCircleIcon className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                className={`btn btn-xs btn-ghost tooltip ${isSuspended ? "text-warning/50 btn-disabled" : "text-warning"}`}
+                data-tip={isSuspended ? "Already suspended" : "Suspend event"}
+                onClick={() => handleSuspendClick(dataEvent)}
+                disabled={isSuspended || isSuspending}
+                aria-label="Suspend event"
+              >
+                <PauseCircleIcon className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                className={`btn btn-xs btn-ghost tooltip ${isArchived ? "text-error/50 btn-disabled" : "text-error"}`}
+                data-tip={isArchived ? "Already archived" : "Archive event"}
+                onClick={() => handleArchiveClick(dataEvent)}
+                disabled={isArchived || isArchiving}
+                aria-label="Archive event"
+              >
+                <Archive className="w-5 h-5" />
+              </button>
+            </>
+          )}
         </div>
       );
     },
@@ -445,6 +454,7 @@ const EventsListInner = ({ filters, onRefreshReady }: EventsListInnerProps) => {
       isDeclining,
       isSuspending,
       isArchiving,
+      isArchivedView,
     ],
   );
 
@@ -550,6 +560,7 @@ const buildStateOptions = (
 type EventsListProps = {
   fixedFilters?: {
     edited?: boolean;
+    archived?: boolean;
   };
 };
 
@@ -661,37 +672,54 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
     return () => subscription?.unsubscribe();
   }, [distributorStateSearch]);
 
+  const derivedStatus =
+    fixedFilters?.archived === true ? "ARCHIVED" : selectedStatus || undefined;
+
   const filters = {
     tenantId: tenantId || undefined,
     eventTypeId: selectedEventType || undefined,
-    eventStatus: selectedStatus || undefined,
+    eventStatus: derivedStatus,
     requestId: selectedRequest || undefined,
     date: selectedDate || undefined,
     retailerStateId: selectedRetailerStateId || undefined,
     distributorStateId: selectedDistributorStateId || undefined,
-    ...fixedFilters,
+    edited: fixedFilters?.edited || undefined,
   };
 
   const catalogFilters = undefined;
+
+  // Layout helpers
+  const isEditedView = fixedFilters?.edited;
+  const isArchivedView = fixedFilters?.archived;
+
+  const pageTitle = isEditedView
+    ? "Edited Events"
+    : isArchivedView
+      ? "Archived Events"
+      : "All Events";
+
+  const pageDescription = isEditedView
+    ? "List of events that have been edited."
+    : isArchivedView
+      ? "List of archived events in the system."
+      : "List of all events in the system.";
 
   return (
     <Layout>
       <div className="mb-4 flex flex-col gap-2">
         <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
           <div className="p-2 rounded-xl bg-primary/10 text-primary">
-            {fixedFilters?.edited ? (
+            {isEditedView ? (
               <PencilIcon className="w-8 h-8" />
+            ) : isArchivedView ? (
+              <Archive className="w-8 h-8" />
             ) : (
               <CalendarDaysIcon className="w-8 h-8" />
             )}
           </div>
-          <h1>{fixedFilters?.edited ? "Edited Events" : "All Events"}</h1>
+          <h1>{pageTitle}</h1>
         </div>
-        <p className="text-base-content/70">
-          {fixedFilters?.edited
-            ? "List of events that have been edited."
-            : "List of all events in the system."}
-        </p>
+        <p className="text-base-content/70 p-2">{pageDescription}</p>
       </div>
 
       <CatalogsProvider
@@ -750,18 +778,22 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
                   }))}
                   placeholder="Search event type..."
                 />
-                <FormAutocomplete
-                  control={control}
-                  name="status"
-                  label="Filter by Status"
-                  options={catalogs.eventStatuses.flatMap((status) => {
-                    const enumValue = toEventStatusFilterEnum(status);
-                    return enumValue
-                      ? [{ label: status.name, value: enumValue }]
-                      : [];
-                  })}
-                  placeholder="Search status..."
-                />
+
+                {!fixedFilters?.archived ? (
+                  <FormAutocomplete
+                    control={control}
+                    name="status"
+                    label="Filter by Status"
+                    options={catalogs.eventStatuses.flatMap((status) => {
+                      const enumValue = toEventStatusFilterEnum(status);
+                      return enumValue
+                        ? [{ label: status.name, value: enumValue }]
+                        : [];
+                    })}
+                    placeholder="Search status..."
+                  />
+                ) : null}
+
                 <FormAutocomplete
                   control={control}
                   name="request"
@@ -808,6 +840,7 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
             <EventsListInner
               key={`${selectedEventType}-${selectedStatus}-${selectedRequest}-${selectedRetailerStateId}-${selectedDistributorStateId}-${selectedDate}`}
               filters={filters}
+              isArchivedView={isArchivedView}
             />
           </div>
         )}

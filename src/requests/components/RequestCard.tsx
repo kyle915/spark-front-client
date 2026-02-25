@@ -112,7 +112,7 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
   }, [request.createdBy, request.requestorEmail]);
 
   const approvedByLabel = useMemo(() => {
-    if (!request.approvedBy) return "Not approved yet";
+    if (!request.approvedBy) return "N/A";
     return getUserLabel(request.approvedBy);
   }, [request.approvedBy]);
 

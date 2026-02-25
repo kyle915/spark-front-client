@@ -55,12 +55,12 @@ export function AiInsightsSection({ insights, isLoading }: Props) {
   const latestInsightsData = useLazyLoadQuery<LatestInsightsQueryType>(
     LatestInsightsQuery,
     { tenantId: tenantId ?? null },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-and-network" },
   );
 
-  if (isLoading) return <AiInsightsSkeleton />;
-
-  const normalizePriority = (value?: string | null): AIInsightItem["priority"] => {
+  const normalizePriority = (
+    value?: string | null,
+  ): AIInsightItem["priority"] => {
     const normalized = value?.toLowerCase();
     if (normalized === "high") return "High";
     if (normalized === "medium") return "Medium";
@@ -83,7 +83,7 @@ export function AiInsightsSection({ insights, isLoading }: Props) {
   const combinedInsights = useMemo(() => {
     if (!feedbackInsights.length) return insights;
     const nonFeedback = insights.filter(
-      (insight) => insight.category !== "Customer Feedback"
+      (insight) => insight.category !== "Customer Feedback",
     );
     return [...nonFeedback, ...feedbackInsights];
   }, [feedbackInsights, insights]);
@@ -105,7 +105,7 @@ export function AiInsightsSection({ insights, isLoading }: Props) {
         )}
 
         {/* Medium + Low */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-start">
           {[...high.slice(1), ...medium, ...low].map((insight, i) => (
             <AiInsightCard key={i} insight={insight} compact />
           ))}
@@ -113,6 +113,8 @@ export function AiInsightsSection({ insights, isLoading }: Props) {
       </div>
     );
   };
+
+  if (isLoading) return <AiInsightsSkeleton />;
 
   return (
     <div className="w-full relative rounded-2xl p-0.5 overflow-hidden">
@@ -179,12 +181,13 @@ export function AiInsightsSection({ insights, isLoading }: Props) {
                   className={`
                   flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md cursor-pointer
                   transition-all duration-300
-                  ${tab.disabled
+                  ${
+                    tab.disabled
                       ? "cursor-not-allowed opacity-50 bg-base-200/60 text-base-content/40"
                       : activeTab === tab.value
-                      ? "bg-primary text-primary-content shadow-md"
-                      : "text-base-content/70 hover:bg-base-300/90 hover:shadow-md dark:hover:bg-base-300/10"
-                    }
+                        ? "bg-primary text-primary-content shadow-md"
+                        : "text-base-content/70 hover:bg-base-300/90 hover:shadow-md dark:hover:bg-base-300/10"
+                  }
                 `}
                 >
                   {tab.icon}
@@ -214,11 +217,11 @@ export function AiInsightsSection({ insights, isLoading }: Props) {
 
                         {renderInsightsByPriority(
                           combinedInsights.filter(
-                            (i) => i.category === tab.category
-                          )
+                            (i) => i.category === tab.category,
+                          ),
                         )}
                       </div>
-                    )
+                    ),
                 )}
               </>
             )}

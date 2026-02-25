@@ -14,7 +14,7 @@ import {
   UserGroupIcon,
   AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/solid";
-import { Palette, PencilIcon, TagIcon } from "lucide-react";
+import { Palette, PencilIcon, TagIcon, Archive } from "lucide-react";
 
 // Dashboard
 import DashboardEvents from "@/components/pages/dashboard-event/DashboardEvent";
@@ -205,6 +205,7 @@ const EventsLinks = {
     { path: "/events/edited", name: "Edited Events", Icon: PencilIcon },
     { path: "/events/today", name: "Today", Icon: CalendarIcon },
     { path: "/events/map", name: "Map", Icon: MapIcon },
+    { path: "/events/archived", name: "Archived", Icon: Archive },
   ],
 
   routes: [
@@ -216,6 +217,11 @@ const EventsLinks = {
     },
     { path: "/events/today", component: <TodayEvents />, isPublic: false },
     { path: "/events/map", component: <TodayEventsMap />, isPublic: false },
+    {
+      path: "/events/archived",
+      component: <EventsList fixedFilters={{ archived: true }} />,
+      isPublic: false,
+    },
     {
       path: "/event/create",
       name: "Create Event",
