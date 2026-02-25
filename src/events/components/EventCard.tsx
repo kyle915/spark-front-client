@@ -17,6 +17,24 @@ import LocationMap from "@/shared/LocationMap";
 import { formatDate, formatLocalDateTime, formatTime } from "@/utils";
 import { MapPinHouseIcon } from "lucide-react";
 
+type InfoItemProps = {
+  label: string;
+  value: React.ReactNode;
+  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+};
+
+function InfoItem({ label, value, Icon }: InfoItemProps) {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs uppercase opacity-60">{label}</p>
+      <p className="font-medium flex items-center gap-2">
+        <Icon className="w-4 h-4 opacity-60" />
+        <span className="truncate">{value}</span>
+      </p>
+    </div>
+  );
+}
+
 type Event = NonNullable<EventUuidQuery$data["event"]>;
 
 interface Props {
@@ -39,15 +57,6 @@ const EventCard: React.FC<Props> = ({ event, backTo }) => {
     request,
   } = event;
 
-  // const formatTimezone = (tz: TimezoneInfo) => {
-  //   if (!tz) return "N/A";
-  //   const sign = tz.offset >= 0 ? "+" : "-";
-  //   const absOffsetMinutes = Math.abs(tz.offset);
-  //   const hours = String(Math.floor(absOffsetMinutes / 60)).padStart(2, "0");
-  //   const minutes = String(absOffsetMinutes % 60).padStart(2, "0");
-  //   return `${tz.name}-${tz.code} (UTC${sign}${hours}:${minutes})`;
-  // };
-
   const browserTimezone = useMemo(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone,
     [],
@@ -56,18 +65,6 @@ const EventCard: React.FC<Props> = ({ event, backTo }) => {
     () => -new Date().getTimezoneOffset(),
     [],
   );
-
-  const formatLocalDate = (value: string | null) => {
-    if (!value) return "-";
-    const dateObj = new Date(value);
-    if (Number.isNaN(dateObj.getTime())) return value;
-    return new Intl.DateTimeFormat(undefined, {
-      timeZone: browserTimezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(dateObj);
-  };
 
   const formatEventLocalTime = (value: string | null) =>
     formatLocalDateTime(value, { timeZone: browserTimezone });
@@ -126,13 +123,14 @@ const EventCard: React.FC<Props> = ({ event, backTo }) => {
               <span
                 className={`
                   badge badge-soft badge-lg gap-2 font-semibold
-                  ${status?.name === "Pending"
-                    ? "badge-warning"
-                    : status?.name === "Approved"
-                      ? "badge-success"
-                      : status?.name === "Cancelled"
-                        ? "badge-error"
-                        : "badge-neutral"
+                  ${
+                    status?.name === "Pending"
+                      ? "badge-warning"
+                      : status?.name === "Approved"
+                        ? "badge-success"
+                        : status?.name === "Cancelled"
+                          ? "badge-error"
+                          : "badge-neutral"
                   }
                 `}
               >
@@ -184,9 +182,9 @@ const EventCard: React.FC<Props> = ({ event, backTo }) => {
         </div>
 
         {/* ================= MAIN GRID ================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-8 items-start">
           {/* BASIC INFORMATION */}
-          <div className="xl:col-span-2 space-y-8">
+          <div className="col-span-12 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
               <p className="font-semibold text-lg">Basic Information</p>
 
@@ -224,82 +222,85 @@ const EventCard: React.FC<Props> = ({ event, backTo }) => {
           </div>
 
           {/* EVENT + REQUEST DETAILS */}
-          <div className="xl:col-span-2 space-y-8">
+          <div className="col-span-12 xl:col-span-6 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
-              <p className="font-semibold text-lg">Event & Request Details</p>
+              <p className="font-semibold text-lg">Event Details</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <p className="text-xs uppercase opacity-60">Event Type</p>
-                  <p className="font-medium flex items-center gap-2">
-                    <TagIcon className="w-4 h-4 opacity-60" />
-                    {eventType?.name ?? "Unknown"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Event Type"
+                  value={eventType?.name ?? "Unknown"}
+                  Icon={TagIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">Event Status</p>
-                  <p className="font-medium flex items-center gap-2">
-                    <CheckCircleIcon className="w-4 h-4 opacity-60" />
-                    {status?.name ?? "Unknown"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Status"
+                  value={status?.name ?? "Unknown"}
+                  Icon={CheckCircleIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">
-                    Associated Request
-                  </p>
-                  <p className="font-medium flex items-center gap-2">
-                    <ClipboardDocumentIcon className="w-4 h-4 opacity-60" />
-                    {request?.name ?? "—"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Scope"
+                  value={isNational ? "National" : "Local"}
+                  Icon={MapPinHouseIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">Request Type</p>
-                  <p className="font-medium flex items-center gap-2">
-                    <TagIcon className="w-4 h-4 opacity-60" />
-                    {request?.requestType?.name ?? "Unknown"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Associated Request"
+                  value={request?.name ?? "—"}
+                  Icon={ClipboardDocumentIcon}
+                />
+
+                <InfoItem
+                  label="Request Type"
+                  value={request?.requestType?.name ?? "—"}
+                  Icon={TagIcon}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ================= EVENT NOTES ================= */}
+          <div className="col-span-12 xl:col-span-6 space-y-8">
+            <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-4">
+              <p className="font-semibold text-lg">Event Notes</p>
+
+              <div className="rounded-xl bg-base-200/70 border border-base-100/20 p-4">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                  {notes ?? "No notes provided."}
+                </p>
               </div>
             </div>
           </div>
 
           {/* TIMEZONE INFORMATION */}
-          <div className="xl:col-span-4 space-y-8">
+          <div className="col-span-12 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <p className="font-semibold text-lg">Your current timezone</p>
-                <span className="badge badge-outline">
+                <span className="badge badge-outline max-w-full truncate">
                   {formatBrowserTimezoneLabel()}
                 </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <p className="text-xs uppercase opacity-60">
-                    Date (your zone)
-                  </p>
-                  <p className="font-medium">
-                    {formatLocalDate(event.startTime ?? null)}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Event Start Time"
+                  value={formatEventLocalTime(event.startTime ?? null)}
+                  Icon={CalendarIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">
-                    Start (your zone)
-                  </p>
-                  <p className="font-medium">
-                    {formatEventLocalTime(event.startTime ?? null)}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Event End Time"
+                  value={formatEventLocalTime(event.endTime ?? null)}
+                  Icon={CalendarIcon}
+                />
               </div>
             </div>
           </div>
 
           {/* ================= PRODUCTS ================= */}
-          <div className="xl:col-span-4 space-y-8">
+          <div className="col-span-12 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
               <p className="font-semibold text-lg">Products</p>
 
@@ -347,72 +348,58 @@ const EventCard: React.FC<Props> = ({ event, backTo }) => {
           </div>
 
           {/* LOCATION INFORMATION */}
-          <div className="xl:col-span-4 space-y-8">
+          <div className="col-span-12 space-y-8">
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
-              <p className="font-semibold text-lg">Location Information</p>
+              <p className="font-semibold text-lg">Location Details</p>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <p className="text-xs uppercase opacity-60">Retailer State</p>
-                  <p className="font-medium">
-                    {request?.retailer?.location?.state?.name ??
-                      "No retailer state"}
-                  </p>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InfoItem
+                  label="Retailer"
+                  value={request?.retailer?.name ?? "—"}
+                  Icon={BuildingOfficeIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">
-                    Retailer Location
-                  </p>
-                  <p className="font-medium">
-                    {request?.retailer?.location?.name ?? "—"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Retailer Location"
+                  value={request?.retailer?.location?.name ?? "—"}
+                  Icon={MapPinIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">Retailer</p>
-                  <p className="font-medium">
-                    {request?.retailer?.name ?? "—"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Retailer State"
+                  value={request?.retailer?.location?.state?.name ?? "—"}
+                  Icon={MapPinIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">
-                    Distributor State
-                  </p>
-                  <p className="font-medium">
-                    {request?.distributor?.location?.state?.name ??
-                      "No distributor state"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Distributor"
+                  value={request?.distributor?.name ?? "—"}
+                  Icon={UsersIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">
-                    Distributor Location
-                  </p>
-                  <p className="font-medium">
-                    {request?.distributor?.location?.name ?? "—"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Distributor Location"
+                  value={request?.distributor?.location?.name ?? "—"}
+                  Icon={MapPinIcon}
+                />
 
-                <div>
-                  <p className="text-xs uppercase opacity-60">Distributor</p>
-                  <p className="font-medium">
-                    {request?.distributor?.name ?? "—"}
-                  </p>
-                </div>
+                <InfoItem
+                  label="Address"
+                  value={address ?? "—"}
+                  Icon={MapPinIcon}
+                />
               </div>
             </div>
           </div>
 
-          <div className="lg:col-span-4">
-            <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 h-full flex flex-col justify-center">
+          <div className="col-span-12 space-y-8">
+            <div className="rounded-2xl bg-base-300/60 border border-base-100/20 gap-2 p-6 h-full flex flex-col justify-center">
               <div className="flex items-center justify-between">
-                <p className="font-semibold text-lg">Location</p>
+                <p className="font-semibold text-lg">Location Map</p>
                 <span className="text-xs opacity-60">
-                  {request?.coordinates
-                    ? `${request.coordinates[0]}, ${request.coordinates[1]}`
-                    : "—"}
+                  {request?.coordinates.length
+                    ? `${request.coordinates[0] || ""}, ${request.coordinates[1] || ""}`
+                    : "No coordinates provided"}
                 </span>
               </div>
 

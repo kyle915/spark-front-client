@@ -27,6 +27,7 @@ export interface RequestRow {
   retailer?: NamedEntity | null;
   requestType?: NamedEntity | null;
   status?: NamedEntity | null;
+  event?: NamedEntity | null;
 }
 
 export interface EventRow {

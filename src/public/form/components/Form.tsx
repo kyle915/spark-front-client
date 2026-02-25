@@ -59,7 +59,6 @@ interface SparkFormProps {
 
 export default function SparkForm(props: SparkFormProps) {
   const {
-    // clients,
     requestTypes,
     states,
     onStateSearch,
@@ -77,14 +76,14 @@ export default function SparkForm(props: SparkFormProps) {
   const values = watch();
   const [resetSignal, setResetSignal] = useState(0);
 
-  const { handleSubmit, loading } = useSparkSubmit(tenantId, () => {
-    reset();
-    setResetSignal(Math.random());
-  }, timeZones);
-
-  // useEffect(() => {
-  //   if (tenantId) setValue("tenant", tenantId);
-  // }, [tenantId, setValue]);
+  const { handleSubmit, loading } = useSparkSubmit(
+    tenantId,
+    () => {
+      reset();
+      setResetSignal(Math.random());
+    },
+    timeZones,
+  );
 
   const steps = [
     {

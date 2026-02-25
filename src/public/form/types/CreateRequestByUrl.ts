@@ -49,6 +49,9 @@ export interface CreateRequestInput {
 
   // DETAILS
   details: CreateRequestDetailInput[];
+
+  // NOTES
+  notes: string;
 }
 
 export interface CreateRequestResponse {
