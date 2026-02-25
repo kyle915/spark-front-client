@@ -11,6 +11,7 @@ import { RetailersQuery } from "@api/queries/RetailersQuery";
 import type { RetailersQuery as RetailersQueryType } from "@api/queries/__generated__/RetailersQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import FormAutocomplete from "@shared/FormAutocomplete";
+import { cn } from "@/lib/utils";
 
 export type FilterOption = {
   value: string;
@@ -79,7 +80,7 @@ export default function FiltersPanel({
             filters: { tenantId: tenantId ?? null },
             q: query || null,
             first: 100,
-          }
+          },
         ).toPromise();
 
         if (distributorRequestIdRef.current !== requestId) return;
@@ -103,7 +104,7 @@ export default function FiltersPanel({
         }
       }
     },
-    [distributors, tenantId]
+    [tenantId],
   );
 
   const loadRetailers = useCallback(
@@ -118,7 +119,7 @@ export default function FiltersPanel({
             filters: { tenantId: tenantId ?? null },
             q: query || null,
             first: 100,
-          }
+          },
         ).toPromise();
 
         if (retailerRequestIdRef.current !== requestId) return;
@@ -144,7 +145,7 @@ export default function FiltersPanel({
         }
       }
     },
-    [rmmOptions, tenantId]
+    [tenantId],
   );
 
   useEffect(() => {
@@ -186,14 +187,17 @@ export default function FiltersPanel({
 
   return (
     <div className="w-full">
-      <div className="collapse bg-base-100/50 rounded-xl border border-base-300 shadow-sm overflow-visible">
+      <div
+        className={cn(
+          "collapse bg-base-100/50 rounded-xl border border-base-300 shadow-sm overflow-visible transition-all duration-300",
+          isOpen && "collapse-open",
+        )}
+      >
         {/* HEADER */}
-        <input
-          type="checkbox"
-          checked={isOpen}
-          onChange={() => setIsOpen(!isOpen)}
-        />
-        <div className="collapse-title flex items-center justify-between py-4">
+        <div
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="collapse-title flex items-center justify-between py-4 cursor-pointer"
+        >
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 p-2 rounded-lg">
               <Funnel size={18} className="text-primary" />
@@ -203,8 +207,10 @@ export default function FiltersPanel({
 
           <ChevronDown
             size={20}
-            className={`transition-transform ${isOpen ? "rotate-180" : "rotate-0"
-              }`}
+            className={cn(
+              "transition-transform duration-300",
+              isOpen ? "rotate-180" : "rotate-0",
+            )}
           />
         </div>
 
@@ -233,9 +239,7 @@ export default function FiltersPanel({
               options={retailerOptions}
               onSearch={setRetailerSearch}
               placeholder={
-                isLoadingRetailers
-                  ? "Loading rmm..."
-                  : "Search rmm..."
+                isLoadingRetailers ? "Loading rmm..." : "Search rmm..."
               }
             />
 
@@ -271,7 +275,11 @@ export default function FiltersPanel({
 
           {/* APPLY BUTTON */}
           <div className="flex justify-end pt-2 pb-1">
-            <button className="btn btn-primary btn-sm" onClick={handleApply}>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={handleApply}
+            >
               Apply Filters
             </button>
           </div>

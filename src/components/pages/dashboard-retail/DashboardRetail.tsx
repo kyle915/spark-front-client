@@ -71,7 +71,7 @@ const monthLookup = new Map(
         .toLowerCase(),
       index,
     ],
-  ])
+  ]),
 );
 
 const getMonthIndex = (value: string) => {
@@ -89,7 +89,7 @@ const buildQuarterSummaries = (
     month: string;
     consumersSampled: number;
     purchases: number;
-  }>
+  }>,
 ): QuarterSummary[] => {
   const buckets = new Map<
     string,
@@ -185,7 +185,7 @@ export default function DashboardRetail() {
   const { dashboard, filterOptions } = useRecapDashboardData(
     tenantId || "",
     filtersInput,
-    fetchKey
+    fetchKey,
   );
 
   const metrics = dashboard.metrics;
@@ -201,7 +201,7 @@ export default function DashboardRetail() {
       value: formatNumber(metrics.totalConsumersSampled),
       change: formatDelta(
         metrics.totalConsumersSampled,
-        comparison?.totalConsumersSampled
+        comparison?.totalConsumersSampled,
       ),
     },
     {
@@ -253,11 +253,11 @@ export default function DashboardRetail() {
       consumers: point.consumers,
       conversion: point.conversion,
       color: colorPalette[index % colorPalette.length],
-    })
+    }),
   );
 
   const quarterSummaries = buildQuarterSummaries(
-    dashboard.monthlyTrends.dataPoints
+    dashboard.monthlyTrends.dataPoints,
   );
 
   const topMarket = dashboard.marketAnalysis.dataPoints.reduce(
@@ -265,7 +265,7 @@ export default function DashboardRetail() {
       if (!best) return current;
       return current.conversion > best.conversion ? current : best;
     },
-    null as (typeof dashboard.marketAnalysis.dataPoints)[number] | null
+    null as (typeof dashboard.marketAnalysis.dataPoints)[number] | null,
   );
 
   const insights = [
@@ -286,7 +286,7 @@ export default function DashboardRetail() {
       label: "HIGHEST WILLINGNESS TO BUY",
       main: "Overall",
       sub: `${formatPercent(
-        dashboard.performanceInsights.willingToPurchasePercentage
+        dashboard.performanceInsights.willingToPurchasePercentage,
       )} willing to purchase`,
       subColor: "text-emerald-600",
       icon: UsersRound,
@@ -298,7 +298,7 @@ export default function DashboardRetail() {
       label: "STRONGEST BRAND AWARENESS",
       main: "Overall",
       sub: `${formatPercent(
-        dashboard.performanceInsights.brandAwarenessPercentage
+        dashboard.performanceInsights.brandAwarenessPercentage,
       )} awareness among consumers`,
       subColor: "text-blue-600",
       icon: UsersRound,
@@ -368,9 +368,6 @@ export default function DashboardRetail() {
           ))}
         </section>
 
-        {/* AI INSIGHTS */}
-        <AiInsightsSection insights={aiInsightsMockV2} isLoading={false} />
-
         {/* MONTHLY PERFORMANCE */}
         <section className="w-full">
           <ChartCard
@@ -436,6 +433,9 @@ export default function DashboardRetail() {
         <section className="w-full">
           <QuarterSummaryCards data={quarterSummaries} />
         </section>
+
+        {/* AI INSIGHTS */}
+        <AiInsightsSection insights={aiInsightsMockV2} isLoading={false} />
       </main>
     </Layout>
   );
