@@ -38,7 +38,7 @@ import {
   // XCircleIcon,
 } from "@heroicons/react/24/outline";
 
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { FilterIcon, FunnelXIcon } from "lucide-react";
 import { useAlertStore } from "@/store/alertStore";
@@ -63,6 +63,8 @@ type RecapsTableContentProps = {
   emptyMessage: string;
   exportingId: string | null;
   isExporting: boolean;
+  returnPage: number;
+  returnAfter: string | null;
   onExportPdf: (recap: RecapRow) => void;
   // onApprove: (recap: RecapRow) => void;
   // onDecline: (recap: RecapRow) => void;
@@ -83,6 +85,8 @@ const RecapsTableContent = ({
   emptyMessage,
   exportingId,
   isExporting,
+  returnPage,
+  returnAfter,
   onExportPdf,
 }: // onApprove,
   // onDecline,
@@ -120,7 +124,13 @@ const RecapsTableContent = ({
             <button
               type="button"
               className="btn btn-xs btn-outline"
-              onClick={() => navigate(`/recap/view/${row.uuid}`)}
+              onClick={() => {
+                const params = new URLSearchParams();
+                params.set("fromPage", String(returnPage));
+                if (returnAfter) params.set("fromAfter", returnAfter);
+
+                navigate(`/recap/view/${row.uuid}?${params.toString()}`);
+              }}
             >
               <EyeIcon className="w-5 h-5" />
               View
@@ -211,6 +221,7 @@ const RecapsListInner = ({
   emptyMessage,
   onRefreshReady,
 }: RecapsListInnerProps) => {
+  const [searchParams] = useSearchParams();
   const showAlert = useAlertStore((state) => state.showAlert);
   // const [approvingId, setApprovingId] = useState<string | null>(null);
   // const [targetApproval, setTargetApproval] = useState<boolean | null>(null);
@@ -220,10 +231,21 @@ const RecapsListInner = ({
   const [commitGeneratePdf, isExporting] =
     useMutation<GenerateRecapPdfMutationType>(GenerateRecapPdfMutation);
 
+  const initialPageFromUrl = useMemo(() => {
+    const raw = Number(searchParams.get("page") ?? "1");
+    return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 1;
+  }, [searchParams]);
+
+  const initialAfterFromUrl = useMemo(() => {
+    const value = searchParams.get("after");
+    return value && value.length > 0 ? value : null;
+  }, [searchParams]);
+
   const {
     queryRef,
     displayPage,
     isNavigating,
+    currentAfterCursor,
     handlePageLoaded,
     refresh,
     goNext,
@@ -233,6 +255,8 @@ const RecapsListInner = ({
     query: RecapsQuery,
     pageSize: PAGE_SIZE,
     initialVariables: { filters },
+    initialPage: initialPageFromUrl,
+    initialAfter: initialAfterFromUrl,
   });
 
   useEffect(() => {
@@ -332,6 +356,8 @@ const RecapsListInner = ({
           isNavigating={isNavigating}
           onPageLoaded={handlePageLoaded}
           emptyMessage={emptyMessage}
+          returnPage={displayPage}
+          returnAfter={currentAfterCursor}
           // onApprove={(recap) => handleSetRecapApproval(recap, true)}
           // onDecline={(recap) => handleSetRecapApproval(recap, false)}
           // approvingId={approvingId}
