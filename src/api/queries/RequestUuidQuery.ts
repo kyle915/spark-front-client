@@ -74,6 +74,13 @@ export const RequestUuidQuery = graphql`
           url
         }
       }
+      approvedBy {
+        firstName
+        lastName
+        image {
+          url
+        }
+      }
       requestType {
         __typename
         id
