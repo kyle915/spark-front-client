@@ -31,16 +31,14 @@ export const sparkFormSchema = yup.object({
                 .min(1, "Invalid table size"),
             otherwise: (schema) => schema.notRequired(),
           }),
-      })
+      }),
     )
     .required("Details are required"),
-  distributor: yup
-    .string()
-    .when("distributorId", {
-      is: (value: string | null | undefined) => !value,
-      then: (schema) => schema.required("Distributor is required"),
-      otherwise: (schema) => schema.notRequired(),
-    }),
+  distributor: yup.string().when("distributorId", {
+    is: (value: string | null | undefined) => !value,
+    then: (schema) => schema.required("Distributor is required"),
+    otherwise: (schema) => schema.notRequired(),
+  }),
   distributorEmail: yup
     .string()
     .email("Invalid email format")
@@ -61,19 +59,19 @@ export const sparkFormSchema = yup.object({
     .min(1, "Select at least one product")
     .required("Products are required"),
   request_type: yup.string().required("Request type is required"),
-  retailer: yup
-    .string()
-    .when("retailerId", {
-      is: (value: string | null | undefined) => !value,
-      then: (schema) => schema.required("Retailer is required"),
-      otherwise: (schema) => schema.notRequired(),
-    }),
+  retailer: yup.string().when("retailerId", {
+    is: (value: string | null | undefined) => !value,
+    then: (schema) => schema.required("Retailer is required"),
+    otherwise: (schema) => schema.notRequired(),
+  }),
   retailerAddress: yup.string().when("retailerId", {
     is: (value: string | null | undefined) => !value,
     then: (schema) => schema.required("Retailer address is required"),
     otherwise: (schema) => schema.notRequired(),
   }),
-  retailerStoreContact: yup.string().required("Retailer store contact is required"),
+  retailerStoreContact: yup
+    .string()
+    .required("Retailer store contact is required"),
   end_time: yup
     .string()
     .required("End time is required")
@@ -89,10 +87,11 @@ export const sparkFormSchema = yup.object({
         const end = new Date(`1970-01-01T${value}:00`);
 
         return end >= start;
-      }
+      },
     ),
   storeManagerName: yup.string().required("Manager name is required"),
   storeManagerContact: yup.string().required("Manager contact is required"),
+  notes: yup.string().optional(),
   // tenant: yup.string().required("Tenant is required"),
   timeZoneId: yup.string().required("Time zone is required"),
 });

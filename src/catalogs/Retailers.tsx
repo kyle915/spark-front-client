@@ -39,18 +39,14 @@ type RetailerFormValues = {
 };
 
 type TenantLocationSelectProps = {
-  tenantId: string;
   control: Control<RetailerFormValues>;
   name?: string;
 };
 
-const TenantLocationSelect = ({
-  tenantId,
-  control,
-}: TenantLocationSelectProps) => {
+const TenantLocationSelect = ({ control }: TenantLocationSelectProps) => {
   const data = useLazyLoadQuery<LocationsQueryType>(
     LocationsQuery,
-    { filters: { tenantId } },
+    {},
     { fetchPolicy: "store-and-network" },
   );
 
@@ -201,7 +197,6 @@ const RetailerForm = ({
               />
 
               <TenantLocationSelect
-                tenantId={tenantId}
                 control={control}
                 name="locationId"
               />

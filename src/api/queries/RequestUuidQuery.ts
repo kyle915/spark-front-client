@@ -7,6 +7,7 @@ export const RequestUuidQuery = graphql`
       id
       uuid
       name
+      notes
       date
       startTime
       endTime
@@ -92,6 +93,7 @@ export const RequestUuidQuery = graphql`
         id
         uuid
         name
+        slug
       }
       timezone {
         __typename

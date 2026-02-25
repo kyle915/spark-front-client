@@ -25,5 +25,5 @@ export const stepFields: Record<string, FieldPath<SparkFormData>[]> = {
     "storeManagerContact",
     "request_type",
   ],
-  step4: ["details.0.isTableNeeded", "details.0.tableSize"],
+  step4: ["details.0.isTableNeeded", "details.0.tableSize", "notes"],
 };

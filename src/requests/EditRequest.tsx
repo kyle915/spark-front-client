@@ -11,12 +11,12 @@ import { UpdateRequestMutation } from "@api/mutations/UpdateRequestMutation";
 import type { UpdateRequestMutation as UpdateRequestMutationType } from "@api/mutations/__generated__/UpdateRequestMutation.graphql";
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
-import { LocationsQuery } from "@api/queries/LocationsQuery";
-import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
 import { ProductTypesQuery } from "@/api/queries/ProductTypesQuery";
 import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import type { ProductTypesQuery as ProductTypesQueryType } from "@api/queries/__generated__/ProductTypesQuery.graphql";
 import type { ProductsQuery as ProductsQueryType } from "@api/queries/__generated__/ProductsQuery.graphql";
+import { StatesQuery } from "@/api/queries/StatesQuery";
+import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/StatesQuery.graphql";
 import { useAlertStore } from "@store/alertStore";
 import { dateFormat } from "@/public/form/utils/toDate";
 import {
@@ -36,7 +36,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
   const request = data.request;
   const tenantId = request?.tenantId ?? "";
   const [commitUpdateRequest] = useMutation<UpdateRequestMutationType>(
-    UpdateRequestMutation
+    UpdateRequestMutation,
   );
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
@@ -44,26 +44,28 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
   const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
     TimezonesQuery,
     {},
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-or-network" },
   );
 
   const productTypesData = useLazyLoadQuery<ProductTypesQueryType>(
     ProductTypesQuery,
     { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-or-network" },
   );
 
   const productsData = useLazyLoadQuery<ProductsQueryType>(
     ProductsQuery,
     { filters: { tenantId }, first: 100 },
-    { fetchPolicy: "store-and-network" }
+    { fetchPolicy: "store-or-network" },
   );
 
-  const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
-    filters: { tenantId },
-  });
+  const statesData = useLazyLoadQuery<StatesQueryType>(
+    StatesQuery,
+    {},
+    { fetchPolicy: "store-or-network" },
+  );
 
-  const locations = locationsData.locations.edges.map((e) => e.node);
+  const states = statesData.states?.edges.map((e) => e.node) || [];
 
   if (!request) {
     return (
@@ -85,6 +87,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
         input: {
           id: request.id,
           name: formData.name,
+          notes: formData.notes?.trim() ?? "",
           date: buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes),
           startTime: formData.startTime
             ? buildDateTimeWithOffset(
@@ -94,7 +97,11 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
               )
             : "",
           endTime: formData.endTime
-            ? buildDateTimeWithOffset(dateValue, formData.endTime, offsetMinutes)
+            ? buildDateTimeWithOffset(
+                dateValue,
+                formData.endTime,
+                offsetMinutes,
+              )
             : "",
           address: formData.address,
           coordinates: (formData.coordinates ?? []) as readonly number[],
@@ -117,7 +124,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
         } else {
           showAlert(
             response.updateRequest?.message ?? "Error updating request",
-            "error"
+            "error",
           );
         }
       },
@@ -129,22 +136,44 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
 
   const defaultDate = extractDatePart(request.date ?? "") ?? request.date ?? "";
   const defaultStartTime =
-    extractTimePart(request.startTime ?? "") ??
-    request.startTime ??
-    undefined;
+    extractTimePart(request.startTime ?? "") ?? request.startTime ?? undefined;
   const defaultEndTime =
     extractTimePart(request.endTime ?? "") ?? request.endTime ?? undefined;
 
   const defaultValues: Partial<RequestFormValues> = {
     name: request.name ?? "",
+    notes: (request as { notes?: string | null }).notes ?? "",
     date: defaultDate,
     startTime: defaultStartTime,
     endTime: defaultEndTime,
     address: request.address ?? "",
     coordinates: request.coordinates?.length ? [...request.coordinates] : null,
     timezoneId: request.timezone?.id ?? null,
-    retailerId: request.retailer?.id ?? null,
-    distributorId: request.distributor?.id ?? null,
+    distributorId:
+      request.distributor?.id ?? request?.distributor?.id ?? undefined,
+    retailerId: request.retailer?.id ?? request?.retailer?.id ?? undefined,
+    stateId:
+      request.retailer?.location?.state?.id ??
+      request.distributor?.location?.state?.id ??
+      request?.retailer?.location?.state?.id ??
+      request?.distributor?.location?.state?.id ??
+      undefined,
+    entitiesLocationId:
+      request.retailer?.location?.id ??
+      request.distributor?.location?.id ??
+      request?.retailer?.location?.id ??
+      request?.distributor?.location?.id ??
+      undefined,
+
+    distributorLocationId:
+      request.distributor?.location?.id ??
+      request?.distributor?.location?.id ??
+      undefined,
+
+    retailerLocationId:
+      request.retailer?.location?.id ??
+      request?.retailer?.location?.id ??
+      undefined,
     requestTypeId: request.requestType?.id ?? null,
     // storeManagerId: request.storeManager?.id ?? null, // Falta en el query request.graphql
     products: request.products?.map((product) => product.id) ?? [],
@@ -192,13 +221,21 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
               defaultValues={defaultValues}
               onSubmit={handleSubmit}
               clients={clients}
-              retailers={retailers}
-              distributors={distributors}
+              states={states}
+              retailers={
+                request.retailer?.id
+                  ? retailers.filter((r) => r.id === request.retailer?.id)
+                  : retailers
+              }
+              distributors={
+                request.distributor?.id
+                  ? distributors.filter((d) => d.id === request.distributor?.id)
+                  : distributors
+              }
               requestTypes={requestTypes}
               timezones={timezones}
               productTypes={productTypes}
               products={products}
-              locations={locations}
               requestStoreManagers={requestStoreManagers}
               enableContactSection={true}
               contactMode="manual"

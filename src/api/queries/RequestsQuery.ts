@@ -6,6 +6,7 @@ export const RequestsQuery = graphql`
     $after: String
     $last: Int
     $before: String
+    $q: String
     $filters: RequestFiltersInput
   ) {
     requests(
@@ -13,6 +14,7 @@ export const RequestsQuery = graphql`
       after: $after
       last: $last
       before: $before
+      q: $q
       filters: $filters
     ) {
       totalCount
@@ -64,6 +66,12 @@ export const RequestsQuery = graphql`
             uuid
             name
             slug
+          }
+          event {
+            __typename
+            id
+            uuid
+            name
           }
           tenantId
           createdAt

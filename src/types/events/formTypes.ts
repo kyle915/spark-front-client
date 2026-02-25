@@ -13,13 +13,13 @@ export interface RequestType {
   uuid?: string;
 }
 
-export interface CatalogItem {
+interface CatalogItem {
   id: string;
   name: string;
-  uuid?: string;
   email?: string | null;
   address?: string | null;
   storeContact?: string | null;
+  code?: string | null;
 }
 
 export interface RequestStoreManagerItem {
@@ -63,9 +63,6 @@ export interface EventFormValues {
   retailerAddress?: string | null;
   retailerStoreContact?: string | null;
   retailerId?: string | null;
-  storeManagerId?: string | null;
-  storeManagerName?: string | null;
-  storeManagerPhone?: string | null;
   startTime?: string | null;
   endTime?: string | null;
   address: string;
@@ -75,6 +72,13 @@ export interface EventFormValues {
   retailerLocationId?: string | null;
   coordinates?: number[] | null;
   timezoneId?: string | null;
+  stateId: string | null;
+  entitiesLocationId?: string | null;
+  associateRequest?: boolean;
+  requestLoading?: boolean;
+  storeManagerName?: string | null;
+  storeManagerPhone?: string | null;
+  onRequestSearch?: (query: string) => void;
 }
 
 // ------------------------------------
@@ -82,26 +86,27 @@ export interface EventFormValues {
 // ------------------------------------
 export interface EventFormProps {
   mode: "create" | "edit";
-  tenants?: Tenant[];
-  requests?: RequestType[];
+  // tenants?: Tenant[];
+  // requests?: RequestType[];
   eventTypes: EventType[];
-  timezones?: { id: string; name: string; code: string; offset: number }[];
-  tenantId?: string;
-  requestId?: string;
-  clients?: CatalogItem[];
+  tenantId: string;
   distributors?: CatalogItem[];
+  timezones?: { id: string; name: string; code: string; offset: number }[];
   retailers?: CatalogItem[];
-  requestStoreManagers?: RequestStoreManagerItem[];
+  requestStoreManagers?: CatalogItem[];
+  clients?: CatalogItem[];
   locations?: Location[];
+  states?: CatalogItem[];
+  onStateChange?: (stateId: string | null) => void;
+  defaultValues?: Partial<EventFormValues>;
+  onSubmit: (data: EventFormValues) => void;
+  showRequestField?: boolean;
+  showAssociateRequestToggle?: boolean;
+  contactMode?: "request" | "manual";
   requestContactInfo?: RequestContactInfo;
   enableContactSection?: boolean;
-  contactMode?: "request" | "manual";
-  onSubmit: (data: EventFormValues) => void;
-  defaultValues?: Partial<EventFormValues>;
+  onRefetch?: (key: "distributors" | "retailers" | "clients") => void;
   showIsNational?: boolean;
-  onRefetch?: (
-    key: "distributors" | "retailers" | "clients" | "requestStoreManagers"
-  ) => void;
 }
 
 export interface RequestContactInfo {
