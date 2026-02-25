@@ -70,7 +70,7 @@ export default function DashboardIndex() {
   const { dashboard, filterOptions } = useEventDashboardData(
     tenantId || "",
     filtersInput,
-    fetchKey
+    fetchKey,
   );
 
   const metrics = dashboard.metrics;
@@ -92,7 +92,7 @@ export default function DashboardIndex() {
       value: formatNumber(metrics.consumersSampled),
       change: formatDelta(
         metrics.consumersSampled,
-        comparison?.consumersSampled
+        comparison?.consumersSampled,
       ),
     },
     {
@@ -177,9 +177,6 @@ export default function DashboardIndex() {
           ))}
         </section>
 
-        {/* AI INSIGHTS */}
-        <AiInsightsSection insights={aiInsightsMock} isLoading={false} />
-
         {/* MONTHLY PERFORMANCE */}
         <section className="w-full">
           <ChartCard
@@ -239,6 +236,9 @@ export default function DashboardIndex() {
         <section className="w-full">
           <RecentEventsCarousel events={recentEvents} />
         </section>
+
+        {/* AI INSIGHTS */}
+        <AiInsightsSection insights={aiInsightsMock} isLoading={false} />
       </main>
     </Layout>
   );
