@@ -40,7 +40,11 @@ export default function FormDatePicker<T extends FieldValues>({
   };
 
   const minimumDaysFromToday =
-    typeof minDaysFromToday === "number" ? minDaysFromToday : minToday ? 0 : null;
+    typeof minDaysFromToday === "number"
+      ? minDaysFromToday
+      : minToday
+        ? 0
+        : null;
 
   const getMinimumDate = () => {
     if (minimumDaysFromToday === null) return null;
@@ -65,14 +69,18 @@ export default function FormDatePicker<T extends FieldValues>({
     combinedRules.validate = (value: string) => {
       if (!value) return "Please select a valid date";
       const datePart = toDatePart(value);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return "Please select a valid date";
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart))
+        return "Please select a valid date";
 
       const [year, month, day] = datePart.split("-").map(Number);
       const selected = new Date(year, month - 1, day).setHours(0, 0, 0, 0);
       const minimumDate = getMinimumDate();
 
       if (!minimumDate) return true;
-      return selected >= minimumDate.getTime() || "Date cannot be earlier than allowed";
+      return (
+        selected >= minimumDate.getTime() ||
+        "Date cannot be earlier than allowed"
+      );
     };
   }
 
@@ -100,8 +108,9 @@ export default function FormDatePicker<T extends FieldValues>({
             type="button"
             disabled={disabled}
             popoverTarget={popoverId}
-            className={`input input-bordered w-full rounded-full text-left ${error ? "input-error" : ""
-              }`}
+            className={`input input-bordered w-full rounded-full text-left ${
+              error ? "input-error" : ""
+            }`}
             style={{ anchorName: anchorVar } as React.CSSProperties}
           >
             <span
@@ -121,7 +130,8 @@ export default function FormDatePicker<T extends FieldValues>({
             <DayPicker
               mode="single"
               selected={
-                field.value && /^\d{4}-\d{2}-\d{2}$/.test(toDatePart(field.value))
+                field.value &&
+                /^\d{4}-\d{2}-\d{2}$/.test(toDatePart(field.value))
                   ? new Date(`${toDatePart(field.value)}T00:00:00`)
                   : undefined
               }
@@ -149,12 +159,17 @@ export default function FormDatePicker<T extends FieldValues>({
                   const minimumDate = getMinimumDate();
                   const targetDate = minimumDate ?? new Date();
                   const year = targetDate.getFullYear();
-                  const month = String(targetDate.getMonth() + 1).padStart(2, "0");
+                  const month = String(targetDate.getMonth() + 1).padStart(
+                    2,
+                    "0",
+                  );
                   const day = String(targetDate.getDate()).padStart(2, "0");
                   field.onChange(`${year}-${month}-${day}`);
                 }}
               >
-                {minimumDaysFromToday && minimumDaysFromToday > 0 ? "Earliest" : "Today"}
+                {minimumDaysFromToday && minimumDaysFromToday > 0
+                  ? "Earliest"
+                  : "Today"}
               </button>
 
               <button
