@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo } from "react";
 import { useParams, useNavigate } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 
@@ -7,20 +7,12 @@ import Loading from "@shared/Loading";
 import CatalogsProvider from "@shared/CatalogsProvider";
 import EventForm from "./components/EventForm";
 
-import { fetchQuery } from "react-relay";
-import environment from "@api/relay/environment";
-
 import { useAlertStore } from "@store/alertStore";
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
-import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/StatesQuery.graphql";
-import { StatesQuery } from "@api/queries/StatesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 
 import { RequestUuidQuery } from "@api/queries/RequestUuidQuery";
 import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__generated__/RequestUuidQuery.graphql";
-
-import { LocationsQuery } from "@api/queries/LocationsQuery";
-import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
 
 import { CreateEventMutation } from "@api/mutations/CreateEventMutation";
 import type { CreateEventMutation as CreateEventMutationType } from "@api/mutations/__generated__/CreateEventMutation.graphql";
@@ -84,15 +76,9 @@ type FormProps = {
   request: NonNullable<RequestUuidQueryType["response"]["request"]>;
 };
 
-type LocationNode = NonNullable<
-  NonNullable<LocationsQueryType["response"]["locations"]>["edges"][number]
->["node"];
-
 const CreateEventForm = ({ request }: FormProps) => {
   const navigate = useNavigate();
   const { showAlert } = useAlertStore();
-  const [locations, setLocations] = useState<LocationNode[]>([]);
-  const [selectedStateId, setSelectedStateId] = useState<string | null>(null);
 
   // ========================
   // QUERIES
@@ -104,56 +90,6 @@ const CreateEventForm = ({ request }: FormProps) => {
   );
 
   const timeZones = timezonesData.timezones.edges.map((e) => e.node);
-
-  const statesData = useLazyLoadQuery<StatesQueryType>(
-    StatesQuery,
-    {},
-    { fetchPolicy: "store-and-network" },
-  );
-
-  useEffect(() => {
-    let isCancelled = false;
-
-    const loadLocations = async () => {
-      if (!request?.tenantId) {
-        setLocations([]);
-        return;
-      }
-
-      try {
-        const data: LocationsQueryType["response"] | null | undefined =
-          await fetchQuery<LocationsQueryType>(
-            environment,
-            LocationsQuery,
-            {
-              filters: {
-                ...(selectedStateId ? { stateId: selectedStateId } : {}),
-              },
-            },
-            { fetchPolicy: "network-only" },
-          ).toPromise();
-
-        const edges = data?.locations?.edges ?? [];
-        const nodes = edges.flatMap((edge) => (edge?.node ? [edge.node] : []));
-
-        if (!isCancelled) {
-          setLocations(nodes);
-        }
-      } catch {
-        if (!isCancelled) {
-          setLocations([]);
-        }
-      }
-    };
-
-    loadLocations();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [request?.tenantId, selectedStateId]);
-
-  const states = statesData.states?.edges.map((e) => e.node) || [];
 
   // ========================
   // MUTATIONS

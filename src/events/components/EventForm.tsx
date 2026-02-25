@@ -69,7 +69,8 @@ export default function EventForm({
   onSubmit,
   defaultValues = {},
   showIsNational = true,
-}: // onRefetch,
+  onRefetch,
+}:
 EventFormProps) {
   const renderCountRef = useRef(0);
   renderCountRef.current++;
