@@ -90,9 +90,7 @@ export interface EventFormProps {
   // requests?: RequestType[];
   eventTypes: EventType[];
   tenantId: string;
-  distributors?: CatalogItem[];
   timezones?: { id: string; name: string; code: string; offset: number }[];
-  retailers?: CatalogItem[];
   requestStoreManagers?: CatalogItem[];
   clients?: CatalogItem[];
   locations?: Location[];

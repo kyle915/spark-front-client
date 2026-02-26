@@ -201,8 +201,6 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
       >
         {({
           clients,
-          retailers,
-          distributors,
           requestTypes,
           requestStoreManagers,
           loading,
@@ -222,16 +220,6 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
               onSubmit={handleSubmit}
               clients={clients}
               states={states}
-              retailers={
-                request.retailer?.id
-                  ? retailers.filter((r) => r.id === request.retailer?.id)
-                  : retailers
-              }
-              distributors={
-                request.distributor?.id
-                  ? distributors.filter((d) => d.id === request.distributor?.id)
-                  : distributors
-              }
               requestTypes={requestTypes}
               timezones={timezones}
               productTypes={productTypes}
