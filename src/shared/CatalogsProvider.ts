@@ -46,6 +46,7 @@ export interface CatalogItem {
   email?: string | null;
   address?: string | null;
   storeContact?: string | null;
+  code?: string | null;
 }
 
 export interface RequestStoreManagerItem {
