@@ -99,16 +99,16 @@ interface StoreManagerItem {
 
 interface RequestFormProps {
   mode: "create" | "edit";
+  tenantId: string;
   onSubmit: (data: RequestFormValues) => void;
   defaultValues?: Partial<RequestFormValues>;
   clients?: CatalogItem[];
-  retailers?: CatalogItem[];
-  distributors?: CatalogItem[];
+  // retailers?: CatalogItem[];
+  // distributors?: CatalogItem[];
   requestTypes: CatalogItem[];
   timezones?: TimezoneItem[];
   productTypes?: CatalogItem[];
   products?: ProductItem[];
-  tenantId: string;
   requestId?: string | null;
   requestStoreManagers?: StoreManagerItem[];
   // locations?: CatalogItem[];
@@ -141,8 +141,8 @@ export default function RequestForm({
   mode,
   onSubmit,
   defaultValues = {},
-  retailers = [],
-  distributors = [],
+  // retailers = [],
+  // distributors = [],
   requestTypes,
   timezones = [],
   productTypes = [],
@@ -302,7 +302,7 @@ export default function RequestForm({
   >({
     tenantId,
     entitiesLocationId: selectedEntitiesLocationId ?? null,
-    initialItems: distributors,
+    // initialItems: distributors,
     queryDocument: DistributorsQuery,
     extractNodes: extractDistributors,
   });
@@ -316,7 +316,7 @@ export default function RequestForm({
   const retailersHook = useEntitiesByLocation<CatalogItem, RetailersQueryType>({
     tenantId,
     entitiesLocationId: selectedEntitiesLocationId ?? null,
-    initialItems: retailers,
+    // initialItems: retailers,
     queryDocument: RetailersQuery,
     extractNodes: extractRetailers,
   });
@@ -496,28 +496,6 @@ export default function RequestForm({
       onError: (e) => showAlert(e.message, "error"),
     });
   };
-
-  // ========================
-  // EFFECT TO RESET FORM IN EDIT MODE WHEN DEFAULT VALUES CHANGE
-  // ========================
-  // useEffect(() => {
-  //   if (mode === "edit" && Object.keys(defaultValues).length > 0) {
-  //     reset({
-  //       name: defaultValues.name ?? "",
-  //       date: defaultValues.date ?? "",
-  //       startTime: defaultValues.startTime ?? "",
-  //       endTime: defaultValues.endTime ?? "",
-  //       address: defaultValues.address ?? "",
-  //       coordinates: defaultValues.coordinates ?? null,
-  //       timezoneId: defaultValues.timezoneId ?? null,
-  //       retailerId: defaultValues.retailerId ?? null,
-  //       distributorId: defaultValues.distributorId ?? null,
-  //       requestTypeId: defaultValues.requestTypeId ?? null,
-  //       products: defaultValues.products ?? [],
-  //       notes: defaultValues.notes ?? "",
-  //     });
-  //   }
-  // }, [mode, defaultValues, reset]);
 
   useAutoTimezoneFromCoordinates<RequestFormValues, "timezoneId">({
     coordinates: selectedCoordinates,
@@ -853,7 +831,20 @@ export default function RequestForm({
                           <button
                             type="button"
                             className="btn btn-outline btn-xs"
-                            onClick={() => setShowDistributorLocation(true)}
+                            onClick={() => {
+                              setShowDistributorLocation(true);
+
+                              if (selectedEntitiesLocationId) {
+                                setValue(
+                                  "distributorLocationId",
+                                  selectedEntitiesLocationId,
+                                  {
+                                    shouldDirty: true,
+                                    shouldTouch: true,
+                                  },
+                                );
+                              }
+                            }}
                             disabled={!isEntitiesLocationSelected}
                           >
                             Create new distributor
@@ -941,7 +932,20 @@ export default function RequestForm({
                         <button
                           type="button"
                           className="btn btn-outline btn-xs"
-                          onClick={() => setShowRetailerLocation(true)}
+                          onClick={() => {
+                            setShowRetailerLocation(true);
+
+                            if (selectedEntitiesLocationId) {
+                              setValue(
+                                "retailerLocationId",
+                                selectedEntitiesLocationId,
+                                {
+                                  shouldDirty: true,
+                                  shouldTouch: true,
+                                },
+                              );
+                            }
+                          }}
                           disabled={!isEntitiesLocationSelected}
                         >
                           Create new retailer

@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo } from "react";
 import Layout from "@/layout/Layout";
 import Loading from "@/shared/Loading";
 import CatalogsProvider from "@/shared/CatalogsProvider";
@@ -13,8 +13,6 @@ import { CreateEventMutation } from "@api/mutations/CreateEventMutation";
 import type { CreateEventMutation as CreateEventMutationType } from "@api/mutations/__generated__/CreateEventMutation.graphql";
 import { useAlertStore } from "@store/alertStore";
 import { useNavigate } from "react-router";
-import { fetchQuery } from "react-relay";
-import environment from "@/api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
 import { dateFormat } from "@/public/form/utils/toDate";
 import { buildDateTimeWithOffset } from "@/utils";
@@ -22,12 +20,6 @@ import { buildDateTimeWithOffset } from "@/utils";
 const CreateEventWithoutRequestContent = () => {
   const { tenantId } = useAuthStore();
   //   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
-
-  const [timezones, setTimezones] = useState<
-    Array<{ id: string; name: string; code: string; offset: number }>
-  >([]);
-  const [loadingTimezones, setLoadingTimezones] = useState(false);
-  const [timezonesError, setTimezonesError] = useState<Error | null>(null);
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
   const [commitCreateEvent] =
@@ -39,44 +31,15 @@ const CreateEventWithoutRequestContent = () => {
     { fetchPolicy: "store-and-network" },
   );
 
+  const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
+    TimezonesQuery,
+    {},
+    { fetchPolicy: "store-and-network" },
+  );
+
   const states = statesData.states?.edges.map((e) => e.node) || [];
 
-  useEffect(() => {
-    if (!tenantId) {
-      setTimezones([]);
-      setTimezonesError(null);
-      return;
-    }
-
-    setLoadingTimezones(true);
-    setTimezonesError(null);
-
-    const tzSubscription = fetchQuery<TimezonesQueryType>(
-      environment,
-      TimezonesQuery,
-      {},
-      { fetchPolicy: "network-only" },
-    ).subscribe({
-      next: (data) => {
-        const parsed =
-          data.timezones?.edges?.flatMap((edge) =>
-            edge?.node ? [edge.node] : [],
-          ) ?? [];
-        setTimezones(parsed);
-      },
-      error: (err: unknown) => {
-        const error = err instanceof Error ? err : new Error(String(err));
-        setTimezonesError(error);
-        setTimezones([]);
-        setLoadingTimezones(false);
-      },
-      complete: () => setLoadingTimezones(false),
-    });
-
-    return () => {
-      tzSubscription.unsubscribe();
-    };
-  }, [tenantId]);
+  const timezones = timezonesData.timezones?.edges.map((e) => e.node) || [];
 
   const handleSubmit = (formData: EventFormValues) => {
     if (
@@ -174,106 +137,60 @@ const CreateEventWithoutRequestContent = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <CatalogsProvider tenants>
-        {({ loading, errors }) => {
-          if (loading.tenants) {
+      <CatalogsProvider
+        eventTypes
+        eventTypesFilters={{ tenantId: tenantId }}
+        requestStoreManagers
+        requestStoreManagersFilters={{ tenantId: tenantId }}
+      >
+        {({
+          eventTypes,
+          requestStoreManagers,
+          loading: catalogLoading,
+          errors: catalogErrors,
+          refetch,
+        }) => {
+          if (
+            catalogLoading.eventTypes ||
+            catalogLoading.distributors ||
+            catalogLoading.retailers ||
+            catalogLoading.requestStoreManagers
+          ) {
             return <Loading />;
           }
 
-          if (errors.tenants) {
+          if (
+            catalogErrors.eventTypes ||
+            catalogErrors.distributors ||
+            catalogErrors.retailers ||
+            catalogErrors.requestStoreManagers
+          ) {
             return (
               <div className="alert alert-error">
-                <span>Unable to load tenants. Please try again.</span>
+                <span>
+                  Unable to load catalogs for this tenant. Please try again.
+                </span>
               </div>
             );
           }
-
           return (
             <div className="flex flex-col gap-4">
-              <div className="max-w-xl"></div>
-
-              {tenantId ? (
-                <CatalogsProvider
-                  eventTypes
-                  eventTypesFilters={{ tenantId: tenantId }}
-                  distributors
-                  distributorsFilters={{ tenantId: tenantId }}
-                  retailers
-                  retailersFilters={{ tenantId: tenantId }}
-                  requestStoreManagers
-                  requestStoreManagersFilters={{ tenantId: tenantId }}
-                >
-                  {({
-                    eventTypes,
-                    distributors,
-                    retailers,
-                    requestStoreManagers,
-                    loading: catalogLoading,
-                    errors: catalogErrors,
-                    refetch,
-                  }) => {
-                    if (
-                      catalogLoading.eventTypes ||
-                      catalogLoading.distributors ||
-                      catalogLoading.retailers ||
-                      catalogLoading.requestStoreManagers
-                    ) {
-                      return <Loading />;
-                    }
-
-                    if (
-                      catalogErrors.eventTypes ||
-                      catalogErrors.distributors ||
-                      catalogErrors.retailers ||
-                      catalogErrors.requestStoreManagers
-                    ) {
-                      return (
-                        <div className="alert alert-error">
-                          <span>
-                            Unable to load catalogs for this tenant. Please try
-                            again.
-                          </span>
-                        </div>
-                      );
-                    }
-                    return (
-                      <div className="flex flex-col gap-4">
-                        {timezonesError && (
-                          <div className="alert alert-warning">
-                            <span>
-                              Unable to load timezones: {timezonesError.message}
-                            </span>
-                          </div>
-                        )}
-                        {loadingTimezones && <Loading />}
-
-                        <EventForm
-                          mode="create"
-                          eventTypes={eventTypes}
-                          tenantId={tenantId}
-                          distributors={distributors}
-                          retailers={retailers}
-                          timezones={timezones}
-                          requestStoreManagers={requestStoreManagers}
-                          onSubmit={handleSubmit}
-                          states={states}
-                          defaultValues={defaultValues}
-                          enableContactSection
-                          contactMode="manual"
-                          showIsNational={false}
-                          onRefetch={refetch}
-                          showRequestField={true}
-                          showAssociateRequestToggle={true}
-                        />
-                      </div>
-                    );
-                  }}
-                </CatalogsProvider>
-              ) : (
-                <div className="alert alert-info max-w-xl">
-                  <span>Select a tenant to load event data.</span>
-                </div>
-              )}
+              <EventForm
+                mode="create"
+                eventTypes={eventTypes}
+                tenantId={tenantId ?? ""}
+                timezones={timezones}
+                requestStoreManagers={requestStoreManagers}
+                onSubmit={handleSubmit}
+                states={states}
+                defaultValues={defaultValues}
+                enableContactSection
+                contactMode="manual"
+                showIsNational={false}
+                onRefetch={refetch}
+                showRequestField={true}
+                showAssociateRequestToggle={true}
+              />
             </div>
           );
         }}

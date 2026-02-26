@@ -58,10 +58,6 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
     { fetchPolicy: "store-and-network" },
   );
 
-  // const locationsData = useLazyLoadQuery<LocationsQueryType>(LocationsQuery, {
-  //   filters: { tenantId: tenantId },
-  // });
-
   const statesData = useLazyLoadQuery<StatesQueryType>(
     StatesQuery,
     {},
@@ -186,14 +182,14 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
 
   return (
     <CatalogsProvider
-      retailers
-      retailersFilters={filters}
-      distributors
-      distributorsFilters={filters}
+      // retailers
+      // retailersFilters={filters}
+      // distributors
+      // distributorsFilters={filters}
       requestStoreManagers
       requestStoreManagersFilters={filters}
     >
-      {({ retailers, distributors, requestStoreManagers }) => (
+      {({ requestStoreManagers }) => (
         <RequestForm
           mode="create"
           onSubmit={handleSubmit}
@@ -202,9 +198,9 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
           productTypes={productTypes}
           products={products}
           tenantId={tenantId}
-          retailers={retailers}
+          // retailers={retailers}
           states={states}
-          distributors={distributors}
+          // distributors={distributors}
           requestStoreManagers={requestStoreManagers}
           enableContactSection={true}
           contactMode="manual"
