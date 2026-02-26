@@ -31,9 +31,8 @@ import {
   XCircleIcon,
   CalendarDaysIcon,
   ClipboardDocumentListIcon,
-  FunnelIcon as FilterIcon,
 } from "@heroicons/react/24/outline";
-import { FunnelXIcon } from "lucide-react";
+import { ChevronDown, Funnel, FunnelXIcon } from "lucide-react";
 import FormAutocomplete from "@/shared/FormAutocomplete";
 import type { DeclineRequestMutation as DeclineRequestMutationType } from "@api/mutations/__generated__/DeclineRequestMutation.graphql";
 import ConfirmationModal from "@/shared/ConfirmationModal";
@@ -41,6 +40,7 @@ import { useAlertStore } from "@/store/alertStore";
 import { useAuthStore } from "@/store/authStore";
 import { DeclineRequestMutation } from "@/api/mutations/DeclineRequestMutation";
 import FormDatePicker from "@/shared/FormDatePicker";
+import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
 
@@ -441,9 +441,12 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
     ],
   );
 
-  const catalogFilters = {
-    tenantId: tenantId || undefined,
-  };
+  const catalogFilters = useMemo(
+    () => ({
+      tenantId: tenantId || undefined,
+    }),
+    [tenantId],
+  );
 
   const retailerCatalogFilters = useMemo(
     () => ({
@@ -657,30 +660,23 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
               />
             </div> */}
               <div
-                className={`collapse collapse-arrow overflow-visible bg-base-100 shadow-sm rounded-xl border border-base-200 ${
-                  isFiltersOpen ? "collapse-open" : "collapse-close"
-                }`}
+                className={cn(
+                  "collapse bg-base-100/50 rounded-xl border border-base-300 shadow-sm overflow-visible transition-all duration-300",
+                  isFiltersOpen && "collapse-open",
+                )}
               >
                 <div
-                  className="collapse-title px-5 py-4 cursor-pointer"
+                  className="collapse-title flex items-center justify-between cursor-pointer"
                   onClick={() => setIsFiltersOpen((prev) => !prev)}
                 >
-                  <div className="flex items-center justify-between">
-                    {/* Left Side */}
+                  <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <FilterIcon className="w-4 h-4 text-primary" />
+                      <div className="bg-primary/10 p-2 rounded-lg">
+                        <Funnel size={18} className="text-primary" />
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-sm font-semibold">Filters</h2>
-
-                        {activeFiltersCount > 0 && (
-                          <span className="badge badge-primary badge-sm rounded-xl">
-                            {activeFiltersCount}
-                          </span>
-                        )}
-                      </div>
+                      <h3 className="text-lg font-semibold text-base-content">
+                        Filters
+                      </h3>
                     </div>
 
                     {/* Right Side */}
@@ -696,15 +692,23 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                         </button>
                       )}
 
-                      <span className="text-xs text-base-content/60 mr-4">
+                      <span className="text-xs text-base-content/60">
                         {isFiltersOpen ? "Hide" : "Show"}
                       </span>
+
+                      <ChevronDown
+                        size={20}
+                        className={cn(
+                          "transition-transform duration-300",
+                          isFiltersOpen ? "rotate-180" : "rotate-0",
+                        )}
+                      />
                     </div>
                   </div>
                 </div>
 
-                <div className="collapse-content mt-2 overflow-visible px-5 pb-5 pt-2">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 overflow-visible">
+                <div className="collapse-content mt-2 overflow-visible">
+                  <div className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 overflow-visible">
                     {/** Retailer control filter */}
                     <FormAutocomplete
                       control={control}
