@@ -205,13 +205,19 @@ export default function FiltersPanel({
             <h3 className="text-lg font-semibold text-base-content">Filters</h3>
           </div>
 
-          <ChevronDown
-            size={20}
-            className={cn(
-              "transition-transform duration-300",
-              isOpen ? "rotate-180" : "rotate-0",
-            )}
-          />
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs text-base-content/60">
+              {isOpen ? "Hide" : "Show"}
+            </span>
+
+            <ChevronDown
+              size={20}
+              className={cn(
+                "transition-transform duration-300",
+                isOpen ? "rotate-180" : "rotate-0",
+              )}
+            />
+          </div>
         </div>
 
         {/* BODY */}

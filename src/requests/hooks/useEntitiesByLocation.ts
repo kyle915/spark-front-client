@@ -8,9 +8,10 @@ interface UseEntitiesByLocationProps<TItem, TQuery extends OperationType> {
   tenantId: string | null;
   entitiesLocationId: string | null;
   initialItems: TItem[];
-  selectedId?: string | null; // 👈 nuevo
+  selectedId?: string | null;
   queryDocument: GraphQLTaggedNode;
   extractNodes: (data: TQuery["response"]) => TItem[];
+  debounceMs?: number;
 }
 
 export function useEntitiesByLocation<
@@ -23,15 +24,44 @@ export function useEntitiesByLocation<
   selectedId,
   queryDocument,
   extractNodes,
+  debounceMs = 300,
 }: UseEntitiesByLocationProps<TItem, TQuery>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [remoteItems, setRemoteItems] = useState<TItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const lastFetchKeyRef = useRef<string | null>(null);
+  const activeRequestIdRef = useRef<number>(0);
+  const prevLocationRef = useRef<string | null | undefined>(undefined);
 
+  const cacheRef = useRef<Map<string, TItem[]>>(new Map());
+
+  // ===============================
+  // RESET WHEN LOCATION CHANGES
+  // ===============================
   useEffect(() => {
-    if (!tenantId) return;
+    if (prevLocationRef.current === undefined) {
+      prevLocationRef.current = entitiesLocationId ?? null;
+      return;
+    }
+
+    if (prevLocationRef.current === entitiesLocationId) return;
+
+    prevLocationRef.current = entitiesLocationId ?? null;
+
+    setSearchTerm("");
+    setRemoteItems([]);
+    lastFetchKeyRef.current = null;
+  }, [entitiesLocationId]);
+
+  // ===============================
+  // FETCH WITH CACHE + DEBOUNCE
+  // ===============================
+  useEffect(() => {
+    if (!tenantId) {
+      setRemoteItems([]);
+      return;
+    }
 
     const trimmed = searchTerm.trim();
 
@@ -47,36 +77,55 @@ export function useEntitiesByLocation<
 
     const fetchKey = `${tenantId}-${entitiesLocationId ?? "null"}-${trimmed}`;
 
+    if (cacheRef.current.has(fetchKey)) {
+      setRemoteItems(cacheRef.current.get(fetchKey)!);
+      return;
+    }
+
     if (lastFetchKeyRef.current === fetchKey) return;
 
-    lastFetchKeyRef.current = fetchKey;
+    const requestId = ++activeRequestIdRef.current;
 
-    const filters = {
-      tenantId,
-      ...(entitiesLocationId ? { locationId: entitiesLocationId } : {}),
-    };
+    const timeout = setTimeout(() => {
+      lastFetchKeyRef.current = fetchKey;
 
-    setIsLoading(true);
+      const filters = {
+        tenantId,
+        ...(entitiesLocationId ? { locationId: entitiesLocationId } : {}),
+      };
 
-    fetchQuery<TQuery>(
-      environment,
-      queryDocument,
-      {
-        filters,
-        q: trimmed || null,
-      },
-      { fetchPolicy: "network-only" },
-    )
-      .toPromise()
-      .then((data) => {
-        setRemoteItems(extractNodes(data));
-      })
-      .catch(() => {
-        setRemoteItems([]);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+      setIsLoading(true);
+
+      fetchQuery<TQuery>(
+        environment,
+        queryDocument,
+        {
+          filters,
+          q: trimmed || null,
+        },
+        { fetchPolicy: "network-only" },
+      )
+        .toPromise()
+        .then((data) => {
+          if (requestId !== activeRequestIdRef.current) return;
+
+          const extracted = extractNodes(data);
+
+          cacheRef.current.set(fetchKey, extracted);
+
+          setRemoteItems(extracted);
+        })
+        .catch(() => {
+          if (requestId !== activeRequestIdRef.current) return;
+          setRemoteItems([]);
+        })
+        .finally(() => {
+          if (requestId !== activeRequestIdRef.current) return;
+          setIsLoading(false);
+        });
+    }, debounceMs);
+
+    return () => clearTimeout(timeout);
   }, [
     tenantId,
     entitiesLocationId,
@@ -85,6 +134,7 @@ export function useEntitiesByLocation<
     initialItems,
     queryDocument,
     extractNodes,
+    debounceMs,
   ]);
 
   const items =
