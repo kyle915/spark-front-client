@@ -34,19 +34,11 @@ export const sparkFormSchema = yup.object({
       }),
     )
     .required("Details are required"),
-  distributor: yup.string().when("distributorId", {
-    is: (value: string | null | undefined) => !value,
-    then: (schema) => schema.required("Distributor is required"),
-    otherwise: (schema) => schema.notRequired(),
-  }),
+  distributor: yup.string().notRequired(),
   distributorEmail: yup
     .string()
     .email("Invalid email format")
-    .when("distributorId", {
-      is: (value: string | null | undefined) => !value,
-      then: (schema) => schema.required("Distributor email is required"),
-      otherwise: (schema) => schema.notRequired(),
-    }),
+    .notRequired(),
   start_time: yup.string().required("Start time is required"),
   name: yup.string().required("Name is required"),
   requestorEmail: yup
@@ -59,16 +51,8 @@ export const sparkFormSchema = yup.object({
     .min(1, "Select at least one product")
     .required("Products are required"),
   request_type: yup.string().required("Request type is required"),
-  retailer: yup.string().when("retailerId", {
-    is: (value: string | null | undefined) => !value,
-    then: (schema) => schema.required("Retailer is required"),
-    otherwise: (schema) => schema.notRequired(),
-  }),
-  retailerAddress: yup.string().when("retailerId", {
-    is: (value: string | null | undefined) => !value,
-    then: (schema) => schema.required("Retailer address is required"),
-    otherwise: (schema) => schema.notRequired(),
-  }),
+  retailer: yup.string().notRequired(),
+  retailerAddress: yup.string().notRequired(),
   retailerStoreContact: yup
     .string()
     .required("Retailer store contact is required"),
