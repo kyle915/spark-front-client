@@ -657,7 +657,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
               />
             </div> */}
               <div
-                className={`collapse collapse-arrow bg-base-100 shadow-sm rounded-xl border border-base-200 ${
+                className={`collapse collapse-arrow overflow-visible bg-base-100 shadow-sm rounded-xl border border-base-200 ${
                   isFiltersOpen ? "collapse-open" : "collapse-close"
                 }`}
               >
@@ -703,8 +703,8 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                   </div>
                 </div>
 
-                <div className="collapse-content px-5 pb-5 pt-0 ">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="collapse-content mt-2 overflow-visible px-5 pb-5 pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 overflow-visible">
                     {/** Retailer control filter */}
                     <FormAutocomplete
                       control={control}
