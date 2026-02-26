@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import type { ReactNode } from "react";
 import Layout from "@/layout/Layout";
@@ -16,6 +16,12 @@ import { useMutation, usePreloadedQuery } from "react-relay/hooks";
 import type { PreloadedQuery } from "react-relay";
 import { useForm } from "react-hook-form";
 import CatalogsProvider, { type CatalogsState } from "@shared/CatalogsProvider";
+
+import { fetchQuery } from "relay-runtime";
+import environment from "@/api/relay/environment";
+
+import { LocationsQuery } from "@api/queries/LocationsQuery";
+import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
 
 //Icons
 import {
@@ -360,37 +366,228 @@ type RequestsListProps = {
 const RequestsList = ({ fixedFilters }: RequestsListProps) => {
   const { tenantId } = useAuthStore();
   const navigate = useNavigate();
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+
+  // Reailer States
+  const [retailerLocationSearchTerm, setRetailerLocationSearchTerm] =
+    useState("");
+  const [retailerLocations, setRetailerLocations] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [isRetailerLocationsLoading, setIsRetailerLocationsLoading] =
+    useState(false);
   const [retailerSearchTerm, setRetailerSearchTerm] = useState("");
+  // Distributor states
+  const [distributorLocationSearchTerm, setDistributorLocationSearchTerm] =
+    useState("");
+  const [distributorLocations, setDistributorLocations] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [isDistributorLocationsLoading, setIsDistributorLocationsLoading] =
+    useState(false);
   const [distributorSearchTerm, setDistributorSearchTerm] = useState("");
-  const { control, watch, reset } = useForm({
+
+  const { control, watch, reset, setValue } = useForm({
     defaultValues: {
       // tenant: "",
       client: "",
+      retailerState: "",
+      retailerLocation: "",
+      distributorState: "",
+      distributorLocation: "",
       retailer: "",
       distributor: "",
+      requestType: "",
       status: "",
       date: "",
     },
   });
   // const selectedTenant = watch("tenant");
   //   const selectedClient = watch("client");
+  const selectedRetailerState = watch("retailerState");
+  const selectedRetailerLocation = watch("retailerLocation");
   const selectedRetailer = watch("retailer");
+
+  const selectedDistributorState = watch("distributorState");
+  const selectedDistributorLocation = watch("distributorLocation");
   const selectedDistributor = watch("distributor");
   const selectedStatus = watch("status");
+  const selectedRequestType = watch("requestType");
   const selectedDate = watch("date");
 
-  const filters = {
-    tenantId: tenantId || undefined,
-    retailerId: selectedRetailer || undefined,
-    distributorId: selectedDistributor || undefined,
-    statusId: selectedStatus || undefined,
-    date: selectedDate || undefined,
-    ...fixedFilters,
-  };
+  // Construct filters object for the query, excluding empty values
+  const filters = useMemo(
+    () => ({
+      tenantId: tenantId || undefined,
+      retailerId: selectedRetailer || undefined,
+      retailerStateId: selectedRetailerState || undefined,
+      distributorId: selectedDistributor || undefined,
+      distributorStateId: selectedDistributorState || undefined,
+      requestTypeId: selectedRequestType || undefined,
+      statusId: selectedStatus || undefined,
+      date: selectedDate || undefined,
+      ...fixedFilters,
+    }),
+    [
+      selectedDistributor,
+      selectedDistributorState,
+      selectedRequestType,
+      selectedRetailer,
+      selectedRetailerState,
+      selectedStatus,
+      tenantId,
+      fixedFilters,
+      selectedDate,
+    ],
+  );
 
   const catalogFilters = {
     tenantId: tenantId || undefined,
   };
+
+  const retailerCatalogFilters = useMemo(
+    () => ({
+      ...(selectedRetailerState ? { stateId: selectedRetailerState } : {}),
+      ...(selectedRetailerLocation
+        ? { locationId: selectedRetailerLocation }
+        : {}),
+    }),
+    [selectedRetailerState, selectedRetailerLocation],
+  );
+
+  useEffect(() => {
+    setValue("retailerLocation", "");
+    setValue("retailer", "");
+    setRetailerLocationSearchTerm("");
+    setRetailerSearchTerm("");
+  }, [selectedRetailerState, setValue]);
+
+  useEffect(() => {
+    setRetailerSearchTerm("");
+    setValue("retailer", "");
+  }, [selectedRetailerLocation, setValue]);
+
+  useEffect(() => {
+    if (!selectedRetailerState) {
+      setRetailerLocations([]);
+      setIsRetailerLocationsLoading(false);
+      return;
+    }
+
+    let isCurrent = true;
+    setIsRetailerLocationsLoading(true);
+
+    fetchQuery<LocationsQueryType>(environment, LocationsQuery, {
+      filters: {
+        ...(selectedRetailerState ? { stateId: selectedRetailerState } : {}),
+      },
+      q: retailerLocationSearchTerm || null,
+    })
+      .toPromise()
+      .then((data) => {
+        if (!isCurrent) return;
+        const nextLocations =
+          data?.locations?.edges?.flatMap((edge) =>
+            edge?.node ? [{ id: edge.node.id, name: edge.node.name }] : [],
+          ) ?? [];
+        setRetailerLocations(nextLocations);
+        setIsRetailerLocationsLoading(false);
+      })
+      .catch(() => {
+        if (!isCurrent) return;
+        setRetailerLocations([]);
+        setIsRetailerLocationsLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [retailerLocationSearchTerm, selectedRetailerState]);
+
+  // Distributor locations effect
+  const distributorCatalogFilters = useMemo(
+    () => ({
+      ...(selectedDistributorState
+        ? { stateId: selectedDistributorState }
+        : {}),
+      ...(selectedDistributorLocation
+        ? { locationId: selectedDistributorLocation }
+        : {}),
+    }),
+    [selectedDistributorLocation, selectedDistributorState],
+  );
+
+  useEffect(() => {
+    setValue("distributorLocation", "");
+    setValue("distributor", "");
+    setDistributorLocationSearchTerm("");
+    setDistributorSearchTerm("");
+  }, [selectedDistributorState, setValue]);
+
+  useEffect(() => {
+    setDistributorSearchTerm("");
+    setValue("distributor", "");
+  }, [selectedDistributorLocation, setValue]);
+
+  useEffect(() => {
+    if (!selectedDistributorState) {
+      setDistributorLocations([]);
+      setIsDistributorLocationsLoading(false);
+      return;
+    }
+
+    let isCurrent = true;
+    setIsDistributorLocationsLoading(true);
+
+    fetchQuery<LocationsQueryType>(environment, LocationsQuery, {
+      filters: {
+        ...(selectedDistributorState
+          ? { stateId: selectedDistributorState }
+          : {}),
+      },
+      q: distributorLocationSearchTerm || null,
+    })
+      .toPromise()
+      .then((data) => {
+        if (!isCurrent) return;
+        const nextLocations =
+          data?.locations?.edges?.flatMap((edge) =>
+            edge?.node ? [{ id: edge.node.id, name: edge.node.name }] : [],
+          ) ?? [];
+        setDistributorLocations(nextLocations);
+        setIsDistributorLocationsLoading(false);
+      })
+      .catch(() => {
+        if (!isCurrent) return;
+        setDistributorLocations([]);
+        setIsDistributorLocationsLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [distributorLocationSearchTerm, selectedDistributorState, tenantId]);
+
+  const handleResetFilters = useCallback(() => {
+    reset({
+      client: "",
+      retailerState: "",
+      retailerLocation: "",
+      distributorState: "",
+      distributorLocation: "",
+      retailer: "",
+      distributor: "",
+      requestType: "",
+      status: "",
+      date: "",
+    });
+    setRetailerSearchTerm("");
+    setDistributorSearchTerm("");
+    setRetailerLocationSearchTerm("");
+    setDistributorLocationSearchTerm("");
+  }, [reset]);
+
+  const activeFiltersCount = Object.values(watch()).filter(Boolean).length;
 
   return (
     <Layout>
@@ -430,13 +627,16 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
         clients={true}
         retailers={true}
         distributors={true}
+        requestTypes={true}
         requestStatuses={true}
         clientsFilters={catalogFilters}
-        retailersFilters={catalogFilters}
+        requestTypesFilters={catalogFilters}
+        retailersFilters={retailerCatalogFilters}
         retailersQuery={retailerSearchTerm.trim() || null}
-        distributorsFilters={catalogFilters}
+        distributorsFilters={distributorCatalogFilters}
         distributorsQuery={distributorSearchTerm.trim() || null}
         requestStatusesFilters={catalogFilters}
+        states={true}
       >
         {(catalogs) => {
           const isLoading = (key: keyof CatalogsState["loading"]) =>
@@ -456,80 +656,196 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                 placeholder="Select a tenant"
               />
             </div> */}
-              <div className="rounded-xl  bg-base-100 p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-1">
-                    <FilterIcon className="w-4 h-4" />
-                    <h2 className="text-sm font-semibold text-base-content/70">
-                      Filters
-                    </h2>
-                  </div>
+              <div
+                className={`collapse collapse-arrow bg-base-100 shadow-sm rounded-xl border border-base-200 ${
+                  isFiltersOpen ? "collapse-open" : "collapse-close"
+                }`}
+              >
+                <div
+                  className="collapse-title px-5 py-4 cursor-pointer"
+                  onClick={() => setIsFiltersOpen((prev) => !prev)}
+                >
+                  <div className="flex items-center justify-between">
+                    {/* Left Side */}
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <FilterIcon className="w-4 h-4 text-primary" />
+                      </div>
 
-                  <div className="flex gap-2">
-                    {Object.entries(watch()).some(([, value]) => value) && (
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => reset()}
-                      >
-                        <FunnelXIcon className="w-4 h-4" />
-                        Clear filters
-                      </button>
-                    )}
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-sm font-semibold">Filters</h2>
+
+                        {activeFiltersCount > 0 && (
+                          <span className="badge badge-primary badge-sm rounded-xl">
+                            {activeFiltersCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right Side */}
+                    <div className="flex items-center justify-between gap-3">
+                      {activeFiltersCount > 0 && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-xs"
+                          onClick={handleResetFilters}
+                        >
+                          <FunnelXIcon className="w-4 h-4" />
+                          Clear
+                        </button>
+                      )}
+
+                      <span className="text-xs text-base-content/60 mr-4">
+                        {isFiltersOpen ? "Hide" : "Show"}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <FormAutocomplete
-                    control={control}
-                    name="retailer"
-                    label="Retailer"
-                    options={catalogs.retailers.map((r) => ({
-                      label: r.name,
-                      value: r.id,
-                    }))}
-                    loading={isLoading("retailers")}
-                    placeholder="Search retailer..."
-                    onSearch={setRetailerSearchTerm}
-                  />
+                <div className="collapse-content px-5 pb-5 pt-0 ">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/** Retailer control filter */}
+                    <FormAutocomplete
+                      control={control}
+                      name="retailerState"
+                      label="Retailer State"
+                      options={catalogs.states.map((state) => ({
+                        label: state.code
+                          ? `${state.name} (${state.code})`
+                          : state.name,
+                        value: state.id,
+                      }))}
+                      placeholder="Search state..."
+                      loading={isLoading("states")}
+                    />
+                    <FormAutocomplete
+                      control={control}
+                      name="retailerLocation"
+                      label="Retailer Location"
+                      options={retailerLocations.map((location) => ({
+                        label: location.name,
+                        value: location.id,
+                      }))}
+                      placeholder={
+                        selectedRetailerState
+                          ? "Search location..."
+                          : "Select a state first"
+                      }
+                      loading={isRetailerLocationsLoading}
+                      disabled={!selectedRetailerState}
+                      onSearch={setRetailerLocationSearchTerm}
+                    />
+                    <FormAutocomplete
+                      control={control}
+                      name="retailer"
+                      label="Filter by Retailer"
+                      options={catalogs.retailers.map((r) => ({
+                        label: r.name,
+                        value: r.id,
+                      }))}
+                      placeholder={
+                        selectedRetailerLocation
+                          ? "Search retailer..."
+                          : "Select a location first"
+                      }
+                      loading={isLoading("retailers")}
+                      onSearch={setRetailerSearchTerm}
+                      disabled={!selectedRetailerLocation}
+                    />
 
-                  <FormAutocomplete
-                    control={control}
-                    name="distributor"
-                    label="Distributor"
-                    options={catalogs.distributors.map((d) => ({
-                      label: d.name,
-                      value: d.id,
-                    }))}
-                    loading={isLoading("distributors")}
-                    placeholder="Search distributor..."
-                    onSearch={setDistributorSearchTerm}
-                  />
+                    {/** Distributor control filter */}
+                    <FormAutocomplete
+                      control={control}
+                      name="distributorState"
+                      label="Distributor State"
+                      options={catalogs.states.map((state) => ({
+                        label: state.code
+                          ? `${state.name} (${state.code})`
+                          : state.name,
+                        value: state.id,
+                        searchText: state.code
+                          ? `${state.name} ${state.code}`
+                          : state.name,
+                      }))}
+                      placeholder="Search state..."
+                      loading={isLoading("states")}
+                    />
 
-                  <FormAutocomplete
-                    control={control}
-                    name="status"
-                    label="Status"
-                    options={catalogs.requestStatuses.map((s) => ({
-                      label: s.name,
-                      value: s.id,
-                    }))}
-                    loading={isLoading("requestStatuses")}
-                    placeholder="Search status..."
-                  />
+                    <FormAutocomplete
+                      control={control}
+                      name="distributorLocation"
+                      label="Distributor Location"
+                      options={distributorLocations.map((location) => ({
+                        label: location.name,
+                        value: location.id,
+                      }))}
+                      placeholder={
+                        selectedDistributorState
+                          ? "Search location..."
+                          : "Select a state first"
+                      }
+                      loading={isDistributorLocationsLoading}
+                      disabled={!selectedDistributorState}
+                      onSearch={setDistributorLocationSearchTerm}
+                    />
 
-                  <FormDatePicker
-                    control={control}
-                    name="date"
-                    label="Filter by Date"
-                    placeholder="Select date"
-                  />
+                    <FormAutocomplete
+                      control={control}
+                      name="distributor"
+                      label="Distributor"
+                      options={catalogs.distributors.map((d) => ({
+                        label: d.name,
+                        value: d.id,
+                      }))}
+                      loading={isLoading("distributors")}
+                      placeholder={
+                        selectedDistributorLocation
+                          ? "Search distributor..."
+                          : "Select a location first"
+                      }
+                      onSearch={setDistributorSearchTerm}
+                      disabled={!selectedDistributorLocation}
+                    />
+
+                    {/** Other filters */}
+                    <FormAutocomplete
+                      control={control}
+                      name="status"
+                      label="Status"
+                      options={catalogs.requestStatuses.map((s) => ({
+                        label: s.name,
+                        value: s.id,
+                      }))}
+                      loading={isLoading("requestStatuses")}
+                      placeholder="Search status..."
+                    />
+
+                    <FormDatePicker
+                      control={control}
+                      name="date"
+                      label="Filter by Date"
+                      placeholder="Select date"
+                    />
+
+                    <FormAutocomplete
+                      control={control}
+                      name="requestType"
+                      label="Request Type"
+                      options={catalogs.requestTypes.map((s) => ({
+                        label: s.name,
+                        value: s.id,
+                      }))}
+                      loading={isLoading("requestTypes")}
+                      placeholder="Search request type..."
+                    />
+                  </div>
                 </div>
               </div>
 
               <div className="mt-2">
                 <RequestsListInner
-                  key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedDate}`}
+                  key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedDate}-${selectedRequestType}`}
                   filters={filters}
                 />
               </div>

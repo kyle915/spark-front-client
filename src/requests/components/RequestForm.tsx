@@ -218,6 +218,25 @@ export default function RequestForm({
   const selectedStateId = watch("stateId");
   const notesValue = watch("notes") || "";
   const selectedEntitiesLocationId = watch("entitiesLocationId");
+  const selectedRequestTypeId = watch("requestTypeId");
+
+  // ========================
+  // HIDE DISTRIBUTOR FOR REQUEST TYPE: Event Activation
+  // ========================
+  const isEventActivation = useMemo(() => {
+    const selected = requestTypes.find((rt) => rt.id === selectedRequestTypeId);
+
+    return selected?.name === "Event Activation";
+  }, [selectedRequestTypeId, requestTypes]);
+
+  useEffect(() => {
+    if (isEventActivation) {
+      setValue("distributorId", null, {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+    }
+  }, [isEventActivation, setValue]);
 
   // ========================
   // DISTRIBUTORS AND RETAILERS
@@ -749,85 +768,87 @@ export default function RequestForm({
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
-                  <p className="font-medium">Distributor</p>
+                {!isEventActivation && (
+                  <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
+                    <p className="font-medium">Distributor</p>
 
-                  <FormAutocomplete
-                    name="distributorId"
-                    control={control}
-                    label="Select distributor"
-                    placeholder="Search distributor..."
-                    options={distributorsHook.items.map((d) => ({
-                      value: d.id,
-                      label: d.name,
-                    }))}
-                    onSearch={distributorsHook.setSearchTerm}
-                  />
+                    <FormAutocomplete
+                      name="distributorId"
+                      control={control}
+                      label="Select distributor"
+                      placeholder="Search distributor..."
+                      options={distributorsHook.items.map((d) => ({
+                        value: d.id,
+                        label: d.name,
+                      }))}
+                      onSearch={distributorsHook.setSearchTerm}
+                    />
 
-                  {!distributorId && (
-                    <div className="space-y-3">
-                      <p className="text-base-content/60">or</p>
-                      {!showDistributorLocation ? (
-                        <button
-                          type="button"
-                          className="btn btn-outline btn-xs"
-                          onClick={() => setShowDistributorLocation(true)}
-                        >
-                          Create new distributor
-                        </button>
-                      ) : (
-                        <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormInputText
-                              name="distributorName"
+                    {!distributorId && (
+                      <div className="space-y-3">
+                        <p className="text-base-content/60">or</p>
+                        {!showDistributorLocation ? (
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-xs"
+                            onClick={() => setShowDistributorLocation(true)}
+                          >
+                            Create new distributor
+                          </button>
+                        ) : (
+                          <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <FormInputText
+                                name="distributorName"
+                                control={control}
+                                label="Distributor name"
+                                placeholder="Enter distributor name"
+                              />
+                              <FormInputText
+                                name="distributorEmail"
+                                control={control}
+                                label="Distributor email"
+                                placeholder="Enter distributor email"
+                              />
+                            </div>
+
+                            <FormAutocomplete
+                              name="distributorLocationId"
                               control={control}
-                              label="Distributor name"
-                              placeholder="Enter distributor name"
+                              label="Distributor location"
+                              placeholder="Select location"
+                              options={locations.map((l) => ({
+                                value: l.id,
+                                label: l.name,
+                              }))}
                             />
-                            <FormInputText
-                              name="distributorEmail"
-                              control={control}
-                              label="Distributor email"
-                              placeholder="Enter distributor email"
-                            />
-                          </div>
 
-                          <FormAutocomplete
-                            name="distributorLocationId"
-                            control={control}
-                            label="Distributor location"
-                            placeholder="Select location"
-                            options={locations.map((l) => ({
-                              value: l.id,
-                              label: l.name,
-                            }))}
-                          />
-
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              className="btn btn-primary btn-xs"
-                              onClick={handleCreateDistributor}
-                              disabled={isCreatingDistributor}
-                            >
-                              Confirm distributor
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-ghost btn-xs"
-                              onClick={() => {
-                                setShowDistributorLocation(false);
-                                setValue("distributorLocationId", null);
-                              }}
-                            >
-                              Cancel
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-xs"
+                                onClick={handleCreateDistributor}
+                                disabled={isCreatingDistributor}
+                              >
+                                Confirm distributor
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-xs"
+                                onClick={() => {
+                                  setShowDistributorLocation(false);
+                                  setValue("distributorLocationId", null);
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
                   <p className="font-medium">Retailer</p>
@@ -915,7 +936,11 @@ export default function RequestForm({
                   )}
                 </div>
 
-                <div className="col-span-2 space-y-4 rounded-xl bg-base-200/60 p-4">
+                <div
+                  className={`space-y-4 rounded-xl bg-base-200/60 p-4 ${
+                    isEventActivation ? "" : "md:col-span-2"
+                  }`}
+                >
                   <p className="font-medium">Store manager</p>
 
                   <FormAutocomplete
