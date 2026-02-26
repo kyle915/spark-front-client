@@ -44,6 +44,7 @@ import type { CreateRetailerMutation as CreateRetailerMutationType } from "@api/
 import { useAutoTimezoneFromCoordinates } from "@/requests/hooks/useAutoTimezoneFromCoordinates";
 import { useEntitiesByLocation } from "@/requests/hooks/useEntitiesByLocation";
 import { useAlertStore } from "@/store/alertStore";
+import { useLocationsByState } from "@/requests/hooks/useLocationsByState";
 
 interface CatalogItem {
   id: string;
@@ -70,8 +71,7 @@ export default function EventForm({
   defaultValues = {},
   showIsNational = true,
   onRefetch,
-}:
-EventFormProps) {
+}: EventFormProps) {
   const renderCountRef = useRef(0);
   renderCountRef.current++;
 
@@ -103,10 +103,7 @@ EventFormProps) {
   };
 
   const navigate = useNavigate();
-  const [locations, setLocations] = useState<
-    Array<{ id: string; name: string }>
-  >([]);
-  const [loadingLocations, setLoadingLocations] = useState(false);
+
   const { showAlert } = useAlertStore();
 
   const [requestSearchTerm, setRequestSearchTerm] = useState("");
@@ -211,58 +208,54 @@ EventFormProps) {
   const distributorLocationId = watch("distributorLocationId");
   const retailerLocationId = watch("retailerLocationId");
   const notesValue = watch("notes") || "";
+  const prevStateIdRef = useRef<string | null | undefined>(undefined);
+  const prevEntitiesLocationIdRef = useRef<string | null | undefined>(
+    undefined,
+  );
 
   // ========================
   // DISTRIBUTORS AND RETAILERS
   // ========================
+
   useEffect(() => {
-    if (!tenantId) {
-      setLocations([]);
+    if (prevStateIdRef.current === undefined) {
+      prevStateIdRef.current = selectedStateId ?? null;
       return;
     }
 
-    let isCancelled = false;
+    if (prevStateIdRef.current === (selectedStateId ?? null)) return;
 
-    const loadLocations = async () => {
-      setLoadingLocations(true);
+    prevStateIdRef.current = selectedStateId ?? null;
 
-      try {
-        const data = await fetchQuery<LocationsQueryType>(
-          environment,
-          LocationsQuery,
-          {
-            filters: {
-              ...(selectedStateId ? { stateId: selectedStateId } : {}),
-            },
-          },
-          { fetchPolicy: "network-only" },
-        ).toPromise();
+    // =========================
+    // RESET
+    // =========================
+    setValue("entitiesLocationId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
 
-        const parsed =
-          data?.locations?.edges?.flatMap((edge) =>
-            edge?.node ? [edge.node] : [],
-          ) ?? [];
+    setValue("distributorId", null, { shouldDirty: true, shouldTouch: true });
+    setValue("retailerId", null, { shouldDirty: true, shouldTouch: true });
 
-        if (!isCancelled) {
-          setLocations(parsed);
-        }
-      } catch {
-        if (!isCancelled) {
-          setLocations([]);
-        }
-      } finally {
-        if (!isCancelled) {
-          setLoadingLocations(false);
-        }
-      }
-    };
+    setValue("distributorLocationId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("retailerLocationId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
 
-    loadLocations();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [tenantId, selectedStateId]);
+    setValue("distributorName", "", { shouldDirty: true, shouldTouch: true });
+    setValue("distributorEmail", "", { shouldDirty: true, shouldTouch: true });
+    setValue("retailerName", "", { shouldDirty: true, shouldTouch: true });
+    setValue("retailerAddress", "", { shouldDirty: true, shouldTouch: true });
+    setValue("retailerStoreContact", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }, [selectedStateId, setValue]);
 
   const stateOptions = useMemo(
     () =>
@@ -274,14 +267,20 @@ EventFormProps) {
     [states],
   );
 
-  const locationOptions = useMemo(
-    () =>
-      locations.map((location) => ({
-        value: location.id,
-        label: location.name,
-      })),
-    [locations],
+  const extractLocations = useCallback(
+    (data: LocationsQueryType["response"]) =>
+      data.locations?.edges?.flatMap((e) => (e?.node ? [e.node] : [])) ?? [],
+    [],
   );
+
+  const locationsHook = useLocationsByState<
+    { id: string; name: string },
+    LocationsQueryType
+  >({
+    stateId: selectedStateId ?? null,
+    queryDocument: LocationsQuery,
+    extractNodes: extractLocations,
+  });
 
   const extractDistributors = useCallback(
     (data: DistributorsQueryType["response"]) =>
@@ -426,6 +425,56 @@ EventFormProps) {
       onError: (e) => showAlert(e.message, "error"),
     });
   };
+
+  useEffect(() => {
+    if (mode !== "create") return;
+
+    if (!selectedEntitiesLocationId) return;
+
+    if (!distributorLocationId) {
+      setValue("distributorLocationId", selectedEntitiesLocationId, {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+    }
+
+    if (!retailerLocationId) {
+      setValue("retailerLocationId", selectedEntitiesLocationId, {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+    }
+  }, [
+    mode,
+    selectedEntitiesLocationId,
+    distributorLocationId,
+    retailerLocationId,
+    setValue,
+  ]);
+
+  useEffect(() => {
+    const previousLocationId = prevEntitiesLocationIdRef.current;
+    const currentLocationId = selectedEntitiesLocationId ?? null;
+
+    if (previousLocationId === undefined) {
+      prevEntitiesLocationIdRef.current = currentLocationId;
+      return;
+    }
+
+    if (previousLocationId === currentLocationId) return;
+
+    prevEntitiesLocationIdRef.current = currentLocationId;
+
+    // =========================
+    // RESET
+    // =========================
+    setValue("distributorId", null, { shouldDirty: true, shouldTouch: true });
+    setValue("retailerId", null, { shouldDirty: true, shouldTouch: true });
+
+    // Resetear términos de búsqueda en hooks
+    distributorsHook.setSearchTerm("");
+    retailersHook.setSearchTerm("");
+  }, [selectedEntitiesLocationId, setValue, distributorsHook, retailersHook]);
 
   /* ================= RENDER ================= */
   return (
@@ -651,9 +700,13 @@ EventFormProps) {
                 control={control}
                 label="City"
                 placeholder="Select city..."
-                loading={loadingLocations}
-                options={locationOptions}
-                disabled={!tenantId || !selectedStateId || loadingLocations}
+                options={locationsHook.items.map((l) => ({
+                  value: l.id,
+                  label: l.name,
+                }))}
+                loading={locationsHook.isLoading}
+                onSearch={locationsHook.setSearchTerm}
+                disabled={!tenantId || !selectedStateId}
               />
             </div>
 
@@ -714,10 +767,12 @@ EventFormProps) {
                           control={control}
                           label="Distributor location"
                           placeholder="Select location"
-                          options={locations.map((l) => ({
+                          options={locationsHook.items.map((l) => ({
                             value: l.id,
                             label: l.name,
                           }))}
+                          loading={locationsHook.isLoading}
+                          onSearch={locationsHook.setSearchTerm}
                         />
 
                         <div className="flex gap-2">
@@ -805,10 +860,12 @@ EventFormProps) {
                           control={control}
                           label="Retailer location"
                           placeholder="Select location"
-                          options={locations.map((l) => ({
+                          options={locationsHook.items.map((l) => ({
                             value: l.id,
                             label: l.name,
                           }))}
+                          loading={locationsHook.isLoading}
+                          onSearch={locationsHook.setSearchTerm}
                         />
 
                         <div className="flex gap-2">

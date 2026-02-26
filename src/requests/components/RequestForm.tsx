@@ -1,5 +1,5 @@
 import { Controller, useForm, useWatch } from "react-hook-form";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router";
 import FormInputText from "@/shared/FormInputText";
 import FormInputTime from "@/shared/FormInputTime";
@@ -35,8 +35,7 @@ import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__
 import { RetailersQuery } from "@api/queries/RetailersQuery";
 import type { RetailersQuery as RetailersQueryType } from "@api/queries/__generated__/RetailersQuery.graphql";
 import { useEntitiesByLocation } from "../hooks/useEntitiesByLocation";
-import { fetchQuery } from "relay-runtime";
-import environment from "@/api/relay/environment";
+import { useLocationsByState } from "../hooks/useLocationsByState";
 
 export interface RequestFormValues {
   name: string;
@@ -190,10 +189,6 @@ export default function RequestForm({
 
   const { showAlert } = useAlertStore();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [locations, setLocations] = useState<
-    Array<{ id: string; name: string }>
-  >([]);
-  const [loadingLocations, setLoadingLocations] = useState(false);
 
   // ========================
   // INITIALIZE FORM AND FORM STATE
@@ -216,10 +211,55 @@ export default function RequestForm({
   const distributorLocationId = watch("distributorLocationId");
   const retailerLocationId = watch("retailerLocationId");
   const selectedStateId = watch("stateId");
+  const prevStateIdRef = useRef<string | null | undefined>(undefined);
+  const prevEntitiesLocationIdRef = useRef<string | null | undefined>(
+    undefined,
+  );
   const notesValue = watch("notes") || "";
   const selectedEntitiesLocationId = watch("entitiesLocationId");
   const isEntitiesLocationSelected = Boolean(selectedEntitiesLocationId);
   const selectedRequestTypeId = watch("requestTypeId");
+
+  useEffect(() => {
+    if (prevStateIdRef.current === undefined) {
+      prevStateIdRef.current = selectedStateId ?? null;
+      return;
+    }
+
+    if (prevStateIdRef.current === (selectedStateId ?? null)) return;
+
+    prevStateIdRef.current = selectedStateId ?? null;
+
+    // =========================
+    // RESET
+    // =========================
+    setValue("entitiesLocationId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+
+    setValue("distributorId", null, { shouldDirty: true, shouldTouch: true });
+    setValue("retailerId", null, { shouldDirty: true, shouldTouch: true });
+    setValue("storeManagerId", null, { shouldDirty: true, shouldTouch: true });
+
+    setValue("distributorLocationId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("retailerLocationId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+
+    setValue("distributorName", "", { shouldDirty: true, shouldTouch: true });
+    setValue("distributorEmail", "", { shouldDirty: true, shouldTouch: true });
+    setValue("retailerName", "", { shouldDirty: true, shouldTouch: true });
+    setValue("retailerAddress", "", { shouldDirty: true, shouldTouch: true });
+    setValue("retailerStoreContact", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }, [selectedStateId, setValue]);
 
   // ========================
   // HIDE DISTRIBUTOR FOR REQUEST TYPE: Event Activation
@@ -230,75 +270,24 @@ export default function RequestForm({
     return selected?.name === "Event Activation";
   }, [selectedRequestTypeId, requestTypes]);
 
-  useEffect(() => {
-    if (isEventActivation) {
-      setValue("distributorId", null, {
-        shouldDirty: true,
-        shouldTouch: true,
-      });
-    }
-  }, [isEventActivation, setValue]);
-
   // ========================
-  // DISTRIBUTORS AND RETAILERS
+  // LOCATIONS (CITY) BY STATE WITH SEARCH
   // ========================
-  useEffect(() => {
-    if (!tenantId) {
-      setLocations([]);
-      return;
-    }
 
-    let isCancelled = false;
-
-    const loadLocations = async () => {
-      setLoadingLocations(true);
-
-      try {
-        const data = await fetchQuery<LocationsQueryType>(
-          environment,
-          LocationsQuery,
-          {
-            filters: {
-              ...(selectedStateId ? { stateId: selectedStateId } : {}),
-            },
-          },
-          { fetchPolicy: "network-only" },
-        ).toPromise();
-
-        const parsed =
-          data?.locations?.edges?.flatMap((edge) =>
-            edge?.node ? [edge.node] : [],
-          ) ?? [];
-
-        if (!isCancelled) {
-          setLocations(parsed);
-        }
-      } catch {
-        if (!isCancelled) {
-          setLocations([]);
-        }
-      } finally {
-        if (!isCancelled) {
-          setLoadingLocations(false);
-        }
-      }
-    };
-
-    loadLocations();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [tenantId, selectedStateId]);
-
-  const locationOptions = useMemo(
-    () =>
-      locations.map((location) => ({
-        value: location.id,
-        label: location.name,
-      })),
-    [locations],
+  const extractLocations = useCallback(
+    (data: LocationsQueryType["response"]) =>
+      data.locations?.edges?.flatMap((e) => (e?.node ? [e.node] : [])) ?? [],
+    [],
   );
+
+  const locationsHook = useLocationsByState<
+    { id: string; name: string },
+    LocationsQueryType
+  >({
+    stateId: selectedStateId ?? null,
+    queryDocument: LocationsQuery,
+    extractNodes: extractLocations,
+  });
 
   /* ================= DISTRIBUTORS AND RETAILERS ================= */
   const extractDistributors = useCallback(
@@ -590,6 +579,67 @@ export default function RequestForm({
     [states],
   );
 
+  // STATE AND LOCATIONS EFFECTS TO QUERY Q
+  useEffect(() => {
+    if (isEventActivation) {
+      setValue("distributorId", null, {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+    }
+  }, [isEventActivation, setValue]);
+
+  useEffect(() => {
+    if (mode !== "create") return;
+
+    if (!selectedEntitiesLocationId) return;
+
+    if (!distributorLocationId) {
+      setValue("distributorLocationId", selectedEntitiesLocationId, {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+    }
+
+    if (!retailerLocationId) {
+      setValue("retailerLocationId", selectedEntitiesLocationId, {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+    }
+  }, [
+    mode,
+    selectedEntitiesLocationId,
+    distributorLocationId,
+    retailerLocationId,
+    setValue,
+  ]);
+
+  useEffect(() => {
+    const previousLocationId = prevEntitiesLocationIdRef.current;
+    const currentLocationId = selectedEntitiesLocationId ?? null;
+
+    if (previousLocationId === undefined) {
+      prevEntitiesLocationIdRef.current = currentLocationId;
+      return;
+    }
+
+    if (previousLocationId === currentLocationId) return;
+
+    prevEntitiesLocationIdRef.current = currentLocationId;
+
+    // =========================
+    // RESET
+    // =========================
+    setValue("distributorId", null, { shouldDirty: true, shouldTouch: true });
+    setValue("retailerId", null, { shouldDirty: true, shouldTouch: true });
+    setValue("storeManagerId", null, { shouldDirty: true, shouldTouch: true });
+
+    // Resetear términos de búsqueda en hooks
+    distributorsHook.setSearchTerm("");
+    retailersHook.setSearchTerm("");
+  }, [selectedEntitiesLocationId, setValue, distributorsHook, retailersHook]);
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full">
       <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
@@ -762,9 +812,13 @@ export default function RequestForm({
                   control={control}
                   label="City"
                   placeholder="Select city..."
-                  loading={loadingLocations}
-                  options={locationOptions}
-                  disabled={!tenantId || !selectedStateId || loadingLocations}
+                  options={locationsHook.items.map((l) => ({
+                    value: l.id,
+                    label: l.name,
+                  }))}
+                  loading={locationsHook.isLoading}
+                  onSearch={locationsHook.setSearchTerm}
+                  disabled={!tenantId || !selectedStateId}
                 />
               </div>
 
@@ -826,10 +880,12 @@ export default function RequestForm({
                               control={control}
                               label="Distributor location"
                               placeholder="Select location"
-                              options={locations.map((l) => ({
+                              options={locationsHook.items.map((l) => ({
                                 value: l.id,
                                 label: l.name,
                               }))}
+                              loading={locationsHook.isLoading}
+                              onSearch={locationsHook.setSearchTerm}
                             />
 
                             <div className="flex gap-2">
@@ -918,10 +974,12 @@ export default function RequestForm({
                             control={control}
                             label="Retailer location"
                             placeholder="Select location"
-                            options={locations.map((l) => ({
+                            options={locationsHook.items.map((l) => ({
                               value: l.id,
                               label: l.name,
                             }))}
+                            loading={locationsHook.isLoading}
+                            onSearch={locationsHook.setSearchTerm}
                           />
 
                           <div className="flex gap-2">
@@ -930,7 +988,8 @@ export default function RequestForm({
                               className="btn btn-primary btn-xs"
                               onClick={handleCreateRetailer}
                               disabled={
-                                isCreatingRetailer || !isEntitiesLocationSelected
+                                isCreatingRetailer ||
+                                !isEntitiesLocationSelected
                               }
                             >
                               Confirm retailer
