@@ -270,6 +270,7 @@ const CreateEventForm = ({ request }: FormProps) => {
       distributorsFilters={eventTypeFilters}
       retailers
       retailersFilters={eventTypeFilters}
+      states
       requestStoreManagers
       requestStoreManagersFilters={{ tenantId: request.tenantId }}
     >
@@ -277,6 +278,7 @@ const CreateEventForm = ({ request }: FormProps) => {
         eventTypes,
         distributors,
         retailers,
+        states,
         requestStoreManagers,
         loading,
         errors,
@@ -295,6 +297,7 @@ const CreateEventForm = ({ request }: FormProps) => {
             distributors={distributors}
             timezones={timeZones}
             retailers={retailers}
+            states={states}
             requestStoreManagers={requestStoreManagers}
             // requestContactInfo={requestContactInfo}
             // locations={locations}

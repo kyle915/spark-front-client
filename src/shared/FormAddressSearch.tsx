@@ -121,7 +121,7 @@ const FormAddressSearch = <T extends FieldValues>({
         )}
 
         {showResults && !disabled && (results.length > 0 || searchError) && (
-          <div className="absolute z-50 mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow-lg max-h-60 overflow-auto">
+          <div className="absolute z-[1200] mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow-lg max-h-60 overflow-auto">
             {searchError && (
               <div className="px-4 py-2 text-sm text-error">{searchError}</div>
             )}

@@ -218,6 +218,7 @@ export default function RequestForm({
   const selectedStateId = watch("stateId");
   const notesValue = watch("notes") || "";
   const selectedEntitiesLocationId = watch("entitiesLocationId");
+  const isEntitiesLocationSelected = Boolean(selectedEntitiesLocationId);
   const selectedRequestTypeId = watch("requestTypeId");
 
   // ========================
@@ -763,9 +764,15 @@ export default function RequestForm({
                   placeholder="Select city..."
                   loading={loadingLocations}
                   options={locationOptions}
-                  disabled={!tenantId || loadingLocations}
+                  disabled={!tenantId || !selectedStateId || loadingLocations}
                 />
               </div>
+
+              {!isEntitiesLocationSelected && (
+                <p className="text-sm text-warning">
+                  Select a city first to enable distributor and retailer.
+                </p>
+              )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {!isEventActivation && (
@@ -782,6 +789,7 @@ export default function RequestForm({
                         label: d.name,
                       }))}
                       onSearch={distributorsHook.setSearchTerm}
+                      disabled={!isEntitiesLocationSelected}
                     />
 
                     {!distributorId && (
@@ -792,6 +800,7 @@ export default function RequestForm({
                             type="button"
                             className="btn btn-outline btn-xs"
                             onClick={() => setShowDistributorLocation(true)}
+                            disabled={!isEntitiesLocationSelected}
                           >
                             Create new distributor
                           </button>
@@ -828,7 +837,10 @@ export default function RequestForm({
                                 type="button"
                                 className="btn btn-primary btn-xs"
                                 onClick={handleCreateDistributor}
-                                disabled={isCreatingDistributor}
+                                disabled={
+                                  isCreatingDistributor ||
+                                  !isEntitiesLocationSelected
+                                }
                               >
                                 Confirm distributor
                               </button>
@@ -863,6 +875,7 @@ export default function RequestForm({
                       label: r.name,
                     }))}
                     onSearch={retailersHook.setSearchTerm}
+                    disabled={!isEntitiesLocationSelected}
                   />
 
                   {!retailerId && (
@@ -873,6 +886,7 @@ export default function RequestForm({
                           type="button"
                           className="btn btn-outline btn-xs"
                           onClick={() => setShowRetailerLocation(true)}
+                          disabled={!isEntitiesLocationSelected}
                         >
                           Create new retailer
                         </button>
@@ -915,7 +929,9 @@ export default function RequestForm({
                               type="button"
                               className="btn btn-primary btn-xs"
                               onClick={handleCreateRetailer}
-                              disabled={isCreatingRetailer}
+                              disabled={
+                                isCreatingRetailer || !isEntitiesLocationSelected
+                              }
                             >
                               Confirm retailer
                             </button>
