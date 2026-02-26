@@ -703,7 +703,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                   </div>
                 </div>
 
-                <div className="collapse-content px-5 pb-5 pt-0">
+                <div className="collapse-content px-5 pb-5 pt-0 ">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/** Retailer control filter */}
                     <FormAutocomplete
