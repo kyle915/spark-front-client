@@ -68,8 +68,9 @@ export const requestColumns: Column<RequestRow>[] = [
 
       return (
         <span
-          className={`badge badge-sm badge-outline ${statusColorMap[row.status?.name ?? ""] ?? ""
-            }`}
+          className={`badge badge-sm badge-outline rounded-2xl ${
+            statusColorMap[row.status?.name ?? ""] ?? ""
+          }`}
         >
           {row.status?.name ?? "-"}
         </span>
@@ -85,9 +86,7 @@ export const eventColumns: Column<EventRow>[] = [
     render: (_v, row) => (
       <div className="flex flex-col">
         <span className="font-medium">{row.name}</span>
-        {row.name && (
-          <span className="text-xs opacity-60">{row.name}</span>
-        )}
+        {row.name && <span className="text-xs opacity-60">{row.name}</span>}
       </div>
     ),
   },
@@ -96,9 +95,7 @@ export const eventColumns: Column<EventRow>[] = [
     label: "Schedule",
     render: (_v, row) => (
       <div className="flex flex-col text-sm">
-        <span className="font-medium">
-          {formatDate(row.date ?? "-")}
-        </span>
+        <span className="font-medium">{formatDate(row.date ?? "-")}</span>
       </div>
     ),
   },
@@ -145,8 +142,9 @@ export const eventColumns: Column<EventRow>[] = [
 
       return (
         <span
-          className={`badge badge-sm badge-outline ${statusColorMap[row.status?.name ?? ""] ?? ""
-            }`}
+          className={`badge badge-sm badge-outline ${
+            statusColorMap[row.status?.name ?? ""] ?? ""
+          }`}
         >
           {row.status?.name ?? "-"}
         </span>
@@ -170,42 +168,40 @@ export const tenantColumns: Column<TenantRow>[] = [
 export const createRecapColumns = (
   eventLookup: Record<string, string> = {},
 ): Column<RecapRow>[] => [
-    {
-      key: "name",
-      label: "Recap",
+  {
+    key: "name",
+    label: "Recap",
+  },
+  {
+    key: "eventId",
+    label: "Event",
+    render: (_value, row) => {
+      if (row.event?.name) return row.event.name;
+      const label = row.eventId ? eventLookup[row.eventId] : null;
+      return label ?? row.eventId ?? "-";
     },
-    {
-      key: "eventId",
-      label: "Event",
-      render: (_value, row) => {
-        if (row.event?.name) return row.event.name;
-        const label = row.eventId ? eventLookup[row.eventId] : null;
-        return label ?? row.eventId ?? "-";
-      },
-    },
-    {
-      key: "retailerState",
-      label: "State",
-      render: (_value, row) =>
-        row.event?.retailer?.location?.state?.name,
-    },
-    {
-      key: "retailerLocation",
-      label: "Location",
-      render: (_value, row) =>
-        row.event?.retailer?.location?.name ?? "-",
-    },
-    {
-      key: "eventAddress",
-      label: "Event Address",
-      render: (_value, row) => row.event?.address ?? "-",
-    },
-    {
-      key: "eventDate",
-      label: "Event Date",
-      render: (_value, row) => formatDate(row.event?.date ?? null),
-    },
-  ];
+  },
+  {
+    key: "retailerState",
+    label: "State",
+    render: (_value, row) => row.event?.retailer?.location?.state?.name,
+  },
+  {
+    key: "retailerLocation",
+    label: "Location",
+    render: (_value, row) => row.event?.retailer?.location?.name ?? "-",
+  },
+  {
+    key: "eventAddress",
+    label: "Event Address",
+    render: (_value, row) => row.event?.address ?? "-",
+  },
+  {
+    key: "eventDate",
+    label: "Event Date",
+    render: (_value, row) => formatDate(row.event?.date ?? null),
+  },
+];
 
 export const userColumns: Column<UserRow>[] = [
   {
