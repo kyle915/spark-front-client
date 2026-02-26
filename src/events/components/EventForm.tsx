@@ -59,9 +59,7 @@ export default function EventForm({
   mode,
   eventTypes,
   tenantId,
-  distributors = [],
   timezones = [],
-  retailers = [],
   showRequestField = false,
   showAssociateRequestToggle = true,
   states = [],
@@ -112,13 +110,11 @@ export default function EventForm({
   >([]);
   const [requestLoading, setRequestLoading] = useState(false);
 
+  const effectiveSearchTerm = showRequestField ? requestSearchTerm : "";
   useEffect(() => {
-    if (!tenantId || !showRequestField) {
-      setRequests([]);
-      return;
-    }
+    if (!showRequestField) return;
 
-    const q = requestSearchTerm.trim();
+    const q = effectiveSearchTerm.trim();
     setRequestLoading(true);
 
     const subscription = fetchQuery<RequestsQueryType>(
@@ -127,7 +123,6 @@ export default function EventForm({
       {
         first: 50,
         q: q || null,
-        // filters: { tenantId },
       },
       { fetchPolicy: "network-only" },
     ).subscribe({
@@ -151,7 +146,7 @@ export default function EventForm({
     return () => {
       subscription.unsubscribe();
     };
-  }, [tenantId, requestSearchTerm, showRequestField]);
+  }, [showRequestField, effectiveSearchTerm]);
 
   const requestOptions = useMemo(
     () =>
@@ -295,8 +290,6 @@ export default function EventForm({
     tenantId,
     entitiesLocationId:
       selectedEntitiesLocationId ?? defaultValues.entitiesLocationId ?? null,
-    initialItems: distributors,
-    selectedId: distributorId,
     queryDocument: DistributorsQuery,
     extractNodes: extractDistributors,
   });
@@ -311,8 +304,6 @@ export default function EventForm({
     tenantId,
     entitiesLocationId:
       selectedEntitiesLocationId ?? defaultValues.entitiesLocationId ?? null,
-    initialItems: retailers,
-    selectedId: retailerId,
     queryDocument: RetailersQuery,
     extractNodes: extractRetailers,
   });
@@ -740,7 +731,20 @@ export default function EventForm({
                       <button
                         type="button"
                         className="btn btn-outline btn-xs"
-                        onClick={() => setShowDistributorLocation(true)}
+                        onClick={() => {
+                          setShowDistributorLocation(true);
+
+                          if (selectedEntitiesLocationId) {
+                            setValue(
+                              "distributorLocationId",
+                              selectedEntitiesLocationId,
+                              {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                              },
+                            );
+                          }
+                        }}
                         disabled={!isEntitiesLocationSelected}
                       >
                         Create new distributor
@@ -827,7 +831,20 @@ export default function EventForm({
                       <button
                         type="button"
                         className="btn btn-outline btn-xs"
-                        onClick={() => setShowRetailerLocation(true)}
+                        onClick={() => {
+                          setShowRetailerLocation(true);
+
+                          if (selectedEntitiesLocationId) {
+                            setValue(
+                              "retailerLocationId",
+                              selectedEntitiesLocationId,
+                              {
+                                shouldDirty: true,
+                                shouldTouch: true,
+                              },
+                            );
+                          }
+                        }}
                         disabled={!isEntitiesLocationSelected}
                       >
                         Create new retailer
