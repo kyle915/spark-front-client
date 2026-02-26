@@ -188,14 +188,7 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
   return (
     <>
       <CatalogsProvider eventTypes eventTypesFilters={eventTypeFilters}>
-        {({
-          eventTypes,
-          loading,
-          errors,
-          refetch,
-          distributors,
-          retailers,
-        }) => {
+        {({ eventTypes, loading, errors, refetch }) => {
           if (loading.eventTypes) {
             return <Loading />;
           }
@@ -213,8 +206,6 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
               mode="edit"
               eventTypes={eventTypes}
               tenantId={event.tenantId ?? ""}
-              distributors={distributors}
-              retailers={retailers}
               timezones={timeZones}
               showIsNational={false}
               onSubmit={handleSubmit}

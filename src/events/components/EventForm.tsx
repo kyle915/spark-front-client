@@ -211,7 +211,6 @@ export default function EventForm({
   // ========================
   // DISTRIBUTORS AND RETAILERS
   // ========================
-
   useEffect(() => {
     if (prevStateIdRef.current === undefined) {
       prevStateIdRef.current = selectedStateId ?? null;
