@@ -7,8 +7,8 @@ import environment from "@api/relay/environment";
 interface UseEntitiesByLocationProps<TItem, TQuery extends OperationType> {
   tenantId: string | null;
   entitiesLocationId: string | null;
-  initialItems: TItem[];
-  selectedId?: string | null;
+  // initialItems: TItem[];
+  // selectedId?: string | null;
   queryDocument: GraphQLTaggedNode;
   extractNodes: (data: TQuery["response"]) => TItem[];
   debounceMs?: number;
@@ -20,8 +20,8 @@ export function useEntitiesByLocation<
 >({
   tenantId,
   entitiesLocationId,
-  initialItems,
-  selectedId,
+  // initialItems,
+  // selectedId,
   queryDocument,
   extractNodes,
   debounceMs = 300,
@@ -31,10 +31,7 @@ export function useEntitiesByLocation<
   const [isLoading, setIsLoading] = useState(false);
 
   const lastFetchKeyRef = useRef<string | null>(null);
-  const activeRequestIdRef = useRef<number>(0);
   const prevLocationRef = useRef<string | null | undefined>(undefined);
-
-  const cacheRef = useRef<Map<string, TItem[]>>(new Map());
 
   // ===============================
   // RESET WHEN LOCATION CHANGES
@@ -58,69 +55,34 @@ export function useEntitiesByLocation<
   // FETCH WITH CACHE + DEBOUNCE
   // ===============================
   useEffect(() => {
-    if (!tenantId) {
+    if (!tenantId || !entitiesLocationId) {
       setRemoteItems([]);
       return;
     }
 
     const trimmed = searchTerm.trim();
 
-    const selectedExists =
-      selectedId && initialItems?.some((item) => item.id === selectedId);
-
-    const shouldFetch =
-      trimmed.length > 0 ||
-      !initialItems?.length ||
-      (selectedId && !selectedExists);
-
-    if (!shouldFetch) return;
-
-    const fetchKey = `${tenantId}-${entitiesLocationId ?? "null"}-${trimmed}`;
-
-    if (cacheRef.current.has(fetchKey)) {
-      setRemoteItems(cacheRef.current.get(fetchKey)!);
-      return;
-    }
-
-    if (lastFetchKeyRef.current === fetchKey) return;
-
-    const requestId = ++activeRequestIdRef.current;
-
     const timeout = setTimeout(() => {
-      lastFetchKeyRef.current = fetchKey;
-
-      const filters = {
-        tenantId,
-        ...(entitiesLocationId ? { locationId: entitiesLocationId } : {}),
-      };
-
       setIsLoading(true);
 
       fetchQuery<TQuery>(
         environment,
         queryDocument,
         {
-          filters,
+          filters: {
+            tenantId,
+            locationId: entitiesLocationId,
+          },
           q: trimmed || null,
         },
         { fetchPolicy: "network-only" },
       )
         .toPromise()
         .then((data) => {
-          if (requestId !== activeRequestIdRef.current) return;
-
           const extracted = extractNodes(data);
-
-          cacheRef.current.set(fetchKey, extracted);
-
           setRemoteItems(extracted);
         })
-        .catch(() => {
-          if (requestId !== activeRequestIdRef.current) return;
-          setRemoteItems([]);
-        })
         .finally(() => {
-          if (requestId !== activeRequestIdRef.current) return;
           setIsLoading(false);
         });
     }, debounceMs);
@@ -130,19 +92,12 @@ export function useEntitiesByLocation<
     tenantId,
     entitiesLocationId,
     searchTerm,
-    selectedId,
-    initialItems,
     queryDocument,
     extractNodes,
     debounceMs,
   ]);
 
-  const items =
-    searchTerm.trim().length > 0
-      ? remoteItems
-      : initialItems?.length > 0
-        ? initialItems
-        : remoteItems;
+  const items = searchTerm.trim().length > 0 ? remoteItems : remoteItems;
 
   return {
     items,
