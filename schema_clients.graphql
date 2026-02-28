@@ -3403,6 +3403,7 @@ type RecapFileUrlResponse {
 input RecapFiltersInput {
   clientMutationId: ID = null
   eventId: ID = null
+  rmmAsignedId: ID = null
   retailerId: ID = null
   stateId: ID = null
   eventDate: String = null
