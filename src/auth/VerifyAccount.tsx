@@ -7,7 +7,9 @@ import Loading from "@/shared/Loading";
 type VerifyStatus = "pending" | "success" | "error";
 
 const isMobileDevice = () => {
-    const userAgentData = navigator.userAgentData as { mobile?: boolean } | undefined;
+    const userAgentData = (navigator as Navigator & {
+        userAgentData?: { mobile?: boolean };
+    }).userAgentData;
     if (typeof userAgentData?.mobile === "boolean") return userAgentData.mobile;
 
     return /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
