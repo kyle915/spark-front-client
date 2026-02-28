@@ -6,15 +6,6 @@ import Loading from "@/shared/Loading";
 
 type VerifyStatus = "pending" | "success" | "error";
 
-const isMobileDevice = () => {
-    const userAgentData = (navigator as Navigator & {
-        userAgentData?: { mobile?: boolean };
-    }).userAgentData;
-    if (typeof userAgentData?.mobile === "boolean") return userAgentData.mobile;
-
-    return /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
-};
-
 const VerifyAccount = () => {
     const [searchParams] = useSearchParams();
     const [status, setStatus] = useState<VerifyStatus>("pending");
@@ -42,14 +33,8 @@ const VerifyAccount = () => {
     }, [searchParams]);
 
     const handleGoToLogin = () => {
-        const mobileLoginUrl = import.meta.env.VITE_MOBILE_LOGIN_URL as string | undefined;
-
-        if (isMobileDevice() && mobileLoginUrl) {
-            window.location.href = mobileLoginUrl;
-            return;
-        }
-
-        window.location.href = "/login";
+        const mobileLoginUrl = import.meta.env.VITE_MOBILE_LOGIN_URL as string;
+        window.location.href = mobileLoginUrl;
     };
 
     return (
