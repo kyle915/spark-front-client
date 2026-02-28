@@ -12,7 +12,7 @@ import { CalendarDays } from "lucide-react";
 import DashboardHeader from "../dashboard/DashboardHeader";
 
 import MonthlyTrendsChart from "../dashboard-event/MonthlyTrendsSection";
-import DemographicInsightSection from "../dashboard-event/DemographicInsightSection";
+// import DemographicInsightSection from "../dashboard-event/DemographicInsightSection";
 import PerformanceInsights from "../dashboard-event/PerformanceInsights";
 import GoalsProgressSection from "../dashboard-event/GoalsProgressSection";
 import RegionalMarketPerformance from "../dashboard-event/RegionalMarketPerformance";
@@ -220,7 +220,7 @@ export default function DashboardIndex() {
         </section>
 
         {/* DEMOGRAPHIC INSIGHTS */}
-        <section className="w-full ">
+        {/* <section className="w-full ">
           <DemographicInsightSection
             ageDistribution={[
               { label: "18-24", value: 22, consumers: 2745 },
@@ -234,7 +234,7 @@ export default function DashboardIndex() {
               { label: "Female", value: 42 },
             ]}
           />
-        </section>
+        </section> */}
 
         {/* PERFORMANCE INSIGHTS */}
         <section className="w-full">
