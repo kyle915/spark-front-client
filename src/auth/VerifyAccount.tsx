@@ -1,13 +1,19 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import bgImage from "@/assets/background.png";
 import { verifyAccount } from "@/api/auth/verifyAccount";
 import Loading from "@/shared/Loading";
 
 type VerifyStatus = "pending" | "success" | "error";
 
+const isMobileDevice = () => {
+    const userAgentData = navigator.userAgentData as { mobile?: boolean } | undefined;
+    if (typeof userAgentData?.mobile === "boolean") return userAgentData.mobile;
+
+    return /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
 const VerifyAccount = () => {
-    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [status, setStatus] = useState<VerifyStatus>("pending");
     const [message, setMessage] = useState("Verifying your account...");
@@ -34,7 +40,14 @@ const VerifyAccount = () => {
     }, [searchParams]);
 
     const handleGoToLogin = () => {
-        navigate("/login", { replace: true });
+        const mobileLoginUrl = import.meta.env.VITE_MOBILE_LOGIN_URL as string | undefined;
+
+        if (isMobileDevice() && mobileLoginUrl) {
+            window.location.href = mobileLoginUrl;
+            return;
+        }
+
+        window.location.href = "/login";
     };
 
     return (
