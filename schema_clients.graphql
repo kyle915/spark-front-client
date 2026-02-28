@@ -319,6 +319,10 @@ input AmbassadorJobFiltersInput {
   statusId: ID = null
   statusSlug: String = null
   acceptedTerms: Boolean = null
+  jobId: ID = null
+  startDate: String = null
+  endDate: String = null
+  coordinates: CoordinatesFilterInput = null
 }
 
 enum AmbassadorJobStatusFilter {
@@ -1242,6 +1246,7 @@ input CreateEventInput {
   requestId: ID = null
   retailerId: ID = null
   distributorId: ID = null
+  rmmAsignedId: ID = null
   timezoneId: ID = null
   date: String!
   address: String!
@@ -1463,6 +1468,7 @@ input CreateRequestInput {
   distributorId: ID = null
   retailerId: ID = null
   storeManagerId: ID = null
+  rmmAsignedId: ID = null
   requestorEmail: String = null
   clientName: String = null
   clientEmail: String = null
@@ -1806,7 +1812,7 @@ type DjangoImageType {
 }
 
 """
-Event(id, uuid, name, date, coordinates, timezone, tenant, request, event_type, status, retailer, distributor, start_time, end_time, address, notes, is_national, created_by, updated_by, created_at, updated_at)
+Event(id, uuid, name, date, coordinates, timezone, tenant, request, event_type, status, retailer, distributor, start_time, end_time, address, notes, is_national, rmm_asigned, created_by, updated_by, created_at, updated_at)
 """
 type Event implements Node {
   """The Globally Unique ID of this object"""
@@ -1827,6 +1833,7 @@ type Event implements Node {
   eventType: EventType
   status: EventStatus
   timezone: TimeZone
+  rmmAsigned: SparkUserType
   tenantImage: String
   date: String
   startTime: String
@@ -1849,6 +1856,7 @@ type EventCountableEdge {
 
 type EventDashboard {
   metrics: EventDashboardMetrics!
+  globalKpis: RecapGlobalKPIs!
   monthlyTrends: MonthlyPerformanceTrend!
   performanceInsights: PerformanceInsights!
   recentEvents: [RecentEvent!]
@@ -1867,7 +1875,7 @@ input EventDashboardFiltersInput {
   startDate: String = null
   endDate: String = null
   quarter: String = null
-  rmmId: ID = null
+  rmmAsignedId: ID = null
   distributorId: ID = null
 }
 
@@ -2275,10 +2283,12 @@ input JobFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   eventId: ID = null
+  locationId: ID = null
   status: JobStatusFilter = null
   statuses: [JobStatusFilter!] = null
   startDate: String = null
   endDate: String = null
+  coordinates: CoordinatesFilterInput = null
   edited: Boolean = null
 }
 
@@ -2956,6 +2966,7 @@ type Query {
   eventStatus(id: ID = null, uuid: ID = null): EventStatus
   publicClients(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): ClientCountableConnection!
   clients(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ClientFiltersInput = null): ClientCountableConnection!
+  rmmClients(tenantId: ID = null, tenantUuid: ID = null, q: String = null): [SparkUserType!]!
   client(id: ID = null, uuid: ID = null): Client
   publicDistributors(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: DistributorFiltersInput = null): DistributorCountableConnection!
   distributors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: DistributorFiltersInput = null): DistributorCountableConnection!
@@ -3063,7 +3074,7 @@ type Query {
   ambassadorJobs(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorJobFiltersInput = null): AmbassadorJobCountableConnection!
   ambassadorJobsMobile(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorJobFiltersInput = null): AmbassadorJobCountableConnection!
   ambassadorJob(id: ID = null, uuid: ID = null): AmbassadorJob
-  ambassadorJobMobile(id: ID = null, uuid: ID = null): AmbassadorJob
+  ambassadorJobMobile(id: ID = null, uuid: ID = null, filters: AmbassadorJobFiltersInput = null): AmbassadorJob
   jobApplicants(jobId: ID!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): AmbassadorJobCountableConnection!
   companyToAmbassadorReviews(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): CompanyToAmbassadorReviewCountableConnection!
   companyToAmbassadorReview(id: ID = null, uuid: ID = null): CompanyToAmbassadorReview
@@ -3318,7 +3329,7 @@ input RecapDashboardFiltersInput {
   startDate: String = null
   endDate: String = null
   quarter: String = null
-  rmmId: ID = null
+  rmmAsignedId: ID = null
   distributorId: ID = null
 }
 
@@ -3399,6 +3410,19 @@ input RecapFiltersInput {
   edited: Boolean = null
 }
 
+type RecapGlobalKPIByRMM {
+  rmmId: ID!
+  rmmName: String!
+  singleCansSold: Int!
+  multiPacksSold: Int!
+}
+
+type RecapGlobalKPIs {
+  singleCansSold: Int!
+  multiPacksSold: Int!
+  byRmm: [RecapGlobalKPIByRMM!]!
+}
+
 type RecapMonthlyDataPoint {
   month: String!
   consumersSampled: Int!
@@ -3468,7 +3492,7 @@ input RemoveAmbassadorsFromGroupInput {
 }
 
 """
-Request(id, uuid, name, date, start_time, end_time, address, decline_reason, requestor_email, notes, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, created_by, updated_by, approved_by, created_at, updated_at)
+Request(id, uuid, name, date, start_time, end_time, address, decline_reason, requestor_email, notes, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, rmm_asigned, created_by, updated_by, approved_by, created_at, updated_at)
 """
 type Request implements Node {
   """The Globally Unique ID of this object"""
@@ -3496,6 +3520,7 @@ type Request implements Node {
   requestType: RequestType
   status: RequestStatus
   tenantId: ID!
+  rmmAsigned: SparkUserType
   createdBy: SparkUserType
   updatedBy: SparkUserType
   approvedBy: SparkUserType
@@ -3570,6 +3595,9 @@ input RequestFiltersInput {
   clientId: ID = null
   retailerId: ID = null
   distributorId: ID = null
+  requestTypeId: ID = null
+  retailerStateId: ID = null
+  distributorStateId: ID = null
   date: String = null
   edited: Boolean = null
 }
@@ -4301,6 +4329,7 @@ input UpdateEventInput {
   requestId: ID = null
   retailerId: ID = null
   distributorId: ID = null
+  rmmAsignedId: ID = null
   timezoneId: ID = null
   date: String!
   address: String!
@@ -4517,6 +4546,7 @@ input UpdateRequestInput {
   requestTypeId: ID!
   distributorId: ID!
   retailerId: ID!
+  rmmAsignedId: ID = null
   requestorEmail: String = null
   storeManagerName: String!
   storeManagerPhone: String!

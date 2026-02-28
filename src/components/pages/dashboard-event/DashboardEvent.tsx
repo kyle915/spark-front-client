@@ -32,11 +32,20 @@ const defaultFilters: FiltersState = {
   dateRange: undefined,
 };
 
-const formatNumber = (value: number) => value.toLocaleString();
-const formatPercent = (value: number) => `${value.toFixed(1)}%`;
+const formatNumber = (value?: number | null) =>
+  typeof value === "number" ? value.toLocaleString() : "0";
 
-const formatDelta = (current: number, previous?: number | null) => {
-  if (!previous || previous === 0) return "0%";
+const formatPercent = (value?: number | null) =>
+  typeof value === "number" ? `${value.toFixed(1)}%` : "0%";
+
+const formatDelta = (current?: number | null, previous?: number | null) => {
+  if (
+    typeof current !== "number" ||
+    typeof previous !== "number" ||
+    previous === 0
+  )
+    return "0%";
+
   const diff = ((current - previous) / previous) * 100;
   const sign = diff >= 0 ? "+" : "";
   return `${sign}${diff.toFixed(1)}%`;
@@ -73,8 +82,8 @@ export default function DashboardIndex() {
     fetchKey,
   );
 
-  const metrics = dashboard.metrics;
-  const comparison = metrics.comparisonValues;
+  const { metrics, globalKpis } = dashboard;
+
   const comparisonLabel = metrics.comparisonPeriod
     ? `vs ${metrics.comparisonPeriod}`
     : "vs previous period";
@@ -84,7 +93,10 @@ export default function DashboardIndex() {
       key: "totalEvents",
       title: "Total Events",
       value: formatNumber(metrics.totalEvents),
-      change: formatDelta(metrics.totalEvents, comparison?.totalEvents),
+      change: formatDelta(
+        metrics.totalEvents,
+        metrics.comparisonValues?.totalEvents,
+      ),
     },
     {
       key: "consumersSampled",
@@ -92,20 +104,38 @@ export default function DashboardIndex() {
       value: formatNumber(metrics.consumersSampled),
       change: formatDelta(
         metrics.consumersSampled,
-        comparison?.consumersSampled,
+        metrics.comparisonValues?.consumersSampled,
       ),
     },
     {
       key: "brandAwareness",
       title: "Brand Awareness",
       value: formatPercent(metrics.brandAwareness),
-      change: formatDelta(metrics.brandAwareness, comparison?.brandAwareness),
+      change: formatDelta(
+        metrics.brandAwareness,
+        metrics.comparisonValues?.brandAwareness,
+      ),
     },
     {
       key: "purchaseIntent",
       title: "Purchase Intent",
       value: formatPercent(metrics.purchaseIntent),
-      change: formatDelta(metrics.purchaseIntent, comparison?.purchaseIntent),
+      change: formatDelta(
+        metrics.purchaseIntent,
+        metrics.comparisonValues?.purchaseIntent,
+      ),
+    },
+    {
+      key: "multiPacksSold",
+      title: "Multi Packs Sold",
+      value: formatNumber(globalKpis?.multiPacksSold),
+      change: "0%", // no hay comparación en el query
+    },
+    {
+      key: "singleCansSold",
+      title: "Single Cans Sold",
+      value: formatNumber(globalKpis?.singleCansSold),
+      change: "0%",
     },
   ];
 
