@@ -7,8 +7,8 @@ import { fetchQuery } from "react-relay";
 import environment from "@api/relay/environment";
 import { DistributorsQuery } from "@api/queries/DistributorsQuery";
 import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__generated__/DistributorsQuery.graphql";
-import { RetailersQuery } from "@api/queries/RetailersQuery";
-import type { RetailersQuery as RetailersQueryType } from "@api/queries/__generated__/RetailersQuery.graphql";
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import FormAutocomplete from "@shared/FormAutocomplete";
 import { cn } from "@/lib/utils";
@@ -58,15 +58,21 @@ export default function FiltersPanel({
 
   const dateRange = watch("dateRange");
   const [distributorSearch, setDistributorSearch] = useState("");
-  const [retailerSearch, setRetailerSearch] = useState("");
+  // const [retailerSearch, setRetailerSearch] = useState("");
   const [distributorOptions, setDistributorOptions] =
     useState<FilterOption[]>(distributors);
-  const [retailerOptions, setRetailerOptions] =
-    useState<FilterOption[]>(rmmOptions);
+  // const [retailerOptions, setRetailerOptions] =
+  //   useState<FilterOption[]>(rmmOptions);
   const [isLoadingDistributors, setIsLoadingDistributors] = useState(false);
-  const [isLoadingRetailers, setIsLoadingRetailers] = useState(false);
+  // const [isLoadingRetailers, setIsLoadingRetailers] = useState(false);
   const distributorRequestIdRef = useRef(0);
-  const retailerRequestIdRef = useRef(0);
+  // const retailerRequestIdRef = useRef(0);
+
+  const [rmmSearch, setRmmSearch] = useState("");
+  const [rmmOptionsState, setRmmOptionsState] =
+    useState<FilterOption[]>(rmmOptions);
+  const [isLoadingRmm, setIsLoadingRmm] = useState(false);
+  const rmmRequestIdRef = useRef(0);
 
   const loadDistributors = useCallback(
     async (query: string) => {
@@ -107,46 +113,89 @@ export default function FiltersPanel({
     [tenantId],
   );
 
-  const loadRetailers = useCallback(
+  const loadRmm = useCallback(
     async (query: string) => {
-      const requestId = ++retailerRequestIdRef.current;
-      setIsLoadingRetailers(true);
+      if (!tenantId) return;
+
+      const requestId = ++rmmRequestIdRef.current;
+      setIsLoadingRmm(true);
+
       try {
-        const data = await fetchQuery<RetailersQueryType>(
+        const data = await fetchQuery<RmmClientsQueryType>(
           environment,
-          RetailersQuery,
+          RmmClientsQuery,
           {
-            filters: { tenantId: tenantId ?? null },
+            tenantId,
             q: query || null,
-            first: 100,
           },
         ).toPromise();
 
-        if (retailerRequestIdRef.current !== requestId) return;
-        const options =
-          data?.retailers?.edges
-            ?.map((edge) => edge?.node)
-            .filter((node): node is NonNullable<typeof node> => Boolean(node))
-            .map((node) => ({
-              value: node.id,
-              label: node.name ?? node.id,
-              searchText: [node.name, node.address, node.storeContact]
-                .filter(Boolean)
-                .join(" "),
-            })) ?? [];
+        if (rmmRequestIdRef.current !== requestId) return;
 
-        setRetailerOptions(options);
+        const options =
+          data?.rmmClients?.map((rmm) => ({
+            value: rmm.id,
+            label: rmm.firstName
+              ? `${rmm.firstName} ${rmm.lastName}`
+              : rmm.username,
+            searchText: [rmm.firstName, rmm.lastName, rmm.username]
+              .filter(Boolean)
+              .join(" "),
+          })) ?? [];
+
+        setRmmOptionsState(options);
       } catch {
-        if (retailerRequestIdRef.current !== requestId) return;
-        setRetailerOptions([]);
+        if (rmmRequestIdRef.current !== requestId) return;
+        setRmmOptionsState([]);
       } finally {
-        if (retailerRequestIdRef.current === requestId) {
-          setIsLoadingRetailers(false);
+        if (rmmRequestIdRef.current === requestId) {
+          setIsLoadingRmm(false);
         }
       }
     },
     [tenantId],
   );
+
+  // const loadRetailers = useCallback(
+  //   async (query: string) => {
+  //     const requestId = ++retailerRequestIdRef.current;
+  //     setIsLoadingRetailers(true);
+  //     try {
+  //       const data = await fetchQuery<RetailersQueryType>(
+  //         environment,
+  //         RetailersQuery,
+  //         {
+  //           filters: { tenantId: tenantId ?? null },
+  //           q: query || null,
+  //           first: 100,
+  //         },
+  //       ).toPromise();
+
+  //       if (retailerRequestIdRef.current !== requestId) return;
+  //       const options =
+  //         data?.retailers?.edges
+  //           ?.map((edge) => edge?.node)
+  //           .filter((node): node is NonNullable<typeof node> => Boolean(node))
+  //           .map((node) => ({
+  //             value: node.id,
+  //             label: node.name ?? node.id,
+  //             searchText: [node.name, node.address, node.storeContact]
+  //               .filter(Boolean)
+  //               .join(" "),
+  //           })) ?? [];
+
+  //       setRetailerOptions(options);
+  //     } catch {
+  //       if (retailerRequestIdRef.current !== requestId) return;
+  //       setRetailerOptions([]);
+  //     } finally {
+  //       if (retailerRequestIdRef.current === requestId) {
+  //         setIsLoadingRetailers(false);
+  //       }
+  //     }
+  //   },
+  //   [tenantId],
+  // );
 
   useEffect(() => {
     if (!tenantId) {
@@ -156,14 +205,15 @@ export default function FiltersPanel({
 
   useEffect(() => {
     if (!tenantId) {
-      setRetailerOptions(rmmOptions);
+      setRmmOptionsState(rmmOptions);
     }
   }, [rmmOptions, tenantId]);
 
   useEffect(() => {
     if (!tenantId) return;
     setDistributorSearch("");
-    setRetailerSearch("");
+    setRmmSearch("");
+    // setRetailerSearch("");
     setValue("distributor", "");
     setValue("rmm", "");
   }, [setValue, tenantId]);
@@ -173,8 +223,12 @@ export default function FiltersPanel({
   }, [distributorSearch, loadDistributors]);
 
   useEffect(() => {
-    void loadRetailers(retailerSearch.trim());
-  }, [loadRetailers, retailerSearch]);
+    void loadRmm(rmmSearch.trim());
+  }, [loadRmm, rmmSearch]);
+
+  // useEffect(() => {
+  //   void loadRetailers(retailerSearch.trim());
+  // }, [loadRetailers, retailerSearch]);
 
   const handleApply = handleSubmit((values) => {
     const nextFilters: FiltersState = {
@@ -237,16 +291,14 @@ export default function FiltersPanel({
               }
             />
 
-            {/* Retailer */}
+            {/* RRM Clients */}
             <FormAutocomplete<FiltersFormValues>
               control={control}
               name="rmm"
-              label="Rmm"
-              options={retailerOptions}
-              onSearch={setRetailerSearch}
-              placeholder={
-                isLoadingRetailers ? "Loading rmm..." : "Search rmm..."
-              }
+              label="RMM"
+              options={rmmOptionsState}
+              onSearch={setRmmSearch}
+              placeholder={isLoadingRmm ? "Loading RMM..." : "Search RMM..."}
             />
 
             {/* Quarter */}

@@ -4,15 +4,18 @@ import type { EventDashboardQuery as EventDashboardQueryType } from "@/api/queri
 
 export function useEventDashboardData(
   tenantId: string,
-  filters: EventDashboardQueryType["variables"]["filters"],
-  fetchKey: number
+  filters: EventDashboardQueryType["variables"]["filters"] | null,
+  fetchKey: number,
 ) {
-  const tenantFilter = { ...filters, tenantId };
+  const tenantFilter = {
+    tenantId,
+    ...(filters ?? {}),
+  };
 
   const data = useLazyLoadQuery<EventDashboardQueryType>(
     EventDashboardQuery,
     { filters: tenantFilter },
-    { fetchKey }
+    { fetchKey },
   );
 
   return {

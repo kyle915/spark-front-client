@@ -24,6 +24,9 @@ import { AiInsightsSection } from "@/components/ai-insights/AiInsightsSection";
 import { aiInsightsMock } from "@/data/dashboard-events/aiInsightsMock";
 import { regionalMarketMock } from "@/data/dashboard-events/regionalMarketMock";
 import { useAuthStore } from "@/store/authStore";
+import { useLazyLoadQuery } from "react-relay";
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
 
 const defaultFilters: FiltersState = {
   distributor: "",
@@ -66,14 +69,13 @@ export default function DashboardIndex() {
 
     const input = {
       distributorId: filters.distributor || null,
-      rmmId: filters.rmm || null,
+      rmmAsignedId: filters.rmm || null,
       quarter: filters.quarter || null,
       startDate,
       endDate,
     };
 
-    const hasValues = Object.values(input).some((value) => value);
-    return hasValues ? input : null;
+    return input;
   }, [filters]);
 
   const { dashboard, filterOptions } = useEventDashboardData(
@@ -161,11 +163,16 @@ export default function DashboardIndex() {
       label: d.name,
     })) ?? [];
 
-  const rmmOptions =
-    filterOptions?.rmms?.map((r) => ({
-      value: r.id,
-      label: r.name,
-    })) ?? [];
+  const rrmOptions = useLazyLoadQuery<RmmClientsQueryType>(
+    RmmClientsQuery,
+    { tenantId: tenantId || "" },
+    { fetchPolicy: "store-and-network" },
+  );
+
+  const rmmOptionsMap = rrmOptions.rmmClients.map((rmm) => ({
+    value: rmm.id,
+    label: rmm.firstName ? `${rmm.firstName} ${rmm.lastName}` : rmm.username,
+  }));
 
   const quarterOptions =
     filterOptions?.quarters?.map((q) => ({
@@ -183,7 +190,7 @@ export default function DashboardIndex() {
         <div className="relative z-40">
           <FiltersPanel
             distributors={distributors}
-            rmmOptions={rmmOptions}
+            rmmOptions={rmmOptionsMap}
             quarterOptions={quarterOptions}
             onApplyFilters={(nextFilters) => {
               setFilters(nextFilters);
