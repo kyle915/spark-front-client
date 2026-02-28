@@ -1,18 +1,14 @@
-import { useMemo, useState } from "react";
-import { format } from "date-fns";
+import { useState } from "react";
 import Layout from "@/layout/Layout";
 import { MetricCard } from "@/components/cards/metric-card";
 import FiltersPanel, {
-  type FiltersState,
+  type DashboardFilters,
 } from "@/components/filters/FiltersPanel";
 import ChartCard from "@/components/charts/ChartCard";
-
 import { CalendarDays } from "lucide-react";
 
 import DashboardHeader from "../dashboard/DashboardHeader";
-
 import MonthlyTrendsChart from "../dashboard-event/MonthlyTrendsSection";
-// import DemographicInsightSection from "../dashboard-event/DemographicInsightSection";
 import PerformanceInsights from "../dashboard-event/PerformanceInsights";
 import GoalsProgressSection from "../dashboard-event/GoalsProgressSection";
 import RegionalMarketPerformance from "../dashboard-event/RegionalMarketPerformance";
@@ -24,17 +20,10 @@ import { AiInsightsSection } from "@/components/ai-insights/AiInsightsSection";
 import { aiInsightsMock } from "@/data/dashboard-events/aiInsightsMock";
 import { regionalMarketMock } from "@/data/dashboard-events/regionalMarketMock";
 import { useAuthStore } from "@/store/authStore";
-import { useLazyLoadQuery } from "react-relay";
-import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
-import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
 
-const defaultFilters: FiltersState = {
-  distributor: "",
-  rmm: "",
-  quarter: "",
-  dateRange: undefined,
-};
-
+/* =========================
+   Helpers
+========================= */
 const formatNumber = (value?: number | null) =>
   typeof value === "number" ? value.toLocaleString() : "0";
 
@@ -54,33 +43,25 @@ const formatDelta = (current?: number | null, previous?: number | null) => {
   return `${sign}${diff.toFixed(1)}%`;
 };
 
+/* =========================
+   Dashboard
+========================= */
 export default function DashboardIndex() {
-  const [filters, setFilters] = useState<FiltersState>(defaultFilters);
-  const [fetchKey, setFetchKey] = useState(0);
   const { tenantId } = useAuthStore();
 
-  const filtersInput = useMemo(() => {
-    const startDate = filters.dateRange?.from
-      ? format(filters.dateRange.from, "yyyy-MM-dd")
-      : null;
-    const endDate = filters.dateRange?.to
-      ? format(filters.dateRange.to, "yyyy-MM-dd")
-      : null;
+  const [filters, setFilters] = useState<DashboardFilters>({
+    distributorId: null,
+    rmmAsignedId: null,
+    quarter: null,
+    startDate: null,
+    endDate: null,
+  });
 
-    const input = {
-      distributorId: filters.distributor || null,
-      rmmAsignedId: filters.rmm || null,
-      quarter: filters.quarter || null,
-      startDate,
-      endDate,
-    };
+  const [fetchKey, setFetchKey] = useState(0);
 
-    return input;
-  }, [filters]);
-
-  const { dashboard, filterOptions } = useEventDashboardData(
+  const { dashboard } = useEventDashboardData(
     tenantId || "",
-    filtersInput,
+    filters,
     fetchKey,
   );
 
@@ -131,7 +112,7 @@ export default function DashboardIndex() {
       key: "multiPacksSold",
       title: "Multi Packs Sold",
       value: formatNumber(globalKpis?.multiPacksSold),
-      change: "0%", // no hay comparación en el query
+      change: "0%",
     },
     {
       key: "singleCansSold",
@@ -157,29 +138,6 @@ export default function DashboardIndex() {
     status: event.status,
   }));
 
-  const distributors =
-    filterOptions?.distributors?.map((d) => ({
-      value: d.id,
-      label: d.name,
-    })) ?? [];
-
-  const rrmOptions = useLazyLoadQuery<RmmClientsQueryType>(
-    RmmClientsQuery,
-    { tenantId: tenantId || "" },
-    { fetchPolicy: "store-and-network" },
-  );
-
-  const rmmOptionsMap = rrmOptions.rmmClients.map((rmm) => ({
-    value: rmm.id,
-    label: rmm.firstName ? `${rmm.firstName} ${rmm.lastName}` : rmm.username,
-  }));
-
-  const quarterOptions =
-    filterOptions?.quarters?.map((q) => ({
-      value: q.value,
-      label: q.label,
-    })) ?? [];
-
   return (
     <Layout>
       <main className="max-w-7xl mx-auto p-5 space-y-10">
@@ -189,12 +147,9 @@ export default function DashboardIndex() {
         {/* FILTERS */}
         <div className="relative z-40">
           <FiltersPanel
-            distributors={distributors}
-            rmmOptions={rmmOptionsMap}
-            quarterOptions={quarterOptions}
             onApplyFilters={(nextFilters) => {
               setFilters(nextFilters);
-              setFetchKey((key) => key + 1);
+              setFetchKey((k) => k + 1);
             }}
           />
         </div>
@@ -220,28 +175,11 @@ export default function DashboardIndex() {
             title="Monthly Performance Trends"
             icon={CalendarDays}
             iconColor="text-blue-600"
-            fixedHeight={true}
+            fixedHeight
           >
             <MonthlyTrendsChart data={monthlyTrends} />
           </ChartCard>
         </section>
-
-        {/* DEMOGRAPHIC INSIGHTS */}
-        {/* <section className="w-full ">
-          <DemographicInsightSection
-            ageDistribution={[
-              { label: "18-24", value: 22, consumers: 2745 },
-              { label: "25-34", value: 35, consumers: 4368 },
-              { label: "35-44", value: 28, consumers: 3494 },
-              { label: "45-54", value: 12, consumers: 1497 },
-              { label: "55+", value: 3, consumers: 374 },
-            ]}
-            genderDistribution={[
-              { label: "Male", value: 58 },
-              { label: "Female", value: 42 },
-            ]}
-          />
-        </section> */}
 
         {/* PERFORMANCE INSIGHTS */}
         <section className="w-full">
@@ -257,10 +195,6 @@ export default function DashboardIndex() {
                 { label: "Brand Awareness", current: 0, target: 50 },
                 { label: "Purchase Intent", current: 0, target: 75 },
                 { label: "Female Participation", current: 0, target: 65 },
-                { label: "First-Time Buyers", current: 0, target: 70 },
-                { label: "First-Time Buyers-2", current: 0, target: 70 },
-                { label: "First-Time Buyers-3", current: 0, target: 70 },
-                { label: "First-Time Buyers-4", current: 0, target: 70 },
               ]}
             />
           </div>
