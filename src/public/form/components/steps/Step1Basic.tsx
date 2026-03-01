@@ -92,17 +92,7 @@ export function Step1Basic({
         placeholder="HH:MM AM/PM"
       />
 
-      <div className="md:col-span-2">
-        <FormLocationPicker
-          control={control}
-          nameLat="latitude"
-          nameLng="longitude"
-          label="Select visit location"
-          setValue={setValue}
-        />
-      </div>
-
-      <div className="md:col-span-2">
+      <div className="md:col-span-2 relative z-20">
         <FormAddressSearch<SparkFormData>
           name="address"
           label="Address"
@@ -118,6 +108,16 @@ export function Step1Basic({
               shouldTouch: true,
             });
           }}
+        />
+      </div>
+
+      <div className="md:col-span-2 relative z-0">
+        <FormLocationPicker
+          control={control}
+          nameLat="latitude"
+          nameLng="longitude"
+          label="Select visit location"
+          setValue={setValue}
         />
       </div>
     </div>

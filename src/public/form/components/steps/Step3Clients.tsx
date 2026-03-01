@@ -67,6 +67,7 @@ export function Step3Clients({
     control,
     name: "stateId",
   });
+  const isLocationSelected = Boolean(selectedStateId);
 
   useEffect(() => {
     if (selectedDistributorId) {
@@ -74,7 +75,10 @@ export function Step3Clients({
       if (selected) {
         setValue("distributor", selected.name, { shouldValidate: true });
       }
+      return;
     }
+    setValue("distributor", "", { shouldValidate: true });
+    setValue("distributorEmail", "", { shouldValidate: true });
   }, [distributors, selectedDistributorId, setValue]);
 
   useEffect(() => {
@@ -87,6 +91,8 @@ export function Step3Clients({
       return;
     }
     setSelectedRetailer(null);
+    setValue("retailer", "", { shouldValidate: true });
+    setValue("retailerAddress", "", { shouldValidate: true });
   }, [retailers, selectedRetailerId, setValue]);
 
   useEffect(() => {
@@ -192,6 +198,11 @@ export function Step3Clients({
         />
       </div>
       <div className="space-y-6 pt-4 border-t border-base-300">
+        {!isLocationSelected && (
+          <p className="text-sm text-warning">
+            Select a state first to enable distributor and retailer.
+          </p>
+        )}
         <h3 className="font-semibold text-lg">Distributor Details</h3>
         {/* DISTRIBUTOR TEXT INPUTS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -205,13 +216,14 @@ export function Step3Clients({
             }))}
             placeholder="Search a distributor"
             onSearch={setDistributorQuery}
+            disabled={!isLocationSelected}
           />
           <FormInputText
             name="distributor"
             label="Other Distributor"
             control={control}
             placeholder="Other Distributor"
-            disabled={!!selectedDistributorId}
+            disabled={!!selectedDistributorId || !isLocationSelected}
           />
 
           <FormInputText
@@ -219,7 +231,7 @@ export function Step3Clients({
             label="Distributor Email"
             control={control}
             placeholder="distributor@example.com"
-            disabled={!!selectedDistributorId}
+            disabled={!!selectedDistributorId || !isLocationSelected}
           />
         </div>
       </div>
@@ -238,20 +250,21 @@ export function Step3Clients({
           }))}
           placeholder="Search a retailer"
           onSearch={onRetailerSearch}
+          disabled={!isLocationSelected}
         />
           <FormInputText
             name="retailer"
             label="Other Retailer"
             control={control}
             placeholder="Retail store name"
-            disabled={!!selectedRetailerId}
+            disabled={!!selectedRetailerId || !isLocationSelected}
           />
           <FormInputText
             name="retailerAddress"
             label="Retailer Address"
             control={control}
             placeholder="Street, city, and store reference"
-            disabled={!!selectedRetailerId}
+            disabled={!!selectedRetailerId || !isLocationSelected}
           />
         </div>
         <div className="space-y-6 pt-4 border-t border-base-300">

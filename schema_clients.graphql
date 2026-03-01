@@ -272,12 +272,13 @@ type AmbassadorInvitationTypeCountableEdge {
 }
 
 """
-AmbassadorJob(id, uuid, recap_uploaded, appear_as_rfp, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
+AmbassadorJob(id, uuid, recap_uploaded, accepted_terms, appear_as_rfp, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
 """
 type AmbassadorJob implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
+  acceptedTerms: Boolean!
   appearAsRfp: Boolean!
   tenantId: ID!
   ambassadorId: ID!
@@ -317,6 +318,7 @@ input AmbassadorJobFiltersInput {
   statuses: [AmbassadorJobStatusFilter!] = null
   statusId: ID = null
   statusSlug: String = null
+  acceptedTerms: Boolean = null
 }
 
 enum AmbassadorJobStatusFilter {
@@ -1897,6 +1899,8 @@ input EventFiltersInput {
   retailerStateId: ID = null
   distributorStateId: ID = null
   date: String = null
+  startDate: String = null
+  endDate: String = null
   coordinates: CoordinatesFilterInput = null
   edited: Boolean = null
 }
@@ -2273,6 +2277,8 @@ input JobFiltersInput {
   eventId: ID = null
   status: JobStatusFilter = null
   statuses: [JobStatusFilter!] = null
+  startDate: String = null
+  endDate: String = null
   edited: Boolean = null
 }
 
@@ -2694,7 +2700,7 @@ type Mutation {
   inviteAmbassadorsToJob(input: InviteAmbassadorsToJobInput!): InviteAmbassadorsToJobResponse!
   declineAmbassadorJob(input: DeclineAmbassadorJobInput!): AmbassadorJobDetailResponse!
   applyAmbassadorEvent(eventId: ID!, ambassadorId: ID = null): ApplyAmbassadorEventResponse!
-  applyAmbassadorJob(jobId: ID!): ApplyAmbassadorJobResponse!
+  applyAmbassadorJob(jobId: ID!, acceptedTerms: Boolean! = false): ApplyAmbassadorJobResponse!
   createPublicAmbassador(input: CreatePublicAmbassadorInput!): PublicAmbassadorCreationResponse!
   createAmbassadorWithUser(input: CreateAmbassadorWithUserInput!): PublicAmbassadorCreationResponse!
   createAmbassadorInvitation(input: CreateAmbassadorInvitationInput!): AmbassadorInvitationResponse!
@@ -3055,7 +3061,9 @@ type Query {
   jobRequirementFile(id: ID = null, uuid: ID = null): JobRequirementFile
   availableJobs(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: JobFiltersInput = null): JobCountableConnection!
   ambassadorJobs(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorJobFiltersInput = null): AmbassadorJobCountableConnection!
+  ambassadorJobsMobile(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorJobFiltersInput = null): AmbassadorJobCountableConnection!
   ambassadorJob(id: ID = null, uuid: ID = null): AmbassadorJob
+  ambassadorJobMobile(id: ID = null, uuid: ID = null): AmbassadorJob
   jobApplicants(jobId: ID!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): AmbassadorJobCountableConnection!
   companyToAmbassadorReviews(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): CompanyToAmbassadorReviewCountableConnection!
   companyToAmbassadorReview(id: ID = null, uuid: ID = null): CompanyToAmbassadorReview
@@ -3385,6 +3393,8 @@ input RecapFiltersInput {
   clientMutationId: ID = null
   eventId: ID = null
   retailerId: ID = null
+  stateId: ID = null
+  eventDate: String = null
   eventAddress: String = null
   edited: Boolean = null
 }

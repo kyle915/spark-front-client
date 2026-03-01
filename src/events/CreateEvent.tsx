@@ -266,17 +266,15 @@ const CreateEventForm = ({ request }: FormProps) => {
     <CatalogsProvider
       eventTypes
       eventTypesFilters={eventTypeFilters}
-      distributors
-      distributorsFilters={eventTypeFilters}
-      retailers
-      retailersFilters={eventTypeFilters}
+      states
       requestStoreManagers
       requestStoreManagersFilters={{ tenantId: request.tenantId }}
     >
       {({
         eventTypes,
-        distributors,
-        retailers,
+        // distributors,
+        // retailers,
+        states,
         requestStoreManagers,
         loading,
         errors,
@@ -292,9 +290,10 @@ const CreateEventForm = ({ request }: FormProps) => {
             eventTypes={eventTypes}
             tenantId={request.tenantId}
             // requestId={request.id}
-            distributors={distributors}
+            // distributors={distributors}
+            // retailers={retailers}
             timezones={timeZones}
-            retailers={retailers}
+            states={states}
             requestStoreManagers={requestStoreManagers}
             // requestContactInfo={requestContactInfo}
             // locations={locations}
