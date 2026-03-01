@@ -23,6 +23,12 @@ export const RequestUuidQuery = graphql`
       storeManagerName
       storeManagerPhone
       declineReason
+      rmmAsigned {
+        id
+        uuid
+        firstName
+        lastName
+      }
       client {
         __typename
         id

@@ -48,6 +48,7 @@ export interface RequestFormValues {
   retailerId?: string | null;
   distributorId?: string | null;
   requestTypeId?: string | null;
+  rmmAsignedId?: string;
   clientName?: string;
   clientEmail?: string;
   entitiesLocationId?: string | null;
@@ -77,6 +78,12 @@ interface CatalogItem {
   code?: string | null;
 }
 
+interface RmmClientItem {
+  uuid: string;
+  firstName: string;
+  lastName: string;
+}
+
 interface ProductItem {
   id: string;
   name: string;
@@ -103,6 +110,8 @@ interface RequestFormProps {
   onSubmit: (data: RequestFormValues) => void;
   defaultValues?: Partial<RequestFormValues>;
   clients?: CatalogItem[];
+  rmmClients?: RmmClientItem[];
+  userIdLoggin: string;
   // retailers?: CatalogItem[];
   // distributors?: CatalogItem[];
   requestTypes: CatalogItem[];
@@ -141,6 +150,8 @@ export default function RequestForm({
   mode,
   onSubmit,
   defaultValues = {},
+  rmmClients = [],
+  userIdLoggin = "",
   // retailers = [],
   // distributors = [],
   requestTypes,
@@ -167,6 +178,7 @@ export default function RequestForm({
     retailerId: null,
     distributorId: null,
     requestTypeId: null,
+    rmmAsignedId: userIdLoggin,
     clientName: "",
     clientEmail: "",
     distributorName: "",
@@ -221,6 +233,20 @@ export default function RequestForm({
   const selectedRequestTypeId = watch("requestTypeId");
 
   useEffect(() => {
+    if (!userIdLoggin) return;
+    if (!rmmClients.length) return;
+
+    const exists = rmmClients.some((c) => c.uuid === userIdLoggin);
+
+    if (exists) {
+      setValue("rmmAsignedId", userIdLoggin, {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+    }
+  }, [userIdLoggin, rmmClients, setValue]);
+
+  useEffect(() => {
     if (prevStateIdRef.current === undefined) {
       prevStateIdRef.current = selectedStateId ?? null;
       return;
@@ -273,7 +299,6 @@ export default function RequestForm({
   // ========================
   // LOCATIONS (CITY) BY STATE WITH SEARCH
   // ========================
-
   const extractLocations = useCallback(
     (data: LocationsQueryType["response"]) =>
       data.locations?.edges?.flatMap((e) => (e?.node ? [e.node] : [])) ?? [],
@@ -743,6 +768,17 @@ export default function RequestForm({
                 control={control}
                 label="End Time"
                 rules={{ required: "End Time is required" }}
+              />
+
+              <FormAutocomplete<RequestFormValues>
+                name="rmmAsignedId"
+                control={control}
+                label="RMM Assigned"
+                placeholder="Search RMM assigned..."
+                options={rmmClients.map((c) => ({
+                  value: c.uuid,
+                  label: `${c.firstName} ${c.lastName}`,
+                }))}
               />
 
               <div className="md:col-span-2">
