@@ -3,6 +3,16 @@ import { graphql } from "react-relay";
 export const EventDashboardQuery = graphql`
   query EventDashboardQuery($filters: EventDashboardFiltersInput) {
     eventDashboard(filters: $filters) {
+      globalKpis {
+        singleCansSold
+        multiPacksSold
+        byRmm {
+          rmmId
+          rmmName
+          singleCansSold
+          multiPacksSold
+        }
+      }
       metrics {
         totalEvents
         consumersSampled

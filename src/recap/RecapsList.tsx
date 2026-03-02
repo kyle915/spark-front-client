@@ -24,6 +24,10 @@ import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import type { EventsQuery as EventsQueryType } from "@/api/queries/__generated__/EventsQuery.graphql";
 import type { StatesQuery as StatesQueryType } from "@/api/queries/__generated__/StatesQuery.graphql";
 import type { RecapsQuery as RecapsQueryType } from "@/api/queries/__generated__/RecapsQuery.graphql";
+
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
+
 // import { ApproveRecapMutation } from "@api/mutations/ApproveRecapMutation";
 // import type { ApproveRecapMutation as ApproveRecapMutationType } from "@api/mutations/__generated__/ApproveRecapMutation.graphql";
 import { GenerateRecapPdfMutation } from "@/api/mutations/GenerateRecapPdfMutation";
@@ -48,6 +52,8 @@ import { useForm } from "react-hook-form";
 import FormInputText from "@/shared/FormInputText";
 import FormAutocomplete from "@/shared/FormAutocomplete";
 import FormDatePicker from "@/shared/FormDatePicker";
+import { fetchQuery } from "relay-runtime";
+import environment from "@/api/relay/environment";
 
 const PAGE_SIZE = 10;
 
@@ -92,11 +98,11 @@ const RecapsTableContent = ({
   returnAfter,
   onExportPdf,
 }: // onApprove,
-  // onDecline,
-  // approvingId,
-  // targetApproval,
-  // isApproving,
-  RecapsTableContentProps) => {
+// onDecline,
+// approvingId,
+// targetApproval,
+// isApproving,
+RecapsTableContentProps) => {
   const navigate = useNavigate();
   const data = usePreloadedQuery<RecapsQueryType>(RecapsQuery, queryReference);
   const connection = data.recaps;
@@ -379,6 +385,12 @@ const RecapsListInner = ({
   );
 };
 
+type FilterOption = {
+  value: string;
+  label: string;
+  searchText?: string;
+};
+
 // ======================================================
 // PAGE
 // ======================================================
@@ -395,18 +407,58 @@ const RecapList = () => {
     eventId: string | null;
     stateId: string | null;
     eventDate: string;
+    rmmAsignedId: string | null; // 👈 NUEVO
   }>({
     defaultValues: {
       eventAddress: "",
       eventId: null,
       stateId: null,
       eventDate: "",
+      rmmAsignedId: null, // 👈 NUEVO
     },
   });
+  const [rmmOptions, setRmmOptions] = useState<FilterOption[]>([]);
+  const [rmmSearch, setRmmSearch] = useState("");
+  const rmmRequestIdRef = useRef(0);
+
   const eventAddressInput = watch("eventAddress");
   const selectedEventId = watch("eventId") ?? "";
   const selectedStateId = watch("stateId") ?? "";
   const selectedEventDate = watch("eventDate") ?? "";
+  const selectedRmmId = watch("rmmAsignedId") ?? "";
+
+  const loadRmm = useCallback(
+    async (query: string) => {
+      if (!tenantId) return;
+
+      const requestId = ++rmmRequestIdRef.current;
+
+      const data = await fetchQuery<RmmClientsQueryType>(
+        environment,
+        RmmClientsQuery,
+        {
+          tenantId,
+          q: query || null,
+        },
+      ).toPromise();
+
+      if (rmmRequestIdRef.current !== requestId) return;
+
+      const options =
+        data?.rmmClients?.map((rmm) => ({
+          value: rmm.id,
+          label: rmm.firstName
+            ? `${rmm.firstName} ${rmm.lastName}`
+            : rmm.username,
+          searchText: [rmm.firstName, rmm.lastName, rmm.username]
+            .filter(Boolean)
+            .join(" "),
+        })) ?? [];
+
+      setRmmOptions(options);
+    },
+    [tenantId],
+  );
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -428,6 +480,14 @@ const RecapList = () => {
     }, 500);
     return () => window.clearTimeout(handle);
   }, [stateSearchInput]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      loadRmm(rmmSearch.trim());
+    }, 500);
+
+    return () => window.clearTimeout(handle);
+  }, [rmmSearch, loadRmm]);
 
   // =========================
   // EVENTS (FROM TENANT)
@@ -477,18 +537,24 @@ const RecapList = () => {
   );
 
   const filters =
-    selectedEventId || eventAddress || selectedStateId || selectedEventDate
+    selectedEventId ||
+    eventAddress ||
+    selectedStateId ||
+    selectedEventDate ||
+    selectedRmmId
       ? {
-        eventId: selectedEventId || undefined,
-        eventAddress: eventAddress || undefined,
-        stateId: selectedStateId || undefined,
-        eventDate: selectedEventDate || undefined,
-      }
+          eventId: selectedEventId || undefined,
+          eventAddress: eventAddress || undefined,
+          stateId: selectedStateId || undefined,
+          eventDate: selectedEventDate || undefined,
+          rmmAsignedId: selectedRmmId || undefined,
+        }
       : undefined;
 
-  const emptyMessage = selectedEventId || selectedStateId || selectedEventDate
-    ? "No recaps found for this event."
-    : "No recaps found.";
+  const emptyMessage =
+    selectedEventId || selectedStateId || selectedEventDate
+      ? "No recaps found for this event."
+      : "No recaps found.";
 
   return (
     <Layout>
@@ -570,6 +636,17 @@ const RecapList = () => {
             </div>
             <div className="w-full max-w-sm">
               <FormAutocomplete
+                name="rmmAsignedId"
+                control={control}
+                label="RMM Client"
+                options={rmmOptions}
+                placeholder="Search RMM client"
+                disabled={rmmOptions.length === 0}
+                onSearch={setRmmSearch}
+              />
+            </div>
+            <div className="w-full max-w-sm">
+              <FormAutocomplete
                 name="stateId"
                 control={control}
                 label="State"
@@ -602,7 +679,7 @@ const RecapList = () => {
           TABLE
       ========================= */}
           <RecapsListInner
-            key={`${selectedEventId}::${selectedStateId}::${eventAddress}::${selectedEventDate}`}
+            key={`${selectedEventId}::${selectedStateId}::${eventAddress}::${selectedEventDate}-${selectedRmmId}`} // Reset inner state when filters change
             filters={filters}
             emptyMessage={emptyMessage}
             onRefreshReady={(fn) => (refreshRef.current = fn)}
