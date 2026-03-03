@@ -276,6 +276,21 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
                 </span>
               </span>
             </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-base-content/60 whitespace-nowrap">
+                {request.rmmAsigned ? (
+                  <>
+                    <UsersIcon className="w-4 h-4 opacity-60" />
+                    Assigned RMM
+                  </>
+                ) : (
+                  <span className="font-medium text-base-content">
+                    No RMM assigned
+                  </span>
+                )}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -422,9 +437,7 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
 
               {request.declineReason?.trim() && (
                 <div>
-                  <p className="text-xs uppercase opacity-60">
-                    Decline Reason
-                  </p>
+                  <p className="text-xs uppercase opacity-60">Decline Reason</p>
                   <p className="font-medium whitespace-pre-wrap">
                     {request.declineReason}
                   </p>
