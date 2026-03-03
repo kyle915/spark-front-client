@@ -56,6 +56,12 @@ export const EventUuidQuery = graphql`
           }
         }
       }
+      rmmAsigned {
+        id
+        uuid
+        firstName
+        lastName
+      }
       request {
         __typename
         id

@@ -14,6 +14,9 @@ import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import { StatesQuery } from "@/api/queries/StatesQuery";
 import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/StatesQuery.graphql";
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
+
 import { useAlertStore } from "@/store/alertStore";
 import { dateFormat } from "@/public/form/utils/toDate";
 import {
@@ -21,19 +24,17 @@ import {
   extractDatePart,
   extractTimePart,
 } from "@/utils";
+import { useAuthStore } from "@/store/authStore";
 
 type EditEventContentProps = {
   uuid: string;
 };
 
 const EditEventContent = ({ uuid }: EditEventContentProps) => {
+  const { tenantId, user } = useAuthStore();
+
   const renderCountRef = useRef(0);
   renderCountRef.current++;
-
-  console.log(
-    `%c[EditEventContent] render #${renderCountRef.current}`,
-    "color: cyan; font-weight: bold;",
-  );
 
   const navigate = useNavigate();
   const data = useLazyLoadQuery<EventUuidQueryType>(EventUuidQuery, { uuid });
@@ -42,6 +43,14 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
   const [commitUpdateEvent] =
     useMutation<UpdateEventMutationType>(UpdateEventMutation);
   const { showAlert } = useAlertStore();
+
+  const rmmClientsData = useLazyLoadQuery<RmmClientsQueryType>(
+    RmmClientsQuery,
+    { tenantId: tenantId ?? "" },
+    { fetchPolicy: "store-and-network" },
+  );
+
+  const rmmClients = rmmClientsData.rmmClients?.map((c) => c) || [];
 
   const eventTypeFilters = useMemo(
     () => (event?.tenantId ? { tenantId: event.tenantId } : undefined),
@@ -103,6 +112,7 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
           distributorId: formData.distributorId ?? null,
           retailerId: formData.retailerId ?? null,
           notes: formData.notes ?? "",
+          rmmAsignedId: formData.rmmAsignedId,
           isNational: formData.isNational ?? false,
           startTime:
             dateValue && formData.startTime
@@ -157,6 +167,7 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
     eventTypeId: event.eventType?.id,
     requestId: event.request?.id ?? undefined,
     associateRequest: Boolean(event.request),
+    rmmAsignedId: event.rmmAsigned?.uuid ?? null,
     distributorId:
       event.distributor?.id ?? event.request?.distributor?.id ?? undefined,
     retailerId: event.retailer?.id ?? event.request?.retailer?.id ?? undefined,
@@ -178,7 +189,6 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
       event.distributor?.location?.id ??
       event.request?.distributor?.location?.id ??
       undefined,
-
     retailerLocationId:
       event.retailer?.location?.id ??
       event.request?.retailer?.location?.id ??
@@ -208,6 +218,8 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
               tenantId={event.tenantId ?? ""}
               timezones={timeZones}
               showIsNational={false}
+              rmmClients={rmmClients}
+              userIdLoggin={user?.id ?? ""}
               onSubmit={handleSubmit}
               states={states}
               defaultValues={defaultValues}

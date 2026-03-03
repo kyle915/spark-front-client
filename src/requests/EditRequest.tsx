@@ -17,6 +17,8 @@ import type { ProductTypesQuery as ProductTypesQueryType } from "@api/queries/__
 import type { ProductsQuery as ProductsQueryType } from "@api/queries/__generated__/ProductsQuery.graphql";
 import { StatesQuery } from "@/api/queries/StatesQuery";
 import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/StatesQuery.graphql";
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
 import { useAlertStore } from "@store/alertStore";
 import { dateFormat } from "@/public/form/utils/toDate";
 import {
@@ -40,6 +42,12 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
   );
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
+
+  const rmmClientsData = useLazyLoadQuery<RmmClientsQueryType>(
+    RmmClientsQuery,
+    { tenantId },
+    { fetchPolicy: "store-and-network" },
+  );
 
   const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
     TimezonesQuery,
@@ -66,6 +74,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
   );
 
   const states = statesData.states?.edges.map((e) => e.node) || [];
+  const rmmClients = rmmClientsData.rmmClients?.map((c) => c) || [];
 
   if (!request) {
     return (
@@ -104,6 +113,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
               )
             : "",
           address: formData.address,
+          rmmAsignedId: formData.rmmAsignedId,
           coordinates: (formData.coordinates ?? []) as readonly number[],
           timezoneId: formData.timezoneId ?? "",
           requestTypeId: formData.requestTypeId ?? "",
@@ -149,6 +159,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     address: request.address ?? "",
     coordinates: request.coordinates?.length ? [...request.coordinates] : null,
     timezoneId: request.timezone?.id ?? null,
+    rmmAsignedId: request.rmmAsigned?.uuid ?? null,
     distributorId:
       request.distributor?.id ?? request?.distributor?.id ?? undefined,
     retailerId: request.retailer?.id ?? request?.retailer?.id ?? undefined,
@@ -220,6 +231,8 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
               onSubmit={handleSubmit}
               clients={clients}
               states={states}
+              userIdLoggin=""
+              rmmClients={rmmClients}
               requestTypes={requestTypes}
               timezones={timezones}
               productTypes={productTypes}

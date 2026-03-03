@@ -36,6 +36,9 @@ import { RetailersQuery } from "@api/queries/RetailersQuery";
 import type { RetailersQuery as RetailersQueryType } from "@api/queries/__generated__/RetailersQuery.graphql";
 import { useEntitiesByLocation } from "../hooks/useEntitiesByLocation";
 import { useLocationsByState } from "../hooks/useLocationsByState";
+import { useSearchQuery } from "../hooks/useSearchQuery";
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
 
 export interface RequestFormValues {
   name: string;
@@ -48,6 +51,7 @@ export interface RequestFormValues {
   retailerId?: string | null;
   distributorId?: string | null;
   requestTypeId?: string | null;
+  rmmAsignedId?: string;
   clientName?: string;
   clientEmail?: string;
   entitiesLocationId?: string | null;
@@ -77,6 +81,12 @@ interface CatalogItem {
   code?: string | null;
 }
 
+interface RmmClientItem {
+  uuid: string;
+  firstName: string;
+  lastName: string;
+}
+
 interface ProductItem {
   id: string;
   name: string;
@@ -103,6 +113,8 @@ interface RequestFormProps {
   onSubmit: (data: RequestFormValues) => void;
   defaultValues?: Partial<RequestFormValues>;
   clients?: CatalogItem[];
+  rmmClients?: RmmClientItem[];
+  userIdLoggin: string;
   // retailers?: CatalogItem[];
   // distributors?: CatalogItem[];
   requestTypes: CatalogItem[];
@@ -141,6 +153,8 @@ export default function RequestForm({
   mode,
   onSubmit,
   defaultValues = {},
+  rmmClients = [],
+  userIdLoggin = "",
   // retailers = [],
   // distributors = [],
   requestTypes,
@@ -167,6 +181,7 @@ export default function RequestForm({
     retailerId: null,
     distributorId: null,
     requestTypeId: null,
+    rmmAsignedId: userIdLoggin,
     clientName: "",
     clientEmail: "",
     distributorName: "",
@@ -221,6 +236,21 @@ export default function RequestForm({
   const selectedRequestTypeId = watch("requestTypeId");
 
   useEffect(() => {
+    if (mode !== "create") return;
+    if (!userIdLoggin) return;
+    if (!rmmClients.length) return;
+
+    const exists = rmmClients.some((c) => c.uuid === userIdLoggin);
+
+    if (exists) {
+      setValue("rmmAsignedId", userIdLoggin, {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+    }
+  }, [mode, userIdLoggin, rmmClients, setValue]);
+
+  useEffect(() => {
     if (prevStateIdRef.current === undefined) {
       prevStateIdRef.current = selectedStateId ?? null;
       return;
@@ -270,10 +300,39 @@ export default function RequestForm({
     return selected?.name === "Event Activation";
   }, [selectedRequestTypeId, requestTypes]);
 
+  const extractRmmClients = useCallback(
+    (data: RmmClientsQueryType["response"]) =>
+      data.rmmClients?.flatMap((e) => (e ? [e] : [])) ?? [],
+    [],
+  );
+
+  const rmmSearchVariables = useMemo(() => ({ tenantId }), [tenantId]);
+
+  const rmmSearchHook = useSearchQuery<
+    { uuid: string; firstName: string; lastName: string },
+    RmmClientsQueryType
+  >({
+    queryDocument: RmmClientsQuery,
+    extractNodes: extractRmmClients,
+    variables: rmmSearchVariables,
+    minLength: 1,
+  });
+
+  const rmmOptions = useMemo(() => {
+    const source =
+      rmmSearchHook.searchTerm.trim().length >= 1
+        ? rmmSearchHook.items
+        : rmmClients;
+
+    return source.map((c) => ({
+      value: c.uuid,
+      label: `${c.firstName} ${c.lastName}`,
+    }));
+  }, [rmmSearchHook.searchTerm, rmmSearchHook.items, rmmClients]);
+
   // ========================
   // LOCATIONS (CITY) BY STATE WITH SEARCH
   // ========================
-
   const extractLocations = useCallback(
     (data: LocationsQueryType["response"]) =>
       data.locations?.edges?.flatMap((e) => (e?.node ? [e.node] : [])) ?? [],
@@ -743,6 +802,16 @@ export default function RequestForm({
                 control={control}
                 label="End Time"
                 rules={{ required: "End Time is required" }}
+              />
+
+              <FormAutocomplete
+                name="rmmAsignedId"
+                control={control}
+                label="RMM Assigned"
+                placeholder="Search RMM..."
+                options={rmmOptions}
+                onSearch={rmmSearchHook.setSearchTerm}
+                loading={rmmSearchHook.isLoading}
               />
 
               <div className="md:col-span-2">

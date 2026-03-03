@@ -45,6 +45,9 @@ import { useAutoTimezoneFromCoordinates } from "@/requests/hooks/useAutoTimezone
 import { useEntitiesByLocation } from "@/requests/hooks/useEntitiesByLocation";
 import { useAlertStore } from "@/store/alertStore";
 import { useLocationsByState } from "@/requests/hooks/useLocationsByState";
+import { useSearchQuery } from "@/requests/hooks/useSearchQuery";
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
 
 interface CatalogItem {
   id: string;
@@ -59,10 +62,12 @@ export default function EventForm({
   mode,
   eventTypes,
   tenantId,
+  rmmClients = [],
   timezones = [],
   showRequestField = false,
   showAssociateRequestToggle = true,
   states = [],
+  userIdLoggin = "",
   requestContactInfo,
   contactMode,
   onSubmit,
@@ -84,6 +89,7 @@ export default function EventForm({
     endTime: "",
     notes: "",
     isNational: false,
+    rmmAsignedId: userIdLoggin,
     coordinates: null,
     timezoneId: null,
     distributorId: null,
@@ -173,6 +179,50 @@ export default function EventForm({
   const selectedTimezoneId = watch("timezoneId");
   const selectedCoordinates = watch("coordinates");
   const associateRequest = watch("associateRequest");
+
+  useEffect(() => {
+    if (mode !== "create") return;
+    if (!userIdLoggin) return;
+    if (!rmmClients.length) return;
+
+    const exists = rmmClients.some((c) => c.uuid === userIdLoggin);
+
+    if (exists) {
+      setValue("rmmAsignedId", userIdLoggin, {
+        shouldDirty: false,
+        shouldTouch: false,
+      });
+    }
+  }, [mode, userIdLoggin, rmmClients, setValue]);
+
+  const extractRmmClients = useCallback(
+    (data: RmmClientsQueryType["response"]) =>
+      data.rmmClients?.flatMap((e) => (e ? [e] : [])) ?? [],
+    [],
+  );
+  const rmmSearchVariables = useMemo(() => ({ tenantId }), [tenantId]);
+
+  const rmmSearchHook = useSearchQuery<
+    { uuid: string; firstName: string; lastName: string },
+    RmmClientsQueryType
+  >({
+    queryDocument: RmmClientsQuery,
+    extractNodes: extractRmmClients,
+    variables: rmmSearchVariables,
+    minLength: 1,
+  });
+
+  const rmmOptions = useMemo(() => {
+    const source =
+      rmmSearchHook.searchTerm.trim().length >= 1
+        ? rmmSearchHook.items
+        : rmmClients;
+
+    return source.map((c) => ({
+      value: c.uuid,
+      label: `${c.firstName} ${c.lastName}`,
+    }));
+  }, [rmmSearchHook.searchTerm, rmmSearchHook.items, rmmClients]);
 
   useAutoTimezoneFromCoordinates<EventFormValues, "timezoneId">({
     coordinates: selectedCoordinates,
@@ -641,6 +691,16 @@ export default function EventForm({
                 control={control}
                 label="End Time"
                 rules={{ required: "End Time is required" }}
+              />
+
+              <FormAutocomplete
+                name="rmmAsignedId"
+                control={control}
+                label="RMM Assigned"
+                placeholder="Search RMM..."
+                options={rmmOptions}
+                onSearch={rmmSearchHook.setSearchTerm}
+                loading={rmmSearchHook.isLoading}
               />
 
               <div className="md:col-span-2">

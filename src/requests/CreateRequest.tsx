@@ -10,7 +10,9 @@ import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
 import { StatesQuery } from "@api/queries/StatesQuery";
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 
+import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
 import type { RequestTypesQuery as RequestTypesQueryType } from "@api/queries/__generated__/RequestTypesQuery.graphql";
 import type { ProductTypesQuery as ProductTypesQueryType } from "@api/queries/__generated__/ProductTypesQuery.graphql";
 import type { ProductsQuery as ProductsQueryType } from "@api/queries/__generated__/ProductsQuery.graphql";
@@ -28,12 +30,19 @@ import CatalogsProvider from "@/shared/CatalogsProvider";
 
 interface CreateRequestFormProps {
   tenantId: string;
+  userId?: string;
 }
 
-const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
+const CreateRequestForm = ({ tenantId, userId }: CreateRequestFormProps) => {
   // ========================
   // QUERIES
   // ========================
+  const rmmClientsData = useLazyLoadQuery<RmmClientsQueryType>(
+    RmmClientsQuery,
+    { tenantId },
+    { fetchPolicy: "store-and-network" },
+  );
+
   const requestTypesData = useLazyLoadQuery<RequestTypesQueryType>(
     RequestTypesQuery,
     { filters: { tenantId } },
@@ -77,6 +86,8 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
   // ========================
   // DATA MAPPING
   // ========================
+  const rmmClients = rmmClientsData.rmmClients?.map((c) => c) || [];
+
   const states = statesData.states?.edges.map((e) => e.node) || [];
 
   const requestTypes =
@@ -126,7 +137,7 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
           distributorId: formData.distributorId ?? null,
           retailerId: formData.retailerId ?? null,
           storeManagerId: formData.storeManagerId ?? null,
-
+          rmmAsignedId: formData.rmmAsignedId,
           // Create-only fields
           clientName: formData.clientName!,
           clientEmail: formData.clientEmail!,
@@ -180,6 +191,9 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
 
   const filters = { tenantId: tenantId };
 
+  console.log(userId);
+  console.log(rmmClients);
+
   return (
     <CatalogsProvider
       // retailers
@@ -198,6 +212,8 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
           productTypes={productTypes}
           products={products}
           tenantId={tenantId}
+          rmmClients={rmmClients}
+          userIdLoggin={userId ? userId : ""}
           // retailers={retailers}
           states={states}
           // distributors={distributors}
@@ -214,7 +230,7 @@ const CreateRequestForm = ({ tenantId }: CreateRequestFormProps) => {
 // PAGE CONTENT
 // ========================
 const CreateRequestContent = () => {
-  const { tenantId } = useAuthStore();
+  const { tenantId, user } = useAuthStore();
 
   if (!tenantId) {
     return (
@@ -227,7 +243,7 @@ const CreateRequestContent = () => {
   return (
     <>
       <Suspense fallback={<Loading />}>
-        <CreateRequestForm tenantId={tenantId} />
+        <CreateRequestForm tenantId={tenantId} userId={user?.uuid} />
       </Suspense>
     </>
   );
