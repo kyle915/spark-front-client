@@ -36,6 +36,9 @@ import { RetailersQuery } from "@api/queries/RetailersQuery";
 import type { RetailersQuery as RetailersQueryType } from "@api/queries/__generated__/RetailersQuery.graphql";
 import { useEntitiesByLocation } from "../hooks/useEntitiesByLocation";
 import { useLocationsByState } from "../hooks/useLocationsByState";
+import { useSearchQuery } from "../hooks/useSearchQuery";
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
 
 export interface RequestFormValues {
   name: string;
@@ -233,6 +236,7 @@ export default function RequestForm({
   const selectedRequestTypeId = watch("requestTypeId");
 
   useEffect(() => {
+    if (mode !== "create") return;
     if (!userIdLoggin) return;
     if (!rmmClients.length) return;
 
@@ -244,7 +248,7 @@ export default function RequestForm({
         shouldTouch: false,
       });
     }
-  }, [userIdLoggin, rmmClients, setValue]);
+  }, [mode, userIdLoggin, rmmClients, setValue]);
 
   useEffect(() => {
     if (prevStateIdRef.current === undefined) {
@@ -295,6 +299,36 @@ export default function RequestForm({
 
     return selected?.name === "Event Activation";
   }, [selectedRequestTypeId, requestTypes]);
+
+  const extractRmmClients = useCallback(
+    (data: RmmClientsQueryType["response"]) =>
+      data.rmmClients?.flatMap((e) => (e ? [e] : [])) ?? [],
+    [],
+  );
+
+  const rmmSearchVariables = useMemo(() => ({ tenantId }), [tenantId]);
+
+  const rmmSearchHook = useSearchQuery<
+    { uuid: string; firstName: string; lastName: string },
+    RmmClientsQueryType
+  >({
+    queryDocument: RmmClientsQuery,
+    extractNodes: extractRmmClients,
+    variables: rmmSearchVariables,
+    minLength: 1,
+  });
+
+  const rmmOptions = useMemo(() => {
+    const source =
+      rmmSearchHook.searchTerm.trim().length >= 1
+        ? rmmSearchHook.items
+        : rmmClients;
+
+    return source.map((c) => ({
+      value: c.uuid,
+      label: `${c.firstName} ${c.lastName}`,
+    }));
+  }, [rmmSearchHook.searchTerm, rmmSearchHook.items, rmmClients]);
 
   // ========================
   // LOCATIONS (CITY) BY STATE WITH SEARCH
@@ -770,15 +804,14 @@ export default function RequestForm({
                 rules={{ required: "End Time is required" }}
               />
 
-              <FormAutocomplete<RequestFormValues>
+              <FormAutocomplete
                 name="rmmAsignedId"
                 control={control}
                 label="RMM Assigned"
-                placeholder="Search RMM assigned..."
-                options={rmmClients.map((c) => ({
-                  value: c.uuid,
-                  label: `${c.firstName} ${c.lastName}`,
-                }))}
+                placeholder="Search RMM..."
+                options={rmmOptions}
+                onSearch={rmmSearchHook.setSearchTerm}
+                loading={rmmSearchHook.isLoading}
               />
 
               <div className="md:col-span-2">
