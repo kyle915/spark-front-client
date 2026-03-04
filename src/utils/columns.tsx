@@ -14,6 +14,12 @@ import type {
 } from "@/types/columnsTypes";
 import { formatDate, formatTime } from "@/utils";
 
+const getRecapPrimaryLocation = (row: RecapRow) =>
+  row.event?.retailer?.location ??
+  row.event?.distributor?.location ??
+  row.event?.request?.retailer?.location ??
+  row.event?.request?.distributor?.location;
+
 export const requestColumns: Column<RequestRow>[] = [
   {
     key: "name",
@@ -184,12 +190,12 @@ export const createRecapColumns = (
   {
     key: "retailerState",
     label: "State",
-    render: (_value, row) => row.event?.retailer?.location?.state?.name,
+    render: (_value, row) => getRecapPrimaryLocation(row)?.state?.name ?? "-",
   },
   {
     key: "retailerLocation",
     label: "Location",
-    render: (_value, row) => row.event?.retailer?.location?.name ?? "-",
+    render: (_value, row) => getRecapPrimaryLocation(row)?.name ?? "-",
   },
   {
     key: "eventAddress",
