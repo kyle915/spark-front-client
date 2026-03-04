@@ -23,7 +23,8 @@ interface NodeRetailer {
 export function usePublicRetailer(
   requestUrlName: string,
   stateId?: string,
-  q?: string
+  q?: string,
+  isNational?: boolean,
 ) {
   const [retailers, setRetailers] = useState<Retailer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,16 +32,20 @@ export function usePublicRetailer(
   useEffect(() => {
     if (!requestUrlName) return;
     setLoading(true);
+    const filters: { isNational?: boolean; stateId?: string } = {};
+    if (typeof isNational === "boolean") filters.isNational = isNational;
+    if (isNational === false && stateId) filters.stateId = stateId;
+
     gqlRequest<NodeRetailer>(PUBLIC_RETAILER_QUERY, {
       requestUrlName,
-      filters: stateId ? { stateId } : null,
+      filters: Object.keys(filters).length ? filters : null,
       q,
     })
       .then((data) => {
         setRetailers(mapQuery(data.publicRetailers?.edges));
       })
       .finally(() => setLoading(false));
-  }, [requestUrlName, stateId, q]);
+  }, [requestUrlName, stateId, q, isNational]);
 
   return { retailers, loading };
 }

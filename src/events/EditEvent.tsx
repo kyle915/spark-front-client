@@ -167,10 +167,13 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
     eventTypeId: event.eventType?.id,
     requestId: event.request?.id ?? undefined,
     associateRequest: Boolean(event.request),
-    rmmAsignedId: event.rmmAsigned?.uuid ?? null,
+    rmmAsignedId: event.rmmAsigned?.id ?? null,
     distributorId:
       event.distributor?.id ?? event.request?.distributor?.id ?? undefined,
+    distributorName:
+      event.distributor?.name ?? event.request?.distributor?.name ?? "",
     retailerId: event.retailer?.id ?? event.request?.retailer?.id ?? undefined,
+    retailerName: event.retailer?.name ?? event.request?.retailer?.name ?? "",
     stateId:
       event.retailer?.location?.state?.id ??
       event.distributor?.location?.state?.id ??

@@ -52,7 +52,11 @@ const CreateEventPage = () => {
   return (
     <Layout>
       <Suspense fallback={<Loading />}>
-        <CreateEventContent uuid={uuid} userId={user?.uuid ?? ""} />
+        <CreateEventContent
+          uuid={uuid}
+          userId={user?.id ?? ""}
+          userUuid={user?.uuid ?? ""}
+        />
       </Suspense>
     </Layout>
   );
@@ -62,9 +66,11 @@ const CreateEventPage = () => {
 const CreateEventContent = ({
   uuid,
   userId,
+  userUuid,
 }: {
   uuid: string;
   userId: string;
+  userUuid: string;
 }) => {
   const data = useLazyLoadQuery<RequestUuidQueryType>(RequestUuidQuery, {
     uuid,
@@ -78,16 +84,19 @@ const CreateEventContent = ({
     );
   }
 
-  return <CreateEventForm request={data.request} userId={userId} />;
+  return (
+    <CreateEventForm request={data.request} userId={userId} userUuid={userUuid} />
+  );
 };
 
 /* ================= Form ================= */
 type FormProps = {
   request: NonNullable<RequestUuidQueryType["response"]["request"]>;
   userId: string;
+  userUuid: string;
 };
 
-const CreateEventForm = ({ request, userId }: FormProps) => {
+const CreateEventForm = ({ request, userId, userUuid }: FormProps) => {
   const navigate = useNavigate();
   const { showAlert } = useAlertStore();
 
@@ -273,6 +282,7 @@ const CreateEventForm = ({ request, userId }: FormProps) => {
     notes: "",
     coordinates: request.coordinates.map((coord) => coord) ?? undefined,
     isNational: false,
+    isNationalRetailer: true,
     timezoneId: request.timezone?.id ?? null,
     distributorId: request.distributor?.id ?? null,
     retailerId: request.retailer?.id ?? null,
@@ -313,6 +323,7 @@ const CreateEventForm = ({ request, userId }: FormProps) => {
             tenantId={request.tenantId}
             rmmClients={rmmClients}
             userIdLoggin={userId ? userId : ""}
+            userUuidLoggin={userUuid ? userUuid : ""}
             // requestId={request.id}
             // distributors={distributors}
             // retailers={retailers}

@@ -44,6 +44,7 @@ export const EventUuidQuery = graphql`
         id
         uuid
         name
+        isNational
         location {
           id
           name
@@ -107,6 +108,7 @@ export const EventUuidQuery = graphql`
           id
           uuid
           name
+          isNational
           location {
             id
             name

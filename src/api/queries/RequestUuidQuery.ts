@@ -59,6 +59,7 @@ export const RequestUuidQuery = graphql`
         id
         uuid
         name
+        isNational
         address
         storeContact
         location {

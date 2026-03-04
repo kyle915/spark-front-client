@@ -142,6 +142,7 @@ const CreateEventWithoutRequestContent = () => {
       date: "",
       notes: "",
       isNational: false,
+      isNationalRetailer: true,
       coordinates: undefined,
     }),
     [tenantId],
@@ -193,7 +194,8 @@ const CreateEventWithoutRequestContent = () => {
                 tenantId={tenantId ?? ""}
                 timezones={timezones}
                 rmmClients={rmmClients}
-                userIdLoggin={user?.uuid ?? ""}
+                userIdLoggin={user?.id ?? ""}
+                userUuidLoggin={user?.uuid ?? ""}
                 requestStoreManagers={requestStoreManagers}
                 onSubmit={handleSubmit}
                 states={states}
