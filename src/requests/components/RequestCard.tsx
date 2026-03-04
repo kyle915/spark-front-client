@@ -133,6 +133,14 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
     if (!request.approvedBy) return "N/A";
     return getUserLabel(request.approvedBy);
   }, [request.approvedBy]);
+  const rmmAssignedLabel = useMemo(() => {
+    if (!request.rmmAsigned) return "No RMM assigned";
+    return getUserLabel(request.rmmAsigned);
+  }, [request.rmmAsigned]);
+  const isNationalRetailer = Boolean(
+    (request.retailer as { isNational?: boolean } | null)?.isNational,
+  );
+  const retailerDisplayName = request.retailer?.name ?? request.retailerName ?? "—";
 
   return (
     <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
@@ -282,7 +290,10 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
                 {request.rmmAsigned ? (
                   <>
                     <UsersIcon className="w-4 h-4 opacity-60" />
-                    Assigned RMM
+                    Assigned RMM:{" "}
+                    <span className="font-medium text-base-content">
+                      {rmmAssignedLabel}
+                    </span>
                   </>
                 ) : (
                   <span className="font-medium text-base-content">
@@ -339,28 +350,47 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
               <p className="font-semibold text-lg">Location Information</p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <InfoItem
-                  label="Retailer State"
-                  value={request.retailer?.location?.state?.name ?? "—"}
-                  Icon={MapPinIcon}
-                />
-                <InfoItem
-                  label="Retailer Location"
-                  value={request.retailer?.location?.name ?? "—"}
-                  Icon={MapPinIcon}
-                />
+                {isNationalRetailer ? (
+                  <>
+                    <InfoItem
+                      label="Is National"
+                      value="Yes"
+                      Icon={MapPinIcon}
+                    />
+                    <InfoItem
+                      label="Retailer"
+                      value={retailerDisplayName}
+                      Icon={MapPinIcon}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <InfoItem
+                      label="Retailer State"
+                      value={request.retailer?.location?.state?.name ?? "—"}
+                      Icon={MapPinIcon}
+                    />
+                    <InfoItem
+                      label="Retailer Location"
+                      value={request.retailer?.location?.name ?? "—"}
+                      Icon={MapPinIcon}
+                    />
 
-                <InfoItem
-                  label="Retailer Zip"
-                  value={request.retailer?.location?.zip ?? "—"}
-                  Icon={MapPinIcon}
-                />
+                    <InfoItem
+                      label="Retailer Zip"
+                      value={request.retailer?.location?.zip ?? "—"}
+                      Icon={MapPinIcon}
+                    />
+                  </>
+                )}
 
-                <InfoItem
-                  label="Distributor State"
-                  value={request.distributor?.location?.state?.name ?? "—"}
-                  Icon={MapPinIcon}
-                />
+                <div className="md:col-start-1">
+                  <InfoItem
+                    label="Distributor State"
+                    value={request.distributor?.location?.state?.name ?? "—"}
+                    Icon={MapPinIcon}
+                  />
+                </div>
                 <InfoItem
                   label="Distributor Location"
                   value={request.distributor?.location?.name ?? "—"}

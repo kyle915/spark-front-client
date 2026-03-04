@@ -19,6 +19,7 @@ interface SparkFormProps {
   onStateSearch: (value: string) => void;
   onStateChange: (value: string) => void;
   onRetailerSearch: (value: string) => void;
+  onNationalRetailerChange: (value: boolean) => void;
   distributors: {
     id: string;
     name: string;
@@ -64,6 +65,7 @@ export default function SparkForm(props: SparkFormProps) {
     onStateSearch,
     onStateChange,
     onRetailerSearch,
+    onNationalRetailerChange,
     products,
     productTypes,
     distributors,
@@ -123,6 +125,7 @@ export default function SparkForm(props: SparkFormProps) {
           onStateSearch={onStateSearch}
           onStateChange={onStateChange}
           onRetailerSearch={onRetailerSearch}
+          onNationalRetailerChange={onNationalRetailerChange}
           distributors={distributors}
           retailers={retailers}
         />

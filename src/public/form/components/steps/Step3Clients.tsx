@@ -1,11 +1,12 @@
 import FormAutocomplete from "@/shared/FormAutocomplete";
+import FormCheckbox from "@/shared/FormCheckbox";
 import FormInputText from "@/shared/FormInputText";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useWatch, type Control, type UseFormSetValue } from "react-hook-form";
 import type { SparkFormData } from "../../schema/schema";
 
 interface Step3NewProps {
-  control: Control<SparkFormData, any, SparkFormData>;
+  control: Control<SparkFormData>;
   setValue: UseFormSetValue<SparkFormData>;
   distributors: {
     id: string;
@@ -20,6 +21,7 @@ interface Step3NewProps {
   onStateSearch: (value: string) => void;
   onStateChange: (value: string) => void;
   onRetailerSearch: (value: string) => void;
+  onNationalRetailerChange: (value: boolean) => void;
   requestTypes: {
     id: string;
     name: string;
@@ -38,6 +40,7 @@ export function Step3Clients({
   onStateSearch,
   onStateChange,
   onRetailerSearch,
+  onNationalRetailerChange,
   distributors,
   retailers,
 }: Step3NewProps) {
@@ -67,6 +70,11 @@ export function Step3Clients({
     control,
     name: "stateId",
   });
+  const isNationalRetailer = useWatch({
+    control,
+    name: "isNationalRetailer",
+  });
+  const prevIsNationalRetailerRef = useRef<boolean | undefined>(undefined);
   const isLocationSelected = Boolean(selectedStateId);
 
   useEffect(() => {
@@ -105,18 +113,24 @@ export function Step3Clients({
       }
     }
 
-    if (selectedRetailerId) {
-      const selected = retailers.find((r) => r.id === selectedRetailerId);
-      if (selected && selected.location?.state?.id !== selectedStateId) {
-        setValue("retailerId", "", { shouldValidate: true });
-      }
-    }
   }, [
     distributors,
-    retailers,
     selectedDistributorId,
     selectedStateId,
+    setValue,
+  ]);
+
+  useEffect(() => {
+    if (isNationalRetailer || !selectedStateId || !selectedRetailerId) return;
+    const selected = retailers.find((r) => r.id === selectedRetailerId);
+    if (selected && selected.location?.state?.id !== selectedStateId) {
+      setValue("retailerId", "", { shouldValidate: true });
+    }
+  }, [
+    isNationalRetailer,
+    selectedStateId,
     selectedRetailerId,
+    retailers,
     setValue,
   ]);
 
@@ -135,6 +149,21 @@ export function Step3Clients({
   useEffect(() => {
     onStateChange(selectedStateId ?? "");
   }, [onStateChange, selectedStateId]);
+
+  useEffect(() => {
+    const currentValue = Boolean(isNationalRetailer);
+    onNationalRetailerChange(currentValue);
+
+    if (prevIsNationalRetailerRef.current === undefined) {
+      prevIsNationalRetailerRef.current = currentValue;
+      return;
+    }
+
+    if (prevIsNationalRetailerRef.current !== currentValue) {
+      prevIsNationalRetailerRef.current = currentValue;
+      setValue("retailerId", "", { shouldValidate: true });
+    }
+  }, [isNationalRetailer, onNationalRetailerChange, setValue]);
 
   const filteredRequestTypes = useMemo(() => {
     const q = requestTypeQuery.trim().toLowerCase();
@@ -160,15 +189,16 @@ export function Step3Clients({
   }, [states, selectedState]);
 
   const filteredRetailers = useMemo(() => {
-    const byState = selectedStateId
-      ? retailers.filter((r) => r.location?.state?.id === selectedStateId)
-      : retailers;
-    if (!selectedRetailer) return byState;
+    const baseRetailers =
+      isNationalRetailer || !selectedStateId
+        ? retailers
+        : retailers.filter((r) => r.location?.state?.id === selectedStateId);
+    if (!selectedRetailer) return baseRetailers;
     return [
       selectedRetailer,
-      ...byState.filter((r) => r.id !== selectedRetailer.id),
+      ...baseRetailers.filter((r) => r.id !== selectedRetailer.id),
     ];
-  }, [retailers, selectedStateId, selectedRetailer]);
+  }, [isNationalRetailer, retailers, selectedStateId, selectedRetailer]);
 
   return (
     <div className="space-y-10">
@@ -238,20 +268,25 @@ export function Step3Clients({
       {/* RETAILER EXTRA FIELDS */}
       <div className="space-y-6 pt-4 border-t border-base-300">
         <h3 className="font-semibold text-lg">Retailer Details</h3>
+        <FormCheckbox
+          name="isNationalRetailer"
+          label="Is National Retailer"
+          control={control}
+        />
         {/* RETAILER INPUT */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormAutocomplete
             name="retailerId"
             label="Retailer"
             control={control}
-          options={filteredRetailers.map((r) => ({
-            value: r.id,
-            label: r.name,
-          }))}
-          placeholder="Search a retailer"
-          onSearch={onRetailerSearch}
-          disabled={!isLocationSelected}
-        />
+            options={filteredRetailers.map((r) => ({
+              value: r.id,
+              label: r.name,
+            }))}
+            placeholder="Search a retailer"
+            onSearch={onRetailerSearch}
+            disabled={!isLocationSelected}
+          />
           <FormInputText
             name="retailer"
             label="Other Retailer"

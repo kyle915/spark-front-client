@@ -75,6 +75,7 @@ export interface EventFormValues {
   timezoneId?: string | null;
   stateId: string | null;
   entitiesLocationId?: string | null;
+  isNationalRetailer?: boolean;
   associateRequest?: boolean;
   requestLoading?: boolean;
   storeManagerName?: string | null;
@@ -92,6 +93,7 @@ export interface EventFormProps {
   eventTypes: EventType[];
   tenantId: string;
   rmmClients?: {
+    id: string;
     uuid: string;
     firstName: string;
     lastName: string;
@@ -99,6 +101,7 @@ export interface EventFormProps {
   timezones?: { id: string; name: string; code: string; offset: number }[];
   requestStoreManagers?: CatalogItem[];
   userIdLoggin?: string;
+  userUuidLoggin?: string;
   clients?: CatalogItem[];
   locations?: Location[];
   states?: CatalogItem[];

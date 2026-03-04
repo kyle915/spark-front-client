@@ -1754,7 +1754,7 @@ enum DistanceUnit {
 }
 
 """
-Distributor(id, uuid, name, email, location, tenant, created_by, updated_by, created_at, updated_at)
+Distributor(id, uuid, name, email, location, state, tenant, created_by, updated_by, created_at, updated_at)
 """
 type Distributor implements Node {
   """The Globally Unique ID of this object"""
@@ -1764,6 +1764,7 @@ type Distributor implements Node {
   email: String
   tenantId: ID!
   location: Location
+  state: State
   createdAt: String!
   updatedAt: String!
 }
@@ -1818,7 +1819,6 @@ type Event implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
-  name: String!
   coordinates: [Float!]
   address: String!
   isNational: Boolean!
@@ -1835,6 +1835,7 @@ type Event implements Node {
   timezone: TimeZone
   rmmAsigned: SparkUserType
   tenantImage: String
+  name: String!
   date: String
   startTime: String
   endTime: String
@@ -1964,7 +1965,7 @@ input EventStatusFiltersInput {
 }
 
 """
-EventType(id, uuid, name, is_default, tenant, created_by, updated_by, created_at, updated_at)
+EventType(id, uuid, name, is_default, slug, tenant, created_by, updated_by, created_at, updated_at)
 """
 type EventType implements Node {
   """The Globally Unique ID of this object"""
@@ -1972,6 +1973,7 @@ type EventType implements Node {
   uuid: String!
   name: String!
   isDefault: Boolean!
+  slug: String
   tenantId: ID!
   createdAt: String!
   updatedAt: String!
@@ -2073,6 +2075,11 @@ type FileTypeCountableEdge {
 
   """The item at the end of the edge"""
   node: FileType!
+}
+
+input ForgotPasswordInput {
+  clientMutationId: ID = null
+  email: String!
 }
 
 input GenerateRecapPdfInput {
@@ -2220,6 +2227,7 @@ type Job implements Node {
   updatedAt: String!
   attendances: [Attendance!]!
   ambassadorJobs: [AmbassadorJob!]!
+  applied: Boolean!
 }
 
 type JobCountableConnection {
@@ -2644,6 +2652,8 @@ type Mutation {
   register(input: ClientRegisterInput!): RegisterResponse!
   socialAuthGoogle(input: GoogleSocialAuthInput!): SocialAuthResponse!
   socialAuthApple(input: AppleSocialAuthInput!): SocialAuthResponse!
+  forgotPassword(input: ForgotPasswordInput!): UpdateUserResponse!
+  resetPasswordWithCode(input: ResetPasswordWithCodeInput!): UpdateUserResponse!
   createUser(input: CreateUserInput!): RegisterResponse!
   updateUser(input: UpdateUserInput!): UpdateUserResponse!
   changeUserPassword(input: ChangeUserPasswordInput!): UpdateUserResponse!
@@ -3403,6 +3413,7 @@ type RecapFileUrlResponse {
 input RecapFiltersInput {
   clientMutationId: ID = null
   eventId: ID = null
+  eventType: ID = null
   rmmAsignedId: ID = null
   retailerId: ID = null
   stateId: ID = null
@@ -3499,7 +3510,6 @@ type Request implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
-  name: String!
   address: String!
   declineReason: String
   notes: String
@@ -3527,6 +3537,7 @@ type Request implements Node {
   approvedBy: SparkUserType
   createdAt: String!
   updatedAt: String!
+  name: String!
   date: String
   startTime: String
   endTime: String
@@ -3728,8 +3739,16 @@ input RequestTypeFiltersInput {
   tenantUuid: ID = null
 }
 
+input ResetPasswordWithCodeInput {
+  clientMutationId: ID = null
+  email: String!
+  code: String!
+  password1: String!
+  password2: String!
+}
+
 """
-Retailer(id, uuid, name, address, store_contact, location, tenant, created_by, updated_by, created_at, updated_at)
+Retailer(id, uuid, name, address, store_contact, is_national, location, tenant, created_by, updated_by, created_at, updated_at)
 """
 type Retailer implements Node {
   """The Globally Unique ID of this object"""
@@ -3738,6 +3757,7 @@ type Retailer implements Node {
   name: String!
   address: String
   storeContact: String
+  isNational: Boolean!
   tenantId: ID!
   location: Location
   createdAt: String!
@@ -3771,6 +3791,7 @@ input RetailerFiltersInput {
   tenantUuid: ID = null
   locationId: ID = null
   stateId: ID = null
+  isNational: Boolean = null
 }
 
 type RetailerOption {
@@ -4664,6 +4685,8 @@ input UpsertAmbassadorProfileInput {
   clientMutationId: ID = null
   ambassadorId: ID = null
   ambassadorUuid: ID = null
+  firstName: String = null
+  lastName: String = null
   locationId: ID = null
   tShirtSize: String = null
   address: String = null
@@ -4732,13 +4755,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
-  id: ID!
-  lastName: String
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
-  firstName: String
+  lastName: String
   email: String!
+  firstName: String
+  id: ID!
   archived: Boolean!
   verified: Boolean!
 }
