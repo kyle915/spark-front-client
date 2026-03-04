@@ -62,19 +62,26 @@ export interface RecapRow {
   event?:
     | (NamedEntity & {
         address?: string | null;
-        retailer?: {
-          location?: {
-            name?: string | null;
-            state?: {
-              name?: string | null;
-              code?: string | null;
-            } | null;
-          } | null;
+        retailer?: RecapEntityWithLocation | null;
+        distributor?: RecapEntityWithLocation | null;
+        request?: {
+          retailer?: RecapEntityWithLocation | null;
+          distributor?: RecapEntityWithLocation | null;
         } | null;
       })
     | null;
   createdAt?: string | null;
 }
+
+type RecapEntityWithLocation = {
+  location?: {
+    name?: string | null;
+    state?: {
+      name?: string | null;
+      code?: string | null;
+    } | null;
+  } | null;
+};
 
 export interface UserRow {
   id: string;

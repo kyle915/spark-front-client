@@ -58,6 +58,58 @@ export const RecapsQuery = graphql`
                 }
               }
             }
+            distributor {
+              id
+              uuid
+              name
+              location {
+                id
+                uuid
+                name
+                state {
+                  id
+                  uuid
+                  name
+                  code
+                }
+              }
+            }
+            request {
+              id
+              uuid
+              retailer {
+                id
+                uuid
+                name
+                location {
+                  id
+                  uuid
+                  name
+                  state {
+                    id
+                    uuid
+                    name
+                    code
+                  }
+                }
+              }
+              distributor {
+                id
+                uuid
+                name
+                location {
+                  id
+                  uuid
+                  name
+                  state {
+                    id
+                    uuid
+                    name
+                    code
+                  }
+                }
+              }
+            }
           }
           approved
           createdAt
