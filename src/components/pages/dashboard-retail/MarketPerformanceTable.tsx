@@ -1,13 +1,9 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { DollarSign } from "lucide-react";
-import { fetchQuery } from "react-relay";
 import { useForm } from "react-hook-form";
 import ChartCard from "@/components/charts/ChartCard";
-import environment from "@/api/relay/environment";
-import { DistributorsQuery } from "@/api/queries/DistributorsQuery";
-import type { DistributorsQuery as DistributorsQueryType } from "@/api/queries/__generated__/DistributorsQuery.graphql";
 import FormAutocomplete from "@/shared/FormAutocomplete";
-import { useAuthStore } from "@/store/authStore";
+import { useGlobalDistributors } from "../hooks/useGlobalDistributors";
 
 type MarketRow = {
   market: string;
@@ -16,6 +12,7 @@ type MarketRow = {
   conversion: number;
   demos: number;
   efficiency: number;
+  distributorId: string;
 };
 
 const filterOptions = [
@@ -25,18 +22,9 @@ const filterOptions = [
   "Top 10 by Purchases",
 ] as const;
 
-type DistributorOption = {
-  value: string;
-  label: string;
-  searchText?: string;
-};
-
 type DistributorFilterValues = {
   distributor: string | null;
 };
-
-type DistributorConnection = DistributorsQueryType["response"]["distributors"];
-type DistributorNode = DistributorConnection["edges"][number]["node"];
 
 function filterMarkets(data: MarketRow[], filter: string): MarketRow[] {
   switch (filter) {
@@ -57,147 +45,51 @@ function filterMarkets(data: MarketRow[], filter: string): MarketRow[] {
 export default memo(function MarketPerformanceTable({
   data,
   rowsPerPage = 7,
-  distributors = [],
-  selectedDistributor = "",
-  onDistributorChange,
 }: {
   data: MarketRow[];
   rowsPerPage?: number;
-  distributors?: DistributorOption[];
-  selectedDistributor?: string;
-  onDistributorChange?: (value: string) => void;
 }) {
-  const tenantId = useAuthStore((state) => state.tenantId);
   const [filter, setFilter] = useState<string>("All Retails");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [distributorSearch, setDistributorSearch] = useState("");
-  const [isLoadingDistributors, setIsLoadingDistributors] = useState(false);
-  const [distributorOptions, setDistributorOptions] =
-    useState<DistributorOption[]>(distributors);
-  const distributorRequestIdRef = useRef(0);
-  const isSyncingFromPropsRef = useRef(false);
-  const lastSelectedDistributorRef = useRef(selectedDistributor);
-  const { control, watch, setValue, getValues } = useForm<DistributorFilterValues>({
+
+  const { distributors, loading } = useGlobalDistributors();
+
+  const { control, watch } = useForm<DistributorFilterValues>({
     defaultValues: {
-      distributor: selectedDistributor || "",
+      distributor: "",
     },
   });
+
   const selectedDistributorValue = watch("distributor");
 
-  const loadDistributors = useCallback(
-    async (searchQuery: string) => {
-      const requestId = ++distributorRequestIdRef.current;
-      setIsLoadingDistributors(true);
+  /* =========================
+     Local Filtering
+  ========================== */
 
-      try {
-        let after: string | null = null;
-        const allNodes: DistributorNode[] = [];
-
-        while (true) {
-          const response: DistributorsQueryType["response"] | null | undefined =
-            await fetchQuery<DistributorsQueryType>(
-            environment,
-            DistributorsQuery,
-            {
-              filters: tenantId ? { tenantId } : {},
-              q: searchQuery || null,
-              first: 100,
-              after,
-            }
-          ).toPromise();
-
-          if (distributorRequestIdRef.current !== requestId) return;
-
-          const connection: DistributorConnection | undefined =
-            response?.distributors;
-          const nodes =
-            connection?.edges
-              .map((edge: DistributorConnection["edges"][number]) => edge.node)
-              .filter(
-                (node: DistributorNode | null | undefined): node is DistributorNode =>
-                  Boolean(node)
-              ) ?? [];
-
-          allNodes.push(...nodes);
-
-          const hasNextPage = connection?.pageInfo?.hasNextPage;
-          const endCursor: string | null = connection?.pageInfo?.endCursor ?? null;
-          if (!hasNextPage || !endCursor) break;
-          after = endCursor;
-        }
-
-        const options = allNodes.map((node) => ({
-          value: node.id,
-          label: node.name ?? node.email ?? node.id,
-          searchText: [node.name, node.email].filter(Boolean).join(" "),
-        }));
-
-        setDistributorOptions(options);
-      } catch {
-        if (distributorRequestIdRef.current !== requestId) return;
-        setDistributorOptions(distributors);
-      } finally {
-        if (distributorRequestIdRef.current === requestId) {
-          setIsLoadingDistributors(false);
-        }
-      }
-    },
-    [distributors, tenantId]
-  );
-
-  useEffect(() => {
-    const nextValue = selectedDistributor || "";
-    const currentValue = getValues("distributor") ?? "";
-    if (currentValue === nextValue) {
-      lastSelectedDistributorRef.current = nextValue;
-      return;
-    }
-
-    isSyncingFromPropsRef.current = true;
-    lastSelectedDistributorRef.current = nextValue;
-    setValue("distributor", nextValue);
-  }, [getValues, selectedDistributor, setValue]);
-
-  useEffect(() => {
-    if (isSyncingFromPropsRef.current) {
-      isSyncingFromPropsRef.current = false;
-      return;
-    }
-
-    const nextValue = selectedDistributorValue ?? "";
-    if (nextValue === lastSelectedDistributorRef.current) return;
-
-    lastSelectedDistributorRef.current = nextValue;
-    onDistributorChange?.(nextValue);
-    setPage(1);
-  }, [onDistributorChange, selectedDistributorValue]);
-
-  useEffect(() => {
-    void loadDistributors(distributorSearch.trim());
-  }, [distributorSearch, loadDistributors]);
-
-  // Filter + Search
   const processedData = useMemo(() => {
     let result = filterMarkets(data, filter);
 
+    // 🔥 Distributor LOCAL filter
+    if (selectedDistributorValue) {
+      result = result.filter(
+        (m) => m.distributorId === selectedDistributorValue,
+      );
+    }
+
     if (query.trim().length > 0) {
       result = result.filter((m) =>
-        m.market.toLowerCase().includes(query.toLowerCase())
+        m.market.toLowerCase().includes(query.toLowerCase()),
       );
     }
 
     return result;
-  }, [data, filter, query]);
+  }, [data, filter, query, selectedDistributorValue]);
 
   const totalPages = Math.ceil(processedData.length / rowsPerPage);
   const start = (page - 1) * rowsPerPage;
   const end = start + rowsPerPage;
   const pageRows = processedData.slice(start, end);
-  const distributorAutocompleteOptions = useMemo(
-    () => [{ value: "", label: "All Distributors" }, ...distributorOptions],
-    [distributorOptions]
-  );
 
   return (
     <ChartCard
@@ -221,20 +113,17 @@ export default memo(function MarketPerformanceTable({
             <option key={f}>{f}</option>
           ))}
         </select>
+
         <FormAutocomplete<DistributorFilterValues>
           control={control}
           name="distributor"
           label=""
-          options={distributorAutocompleteOptions}
-          onSearch={setDistributorSearch}
-          loading={isLoadingDistributors}
-          placeholder={
-            isLoadingDistributors
-              ? "Loading distributors..."
-              : "Search distributor..."
-          }
+          options={[{ value: "", label: "All Distributors" }, ...distributors]}
+          loading={loading}
+          placeholder={loading ? "Loading..." : "Search distributor..."}
           containerClassName="w-full md:max-w-xs [&_.label]:hidden"
         />
+
         {/* Search */}
         <input
           type="text"
@@ -272,7 +161,6 @@ export default memo(function MarketPerformanceTable({
                 <td>{m.consumers.toLocaleString()}</td>
                 <td>{m.purchases.toLocaleString()}</td>
 
-                {/* Conversion Badge */}
                 <td>
                   <span
                     className="px-3 py-1 rounded-full text-white text-sm font-semibold"
@@ -308,13 +196,13 @@ export default memo(function MarketPerformanceTable({
         </button>
 
         <span>
-          Page <strong>{page}</strong> of {totalPages}
+          Page <strong>{page}</strong> of {totalPages || 1}
         </span>
 
         <button
           className="btn btn-sm btn-outline"
-          disabled={page === totalPages}
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          disabled={page === totalPages || totalPages === 0}
+          onClick={() => setPage((p) => Math.min(totalPages || 1, p + 1))}
         >
           Next
         </button>

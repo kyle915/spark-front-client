@@ -27,6 +27,11 @@ export function useLocationsByState<
   const activeRequestIdRef = useRef(0);
   const cacheRef = useRef<Map<string, TItem[]>>(new Map());
   const prevStateRef = useRef<string | null | undefined>(undefined);
+  const extractNodesRef = useRef(extractNodes);
+
+  useEffect(() => {
+    extractNodesRef.current = extractNodes;
+  }, [extractNodes]);
 
   // Reset when state changes
   useEffect(() => {
@@ -45,7 +50,7 @@ export function useLocationsByState<
 
   useEffect(() => {
     if (!stateId) {
-      setItems([]);
+      setItems((prev) => (prev.length === 0 ? prev : []));
       return;
     }
 
@@ -78,13 +83,13 @@ export function useLocationsByState<
         .then((data) => {
           if (requestId !== activeRequestIdRef.current) return;
 
-          const extracted = extractNodes(data);
+          const extracted = extractNodesRef.current(data);
           cacheRef.current.set(cacheKey, extracted);
           setItems(extracted);
         })
         .catch(() => {
           if (requestId !== activeRequestIdRef.current) return;
-          setItems([]);
+          setItems((prev) => (prev.length === 0 ? prev : []));
         })
         .finally(() => {
           if (requestId !== activeRequestIdRef.current) return;
@@ -93,7 +98,7 @@ export function useLocationsByState<
     }, debounceMs);
 
     return () => clearTimeout(timeout);
-  }, [stateId, searchTerm, queryDocument, extractNodes, debounceMs]);
+  }, [stateId, searchTerm, queryDocument, debounceMs]);
 
   return {
     items,

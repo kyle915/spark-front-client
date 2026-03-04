@@ -76,6 +76,12 @@ const EventCard: React.FC<Props> = ({ event, backTo }) => {
     const minutes = String(absOffsetMinutes % 60).padStart(2, "0");
     return `${browserTimezone} (UTC${sign}${hours}:${minutes})`;
   };
+  const isNationalRetailer = Boolean(
+    (request?.retailer as { isNational?: boolean } | null)?.isNational ??
+      (event.retailer as { isNational?: boolean } | null)?.isNational,
+  );
+  const retailerDisplayName =
+    request?.retailer?.name ?? event.retailer?.name ?? "—";
 
   return (
     <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
@@ -352,24 +358,43 @@ const EventCard: React.FC<Props> = ({ event, backTo }) => {
             <div className="rounded-2xl bg-base-300/60 border border-base-100/20 p-6 space-y-6">
               <p className="font-semibold text-lg">Location Details</p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InfoItem
-                  label="Retailer"
-                  value={request?.retailer?.name ?? "—"}
-                  Icon={BuildingOfficeIcon}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {isNationalRetailer ? (
+                  <>
+                    <InfoItem
+                      label="Is National"
+                      value="Yes"
+                      Icon={MapPinIcon}
+                    />
+                    <InfoItem
+                      label="Retailer"
+                      value={retailerDisplayName}
+                      Icon={BuildingOfficeIcon}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <InfoItem
+                      label="Retailer"
+                      value={retailerDisplayName}
+                      Icon={BuildingOfficeIcon}
+                    />
 
-                <InfoItem
-                  label="Retailer Location"
-                  value={request?.retailer?.location?.name ?? "—"}
-                  Icon={MapPinIcon}
-                />
+                    <InfoItem
+                      label="Retailer Location"
+                      value={request?.retailer?.location?.name ?? "—"}
+                      Icon={MapPinIcon}
+                    />
 
-                <InfoItem
-                  label="Retailer State"
-                  value={request?.retailer?.location?.state?.name ?? "—"}
-                  Icon={MapPinIcon}
-                />
+                    <InfoItem
+                      label="Retailer State"
+                      value={request?.retailer?.location?.state?.name ?? "—"}
+                      Icon={MapPinIcon}
+                    />
+                  </>
+                )}
+
+                <div className="hidden md:block md:col-span-3" />
 
                 <InfoItem
                   label="Distributor"

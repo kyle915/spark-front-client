@@ -1,6 +1,7 @@
 import * as yup from "yup";
 
 export const sparkFormSchema = yup.object({
+  isNationalRetailer: yup.boolean().default(true),
   distributorId: yup.string().optional().nullable(),
   retailerId: yup.string().optional().nullable(),
   stateId: yup.string().optional().nullable(),

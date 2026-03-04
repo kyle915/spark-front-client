@@ -11,6 +11,9 @@ import type { EventFormValues } from "../types/events/formTypes";
 import { useMutation, useLazyLoadQuery } from "react-relay/hooks";
 import { CreateEventMutation } from "@api/mutations/CreateEventMutation";
 import type { CreateEventMutation as CreateEventMutationType } from "@api/mutations/__generated__/CreateEventMutation.graphql";
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
+
 import { useAlertStore } from "@store/alertStore";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "@/store/authStore";
@@ -18,12 +21,20 @@ import { dateFormat } from "@/public/form/utils/toDate";
 import { buildDateTimeWithOffset } from "@/utils";
 
 const CreateEventWithoutRequestContent = () => {
-  const { tenantId } = useAuthStore();
+  const { tenantId, user } = useAuthStore();
   //   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
   const [commitCreateEvent] =
     useMutation<CreateEventMutationType>(CreateEventMutation);
+
+  const rmmClientsData = useLazyLoadQuery<RmmClientsQueryType>(
+    RmmClientsQuery,
+    { tenantId: tenantId ?? "" },
+    { fetchPolicy: "store-and-network" },
+  );
+
+  const rmmClients = rmmClientsData.rmmClients?.map((c) => c) || [];
 
   const statesData = useLazyLoadQuery<StatesQueryType>(
     StatesQuery,
@@ -73,6 +84,7 @@ const CreateEventWithoutRequestContent = () => {
       notes: formData.notes ?? "",
       isNational: formData.isNational ?? false,
       timezoneId: formData.timezoneId ?? null,
+      rmmAsignedId: formData.rmmAsignedId,
       startTime:
         dateValue && formData.startTime
           ? buildDateTimeWithOffset(
@@ -130,6 +142,7 @@ const CreateEventWithoutRequestContent = () => {
       date: "",
       notes: "",
       isNational: false,
+      isNationalRetailer: true,
       coordinates: undefined,
     }),
     [tenantId],
@@ -180,6 +193,9 @@ const CreateEventWithoutRequestContent = () => {
                 eventTypes={eventTypes}
                 tenantId={tenantId ?? ""}
                 timezones={timezones}
+                rmmClients={rmmClients}
+                userIdLoggin={user?.id ?? ""}
+                userUuidLoggin={user?.uuid ?? ""}
                 requestStoreManagers={requestStoreManagers}
                 onSubmit={handleSubmit}
                 states={states}

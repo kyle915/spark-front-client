@@ -30,10 +30,14 @@ import {
   extractDatePart,
   extractTimePart,
 } from "@/utils";
+import { useAuthStore } from "@/store/authStore";
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
 
 /* ================= Page ================= */
 const CreateEventPage = () => {
   const { uuid } = useParams<{ uuid: string }>();
+  const { user } = useAuthStore();
 
   if (!uuid) {
     return (
@@ -48,14 +52,26 @@ const CreateEventPage = () => {
   return (
     <Layout>
       <Suspense fallback={<Loading />}>
-        <CreateEventContent uuid={uuid} />
+        <CreateEventContent
+          uuid={uuid}
+          userId={user?.id ?? ""}
+          userUuid={user?.uuid ?? ""}
+        />
       </Suspense>
     </Layout>
   );
 };
 
 /* ================= Content only load ================= */
-const CreateEventContent = ({ uuid }: { uuid: string }) => {
+const CreateEventContent = ({
+  uuid,
+  userId,
+  userUuid,
+}: {
+  uuid: string;
+  userId: string;
+  userUuid: string;
+}) => {
   const data = useLazyLoadQuery<RequestUuidQueryType>(RequestUuidQuery, {
     uuid,
   });
@@ -68,21 +84,33 @@ const CreateEventContent = ({ uuid }: { uuid: string }) => {
     );
   }
 
-  return <CreateEventForm request={data.request} />;
+  return (
+    <CreateEventForm request={data.request} userId={userId} userUuid={userUuid} />
+  );
 };
 
 /* ================= Form ================= */
 type FormProps = {
   request: NonNullable<RequestUuidQueryType["response"]["request"]>;
+  userId: string;
+  userUuid: string;
 };
 
-const CreateEventForm = ({ request }: FormProps) => {
+const CreateEventForm = ({ request, userId, userUuid }: FormProps) => {
   const navigate = useNavigate();
   const { showAlert } = useAlertStore();
 
   // ========================
   // QUERIES
   // ========================
+  const rmmClientsData = useLazyLoadQuery<RmmClientsQueryType>(
+    RmmClientsQuery,
+    { tenantId: request.tenantId },
+    { fetchPolicy: "store-and-network" },
+  );
+
+  const rmmClients = rmmClientsData.rmmClients?.map((c) => c) || [];
+
   const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
     TimezonesQuery,
     {},
@@ -139,6 +167,7 @@ const CreateEventForm = ({ request }: FormProps) => {
           notes: data.notes ?? "",
           isNational: data.isNational ?? false,
           timezoneId: data.timezoneId ?? request.timezone?.id ?? null,
+          rmmAsignedId: data.rmmAsignedId,
           distributorId: request.distributor?.id ?? null,
           retailerId: request.retailer?.id ?? null,
           startTime: dateValue
@@ -223,6 +252,7 @@ const CreateEventForm = ({ request }: FormProps) => {
           retailerId: request.retailer?.id ?? "",
           storeManagerName: request.storeManagerName ?? "",
           storeManagerPhone: request.storeManagerPhone ?? "",
+          rmmAsignedId: request.rmmAsigned?.id ?? "",
           details: [], // faltan en el request.
           products: [], // faltan en el request.
         },
@@ -252,9 +282,11 @@ const CreateEventForm = ({ request }: FormProps) => {
     notes: "",
     coordinates: request.coordinates.map((coord) => coord) ?? undefined,
     isNational: false,
+    isNationalRetailer: true,
     timezoneId: request.timezone?.id ?? null,
     distributorId: request.distributor?.id ?? null,
     retailerId: request.retailer?.id ?? null,
+    rmmAsignedId: request.rmmAsigned?.id ?? "",
     // storeManagerName:
     //   requestContactInfo.storeManagerName ??
     //   requestContactInfo.retailerStoreContact ??
@@ -289,6 +321,9 @@ const CreateEventForm = ({ request }: FormProps) => {
             mode="create"
             eventTypes={eventTypes}
             tenantId={request.tenantId}
+            rmmClients={rmmClients}
+            userIdLoggin={userId ? userId : ""}
+            userUuidLoggin={userUuid ? userUuid : ""}
             // requestId={request.id}
             // distributors={distributors}
             // retailers={retailers}
