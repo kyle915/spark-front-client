@@ -20,6 +20,7 @@ export default function SparkFormPage() {
   const [stateQuery, setStateQuery] = useState("");
   const [selectedStateId, setSelectedStateId] = useState("");
   const [retailerQuery, setRetailerQuery] = useState("");
+  const [isNationalRetailer, setIsNationalRetailer] = useState(true);
 
   const { products } = usePublicProducts(slug);
   // const { clients } = usePublicClients(slug);
@@ -30,7 +31,8 @@ export default function SparkFormPage() {
   const { retailers } = usePublicRetailer(
     slug,
     selectedStateId,
-    retailerQuery
+    retailerQuery,
+    isNationalRetailer,
   );
   const { states } = usePublicStates(stateQuery);
 
@@ -55,6 +57,7 @@ export default function SparkFormPage() {
         onStateSearch={setStateQuery}
         onStateChange={setSelectedStateId}
         onRetailerSearch={setRetailerQuery}
+        onNationalRetailerChange={setIsNationalRetailer}
         products={products}
         productTypes={productTypes}
         distributors={distributors}

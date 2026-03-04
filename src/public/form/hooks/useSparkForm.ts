@@ -8,6 +8,7 @@ export const useSparkForm = () =>
     resolver: yupResolver(sparkFormSchema) as Resolver<SparkFormData>,
 
     defaultValues: {
+      isNationalRetailer: true,
       distributorId: "",
       retailerId: "",
       stateId: "",

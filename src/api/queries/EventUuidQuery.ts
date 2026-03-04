@@ -44,6 +44,7 @@ export const EventUuidQuery = graphql`
         id
         uuid
         name
+        isNational
         location {
           id
           name
@@ -55,6 +56,12 @@ export const EventUuidQuery = graphql`
             code
           }
         }
+      }
+      rmmAsigned {
+        id
+        uuid
+        firstName
+        lastName
       }
       request {
         __typename
@@ -101,6 +108,7 @@ export const EventUuidQuery = graphql`
           id
           uuid
           name
+          isNational
           location {
             id
             name

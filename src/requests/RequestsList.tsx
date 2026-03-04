@@ -240,7 +240,7 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
       const isApproved = statusName === "approved";
       const isDeclined = statusSlug === "declined";
       const hasEvent = Boolean(request.event?.id);
-      const canCreateEvent = isApproved && !hasEvent;
+      const canCreateEvent = !hasEvent && !isApproved && !isDeclined;
 
       return (
         <div className="flex gap-2">
@@ -262,9 +262,20 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
 
           <button
             type="button"
-            className={`btn btn-xs btn-outline btn-info tooltip ${!canCreateEvent && "disabled:text-info/50 hover:text-white"}`}
-            data-tip="Create Event from Request"
+            className={`btn btn-xs btn-outline btn-info tooltip ${
+              !canCreateEvent ? "disabled:text-info/50 hover:text-white" : ""
+            }`}
+            data-tip={
+              hasEvent
+                ? "Event already created"
+                : isApproved
+                  ? "Cannot create event from approved request"
+                  : isDeclined
+                    ? "Cannot create event from declined request"
+                    : "Create Event from Request"
+            }
             onClick={() => handleCreateEvent(request)}
+            disabled={!canCreateEvent}
           >
             <CalendarDaysIcon className="w-5 h-5" />
           </button>

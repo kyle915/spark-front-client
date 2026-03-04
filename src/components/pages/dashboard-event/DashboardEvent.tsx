@@ -1,18 +1,14 @@
-import { useMemo, useState } from "react";
-import { format } from "date-fns";
+import { useState } from "react";
 import Layout from "@/layout/Layout";
 import { MetricCard } from "@/components/cards/metric-card";
 import FiltersPanel, {
-  type FiltersState,
+  type DashboardFilters,
 } from "@/components/filters/FiltersPanel";
 import ChartCard from "@/components/charts/ChartCard";
-
 import { CalendarDays } from "lucide-react";
 
 import DashboardHeader from "../dashboard/DashboardHeader";
-
 import MonthlyTrendsChart from "../dashboard-event/MonthlyTrendsSection";
-import DemographicInsightSection from "../dashboard-event/DemographicInsightSection";
 import PerformanceInsights from "../dashboard-event/PerformanceInsights";
 import GoalsProgressSection from "../dashboard-event/GoalsProgressSection";
 import RegionalMarketPerformance from "../dashboard-event/RegionalMarketPerformance";
@@ -25,56 +21,52 @@ import { aiInsightsMock } from "@/data/dashboard-events/aiInsightsMock";
 import { regionalMarketMock } from "@/data/dashboard-events/regionalMarketMock";
 import { useAuthStore } from "@/store/authStore";
 
-const defaultFilters: FiltersState = {
-  distributor: "",
-  rmm: "",
-  quarter: "",
-  dateRange: undefined,
-};
+/* =========================
+   Helpers
+========================= */
+const formatNumber = (value?: number | null) =>
+  typeof value === "number" ? value.toLocaleString() : "0";
 
-const formatNumber = (value: number) => value.toLocaleString();
-const formatPercent = (value: number) => `${value.toFixed(1)}%`;
+const formatPercent = (value?: number | null) =>
+  typeof value === "number" ? `${value.toFixed(1)}%` : "0%";
 
-const formatDelta = (current: number, previous?: number | null) => {
-  if (!previous || previous === 0) return "0%";
+const formatDelta = (current?: number | null, previous?: number | null) => {
+  if (
+    typeof current !== "number" ||
+    typeof previous !== "number" ||
+    previous === 0
+  )
+    return "0%";
+
   const diff = ((current - previous) / previous) * 100;
   const sign = diff >= 0 ? "+" : "";
   return `${sign}${diff.toFixed(1)}%`;
 };
 
+/* =========================
+   Dashboard
+========================= */
 export default function DashboardIndex() {
-  const [filters, setFilters] = useState<FiltersState>(defaultFilters);
-  const [fetchKey, setFetchKey] = useState(0);
   const { tenantId } = useAuthStore();
 
-  const filtersInput = useMemo(() => {
-    const startDate = filters.dateRange?.from
-      ? format(filters.dateRange.from, "yyyy-MM-dd")
-      : null;
-    const endDate = filters.dateRange?.to
-      ? format(filters.dateRange.to, "yyyy-MM-dd")
-      : null;
+  const [filters, setFilters] = useState<DashboardFilters>({
+    distributorId: null,
+    rmmAsignedId: null,
+    quarter: null,
+    startDate: null,
+    endDate: null,
+  });
 
-    const input = {
-      distributorId: filters.distributor || null,
-      rmmId: filters.rmm || null,
-      quarter: filters.quarter || null,
-      startDate,
-      endDate,
-    };
+  const [fetchKey, setFetchKey] = useState(0);
 
-    const hasValues = Object.values(input).some((value) => value);
-    return hasValues ? input : null;
-  }, [filters]);
-
-  const { dashboard, filterOptions } = useEventDashboardData(
+  const { dashboard } = useEventDashboardData(
     tenantId || "",
-    filtersInput,
+    filters,
     fetchKey,
   );
 
-  const metrics = dashboard.metrics;
-  const comparison = metrics.comparisonValues;
+  const { metrics, globalKpis } = dashboard;
+
   const comparisonLabel = metrics.comparisonPeriod
     ? `vs ${metrics.comparisonPeriod}`
     : "vs previous period";
@@ -84,7 +76,10 @@ export default function DashboardIndex() {
       key: "totalEvents",
       title: "Total Events",
       value: formatNumber(metrics.totalEvents),
-      change: formatDelta(metrics.totalEvents, comparison?.totalEvents),
+      change: formatDelta(
+        metrics.totalEvents,
+        metrics.comparisonValues?.totalEvents,
+      ),
     },
     {
       key: "consumersSampled",
@@ -92,20 +87,38 @@ export default function DashboardIndex() {
       value: formatNumber(metrics.consumersSampled),
       change: formatDelta(
         metrics.consumersSampled,
-        comparison?.consumersSampled,
+        metrics.comparisonValues?.consumersSampled,
       ),
     },
     {
       key: "brandAwareness",
       title: "Brand Awareness",
       value: formatPercent(metrics.brandAwareness),
-      change: formatDelta(metrics.brandAwareness, comparison?.brandAwareness),
+      change: formatDelta(
+        metrics.brandAwareness,
+        metrics.comparisonValues?.brandAwareness,
+      ),
     },
     {
       key: "purchaseIntent",
       title: "Purchase Intent",
       value: formatPercent(metrics.purchaseIntent),
-      change: formatDelta(metrics.purchaseIntent, comparison?.purchaseIntent),
+      change: formatDelta(
+        metrics.purchaseIntent,
+        metrics.comparisonValues?.purchaseIntent,
+      ),
+    },
+    {
+      key: "multiPacksSold",
+      title: "Multi Packs Sold",
+      value: formatNumber(globalKpis?.multiPacksSold),
+      change: "0%",
+    },
+    {
+      key: "singleCansSold",
+      title: "Single Cans Sold",
+      value: formatNumber(globalKpis?.singleCansSold),
+      change: "0%",
     },
   ];
 
@@ -125,24 +138,6 @@ export default function DashboardIndex() {
     status: event.status,
   }));
 
-  const distributors =
-    filterOptions?.distributors?.map((d) => ({
-      value: d.id,
-      label: d.name,
-    })) ?? [];
-
-  const rmmOptions =
-    filterOptions?.rmms?.map((r) => ({
-      value: r.id,
-      label: r.name,
-    })) ?? [];
-
-  const quarterOptions =
-    filterOptions?.quarters?.map((q) => ({
-      value: q.value,
-      label: q.label,
-    })) ?? [];
-
   return (
     <Layout>
       <main className="max-w-7xl mx-auto p-5 space-y-10">
@@ -152,12 +147,9 @@ export default function DashboardIndex() {
         {/* FILTERS */}
         <div className="relative z-40">
           <FiltersPanel
-            distributors={distributors}
-            rmmOptions={rmmOptions}
-            quarterOptions={quarterOptions}
             onApplyFilters={(nextFilters) => {
               setFilters(nextFilters);
-              setFetchKey((key) => key + 1);
+              setFetchKey((k) => k + 1);
             }}
           />
         </div>
@@ -183,27 +175,10 @@ export default function DashboardIndex() {
             title="Monthly Performance Trends"
             icon={CalendarDays}
             iconColor="text-blue-600"
-            fixedHeight={true}
+            fixedHeight
           >
             <MonthlyTrendsChart data={monthlyTrends} />
           </ChartCard>
-        </section>
-
-        {/* DEMOGRAPHIC INSIGHTS */}
-        <section className="w-full ">
-          <DemographicInsightSection
-            ageDistribution={[
-              { label: "18-24", value: 22, consumers: 2745 },
-              { label: "25-34", value: 35, consumers: 4368 },
-              { label: "35-44", value: 28, consumers: 3494 },
-              { label: "45-54", value: 12, consumers: 1497 },
-              { label: "55+", value: 3, consumers: 374 },
-            ]}
-            genderDistribution={[
-              { label: "Male", value: 58 },
-              { label: "Female", value: 42 },
-            ]}
-          />
         </section>
 
         {/* PERFORMANCE INSIGHTS */}
@@ -220,10 +195,6 @@ export default function DashboardIndex() {
                 { label: "Brand Awareness", current: 0, target: 50 },
                 { label: "Purchase Intent", current: 0, target: 75 },
                 { label: "Female Participation", current: 0, target: 65 },
-                { label: "First-Time Buyers", current: 0, target: 70 },
-                { label: "First-Time Buyers-2", current: 0, target: 70 },
-                { label: "First-Time Buyers-3", current: 0, target: 70 },
-                { label: "First-Time Buyers-4", current: 0, target: 70 },
               ]}
             />
           </div>

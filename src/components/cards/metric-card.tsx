@@ -34,6 +34,9 @@ const metricIcons: Record<string, React.ReactNode> = {
   boxesSold: <Boxes className="text-red-500" />,
   additionalDisplays: <Users className="text-gray-500" />,
   revenueGenerated: <DollarSign className="text-green-500" />,
+  totalCansSold: <ShoppingCart className="text-green-500" />,
+  multiPacksSold: <Boxes className="text-red-500" />,
+  singleCansSold: <ShoppingCart className="text-green-500" />,
   brandAwareness: <Eye />,
   purchaseIntent: <BadgeDollarSign />,
 };
@@ -68,18 +71,18 @@ export function MetricCard({
           bg: "bg-green-600/10",
         }
       : variant === "error"
-      ? {
-          text: "text-error",
-          bg: "bg-error/10",
-        }
-      : {
-          text: "text-neutral-content",
-          bg: "bg-base-300/40",
-        };
+        ? {
+            text: "text-error",
+            bg: "bg-error/10",
+          }
+        : {
+            text: "text-neutral-content",
+            bg: "bg-base-300/40",
+          };
 
   const selectedIcon = metricKey
-    ? metricIcons[metricKey] ?? null
-    : icon ?? null;
+    ? (metricIcons[metricKey] ?? null)
+    : (icon ?? null);
 
   return (
     <div
@@ -87,7 +90,7 @@ export function MetricCard({
         // Card container
         "rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300",
         "bg-base-100 text-base-content border border-base-300",
-        "dark:border-base-700 dark:bg-base backdrop-blur-sm"
+        "dark:border-base-700 dark:bg-base backdrop-blur-sm",
       )}
     >
       {/* TITLE */}
@@ -103,7 +106,7 @@ export function MetricCard({
           className={cn(
             "p-3 rounded-xl flex items-center justify-center",
             "transition-colors duration-300",
-            colorScheme.bg
+            colorScheme.bg,
           )}
         >
           <div className={cn("w-6 h-6", colorScheme.text)}>{selectedIcon}</div>
@@ -121,7 +124,7 @@ export function MetricCard({
         <span
           className={cn(
             "text-sm font-semibold",
-            isNegative ? "text-error" : "text-green-600"
+            isNegative ? "text-error" : "text-green-600",
           )}
         >
           {change}
