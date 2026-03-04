@@ -159,7 +159,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     address: request.address ?? "",
     coordinates: request.coordinates?.length ? [...request.coordinates] : null,
     timezoneId: request.timezone?.id ?? null,
-    rmmAsignedId: request.rmmAsigned?.id ?? null,
+    rmmAsignedId: request.rmmAsigned?.id ?? undefined,
     distributorId:
       request.distributor?.id ?? request?.distributor?.id ?? undefined,
     retailerId: request.retailer?.id ?? request?.retailer?.id ?? undefined,
