@@ -218,10 +218,12 @@ RecapsTableContentProps) => {
 // ======================================================
 type RecapsListInnerProps = {
   filters?: {
+    tenantId?: string;
     eventId?: string;
     eventAddress?: string;
     stateId?: string;
     eventDate?: string;
+    rmmAsignedId?: string;
   };
   emptyMessage: string;
   onRefreshReady?: (refreshFn: () => void) => void;
@@ -536,20 +538,34 @@ const RecapList = () => {
     [statesData],
   );
 
-  const filters =
-    selectedEventId ||
-    eventAddress ||
-    selectedStateId ||
-    selectedEventDate ||
-    selectedRmmId
-      ? {
-          eventId: selectedEventId || undefined,
-          eventAddress: eventAddress || undefined,
-          stateId: selectedStateId || undefined,
-          eventDate: selectedEventDate || undefined,
-          rmmAsignedId: selectedRmmId || undefined,
-        }
-      : undefined;
+  const filters = useMemo(() => {
+    if (
+      !tenantId &&
+      !selectedEventId &&
+      !eventAddress &&
+      !selectedStateId &&
+      !selectedEventDate &&
+      !selectedRmmId
+    ) {
+      return undefined;
+    }
+
+    return {
+      tenantId: tenantId || undefined,
+      eventId: selectedEventId || undefined,
+      eventAddress: eventAddress || undefined,
+      stateId: selectedStateId || undefined,
+      eventDate: selectedEventDate || undefined,
+      rmmAsignedId: selectedRmmId || undefined,
+    };
+  }, [
+    tenantId,
+    selectedEventId,
+    eventAddress,
+    selectedStateId,
+    selectedEventDate,
+    selectedRmmId,
+  ]);
 
   const emptyMessage =
     selectedEventId || selectedStateId || selectedEventDate
