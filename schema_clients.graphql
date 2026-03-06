@@ -1738,6 +1738,18 @@ type DeleteSkillResponse {
   clientMutationId: ID
 }
 
+input DisableAmbassadorInput {
+  clientMutationId: ID = null
+  ambassadorId: ID!
+}
+
+type DisableAmbassadorResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  ambassador: Ambassador
+}
+
 input DisconnectGoogleCalendarInput {
   clientMutationId: ID = null
 }
@@ -2080,6 +2092,12 @@ type FileTypeCountableEdge {
 input ForgotPasswordInput {
   clientMutationId: ID = null
   email: String!
+}
+
+type GenerateInsightsPayload {
+  success: Boolean!
+  enqueued: Boolean!
+  insights: Insights
 }
 
 input GenerateRecapPdfInput {
@@ -2727,6 +2745,7 @@ type Mutation {
   acceptAmbassadorInvitation(input: AcceptAmbassadorInvitationInput!): AcceptInvitationResponse!
   acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
+  disableAmbassador(input: DisableAmbassadorInput!): DisableAmbassadorResponse!
   createAmbassador(input: CreateAmbassadorInput!): CreateAmbassadorResponse!
   updateAmbassador(input: UpdateAmbassadorInput!): UpdateAmbassadorResponse!
   upsertAmbassadorProfile(input: UpsertAmbassadorProfileInput!): UpsertAmbassadorProfileResponse!
@@ -2758,6 +2777,7 @@ type Mutation {
   deleteAmbassadorGroup(input: DeleteAmbassadorGroupInput!): AmbassadorGroupResponse!
   addAmbassadorsToGroup(input: AddAmbassadorsToGroupInput!): AddAmbassadorsToGroupResponse!
   removeAmbassadorsFromGroup(input: RemoveAmbassadorsFromGroupInput!): AmbassadorGroupResponse!
+  generateInsights(tenantId: ID = null, fromDate: String = null, toDate: String = null, enqueue: Boolean! = false): GenerateInsightsPayload!
 }
 
 type MutationNormalOutput {
@@ -3277,8 +3297,6 @@ type Recap implements Node {
   job: Job
   retailerId: ID
   retailer: Retailer
-  recapFile: RecapFile!
-  recapFileId: ID!
   createdAt: String!
   updatedAt: String!
   totalEngagements: Int
@@ -3292,6 +3310,8 @@ type Recap implements Node {
   salesPerformance: [SalesPerformance!]!
   consumerFeedback: [ConsumerFeedback!]!
   accountFeedback: [AccountFeedback!]!
+  recapFile: RecapFile
+  recapFileId: ID
   recapFiles: [RecapFile!]!
   ambassadors: [Ambassador!]!
   requestStoreManagers: [RequestStoreManager!]!
@@ -3412,6 +3432,7 @@ type RecapFileUrlResponse {
 
 input RecapFiltersInput {
   clientMutationId: ID = null
+  tenantId: ID = null
   eventId: ID = null
   eventType: ID = null
   rmmAsignedId: ID = null
