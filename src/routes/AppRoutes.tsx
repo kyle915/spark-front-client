@@ -13,6 +13,7 @@ import {
   MapPinIcon,
   UserGroupIcon,
   AdjustmentsHorizontalIcon,
+  FlagIcon,
 } from "@heroicons/react/24/solid";
 import { Palette, PencilIcon, TagIcon, Archive } from "lucide-react";
 
@@ -95,6 +96,8 @@ import CalendarConnection from "@/calendar/CalendarConnection";
 
 // Settings
 import ThemePage from "@/theme/ThemePage";
+import CreateGoals from "@/goals/CreateGoals";
+import GoalsList from "@/goals/GoalsList";
 
 /* -----------------------------------------------------------
    PUBLIC ROUTES (NO AUTH REQUIRED)
@@ -610,6 +613,38 @@ const SettingsLinks = {
 };
 
 /* -----------------------------------------------------------
+  GOALS
+----------------------------------------------------------- */
+const GoalsLinks = {
+  menu: [
+    {
+      path: "/goals/list",
+      name: "List",
+      component: <GoalsList />,
+      Icon: Bars4Icon,
+    },
+    {
+      path: "/goals/create",
+      name: "Create",
+      component: <CreateGoals />,
+      Icon: PlusCircleIcon,
+    },
+  ],
+  routes: [
+    {
+      path: "/goals/list",
+      component: <GoalsList />,
+      isPublic: false,
+    },
+    {
+      path: "/goals/create",
+      component: <CreateGoals />,
+      isPublic: false,
+    },
+  ],
+};
+
+/* -----------------------------------------------------------
    EXPORT: SIDEBAR MENU
 ----------------------------------------------------------- */
 export const navigationMenuRoutes = [
@@ -659,6 +694,11 @@ export const navigationMenuRoutes = [
     Icon: AdjustmentsHorizontalIcon,
     links: SettingsLinks.menu,
   },
+  {
+    title: "Goals",
+    Icon: FlagIcon,
+    links: GoalsLinks.menu,
+  },
 ];
 
 /* -----------------------------------------------------------
@@ -677,4 +717,5 @@ export const appRoutes = [
   ...CompanyRoutes.routes,
   ...PublicRoutes.routes,
   ...SettingsLinks.routes,
+  ...GoalsLinks.routes,
 ];
