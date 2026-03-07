@@ -776,7 +776,8 @@ export default function RequestForm({
                 name="timezoneId"
                 control={control}
                 label="Timezone"
-                placeholder="Search timezone..."
+                disabled
+                placeholder="Select location in map"
                 options={timezones.map((tz) => {
                   const sign = tz.offset >= 0 ? "+" : "-";
                   const abs = Math.abs(tz.offset);
