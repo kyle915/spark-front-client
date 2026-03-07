@@ -12,13 +12,20 @@ import {
   useRelayPagination,
   type PageLoadedPayload,
 } from "@/hooks/useRelayPagination";
-import { useMutation, usePreloadedQuery } from "react-relay/hooks";
+import {
+  useLazyLoadQuery,
+  useMutation,
+  usePreloadedQuery,
+} from "react-relay/hooks";
 import type { PreloadedQuery } from "react-relay";
 import { useForm } from "react-hook-form";
 import CatalogsProvider, { type CatalogsState } from "@shared/CatalogsProvider";
 
 import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
+
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
 
 import { LocationsQuery } from "@api/queries/LocationsQuery";
 import type { LocationsQuery as LocationsQueryType } from "@api/queries/__generated__/LocationsQuery.graphql";
@@ -128,6 +135,7 @@ type RequestsListInnerProps = {
     statusId?: string;
     date?: string;
     edited?: boolean;
+    rmmClientId?: string;
   };
 };
 
@@ -406,6 +414,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
       retailerLocation: "",
       distributorState: "",
       distributorLocation: "",
+      rmmAsigned: "",
       retailer: "",
       distributor: "",
       requestType: "",
@@ -425,6 +434,14 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
   const selectedStatus = watch("status");
   const selectedRequestType = watch("requestType");
   const selectedDate = watch("date");
+  const selectedRmmClient = watch("rmmAsigned");
+
+  // rmm clients query (for filters)
+  const rmmClientsData = useLazyLoadQuery<RmmClientsQueryType>(
+    RmmClientsQuery,
+    { tenantId: tenantId ?? "" },
+    { fetchPolicy: "store-and-network" },
+  );
 
   // Construct filters object for the query, excluding empty values
   const filters = useMemo(
@@ -437,6 +454,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
       requestTypeId: selectedRequestType || undefined,
       statusId: selectedStatus || undefined,
       date: selectedDate || undefined,
+      rmmAsigned: selectedRmmClient || undefined,
       ...fixedFilters,
     }),
     [
@@ -449,6 +467,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
       tenantId,
       fixedFilters,
       selectedDate,
+      selectedRmmClient,
     ],
   );
 
@@ -822,8 +841,10 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                       onSearch={setDistributorSearchTerm}
                       disabled={!selectedDistributorLocation}
                     />
+                  </div>
+                  {/** Other filters */}
 
-                    {/** Other filters */}
+                  <div className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 overflow-visible">
                     <FormAutocomplete
                       control={control}
                       name="status"
@@ -854,13 +875,25 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                       loading={isLoading("requestTypes")}
                       placeholder="Search request type..."
                     />
+
+                    <FormAutocomplete
+                      control={control}
+                      name="rmmAsigned"
+                      label="RMM Client"
+                      options={rmmClientsData.rmmClients.map((c) => ({
+                        label: `${c.firstName} ${c.lastName}`,
+                        value: c.id,
+                      }))}
+                      loading={isLoading("clients")}
+                      placeholder="Search client..."
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="mt-2">
                 <RequestsListInner
-                  key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedDate}-${selectedRequestType}`}
+                  key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedDate}-${selectedRequestType}-${selectedRmmClient}-${JSON.stringify(fixedFilters)}`} // Reset inner component when filters change to reset pagination
                   filters={filters}
                 />
               </div>
