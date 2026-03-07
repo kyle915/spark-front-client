@@ -2,16 +2,12 @@ import { privacyPolicy } from "@/utils/privacyPolicy";
 import { useNavigate } from "react-router";
 
 const formatLabel = (value: string) =>
-  value
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
 const renderContent = (content: unknown) => {
   if (typeof content === "string") {
     return (
-      <p className="text-sm leading-relaxed text-base-content/80">
-        {content}
-      </p>
+      <p className="text-sm leading-relaxed text-base-content/80">{content}</p>
     );
   }
 
@@ -64,7 +60,9 @@ export default function PrivacyPolicyView() {
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <span className="badge badge-primary badge-outline">Public</span>
-              <span className="badge badge-ghost">{privacyPolicy.platform}</span>
+              <span className="badge badge-ghost">
+                {privacyPolicy.platform}
+              </span>
               <span className="badge badge-ghost">{privacyPolicy.company}</span>
             </div>
             <div className="space-y-2">
@@ -104,7 +102,7 @@ export default function PrivacyPolicyView() {
           </div>
         </div>
 
-        {privacyPolicy.sections.map((section, index) => (
+        {privacyPolicy.sections.map((section) => (
           <section
             key={section.id}
             id={section.id}
@@ -112,7 +110,7 @@ export default function PrivacyPolicyView() {
           >
             <div className="card-body space-y-4">
               <div className="flex items-center gap-3">
-                <span className="badge badge-outline">{index + 1}</span>
+                {/* <span className="badge badge-outline">{index + 1}</span> */}
                 <h2 className="card-title text-base md:text-lg">
                   {section.title}
                 </h2>
@@ -129,7 +127,6 @@ export default function PrivacyPolicyView() {
             </p>
           </div>
         </div>
-
       </div>
     </div>
   );

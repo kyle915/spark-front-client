@@ -89,6 +89,7 @@ import CreateUser from "@/users/CreateUser";
 import SparkFormPage from "@/public/form/FormPage";
 import PrivacyPolicyView from "@/utils/PrivacyPolicyView";
 import TermsOfServiceView from "@/utils/TermsOfServiceView";
+import IndependentContractorAgreementPage from "@/utils/IndependentContractorAgreement";
 
 // Calendar
 import CalendarConnection from "@/calendar/CalendarConnection";
@@ -109,6 +110,11 @@ const PublicRoutes = {
     {
       path: "/privacy-policy",
       component: <PrivacyPolicyView />,
+      isPublic: true,
+    },
+    {
+      path: "/independent-contractor-agreement",
+      component: <IndependentContractorAgreementPage />,
       isPublic: true,
     },
     {
