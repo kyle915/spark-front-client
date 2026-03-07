@@ -301,7 +301,9 @@ export default function DashboardRetail() {
           </div>
 
           <div className="col-span-1">
-            <VerticalPerformanceInsights />
+            <VerticalPerformanceInsights
+              insightsData={dashboard.performanceInsights}
+            />
           </div>
         </section>
 

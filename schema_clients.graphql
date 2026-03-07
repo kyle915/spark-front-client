@@ -1738,6 +1738,18 @@ type DeleteSkillResponse {
   clientMutationId: ID
 }
 
+input DisableAmbassadorInput {
+  clientMutationId: ID = null
+  ambassadorId: ID!
+}
+
+type DisableAmbassadorResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  ambassador: Ambassador
+}
+
 input DisconnectGoogleCalendarInput {
   clientMutationId: ID = null
 }
@@ -1754,7 +1766,7 @@ enum DistanceUnit {
 }
 
 """
-Distributor(id, uuid, name, email, location, tenant, created_by, updated_by, created_at, updated_at)
+Distributor(id, uuid, name, email, location, state, tenant, created_by, updated_by, created_at, updated_at)
 """
 type Distributor implements Node {
   """The Globally Unique ID of this object"""
@@ -1764,6 +1776,7 @@ type Distributor implements Node {
   email: String
   tenantId: ID!
   location: Location
+  state: State
   createdAt: String!
   updatedAt: String!
 }
@@ -1811,6 +1824,16 @@ type DjangoImageType {
   height: Int!
 }
 
+type EnqueueCreateGoalsForAllTenantsPayload {
+  success: Boolean!
+  enqueued: Boolean!
+}
+
+type EnqueueCreateGoalsForTenantPayload {
+  success: Boolean!
+  enqueued: Boolean!
+}
+
 """
 Event(id, uuid, name, date, coordinates, timezone, tenant, request, event_type, status, retailer, distributor, start_time, end_time, address, notes, is_national, rmm_asigned, created_by, updated_by, created_at, updated_at)
 """
@@ -1818,7 +1841,6 @@ type Event implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
-  name: String!
   coordinates: [Float!]
   address: String!
   isNational: Boolean!
@@ -1835,6 +1857,7 @@ type Event implements Node {
   timezone: TimeZone
   rmmAsigned: SparkUserType
   tenantImage: String
+  name: String!
   date: String
   startTime: String
   endTime: String
@@ -1860,6 +1883,7 @@ type EventDashboard {
   monthlyTrends: MonthlyPerformanceTrend!
   performanceInsights: PerformanceInsights!
   recentEvents: [RecentEvent!]
+  goalsProgress: [GoalProgress!]
 }
 
 type EventDashboardFilterOptions {
@@ -1877,6 +1901,7 @@ input EventDashboardFiltersInput {
   quarter: String = null
   rmmAsignedId: ID = null
   distributorId: ID = null
+  year: Int = null
 }
 
 type EventDashboardMetrics {
@@ -1964,7 +1989,7 @@ input EventStatusFiltersInput {
 }
 
 """
-EventType(id, uuid, name, is_default, tenant, created_by, updated_by, created_at, updated_at)
+EventType(id, uuid, name, is_default, slug, tenant, created_by, updated_by, created_at, updated_at)
 """
 type EventType implements Node {
   """The Globally Unique ID of this object"""
@@ -1972,6 +1997,7 @@ type EventType implements Node {
   uuid: String!
   name: String!
   isDefault: Boolean!
+  slug: String
   tenantId: ID!
   createdAt: String!
   updatedAt: String!
@@ -2075,9 +2101,56 @@ type FileTypeCountableEdge {
   node: FileType!
 }
 
+input ForgotPasswordInput {
+  clientMutationId: ID = null
+  email: String!
+}
+
+type GenerateInsightsPayload {
+  success: Boolean!
+  enqueued: Boolean!
+  insights: Insights
+}
+
 input GenerateRecapPdfInput {
   clientMutationId: ID = null
   id: ID!
+}
+
+type Goal {
+  id: ID!
+  uuid: String!
+  tenantId: ID!
+  user: GoalUser!
+  userId: ID!
+  year: Int!
+  eventTargetGoal: Int
+  consumerSamplingGoal: Int
+  brandAwarenessGoal: Float
+  purchaseIntentGoal: Float
+  femaleParticipationGoal: Float
+  firstTimeBuyersGoal: Int
+  currentEventsCount: Int
+  currentConsumerSampling: Int
+  currentBrandAwareness: Float
+  currentPurchaseIntent: Float
+  currentFirstTimeBuyers: Int
+  currentFemaleParticipation: Float
+}
+
+type GoalProgress {
+  name: String!
+  target: Float!
+  current: Float!
+  percentageComplete: Float!
+}
+
+type GoalUser {
+  id: ID!
+  uuid: String!
+  email: String!
+  firstName: String!
+  lastName: String!
 }
 
 input GoogleCalendarCallbackInput {
@@ -2220,6 +2293,7 @@ type Job implements Node {
   updatedAt: String!
   attendances: [Attendance!]!
   ambassadorJobs: [AmbassadorJob!]!
+  applied: Boolean!
 }
 
 type JobCountableConnection {
@@ -2581,6 +2655,16 @@ type MarketPerformanceData {
   efficiency: Float!
 }
 
+type MarketWithBrandAwareness {
+  marketName: String!
+  brandAwareCount: Int!
+}
+
+type MarketWithWillingness {
+  marketName: String!
+  willingCount: Int!
+}
+
 type MonthlyDataPoint {
   month: String!
   consumersSampled: Int!
@@ -2644,6 +2728,8 @@ type Mutation {
   register(input: ClientRegisterInput!): RegisterResponse!
   socialAuthGoogle(input: GoogleSocialAuthInput!): SocialAuthResponse!
   socialAuthApple(input: AppleSocialAuthInput!): SocialAuthResponse!
+  forgotPassword(input: ForgotPasswordInput!): UpdateUserResponse!
+  resetPasswordWithCode(input: ResetPasswordWithCodeInput!): UpdateUserResponse!
   createUser(input: CreateUserInput!): RegisterResponse!
   updateUser(input: UpdateUserInput!): UpdateUserResponse!
   changeUserPassword(input: ChangeUserPasswordInput!): UpdateUserResponse!
@@ -2717,6 +2803,7 @@ type Mutation {
   acceptAmbassadorInvitation(input: AcceptAmbassadorInvitationInput!): AcceptInvitationResponse!
   acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
+  disableAmbassador(input: DisableAmbassadorInput!): DisableAmbassadorResponse!
   createAmbassador(input: CreateAmbassadorInput!): CreateAmbassadorResponse!
   updateAmbassador(input: UpdateAmbassadorInput!): UpdateAmbassadorResponse!
   upsertAmbassadorProfile(input: UpsertAmbassadorProfileInput!): UpsertAmbassadorProfileResponse!
@@ -2748,6 +2835,10 @@ type Mutation {
   deleteAmbassadorGroup(input: DeleteAmbassadorGroupInput!): AmbassadorGroupResponse!
   addAmbassadorsToGroup(input: AddAmbassadorsToGroupInput!): AddAmbassadorsToGroupResponse!
   removeAmbassadorsFromGroup(input: RemoveAmbassadorsFromGroupInput!): AmbassadorGroupResponse!
+  generateInsights(tenantId: ID = null, fromDate: String = null, toDate: String = null, enqueue: Boolean! = false): GenerateInsightsPayload!
+  setGoals(input: SetGoalsInput!): Goal!
+  enqueueCreateGoalsForTenant(tenantId: ID!, year: Int!): EnqueueCreateGoalsForTenantPayload!
+  enqueueCreateGoalsForAllTenants(year: Int!): EnqueueCreateGoalsForAllTenantsPayload!
 }
 
 type MutationNormalOutput {
@@ -3093,6 +3184,8 @@ type Query {
   recapDashboardFilterOptions: RecapDashboardFilterOptions!
   recapDashboard(filters: RecapDashboardFiltersInput = null): RecapDashboard!
   latestInsights(tenantId: ID = null): Insights
+  goals(tenantId: ID!, year: Int!, userId: ID = null, startDate: String = null, endDate: String = null, quarter: String = null): Goal
+  goalsList(tenantId: ID!, year: Int = null, userId: ID = null): [Goal!]!
   getUploadUrl(filePath: String!, contentType: String! = "image/jpeg"): UploadUrlResponse!
   getDownloadUrl(filePath: String!): String!
 }
@@ -3267,8 +3360,6 @@ type Recap implements Node {
   job: Job
   retailerId: ID
   retailer: Retailer
-  recapFile: RecapFile!
-  recapFileId: ID!
   createdAt: String!
   updatedAt: String!
   totalEngagements: Int
@@ -3282,6 +3373,8 @@ type Recap implements Node {
   salesPerformance: [SalesPerformance!]!
   consumerFeedback: [ConsumerFeedback!]!
   accountFeedback: [AccountFeedback!]!
+  recapFile: RecapFile
+  recapFileId: ID
   recapFiles: [RecapFile!]!
   ambassadors: [Ambassador!]!
   requestStoreManagers: [RequestStoreManager!]!
@@ -3402,7 +3495,9 @@ type RecapFileUrlResponse {
 
 input RecapFiltersInput {
   clientMutationId: ID = null
+  tenantId: ID = null
   eventId: ID = null
+  eventType: ID = null
   rmmAsignedId: ID = null
   retailerId: ID = null
   stateId: ID = null
@@ -3446,6 +3541,9 @@ type RecapPerformanceInsights {
   willingToPurchasePercentage: Float!
   bestMonth: BestRecapMonth
   growthRate: Float!
+  topConvertingMarket: TopConvertingMarket
+  highestWillingnessToBuy: MarketWithWillingness
+  strongestBrandAwareness: MarketWithBrandAwareness
 }
 
 type RecentEvent {
@@ -3499,7 +3597,6 @@ type Request implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
-  name: String!
   address: String!
   declineReason: String
   notes: String
@@ -3527,6 +3624,7 @@ type Request implements Node {
   approvedBy: SparkUserType
   createdAt: String!
   updatedAt: String!
+  name: String!
   date: String
   startTime: String
   endTime: String
@@ -3728,8 +3826,16 @@ input RequestTypeFiltersInput {
   tenantUuid: ID = null
 }
 
+input ResetPasswordWithCodeInput {
+  clientMutationId: ID = null
+  email: String!
+  code: String!
+  password1: String!
+  password2: String!
+}
+
 """
-Retailer(id, uuid, name, address, store_contact, location, tenant, created_by, updated_by, created_at, updated_at)
+Retailer(id, uuid, name, address, store_contact, is_national, location, tenant, created_by, updated_by, created_at, updated_at)
 """
 type Retailer implements Node {
   """The Globally Unique ID of this object"""
@@ -3738,6 +3844,7 @@ type Retailer implements Node {
   name: String!
   address: String
   storeContact: String
+  isNational: Boolean!
   tenantId: ID!
   location: Location
   createdAt: String!
@@ -3771,6 +3878,7 @@ input RetailerFiltersInput {
   tenantUuid: ID = null
   locationId: ID = null
   stateId: ID = null
+  isNational: Boolean = null
 }
 
 type RetailerOption {
@@ -3849,6 +3957,19 @@ input SalesPerformanceInput {
   productId: ID!
   typeOfGoodId: ID!
   price: Float!
+}
+
+input SetGoalsInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  userId: ID = null
+  year: Int!
+  eventTargetGoal: Int = null
+  consumerSamplingGoal: Int = null
+  brandAwarenessGoal: Float = null
+  purchaseIntentGoal: Float = null
+  femaleParticipationGoal: Float = null
+  firstTimeBuyersGoal: Int = null
 }
 
 input SkillFiltersInput {
@@ -4112,6 +4233,11 @@ type TokenType {
 
   """The encoded payload, namely a token."""
   token: String!
+}
+
+type TopConvertingMarket {
+  marketName: String!
+  conversionRate: Float!
 }
 
 """
@@ -4664,6 +4790,8 @@ input UpsertAmbassadorProfileInput {
   clientMutationId: ID = null
   ambassadorId: ID = null
   ambassadorUuid: ID = null
+  firstName: String = null
+  lastName: String = null
   locationId: ID = null
   tShirtSize: String = null
   address: String = null
@@ -4732,13 +4860,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
-  id: ID!
+  email: String!
   lastName: String
+  id: ID!
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
   firstName: String
-  email: String!
   archived: Boolean!
   verified: Boolean!
 }
