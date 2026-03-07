@@ -76,7 +76,7 @@ export default memo(function RecentEventsCarousel({
             "
           >
             {/* Title */}
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center gap-4">
               <h3 className="text-lg font-bold">{ev.title}</h3>
 
               <span
