@@ -272,7 +272,7 @@ type AmbassadorInvitationTypeCountableEdge {
 }
 
 """
-AmbassadorJob(id, uuid, recap_uploaded, accepted_terms, appear_as_rfp, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
+AmbassadorJob(id, uuid, recap_uploaded, accepted_terms, real_amount, appear_as_rfp, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
 """
 type AmbassadorJob implements Node {
   """The Globally Unique ID of this object"""
@@ -1432,6 +1432,9 @@ input CreateRecapInput {
   name: String!
   eventId: ID!
   files: [RecapFileInput!]!
+  fillingForAmbassador: Boolean = null
+  late: Boolean = null
+  incomplete: Boolean = null
   productsSold: Int = null
   totalCansSold: Int = null
   totalPacksSold: Int = null
@@ -1901,6 +1904,7 @@ input EventDashboardFiltersInput {
   quarter: String = null
   rmmAsignedId: ID = null
   distributorId: ID = null
+  distributorIds: [ID!] = null
   year: Int = null
 }
 
@@ -1924,6 +1928,7 @@ input EventFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
+  rmmAsigned: ID = null
   eventTypeId: ID = null
   eventStatus: EventStatusFilterEnum = null
   requestId: ID = null
@@ -3346,7 +3351,7 @@ input RateTypeFiltersInput {
 }
 
 """
-Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, total_cans_sold, total_packs_sold, account_spend_amount, approved, timezone, event, ambassador, job, retailer, created_by, updated_by, created_at, updated_at)
+Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, total_cans_sold, total_packs_sold, filling_for_ambassador, late, incomplete, account_spend_amount, approved, timezone, event, ambassador, job, retailer, created_by, updated_by, created_at, updated_at)
 """
 type Recap implements Node {
   """The Globally Unique ID of this object"""
@@ -3354,6 +3359,7 @@ type Recap implements Node {
   uuid: String!
   name: String!
   approved: Boolean!
+  fillingForAmbassador: Boolean!
   event: Event!
   eventId: ID!
   jobId: ID
@@ -3424,6 +3430,7 @@ input RecapDashboardFiltersInput {
   quarter: String = null
   rmmAsignedId: ID = null
   distributorId: ID = null
+  distributorIds: [ID!] = null
 }
 
 type RecapDashboardMetrics {
@@ -3690,6 +3697,7 @@ input RequestFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
+  rmmAsigned: ID = null
   statusId: ID = null
   clientId: ID = null
   retailerId: ID = null
@@ -4642,6 +4650,9 @@ input UpdateRecapInput {
   name: String!
   eventId: ID!
   files: [RecapFileInput!]!
+  fillingForAmbassador: Boolean = null
+  late: Boolean = null
+  incomplete: Boolean = null
   productsSold: Int = null
   totalCansSold: Int = null
   totalPacksSold: Int = null

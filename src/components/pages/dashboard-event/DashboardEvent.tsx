@@ -50,7 +50,7 @@ export default function DashboardIndex() {
   const { tenantId } = useAuthStore();
 
   const [filters, setFilters] = useState<DashboardFilters>({
-    distributorId: null,
+    distributorIds: [],
     rmmAsignedId: null,
     quarter: null,
     startDate: null,
