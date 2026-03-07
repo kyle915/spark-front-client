@@ -319,7 +319,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {publicFormUrl && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-base-200 border border-base-300 text-sm">
                 {/* LABEL */}
-                <span className="text-base-content/60">Form link</span>
+                <span className="text-base-content/60">Public form link for external requestors</span>
 
                 {/* VALUE */}
                 <span className="font-medium text-primary truncate max-w-[180px]">
