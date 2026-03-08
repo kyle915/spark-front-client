@@ -1904,7 +1904,6 @@ input EventDashboardFiltersInput {
   quarter: String = null
   rmmAsignedId: ID = null
   distributorId: ID = null
-  distributorIds: [ID!] = null
   year: Int = null
 }
 

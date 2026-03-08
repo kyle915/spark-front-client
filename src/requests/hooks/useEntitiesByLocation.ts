@@ -7,10 +7,18 @@ import environment from "@api/relay/environment";
 interface UseEntitiesByLocationProps<TItem, TQuery extends OperationType> {
   tenantId: string | null;
   entitiesLocationId: string | null;
+  stateId?: string | null;
+  filterByStateOnly?: boolean;
+  locationIdRequired?: boolean;
+  additionalFilters?: Record<string, unknown>;
+  // initialItems: TItem[];
+  // selectedId?: string | null;
   queryDocument: GraphQLTaggedNode;
   extractNodes: (data: TQuery["response"]) => TItem[];
   debounceMs?: number;
 }
+
+const EMPTY_FILTERS: Record<string, unknown> = {};
 
 export function useEntitiesByLocation<
   TItem extends { id: string },
@@ -18,6 +26,12 @@ export function useEntitiesByLocation<
 >({
   tenantId,
   entitiesLocationId,
+  stateId = null,
+  filterByStateOnly = false,
+  locationIdRequired = true,
+  additionalFilters = EMPTY_FILTERS,
+  // initialItems,
+  // selectedId,
   queryDocument,
   extractNodes,
   debounceMs = 300,
@@ -28,6 +42,17 @@ export function useEntitiesByLocation<
   const [isLoading, setIsLoading] = useState(false);
 
   const prevLocationRef = useRef<string | null | undefined>(undefined);
+  const extractNodesRef = useRef(extractNodes);
+  const additionalFiltersRef = useRef(additionalFilters);
+  const additionalFiltersKey = JSON.stringify(additionalFilters);
+
+  useEffect(() => {
+    extractNodesRef.current = extractNodes;
+  }, [extractNodes]);
+
+  useEffect(() => {
+    additionalFiltersRef.current = additionalFilters;
+  }, [additionalFilters]);
 
   // ===============================
   // RESET WHEN LOCATION CHANGES
@@ -51,8 +76,13 @@ export function useEntitiesByLocation<
   // FETCH WITH DEBOUNCE
   // ===============================
   useEffect(() => {
-    if (!tenantId || !entitiesLocationId) {
-      setRemoteItems([]);
+    if (filterByStateOnly) {
+      if (!stateId) {
+        setRemoteItems((prev) => (prev.length === 0 ? prev : []));
+        return;
+      }
+    } else if (!tenantId || (locationIdRequired && !entitiesLocationId)) {
+      setRemoteItems((prev) => (prev.length === 0 ? prev : []));
       return;
     }
 
@@ -65,17 +95,22 @@ export function useEntitiesByLocation<
         environment,
         queryDocument,
         {
-          filters: {
-            tenantId,
-            locationId: entitiesLocationId,
-          },
+          filters: filterByStateOnly
+            ? { stateId }
+            : {
+                tenantId,
+                ...(locationIdRequired
+                  ? { locationId: entitiesLocationId }
+                  : {}),
+                ...additionalFiltersRef.current,
+              },
           q: trimmed || null,
         },
         { fetchPolicy: "network-only" },
       )
         .toPromise()
         .then((data) => {
-          const extracted = extractNodes(data);
+          const extracted = extractNodesRef.current(data);
           setRemoteItems(extracted);
         })
         .finally(() => {
@@ -87,9 +122,12 @@ export function useEntitiesByLocation<
   }, [
     tenantId,
     entitiesLocationId,
+    stateId,
+    filterByStateOnly,
+    locationIdRequired,
+    additionalFiltersKey,
     searchTerm,
     queryDocument,
-    extractNodes,
     debounceMs,
   ]);
 

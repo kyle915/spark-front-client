@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useSearchParams } from "react-router";
 import bgImage from "@/assets/background.png";
 import { verifyAccount } from "@/api/auth/verifyAccount";
 import Loading from "@/shared/Loading";
@@ -7,7 +7,6 @@ import Loading from "@/shared/Loading";
 type VerifyStatus = "pending" | "success" | "error";
 
 const VerifyAccount = () => {
-    const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [status, setStatus] = useState<VerifyStatus>("pending");
     const [message, setMessage] = useState("Verifying your account...");
@@ -34,7 +33,8 @@ const VerifyAccount = () => {
     }, [searchParams]);
 
     const handleGoToLogin = () => {
-        navigate("/login", { replace: true });
+        const mobileLoginUrl = import.meta.env.VITE_MOBILE_LOGIN_URL as string;
+        window.location.href = mobileLoginUrl;
     };
 
     return (

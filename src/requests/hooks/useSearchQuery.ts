@@ -12,10 +12,12 @@ interface UseSearchQueryProps<TItem, TQuery extends OperationType> {
   minLength?: number;
 }
 
+const EMPTY_VARIABLES: Record<string, unknown> = {};
+
 export function useSearchQuery<TItem, TQuery extends OperationType>({
   queryDocument,
   extractNodes,
-  variables = {},
+  variables = EMPTY_VARIABLES,
   debounceMs = 300,
   minLength = 0,
 }: UseSearchQueryProps<TItem, TQuery>) {
@@ -25,17 +27,29 @@ export function useSearchQuery<TItem, TQuery extends OperationType>({
 
   const activeRequestIdRef = useRef(0);
   const cacheRef = useRef<Map<string, TItem[]>>(new Map());
+  const extractNodesRef = useRef(extractNodes);
+  const variablesRef = useRef(variables);
+
+  const variablesKey = JSON.stringify(variables);
+
+  useEffect(() => {
+    extractNodesRef.current = extractNodes;
+  }, [extractNodes]);
+
+  useEffect(() => {
+    variablesRef.current = variables;
+  }, [variables]);
 
   useEffect(() => {
     const trimmed = searchTerm.trim();
 
     if (trimmed.length < minLength) {
-      setItems([]);
+      setItems((prev) => (prev.length === 0 ? prev : []));
       return;
     }
 
     const cacheKey = JSON.stringify({
-      ...variables,
+      ...variablesRef.current,
       q: trimmed,
     });
 
@@ -54,7 +68,7 @@ export function useSearchQuery<TItem, TQuery extends OperationType>({
         environment,
         queryDocument,
         {
-          ...variables,
+          ...variablesRef.current,
           q: trimmed || null,
         },
         { fetchPolicy: "network-only" },
@@ -63,13 +77,13 @@ export function useSearchQuery<TItem, TQuery extends OperationType>({
         .then((data) => {
           if (requestId !== activeRequestIdRef.current) return;
 
-          const extracted = extractNodes(data);
+          const extracted = extractNodesRef.current(data);
           cacheRef.current.set(cacheKey, extracted);
           setItems(extracted);
         })
         .catch(() => {
           if (requestId !== activeRequestIdRef.current) return;
-          setItems([]);
+          setItems((prev) => (prev.length === 0 ? prev : []));
         })
         .finally(() => {
           if (requestId !== activeRequestIdRef.current) return;
@@ -81,8 +95,7 @@ export function useSearchQuery<TItem, TQuery extends OperationType>({
   }, [
     searchTerm,
     queryDocument,
-    extractNodes,
-    variables,
+    variablesKey,
     debounceMs,
     minLength,
   ]);

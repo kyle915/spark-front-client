@@ -70,6 +70,7 @@ export interface RequestFormValues {
   tableSize?: string;
   products?: string[];
   stateId?: string | null;
+  isNationalRetailer?: boolean;
   notes?: string | null;
 }
 
@@ -84,6 +85,7 @@ interface CatalogItem {
 
 interface RmmClientItem {
   id: string;
+  uuid: string;
   firstName: string;
   lastName: string;
 }
@@ -117,6 +119,7 @@ interface RequestFormProps {
   eventTypes?: CatalogItem[];
   rmmClients?: RmmClientItem[];
   userIdLoggin: string;
+  userUuidLoggin?: string;
   // retailers?: CatalogItem[];
   // distributors?: CatalogItem[];
   requestTypes: CatalogItem[];
@@ -157,6 +160,7 @@ export default function RequestForm({
   defaultValues = {},
   rmmClients = [],
   userIdLoggin = "",
+  userUuidLoggin = "",
   // retailers = [],
   // distributors = [],
   requestTypes,
@@ -199,6 +203,7 @@ export default function RequestForm({
     tableSize: "",
     products: [],
     stateId: null,
+    isNationalRetailer: true,
     notes: "",
     distributorLocationId: null,
     retailerLocationId: null,
@@ -237,22 +242,27 @@ export default function RequestForm({
   const notesValue = watch("notes") || "";
   const selectedEntitiesLocationId = watch("entitiesLocationId");
   const isEntitiesLocationSelected = Boolean(selectedEntitiesLocationId);
+  const isStateSelected = Boolean(selectedStateId);
+  const isNationalRetailer = watch("isNationalRetailer") ?? true;
+  const prevIsNationalRetailerRef = useRef<boolean | undefined>(undefined);
   const selectedRequestTypeId = watch("requestTypeId");
 
   useEffect(() => {
     if (mode !== "create") return;
-    if (!userIdLoggin) return;
+    if (!userIdLoggin && !userUuidLoggin) return;
     if (!rmmClients.length) return;
 
-    const exists = rmmClients.some((c) => c.id === userIdLoggin);
+    const selectedRmm =
+      rmmClients.find((c) => c.id === userIdLoggin) ??
+      rmmClients.find((c) => c.uuid === userUuidLoggin);
 
-    if (exists) {
-      setValue("rmmAsignedId", userIdLoggin, {
+    if (selectedRmm) {
+      setValue("rmmAsignedId", selectedRmm.id, {
         shouldDirty: false,
         shouldTouch: false,
       });
     }
-  }, [mode, userIdLoggin, rmmClients, setValue]);
+  }, [mode, userIdLoggin, userUuidLoggin, rmmClients, setValue]);
 
   useEffect(() => {
     if (prevStateIdRef.current === undefined) {
@@ -313,7 +323,7 @@ export default function RequestForm({
   const rmmSearchVariables = useMemo(() => ({ tenantId }), [tenantId]);
 
   const rmmSearchHook = useSearchQuery<
-    { id: string; firstName: string; lastName: string },
+    { id: string; uuid: string; firstName: string; lastName: string },
     RmmClientsQueryType
   >({
     queryDocument: RmmClientsQuery,
@@ -365,6 +375,8 @@ export default function RequestForm({
   >({
     tenantId,
     entitiesLocationId: selectedEntitiesLocationId ?? null,
+    stateId: selectedStateId ?? null,
+    filterByStateOnly: mode === "create",
     // initialItems: distributors,
     queryDocument: DistributorsQuery,
     extractNodes: extractDistributors,
@@ -376,9 +388,16 @@ export default function RequestForm({
     [],
   );
 
+  const retailerAdditionalFilters = useMemo(
+    () => ({ isNational: isNationalRetailer }),
+    [isNationalRetailer],
+  );
+
   const retailersHook = useEntitiesByLocation<CatalogItem, RetailersQueryType>({
     tenantId,
     entitiesLocationId: selectedEntitiesLocationId ?? null,
+    locationIdRequired: !isNationalRetailer,
+    additionalFilters: retailerAdditionalFilters,
     // initialItems: retailers,
     queryDocument: RetailersQuery,
     extractNodes: extractRetailers,
@@ -758,6 +777,38 @@ export default function RequestForm({
     retailersHook.setSearchTerm("");
   }, [selectedEntitiesLocationId, setValue, distributorsHook, retailersHook]);
 
+  useEffect(() => {
+    if (prevIsNationalRetailerRef.current === undefined) {
+      prevIsNationalRetailerRef.current = isNationalRetailer;
+      return;
+    }
+
+    if (prevIsNationalRetailerRef.current === isNationalRetailer) return;
+
+    prevIsNationalRetailerRef.current = isNationalRetailer;
+
+    setValue("retailerId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    retailersHook.setSearchTerm("");
+
+    if (!isNationalRetailer) return;
+
+    setValue("entitiesLocationId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("retailerId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("retailerLocationId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }, [isNationalRetailer, setValue, retailersHook]);
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full">
       <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
@@ -938,13 +989,20 @@ export default function RequestForm({
                 </span>
               </div>
 
-              <div className="flex items-center gap-4 mt-4 w-full">
+              <div className="flex items-end gap-4 mt-4 w-full">
                 <FormAutocomplete<RequestFormValues>
                   name="stateId"
                   control={control}
                   label="State"
                   placeholder="Select state..."
                   options={stateOptions}
+                  disabled={!tenantId}
+                />
+
+                <FormCheckbox<RequestFormValues>
+                  name="isNationalRetailer"
+                  control={control}
+                  label="National retailer"
                   disabled={!tenantId}
                 />
 
@@ -959,13 +1017,21 @@ export default function RequestForm({
                   }))}
                   loading={locationsHook.isLoading}
                   onSearch={locationsHook.setSearchTerm}
-                  disabled={!tenantId || !selectedStateId}
+                  disabled={!tenantId || !selectedStateId || isNationalRetailer}
                 />
               </div>
 
-              {!isEntitiesLocationSelected && (
+              {!isStateSelected && (
                 <p className="text-sm text-warning">
-                  Select a city first to enable distributor and retailer.
+                  Select a state first to enable distributor.
+                </p>
+              )}
+
+              {isStateSelected &&
+                !isNationalRetailer &&
+                !isEntitiesLocationSelected && (
+                <p className="text-sm text-warning">
+                  Select a city first to enable retailer.
                 </p>
               )}
 
@@ -984,7 +1050,7 @@ export default function RequestForm({
                         label: d.name,
                       }))}
                       onSearch={distributorsHook.setSearchTerm}
-                      disabled={!isEntitiesLocationSelected}
+                      disabled={!isStateSelected}
                     />
 
                     {!distributorId && (
@@ -1008,7 +1074,7 @@ export default function RequestForm({
                                 );
                               }
                             }}
-                            disabled={!isEntitiesLocationSelected}
+                            disabled={!isStateSelected}
                           >
                             Create new distributor
                           </button>
@@ -1049,7 +1115,7 @@ export default function RequestForm({
                                 onClick={handleCreateDistributor}
                                 disabled={
                                   isCreatingDistributor ||
-                                  !isEntitiesLocationSelected
+                                  !isStateSelected
                                 }
                               >
                                 Confirm distributor
@@ -1085,7 +1151,10 @@ export default function RequestForm({
                       label: r.name,
                     }))}
                     onSearch={retailersHook.setSearchTerm}
-                    disabled={!isEntitiesLocationSelected}
+                    disabled={
+                      !isNationalRetailer &&
+                      (!isStateSelected || !isEntitiesLocationSelected)
+                    }
                   />
 
                   {!retailerId && (

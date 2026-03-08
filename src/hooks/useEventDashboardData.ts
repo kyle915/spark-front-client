@@ -15,7 +15,11 @@ export function useEventDashboardData(
   const data = useLazyLoadQuery<EventDashboardQueryType>(
     EventDashboardQuery,
     { filters: tenantFilter },
-    { fetchKey },
+    {
+      fetchKey,
+      fetchPolicy: "network-only",
+      networkCacheConfig: { force: true },
+    },
   );
 
   return {

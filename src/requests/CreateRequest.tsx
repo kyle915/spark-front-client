@@ -34,9 +34,14 @@ import CatalogsProvider from "@/shared/CatalogsProvider";
 interface CreateRequestFormProps {
   tenantId: string;
   userId?: string;
+  userUuid?: string;
 }
 
-const CreateRequestForm = ({ tenantId, userId }: CreateRequestFormProps) => {
+const CreateRequestForm = ({
+  tenantId,
+  userId,
+  userUuid,
+}: CreateRequestFormProps) => {
   // ========================
   // QUERIES
   // ========================
@@ -278,6 +283,7 @@ const CreateRequestForm = ({ tenantId, userId }: CreateRequestFormProps) => {
           tenantId={tenantId}
           rmmClients={rmmClients}
           userIdLoggin={userId ? userId : ""}
+          userUuidLoggin={userUuid ? userUuid : ""}
           // retailers={retailers}
           states={states}
           // distributors={distributors}
@@ -307,7 +313,11 @@ const CreateRequestContent = () => {
   return (
     <>
       <Suspense fallback={<Loading />}>
-        <CreateRequestForm tenantId={tenantId} userId={user?.uuid} />
+        <CreateRequestForm
+          tenantId={tenantId}
+          userId={user?.id}
+          userUuid={user?.uuid}
+        />
       </Suspense>
     </>
   );

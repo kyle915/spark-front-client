@@ -32,7 +32,9 @@ export default memo(function GoalsProgressSection({
     >
       <div className="space-y-6 p-1 max-w-full overflow-hidden">
         {goals.map((goal) => {
-          const percent = Math.round((goal.current / goal.target) * 100);
+          const percent =
+            goal.target > 0 ? Math.round((goal.current / goal.target) * 100) : 0;
+          const progressWidth = Math.min(Math.max(percent, 0), 100);
 
           return (
             <div key={goal.label} className="space-y-1 max-w-full">
@@ -55,7 +57,7 @@ export default memo(function GoalsProgressSection({
               >
                 <div
                   className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${percent}%` }}
+                  style={{ width: `${progressWidth}%` }}
                 />
               </div>
 
