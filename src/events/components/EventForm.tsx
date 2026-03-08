@@ -185,7 +185,7 @@ export default function EventForm({
     if (!userIdLoggin) return;
     if (!rmmClients.length) return;
 
-    const exists = rmmClients.some((c) => c.uuid === userIdLoggin);
+    const exists = rmmClients.some((c) => c.id === userIdLoggin);
 
     if (exists) {
       setValue("rmmAsignedId", userIdLoggin, {
@@ -203,7 +203,7 @@ export default function EventForm({
   const rmmSearchVariables = useMemo(() => ({ tenantId }), [tenantId]);
 
   const rmmSearchHook = useSearchQuery<
-    { uuid: string; firstName: string; lastName: string },
+    { id: string; firstName: string; lastName: string },
     RmmClientsQueryType
   >({
     queryDocument: RmmClientsQuery,
@@ -219,7 +219,7 @@ export default function EventForm({
         : rmmClients;
 
     return source.map((c) => ({
-      value: c.uuid,
+      value: c.id,
       label: `${c.firstName} ${c.lastName}`,
     }));
   }, [rmmSearchHook.searchTerm, rmmSearchHook.items, rmmClients]);

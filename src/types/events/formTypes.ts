@@ -92,7 +92,7 @@ export interface EventFormProps {
   eventTypes: EventType[];
   tenantId: string;
   rmmClients?: {
-    uuid: string;
+    id: string;
     firstName: string;
     lastName: string;
   }[];
