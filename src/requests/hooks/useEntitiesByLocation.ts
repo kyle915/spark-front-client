@@ -1,6 +1,6 @@
 import type { GraphQLTaggedNode } from "react-relay";
 import type { OperationType } from "relay-runtime";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { fetchQuery } from "react-relay";
 import environment from "@api/relay/environment";
 
@@ -38,9 +38,9 @@ export function useEntitiesByLocation<
 }: UseEntitiesByLocationProps<TItem, TQuery>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [remoteItems, setRemoteItems] = useState<TItem[]>([]);
+  const [localItems, setLocalItems] = useState<TItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const lastFetchKeyRef = useRef<string | null>(null);
   const prevLocationRef = useRef<string | null | undefined>(undefined);
   const extractNodesRef = useRef(extractNodes);
   const additionalFiltersRef = useRef(additionalFilters);
@@ -69,11 +69,11 @@ export function useEntitiesByLocation<
 
     setSearchTerm("");
     setRemoteItems([]);
-    lastFetchKeyRef.current = null;
+    setLocalItems([]);
   }, [entitiesLocationId]);
 
   // ===============================
-  // FETCH WITH CACHE + DEBOUNCE
+  // FETCH WITH DEBOUNCE
   // ===============================
   useEffect(() => {
     if (filterByStateOnly) {
@@ -131,12 +131,40 @@ export function useEntitiesByLocation<
     debounceMs,
   ]);
 
-  const items = searchTerm.trim().length > 0 ? remoteItems : remoteItems;
+  // ===============================
+  // MERGE LOCAL + REMOTE (NO DUPES)
+  // ===============================
+  const items = useMemo(() => {
+    const map = new Map<string, TItem>();
+
+    for (const item of localItems) {
+      map.set(item.id, item);
+    }
+
+    for (const item of remoteItems) {
+      if (!map.has(item.id)) {
+        map.set(item.id, item);
+      }
+    }
+
+    return Array.from(map.values());
+  }, [localItems, remoteItems]);
+
+  // ===============================
+  // ADD ITEM LOCALLY (for mutations)
+  // ===============================
+  const addItem = useCallback((item: TItem) => {
+    setLocalItems((prev) => {
+      if (prev.some((i) => i.id === item.id)) return prev;
+      return [item, ...prev];
+    });
+  }, []);
 
   return {
     items,
     searchTerm,
     setSearchTerm,
     isLoading,
+    addItem,
   };
 }

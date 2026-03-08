@@ -12,6 +12,9 @@ import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
 import { StatesQuery } from "@api/queries/StatesQuery";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 
+import { CreateEventMutation } from "@/api/mutations/CreateEventMutation";
+import type { CreateEventMutation as CreateEventMutationType } from "@/api/mutations/__generated__/CreateEventMutation.graphql";
+
 import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
 import type { RequestTypesQuery as RequestTypesQueryType } from "@api/queries/__generated__/RequestTypesQuery.graphql";
 import type { ProductTypesQuery as ProductTypesQueryType } from "@api/queries/__generated__/ProductTypesQuery.graphql";
@@ -85,6 +88,9 @@ const CreateRequestForm = ({
     CreateRequestMutation,
   );
 
+  const [commitCreateEvent] =
+    useMutation<CreateEventMutationType>(CreateEventMutation);
+
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
 
@@ -108,6 +114,63 @@ const CreateRequestForm = ({
   // ========================
   // SUBMIT
   // ========================
+  // handler create event
+  const runCreateEvent = (requestId: string, formData: RequestFormValues) => {
+    const timezone =
+      timezones.find((tz) => tz.id === formData.timezoneId) ?? null;
+
+    const offsetMinutes = timezone?.offset ?? null;
+    const dateValue = dateFormat(formData.date);
+
+    const normalizedDate = buildDateTimeWithOffset(
+      dateValue,
+      "00:00",
+      offsetMinutes,
+    );
+
+    commitCreateEvent({
+      variables: {
+        input: {
+          name: formData.name,
+          date: normalizedDate,
+          eventTypeId: formData.eventTypeId ?? "",
+          requestId: requestId,
+          address: formData.address,
+          notes: formData.notes ?? "",
+          isNational: false,
+          timezoneId: formData.timezoneId ?? null,
+          rmmAsignedId: formData.rmmAsignedId,
+          distributorId: formData.distributorId ?? null,
+          retailerId: formData.retailerId ?? null,
+          startTime: formData.startTime
+            ? buildDateTimeWithOffset(
+                dateValue,
+                formData.startTime,
+                offsetMinutes,
+              )
+            : "",
+          endTime: formData.endTime
+            ? buildDateTimeWithOffset(
+                dateValue,
+                formData.endTime,
+                offsetMinutes,
+              )
+            : "",
+          coordinates: formData.coordinates ?? undefined,
+          tenantId: tenantId,
+        },
+      },
+      onCompleted: ({ createEvent }) => {
+        if (createEvent?.success && createEvent.event?.uuid) {
+          navigate(`/event/view/${createEvent.event.uuid}`);
+        } else {
+          showAlert(createEvent?.message ?? "Error creating event", "error");
+        }
+      },
+      onError: (e) => showAlert(e.message, "error"),
+    });
+  };
+
   const handleSubmit = (formData: RequestFormValues) => {
     const timezone =
       timezones.find((tz) => tz.id === formData.timezoneId) ?? null;
@@ -171,12 +234,13 @@ const CreateRequestForm = ({
         },
       },
       onCompleted: (response) => {
-        if (
-          response.createRequest?.success &&
-          response.createRequest.request?.uuid
-        ) {
+        const request = response.createRequest?.request;
+
+        if (response.createRequest?.success && request?.uuid) {
           showAlert(response.createRequest.message, "success");
-          navigate(`/request/view/${response.createRequest.request.uuid}`);
+
+          // Crear el evento inmediatamente
+          runCreateEvent(request.id, formData);
         } else {
           showAlert(
             response.createRequest?.message ?? "Error creating request",
@@ -198,6 +262,8 @@ const CreateRequestForm = ({
 
   return (
     <CatalogsProvider
+      eventTypes
+      eventTypesFilters={filters}
       // retailers
       // retailersFilters={filters}
       // distributors
@@ -205,10 +271,11 @@ const CreateRequestForm = ({
       requestStoreManagers
       requestStoreManagersFilters={filters}
     >
-      {({ requestStoreManagers }) => (
+      {({ requestStoreManagers, eventTypes }) => (
         <RequestForm
           mode="create"
           onSubmit={handleSubmit}
+          eventTypes={eventTypes}
           requestTypes={requestTypes}
           timezones={timezones}
           productTypes={productTypes}

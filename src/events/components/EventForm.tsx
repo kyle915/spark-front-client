@@ -895,7 +895,8 @@ export default function EventForm({
                 name="timezoneId"
                 control={control}
                 label="Timezone"
-                placeholder="Search timezone..."
+                placeholder="Select location in map"
+                disabled
                 options={timezones.map((tz) => {
                   const sign = tz.offset >= 0 ? "+" : "-";
                   const abs = Math.abs(tz.offset);

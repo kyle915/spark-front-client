@@ -52,6 +52,7 @@ export interface RequestFormValues {
   distributorId?: string | null;
   requestTypeId?: string | null;
   rmmAsignedId?: string;
+  eventTypeId?: string;
   clientName?: string;
   clientEmail?: string;
   entitiesLocationId?: string | null;
@@ -115,6 +116,7 @@ interface RequestFormProps {
   onSubmit: (data: RequestFormValues) => void;
   defaultValues?: Partial<RequestFormValues>;
   clients?: CatalogItem[];
+  eventTypes?: CatalogItem[];
   rmmClients?: RmmClientItem[];
   userIdLoggin: string;
   userUuidLoggin?: string;
@@ -163,6 +165,7 @@ export default function RequestForm({
   // distributors = [],
   requestTypes,
   timezones = [],
+  eventTypes = [],
   productTypes = [],
   products = [],
   tenantId,
@@ -184,6 +187,7 @@ export default function RequestForm({
     timezoneId: null,
     retailerId: null,
     distributorId: null,
+    eventTypeId: "",
     requestTypeId: null,
     rmmAsignedId: userIdLoggin,
     clientName: "",
@@ -471,18 +475,47 @@ export default function RequestForm({
           locationId: distributorLocationId,
         },
       },
+      updater: (store) => {
+        const payload = store.getRootField("createDistributor");
+        const newDistributor = payload?.getLinkedRecord("distributor");
+
+        if (!newDistributor) return;
+
+        const root = store.getRoot();
+        const distributors = root.getLinkedRecord("distributors");
+
+        if (!distributors) return;
+
+        const edges = distributors.getLinkedRecords("edges") ?? [];
+
+        const newEdge = store.create(
+          `edge:${newDistributor.getDataID()}`,
+          "DistributorEdge",
+        );
+
+        newEdge.setLinkedRecord(newDistributor, "node");
+
+        distributors.setLinkedRecords([...edges, newEdge], "edges");
+      },
       onCompleted: (res) => {
         const distributor = res.createDistributor?.distributor;
+
         if (res.createDistributor?.success && distributor) {
+          distributorsHook.addItem(distributor);
+
           setValue("distributorId", distributor.id, {
             shouldDirty: true,
             shouldTouch: true,
           });
+
           setShowDistributorLocation(false);
-          onRefetch?.("distributors");
+
+          // limpiar campos
+          setValue("distributorName", "");
+          setValue("distributorEmail", "");
+          setValue("distributorLocationId", null);
+
           showAlert(res.createDistributor.message, "success");
-        } else {
-          showAlert(res.createDistributor?.message ?? "Error", "error");
         }
       },
       onError: (e) => showAlert(e.message, "error"),
@@ -512,15 +545,42 @@ export default function RequestForm({
           locationId: retailerLocationId,
         },
       },
+      updater: (store) => {
+        const payload = store.getRootField("createRetailer");
+        const newRetailer = payload?.getLinkedRecord("retailer");
+        if (!newRetailer) return;
+
+        const root = store.getRoot();
+
+        const retailersConnection = root.getLinkedRecord("retailers");
+        if (!retailersConnection) return;
+
+        const edges = retailersConnection.getLinkedRecords("edges") ?? [];
+
+        const newEdge = store.create(
+          `client:newRetailerEdge:${newRetailer.getDataID()}`,
+          "RetailerEdge",
+        );
+
+        newEdge.setLinkedRecord(newRetailer, "node");
+
+        retailersConnection.setLinkedRecords([...edges, newEdge], "edges");
+      },
       onCompleted: (res) => {
         const retailer = res.createRetailer?.retailer;
         if (res.createRetailer?.success && retailer) {
+          retailersHook.addItem(retailer);
           setValue("retailerId", retailer.id, {
             shouldDirty: true,
             shouldTouch: true,
           });
           setShowRetailerLocation(false);
           onRefetch?.("retailers");
+          // limpiar campos
+          setValue("retailerName", "");
+          setValue("retailerAddress", "");
+          setValue("retailerStoreContact", "");
+          setValue("retailerLocationId", null);
           showAlert(res.createRetailer.message, "success");
         } else {
           showAlert(res.createRetailer?.message ?? "Error", "error");
@@ -553,6 +613,27 @@ export default function RequestForm({
           name: storeManagerName,
           phone: storeManagerPhone,
         },
+      },
+      updater: (store) => {
+        const payload = store.getRootField("createRequestStoreManager");
+        const newManager = payload?.getLinkedRecord("requestStoreManager");
+        if (!newManager) return;
+
+        const root = store.getRoot();
+
+        const managersConnection = root.getLinkedRecord("requestStoreManagers");
+        if (!managersConnection) return;
+
+        const edges = managersConnection.getLinkedRecords("edges") ?? [];
+
+        const newEdge = store.create(
+          `client:newStoreManagerEdge:${newManager.getDataID()}`,
+          "RequestStoreManagerEdge",
+        );
+
+        newEdge.setLinkedRecord(newManager, "node");
+
+        managersConnection.setLinkedRecords([...edges, newEdge], "edges");
       },
       onCompleted: (res) => {
         const manager = res.createRequestStoreManager?.requestStoreManager;
@@ -814,6 +895,18 @@ export default function RequestForm({
                 rules={{ required: "Request Type is required" }}
               />
 
+              <FormAutocomplete<RequestFormValues>
+                name="eventTypeId"
+                control={control}
+                label="Event Type"
+                placeholder="Search event type..."
+                options={eventTypes.map((et) => ({
+                  value: et.id,
+                  label: et.name,
+                }))}
+                rules={{ required: "Event Type is required" }}
+              />
+
               <FormDatePicker<RequestFormValues>
                 name="date"
                 control={control}
@@ -827,7 +920,8 @@ export default function RequestForm({
                 name="timezoneId"
                 control={control}
                 label="Timezone"
-                placeholder="Search timezone..."
+                disabled
+                placeholder="Select location in map"
                 options={timezones.map((tz) => {
                   const sign = tz.offset >= 0 ? "+" : "-";
                   const abs = Math.abs(tz.offset);
@@ -855,7 +949,7 @@ export default function RequestForm({
                 rules={{ required: "End Time is required" }}
               />
 
-              <FormAutocomplete
+              <FormAutocomplete<RequestFormValues>
                 name="rmmAsignedId"
                 control={control}
                 label="RMM Assigned"

@@ -56,7 +56,7 @@ export default function DashboardIndex() {
   const { tenantId } = useAuthStore();
 
   const [filters, setFilters] = useState<DashboardFilters>({
-    distributorId: null,
+    distributorIds: [],
     rmmAsignedId: null,
     quarter: null,
     startDate: null,
@@ -87,7 +87,7 @@ export default function DashboardIndex() {
       ),
     },
     {
-      key: "consumersSampled",
+      key: "totalConsumersSampled",
       title: "Consumers Sampled",
       value: formatNumber(metrics.consumersSampled),
       change: formatDelta(
@@ -169,7 +169,7 @@ export default function DashboardIndex() {
         </div>
 
         {/* METRICS */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3  gap-6">
           {metricItems.map((metric) => (
             <MetricCard
               key={metric.key}
