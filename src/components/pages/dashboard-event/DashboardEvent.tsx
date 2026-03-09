@@ -11,14 +11,11 @@ import DashboardHeader from "../dashboard/DashboardHeader";
 import MonthlyTrendsChart from "../dashboard-event/MonthlyTrendsSection";
 import PerformanceInsights from "../dashboard-event/PerformanceInsights";
 import GoalsProgressSection from "../dashboard-event/GoalsProgressSection";
-import RegionalMarketPerformance from "../dashboard-event/RegionalMarketPerformance";
 import RecentEventsCarousel from "../dashboard-event/RecentEventsCarousel";
 
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { AiInsightsSection } from "@/components/ai-insights/AiInsightsSection";
 
-import { aiInsightsMock } from "@/data/dashboard-events/aiInsightsMock";
-import { regionalMarketMock } from "@/data/dashboard-events/regionalMarketMock";
 import { useAuthStore } from "@/store/authStore";
 
 /* =========================
@@ -200,8 +197,8 @@ export default function DashboardIndex() {
           <PerformanceInsights data={dashboard.performanceInsights} />
         </section>
 
-        <section className="w-full grid grid-cols-3 gap-6">
-          <div className="col-span-1">
+        <section className="w-full">
+          <div>
             {filters.rmmAsignedId ? (
               <GoalsProgressSection goals={goalsProgress} />
             ) : (
@@ -215,10 +212,6 @@ export default function DashboardIndex() {
               </div>
             )}
           </div>
-
-          <div className="col-span-2">
-            <RegionalMarketPerformance data={regionalMarketMock} />
-          </div>
         </section>
 
         <section className="w-full">
@@ -226,7 +219,7 @@ export default function DashboardIndex() {
         </section>
 
         {/* AI INSIGHTS */}
-        <AiInsightsSection insights={aiInsightsMock} isLoading={false} />
+        <AiInsightsSection insights={[]} isLoading={false} />
       </main>
     </Layout>
   );
