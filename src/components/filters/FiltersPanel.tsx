@@ -16,9 +16,10 @@ import type { DistributorsQuery as DistributorsQueryType } from "@/api/queries/_
 
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
+import FormMultiAutocomplete from "@/shared/FormMultiAutocomplete";
 
 export type DashboardFilters = {
-  distributorId: string | null;
+  distributorIds: string[] | null;
   rmmAsignedId: string | null;
   quarter: string | null;
   startDate: string | null;
@@ -26,7 +27,7 @@ export type DashboardFilters = {
 };
 
 type FiltersFormValues = {
-  distributor: string | null;
+  distributors: string[];
   rmm: string | null;
   quarter: string;
   dateRange: DateRange | undefined;
@@ -49,7 +50,7 @@ export default function FiltersPanel({ onApplyFilters }: FiltersPanelProps) {
   const { control, register, watch, setValue, handleSubmit } =
     useForm<FiltersFormValues>({
       defaultValues: {
-        distributor: null,
+        distributors: [],
         rmm: null,
         quarter: "",
         dateRange: undefined,
@@ -153,10 +154,9 @@ export default function FiltersPanel({ onApplyFilters }: FiltersPanelProps) {
   /* =========================
      APPLY FILTERS
   ========================== */
-
   const handleApply = handleSubmit((values) => {
     const normalized: DashboardFilters = {
-      distributorId: values.distributor || null,
+      distributorIds: values.distributors?.length ? values.distributors : null,
       rmmAsignedId: values.rmm || null,
       quarter: values.quarter || null,
       startDate: values.dateRange?.from
@@ -206,13 +206,13 @@ export default function FiltersPanel({ onApplyFilters }: FiltersPanelProps) {
         {/* BODY */}
         <div className="collapse-content mt-2 overflow-visible">
           <div className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <FormAutocomplete
+            <FormMultiAutocomplete
               control={control}
-              name="distributor"
-              label="Distributor"
+              name="distributors"
+              label="Distributors"
               options={distributorOptions}
               onSearch={setDistributorSearch}
-              placeholder="Search distributor..."
+              placeholder="Search distributors..."
             />
 
             <FormAutocomplete

@@ -50,6 +50,7 @@ interface SparkFormProps {
     name: string;
   }[];
   tenantId: string;
+  requestUrlName: string;
   timeZones: {
     id: string;
     name: string;
@@ -71,6 +72,7 @@ export default function SparkForm(props: SparkFormProps) {
     distributors,
     retailers,
     tenantId,
+    requestUrlName,
     timeZones,
   } = props;
 
@@ -128,6 +130,7 @@ export default function SparkForm(props: SparkFormProps) {
           onNationalRetailerChange={onNationalRetailerChange}
           distributors={distributors}
           retailers={retailers}
+          requestUrlName={requestUrlName}
         />
       ),
     },
@@ -135,7 +138,14 @@ export default function SparkForm(props: SparkFormProps) {
       title: "Extra Details",
       description: "Optional details",
       validate: () => trigger(stepFields.step4),
-      content: <Step4Details control={control} values={values} />,
+      content: (
+        <Step4Details
+          control={control}
+          setValue={setValue}
+          requestUrlName={requestUrlName}
+          values={values}
+        />
+      ),
     },
   ];
 

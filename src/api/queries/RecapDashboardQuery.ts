@@ -32,6 +32,18 @@ export const RecapDashboardQuery = graphql`
         brandAwareness
         brandAwarenessPercentage
         willingToPurchase
+        highestWillingnessToBuy {
+          marketName
+          willingCount
+        }
+        strongestBrandAwareness {
+          marketName
+          brandAwareCount
+        }
+        topConvertingMarket {
+          marketName
+          conversionRate
+        }
         willingToPurchasePercentage
         bestMonth {
           month

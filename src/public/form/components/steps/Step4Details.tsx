@@ -1,4 +1,5 @@
-import type { Control } from "react-hook-form";
+import { useEffect } from "react";
+import type { Control, UseFormSetValue } from "react-hook-form";
 import { useWatch } from "react-hook-form";
 import type { SparkFormData } from "../../schema/schema";
 import FormSelect from "@/shared/FormSelect";
@@ -7,29 +8,47 @@ import FormInputText from "@/shared/FormInputText";
 
 interface Step4DetailsProps {
   control: Control<SparkFormData>;
+  setValue: UseFormSetValue<SparkFormData>;
+  requestUrlName: string;
   values: SparkFormData;
 }
 
-export function Step4Details({ control, values }: Step4DetailsProps) {
+export function Step4Details({
+  control,
+  setValue,
+  requestUrlName,
+  values,
+}: Step4DetailsProps) {
+  const isJeeterTenant = requestUrlName.trim().toLowerCase().includes("jeeter");
+
   const notesValue =
     useWatch({
       control,
       name: "notes",
     }) || "";
 
+  useEffect(() => {
+    if (!isJeeterTenant) return;
+
+    setValue("details.0.isTableNeeded", "false", { shouldValidate: true });
+    setValue("details.0.tableSize", null, { shouldValidate: true });
+  }, [isJeeterTenant, setValue]);
+
   return (
     <div className="space-y-6">
-      <FormSelect
-        name="details.0.isTableNeeded"
-        label="Table Needed?"
-        control={control}
-        options={[
-          { value: "true", label: "Yes" },
-          { value: "false", label: "No" },
-        ]}
-      />
+      {!isJeeterTenant && (
+        <FormSelect
+          name="details.0.isTableNeeded"
+          label="Table Needed?"
+          control={control}
+          options={[
+            { value: "true", label: "Yes" },
+            { value: "false", label: "No" },
+          ]}
+        />
+      )}
 
-      {values.details?.[0]?.isTableNeeded === "true" && (
+      {!isJeeterTenant && values.details?.[0]?.isTableNeeded === "true" && (
         <FormInputText
           name="details.0.tableSize"
           label="Table Size"

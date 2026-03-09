@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import Layout from "@/layout/Layout";
 import { useNavigate, useParams } from "react-router";
 import Loading from "@shared/Loading";
@@ -20,6 +20,7 @@ import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
 import { useAlertStore } from "@store/alertStore";
+import { useAuthStore } from "@/store/authStore";
 import { dateFormat } from "@/public/form/utils/toDate";
 import {
   buildDateTimeWithOffset,
@@ -32,6 +33,7 @@ type EditRequestContentProps = {
 };
 
 const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
+  const { tenantSlug } = useAuthStore();
   const data = useLazyLoadQuery<RequestUuidQueryType>(RequestUuidQuery, {
     uuid,
   });
@@ -73,7 +75,24 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     { fetchPolicy: "store-or-network" },
   );
 
-  const states = statesData.states?.edges.map((e) => e.node) || [];
+  const states = useMemo(
+    () => statesData.states?.edges.map((e) => e.node) ?? [],
+    [statesData.states?.edges],
+  );
+  const isJeeterTenant = tenantSlug?.toLowerCase() === "jeeter";
+  const californiaState = useMemo(
+    () =>
+      states.find(
+        (state) =>
+          state.name?.toLowerCase() === "california" ||
+          state.code?.toLowerCase() === "ca",
+      ) ?? null,
+    [states],
+  );
+  const allowedStates = useMemo(() => {
+    if (!isJeeterTenant) return states;
+    return californiaState ? [californiaState] : [];
+  }, [isJeeterTenant, states, californiaState]);
   const rmmClients = rmmClientsData.rmmClients?.map((c) => c) || [];
 
   if (!request) {
@@ -117,7 +136,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
           coordinates: (formData.coordinates ?? []) as readonly number[],
           timezoneId: formData.timezoneId ?? "",
           requestTypeId: formData.requestTypeId ?? "",
-          distributorId: formData.distributorId ?? "",
+          distributorId: isJeeterTenant ? "" : (formData.distributorId ?? ""),
           retailerId: formData.retailerId ?? "",
           storeManagerName: formData.storeManagerName ?? "",
           storeManagerPhone: formData.storeManagerPhone ?? "",
@@ -163,12 +182,13 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     distributorId:
       request.distributor?.id ?? request?.distributor?.id ?? undefined,
     retailerId: request.retailer?.id ?? request?.retailer?.id ?? undefined,
-    stateId:
-      request.retailer?.location?.state?.id ??
-      request.distributor?.location?.state?.id ??
-      request?.retailer?.location?.state?.id ??
-      request?.distributor?.location?.state?.id ??
-      undefined,
+    stateId: isJeeterTenant
+      ? californiaState?.id
+      : request.retailer?.location?.state?.id ??
+        request.distributor?.location?.state?.id ??
+        request?.retailer?.location?.state?.id ??
+        request?.distributor?.location?.state?.id ??
+        undefined,
     entitiesLocationId:
       request.retailer?.location?.id ??
       request.distributor?.location?.id ??
@@ -186,6 +206,8 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
       request?.retailer?.location?.id ??
       undefined,
     requestTypeId: request.requestType?.id ?? null,
+    isTableNeeded: isJeeterTenant ? false : undefined,
+    tableSize: isJeeterTenant ? "" : undefined,
     // storeManagerId: request.storeManager?.id ?? null, // Falta en el query request.graphql
     products: request.products?.map((product) => product.id) ?? [],
   };
@@ -230,7 +252,10 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
               defaultValues={defaultValues}
               onSubmit={handleSubmit}
               clients={clients}
-              states={states}
+              states={allowedStates}
+              disableStateSelect={isJeeterTenant}
+              hideTableNeededFields={isJeeterTenant}
+              hideDistributorFields={isJeeterTenant}
               userIdLoggin=""
               rmmClients={rmmClients}
               requestTypes={requestTypes}

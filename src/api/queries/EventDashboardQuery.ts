@@ -47,6 +47,12 @@ export const EventDashboardQuery = graphql`
         }
         growthRate
       }
+      goalsProgress {
+        name
+        target
+        current
+        percentageComplete
+      }
       recentEvents {
         id
         name

@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import Layout from "@/layout/Layout";
 import Loading from "@/shared/Loading";
 import RequestForm, { type RequestFormValues } from "./components/RequestForm";
@@ -11,6 +11,9 @@ import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
 import { StatesQuery } from "@api/queries/StatesQuery";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+
+import { CreateEventMutation } from "@/api/mutations/CreateEventMutation";
+import type { CreateEventMutation as CreateEventMutationType } from "@/api/mutations/__generated__/CreateEventMutation.graphql";
 
 import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
 import type { RequestTypesQuery as RequestTypesQueryType } from "@api/queries/__generated__/RequestTypesQuery.graphql";
@@ -30,12 +33,14 @@ import CatalogsProvider from "@/shared/CatalogsProvider";
 
 interface CreateRequestFormProps {
   tenantId: string;
+  tenantSlug?: string | null;
   userId?: string;
   userUuid?: string;
 }
 
 const CreateRequestForm = ({
   tenantId,
+  tenantSlug,
   userId,
   userUuid,
 }: CreateRequestFormProps) => {
@@ -85,6 +90,9 @@ const CreateRequestForm = ({
     CreateRequestMutation,
   );
 
+  const [commitCreateEvent] =
+    useMutation<CreateEventMutationType>(CreateEventMutation);
+
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
 
@@ -93,7 +101,26 @@ const CreateRequestForm = ({
   // ========================
   const rmmClients = rmmClientsData.rmmClients?.map((c) => c) || [];
 
-  const states = statesData.states?.edges.map((e) => e.node) || [];
+  const states = useMemo(
+    () => statesData.states?.edges.map((e) => e.node) ?? [],
+    [statesData.states?.edges],
+  );
+  const isJeeterTenant = tenantSlug?.toLowerCase() === "jeeter";
+
+  const californiaState = useMemo(
+    () =>
+      states.find(
+        (state) =>
+          state.name?.toLowerCase() === "california" ||
+          state.code?.toLowerCase() === "ca",
+      ) ?? null,
+    [states],
+  );
+
+  const allowedStates = useMemo(() => {
+    if (!isJeeterTenant) return states;
+    return californiaState ? [californiaState] : [];
+  }, [isJeeterTenant, states, californiaState]);
 
   const requestTypes =
     requestTypesData.requestTypes?.edges.map((e) => e.node) || [];
@@ -108,6 +135,63 @@ const CreateRequestForm = ({
   // ========================
   // SUBMIT
   // ========================
+  // handler create event
+  const runCreateEvent = (requestId: string, formData: RequestFormValues) => {
+    const timezone =
+      timezones.find((tz) => tz.id === formData.timezoneId) ?? null;
+
+    const offsetMinutes = timezone?.offset ?? null;
+    const dateValue = dateFormat(formData.date);
+
+    const normalizedDate = buildDateTimeWithOffset(
+      dateValue,
+      "00:00",
+      offsetMinutes,
+    );
+
+    commitCreateEvent({
+      variables: {
+        input: {
+          name: formData.name,
+          date: normalizedDate,
+          eventTypeId: formData.eventTypeId ?? "",
+          requestId: requestId,
+          address: formData.address,
+          notes: formData.notes ?? "",
+          isNational: false,
+          timezoneId: formData.timezoneId ?? null,
+          rmmAsignedId: formData.rmmAsignedId,
+          distributorId: formData.distributorId ?? null,
+          retailerId: formData.retailerId ?? null,
+          startTime: formData.startTime
+            ? buildDateTimeWithOffset(
+                dateValue,
+                formData.startTime,
+                offsetMinutes,
+              )
+            : "",
+          endTime: formData.endTime
+            ? buildDateTimeWithOffset(
+                dateValue,
+                formData.endTime,
+                offsetMinutes,
+              )
+            : "",
+          coordinates: formData.coordinates ?? undefined,
+          tenantId: tenantId,
+        },
+      },
+      onCompleted: ({ createEvent }) => {
+        if (createEvent?.success && createEvent.event?.uuid) {
+          navigate(`/event/view/${createEvent.event.uuid}`);
+        } else {
+          showAlert(createEvent?.message ?? "Error creating event", "error");
+        }
+      },
+      onError: (e) => showAlert(e.message, "error"),
+    });
+  };
+
   const handleSubmit = (formData: RequestFormValues) => {
     const timezone =
       timezones.find((tz) => tz.id === formData.timezoneId) ?? null;
@@ -139,15 +223,15 @@ const CreateRequestForm = ({
           coordinates: (formData.coordinates ?? []) as readonly number[],
           timezoneId: formData.timezoneId!,
           requestTypeId: formData.requestTypeId!,
-          distributorId: formData.distributorId ?? null,
+          distributorId: isJeeterTenant ? null : (formData.distributorId ?? null),
           retailerId: formData.retailerId ?? null,
           storeManagerId: formData.storeManagerId ?? null,
           rmmAsignedId: formData.rmmAsignedId,
           // Create-only fields
           clientName: formData.clientName!,
           clientEmail: formData.clientEmail!,
-          distributorName: formData.distributorName!,
-          distributorEmail: formData.distributorEmail!,
+          distributorName: isJeeterTenant ? "" : formData.distributorName!,
+          distributorEmail: isJeeterTenant ? "" : formData.distributorEmail!,
           retailerName: formData.retailerName!,
           retailerAddress: formData.retailerAddress!,
           retailerStoreContact: formData.retailerStoreContact!,
@@ -157,10 +241,14 @@ const CreateRequestForm = ({
           // Details
           details: [
             {
-              isTableNeeded: formData.isTableNeeded || false,
-              tableSize: formData.tableSize
-                ? parseInt(formData.tableSize)
-                : null,
+              isTableNeeded: isJeeterTenant
+                ? false
+                : formData.isTableNeeded || false,
+              tableSize: isJeeterTenant
+                ? null
+                : formData.tableSize
+                  ? parseInt(formData.tableSize)
+                  : null,
             },
           ],
 
@@ -171,12 +259,13 @@ const CreateRequestForm = ({
         },
       },
       onCompleted: (response) => {
-        if (
-          response.createRequest?.success &&
-          response.createRequest.request?.uuid
-        ) {
+        const request = response.createRequest?.request;
+
+        if (response.createRequest?.success && request?.uuid) {
           showAlert(response.createRequest.message, "success");
-          navigate(`/request/view/${response.createRequest.request.uuid}`);
+
+          // Crear el evento inmediatamente
+          runCreateEvent(request.id, formData);
         } else {
           showAlert(
             response.createRequest?.message ?? "Error creating request",
@@ -198,6 +287,8 @@ const CreateRequestForm = ({
 
   return (
     <CatalogsProvider
+      eventTypes
+      eventTypesFilters={filters}
       // retailers
       // retailersFilters={filters}
       // distributors
@@ -205,10 +296,11 @@ const CreateRequestForm = ({
       requestStoreManagers
       requestStoreManagersFilters={filters}
     >
-      {({ requestStoreManagers }) => (
+      {({ requestStoreManagers, eventTypes }) => (
         <RequestForm
           mode="create"
           onSubmit={handleSubmit}
+          eventTypes={eventTypes}
           requestTypes={requestTypes}
           timezones={timezones}
           productTypes={productTypes}
@@ -218,7 +310,15 @@ const CreateRequestForm = ({
           userIdLoggin={userId ? userId : ""}
           userUuidLoggin={userUuid ? userUuid : ""}
           // retailers={retailers}
-          states={states}
+          states={allowedStates}
+          defaultValues={
+            isJeeterTenant && californiaState
+              ? { stateId: californiaState.id }
+              : undefined
+          }
+          disableStateSelect={isJeeterTenant}
+          hideTableNeededFields={isJeeterTenant}
+          hideDistributorFields={isJeeterTenant}
           // distributors={distributors}
           requestStoreManagers={requestStoreManagers}
           enableContactSection={true}
@@ -233,7 +333,7 @@ const CreateRequestForm = ({
 // PAGE CONTENT
 // ========================
 const CreateRequestContent = () => {
-  const { tenantId, user } = useAuthStore();
+  const { tenantId, tenantSlug, user } = useAuthStore();
 
   if (!tenantId) {
     return (
@@ -248,6 +348,7 @@ const CreateRequestContent = () => {
       <Suspense fallback={<Loading />}>
         <CreateRequestForm
           tenantId={tenantId}
+          tenantSlug={tenantSlug}
           userId={user?.id}
           userUuid={user?.uuid}
         />

@@ -39,7 +39,7 @@ export default function DashboardRetail() {
   const { tenantId } = useAuthStore();
 
   const [filters, setFilters] = useState<DashboardFilters>({
-    distributorId: null,
+    distributorIds: [],
     rmmAsignedId: null,
     quarter: null,
     startDate: null,
@@ -301,7 +301,9 @@ export default function DashboardRetail() {
           </div>
 
           <div className="col-span-1">
-            <VerticalPerformanceInsights />
+            <VerticalPerformanceInsights
+              insightsData={dashboard.performanceInsights}
+            />
           </div>
         </section>
 

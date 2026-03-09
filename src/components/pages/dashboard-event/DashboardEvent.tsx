@@ -43,6 +43,12 @@ const formatDelta = (current?: number | null, previous?: number | null) => {
   return `${sign}${diff.toFixed(1)}%`;
 };
 
+type DashboardGoalProgress = {
+  name?: string | null;
+  target?: number | null;
+  current?: number | null;
+};
+
 /* =========================
    Dashboard
 ========================= */
@@ -50,7 +56,7 @@ export default function DashboardIndex() {
   const { tenantId } = useAuthStore();
 
   const [filters, setFilters] = useState<DashboardFilters>({
-    distributorId: null,
+    distributorIds: [],
     rmmAsignedId: null,
     quarter: null,
     startDate: null,
@@ -58,7 +64,6 @@ export default function DashboardIndex() {
   });
 
   const [fetchKey, setFetchKey] = useState(0);
-
   const { dashboard } = useEventDashboardData(
     tenantId || "",
     filters,
@@ -82,7 +87,7 @@ export default function DashboardIndex() {
       ),
     },
     {
-      key: "consumersSampled",
+      key: "totalConsumersSampled",
       title: "Consumers Sampled",
       value: formatNumber(metrics.consumersSampled),
       change: formatDelta(
@@ -138,6 +143,15 @@ export default function DashboardIndex() {
     status: event.status,
   }));
 
+  const goalsProgress = (
+    (dashboard as { goalsProgress?: DashboardGoalProgress[] }).goalsProgress ??
+    []
+  ).map((goal) => ({
+    label: goal.name ?? "Goal",
+    current: goal.current ?? 0,
+    target: goal.target ?? 0,
+  }));
+
   return (
     <Layout>
       <main className="max-w-7xl mx-auto p-5 space-y-10">
@@ -155,7 +169,7 @@ export default function DashboardIndex() {
         </div>
 
         {/* METRICS */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3  gap-6">
           {metricItems.map((metric) => (
             <MetricCard
               key={metric.key}
@@ -188,15 +202,18 @@ export default function DashboardIndex() {
 
         <section className="w-full grid grid-cols-3 gap-6">
           <div className="col-span-1">
-            <GoalsProgressSection
-              goals={[
-                { label: "Events Target", current: 0, target: 200 },
-                { label: "Consumer Sampling", current: 0, target: 25000 },
-                { label: "Brand Awareness", current: 0, target: 50 },
-                { label: "Purchase Intent", current: 0, target: 75 },
-                { label: "Female Participation", current: 0, target: 65 },
-              ]}
-            />
+            {filters.rmmAsignedId ? (
+              <GoalsProgressSection goals={goalsProgress} />
+            ) : (
+              <div className="card bg-base-100 shadow-sm border border-base-300">
+                <div className="card-body">
+                  <h3 className="card-title text-base">Goals</h3>
+                  <p className="text-sm text-base-content/70">
+                    Select an RMM first to view goals.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="col-span-2">

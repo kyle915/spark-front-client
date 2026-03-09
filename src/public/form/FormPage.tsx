@@ -63,6 +63,7 @@ export default function SparkFormPage() {
         distributors={distributors}
         retailers={retailers}
         tenantId={slug}
+        requestUrlName={slug}
         timeZones={timeZones}
       />
     </SparkFormLayout>
