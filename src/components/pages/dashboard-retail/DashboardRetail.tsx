@@ -19,7 +19,6 @@ import RetailAccountsPerformance from "./RetailAccountsPerformance";
 import ReachConversionChart from "./ReachConversionChart";
 
 import { useRecapDashboardData } from "@/hooks/useRecapDashboardData";
-import { aiInsightsMockV2 } from "@/data/dashboard-retail/aiInsightsMock";
 import { useAuthStore } from "@/store/authStore";
 
 /* =========================
@@ -325,7 +324,7 @@ export default function DashboardRetail() {
 
         <QuarterSummaryCards data={quarterSummaries} />
 
-        <AiInsightsSection insights={aiInsightsMockV2} isLoading={false} />
+        <AiInsightsSection insights={[]} isLoading={false} />
       </main>
     </Layout>
   );
