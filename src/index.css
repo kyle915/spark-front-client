@@ -166,6 +166,14 @@ html[color-scheme="dark"] .app-logo {
   filter: brightness(0) invert(1);
 }
 
+html[color-scheme="dark"] .app-logo-default {
+  filter: brightness(0) invert(1);
+}
+
+html[color-scheme="light"] .app-logo-default {
+  filter: brightness(0);
+}
+
 html[color-scheme="dark"] .app-logo-public-default {
   filter: brightness(0) invert(1);
 }
