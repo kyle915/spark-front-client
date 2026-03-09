@@ -11,6 +11,7 @@ import DashboardHeader from "../dashboard/DashboardHeader";
 import MonthlyTrendsChart from "../dashboard-event/MonthlyTrendsSection";
 import PerformanceInsights from "../dashboard-event/PerformanceInsights";
 import GoalsProgressSection from "../dashboard-event/GoalsProgressSection";
+import RegionalMarketPerformance from "../dashboard-event/RegionalMarketPerformance";
 import RecentEventsCarousel from "../dashboard-event/RecentEventsCarousel";
 
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
@@ -202,8 +203,8 @@ export default function DashboardIndex() {
           <PerformanceInsights data={dashboard.performanceInsights} />
         </section>
 
-        <section className="w-full">
-          <div>
+        <section className="w-full grid grid-cols-3 gap-6">
+          <div className="col-span-1">
             {filters.rmmAsignedId ? (
               <GoalsProgressSection goals={goalsProgress} />
             ) : (
@@ -216,6 +217,10 @@ export default function DashboardIndex() {
                 </div>
               </div>
             )}
+          </div>
+
+          <div className="col-span-2">
+            <RegionalMarketPerformance data={[]} />
           </div>
         </section>
 
