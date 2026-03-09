@@ -50,7 +50,7 @@ type DashboardGoalProgress = {
    Dashboard
 ========================= */
 export default function DashboardIndex() {
-  const { tenantId } = useAuthStore();
+  const { tenantId, tenantSlug } = useAuthStore();
 
   const [filters, setFilters] = useState<DashboardFilters>({
     distributorIds: [],
@@ -122,7 +122,12 @@ export default function DashboardIndex() {
       value: formatNumber(globalKpis?.singleCansSold),
       change: "0%",
     },
-  ];
+  ].filter((metric) => {
+    if (tenantSlug?.toLowerCase() !== "jeeter") return true;
+    return (
+      metric.key !== "multiPacksSold" && metric.key !== "singleCansSold"
+    );
+  });
 
   const monthlyTrends = dashboard.monthlyTrends.dataPoints.map((point) => ({
     month: point.month,
