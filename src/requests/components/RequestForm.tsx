@@ -130,6 +130,9 @@ interface RequestFormProps {
   requestStoreManagers?: StoreManagerItem[];
   // locations?: CatalogItem[];
   states?: CatalogItem[];
+  disableStateSelect?: boolean;
+  hideTableNeededFields?: boolean;
+  hideDistributorFields?: boolean;
 
   onRefetch?: (
     key: "distributors" | "retailers" | "requestStoreManagers",
@@ -176,6 +179,9 @@ export default function RequestForm({
   contactMode,
   requestContactInfo,
   states = [],
+  disableStateSelect = false,
+  hideTableNeededFields = false,
+  hideDistributorFields = false,
 }: RequestFormProps) {
   const safeDefaultValues: RequestFormValues = {
     name: "",
@@ -809,6 +815,41 @@ export default function RequestForm({
     });
   }, [isNationalRetailer, setValue, retailersHook]);
 
+  useEffect(() => {
+    if (!hideTableNeededFields) return;
+
+    setValue("isTableNeeded", false, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("tableSize", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }, [hideTableNeededFields, setValue]);
+
+  useEffect(() => {
+    if (!hideDistributorFields) return;
+
+    setShowDistributorLocation(false);
+    setValue("distributorId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("distributorName", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("distributorEmail", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("distributorLocationId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }, [hideDistributorFields, setValue]);
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full">
       <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
@@ -996,7 +1037,7 @@ export default function RequestForm({
                   label="State"
                   placeholder="Select state..."
                   options={stateOptions}
-                  disabled={!tenantId}
+                  disabled={!tenantId || disableStateSelect}
                 />
 
                 <FormCheckbox<RequestFormValues>
@@ -1023,7 +1064,9 @@ export default function RequestForm({
 
               {!isStateSelected && (
                 <p className="text-sm text-warning">
-                  Select a state first to enable distributor.
+                  {hideDistributorFields
+                    ? "Select a state first to enable retailer."
+                    : "Select a state first to enable distributor."}
                 </p>
               )}
 
@@ -1036,7 +1079,7 @@ export default function RequestForm({
               )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {!isEventActivation && (
+                {!isEventActivation && !hideDistributorFields && (
                   <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
                     <p className="font-medium">Distributor</p>
 
@@ -1327,26 +1370,28 @@ export default function RequestForm({
           )}
 
           {/* DETAILS  */}
-          <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
-            <p className="font-semibold text-lg">Details</p>
-            <div className="grid grid-cols-1 gap-4">
-              <FormCheckbox<RequestFormValues>
-                name="isTableNeeded"
-                control={control}
-                label="Table Needed?"
-              />
-              {isTableNeeded && (
-                <FormInputText<RequestFormValues>
-                  name="tableSize"
+          {!hideTableNeededFields && (
+            <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+              <p className="font-semibold text-lg">Details</p>
+              <div className="grid grid-cols-1 gap-4">
+                <FormCheckbox<RequestFormValues>
+                  name="isTableNeeded"
                   control={control}
-                  label="Table Size"
-                  placeholder="Enter table size"
-                  type="number"
-                  rules={{ required: "Table Size is required" }}
+                  label="Table Needed?"
                 />
-              )}
-            </div>
-          </section>
+                {isTableNeeded && (
+                  <FormInputText<RequestFormValues>
+                    name="tableSize"
+                    control={control}
+                    label="Table Size"
+                    placeholder="Enter table size"
+                    type="number"
+                    rules={{ required: "Table Size is required" }}
+                  />
+                )}
+              </div>
+            </section>
+          )}
 
           {/* NOTES */}
           <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">

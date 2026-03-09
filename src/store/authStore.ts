@@ -14,6 +14,7 @@ interface AuthState {
   refreshToken: string | null;
   tenantUuid: string | null;
   tenantId: string | null;
+  tenantSlug: string | null;
   tenantMeta: TenantMeta | null;
   isAuthenticated: boolean;
   loading: boolean;
@@ -29,7 +30,8 @@ interface AuthState {
     tenantUuid: string,
     tenantId: string,
     logo?: string | null,
-    requestUrlName?: string | null
+    requestUrlName?: string | null,
+    tenantSlug?: string | null
   ) => void;
   clearTenant: () => void;
 }
@@ -40,6 +42,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   refreshToken: null,
   tenantUuid: null,
   tenantId: null,
+  tenantSlug: null,
   tenantMeta: null,
   isAuthenticated: false,
   loading: false,
@@ -56,6 +59,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         localStorage.setItem("@refreshToken", refreshToken);
       }
       localStorage.removeItem("@tenantUuid");
+      localStorage.removeItem("@tenantSlug");
       const me = await fetchMe();
 
       set({
@@ -63,6 +67,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         token: authToken,
         refreshToken,
         tenantUuid: null,
+        tenantSlug: null,
         tenantMeta: null,
         isAuthenticated: true,
         loading: false,
@@ -85,6 +90,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         localStorage.setItem("@refreshToken", refreshToken);
       }
       localStorage.removeItem("@tenantUuid");
+      localStorage.removeItem("@tenantSlug");
       const me = await fetchMe();
 
       set({
@@ -92,6 +98,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         token,
         refreshToken,
         tenantUuid: null,
+        tenantSlug: null,
         isAuthenticated: true,
         loading: false,
       });
@@ -110,6 +117,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     localStorage.removeItem("@tenantUuid");
     localStorage.removeItem("@tenantId");
+    localStorage.removeItem("@tenantSlug");
     localStorage.removeItem("@tenantLogo");
     localStorage.removeItem("@tenantRequestUrlName");
 
@@ -119,6 +127,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       refreshToken: null,
       tenantUuid: null,
       tenantId: null,
+      tenantSlug: null,
       tenantMeta: null,
       isAuthenticated: false,
       error: null,
@@ -130,6 +139,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const refreshToken = localStorage.getItem("@refreshToken");
     const tenantUuid = localStorage.getItem("@tenantUuid");
     const tenantId = localStorage.getItem("@tenantId");
+    const tenantSlugFromStorage = localStorage.getItem("@tenantSlug");
     const logo = localStorage.getItem("@tenantLogo");
     const requestUrlName = localStorage.getItem("@tenantRequestUrlName");
 
@@ -143,6 +153,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           token,
           refreshToken,
           tenantUuid,
+          tenantSlug: tenantSlugFromStorage,
           isAuthenticated: true,
           tenantId,
           tenantMeta: {
@@ -160,6 +171,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           token: null,
           refreshToken: null,
           tenantUuid: null,
+          tenantSlug: null,
           tenantMeta: null,
           tenantId: null,
           isAuthenticated: false,
@@ -172,10 +184,16 @@ export const useAuthStore = create<AuthState>((set) => ({
     tenantUuid: string,
     tenantId: string,
     logo?: string | null,
-    requestUrlName?: string | null
+    requestUrlName?: string | null,
+    tenantSlug?: string | null
   ) => {
     localStorage.setItem("@tenantUuid", tenantUuid);
     localStorage.setItem("@tenantId", tenantId);
+    if (tenantSlug) {
+      localStorage.setItem("@tenantSlug", tenantSlug);
+    } else {
+      localStorage.removeItem("@tenantSlug");
+    }
 
     if (logo) localStorage.setItem("@tenantLogo", logo);
     if (requestUrlName)
@@ -184,6 +202,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({
       tenantUuid,
       tenantId,
+      tenantSlug: tenantSlug ?? null,
       tenantMeta: {
         logo,
         requestUrlName,
@@ -194,12 +213,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   clearTenant: () => {
     localStorage.removeItem("@tenantUuid");
     localStorage.removeItem("@tenantId");
+    localStorage.removeItem("@tenantSlug");
     localStorage.removeItem("@tenantLogo");
     localStorage.removeItem("@tenantRequestUrlName");
 
     set({
       tenantUuid: null,
       tenantId: null,
+      tenantSlug: null,
       tenantMeta: null,
     });
   },
