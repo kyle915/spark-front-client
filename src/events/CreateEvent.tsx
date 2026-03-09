@@ -37,7 +37,7 @@ import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__gen
 /* ================= Page ================= */
 const CreateEventPage = () => {
   const { uuid } = useParams<{ uuid: string }>();
-  const { user } = useAuthStore();
+  const { user, tenantSlug } = useAuthStore();
 
   if (!uuid) {
     return (
@@ -54,6 +54,7 @@ const CreateEventPage = () => {
       <Suspense fallback={<Loading />}>
         <CreateEventContent
           uuid={uuid}
+          tenantSlug={tenantSlug}
           userId={user?.id ?? ""}
           userUuid={user?.uuid ?? ""}
         />
@@ -65,10 +66,12 @@ const CreateEventPage = () => {
 /* ================= Content only load ================= */
 const CreateEventContent = ({
   uuid,
+  tenantSlug,
   userId,
   userUuid,
 }: {
   uuid: string;
+  tenantSlug?: string | null;
   userId: string;
   userUuid: string;
 }) => {
@@ -85,20 +88,32 @@ const CreateEventContent = ({
   }
 
   return (
-    <CreateEventForm request={data.request} userId={userId} userUuid={userUuid} />
+    <CreateEventForm
+      request={data.request}
+      tenantSlug={tenantSlug}
+      userId={userId}
+      userUuid={userUuid}
+    />
   );
 };
 
 /* ================= Form ================= */
 type FormProps = {
   request: NonNullable<RequestUuidQueryType["response"]["request"]>;
+  tenantSlug?: string | null;
   userId: string;
   userUuid: string;
 };
 
-const CreateEventForm = ({ request, userId, userUuid }: FormProps) => {
+const CreateEventForm = ({
+  request,
+  tenantSlug,
+  userId,
+  userUuid,
+}: FormProps) => {
   const navigate = useNavigate();
   const { showAlert } = useAlertStore();
+  const isJeeterTenant = tenantSlug?.toLowerCase() === "jeeter";
 
   // ========================
   // QUERIES
@@ -168,7 +183,7 @@ const CreateEventForm = ({ request, userId, userUuid }: FormProps) => {
           isNational: data.isNational ?? false,
           timezoneId: data.timezoneId ?? request.timezone?.id ?? null,
           rmmAsignedId: data.rmmAsignedId,
-          distributorId: request.distributor?.id ?? null,
+          distributorId: isJeeterTenant ? null : (request.distributor?.id ?? null),
           retailerId: request.retailer?.id ?? null,
           startTime: dateValue
             ? buildDateTimeWithOffset(dateValue, data.startTime, offsetMinutes)
@@ -248,7 +263,7 @@ const CreateEventForm = ({ request, userId, userUuid }: FormProps) => {
               : "",
           timezoneId: data.timezoneId ?? request.timezone.id,
           requestTypeId: request.requestType.id,
-          distributorId: request.distributor?.id ?? "",
+          distributorId: isJeeterTenant ? "" : (request.distributor?.id ?? ""),
           retailerId: request.retailer?.id ?? "",
           storeManagerName: request.storeManagerName ?? "",
           storeManagerPhone: request.storeManagerPhone ?? "",
@@ -284,7 +299,7 @@ const CreateEventForm = ({ request, userId, userUuid }: FormProps) => {
     isNational: false,
     isNationalRetailer: true,
     timezoneId: request.timezone?.id ?? null,
-    distributorId: request.distributor?.id ?? null,
+    distributorId: isJeeterTenant ? null : (request.distributor?.id ?? null),
     retailerId: request.retailer?.id ?? null,
     rmmAsignedId: request.rmmAsigned?.id ?? "",
     // storeManagerName:
@@ -316,6 +331,19 @@ const CreateEventForm = ({ request, userId, userUuid }: FormProps) => {
         if (Object.values(errors).some(Boolean))
           return <div className="alert alert-error">Catalog error</div>;
 
+        const californiaState =
+          states.find(
+            (state) =>
+              state.name?.toLowerCase() === "california" ||
+              state.code?.toLowerCase() === "ca",
+          ) ?? null;
+        const allowedStates =
+          isJeeterTenant && californiaState ? [californiaState] : states;
+        const formDefaultValues =
+          isJeeterTenant && californiaState
+            ? { ...defaultValues, stateId: californiaState.id }
+            : defaultValues;
+
         return (
           <EventForm
             mode="create"
@@ -328,12 +356,14 @@ const CreateEventForm = ({ request, userId, userUuid }: FormProps) => {
             // distributors={distributors}
             // retailers={retailers}
             timezones={timeZones}
-            states={states}
+            states={allowedStates}
+            disableStateSelect={isJeeterTenant}
+            hideDistributorFields={isJeeterTenant}
             requestStoreManagers={requestStoreManagers}
             // requestContactInfo={requestContactInfo}
             // locations={locations}
             showIsNational={false}
-            defaultValues={defaultValues}
+            defaultValues={formDefaultValues}
             onSubmit={handleSubmit}
             // onRefetch={refetch}
           />

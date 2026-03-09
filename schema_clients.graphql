@@ -272,7 +272,7 @@ type AmbassadorInvitationTypeCountableEdge {
 }
 
 """
-AmbassadorJob(id, uuid, recap_uploaded, accepted_terms, appear_as_rfp, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
+AmbassadorJob(id, uuid, recap_uploaded, accepted_terms, real_amount, appear_as_rfp, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
 """
 type AmbassadorJob implements Node {
   """The Globally Unique ID of this object"""
@@ -1432,6 +1432,9 @@ input CreateRecapInput {
   name: String!
   eventId: ID!
   files: [RecapFileInput!]!
+  fillingForAmbassador: Boolean = null
+  late: Boolean = null
+  incomplete: Boolean = null
   productsSold: Int = null
   totalCansSold: Int = null
   totalPacksSold: Int = null
@@ -1545,6 +1548,7 @@ input CreateRetailerInput {
   address: String!
   storeContact: String!
   locationId: ID!
+  isNational: Boolean! = false
 }
 
 input CreateReviewScoreInput {
@@ -1824,6 +1828,16 @@ type DjangoImageType {
   height: Int!
 }
 
+type EnqueueCreateGoalsForAllTenantsPayload {
+  success: Boolean!
+  enqueued: Boolean!
+}
+
+type EnqueueCreateGoalsForTenantPayload {
+  success: Boolean!
+  enqueued: Boolean!
+}
+
 """
 Event(id, uuid, name, date, coordinates, timezone, tenant, request, event_type, status, retailer, distributor, start_time, end_time, address, notes, is_national, rmm_asigned, created_by, updated_by, created_at, updated_at)
 """
@@ -1873,6 +1887,7 @@ type EventDashboard {
   monthlyTrends: MonthlyPerformanceTrend!
   performanceInsights: PerformanceInsights!
   recentEvents: [RecentEvent!]
+  goalsProgress: [GoalProgress!]
 }
 
 type EventDashboardFilterOptions {
@@ -1890,6 +1905,8 @@ input EventDashboardFiltersInput {
   quarter: String = null
   rmmAsignedId: ID = null
   distributorId: ID = null
+  distributorIds: [ID!] = null
+  year: Int = null
 }
 
 type EventDashboardMetrics {
@@ -1912,6 +1929,7 @@ input EventFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
+  rmmAsigned: ID = null
   eventTypeId: ID = null
   eventStatus: EventStatusFilterEnum = null
   requestId: ID = null
@@ -2103,6 +2121,42 @@ type GenerateInsightsPayload {
 input GenerateRecapPdfInput {
   clientMutationId: ID = null
   id: ID!
+}
+
+type Goal {
+  id: ID!
+  uuid: String!
+  tenantId: ID!
+  user: GoalUser!
+  userId: ID!
+  year: Int!
+  eventTargetGoal: Int
+  consumerSamplingGoal: Int
+  brandAwarenessGoal: Float
+  purchaseIntentGoal: Float
+  femaleParticipationGoal: Float
+  firstTimeBuyersGoal: Int
+  currentEventsCount: Int
+  currentConsumerSampling: Int
+  currentBrandAwareness: Float
+  currentPurchaseIntent: Float
+  currentFirstTimeBuyers: Int
+  currentFemaleParticipation: Float
+}
+
+type GoalProgress {
+  name: String!
+  target: Float!
+  current: Float!
+  percentageComplete: Float!
+}
+
+type GoalUser {
+  id: ID!
+  uuid: String!
+  email: String!
+  firstName: String!
+  lastName: String!
 }
 
 input GoogleCalendarCallbackInput {
@@ -2607,6 +2661,16 @@ type MarketPerformanceData {
   efficiency: Float!
 }
 
+type MarketWithBrandAwareness {
+  marketName: String!
+  brandAwareCount: Int!
+}
+
+type MarketWithWillingness {
+  marketName: String!
+  willingCount: Int!
+}
+
 type MonthlyDataPoint {
   month: String!
   consumersSampled: Int!
@@ -2778,6 +2842,9 @@ type Mutation {
   addAmbassadorsToGroup(input: AddAmbassadorsToGroupInput!): AddAmbassadorsToGroupResponse!
   removeAmbassadorsFromGroup(input: RemoveAmbassadorsFromGroupInput!): AmbassadorGroupResponse!
   generateInsights(tenantId: ID = null, fromDate: String = null, toDate: String = null, enqueue: Boolean! = false): GenerateInsightsPayload!
+  setGoals(input: SetGoalsInput!): Goal!
+  enqueueCreateGoalsForTenant(tenantId: ID!, year: Int!): EnqueueCreateGoalsForTenantPayload!
+  enqueueCreateGoalsForAllTenants(year: Int!): EnqueueCreateGoalsForAllTenantsPayload!
 }
 
 type MutationNormalOutput {
@@ -3123,6 +3190,8 @@ type Query {
   recapDashboardFilterOptions: RecapDashboardFilterOptions!
   recapDashboard(filters: RecapDashboardFiltersInput = null): RecapDashboard!
   latestInsights(tenantId: ID = null): Insights
+  goals(tenantId: ID!, year: Int!, userId: ID = null, startDate: String = null, endDate: String = null, quarter: String = null): Goal
+  goalsList(tenantId: ID!, year: Int = null, userId: ID = null): [Goal!]!
   getUploadUrl(filePath: String!, contentType: String! = "image/jpeg"): UploadUrlResponse!
   getDownloadUrl(filePath: String!): String!
 }
@@ -3283,7 +3352,7 @@ input RateTypeFiltersInput {
 }
 
 """
-Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, total_cans_sold, total_packs_sold, account_spend_amount, approved, timezone, event, ambassador, job, retailer, created_by, updated_by, created_at, updated_at)
+Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, total_cans_sold, total_packs_sold, filling_for_ambassador, late, incomplete, account_spend_amount, approved, timezone, event, ambassador, job, retailer, created_by, updated_by, created_at, updated_at)
 """
 type Recap implements Node {
   """The Globally Unique ID of this object"""
@@ -3291,6 +3360,7 @@ type Recap implements Node {
   uuid: String!
   name: String!
   approved: Boolean!
+  fillingForAmbassador: Boolean!
   event: Event!
   eventId: ID!
   jobId: ID
@@ -3361,6 +3431,7 @@ input RecapDashboardFiltersInput {
   quarter: String = null
   rmmAsignedId: ID = null
   distributorId: ID = null
+  distributorIds: [ID!] = null
 }
 
 type RecapDashboardMetrics {
@@ -3478,6 +3549,9 @@ type RecapPerformanceInsights {
   willingToPurchasePercentage: Float!
   bestMonth: BestRecapMonth
   growthRate: Float!
+  topConvertingMarket: TopConvertingMarket
+  highestWillingnessToBuy: MarketWithWillingness
+  strongestBrandAwareness: MarketWithBrandAwareness
 }
 
 type RecentEvent {
@@ -3552,6 +3626,7 @@ type Request implements Node {
   requestType: RequestType
   status: RequestStatus
   tenantId: ID!
+  tenant: TenantType
   rmmAsigned: SparkUserType
   createdBy: SparkUserType
   updatedBy: SparkUserType
@@ -3624,6 +3699,7 @@ input RequestFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
+  rmmAsigned: ID = null
   statusId: ID = null
   clientId: ID = null
   retailerId: ID = null
@@ -3893,6 +3969,19 @@ input SalesPerformanceInput {
   price: Float!
 }
 
+input SetGoalsInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  userId: ID = null
+  year: Int!
+  eventTargetGoal: Int = null
+  consumerSamplingGoal: Int = null
+  brandAwarenessGoal: Float = null
+  purchaseIntentGoal: Float = null
+  femaleParticipationGoal: Float = null
+  firstTimeBuyersGoal: Int = null
+}
+
 input SkillFiltersInput {
   tenantId: ID = null
   tenantUuid: ID = null
@@ -4078,13 +4167,14 @@ type TenantThemeType implements Node {
 }
 
 """
-Tenant(id, uuid, name, image, request_url_name, created_by, updated_by, created_at, updated_at)
+Tenant(id, uuid, name, image, request_url_name, slug, created_by, updated_by, created_at, updated_at)
 """
 type TenantType implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
   uuid: UUID!
   name: String!
+  slug: String
   requestUrlName: String
   image: String
 }
@@ -4154,6 +4244,11 @@ type TokenType {
 
   """The encoded payload, namely a token."""
   token: String!
+}
+
+type TopConvertingMarket {
+  marketName: String!
+  conversionRate: Float!
 }
 
 """
@@ -4558,6 +4653,9 @@ input UpdateRecapInput {
   name: String!
   eventId: ID!
   files: [RecapFileInput!]!
+  fillingForAmbassador: Boolean = null
+  late: Boolean = null
+  incomplete: Boolean = null
   productsSold: Int = null
   totalCansSold: Int = null
   totalPacksSold: Int = null
@@ -4629,6 +4727,7 @@ input UpdateRetailerInput {
   address: String!
   storeContact: String!
   locationId: ID!
+  isNational: Boolean! = false
   id: ID!
 }
 
@@ -4776,13 +4875,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
+  lastName: String
+  email: String!
+  id: ID!
+  firstName: String
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
-  lastName: String
-  email: String!
-  firstName: String
-  id: ID!
   archived: Boolean!
   verified: Boolean!
 }

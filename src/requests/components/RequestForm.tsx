@@ -52,6 +52,7 @@ export interface RequestFormValues {
   distributorId?: string | null;
   requestTypeId?: string | null;
   rmmAsignedId?: string;
+  eventTypeId?: string;
   clientName?: string;
   clientEmail?: string;
   entitiesLocationId?: string | null;
@@ -115,6 +116,7 @@ interface RequestFormProps {
   onSubmit: (data: RequestFormValues) => void;
   defaultValues?: Partial<RequestFormValues>;
   clients?: CatalogItem[];
+  eventTypes?: CatalogItem[];
   rmmClients?: RmmClientItem[];
   userIdLoggin: string;
   userUuidLoggin?: string;
@@ -128,6 +130,9 @@ interface RequestFormProps {
   requestStoreManagers?: StoreManagerItem[];
   // locations?: CatalogItem[];
   states?: CatalogItem[];
+  disableStateSelect?: boolean;
+  hideTableNeededFields?: boolean;
+  hideDistributorFields?: boolean;
 
   onRefetch?: (
     key: "distributors" | "retailers" | "requestStoreManagers",
@@ -163,6 +168,7 @@ export default function RequestForm({
   // distributors = [],
   requestTypes,
   timezones = [],
+  eventTypes = [],
   productTypes = [],
   products = [],
   tenantId,
@@ -173,6 +179,9 @@ export default function RequestForm({
   contactMode,
   requestContactInfo,
   states = [],
+  disableStateSelect = false,
+  hideTableNeededFields = false,
+  hideDistributorFields = false,
 }: RequestFormProps) {
   const safeDefaultValues: RequestFormValues = {
     name: "",
@@ -184,6 +193,7 @@ export default function RequestForm({
     timezoneId: null,
     retailerId: null,
     distributorId: null,
+    eventTypeId: "",
     requestTypeId: null,
     rmmAsignedId: userIdLoggin,
     clientName: "",
@@ -471,18 +481,47 @@ export default function RequestForm({
           locationId: distributorLocationId,
         },
       },
+      updater: (store) => {
+        const payload = store.getRootField("createDistributor");
+        const newDistributor = payload?.getLinkedRecord("distributor");
+
+        if (!newDistributor) return;
+
+        const root = store.getRoot();
+        const distributors = root.getLinkedRecord("distributors");
+
+        if (!distributors) return;
+
+        const edges = distributors.getLinkedRecords("edges") ?? [];
+
+        const newEdge = store.create(
+          `edge:${newDistributor.getDataID()}`,
+          "DistributorEdge",
+        );
+
+        newEdge.setLinkedRecord(newDistributor, "node");
+
+        distributors.setLinkedRecords([...edges, newEdge], "edges");
+      },
       onCompleted: (res) => {
         const distributor = res.createDistributor?.distributor;
+
         if (res.createDistributor?.success && distributor) {
+          distributorsHook.addItem(distributor);
+
           setValue("distributorId", distributor.id, {
             shouldDirty: true,
             shouldTouch: true,
           });
+
           setShowDistributorLocation(false);
-          onRefetch?.("distributors");
+
+          // limpiar campos
+          setValue("distributorName", "");
+          setValue("distributorEmail", "");
+          setValue("distributorLocationId", null);
+
           showAlert(res.createDistributor.message, "success");
-        } else {
-          showAlert(res.createDistributor?.message ?? "Error", "error");
         }
       },
       onError: (e) => showAlert(e.message, "error"),
@@ -512,15 +551,42 @@ export default function RequestForm({
           locationId: retailerLocationId,
         },
       },
+      updater: (store) => {
+        const payload = store.getRootField("createRetailer");
+        const newRetailer = payload?.getLinkedRecord("retailer");
+        if (!newRetailer) return;
+
+        const root = store.getRoot();
+
+        const retailersConnection = root.getLinkedRecord("retailers");
+        if (!retailersConnection) return;
+
+        const edges = retailersConnection.getLinkedRecords("edges") ?? [];
+
+        const newEdge = store.create(
+          `client:newRetailerEdge:${newRetailer.getDataID()}`,
+          "RetailerEdge",
+        );
+
+        newEdge.setLinkedRecord(newRetailer, "node");
+
+        retailersConnection.setLinkedRecords([...edges, newEdge], "edges");
+      },
       onCompleted: (res) => {
         const retailer = res.createRetailer?.retailer;
         if (res.createRetailer?.success && retailer) {
+          retailersHook.addItem(retailer);
           setValue("retailerId", retailer.id, {
             shouldDirty: true,
             shouldTouch: true,
           });
           setShowRetailerLocation(false);
           onRefetch?.("retailers");
+          // limpiar campos
+          setValue("retailerName", "");
+          setValue("retailerAddress", "");
+          setValue("retailerStoreContact", "");
+          setValue("retailerLocationId", null);
           showAlert(res.createRetailer.message, "success");
         } else {
           showAlert(res.createRetailer?.message ?? "Error", "error");
@@ -553,6 +619,27 @@ export default function RequestForm({
           name: storeManagerName,
           phone: storeManagerPhone,
         },
+      },
+      updater: (store) => {
+        const payload = store.getRootField("createRequestStoreManager");
+        const newManager = payload?.getLinkedRecord("requestStoreManager");
+        if (!newManager) return;
+
+        const root = store.getRoot();
+
+        const managersConnection = root.getLinkedRecord("requestStoreManagers");
+        if (!managersConnection) return;
+
+        const edges = managersConnection.getLinkedRecords("edges") ?? [];
+
+        const newEdge = store.create(
+          `client:newStoreManagerEdge:${newManager.getDataID()}`,
+          "RequestStoreManagerEdge",
+        );
+
+        newEdge.setLinkedRecord(newManager, "node");
+
+        managersConnection.setLinkedRecords([...edges, newEdge], "edges");
       },
       onCompleted: (res) => {
         const manager = res.createRequestStoreManager?.requestStoreManager;
@@ -728,6 +815,41 @@ export default function RequestForm({
     });
   }, [isNationalRetailer, setValue, retailersHook]);
 
+  useEffect(() => {
+    if (!hideTableNeededFields) return;
+
+    setValue("isTableNeeded", false, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("tableSize", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }, [hideTableNeededFields, setValue]);
+
+  useEffect(() => {
+    if (!hideDistributorFields) return;
+
+    setShowDistributorLocation(false);
+    setValue("distributorId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("distributorName", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("distributorEmail", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("distributorLocationId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }, [hideDistributorFields, setValue]);
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full">
       <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
@@ -814,6 +936,18 @@ export default function RequestForm({
                 rules={{ required: "Request Type is required" }}
               />
 
+              <FormAutocomplete<RequestFormValues>
+                name="eventTypeId"
+                control={control}
+                label="Event Type"
+                placeholder="Search event type..."
+                options={eventTypes.map((et) => ({
+                  value: et.id,
+                  label: et.name,
+                }))}
+                rules={{ required: "Event Type is required" }}
+              />
+
               <FormDatePicker<RequestFormValues>
                 name="date"
                 control={control}
@@ -827,7 +961,8 @@ export default function RequestForm({
                 name="timezoneId"
                 control={control}
                 label="Timezone"
-                placeholder="Search timezone..."
+                disabled
+                placeholder="Select location in map"
                 options={timezones.map((tz) => {
                   const sign = tz.offset >= 0 ? "+" : "-";
                   const abs = Math.abs(tz.offset);
@@ -855,7 +990,7 @@ export default function RequestForm({
                 rules={{ required: "End Time is required" }}
               />
 
-              <FormAutocomplete
+              <FormAutocomplete<RequestFormValues>
                 name="rmmAsignedId"
                 control={control}
                 label="RMM Assigned"
@@ -902,7 +1037,7 @@ export default function RequestForm({
                   label="State"
                   placeholder="Select state..."
                   options={stateOptions}
-                  disabled={!tenantId}
+                  disabled={!tenantId || disableStateSelect}
                 />
 
                 <FormCheckbox<RequestFormValues>
@@ -929,7 +1064,9 @@ export default function RequestForm({
 
               {!isStateSelected && (
                 <p className="text-sm text-warning">
-                  Select a state first to enable distributor.
+                  {hideDistributorFields
+                    ? "Select a state first to enable retailer."
+                    : "Select a state first to enable distributor."}
                 </p>
               )}
 
@@ -942,7 +1079,7 @@ export default function RequestForm({
               )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {!isEventActivation && (
+                {!isEventActivation && !hideDistributorFields && (
                   <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
                     <p className="font-medium">Distributor</p>
 
@@ -1233,26 +1370,28 @@ export default function RequestForm({
           )}
 
           {/* DETAILS  */}
-          <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
-            <p className="font-semibold text-lg">Details</p>
-            <div className="grid grid-cols-1 gap-4">
-              <FormCheckbox<RequestFormValues>
-                name="isTableNeeded"
-                control={control}
-                label="Table Needed?"
-              />
-              {isTableNeeded && (
-                <FormInputText<RequestFormValues>
-                  name="tableSize"
+          {!hideTableNeededFields && (
+            <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+              <p className="font-semibold text-lg">Details</p>
+              <div className="grid grid-cols-1 gap-4">
+                <FormCheckbox<RequestFormValues>
+                  name="isTableNeeded"
                   control={control}
-                  label="Table Size"
-                  placeholder="Enter table size"
-                  type="number"
-                  rules={{ required: "Table Size is required" }}
+                  label="Table Needed?"
                 />
-              )}
-            </div>
-          </section>
+                {isTableNeeded && (
+                  <FormInputText<RequestFormValues>
+                    name="tableSize"
+                    control={control}
+                    label="Table Size"
+                    placeholder="Enter table size"
+                    type="number"
+                    rules={{ required: "Table Size is required" }}
+                  />
+                )}
+              </div>
+            </section>
+          )}
 
           {/* NOTES */}
           <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">

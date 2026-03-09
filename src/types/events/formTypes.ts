@@ -115,6 +115,8 @@ export interface EventFormProps {
   enableContactSection?: boolean;
   onRefetch?: (key: "distributors" | "retailers" | "clients") => void;
   showIsNational?: boolean;
+  disableStateSelect?: boolean;
+  hideDistributorFields?: boolean;
 }
 
 export interface RequestContactInfo {

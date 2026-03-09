@@ -17,6 +17,7 @@ export const TenantQuery = graphql`
           uuid
           name
           requestUrlName
+          tenantSlug: slug
           image
         }
       }
