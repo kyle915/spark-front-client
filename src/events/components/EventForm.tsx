@@ -77,6 +77,8 @@ export default function EventForm({
   onSubmit,
   defaultValues = {},
   showIsNational = true,
+  disableStateSelect = false,
+  hideDistributorFields = false,
   onRefetch,
 }: EventFormProps) {
   const renderCountRef = useRef(0);
@@ -747,6 +749,28 @@ export default function EventForm({
     });
   }, [isNationalRetailer, retailersHook, setValue]);
 
+  useEffect(() => {
+    if (!hideDistributorFields) return;
+
+    setShowDistributorLocation(false);
+    setValue("distributorId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("distributorName", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("distributorEmail", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("distributorLocationId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }, [hideDistributorFields, setValue]);
+
   /* ================= RENDER ================= */
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full">
@@ -974,7 +998,7 @@ export default function EventForm({
                 label="State"
                 placeholder="Select state..."
                 options={stateOptions}
-                disabled={!tenantId}
+                disabled={!tenantId || disableStateSelect}
               />
 
               <FormCheckbox<EventFormValues>
@@ -1001,7 +1025,9 @@ export default function EventForm({
 
             {!isStateSelected && (
               <p className="text-sm text-warning">
-                Select a state first to enable distributor.
+                {hideDistributorFields
+                  ? "Select a state first to enable retailer."
+                  : "Select a state first to enable distributor."}
               </p>
             )}
 
@@ -1014,7 +1040,8 @@ export default function EventForm({
             )}
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
+              {!hideDistributorFields && (
+                <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
                 <p className="font-medium">Distributor</p>
 
                 <FormAutocomplete
@@ -1109,7 +1136,8 @@ export default function EventForm({
                     )}
                   </div>
                 )}
-              </div>
+                </div>
+              )}
 
               <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
                 <p className="font-medium">Retailer</p>

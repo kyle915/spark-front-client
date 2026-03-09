@@ -6,6 +6,7 @@ type SelectTenantPayload = {
   tenantId: string;
   logo?: string | null;
   requestUrlName?: string | null;
+  tenantSlug?: string | null;
 };
 
 export function useTenantSelection() {
@@ -17,8 +18,14 @@ export function useTenantSelection() {
   const clearTenantStore = useAuthStore((state) => state.clearTenant);
 
   const selectTenant = useCallback(
-    ({ tenantUuid, tenantId, logo, requestUrlName }: SelectTenantPayload) => {
-      setTenant(tenantUuid, tenantId, logo, requestUrlName);
+    ({
+      tenantUuid,
+      tenantId,
+      logo,
+      requestUrlName,
+      tenantSlug,
+    }: SelectTenantPayload) => {
+      setTenant(tenantUuid, tenantId, logo, requestUrlName, tenantSlug);
     },
     [setTenant]
   );

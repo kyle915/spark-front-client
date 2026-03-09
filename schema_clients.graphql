@@ -1548,6 +1548,7 @@ input CreateRetailerInput {
   address: String!
   storeContact: String!
   locationId: ID!
+  isNational: Boolean! = false
 }
 
 input CreateReviewScoreInput {
@@ -1904,6 +1905,7 @@ input EventDashboardFiltersInput {
   quarter: String = null
   rmmAsignedId: ID = null
   distributorId: ID = null
+  distributorIds: [ID!] = null
   year: Int = null
 }
 
@@ -3624,6 +3626,7 @@ type Request implements Node {
   requestType: RequestType
   status: RequestStatus
   tenantId: ID!
+  tenant: TenantType
   rmmAsigned: SparkUserType
   createdBy: SparkUserType
   updatedBy: SparkUserType
@@ -4164,13 +4167,14 @@ type TenantThemeType implements Node {
 }
 
 """
-Tenant(id, uuid, name, image, request_url_name, created_by, updated_by, created_at, updated_at)
+Tenant(id, uuid, name, image, request_url_name, slug, created_by, updated_by, created_at, updated_at)
 """
 type TenantType implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
   uuid: UUID!
   name: String!
+  slug: String
   requestUrlName: String
   image: String
 }
@@ -4723,6 +4727,7 @@ input UpdateRetailerInput {
   address: String!
   storeContact: String!
   locationId: ID!
+  isNational: Boolean! = false
   id: ID!
 }
 
@@ -4870,13 +4875,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
-  email: String!
   lastName: String
+  email: String!
   id: ID!
+  firstName: String
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
-  firstName: String
   archived: Boolean!
   verified: Boolean!
 }

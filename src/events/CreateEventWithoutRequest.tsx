@@ -21,7 +21,7 @@ import { dateFormat } from "@/public/form/utils/toDate";
 import { buildDateTimeWithOffset } from "@/utils";
 
 const CreateEventWithoutRequestContent = () => {
-  const { tenantId, user } = useAuthStore();
+  const { tenantId, tenantSlug, user } = useAuthStore();
   //   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
@@ -48,7 +48,24 @@ const CreateEventWithoutRequestContent = () => {
     { fetchPolicy: "store-and-network" },
   );
 
-  const states = statesData.states?.edges.map((e) => e.node) || [];
+  const states = useMemo(
+    () => statesData.states?.edges.map((e) => e.node) ?? [],
+    [statesData.states?.edges],
+  );
+  const isJeeterTenant = tenantSlug?.toLowerCase() === "jeeter";
+  const californiaState = useMemo(
+    () =>
+      states.find(
+        (state) =>
+          state.name?.toLowerCase() === "california" ||
+          state.code?.toLowerCase() === "ca",
+      ) ?? null,
+    [states],
+  );
+  const allowedStates = useMemo(() => {
+    if (!isJeeterTenant) return states;
+    return californiaState ? [californiaState] : [];
+  }, [isJeeterTenant, states, californiaState]);
 
   const timezones = timezonesData.timezones?.edges.map((e) => e.node) || [];
 
@@ -85,6 +102,7 @@ const CreateEventWithoutRequestContent = () => {
       isNational: formData.isNational ?? false,
       timezoneId: formData.timezoneId ?? null,
       rmmAsignedId: formData.rmmAsignedId,
+      distributorId: isJeeterTenant ? null : (formData.distributorId ?? null),
       startTime:
         dateValue && formData.startTime
           ? buildDateTimeWithOffset(
@@ -144,8 +162,10 @@ const CreateEventWithoutRequestContent = () => {
       isNational: false,
       isNationalRetailer: true,
       coordinates: undefined,
+      stateId: isJeeterTenant ? californiaState?.id ?? null : null,
+      distributorId: isJeeterTenant ? null : undefined,
     }),
-    [tenantId],
+    [tenantId, isJeeterTenant, californiaState],
   );
 
   return (
@@ -198,8 +218,10 @@ const CreateEventWithoutRequestContent = () => {
                 userUuidLoggin={user?.uuid ?? ""}
                 requestStoreManagers={requestStoreManagers}
                 onSubmit={handleSubmit}
-                states={states}
+                states={allowedStates}
                 defaultValues={defaultValues}
+                disableStateSelect={isJeeterTenant}
+                hideDistributorFields={isJeeterTenant}
                 enableContactSection
                 contactMode="manual"
                 showIsNational={false}

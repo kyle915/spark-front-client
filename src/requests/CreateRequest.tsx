@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import Layout from "@/layout/Layout";
 import Loading from "@/shared/Loading";
 import RequestForm, { type RequestFormValues } from "./components/RequestForm";
@@ -33,12 +33,14 @@ import CatalogsProvider from "@/shared/CatalogsProvider";
 
 interface CreateRequestFormProps {
   tenantId: string;
+  tenantSlug?: string | null;
   userId?: string;
   userUuid?: string;
 }
 
 const CreateRequestForm = ({
   tenantId,
+  tenantSlug,
   userId,
   userUuid,
 }: CreateRequestFormProps) => {
@@ -99,7 +101,26 @@ const CreateRequestForm = ({
   // ========================
   const rmmClients = rmmClientsData.rmmClients?.map((c) => c) || [];
 
-  const states = statesData.states?.edges.map((e) => e.node) || [];
+  const states = useMemo(
+    () => statesData.states?.edges.map((e) => e.node) ?? [],
+    [statesData.states?.edges],
+  );
+  const isJeeterTenant = tenantSlug?.toLowerCase() === "jeeter";
+
+  const californiaState = useMemo(
+    () =>
+      states.find(
+        (state) =>
+          state.name?.toLowerCase() === "california" ||
+          state.code?.toLowerCase() === "ca",
+      ) ?? null,
+    [states],
+  );
+
+  const allowedStates = useMemo(() => {
+    if (!isJeeterTenant) return states;
+    return californiaState ? [californiaState] : [];
+  }, [isJeeterTenant, states, californiaState]);
 
   const requestTypes =
     requestTypesData.requestTypes?.edges.map((e) => e.node) || [];
@@ -202,15 +223,15 @@ const CreateRequestForm = ({
           coordinates: (formData.coordinates ?? []) as readonly number[],
           timezoneId: formData.timezoneId!,
           requestTypeId: formData.requestTypeId!,
-          distributorId: formData.distributorId ?? null,
+          distributorId: isJeeterTenant ? null : (formData.distributorId ?? null),
           retailerId: formData.retailerId ?? null,
           storeManagerId: formData.storeManagerId ?? null,
           rmmAsignedId: formData.rmmAsignedId,
           // Create-only fields
           clientName: formData.clientName!,
           clientEmail: formData.clientEmail!,
-          distributorName: formData.distributorName!,
-          distributorEmail: formData.distributorEmail!,
+          distributorName: isJeeterTenant ? "" : formData.distributorName!,
+          distributorEmail: isJeeterTenant ? "" : formData.distributorEmail!,
           retailerName: formData.retailerName!,
           retailerAddress: formData.retailerAddress!,
           retailerStoreContact: formData.retailerStoreContact!,
@@ -220,10 +241,14 @@ const CreateRequestForm = ({
           // Details
           details: [
             {
-              isTableNeeded: formData.isTableNeeded || false,
-              tableSize: formData.tableSize
-                ? parseInt(formData.tableSize)
-                : null,
+              isTableNeeded: isJeeterTenant
+                ? false
+                : formData.isTableNeeded || false,
+              tableSize: isJeeterTenant
+                ? null
+                : formData.tableSize
+                  ? parseInt(formData.tableSize)
+                  : null,
             },
           ],
 
@@ -285,7 +310,15 @@ const CreateRequestForm = ({
           userIdLoggin={userId ? userId : ""}
           userUuidLoggin={userUuid ? userUuid : ""}
           // retailers={retailers}
-          states={states}
+          states={allowedStates}
+          defaultValues={
+            isJeeterTenant && californiaState
+              ? { stateId: californiaState.id }
+              : undefined
+          }
+          disableStateSelect={isJeeterTenant}
+          hideTableNeededFields={isJeeterTenant}
+          hideDistributorFields={isJeeterTenant}
           // distributors={distributors}
           requestStoreManagers={requestStoreManagers}
           enableContactSection={true}
@@ -300,7 +333,7 @@ const CreateRequestForm = ({
 // PAGE CONTENT
 // ========================
 const CreateRequestContent = () => {
-  const { tenantId, user } = useAuthStore();
+  const { tenantId, tenantSlug, user } = useAuthStore();
 
   if (!tenantId) {
     return (
@@ -315,6 +348,7 @@ const CreateRequestContent = () => {
       <Suspense fallback={<Loading />}>
         <CreateRequestForm
           tenantId={tenantId}
+          tenantSlug={tenantSlug}
           userId={user?.id}
           userUuid={user?.uuid}
         />

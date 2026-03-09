@@ -29,7 +29,9 @@ interface Step3NewProps {
   states: {
     id: string;
     name: string;
+    code?: string;
   }[];
+  requestUrlName: string;
 }
 
 export function Step3Clients({
@@ -43,6 +45,7 @@ export function Step3Clients({
   onNationalRetailerChange,
   distributors,
   retailers,
+  requestUrlName,
 }: Step3NewProps) {
   const [distributorQuery, setDistributorQuery] = useState("");
   const [requestTypeQuery, setRequestTypeQuery] = useState("");
@@ -76,6 +79,10 @@ export function Step3Clients({
   });
   const prevIsNationalRetailerRef = useRef<boolean | undefined>(undefined);
   const isLocationSelected = Boolean(selectedStateId);
+  const isJeeterTenant = requestUrlName
+    .trim()
+    .toLowerCase()
+    .includes("jeeter");
 
   useEffect(() => {
     if (selectedDistributorId) {
@@ -121,6 +128,14 @@ export function Step3Clients({
   ]);
 
   useEffect(() => {
+    if (!isJeeterTenant) return;
+
+    setValue("distributorId", "", { shouldValidate: true });
+    setValue("distributor", "", { shouldValidate: true });
+    setValue("distributorEmail", "", { shouldValidate: true });
+  }, [isJeeterTenant, setValue]);
+
+  useEffect(() => {
     if (isNationalRetailer || !selectedStateId || !selectedRetailerId) return;
     const selected = retailers.find((r) => r.id === selectedRetailerId);
     if (selected && selected.location?.state?.id !== selectedStateId) {
@@ -149,6 +164,23 @@ export function Step3Clients({
   useEffect(() => {
     onStateChange(selectedStateId ?? "");
   }, [onStateChange, selectedStateId]);
+
+  const californiaState = useMemo(
+    () =>
+      states.find(
+        (state) =>
+          state.name.toLowerCase() === "california" ||
+          state.code?.toLowerCase() === "ca",
+      ) ?? null,
+    [states],
+  );
+
+  useEffect(() => {
+    if (!isJeeterTenant || !californiaState) return;
+    if (selectedStateId === californiaState.id) return;
+
+    setValue("stateId", californiaState.id, { shouldValidate: true });
+  }, [isJeeterTenant, californiaState, selectedStateId, setValue]);
 
   useEffect(() => {
     const currentValue = Boolean(isNationalRetailer);
@@ -181,12 +213,15 @@ export function Step3Clients({
   }, [distributors, distributorQuery, selectedStateId]);
 
   const stateOptions = useMemo(() => {
-    if (!selectedState) return states;
+    const availableStates =
+      isJeeterTenant && californiaState ? [californiaState] : states;
+
+    if (!selectedState) return availableStates;
     return [
       selectedState,
-      ...states.filter((state) => state.id !== selectedState.id),
+      ...availableStates.filter((state) => state.id !== selectedState.id),
     ];
-  }, [states, selectedState]);
+  }, [states, selectedState, isJeeterTenant, californiaState]);
 
   const filteredRetailers = useMemo(() => {
     const baseRetailers =
@@ -225,45 +260,50 @@ export function Step3Clients({
           }))}
           placeholder="Search state"
           onSearch={onStateSearch}
+          disabled={isJeeterTenant}
         />
       </div>
       <div className="space-y-6 pt-4 border-t border-base-300">
         {!isLocationSelected && (
           <p className="text-sm text-warning">
-            Select a state first to enable distributor and retailer.
+            Select a state first to enable retailer.
           </p>
         )}
-        <h3 className="font-semibold text-lg">Distributor Details</h3>
-        {/* DISTRIBUTOR TEXT INPUTS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormAutocomplete
-            name="distributorId"
-            label="Distributor"
-            control={control}
-            options={filteredDistributors.map((d) => ({
-              value: d.id,
-              label: d.name,
-            }))}
-            placeholder="Search a distributor"
-            onSearch={setDistributorQuery}
-            disabled={!isLocationSelected}
-          />
-          <FormInputText
-            name="distributor"
-            label="Other Distributor"
-            control={control}
-            placeholder="Other Distributor"
-            disabled={!!selectedDistributorId || !isLocationSelected}
-          />
+        {!isJeeterTenant && (
+          <>
+            <h3 className="font-semibold text-lg">Distributor Details</h3>
+            {/* DISTRIBUTOR TEXT INPUTS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormAutocomplete
+                name="distributorId"
+                label="Distributor"
+                control={control}
+                options={filteredDistributors.map((d) => ({
+                  value: d.id,
+                  label: d.name,
+                }))}
+                placeholder="Search a distributor"
+                onSearch={setDistributorQuery}
+                disabled={!isLocationSelected}
+              />
+              <FormInputText
+                name="distributor"
+                label="Other Distributor"
+                control={control}
+                placeholder="Other Distributor"
+                disabled={!!selectedDistributorId || !isLocationSelected}
+              />
 
-          <FormInputText
-            name="distributorEmail"
-            label="Distributor Email"
-            control={control}
-            placeholder="distributor@example.com"
-            disabled={!!selectedDistributorId || !isLocationSelected}
-          />
-        </div>
+              <FormInputText
+                name="distributorEmail"
+                label="Distributor Email"
+                control={control}
+                placeholder="distributor@example.com"
+                disabled={!!selectedDistributorId || !isLocationSelected}
+              />
+            </div>
+          </>
+        )}
       </div>
       {/* RETAILER EXTRA FIELDS */}
       <div className="space-y-6 pt-4 border-t border-base-300">
