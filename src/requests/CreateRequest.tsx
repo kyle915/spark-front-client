@@ -196,13 +196,19 @@ const CreateRequestForm = ({
     const timezone =
       timezones.find((tz) => tz.id === formData.timezoneId) ?? null;
     const offsetMinutes = timezone?.offset ?? null;
-    const dateValue = dateFormat(formData.date);
+    const rawDateValue = (formData.date ?? "").toString().trim();
+    const dateValue = dateFormat(rawDateValue);
+    const dateForNameSource = dateValue || rawDateValue;
+    const dateForName = /^\d{4}-\d{2}-\d{2}$/.test(dateForNameSource)
+      ? `${dateForNameSource.slice(5, 7)}/${dateForNameSource.slice(8, 10)}/${dateForNameSource.slice(0, 4)}`
+      : dateForNameSource;
+    const requestName = `${(formData.name ?? "").trim()} - ${(formData.retailerName ?? "").trim()} - ${dateForName}`.trim();
 
     commitCreateRequest({
       variables: {
         input: {
           tenantId: tenantId,
-          name: formData.name,
+          name: requestName || formData.name,
           date: buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes),
           notes: formData.notes?.trim() ?? "",
           startTime: formData.startTime

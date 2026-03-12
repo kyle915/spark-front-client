@@ -91,6 +91,16 @@ export default function FormDatePicker<T extends FieldValues>({
     return `${month}/${day}/${year}`;
   };
 
+  const closePopover = () => {
+    const popoverElement = document.getElementById(popoverId);
+    if (!popoverElement || !("hidePopover" in popoverElement)) return;
+    (
+      popoverElement as HTMLElement & {
+        hidePopover: () => void;
+      }
+    ).hidePopover();
+  };
+
   return (
     <Controller
       name={name}
@@ -141,6 +151,7 @@ export default function FormDatePicker<T extends FieldValues>({
                 const month = String(date.getMonth() + 1).padStart(2, "0");
                 const day = String(date.getDate()).padStart(2, "0");
                 field.onChange(`${year}-${month}-${day}`);
+                closePopover();
               }}
               disabled={
                 minimumDaysFromToday !== null
@@ -165,6 +176,7 @@ export default function FormDatePicker<T extends FieldValues>({
                   );
                   const day = String(targetDate.getDate()).padStart(2, "0");
                   field.onChange(`${year}-${month}-${day}`);
+                  closePopover();
                 }}
               >
                 {minimumDaysFromToday && minimumDaysFromToday > 0

@@ -7,6 +7,8 @@ import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/StatesQuery.graphql";
 import { StatesQuery } from "@api/queries/StatesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
+import { RetailersQuery } from "@/api/queries/RetailersQuery";
+import type { RetailersQuery as RetailersQueryType } from "@api/queries/__generated__/RetailersQuery.graphql";
 import type { EventFormValues } from "../types/events/formTypes";
 import { useMutation, useLazyLoadQuery } from "react-relay/hooks";
 import { CreateEventMutation } from "@api/mutations/CreateEventMutation";
@@ -19,6 +21,9 @@ import { useNavigate } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { dateFormat } from "@/public/form/utils/toDate";
 import { buildDateTimeWithOffset } from "@/utils";
+
+const escapeRegExp = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const CreateEventWithoutRequestContent = () => {
   const { tenantId, tenantSlug, user } = useAuthStore();
@@ -48,6 +53,15 @@ const CreateEventWithoutRequestContent = () => {
     { fetchPolicy: "store-and-network" },
   );
 
+  const retailersData = useLazyLoadQuery<RetailersQueryType>(
+    RetailersQuery,
+    {
+      filters: { tenantId: tenantId ?? "" },
+      first: 500,
+    },
+    { fetchPolicy: "store-and-network" },
+  );
+
   const states = useMemo(
     () => statesData.states?.edges.map((e) => e.node) ?? [],
     [statesData.states?.edges],
@@ -68,6 +82,24 @@ const CreateEventWithoutRequestContent = () => {
   }, [isJeeterTenant, states, californiaState]);
 
   const timezones = timezonesData.timezones?.edges.map((e) => e.node) || [];
+  const retailersById = useMemo(
+    () =>
+      new Map(
+        (retailersData.retailers?.edges ?? []).map((edge) => [
+          edge.node.id,
+          edge.node.name,
+        ]),
+      ),
+    [retailersData.retailers?.edges],
+  );
+  const retailerIdByName = useMemo(
+    () =>
+      new Map(
+        (retailersData.retailers?.edges ?? [])
+          .map((edge) => [edge.node.name.trim().toLowerCase(), edge.node.id] as const),
+      ),
+    [retailersData.retailers?.edges],
+  );
 
   const handleSubmit = (formData: EventFormValues) => {
     if (
@@ -90,12 +122,41 @@ const CreateEventWithoutRequestContent = () => {
       timezones.find((tz) => tz.id === formData.timezoneId) ?? null;
     const offsetMinutes = timezone?.offset ?? null;
     const dateValue = dateFormat(formData.date);
+    const dateForName = /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
+      ? `${dateValue.slice(5, 7)}/${dateValue.slice(8, 10)}/${dateValue.slice(0, 4)}`
+      : dateValue;
+    const selectedRetailerId =
+      formData.retailerId?.toString().trim() ||
+      (formData.retailerName
+        ? (retailerIdByName.get(formData.retailerName.trim().toLowerCase()) ?? "")
+        : "") ||
+      null;
+    const selectedRetailerName =
+      (selectedRetailerId ? retailersById.get(selectedRetailerId) : null) ??
+      formData.retailerName?.trim() ??
+      "";
+    const sanitizedBaseName = selectedRetailerName
+      ? (formData.name ?? "").trim().replace(
+          new RegExp(
+            `\\s-\\s${escapeRegExp(selectedRetailerName)}(?:\\s-\\s\\d{2}\\/\\d{2}\\/\\d{4})?$`,
+            "i",
+          ),
+          "",
+        ).trim()
+      : (formData.name ?? "").trim();
+    const eventName = [
+      sanitizedBaseName || formData.name?.trim(),
+      selectedRetailerName.trim(),
+      dateForName,
+    ]
+      .filter(Boolean)
+      .join(" - ");
     const normalizedDate = dateValue
       ? buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes)
       : "";
 
     const input: Record<string, unknown> = {
-      name: formData.name,
+      name: eventName || formData.name,
       eventTypeId: formData.eventTypeId,
       address: formData.address,
       notes: formData.notes ?? "",
@@ -103,6 +164,7 @@ const CreateEventWithoutRequestContent = () => {
       timezoneId: formData.timezoneId ?? null,
       rmmAsignedId: formData.rmmAsignedId,
       distributorId: isJeeterTenant ? null : (formData.distributorId ?? null),
+      retailerId: selectedRetailerId,
       startTime:
         dateValue && formData.startTime
           ? buildDateTimeWithOffset(

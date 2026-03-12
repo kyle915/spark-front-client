@@ -237,6 +237,7 @@ export default function RequestForm({
   /* ================= WATCH FOR SECTION ENTITIES ================= */
   const distributorId = watch("distributorId");
   const retailerId = watch("retailerId");
+  const retailerNameValue = watch("retailerName");
   const storeManagerId = watch("storeManagerId");
   const distributorLocationId = watch("distributorLocationId");
   const retailerLocationId = watch("retailerLocationId");
@@ -408,6 +409,20 @@ export default function RequestForm({
     queryDocument: RetailersQuery,
     extractNodes: extractRetailers,
   });
+
+  useEffect(() => {
+    if (!retailerId) return;
+
+    const selectedRetailer = retailersHook.items.find((item) => item.id === retailerId);
+    const selectedRetailerName = selectedRetailer?.name?.trim();
+    if (!selectedRetailerName) return;
+    if ((retailerNameValue ?? "").trim() === selectedRetailerName) return;
+
+    setValue("retailerName", selectedRetailerName, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }, [retailerId, retailerNameValue, retailersHook.items, setValue]);
 
   /* ================= UI STATE ================= */
   const [showDistributorLocation, setShowDistributorLocation] = useState(false);
