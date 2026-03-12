@@ -71,6 +71,7 @@ export function Step1Basic({
         name="timeZoneId"
         label="Time Zone"
         control={control}
+        disabled
         options={timeZones.map((tz) => ({
           value: tz.id,
           label: tz.name,

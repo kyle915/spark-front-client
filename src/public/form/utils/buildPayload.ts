@@ -22,12 +22,18 @@ export function buildPayload(
   const timezone = timeZones.find((tz) => tz.id === values.timeZoneId) ?? null;
   const offsetMinutes = timezone?.offset ?? null;
   const dateValue = dateFormat(values.date ?? "");
+  const dateForName = /^\d{4}-\d{2}-\d{2}$/.test(dateValue)
+    ? `${dateValue.slice(5, 7)}/${dateValue.slice(8, 10)}/${dateValue.slice(0, 4)}`
+    : dateValue;
   const normalizedDate = dateValue
     ? buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes)
     : "";
+  const requestName = [values.name?.trim(), values.retailer?.trim(), dateForName]
+    .filter(Boolean)
+    .join(" - ");
 
   return {
-    name: values.name,
+    name: requestName || values.name,
     date: normalizedDate,
     startTime:
       dateValue && values.start_time
