@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { MetricCard } from "@/components/cards/metric-card";
 import FiltersPanel, {
   type DashboardFilters,
 } from "@/components/filters/FiltersPanel";
 import ChartCard from "@/components/charts/ChartCard";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Sparkles } from "lucide-react";
 
 import DashboardHeader from "../dashboard/DashboardHeader";
 import MonthlyTrendsChart from "../dashboard-event/MonthlyTrendsSection";
@@ -18,6 +19,9 @@ import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { AiInsightsSection } from "@/components/ai-insights/AiInsightsSection";
 
 import { useAuthStore } from "@/store/authStore";
+import { useAlertStore } from "@/store/alertStore";
+import { GenerateInsightsMutation } from "@/api/mutations/GenerateInsightsMutation";
+import type { GenerateInsightsMutationType } from "@/api/mutations/GenerateInsightsMutation";
 
 /* =========================
    Helpers
@@ -52,6 +56,7 @@ type DashboardGoalProgress = {
 ========================= */
 export default function DashboardIndex() {
   const { tenantId, tenantSlug } = useAuthStore();
+  const showAlert = useAlertStore((state) => state.showAlert);
 
   const [filters, setFilters] = useState<DashboardFilters>({
     distributorIds: [],
@@ -62,6 +67,9 @@ export default function DashboardIndex() {
   });
 
   const [fetchKey, setFetchKey] = useState(0);
+  const [aiInsightsRefreshKey, setAiInsightsRefreshKey] = useState(0);
+  const [commitGenerateInsights, isGeneratingInsights] =
+    useMutation<GenerateInsightsMutationType>(GenerateInsightsMutation);
   const { dashboard } = useEventDashboardData(
     tenantId || "",
     filters,
@@ -155,6 +163,40 @@ export default function DashboardIndex() {
     target: goal.target ?? 0,
   }));
 
+  const handleRegenerateInsights = () => {
+    if (!tenantId) {
+      showAlert("Select a tenant first to generate insights.", "warning");
+      return;
+    }
+
+    commitGenerateInsights({
+      variables: {
+        tenantId,
+        fromDate: filters.startDate,
+        toDate: filters.endDate,
+        enqueue: true,
+      },
+      onCompleted: (response) => {
+        if (response.generateInsights?.success) {
+          const enqueued = response.generateInsights.enqueued;
+          showAlert(
+            enqueued
+              ? "Insights regeneration queued successfully."
+              : "Insights regenerated successfully.",
+            "success",
+          );
+          setAiInsightsRefreshKey((k) => k + 1);
+          return;
+        }
+
+        showAlert("Unable to regenerate AI insights.", "error");
+      },
+      onError: (error) => {
+        showAlert(`Error regenerating AI insights: ${error.message}`, "error");
+      },
+    });
+  };
+
   return (
     <Layout>
       <main className="max-w-7xl mx-auto p-5 space-y-10">
@@ -229,7 +271,31 @@ export default function DashboardIndex() {
         </section>
 
         {/* AI INSIGHTS */}
-        <AiInsightsSection insights={[]} isLoading={false} />
+        <section className="w-full space-y-4">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="btn btn-primary btn-sm gap-2"
+              onClick={handleRegenerateInsights}
+              disabled={isGeneratingInsights || !tenantId}
+            >
+              {isGeneratingInsights ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <Sparkles size={16} />
+              )}
+              {isGeneratingInsights
+                ? "Regenerating Insights..."
+                : "Regenerate AI-Powered Insights"}
+            </button>
+          </div>
+
+          <AiInsightsSection
+            key={aiInsightsRefreshKey}
+            insights={[]}
+            isLoading={false}
+          />
+        </section>
       </main>
     </Layout>
   );
