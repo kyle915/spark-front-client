@@ -136,6 +136,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
           coordinates: (formData.coordinates ?? []) as readonly number[],
           timezoneId: formData.timezoneId ?? "",
           requestTypeId: formData.requestTypeId ?? "",
+          // eventTypeId: formData.eventTypeId ?? "", // Falta en el schema UpdateRequestInput del backend
           distributorId: isJeeterTenant ? "" : (formData.distributorId ?? ""),
           retailerId: formData.retailerId ?? "",
           storeManagerName: formData.storeManagerName ?? "",
@@ -174,6 +175,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     notes: (request as { notes?: string | null }).notes ?? "",
     date: defaultDate,
     startTime: defaultStartTime,
+    // eventTypeId: request.eventTypeId ?? null,
     endTime: defaultEndTime,
     address: request.address ?? "",
     coordinates: request.coordinates?.length ? [...request.coordinates] : null,
@@ -184,11 +186,11 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     retailerId: request.retailer?.id ?? request?.retailer?.id ?? undefined,
     stateId: isJeeterTenant
       ? californiaState?.id
-      : request.retailer?.location?.state?.id ??
+      : (request.retailer?.location?.state?.id ??
         request.distributor?.location?.state?.id ??
         request?.retailer?.location?.state?.id ??
         request?.distributor?.location?.state?.id ??
-        undefined,
+        undefined),
     entitiesLocationId:
       request.retailer?.location?.id ??
       request.distributor?.location?.id ??
@@ -223,6 +225,8 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
       <CatalogsProvider
         clients
         clientsFilters={filters}
+        eventTypes
+        eventTypesFilters={filters}
         retailers
         retailersFilters={filters}
         distributors
@@ -235,6 +239,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
         {({
           clients,
           requestTypes,
+          eventTypes,
           requestStoreManagers,
           loading,
           errors,
@@ -250,6 +255,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
               tenantId={request.tenantId}
               requestId={request.id}
               defaultValues={defaultValues}
+              eventTypes={eventTypes}
               onSubmit={handleSubmit}
               clients={clients}
               states={allowedStates}
