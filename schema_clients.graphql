@@ -8,6 +8,11 @@ input AcceptAmbassadorInvitationInput {
   coordinates: [Float!] = null
 }
 
+input AcceptAmbassadorJobInvitationInput {
+  clientMutationId: ID = null
+  ambassadorJobId: ID!
+}
+
 input AcceptByTokenInput {
   clientMutationId: ID = null
   token: String!
@@ -22,7 +27,7 @@ type AcceptInvitationResponse {
 }
 
 """
-AccountFeedback(id, uuid, do_differently_feedback, feedback, corpo_card, recap, created_by, updated_by, created_at, updated_at)
+AccountFeedback(id, uuid, do_differently_feedback, feedback, corpo_card, was_corpo_card_used, recap, created_by, updated_by, created_at, updated_at)
 """
 type AccountFeedback implements Node {
   """The Globally Unique ID of this object"""
@@ -31,6 +36,7 @@ type AccountFeedback implements Node {
   doDifferentlyFeedback: String
   feedback: String
   corpoCard: String
+  wasCorpoCardUsed: Boolean!
   createdAt: String!
   updatedAt: String!
 }
@@ -40,6 +46,7 @@ input AccountFeedbackInput {
   doDifferentlyFeedback: String = null
   feedback: String = null
   corpoCard: String = null
+  wasCorpoCardUsed: Boolean = null
 }
 
 input ActiveAmbassadorFiltersInput {
@@ -272,7 +279,7 @@ type AmbassadorInvitationTypeCountableEdge {
 }
 
 """
-AmbassadorJob(id, uuid, recap_uploaded, accepted_terms, real_amount, appear_as_rfp, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
+AmbassadorJob(id, uuid, recap_uploaded, accepted_terms, real_amount, appear_as_rfp, reminder_sent_at, reminder_3h_sent_at, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
 """
 type AmbassadorJob implements Node {
   """The Globally Unique ID of this object"""
@@ -1440,6 +1447,8 @@ input CreateRecapInput {
   totalPacksSold: Int = null
   totalEarnings: Float = null
   accountSpendAmount: Float = null
+  trafficDescription: String = null
+  competitivePresence: String = null
   jobId: ID = null
   retailerId: ID = null
   ambassadorId: ID = null
@@ -1473,6 +1482,8 @@ input CreateRequestInput {
   storeManagerId: ID = null
   rmmAsignedId: ID = null
   requestorEmail: String = null
+  reviewed: Boolean = null
+  storeNumber: String = null
   clientName: String = null
   clientEmail: String = null
   distributorName: String = null
@@ -1528,6 +1539,7 @@ input CreateRequestWithDependenciesInput {
   distributorId: ID = null
   retailerId: ID = null
   requestorEmail: String = null
+  storeNumber: String = null
   clientName: String!
   clientEmail: String!
   distributorName: String!
@@ -1665,6 +1677,12 @@ type DeclineRequestResponse {
 input DeleteAmbassadorGroupInput {
   clientMutationId: ID = null
   id: ID!
+}
+
+type DeleteAmbassadorJobResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
 }
 
 input DeleteAmbassadorNoteInput {
@@ -2047,6 +2065,8 @@ input ExportRecapXlsxInput {
 input ExportRecapsXlsxInput {
   clientMutationId: ID = null
   tenantId: ID = null
+  startDate: String = null
+  endDate: String = null
 }
 
 """
@@ -2718,6 +2738,7 @@ type Mutation {
   updateRequest(input: UpdateRequestInput!): RequestDetailResponse!
   approveRequest(input: ApproveRequestInput!): ApproveRequestResponse!
   declineRequest(input: DeclineRequestInput!): DeclineRequestResponse!
+  upsertRequestReviewed(input: UpsertRequestReviewedInput!): RequestDetailResponse!
   createRequestStoreManager(input: CreateRequestStoreManagerInput!): RequestStoreManagerDetailResponse!
   updateRequestStoreManager(input: UpdateRequestStoreManagerInput!): RequestStoreManagerDetailResponse!
   createTimezone(input: CreateTimeZoneInput!): TimeZoneResponse!
@@ -2757,6 +2778,7 @@ type Mutation {
   verifyAccount(input: VerifyAccountInput!): MutationNormalOutput!
   createAmbassadorJob(input: CreateAmbassadorJobInput!): AmbassadorJobDetailResponse!
   updateAmbassadorJob(input: UpdateAmbassadorJobInput!): AmbassadorJobDetailResponse!
+  acceptAmbassadorJobInvitation(input: AcceptAmbassadorJobInvitationInput!): AmbassadorJobDetailResponse!
   createAmbassadorToAmbassadorReview(input: CreateAmbassadorToAmbassadorReviewInput!): AmbassadorToAmbassadorReviewDetailResponse!
   updateAmbassadorToAmbassadorReview(input: UpdateAmbassadorToAmbassadorReviewInput!): AmbassadorToAmbassadorReviewDetailResponse!
   createAmbassadorJobStatus(input: CreateStatusInput!): StatusDetailResponse!
@@ -2798,6 +2820,7 @@ type Mutation {
   createJobRequirementAnswer(input: CreateJobRequirementAnswerInput!): JobRequirementAnswerDetailResponse!
   updateJobRequirementAnswer(input: UpdateJobRequirementAnswerInput!): JobRequirementAnswerDetailResponse!
   manageAmbassadorJobAssignment(input: ManageAmbassadorJobAssignmentInput!): AmbassadorJobDetailResponse!
+  unassignAmbassadorJob(input: UnassignAmbassadorJobInput!): DeleteAmbassadorJobResponse!
   approveAmbassadorJob(input: ApproveAmbassadorJobInput!): AmbassadorJobDetailResponse!
   inviteAmbassadorsToJob(input: InviteAmbassadorsToJobInput!): InviteAmbassadorsToJobResponse!
   declineAmbassadorJob(input: DeclineAmbassadorJobInput!): AmbassadorJobDetailResponse!
@@ -3352,7 +3375,7 @@ input RateTypeFiltersInput {
 }
 
 """
-Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, total_cans_sold, total_packs_sold, filling_for_ambassador, late, incomplete, account_spend_amount, approved, timezone, event, ambassador, job, retailer, created_by, updated_by, created_at, updated_at)
+Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, total_cans_sold, total_packs_sold, filling_for_ambassador, late, incomplete, account_spend_amount, approved, traffic_description, competitive_presence, timezone, event, ambassador, job, retailer, created_by, updated_by, created_at, updated_at)
 """
 type Recap implements Node {
   """The Globally Unique ID of this object"""
@@ -3363,6 +3386,7 @@ type Recap implements Node {
   fillingForAmbassador: Boolean!
   event: Event!
   eventId: ID!
+  ambassador: Ambassador
   jobId: ID
   job: Job
   retailerId: ID
@@ -3375,6 +3399,8 @@ type Recap implements Node {
   totalPacksSold: Int
   totalEarnings: Float
   accountSpendAmount: Float
+  trafficDescription: String
+  competitivePresence: String
   consumerEngagements: [ConsumerEngagements!]!
   productSamples: [ProductSamples!]!
   salesPerformance: [SalesPerformance!]!
@@ -3383,7 +3409,7 @@ type Recap implements Node {
   recapFile: RecapFile
   recapFileId: ID
   recapFiles: [RecapFile!]!
-  ambassadors: [Ambassador!]!
+  ambassadors: [Ambassador!]! @deprecated(reason: "Use ambassador instead.")
   requestStoreManagers: [RequestStoreManager!]!
 }
 
@@ -3510,6 +3536,8 @@ input RecapFiltersInput {
   retailerId: ID = null
   stateId: ID = null
   eventDate: String = null
+  startDate: String = null
+  endDate: String = null
   eventAddress: String = null
   edited: Boolean = null
 }
@@ -3599,7 +3627,7 @@ input RemoveAmbassadorsFromGroupInput {
 }
 
 """
-Request(id, uuid, name, date, start_time, end_time, address, decline_reason, requestor_email, notes, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, rmm_asigned, created_by, updated_by, approved_by, created_at, updated_at)
+Request(id, uuid, name, date, start_time, end_time, address, decline_reason, requestor_email, notes, reviewed, store_number, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, rmm_asigned, created_by, updated_by, approved_by, created_at, updated_at)
 """
 type Request implements Node {
   """The Globally Unique ID of this object"""
@@ -3607,6 +3635,8 @@ type Request implements Node {
   uuid: String!
   address: String!
   declineReason: String
+  reviewed: Boolean!
+  storeNumber: String
   notes: String
   coordinates: [Float!]!
   requestorEmail: String
@@ -3707,8 +3737,11 @@ input RequestFiltersInput {
   requestTypeId: ID = null
   retailerStateId: ID = null
   distributorStateId: ID = null
+  storeNumber: String = null
   date: String = null
+  createdWithinHours: Int = null
   edited: Boolean = null
+  reviewed: Boolean = null
 }
 
 """
@@ -4284,6 +4317,11 @@ input TypeOfGoodFiltersInput {
 
 scalar UUID
 
+input UnassignAmbassadorJobInput {
+  clientMutationId: ID = null
+  ambassadorJobId: ID!
+}
+
 input UpdateAmbassadorGroupInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -4661,6 +4699,8 @@ input UpdateRecapInput {
   totalPacksSold: Int = null
   totalEarnings: Float = null
   accountSpendAmount: Float = null
+  trafficDescription: String = null
+  competitivePresence: String = null
   jobId: ID = null
   retailerId: ID = null
   ambassadorId: ID = null
@@ -4689,6 +4729,8 @@ input UpdateRequestInput {
   retailerId: ID!
   rmmAsignedId: ID = null
   requestorEmail: String = null
+  reviewed: Boolean = null
+  storeNumber: String = null
   storeManagerName: String!
   storeManagerPhone: String!
   details: [CreateRequestDetailInput!]!
@@ -4830,6 +4872,12 @@ type UpsertAmbassadorProfileResponse {
   profile: AmbassadorProfile
 }
 
+input UpsertRequestReviewedInput {
+  clientMutationId: ID = null
+  id: ID!
+  reviewed: Boolean!
+}
+
 input UserFiltersInput {
   tenantId: ID = null
   name: String = null
@@ -4875,13 +4923,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
-  lastName: String
-  email: String!
   id: ID!
-  firstName: String
+  lastName: String
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
+  firstName: String
+  email: String!
   archived: Boolean!
   verified: Boolean!
 }

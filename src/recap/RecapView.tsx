@@ -321,6 +321,11 @@ const RecapView = () => {
   const totalEngagements = recap.totalEngagements ?? 0;
   const accountSpend = recap.accountSpendAmount;
   const statusLabel = recap.approved ? "Approved" : "Pending";
+  const tenantSlug = recap.event?.tenant?.slug?.toLowerCase() ?? "";
+  const canViewMarketContext =
+    tenantSlug === "begoat" || tenantSlug === "zeroes";
+  const hasMarketContext =
+    !!recap.trafficDescription || !!recap.competitivePresence;
 
   const productsSold = recap.productsSold ?? 0;
   const totalCansSold = recap.totalCansSold ?? 0;
@@ -909,6 +914,43 @@ const RecapView = () => {
                 </div>
               )}
             </KpiCardContainer>
+
+            {canViewMarketContext && (
+              <KpiCardContainer
+                title="Market Context"
+                icon={<MapPinHouse className="text-primary" />}
+              >
+                {!hasMarketContext ? (
+                  <p className="text-sm text-base-content/60">
+                    No market context recorded for this event.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {recap.trafficDescription && (
+                      <div className="space-y-1">
+                        <p className="text-xs uppercase text-base-content/60">
+                          Traffic Description
+                        </p>
+                        <p className="text-sm text-base-content/80">
+                          {recap.trafficDescription}
+                        </p>
+                      </div>
+                    )}
+
+                    {recap.competitivePresence && (
+                      <div className="space-y-1">
+                        <p className="text-xs uppercase text-base-content/60">
+                          Competitive Presence
+                        </p>
+                        <p className="text-sm text-base-content/80">
+                          {recap.competitivePresence}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </KpiCardContainer>
+            )}
           </div>
 
           {/* ======================================================
