@@ -159,6 +159,14 @@ const RecapView = () => {
     if (recapFiles.length === 0) return [];
 
     const categoryMap = new Map<string, { name: string; files: RecapFile[] }>();
+    const preferredOrder = [
+      "sampling photos",
+      "table setup",
+      "retailer photos",
+    ];
+    const preferredOrderIndex = new Map(
+      preferredOrder.map((name, index) => [name, index]),
+    );
 
     recapFiles.forEach((file) => {
       const categoryName = file.fileRecapCategory?.name ?? "Uncategorized";
@@ -170,9 +178,25 @@ const RecapView = () => {
       categoryMap.get(categoryName)!.files.push(file);
     });
 
-    return Array.from(categoryMap.values()).sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-    );
+    return Array.from(categoryMap.values()).sort((a, b) => {
+      const aName = a.name.trim().toLowerCase();
+      const bName = b.name.trim().toLowerCase();
+
+      if (aName === "receipts" && bName !== "receipts") return 1;
+      if (bName === "receipts" && aName !== "receipts") return -1;
+
+      const aPreferredIndex = preferredOrderIndex.get(aName);
+      const bPreferredIndex = preferredOrderIndex.get(bName);
+
+      if (aPreferredIndex !== undefined && bPreferredIndex !== undefined) {
+        return aPreferredIndex - bPreferredIndex;
+      }
+
+      if (aPreferredIndex !== undefined) return -1;
+      if (bPreferredIndex !== undefined) return 1;
+
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    });
   }, [recapFiles]);
 
   const categoriesWithImages = useMemo(
