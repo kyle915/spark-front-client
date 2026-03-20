@@ -15,6 +15,8 @@ export const RecapQuery = graphql`
       totalPacksSold
       totalEarnings
       accountSpendAmount
+      trafficDescription
+      competitivePresence
       job {
         id
         uuid
@@ -29,6 +31,7 @@ export const RecapQuery = graphql`
         tenant {
           id
           name
+          slug
         }
         timezone {
               id

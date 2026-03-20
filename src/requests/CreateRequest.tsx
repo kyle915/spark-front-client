@@ -1,8 +1,9 @@
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Layout from "@/layout/Layout";
 import Loading from "@/shared/Loading";
 import RequestForm, { type RequestFormValues } from "./components/RequestForm";
 
+import { fetchQuery } from "react-relay";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { RequestTypesQuery } from "@/api/queries/RequestTypesQuery";
 import { ProductTypesQuery } from "@/api/queries/ProductTypesQuery";
@@ -30,6 +31,7 @@ import { useAuthStore } from "@/store/authStore";
 import { dateFormat } from "@/public/form/utils/toDate";
 import { buildDateTimeWithOffset } from "@utils/index";
 import CatalogsProvider from "@/shared/CatalogsProvider";
+import environment from "@api/relay/environment";
 
 interface CreateRequestFormProps {
   tenantId: string;
@@ -65,9 +67,17 @@ const CreateRequestForm = ({
     { fetchPolicy: "store-and-network" },
   );
 
+  const productTypes =
+    productTypesData.productTypes?.edges.map((e) => e.node) || [];
+
+  const initialProductTypeId = productTypes[0]?.id ?? null;
+
   const productsData = useLazyLoadQuery<ProductsQueryType>(
     ProductsQuery,
-    { filters: { tenantId }, first: 100 },
+    {
+      filters: { tenantId, productTypeId: initialProductTypeId },
+      first: 100,
+    },
     { fetchPolicy: "store-and-network" },
   );
 
@@ -125,12 +135,68 @@ const CreateRequestForm = ({
   const requestTypes =
     requestTypesData.requestTypes?.edges.map((e) => e.node) || [];
 
-  const productTypes =
-    productTypesData.productTypes?.edges.map((e) => e.node) || [];
+  const initialProducts = useMemo(
+    () => productsData.products?.edges.map((e) => e.node) || [],
+    [productsData.products?.edges],
+  );
 
-  const products = productsData.products?.edges.map((e) => e.node) || [];
+  const [selectedProductTypeId, setSelectedProductTypeId] = useState<
+    string | null
+  >(initialProductTypeId);
+  const [products, setProducts] = useState(initialProducts);
+  const [isProductsLoading, setIsProductsLoading] = useState(false);
+  const productsRequestIdRef = useRef(0);
+  const hasMountedProductsEffectRef = useRef(false);
+  const hasInitializedProductTypeRef = useRef(false);
 
   const timezones = timezonesData.timezones?.edges.map((e) => e.node) || [];
+
+  useEffect(() => {
+    setProducts(initialProducts);
+  }, [initialProducts]);
+
+  useEffect(() => {
+    if (hasInitializedProductTypeRef.current) return;
+    if (!initialProductTypeId) return;
+
+    setSelectedProductTypeId(initialProductTypeId);
+    hasInitializedProductTypeRef.current = true;
+  }, [initialProductTypeId]);
+
+  useEffect(() => {
+    if (!hasMountedProductsEffectRef.current) {
+      hasMountedProductsEffectRef.current = true;
+      return;
+    }
+
+    const requestId = ++productsRequestIdRef.current;
+    setIsProductsLoading(true);
+
+    fetchQuery<ProductsQueryType>(
+      environment,
+      ProductsQuery,
+      {
+        filters: { tenantId, productTypeId: selectedProductTypeId },
+        first: 100,
+      },
+      { fetchPolicy: "network-only" },
+    )
+      .toPromise()
+      .then((data) => {
+        if (!data) return;
+        if (requestId !== productsRequestIdRef.current) return;
+        const nextProducts = data.products?.edges.map((e) => e.node) || [];
+        setProducts(nextProducts);
+      })
+      .catch(() => {
+        if (requestId !== productsRequestIdRef.current) return;
+        setProducts([]);
+      })
+      .finally(() => {
+        if (requestId !== productsRequestIdRef.current) return;
+        setIsProductsLoading(false);
+      });
+  }, [selectedProductTypeId, tenantId]);
 
   // ========================
   // SUBMIT
@@ -311,6 +377,11 @@ const CreateRequestForm = ({
           timezones={timezones}
           productTypes={productTypes}
           products={products}
+          productsLoading={isProductsLoading}
+          selectedProductType={selectedProductTypeId ?? ""}
+          onProductTypeChange={(productTypeId) =>
+            setSelectedProductTypeId(productTypeId || null)
+          }
           tenantId={tenantId}
           rmmClients={rmmClients}
           userIdLoggin={userId ? userId : ""}

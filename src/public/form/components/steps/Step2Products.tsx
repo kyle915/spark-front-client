@@ -21,6 +21,12 @@ interface SimpleCatalog {
 interface Step2ProductsProps {
   control: Control<SparkFormData, any, SparkFormData>;
   products: ProductItem[];
+  productsLoading?: boolean;
+  productsHasMore?: boolean;
+  productsTotalCount?: number;
+  onLoadMoreProducts?: () => void;
+  selectedProductTypeId?: string | null;
+  onProductTypeChange?: (productTypeId: string | null) => void;
   productTypes: SimpleCatalog[];
   // clients: SimpleCatalog[];
   // distributors: SimpleCatalog[];
@@ -31,6 +37,12 @@ interface Step2ProductsProps {
 export function Step2Products({
   control,
   products,
+  productsLoading = false,
+  productsHasMore = false,
+  productsTotalCount = 0,
+  onLoadMoreProducts,
+  selectedProductTypeId = null,
+  onProductTypeChange,
   productTypes,
 }: // clients,
 // distributors,
@@ -51,6 +63,12 @@ Step2ProductsProps) {
           productTypeId: p.productType.id,
         }))}
         productTypes={productTypes}
+        loadingProducts={productsLoading}
+        hasMoreProducts={productsHasMore}
+        totalProductsCount={productsTotalCount}
+        onLoadMoreProducts={onLoadMoreProducts}
+        selectedType={selectedProductTypeId ?? "all"}
+        onSelectedTypeChange={onProductTypeChange}
       />
 
       {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
