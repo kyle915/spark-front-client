@@ -129,96 +129,100 @@ export default function ProductSelector({
               </select>
             </div>
 
-            {/* GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {pageItems.map((p) => {
-                const active = selected.includes(p.id);
-
-                return (
-                  <motion.div
-                    key={p.id}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => toggle(p.id)}
-                    className={`
-                      cursor-pointer rounded-2xl border backdrop-blur-lg 
-                      p-5 flex flex-col items-center space-y-3
-                      transition-all shadow-sm hover:shadow-xl
-                      ${
-                        active
-                          ? "border-primary bg-primary/10"
-                          : "border-base-300"
-                      }
-                    `}
-                  >
-                    {p.image ? (
-                      <motion.img
-                        src={p.image}
-                        alt={p.name}
-                        className="h-24 object-contain"
-                        whileHover={{ scale: 1.1 }}
-                      />
-                    ) : (
-                      <div className="h-24 w-24 flex items-center justify-center rounded-xl bg-base-200 text-xs opacity-60">
-                        No image
-                      </div>
-                    )}
-
-                    <div className="text-center space-y-1">
-                      <p className="font-semibold">{p.name}</p>
-                      <p className="text-xs opacity-70">{p.desc}</p>
-                    </div>
-
-                    <input
-                      type="checkbox"
-                      readOnly
-                      checked={active}
-                      className="checkbox checkbox-primary"
-                    />
-
-                    {error && (
-                      <p className="text-xs text-error mt-1">{error.message}</p>
-                    )}
-                  </motion.div>
-                );
-              })}
-
-              {!loadingProducts && pageItems.length === 0 && (
-                <p className="text-sm opacity-70 col-span-full">
-                  No products found.
-                </p>
-              )}
-            </div>
-
-            {/* PAGINATION */}
-            {(products.length > ITEMS_PER_PAGE || hasMoreProducts) && (
-              <div className="flex justify-center items-center gap-4 mt-4">
-                <button
-                  className="btn btn-sm btn-outline"
-                  onClick={goPrev}
-                  disabled={page === 1}
-                >
-                  Prev
-                </button>
-
-                <span className="text-sm opacity-70">
-                  Page {page} / {totalPages}
-                </span>
-
-                <button
-                  className="btn btn-sm btn-outline"
-                  onClick={goNext}
-                  disabled={page === totalPages && !hasMoreProducts}
-                >
-                  Next
-                </button>
-              </div>
-            )}
-
-            {loadingProducts && (
+            {loadingProducts ? (
               <div className="flex justify-center mt-2">
                 <span className="loading loading-spinner loading-xs" />
               </div>
+            ) : (
+              <>
+                {/* GRID */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {pageItems.map((p) => {
+                    const active = selected.includes(p.id);
+
+                    return (
+                      <motion.div
+                        key={p.id}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => toggle(p.id)}
+                        className={`
+                          cursor-pointer rounded-2xl border backdrop-blur-lg 
+                          p-5 flex flex-col items-center space-y-3
+                          transition-all shadow-sm hover:shadow-xl
+                          ${
+                            active
+                              ? "border-primary bg-primary/10"
+                              : "border-base-300"
+                          }
+                        `}
+                      >
+                        {p.image ? (
+                          <motion.img
+                            src={p.image}
+                            alt={p.name}
+                            className="h-24 object-contain"
+                            whileHover={{ scale: 1.1 }}
+                          />
+                        ) : (
+                          <div className="h-24 w-24 flex items-center justify-center rounded-xl bg-base-200 text-xs opacity-60">
+                            No image
+                          </div>
+                        )}
+
+                        <div className="text-center space-y-1">
+                          <p className="font-semibold">{p.name}</p>
+                          <p className="text-xs opacity-70">{p.desc}</p>
+                        </div>
+
+                        <input
+                          type="checkbox"
+                          readOnly
+                          checked={active}
+                          className="checkbox checkbox-primary"
+                        />
+
+                        {error && (
+                          <p className="text-xs text-error mt-1">
+                            {error.message}
+                          </p>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+
+                  {pageItems.length === 0 && (
+                    <p className="text-sm opacity-70 col-span-full">
+                      No products found.
+                    </p>
+                  )}
+                </div>
+
+                {/* PAGINATION */}
+                {(products.length > ITEMS_PER_PAGE || hasMoreProducts) && (
+                  <div className="flex justify-center items-center gap-4 mt-4">
+                    <button
+                      className="btn btn-sm btn-outline"
+                      onClick={goPrev}
+                      disabled={page === 1}
+                    >
+                      Prev
+                    </button>
+
+                    <span className="text-sm opacity-70">
+                      Page {page} / {totalPages}
+                    </span>
+
+                    <button
+                      className="btn btn-sm btn-outline"
+                      onClick={goNext}
+                      disabled={page === totalPages && !hasMoreProducts}
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         );
