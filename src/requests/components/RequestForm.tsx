@@ -126,6 +126,9 @@ interface RequestFormProps {
   timezones?: TimezoneItem[];
   productTypes?: CatalogItem[];
   products?: ProductItem[];
+  productsLoading?: boolean;
+  selectedProductType?: string;
+  onProductTypeChange?: (productTypeId: string) => void;
   requestId?: string | null;
   requestStoreManagers?: StoreManagerItem[];
   // locations?: CatalogItem[];
@@ -171,6 +174,9 @@ export default function RequestForm({
   eventTypes = [],
   productTypes = [],
   products = [],
+  productsLoading = false,
+  selectedProductType = "",
+  onProductTypeChange,
   tenantId,
   requestId = null,
   requestStoreManagers = [],
@@ -685,8 +691,6 @@ export default function RequestForm({
     timezoneFieldName: "timezoneId",
     initialFromBackend: Boolean(defaultValues.timezoneId),
   });
-
-  const [selectedProductType, setSelectedProductType] = useState<string>("");
 
   const isTableNeeded = watch("isTableNeeded");
   const selectedProducts = watch("products") || [];
@@ -1447,7 +1451,7 @@ export default function RequestForm({
                   <select
                     className="select select-bordered select-sm w-full"
                     value={selectedProductType}
-                    onChange={(e) => setSelectedProductType(e.target.value)}
+                    onChange={(e) => onProductTypeChange?.(e.target.value)}
                   >
                     <option value="">All Types</option>
                     {productTypes.map((t) => (
@@ -1465,8 +1469,14 @@ export default function RequestForm({
                 </p>
               )}
 
+              {productsLoading && (
+                <div className="flex justify-center py-4">
+                  <span className="loading loading-spinner loading-md" />
+                </div>
+              )}
+
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {visibleProducts.length === 0 && (
+                {!productsLoading && visibleProducts.length === 0 && (
                   <p className="text-base-content/60 col-span-full">
                     No products found.
                   </p>

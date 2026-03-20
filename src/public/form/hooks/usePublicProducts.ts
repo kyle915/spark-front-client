@@ -11,24 +11,88 @@ interface Product {
 }
 
 interface NodeProduct {
-  publicProducts: { edges: { node: Product }[] };
+  publicProducts: {
+    totalCount?: number | null;
+    edges: { cursor: string; node: Product }[];
+    pageInfo?: {
+      hasNextPage?: boolean;
+      endCursor?: string | null;
+    } | null;
+  };
 }
 
-export function usePublicProducts(requestUrlName: string) {
+const PAGE_SIZE = 9;
+
+export function usePublicProducts(
+  requestUrlName: string,
+  selectedProductTypeId: string | null = null,
+) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [endCursor, setEndCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
-    if (!requestUrlName) return;
+    if (!requestUrlName) {
+      setProducts([]);
+      setEndCursor(null);
+      setHasMore(false);
+      setTotalCount(0);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
+    setLoadingMore(false);
     gqlRequest<NodeProduct>(PUBLIC_PRODUCTS_QUERY, {
       requestUrlName,
+      first: PAGE_SIZE,
+      after: null,
+      filters: selectedProductTypeId
+        ? { productTypeId: selectedProductTypeId }
+        : null,
     })
       .then((data) => {
-        setProducts(mapQuery(data.publicProducts?.edges));
+        const nextProducts = mapQuery(data.publicProducts?.edges);
+        setProducts(nextProducts);
+        setEndCursor(data.publicProducts?.pageInfo?.endCursor ?? null);
+        setHasMore(Boolean(data.publicProducts?.pageInfo?.hasNextPage));
+        setTotalCount(data.publicProducts?.totalCount ?? nextProducts.length);
       })
-      .finally(() => setLoading(false));
-  }, [requestUrlName]);
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [requestUrlName, selectedProductTypeId]);
 
-  return { products, loading };
+  const loadMore = () => {
+    if (!requestUrlName || !hasMore || loadingMore) return;
+
+    setLoadingMore(true);
+    gqlRequest<NodeProduct>(PUBLIC_PRODUCTS_QUERY, {
+      requestUrlName,
+      first: PAGE_SIZE,
+      after: endCursor,
+      filters: selectedProductTypeId
+        ? { productTypeId: selectedProductTypeId }
+        : null,
+    })
+      .then((data) => {
+        const nextProducts = mapQuery(data.publicProducts?.edges);
+        setProducts((prev) => {
+          const merged = [...prev, ...nextProducts];
+          const deduped = new Map(merged.map((product) => [product.id, product]));
+          return Array.from(deduped.values());
+        });
+        setEndCursor(data.publicProducts?.pageInfo?.endCursor ?? null);
+        setHasMore(Boolean(data.publicProducts?.pageInfo?.hasNextPage));
+        setTotalCount((prev) => data.publicProducts?.totalCount ?? prev);
+      })
+      .finally(() => {
+        setLoadingMore(false);
+      });
+  };
+
+  return { products, loading, loadingMore, hasMore, totalCount, loadMore };
 }
