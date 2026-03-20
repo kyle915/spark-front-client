@@ -45,6 +45,12 @@ interface SparkFormProps {
       name: string;
     };
   }[];
+  productsLoading?: boolean;
+  productsHasMore?: boolean;
+  productsTotalCount?: number;
+  onLoadMoreProducts?: () => void;
+  selectedProductTypeId?: string | null;
+  onProductTypeChange?: (productTypeId: string | null) => void;
   productTypes: {
     id: string;
     name: string;
@@ -68,6 +74,12 @@ export default function SparkForm(props: SparkFormProps) {
     onRetailerSearch,
     onNationalRetailerChange,
     products,
+    productsLoading = false,
+    productsHasMore = false,
+    productsTotalCount = 0,
+    onLoadMoreProducts,
+    selectedProductTypeId = null,
+    onProductTypeChange,
     productTypes,
     distributors,
     retailers,
@@ -110,6 +122,12 @@ export default function SparkForm(props: SparkFormProps) {
         <Step2Products
           control={control}
           products={products}
+          productsLoading={productsLoading}
+          productsHasMore={productsHasMore}
+          productsTotalCount={productsTotalCount}
+          onLoadMoreProducts={onLoadMoreProducts}
+          selectedProductTypeId={selectedProductTypeId}
+          onProductTypeChange={onProductTypeChange}
           productTypes={productTypes}
         />
       ),

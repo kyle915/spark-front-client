@@ -19,10 +19,20 @@ export default function SparkFormPage() {
   const slug = tenantSlug ?? "";
   const [stateQuery, setStateQuery] = useState("");
   const [selectedStateId, setSelectedStateId] = useState("");
+  const [selectedProductTypeId, setSelectedProductTypeId] = useState<
+    string | null
+  >(null);
   const [retailerQuery, setRetailerQuery] = useState("");
   const [isNationalRetailer, setIsNationalRetailer] = useState(true);
 
-  const { products } = usePublicProducts(slug);
+  const {
+    products,
+    loading: loadingProducts,
+    loadingMore,
+    hasMore,
+    totalCount,
+    loadMore,
+  } = usePublicProducts(slug, selectedProductTypeId);
   // const { clients } = usePublicClients(slug);
   const { requestTypes } = usePublicRequestTypes(slug);
   const { productTypes } = usePublicProductTypes(slug);
@@ -59,6 +69,12 @@ export default function SparkFormPage() {
         onRetailerSearch={setRetailerQuery}
         onNationalRetailerChange={setIsNationalRetailer}
         products={products}
+        productsLoading={loadingProducts || loadingMore}
+        productsHasMore={hasMore}
+        productsTotalCount={totalCount}
+        onLoadMoreProducts={loadMore}
+        selectedProductTypeId={selectedProductTypeId}
+        onProductTypeChange={setSelectedProductTypeId}
         productTypes={productTypes}
         distributors={distributors}
         retailers={retailers}

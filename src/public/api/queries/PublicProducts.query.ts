@@ -23,9 +23,21 @@
 // `;
 
 export const PUBLIC_PRODUCTS_QUERY = `
-  query PublicProductsQuery($requestUrlName: String!, $first: Int = 100) {
-    publicProducts(requestUrlName: $requestUrlName, first: $first) {
+  query PublicProductsQuery(
+    $requestUrlName: String!
+    $first: Int = 9
+    $after: String
+    $filters: ProductFiltersInput
+  ) {
+    publicProducts(
+      requestUrlName: $requestUrlName
+      first: $first
+      after: $after
+      filters: $filters
+    ) {
+      totalCount
       edges {
+        cursor
         node {
           id
           uuid
@@ -38,7 +50,11 @@ export const PUBLIC_PRODUCTS_QUERY = `
             uuid
           }
         }
-      } 
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
   }
 `;
