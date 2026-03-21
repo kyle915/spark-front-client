@@ -109,6 +109,8 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
           timezoneId: formData.timezoneId,
           coordinates: formData.coordinates ?? [],
           address: formData.address,
+          locationId: formData.entitiesLocationId,
+          stateId: formData.stateId,
           distributorId: formData.distributorId ?? null,
           retailerId: formData.retailerId ?? null,
           notes: formData.notes ?? "",
@@ -168,26 +170,14 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
     requestId: event.request?.id ?? undefined,
     associateRequest: Boolean(event.request),
     rmmAsignedId: event.rmmAsigned?.id ?? null,
+    stateId: event.state?.id ?? null,
+    entitiesLocationId: event.location?.id ?? null,
     distributorId:
       event.distributor?.id ?? event.request?.distributor?.id ?? undefined,
     distributorName:
       event.distributor?.name ?? event.request?.distributor?.name ?? "",
     retailerId: event.retailer?.id ?? event.request?.retailer?.id ?? undefined,
     retailerName: event.retailer?.name ?? event.request?.retailer?.name ?? "",
-    stateId:
-      event.retailer?.location?.state?.id ??
-      event.distributor?.location?.state?.id ??
-      event.request?.retailer?.location?.state?.id ??
-      event.request?.distributor?.location?.state?.id ??
-      undefined,
-
-    entitiesLocationId:
-      event.retailer?.location?.id ??
-      event.distributor?.location?.id ??
-      event.request?.retailer?.location?.id ??
-      event.request?.distributor?.location?.id ??
-      undefined,
-
     distributorLocationId:
       event.distributor?.location?.id ??
       event.request?.distributor?.location?.id ??

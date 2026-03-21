@@ -165,6 +165,8 @@ const CreateEventWithoutRequestContent = () => {
       rmmAsignedId: formData.rmmAsignedId,
       distributorId: isJeeterTenant ? null : (formData.distributorId ?? null),
       retailerId: selectedRetailerId,
+      locationId: formData.entitiesLocationId,
+      stateId: formData.stateId,
       startTime:
         dateValue && formData.startTime
           ? buildDateTimeWithOffset(
