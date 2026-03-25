@@ -28,7 +28,11 @@ export function buildPayload(
   const normalizedDate = dateValue
     ? buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes)
     : "";
-  const requestName = [values.name?.trim(), values.retailer?.trim(), dateForName]
+  const requestName = [
+    values.name?.trim(),
+    values.retailer?.trim(),
+    dateForName,
+  ]
     .filter(Boolean)
     .join(" - ");
 
@@ -45,6 +49,7 @@ export function buildPayload(
         : "",
     address: values.address,
     coordinates: [Number(values.latitude), Number(values.longitude)],
+    stateId: values.stateId,
     requestorEmail: values.requestorEmail,
     // Backend still requires client fields even though UI no longer collects them.
     clientName: CLIENT_PLACEHOLDER.name,

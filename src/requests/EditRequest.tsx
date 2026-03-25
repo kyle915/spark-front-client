@@ -115,7 +115,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
         input: {
           id: request.id,
           name: formData.name,
-          notes: formData.notes?.trim() ?? "",
+          
           date: buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes),
           startTime: formData.startTime
             ? buildDateTimeWithOffset(
@@ -132,12 +132,15 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
               )
             : "",
           address: formData.address,
-          rmmAsignedId: formData.rmmAsignedId,
+          notes: formData.notes?.trim() ?? "",
           coordinates: (formData.coordinates ?? []) as readonly number[],
           timezoneId: formData.timezoneId ?? "",
           requestTypeId: formData.requestTypeId ?? "",
           distributorId: isJeeterTenant ? "" : (formData.distributorId ?? ""),
           retailerId: formData.retailerId ?? "",
+          locationId: formData.entitiesLocationId,
+          stateId: formData.stateId,
+          rmmAsignedId: formData.rmmAsignedId,
           storeManagerName: formData.storeManagerName ?? "",
           storeManagerPhone: formData.storeManagerPhone ?? "",
           details: [],
@@ -184,11 +187,11 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     retailerId: request.retailer?.id ?? request?.retailer?.id ?? undefined,
     stateId: isJeeterTenant
       ? californiaState?.id
-      : request.retailer?.location?.state?.id ??
+      : (request.retailer?.location?.state?.id ??
         request.distributor?.location?.state?.id ??
         request?.retailer?.location?.state?.id ??
         request?.distributor?.location?.state?.id ??
-        undefined,
+        undefined),
     entitiesLocationId:
       request.retailer?.location?.id ??
       request.distributor?.location?.id ??
@@ -256,6 +259,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
               disableStateSelect={isJeeterTenant}
               hideTableNeededFields={isJeeterTenant}
               hideDistributorFields={isJeeterTenant}
+              hideEventTypeField
               userIdLoggin=""
               rmmClients={rmmClients}
               requestTypes={requestTypes}

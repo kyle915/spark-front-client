@@ -836,7 +836,7 @@ const RecapView = () => {
                   {recap.accountFeedback.map((item) => {
                     const hasFeedback = !!item.feedback;
                     const hasDoDifferently = !!item.doDifferentlyFeedback;
-                    const hasCorpoCard = !!item.corpoCard;
+                    const hasCorpoCard = !!item.wasCorpoCardUsed;
 
                     if (!hasFeedback && !hasDoDifferently && !hasCorpoCard) {
                       return null;
@@ -850,7 +850,7 @@ const RecapView = () => {
                         {hasFeedback && (
                           <div className="space-y-1">
                             <p className="text-xs uppercase text-base-content/60">
-                              Feedback
+                              What was the account feedback provided?
                             </p>
                             <p className="text-sm text-base-content/80">
                               {item.feedback}
@@ -861,7 +861,7 @@ const RecapView = () => {
                         {hasDoDifferently && (
                           <div className="space-y-1">
                             <p className="text-xs uppercase text-base-content/60">
-                              Do differently next time
+                             What would have been done differently?
                             </p>
                             <p className="text-sm text-base-content/80">
                               {item.doDifferentlyFeedback}
@@ -872,10 +872,10 @@ const RecapView = () => {
                         {hasCorpoCard && (
                           <div className="space-y-1">
                             <p className="text-xs uppercase text-base-content/60">
-                              Corporate card used
+                              Was Corporate Card Used?
                             </p>
                             <p className="text-sm text-base-content/80">
-                              {item.corpoCard}
+                              {item.wasCorpoCardUsed ? "Yes" : "No"}
                             </p>
                           </div>
                         )}

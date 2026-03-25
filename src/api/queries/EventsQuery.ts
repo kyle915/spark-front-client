@@ -65,6 +65,12 @@ export const EventsQuery = graphql`
             uuid
             name
           }
+          location {
+            id
+          }
+          state {
+            id
+          }
           status {
             __typename
             id

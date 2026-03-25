@@ -52,7 +52,7 @@ export interface RequestFormValues {
   distributorId?: string | null;
   requestTypeId?: string | null;
   rmmAsignedId?: string;
-  eventTypeId?: string;
+  eventTypeId?: string | null;
   clientName?: string;
   clientEmail?: string;
   entitiesLocationId?: string | null;
@@ -136,6 +136,7 @@ interface RequestFormProps {
   disableStateSelect?: boolean;
   hideTableNeededFields?: boolean;
   hideDistributorFields?: boolean;
+  hideEventTypeField?: boolean;
 
   onRefetch?: (
     key: "distributors" | "retailers" | "requestStoreManagers",
@@ -188,6 +189,7 @@ export default function RequestForm({
   disableStateSelect = false,
   hideTableNeededFields = false,
   hideDistributorFields = false,
+  hideEventTypeField = false,
 }: RequestFormProps) {
   const safeDefaultValues: RequestFormValues = {
     name: "",
@@ -419,7 +421,9 @@ export default function RequestForm({
   useEffect(() => {
     if (!retailerId) return;
 
-    const selectedRetailer = retailersHook.items.find((item) => item.id === retailerId);
+    const selectedRetailer = retailersHook.items.find(
+      (item) => item.id === retailerId,
+    );
     const selectedRetailerName = selectedRetailer?.name?.trim();
     if (!selectedRetailerName) return;
     if ((retailerNameValue ?? "").trim() === selectedRetailerName) return;
@@ -955,17 +959,19 @@ export default function RequestForm({
                 rules={{ required: "Request Type is required" }}
               />
 
-              <FormAutocomplete<RequestFormValues>
-                name="eventTypeId"
-                control={control}
-                label="Event Type"
-                placeholder="Search event type..."
-                options={eventTypes.map((et) => ({
-                  value: et.id,
-                  label: et.name,
-                }))}
-                rules={{ required: "Event Type is required" }}
-              />
+              {!hideEventTypeField && (
+                <FormAutocomplete<RequestFormValues>
+                  name="eventTypeId"
+                  control={control}
+                  label="Event Type"
+                  placeholder="Search event type..."
+                  options={eventTypes.map((et) => ({
+                    value: et.id,
+                    label: et.name,
+                  }))}
+                  rules={{ required: "Event Type is required" }}
+                />
+              )}
 
               <FormDatePicker<RequestFormValues>
                 name="date"
@@ -1092,10 +1098,10 @@ export default function RequestForm({
               {isStateSelected &&
                 !isNationalRetailer &&
                 !isEntitiesLocationSelected && (
-                <p className="text-sm text-warning">
-                  Select a city first to enable retailer.
-                </p>
-              )}
+                  <p className="text-sm text-warning">
+                    Select a city first to enable retailer.
+                  </p>
+                )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {!isEventActivation && !hideDistributorFields && (
@@ -1176,8 +1182,7 @@ export default function RequestForm({
                                 className="btn btn-primary btn-xs"
                                 onClick={handleCreateDistributor}
                                 disabled={
-                                  isCreatingDistributor ||
-                                  !isStateSelected
+                                  isCreatingDistributor || !isStateSelected
                                 }
                               >
                                 Confirm distributor
