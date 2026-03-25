@@ -141,7 +141,6 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
           locationId: formData.entitiesLocationId,
           stateId: formData.stateId,
           rmmAsignedId: formData.rmmAsignedId,
-          // eventTypeId: formData.eventTypeId ?? "", // Falta en el schema UpdateRequestInput del backend
           storeManagerName: formData.storeManagerName ?? "",
           storeManagerPhone: formData.storeManagerPhone ?? "",
           details: [],
@@ -178,7 +177,6 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     notes: (request as { notes?: string | null }).notes ?? "",
     date: defaultDate,
     startTime: defaultStartTime,
-    // eventTypeId: request.eventTypeId ?? null,
     endTime: defaultEndTime,
     address: request.address ?? "",
     coordinates: request.coordinates?.length ? [...request.coordinates] : null,
@@ -228,8 +226,6 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
       <CatalogsProvider
         clients
         clientsFilters={filters}
-        eventTypes
-        eventTypesFilters={filters}
         retailers
         retailersFilters={filters}
         distributors
@@ -242,7 +238,6 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
         {({
           clients,
           requestTypes,
-          eventTypes,
           requestStoreManagers,
           loading,
           errors,
@@ -258,13 +253,13 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
               tenantId={request.tenantId}
               requestId={request.id}
               defaultValues={defaultValues}
-              eventTypes={eventTypes}
               onSubmit={handleSubmit}
               clients={clients}
               states={allowedStates}
               disableStateSelect={isJeeterTenant}
               hideTableNeededFields={isJeeterTenant}
               hideDistributorFields={isJeeterTenant}
+              hideEventTypeField
               userIdLoggin=""
               rmmClients={rmmClients}
               requestTypes={requestTypes}
