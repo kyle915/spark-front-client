@@ -136,6 +136,7 @@ interface RequestFormProps {
   disableStateSelect?: boolean;
   hideTableNeededFields?: boolean;
   hideDistributorFields?: boolean;
+  hideEventTypeField?: boolean;
 
   onRefetch?: (
     key: "distributors" | "retailers" | "requestStoreManagers",
@@ -188,6 +189,7 @@ export default function RequestForm({
   disableStateSelect = false,
   hideTableNeededFields = false,
   hideDistributorFields = false,
+  hideEventTypeField = false,
 }: RequestFormProps) {
   const safeDefaultValues: RequestFormValues = {
     name: "",
@@ -957,17 +959,19 @@ export default function RequestForm({
                 rules={{ required: "Request Type is required" }}
               />
 
-              <FormAutocomplete<RequestFormValues>
-                name="eventTypeId"
-                control={control}
-                label="Event Type"
-                placeholder="Search event type..."
-                options={eventTypes.map((et) => ({
-                  value: et.id,
-                  label: et.name,
-                }))}
-                rules={{ required: "Event Type is required" }}
-              />
+              {!hideEventTypeField && (
+                <FormAutocomplete<RequestFormValues>
+                  name="eventTypeId"
+                  control={control}
+                  label="Event Type"
+                  placeholder="Search event type..."
+                  options={eventTypes.map((et) => ({
+                    value: et.id,
+                    label: et.name,
+                  }))}
+                  rules={{ required: "Event Type is required" }}
+                />
+              )}
 
               <FormDatePicker<RequestFormValues>
                 name="date"
