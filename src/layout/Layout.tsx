@@ -249,6 +249,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const menuItems = navigationMenuRoutes.filter(
     (r) => r.title || r.path,
   ) as NavigationLink[];
+  const appVersion = `v${__APP_VERSION__}`;
 
   return (
     <div className="flex h-screen bg-base-200 text-base-content">
@@ -298,7 +299,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         {/* FOOTER */}
-        <div className="p-4 border-t border-base-300 flex items-center gap-3">
+        <div className="p-4 pb-1 border-t border-base-300 flex items-center gap-3">
           <UserAvatar src={avatarSrc} user={user} />
 
           {!collapsed && (
@@ -313,6 +314,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </>
           )}
         </div>
+
+        {!collapsed && (
+          <div className="px-4 pb-2 text-center">
+            <p className="text-xs opacity-60">{appVersion}</p>
+          </div>
+        )}
       </aside>
 
       <div className="flex flex-col flex-1 min-w-0">
