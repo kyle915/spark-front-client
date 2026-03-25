@@ -1253,6 +1253,8 @@ input CreateEventInput {
   requestId: ID = null
   retailerId: ID = null
   distributorId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   rmmAsignedId: ID = null
   timezoneId: ID = null
   date: String!
@@ -1451,6 +1453,8 @@ input CreateRecapInput {
   competitivePresence: String = null
   jobId: ID = null
   retailerId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   ambassadorId: ID = null
   consumerEngagements: ConsumerEngagementsInput = null
   productSamples: [ProductSampleInput!] = null
@@ -1479,6 +1483,8 @@ input CreateRequestInput {
   requestTypeId: ID!
   distributorId: ID = null
   retailerId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   storeManagerId: ID = null
   rmmAsignedId: ID = null
   requestorEmail: String = null
@@ -1538,6 +1544,8 @@ input CreateRequestWithDependenciesInput {
   requestTypeId: ID!
   distributorId: ID = null
   retailerId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   requestorEmail: String = null
   storeNumber: String = null
   clientName: String!
@@ -1857,7 +1865,7 @@ type EnqueueCreateGoalsForTenantPayload {
 }
 
 """
-Event(id, uuid, name, date, coordinates, timezone, tenant, request, event_type, status, retailer, distributor, start_time, end_time, address, notes, is_national, rmm_asigned, created_by, updated_by, created_at, updated_at)
+Event(id, uuid, name, date, coordinates, timezone, tenant, request, event_type, status, retailer, distributor, start_time, end_time, address, notes, is_national, rmm_asigned, location, state, created_by, updated_by, created_at, updated_at)
 """
 type Event implements Node {
   """The Globally Unique ID of this object"""
@@ -1870,6 +1878,8 @@ type Event implements Node {
   request: Request
   retailer: Retailer
   distributor: Distributor
+  location: Location
+  state: State
   createdAt: String!
   updatedAt: String!
   tenantId: ID!
@@ -1953,6 +1963,8 @@ input EventFiltersInput {
   requestId: ID = null
   retailerId: ID = null
   distributorId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   retailerStateId: ID = null
   distributorStateId: ID = null
   date: String = null
@@ -3375,7 +3387,7 @@ input RateTypeFiltersInput {
 }
 
 """
-Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, total_cans_sold, total_packs_sold, filling_for_ambassador, late, incomplete, account_spend_amount, approved, traffic_description, competitive_presence, timezone, event, ambassador, job, retailer, created_by, updated_by, created_at, updated_at)
+Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, total_cans_sold, total_packs_sold, filling_for_ambassador, late, incomplete, account_spend_amount, approved, traffic_description, competitive_presence, timezone, event, ambassador, job, retailer, location, state, created_by, updated_by, created_at, updated_at)
 """
 type Recap implements Node {
   """The Globally Unique ID of this object"""
@@ -3391,6 +3403,10 @@ type Recap implements Node {
   job: Job
   retailerId: ID
   retailer: Retailer
+  locationId: ID
+  location: Location
+  stateId: ID
+  state: State
   createdAt: String!
   updatedAt: String!
   totalEngagements: Int
@@ -3534,6 +3550,7 @@ input RecapFiltersInput {
   eventType: ID = null
   rmmAsignedId: ID = null
   retailerId: ID = null
+  locationId: ID = null
   stateId: ID = null
   eventDate: String = null
   startDate: String = null
@@ -3627,7 +3644,7 @@ input RemoveAmbassadorsFromGroupInput {
 }
 
 """
-Request(id, uuid, name, date, start_time, end_time, address, decline_reason, requestor_email, notes, reviewed, store_number, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, rmm_asigned, created_by, updated_by, approved_by, created_at, updated_at)
+Request(id, uuid, name, date, start_time, end_time, address, decline_reason, requestor_email, notes, reviewed, store_number, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, rmm_asigned, location, state, created_by, updated_by, approved_by, created_at, updated_at)
 """
 type Request implements Node {
   """The Globally Unique ID of this object"""
@@ -3653,6 +3670,8 @@ type Request implements Node {
   client: Client
   distributor: Distributor
   retailer: Retailer
+  location: Location
+  state: State
   requestType: RequestType
   status: RequestStatus
   tenantId: ID!
@@ -3734,6 +3753,8 @@ input RequestFiltersInput {
   clientId: ID = null
   retailerId: ID = null
   distributorId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   requestTypeId: ID = null
   retailerStateId: ID = null
   distributorStateId: ID = null
@@ -4505,6 +4526,8 @@ input UpdateEventInput {
   requestId: ID = null
   retailerId: ID = null
   distributorId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   rmmAsignedId: ID = null
   timezoneId: ID = null
   date: String!
@@ -4703,6 +4726,8 @@ input UpdateRecapInput {
   competitivePresence: String = null
   jobId: ID = null
   retailerId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   ambassadorId: ID = null
   consumerEngagements: ConsumerEngagementsInput = null
   productSamples: [ProductSampleInput!] = null
@@ -4725,8 +4750,10 @@ input UpdateRequestInput {
   coordinates: [Float!]!
   timezoneId: ID!
   requestTypeId: ID!
-  distributorId: ID!
-  retailerId: ID!
+  distributorId: ID = null
+  retailerId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   rmmAsignedId: ID = null
   requestorEmail: String = null
   reviewed: Boolean = null

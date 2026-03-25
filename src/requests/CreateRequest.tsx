@@ -200,8 +200,8 @@ const CreateRequestForm = ({
 
   // ========================
   // SUBMIT
-  // ========================
   // handler create event
+  // ========================
   const runCreateEvent = (requestId: string, formData: RequestFormValues) => {
     const timezone =
       timezones.find((tz) => tz.id === formData.timezoneId) ?? null;
@@ -276,7 +276,6 @@ const CreateRequestForm = ({
           tenantId: tenantId,
           name: requestName || formData.name,
           date: buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes),
-          notes: formData.notes?.trim() ?? "",
           startTime: formData.startTime
             ? buildDateTimeWithOffset(
                 dateValue,
@@ -292,11 +291,14 @@ const CreateRequestForm = ({
               )
             : "",
           address: formData.address,
+          notes: formData.notes?.trim() ?? "",
           coordinates: (formData.coordinates ?? []) as readonly number[],
           timezoneId: formData.timezoneId!,
           requestTypeId: formData.requestTypeId!,
           distributorId: isJeeterTenant ? null : (formData.distributorId ?? null),
           retailerId: formData.retailerId ?? null,
+          locationId: formData.entitiesLocationId,
+          stateId: formData.stateId,
           storeManagerId: formData.storeManagerId ?? null,
           rmmAsignedId: formData.rmmAsignedId,
           // Create-only fields

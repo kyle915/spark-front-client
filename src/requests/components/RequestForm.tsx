@@ -52,7 +52,7 @@ export interface RequestFormValues {
   distributorId?: string | null;
   requestTypeId?: string | null;
   rmmAsignedId?: string;
-  eventTypeId?: string;
+  eventTypeId?: string | null;
   clientName?: string;
   clientEmail?: string;
   entitiesLocationId?: string | null;
@@ -419,7 +419,9 @@ export default function RequestForm({
   useEffect(() => {
     if (!retailerId) return;
 
-    const selectedRetailer = retailersHook.items.find((item) => item.id === retailerId);
+    const selectedRetailer = retailersHook.items.find(
+      (item) => item.id === retailerId,
+    );
     const selectedRetailerName = selectedRetailer?.name?.trim();
     if (!selectedRetailerName) return;
     if ((retailerNameValue ?? "").trim() === selectedRetailerName) return;
@@ -1092,10 +1094,10 @@ export default function RequestForm({
               {isStateSelected &&
                 !isNationalRetailer &&
                 !isEntitiesLocationSelected && (
-                <p className="text-sm text-warning">
-                  Select a city first to enable retailer.
-                </p>
-              )}
+                  <p className="text-sm text-warning">
+                    Select a city first to enable retailer.
+                  </p>
+                )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {!isEventActivation && !hideDistributorFields && (
@@ -1176,8 +1178,7 @@ export default function RequestForm({
                                 className="btn btn-primary btn-xs"
                                 onClick={handleCreateDistributor}
                                 disabled={
-                                  isCreatingDistributor ||
-                                  !isStateSelected
+                                  isCreatingDistributor || !isStateSelected
                                 }
                               >
                                 Confirm distributor

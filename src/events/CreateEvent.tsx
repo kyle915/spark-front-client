@@ -183,6 +183,8 @@ const CreateEventForm = ({
           isNational: data.isNational ?? false,
           timezoneId: data.timezoneId ?? request.timezone?.id ?? null,
           rmmAsignedId: data.rmmAsignedId,
+          locationId: data.entitiesLocationId,
+          stateId: data.stateId,
           distributorId: isJeeterTenant ? null : (request.distributor?.id ?? null),
           retailerId: request.retailer?.id ?? null,
           startTime: dateValue
