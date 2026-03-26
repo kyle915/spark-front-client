@@ -55,11 +55,30 @@ export const requestColumns: Column<RequestRow>[] = [
     ),
   },
   {
-    key: "distributor",
-    label: "Distributor",
+    key: "address",
+    label: "Address",
     render: (_v, row) => (
-      <span className="opacity-70">{row.distributor?.name ?? "-"}</span>
+      <div className="group relative max-w-[220px]">
+        <span className="block truncate">{row.address ?? "-"}</span>
+        {row.address ? (
+          <div className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden w-max max-w-xs rounded-md border border-base-300 bg-base-100 px-3 py-2 text-xs shadow-lg group-hover:block whitespace-normal break-words">
+            {row.address}
+          </div>
+        ) : null}
+      </div>
     ),
+  },
+  {
+    key: "state",
+    label: "State",
+    render: (_v, row) => (
+      <span>{row.state?.name ?? row.retailer?.location?.state?.name ?? "-"}</span>
+    ),
+  },
+  {
+    key: "city",
+    label: "City",
+    render: (_v, row) => <span>{row.location?.name ?? row.retailer?.location?.name ?? "-"}</span>,
   },
   {
     key: "status",
