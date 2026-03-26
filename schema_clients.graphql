@@ -1280,6 +1280,12 @@ input CreateEventTypeInput {
   isDefault: Boolean! = false
 }
 
+input CreateEventWithRequestInput {
+  clientMutationId: ID = null
+  event: CreateEventInput!
+  request: CreateRequestInput!
+}
+
 input CreateGroupTypeInput {
   clientMutationId: ID = null
   name: String!
@@ -2066,6 +2072,14 @@ input EventTypeFiltersInput {
   tenantUuid: ID = null
 }
 
+type EventWithRequestDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  event: Event
+  request: Request
+}
+
 "\n     Errors messages and codes mapped to\n    fields or non fields errors.\n    Example:\n    {\n        field_name: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ],\n        other_field: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ],\n        nonFieldErrors: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ]\n    }\n    "
 scalar ExpectedError
 
@@ -2717,6 +2731,8 @@ type MonthlyPerformanceTrend {
 
 type Mutation {
   createEvent(input: CreateEventInput!): EventDetailResponse!
+  createEventWithRequest(input: CreateEventWithRequestInput!): EventWithRequestDetailResponse!
+  updateEventWithRequest(input: UpdateEventWithRequestInput!): EventWithRequestDetailResponse!
   updateEvent(input: UpdateEventInput!): EventDetailResponse!
   suspendEvent(input: SuspendEventInput!): EventDetailResponse!
   archiveEvent(input: ArchiveEventInput!): EventDetailResponse!
@@ -3141,7 +3157,7 @@ type Query {
   sentInvitations(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorInvitationFiltersInput = null): AmbassadorInvitationTypeCountableConnection!
   availableAmbassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
   activeAmbassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ActiveAmbassadorFiltersInput = null): AmbassadorCountableConnection!
-  ambassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
+  ambassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
   ambassador(id: ID = null, uuid: ID = null): Ambassador
   ambassadorProfile(id: ID = null, uuid: ID = null, userId: ID = null): AmbassadorProfile
   ambassadorReviews(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorReviewFiltersInput = null): AmbassadorReviewTypeCountableConnection!
@@ -3149,7 +3165,7 @@ type Query {
   ambassadorNotes(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorNoteFiltersInput = null): AmbassadorNoteTypeCountableConnection!
   ambassadorNote(noteId: ID!): AmbassadorNoteType
   skills(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: SkillFiltersInput = null): SkillTypeCountableConnection!
-  skill(skillId: ID!): SkillType
+  skill(skillId: ID = null, skillUuid: ID = null): SkillType
   ambassadorSkills(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorSkillFiltersInput = null): AmbassadorSkillTypeCountableConnection!
   ambassadorSkill(ambassadorSkillId: ID!): AmbassadorSkillType
   attendanceTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): AttendanceTypeCountableConnection!
@@ -3549,6 +3565,7 @@ input RecapFiltersInput {
   eventId: ID = null
   eventType: ID = null
   rmmAsignedId: ID = null
+  ambassadorId: ID = null
   retailerId: ID = null
   locationId: ID = null
   stateId: ID = null
@@ -4556,6 +4573,12 @@ input UpdateEventTypeInput {
   id: ID!
 }
 
+input UpdateEventWithRequestInput {
+  clientMutationId: ID = null
+  event: UpdateEventInput!
+  request: UpdateRequestInput!
+}
+
 input UpdateGroupTypeInput {
   clientMutationId: ID = null
   name: String!
@@ -4754,6 +4777,7 @@ input UpdateRequestInput {
   retailerId: ID = null
   locationId: ID = null
   stateId: ID = null
+  storeManagerId: ID = null
   rmmAsignedId: ID = null
   requestorEmail: String = null
   reviewed: Boolean = null
@@ -4874,6 +4898,7 @@ input UpsertAmbassadorProfileInput {
   clientMutationId: ID = null
   ambassadorId: ID = null
   ambassadorUuid: ID = null
+  email: String = null
   firstName: String = null
   lastName: String = null
   locationId: ID = null

@@ -191,6 +191,15 @@ export default function RequestForm({
   hideDistributorFields = false,
   hideEventTypeField = false,
 }: RequestFormProps) {
+  const [localSelectedProductType, setLocalSelectedProductType] = useState(
+    selectedProductType,
+  );
+
+  const resolvedSelectedProductType =
+    onProductTypeChange !== undefined
+      ? selectedProductType
+      : localSelectedProductType;
+
   const safeDefaultValues: RequestFormValues = {
     name: "",
     date: "",
@@ -700,9 +709,11 @@ export default function RequestForm({
   const selectedProducts = watch("products") || [];
 
   const filteredProducts = useMemo(() => {
-    if (!selectedProductType) return products;
-    return products.filter((p) => p.productType?.id === selectedProductType);
-  }, [products, selectedProductType]);
+    if (!resolvedSelectedProductType) return products;
+    return products.filter(
+      (p) => p.productType?.id === resolvedSelectedProductType,
+    );
+  }, [products, resolvedSelectedProductType]);
 
   const visibleProducts = useMemo(
     () => filteredProducts.slice(0, visibleCount),
@@ -711,7 +722,7 @@ export default function RequestForm({
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [selectedProductType]);
+  }, [resolvedSelectedProductType]);
 
   const toggleProduct = (productId: string) => {
     const current = selectedProducts;
@@ -821,21 +832,6 @@ export default function RequestForm({
       shouldTouch: true,
     });
     retailersHook.setSearchTerm("");
-
-    if (!isNationalRetailer) return;
-
-    setValue("entitiesLocationId", null, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("retailerId", null, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("retailerLocationId", null, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
   }, [isNationalRetailer, setValue, retailersHook]);
 
   useEffect(() => {
@@ -1083,7 +1079,7 @@ export default function RequestForm({
                   }))}
                   loading={locationsHook.isLoading}
                   onSearch={locationsHook.setSearchTerm}
-                  disabled={!tenantId || !selectedStateId || isNationalRetailer}
+                  disabled={!tenantId || !selectedStateId}
                 />
               </div>
 
@@ -1455,8 +1451,15 @@ export default function RequestForm({
                 <div className="w-56">
                   <select
                     className="select select-bordered select-sm w-full"
-                    value={selectedProductType}
-                    onChange={(e) => onProductTypeChange?.(e.target.value)}
+                    value={resolvedSelectedProductType}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      if (onProductTypeChange) {
+                        onProductTypeChange(nextValue);
+                        return;
+                      }
+                      setLocalSelectedProductType(nextValue);
+                    }}
                   >
                     <option value="">All Types</option>
                     {productTypes.map((t) => (
@@ -1468,7 +1471,7 @@ export default function RequestForm({
                 </div>
               </div>
 
-              {selectedProductType && visibleProducts.length > 0 && (
+              {resolvedSelectedProductType && visibleProducts.length > 0 && (
                 <p className="text-xs text-base-content/60">
                   Showing products of selected type
                 </p>
