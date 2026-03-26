@@ -36,6 +36,15 @@ export const RequestsQuery = graphql`
           endTime
           address
           coordinates
+          location {
+            id
+            name
+          }
+          state {
+            id
+            name
+            code
+          }
           client {
             __typename
             id
@@ -53,6 +62,15 @@ export const RequestsQuery = graphql`
             id
             uuid
             name
+            location {
+              id
+              name
+              state {
+                id
+                name
+                code
+              }
+            }
           }
           requestType {
             __typename

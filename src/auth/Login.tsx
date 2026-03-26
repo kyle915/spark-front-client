@@ -25,7 +25,7 @@ type FormData = {
 const Login = () => {
   const currentYear = new Date().getFullYear();
   const navigate = useNavigate();
-  const { login } = useAuthStore();
+  const { login, loading } = useAuthStore();
   const { showAlert } = useAlertStore();
   const [isLogin] = useState(true);
   const [fade] = useState(true);
@@ -120,6 +120,7 @@ const Login = () => {
                 control={control}
                 handleSubmit={handleSubmit}
                 onSubmit={onSubmit}
+                loading={loading}
               />
             ) : (
               <RegisterForm
