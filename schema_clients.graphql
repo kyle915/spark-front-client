@@ -1146,12 +1146,14 @@ input CreateAmbassadorWithUserInput {
   clientMutationId: ID = null
   firstName: String!
   email: String!
-  password1: String!
-  password2: String!
+  password1: String = null
+  password2: String = null
   address: String = null
   phone: String = null
   aboutMe: String = null
   coordinates: [Float!] = null
+  lastName: String = null
+  locationId: ID = null
   isActive: Boolean = null
 }
 
@@ -2861,6 +2863,7 @@ type Mutation {
   acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
   disableAmbassador(input: DisableAmbassadorInput!): DisableAmbassadorResponse!
+  regenerateAmbassadorPasswords(input: RegenerateAmbassadorPasswordsInput!): RegenerateAmbassadorPasswordsResponse!
   createAmbassador(input: CreateAmbassadorInput!): CreateAmbassadorResponse!
   updateAmbassador(input: UpdateAmbassadorInput!): UpdateAmbassadorResponse!
   upsertAmbassadorProfile(input: UpsertAmbassadorProfileInput!): UpsertAmbassadorProfileResponse!
@@ -3573,6 +3576,7 @@ input RecapFiltersInput {
   startDate: String = null
   endDate: String = null
   eventAddress: String = null
+  approved: Boolean = null
   edited: Boolean = null
 }
 
@@ -3644,6 +3648,25 @@ type RefreshTokenType {
   revoked: DateTime
   expiresAt: DateTime!
   isExpired: Boolean!
+}
+
+type RegenerateAmbassadorPasswordResult {
+  ambassadorId: ID
+  email: String
+  success: Boolean!
+  message: String!
+}
+
+input RegenerateAmbassadorPasswordsInput {
+  clientMutationId: ID = null
+  ambassadorIds: [ID!]!
+}
+
+type RegenerateAmbassadorPasswordsResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  results: [RegenerateAmbassadorPasswordResult!]
 }
 
 type RegisterResponse {
@@ -4975,13 +4998,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
-  id: ID!
+  email: String!
   lastName: String
+  id: ID!
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
   firstName: String
-  email: String!
   archived: Boolean!
   verified: Boolean!
 }
