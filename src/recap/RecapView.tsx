@@ -107,9 +107,8 @@ const RecapView = () => {
 
   const backToListUrl = useMemo(() => {
     const pageRaw = Number(searchParams.get("fromPage") ?? "1");
-    const page = Number.isFinite(pageRaw) && pageRaw > 0
-      ? Math.floor(pageRaw)
-      : 1;
+    const page =
+      Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
     const after = searchParams.get("fromAfter");
 
     const params = new URLSearchParams();
@@ -508,7 +507,7 @@ const RecapView = () => {
             </KpiCardContainer>
 
             <KpiCardContainer
-              title="Ammbassadors"
+              title="Ambassadors"
               icon={<Users className="text-primary" />}
             >
               <div>
@@ -861,7 +860,7 @@ const RecapView = () => {
                         {hasDoDifferently && (
                           <div className="space-y-1">
                             <p className="text-xs uppercase text-base-content/60">
-                             What would have been done differently?
+                              What would have been done differently?
                             </p>
                             <p className="text-sm text-base-content/80">
                               {item.doDifferentlyFeedback}
