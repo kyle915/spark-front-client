@@ -49,6 +49,15 @@ export function ImagePreviewModal({
         <img
           src={image.file}
           className="max-h-[70vh] mx-auto rounded-lg"
+          onError={(event) => {
+            console.error("Preview image failed to render", {
+              name: image.name,
+              src: image.file,
+              currentSrc: event.currentTarget.currentSrc,
+              naturalWidth: event.currentTarget.naturalWidth,
+              naturalHeight: event.currentTarget.naturalHeight,
+            });
+          }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}

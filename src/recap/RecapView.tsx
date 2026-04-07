@@ -25,7 +25,11 @@ import {
 } from "lucide-react";
 import { useAlertStore } from "@store/alertStore";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
-//
+
+type Heic2AnyConverter = (options: {
+  blob: Blob;
+  toType?: string;
+}) => Promise<Blob | Blob[]>;
 
 const KpiCardContainer = ({
   title,
@@ -52,16 +56,42 @@ const KpiCardContainer = ({
 const Gallery3DCard = ({
   src,
   alt,
+  debugName,
+  isLoading,
   onClick,
 }: {
   src: string;
   alt: string;
+  debugName?: string;
+  isLoading?: boolean;
   onClick?: () => void;
 }) => (
   <div className="hover-3d cursor-pointer" onClick={onClick}>
     {/* content */}
     <figure className="w-full aspect-4/3 overflow-hidden rounded-2xl bg-base-200">
-      <img src={src} alt={alt} className="w-full h-full object-contain" />
+      {isLoading ? (
+        <div className="flex h-full w-full items-center justify-center bg-base-300/40">
+          <div className="flex flex-col items-center gap-3 text-base-content/60">
+            <span className="loading loading-spinner loading-md" />
+            <span className="text-sm">Loading image...</span>
+          </div>
+        </div>
+      ) : (
+        <img
+          src={src}
+          alt={alt}
+          className="w-full h-full object-contain"
+          onError={(event) => {
+            console.error("Gallery image failed to render", {
+              debugName,
+              src,
+              currentSrc: event.currentTarget.currentSrc,
+              naturalWidth: event.currentTarget.naturalWidth,
+              naturalHeight: event.currentTarget.naturalHeight,
+            });
+          }}
+        />
+      )}
     </figure>
 
     {/* 8 empty divs required for DaisyUI 3D */}
@@ -149,6 +179,20 @@ const RecapView = () => {
     [getFileLabel],
   );
 
+  const isHeicFile = useCallback(
+    (file: (typeof recapFiles)[number]) => {
+      if (!file.file) return false;
+      const extension = file.fileType?.extension?.toLowerCase() ?? "";
+      const label = getFileLabel(file);
+
+      if (extension === "heic" || extension === "heif") return true;
+      if (/\.(heic|heif)(?:$|[?#])/i.test(label)) return true;
+
+      return false;
+    },
+    [getFileLabel],
+  );
+
   // ======================================================
   // CATEGORIES
   // ======================================================
@@ -213,6 +257,112 @@ const RecapView = () => {
     () => categoriesWithImages.flatMap((category) => category.imageFiles),
     [categoriesWithImages],
   );
+  const [imageSources, setImageSources] = useState<Record<string, string>>({});
+  const [convertingImageIds, setConvertingImageIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    const objectUrls: string[] = [];
+
+    const resolveImageSources = async () => {
+      const heicImageIds = flatImages
+        .filter((file) => isHeicFile(file))
+        .map((file) => file.id);
+
+      setConvertingImageIds(heicImageIds);
+
+      const nextSources = await Promise.all(
+        flatImages.map(async (file) => {
+          const fallbackSrc = file.file ?? "";
+          const heicDetected = isHeicFile(file);
+
+          console.info("Recap image resolution started", {
+            fileId: file.id,
+            fileName: file.name,
+            fileUrl: fallbackSrc,
+            fileTypeExtension: file.fileType?.extension ?? null,
+            heicDetected,
+          });
+
+          if (!fallbackSrc || !heicDetected) {
+            return [file.id, fallbackSrc] as const;
+          }
+
+          try {
+            const response = await fetch(fallbackSrc);
+            if (!response.ok) {
+              throw new Error(
+                `Failed to fetch HEIC image: ${response.status} ${response.statusText}`,
+              );
+            }
+
+            const blob = await response.blob();
+            const module = (await import("heic2any")) as {
+              default: Heic2AnyConverter;
+            };
+            const converted = await module.default({
+              blob,
+              toType: "image/jpeg",
+            });
+            const convertedBlob = Array.isArray(converted)
+              ? converted[0]
+              : converted;
+
+            if (!(convertedBlob instanceof Blob)) {
+              throw new Error("Unsupported HEIC conversion result");
+            }
+
+            const objectUrl = URL.createObjectURL(convertedBlob);
+            objectUrls.push(objectUrl);
+
+            console.info("HEIC image converted successfully", {
+              fileId: file.id,
+              fileName: file.name,
+              originalUrl: fallbackSrc,
+              convertedType: convertedBlob.type,
+              convertedSize: convertedBlob.size,
+              objectUrl,
+            });
+
+            return [file.id, objectUrl] as const;
+          } catch (error) {
+            const normalizedError = error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                  stack: error.stack,
+                }
+              : error;
+
+            console.error("Failed to convert HEIC image", {
+              fileId: file.id,
+              fileName: file.name,
+              fileUrl: fallbackSrc,
+              fileTypeExtension: file.fileType?.extension ?? null,
+              error: normalizedError,
+            });
+            return [file.id, fallbackSrc] as const;
+          }
+        }),
+      );
+
+      if (isCancelled) {
+        objectUrls.forEach((url) => URL.revokeObjectURL(url));
+        return;
+      }
+
+      setImageSources(Object.fromEntries(nextSources));
+      setConvertingImageIds([]);
+    };
+
+    void resolveImageSources();
+
+    return () => {
+      isCancelled = true;
+      setConvertingImageIds([]);
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [flatImages, isHeicFile]);
 
   // ======================================================
   // IMAGE CONTROLS
@@ -364,6 +514,9 @@ const RecapView = () => {
 
   const currentPreview =
     flatImages && previewIndex !== null ? flatImages[previewIndex] : null;
+  const currentPreviewSrc = currentPreview
+    ? (imageSources[currentPreview.id] ?? currentPreview.file ?? "")
+    : "";
 
   return (
     <Layout>
@@ -769,8 +922,14 @@ const RecapView = () => {
                           return (
                             <Gallery3DCard
                               key={file.id}
-                              src={file.file ?? ""}
+                              src={imageSources[file.id] ?? file.file ?? ""}
                               alt={file.name}
+                              debugName={file.name}
+                              isLoading={
+                                isHeicFile(file) &&
+                                !imageSources[file.id] &&
+                                convertingImageIds.includes(file.id)
+                              }
                               onClick={() => setPreviewIndex(globalIndex)}
                             />
                           );
@@ -984,7 +1143,7 @@ const RecapView = () => {
             <ImagePreviewModal
               image={{
                 name: currentPreview.name,
-                file: currentPreview.file ?? "",
+                file: currentPreviewSrc,
               }}
               onClose={closePreview}
               onNext={goNext}
