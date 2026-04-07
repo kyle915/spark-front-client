@@ -470,7 +470,7 @@ const RecapView = () => {
     );
   }
 
-  if (!recap) {
+  if (!recap || !recap.approved) {
     return (
       <Layout>
         <div className="alert alert-error">Recap not found.</div>
