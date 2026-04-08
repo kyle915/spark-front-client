@@ -268,7 +268,13 @@ const CreateRequestForm = ({
     const dateForName = /^\d{4}-\d{2}-\d{2}$/.test(dateForNameSource)
       ? `${dateForNameSource.slice(5, 7)}/${dateForNameSource.slice(8, 10)}/${dateForNameSource.slice(0, 4)}`
       : dateForNameSource;
-    const requestName = `${(formData.name ?? "").trim()} - ${(formData.retailerName ?? "").trim()} - ${dateForName}`.trim();
+    const requestName = [
+      (formData.name ?? "").trim(),
+      (formData.retailerName ?? "").trim(),
+      dateForName,
+    ]
+      .filter(Boolean)
+      .join("-");
 
     commitCreateRequest({
       variables: {

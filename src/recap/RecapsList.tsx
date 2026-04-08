@@ -254,6 +254,14 @@ const RecapsListInner = ({
     return value && value.length > 0 ? value : null;
   }, [searchParams]);
 
+  const recapFilters = useMemo(
+    () => ({
+      ...filters,
+      approved: true,
+    }),
+    [filters],
+  );
+
   const {
     queryRef,
     displayPage,
@@ -267,7 +275,7 @@ const RecapsListInner = ({
   } = useRelayPagination<RecapsQueryType>({
     query: RecapsQuery,
     pageSize: PAGE_SIZE,
-    initialVariables: { filters },
+    initialVariables: { filters: recapFilters },
     initialPage: initialPageFromUrl,
     initialAfter: initialAfterFromUrl,
   });
@@ -539,19 +547,12 @@ const RecapList = () => {
   );
 
   const filters = useMemo(() => {
-    if (
-      !tenantId &&
-      !selectedEventId &&
-      !eventAddress &&
-      !selectedStateId &&
-      !selectedEventDate &&
-      !selectedRmmId
-    ) {
+    if (!tenantId) {
       return undefined;
     }
 
     return {
-      tenantId: tenantId || undefined,
+      tenantId,
       eventId: selectedEventId || undefined,
       eventAddress: eventAddress || undefined,
       stateId: selectedStateId || undefined,
@@ -694,12 +695,18 @@ const RecapList = () => {
           {/* =========================
           TABLE
       ========================= */}
-          <RecapsListInner
-            key={`${selectedEventId}::${selectedStateId}::${eventAddress}::${selectedEventDate}-${selectedRmmId}`} // Reset inner state when filters change
-            filters={filters}
-            emptyMessage={emptyMessage}
-            onRefreshReady={(fn) => (refreshRef.current = fn)}
-          />
+          {tenantId ? (
+            <RecapsListInner
+              key={`${tenantId}::${selectedEventId}::${selectedStateId}::${eventAddress}::${selectedEventDate}-${selectedRmmId}`} // Reset inner state when filters change
+              filters={filters}
+              emptyMessage={emptyMessage}
+              onRefreshReady={(fn) => (refreshRef.current = fn)}
+            />
+          ) : (
+            <div className="alert alert-warning">
+              <span>Tenant ID is required to load recaps.</span>
+            </div>
+          )}
         </div>
       </div>
     </Layout>
