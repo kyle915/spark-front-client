@@ -55,6 +55,7 @@ export function buildPayload(
     clientName: CLIENT_PLACEHOLDER.name,
     clientEmail: CLIENT_PLACEHOLDER.email,
     distributorId: values.distributorId || null,
+    billingEntityId: values.billingEntityId || null,
     distributorName: values.distributor ?? "",
     distributorEmail: values.distributorEmail ?? "",
     retailerId: values.retailerId || null,

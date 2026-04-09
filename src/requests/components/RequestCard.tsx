@@ -13,6 +13,7 @@ import {
 } from "@heroicons/react/24/outline";
 import type { RequestUuidQuery$data } from "@api/queries/__generated__/RequestUuidQuery.graphql";
 import LocationMap from "@shared/LocationMap";
+import { useAuthStore } from "@/store/authStore";
 import { formatDate, formatTime } from "@utils/index";
 
 type InfoItemProps = {
@@ -25,9 +26,9 @@ function InfoItem({ label, value, Icon }: InfoItemProps) {
   return (
     <div className="space-y-1">
       <p className="text-xs uppercase opacity-60">{label}</p>
-      <p className="font-medium flex items-center gap-2">
-        <Icon className="w-4 h-4 opacity-60" />
-        <span className="truncate">{value}</span>
+      <p className="font-medium flex items-start gap-2">
+        <Icon className="w-4 h-4 opacity-60 shrink-0 mt-0.5" />
+        <span className="break-words whitespace-normal">{value}</span>
       </p>
     </div>
   );
@@ -41,6 +42,7 @@ interface Props {
 }
 
 const RequestCard: React.FC<Props> = ({ request, backTo }) => {
+  const tenantSlugFromStore = useAuthStore((state) => state.tenantSlug);
   const [productTypeFilter, setProductTypeFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const browserTimezone = useMemo(
@@ -137,10 +139,18 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
     if (!request.rmmAsigned) return "No RMM assigned";
     return getUserLabel(request.rmmAsigned);
   }, [request.rmmAsigned]);
+  const resolvedTenantSlug =
+    request.tenant?.slug?.toLowerCase() ?? tenantSlugFromStore?.toLowerCase();
+  const isCarblissTenant = resolvedTenantSlug === "carbliss";
   const isNationalRetailer = Boolean(
     (request.retailer as { isNational?: boolean } | null)?.isNational,
   );
   const retailerDisplayName = request.retailer?.name ?? request.retailerName ?? "—";
+  const billingEntityName = (
+    request as Request & {
+      billingEntity?: { name?: string | null } | null;
+    }
+  ).billingEntity?.name;
 
   return (
     <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm">
@@ -318,6 +328,14 @@ const RequestCard: React.FC<Props> = ({ request, backTo }) => {
                   value={request.distributor?.name ?? "Unknown"}
                   Icon={UsersIcon}
                 />
+
+                {isCarblissTenant && (
+                  <InfoItem
+                    label="Billing Entity"
+                    value={billingEntityName ?? "—"}
+                    Icon={BuildingOfficeIcon}
+                  />
+                )}
 
                 <InfoItem
                   label="Request Timezone"
