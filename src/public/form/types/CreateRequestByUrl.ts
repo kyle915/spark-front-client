@@ -27,6 +27,7 @@ export interface CreateRequestInput {
 
   // DISTRIBUTOR
   distributorId?: string | null;
+  billingEntityId?: string | null;
   distributorName: string;
   distributorEmail: string;
 

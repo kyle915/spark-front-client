@@ -12,6 +12,11 @@ interface SparkFormProps {
     id: string;
     name: string;
   }[];
+  billingEntities: {
+    id: string;
+    name: string;
+  }[];
+  onBillingEntitySearch: (value: string) => void;
   states: {
     id: string;
     name: string;
@@ -68,6 +73,8 @@ interface SparkFormProps {
 export default function SparkForm(props: SparkFormProps) {
   const {
     requestTypes,
+    billingEntities,
+    onBillingEntitySearch,
     states,
     onStateSearch,
     onStateChange,
@@ -111,6 +118,9 @@ export default function SparkForm(props: SparkFormProps) {
           control={control}
           timeZones={timeZones}
           setValue={setValue}
+          requestUrlName={requestUrlName}
+          billingEntities={billingEntities}
+          onBillingEntitySearch={onBillingEntitySearch}
         />
       ),
     },

@@ -116,6 +116,7 @@ const CreateRequestForm = ({
     [statesData.states?.edges],
   );
   const isJeeterTenant = tenantSlug?.toLowerCase() === "jeeter";
+  const isCarblissTenant = tenantSlug?.toLowerCase() === "carbliss";
 
   const californiaState = useMemo(
     () =>
@@ -303,6 +304,9 @@ const CreateRequestForm = ({
           requestTypeId: formData.requestTypeId!,
           distributorId: isJeeterTenant ? null : (formData.distributorId ?? null),
           retailerId: formData.retailerId ?? null,
+          ...(isCarblissTenant
+            ? { billingEntityId: formData.billingEntityId ?? null }
+            : {}),
           locationId: formData.entitiesLocationId,
           stateId: formData.stateId,
           storeManagerId: formData.storeManagerId ?? null,
@@ -404,6 +408,7 @@ const CreateRequestForm = ({
           disableStateSelect={isJeeterTenant}
           hideTableNeededFields={isJeeterTenant}
           hideDistributorFields={isJeeterTenant}
+          showBillingEntityField={isCarblissTenant}
           // distributors={distributors}
           requestStoreManagers={requestStoreManagers}
           enableContactSection={true}

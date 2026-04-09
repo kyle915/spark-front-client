@@ -11,6 +11,7 @@ export const useSparkForm = () =>
       isNationalRetailer: true,
       distributorId: "",
       retailerId: "",
+      billingEntityId: "",
       stateId: "",
       address: "",
       latitude: undefined,
