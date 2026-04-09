@@ -9,6 +9,7 @@ import {
   usePublicRequestTypes,
   usePublicTimeZones,
   usePublicDistributors,
+  usePublicBillingEntities,
   usePublicStates,
   usePublicRetailer,
 } from "./hooks";
@@ -23,6 +24,7 @@ export default function SparkFormPage() {
     string | null
   >(null);
   const [retailerQuery, setRetailerQuery] = useState("");
+  const [billingEntityQuery, setBillingEntityQuery] = useState("");
   const [isNationalRetailer, setIsNationalRetailer] = useState(true);
 
   const {
@@ -44,6 +46,7 @@ export default function SparkFormPage() {
     retailerQuery,
     isNationalRetailer,
   );
+  const { billingEntities } = usePublicBillingEntities(slug, billingEntityQuery);
   const { states } = usePublicStates(stateQuery);
 
   // if (
@@ -63,6 +66,8 @@ export default function SparkFormPage() {
       <SparkForm
         // clients={clients}
         requestTypes={requestTypes}
+        billingEntities={billingEntities}
+        onBillingEntitySearch={setBillingEntityQuery}
         states={states}
         onStateSearch={setStateQuery}
         onStateChange={setSelectedStateId}

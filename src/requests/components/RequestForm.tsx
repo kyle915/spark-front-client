@@ -16,6 +16,7 @@ import type { Path, PathValue } from "react-hook-form";
 import { useAutoTimezoneFromCoordinates } from "../hooks/useAutoTimezoneFromCoordinates";
 
 import { useMutation } from "react-relay/hooks";
+import type { OperationType } from "relay-runtime";
 import { useAlertStore } from "@store/alertStore";
 
 import { LocationsQuery } from "@api/queries/LocationsQuery";
@@ -34,6 +35,7 @@ import { DistributorsQuery } from "@api/queries/DistributorsQuery";
 import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__generated__/DistributorsQuery.graphql";
 import { RetailersQuery } from "@api/queries/RetailersQuery";
 import type { RetailersQuery as RetailersQueryType } from "@api/queries/__generated__/RetailersQuery.graphql";
+import { BillingEntitiesQuery } from "@api/queries/BillingEntitiesQuery";
 import { useEntitiesByLocation } from "../hooks/useEntitiesByLocation";
 import { useLocationsByState } from "../hooks/useLocationsByState";
 import { useSearchQuery } from "../hooks/useSearchQuery";
@@ -50,6 +52,7 @@ export interface RequestFormValues {
   timezoneId?: string | null;
   retailerId?: string | null;
   distributorId?: string | null;
+  billingEntityId?: string | null;
   requestTypeId?: string | null;
   rmmAsignedId?: string;
   eventTypeId?: string | null;
@@ -110,6 +113,33 @@ interface StoreManagerItem {
   phone: string;
 }
 
+type BillingEntityItem = {
+  id: string;
+  uuid: string;
+  name: string;
+};
+
+type BillingEntitiesQueryType = OperationType & {
+  response: {
+    billingEntities?: {
+      edges?: Array<{
+        node?: BillingEntityItem | null;
+      } | null> | null;
+    } | null;
+  };
+  variables: {
+    filters?: {
+      tenantId?: string | null;
+      tenantUuid?: string | null;
+    } | null;
+    q?: string | null;
+    first?: number | null;
+    after?: string | null;
+    last?: number | null;
+    before?: string | null;
+  };
+};
+
 interface RequestFormProps {
   mode: "create" | "edit";
   tenantId: string;
@@ -137,6 +167,7 @@ interface RequestFormProps {
   hideTableNeededFields?: boolean;
   hideDistributorFields?: boolean;
   hideEventTypeField?: boolean;
+  showBillingEntityField?: boolean;
 
   onRefetch?: (
     key: "distributors" | "retailers" | "requestStoreManagers",
@@ -190,6 +221,7 @@ export default function RequestForm({
   hideTableNeededFields = false,
   hideDistributorFields = false,
   hideEventTypeField = false,
+  showBillingEntityField = false,
 }: RequestFormProps) {
   const [localSelectedProductType, setLocalSelectedProductType] = useState(
     selectedProductType,
@@ -367,6 +399,36 @@ export default function RequestForm({
       label: `${c.firstName} ${c.lastName}`,
     }));
   }, [rmmSearchHook.searchTerm, rmmSearchHook.items, rmmClients]);
+
+  const extractBillingEntities = useCallback(
+    (data: BillingEntitiesQueryType["response"]) =>
+      data.billingEntities?.edges?.flatMap((edge) =>
+        edge?.node ? [edge.node] : [],
+      ) ?? [],
+    [],
+  );
+
+  const billingEntitiesSearchHook = useSearchQuery<
+    BillingEntityItem,
+    BillingEntitiesQueryType
+  >({
+    queryDocument: BillingEntitiesQuery,
+    extractNodes: extractBillingEntities,
+    variables: {
+      filters: { tenantId },
+      first: 100,
+    },
+    minLength: 0,
+  });
+
+  const billingEntityOptions = useMemo(
+    () =>
+      billingEntitiesSearchHook.items.map((billingEntity) => ({
+        value: billingEntity.id,
+        label: billingEntity.name,
+      })),
+    [billingEntitiesSearchHook.items],
+  );
 
   // ========================
   // LOCATIONS (CITY) BY STATE WITH SEARCH
@@ -1021,7 +1083,7 @@ export default function RequestForm({
                 loading={rmmSearchHook.isLoading}
               />
 
-              <div className="md:col-span-2">
+              <div className={showBillingEntityField ? "" : "md:col-span-2"}>
                 <FormAddressSearch<RequestFormValues>
                   name="address"
                   placeholder="Enter address"
@@ -1033,6 +1095,19 @@ export default function RequestForm({
                   }}
                 />
               </div>
+
+              {showBillingEntityField && (
+                <FormAutocomplete<RequestFormValues>
+                  name="billingEntityId"
+                  control={control}
+                  label="Billing Entity"
+                  placeholder="Search Billing Entity..."
+                  options={billingEntityOptions}
+                  onSearch={billingEntitiesSearchHook.setSearchTerm}
+                  loading={billingEntitiesSearchHook.isLoading}
+                  disabled={!tenantId}
+                />
+              )}
             </div>
           </section>
 

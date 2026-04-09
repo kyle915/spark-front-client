@@ -36,6 +36,11 @@ export const RequestUuidQuery = graphql`
         name
         email
       }
+      billingEntity {
+        id
+        uuid
+        name
+      }
       distributor {
         __typename
         id
@@ -120,6 +125,10 @@ export const RequestUuidQuery = graphql`
         }
       }
       tenantId
+      tenant {
+        id
+        slug
+      }
       createdAt
       updatedAt
     }
