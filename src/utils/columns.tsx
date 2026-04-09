@@ -219,7 +219,7 @@ export const createRecapColumns = (
   },
   {
     key: "retailerLocation",
-    label: "Location",
+    label: "City",
     render: (_value, row) => getRecapLocation(row),
   },
   {
