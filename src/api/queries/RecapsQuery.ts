@@ -29,12 +29,34 @@ export const RecapsQuery = graphql`
           uuid
           name
           eventId
+          location {
+            id
+            uuid
+            name
+          }
+          state {
+            id
+            uuid
+            name
+            code
+          }
           event {
             id
             uuid
             name
             address
             date
+            location {
+              id
+              uuid
+              name
+            }
+            state {
+              id
+              uuid
+              name
+              code
+            }
             startTime
             timezone {
               id
@@ -77,6 +99,17 @@ export const RecapsQuery = graphql`
             request {
               id
               uuid
+              location {
+                id
+                uuid
+                name
+              }
+              state {
+                id
+                uuid
+                name
+                code
+              }
               retailer {
                 id
                 uuid
