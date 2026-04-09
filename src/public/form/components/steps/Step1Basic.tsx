@@ -2,6 +2,7 @@ import FormInputText from "@/shared/FormInputText";
 import FormDatePicker from "@/shared/FormDatePicker";
 import FormInputTime from "@/shared/FormInputTime";
 import FormAddressSearch from "@/shared/FormAddressSearch";
+import FormAutocomplete from "@/shared/FormAutocomplete";
 import FormLocationPicker from "../FormLocationPicker";
 import FormSelect from "@/shared/FormSelect";
 import { useWatch, type Control, type UseFormSetValue } from "react-hook-form";
@@ -11,6 +12,12 @@ import { useAutoTimezoneFromCoordinates } from "@/requests/hooks/useAutoTimezone
 interface Step1BasicProps {
   control: Control<SparkFormData>;
   setValue: UseFormSetValue<SparkFormData>;
+  requestUrlName: string;
+  billingEntities?: {
+    id: string;
+    name: string;
+  }[];
+  onBillingEntitySearch: (value: string) => void;
   timeZones?: {
     id: string;
     name: string;
@@ -23,7 +30,14 @@ export function Step1Basic({
   control,
   timeZones = [],
   setValue,
+  requestUrlName,
+  billingEntities = [],
+  onBillingEntitySearch,
 }: Step1BasicProps) {
+  const isCarblissTenant = requestUrlName
+    .trim()
+    .toLowerCase()
+    .includes("carbliss");
   const latitude = useWatch({ control, name: "latitude" });
   const longitude = useWatch({ control, name: "longitude" });
   const timezoneId = useWatch({ control, name: "timeZoneId" });
@@ -71,6 +85,7 @@ export function Step1Basic({
         name="timeZoneId"
         label="Time Zone"
         control={control}
+        disabled
         options={timeZones.map((tz) => ({
           value: tz.id,
           label: tz.name,
@@ -92,7 +107,7 @@ export function Step1Basic({
         placeholder="HH:MM AM/PM"
       />
 
-      <div className="md:col-span-2 relative z-20">
+      <div className={`${isCarblissTenant ? "" : "md:col-span-2"} relative z-20`}>
         <FormAddressSearch<SparkFormData>
           name="address"
           label="Address"
@@ -110,6 +125,20 @@ export function Step1Basic({
           }}
         />
       </div>
+
+      {isCarblissTenant && (
+        <FormAutocomplete<SparkFormData>
+          name="billingEntityId"
+          label="Billing Entity"
+          control={control}
+          options={billingEntities.map((billingEntity) => ({
+            value: billingEntity.id,
+            label: billingEntity.name,
+          }))}
+          placeholder="Search Billing Entity..."
+          onSearch={onBillingEntitySearch}
+        />
+      )}
 
       <div className="md:col-span-2 relative z-0">
         <FormLocationPicker

@@ -91,6 +91,14 @@ export function AiInsightsSection({ insights, isLoading }: Props) {
   const totalNewInsights = tenantId ? feedbackInsights.length : 0;
 
   const renderInsightsByPriority = (items: AIInsightItem[]) => {
+    if (!items.length) {
+      return (
+        <div className="rounded-xl border border-dashed border-base-300 bg-base-200/50 p-6 text-center text-base-content/70">
+          No data available.
+        </div>
+      );
+    }
+
     const high = items.filter((i) => i.priority === "High");
     const medium = items.filter((i) => i.priority === "Medium");
     const low = items.filter((i) => i.priority === "Low");

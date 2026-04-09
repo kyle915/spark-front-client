@@ -123,10 +123,11 @@ const SidebarItem = ({
           onClick={() => setExpanded((v) => !v)}
           className={`w-full flex items-center gap-3 py-2 ${leftPadding}
               rounded-lg transition min-w-0 overflow-hidden
-              ${sectionActive
-              ? "bg-primary/10 text-primary"
-              : "hover:bg-base-300"
-            }`}
+              ${
+                sectionActive
+                  ? "bg-primary/10 text-primary"
+                  : "hover:bg-base-300"
+              }`}
         >
           <div className="flex items-center gap-3 min-w-0">
             {item.Icon && (
@@ -166,10 +167,11 @@ const SidebarItem = ({
       <Link
         to={item.path ?? "#"}
         className={`flex items-center gap-3 py-2 px-3 rounded-lg transition min-w-0
-                    ${sectionActive
-            ? "bg-primary/10 text-primary font-semibold"
-            : "hover:bg-base-300"
-          }`}
+                    ${
+                      sectionActive
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "hover:bg-base-300"
+                    }`}
       >
         {item.Icon && <item.Icon className="w-5 h-5 text-primary shrink-0" />}
         {!collapsed && (
@@ -184,7 +186,7 @@ const SidebarItem = ({
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
-    (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark"
+    (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark",
   );
 
   const [collapsed, setCollapsed] = useState(false);
@@ -234,7 +236,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   useEffect(() => {
     const saved = localStorage.getItem(
-      "@color-scheme"
+      "@color-scheme",
     ) as TenantColorScheme | null;
 
     if (saved) setColorScheme(saved);
@@ -245,8 +247,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [colorScheme]);
 
   const menuItems = navigationMenuRoutes.filter(
-    (r) => r.title || r.path
+    (r) => r.title || r.path,
   ) as NavigationLink[];
+  const appVersion = `v${__APP_VERSION__}`;
 
   return (
     <div className="flex h-screen bg-base-200 text-base-content">
@@ -264,12 +267,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <img
                 src="/logo.svg"
                 alt="Default logo"
-                className="h-8 w-auto app-logo"
+                className="h-8 w-auto app-logo app-logo-default"
               />
             ))}
           <button
-            className={`btn btn-ghost btn-sm text-primary ${collapsed ? "" : "absolute right-4"
-              }`}
+            className={`btn btn-ghost btn-sm text-primary ${
+              collapsed ? "" : "absolute right-4"
+            }`}
             onClick={() => setCollapsed(!collapsed)}
           >
             {collapsed ? (
@@ -295,7 +299,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         {/* FOOTER */}
-        <div className="p-4 border-t border-base-300 flex items-center gap-3">
+        <div className="p-4 pb-1 border-t border-base-300 flex items-center gap-3">
           <UserAvatar src={avatarSrc} user={user} />
 
           {!collapsed && (
@@ -310,6 +314,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </>
           )}
         </div>
+
+        {!collapsed && (
+          <div className="px-4 pb-2 text-center">
+            <p className="text-xs opacity-60">{appVersion}</p>
+          </div>
+        )}
       </aside>
 
       <div className="flex flex-col flex-1 min-w-0">
@@ -319,7 +329,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {publicFormUrl && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-base-200 border border-base-300 text-sm">
                 {/* LABEL */}
-                <span className="text-base-content/60">Form link</span>
+                <span className="text-base-content/60">Public form link for external requestors</span>
 
                 {/* VALUE */}
                 <span className="font-medium text-primary truncate max-w-[180px]">

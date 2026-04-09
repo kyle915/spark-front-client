@@ -14,6 +14,26 @@ export interface NamedEntity {
   date?: string | null;
 }
 
+type RequestLocation = {
+  id?: string;
+  name?: string | null;
+  state?: {
+    id?: string;
+    name?: string | null;
+    code?: string | null;
+  } | null;
+};
+
+type RequestRetailer = NamedEntity & {
+  location?: RequestLocation | null;
+};
+
+type RequestState = {
+  id?: string;
+  name?: string | null;
+  code?: string | null;
+};
+
 export interface RequestRow {
   id: string;
   uuid?: string | null;
@@ -22,9 +42,11 @@ export interface RequestRow {
   startTime?: string | null;
   endTime?: string | null;
   address?: string | null;
+  location?: RequestLocation | null;
+  state?: RequestState | null;
   client?: NamedEntity | null;
   distributor?: NamedEntity | null;
-  retailer?: NamedEntity | null;
+  retailer?: RequestRetailer | null;
   requestType?: NamedEntity | null;
   status?: NamedEntity | null;
   event?: NamedEntity | null;

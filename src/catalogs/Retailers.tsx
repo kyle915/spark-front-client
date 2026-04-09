@@ -10,6 +10,8 @@ import { RetailerByIdQuery } from "@/api/queries/RetailerByIdQuery";
 import type { RetailerByIdQuery as RetailerByIdQueryType } from "@/api/queries/__generated__/RetailerByIdQuery.graphql";
 import { LocationsQuery } from "@/api/queries/LocationsQuery";
 import type { LocationsQuery as LocationsQueryType } from "@/api/queries/__generated__/LocationsQuery.graphql";
+import { StatesQuery } from "@/api/queries/StatesQuery";
+import type { StatesQuery as StatesQueryType } from "@/api/queries/__generated__/StatesQuery.graphql";
 import { CreateRetailerMutation } from "@/api/mutations/CreateRetailerMutation";
 import type { CreateRetailerMutation as CreateRetailerMutationType } from "@/api/mutations/__generated__/CreateRetailerMutation.graphql";
 import { UpdateRetailerMutation } from "@/api/mutations/UpdateRetailerMutation";
@@ -34,19 +36,25 @@ type RetailerFormValues = {
   name: string;
   address: string;
   storeContact: string;
+  stateId: string;
   locationId: string;
   tenantId: string;
 };
 
 type TenantLocationSelectProps = {
   control: Control<RetailerFormValues>;
-  name?: string;
+  stateId?: string;
 };
 
-const TenantLocationSelect = ({ control }: TenantLocationSelectProps) => {
+const TenantLocationSelect = ({
+  control,
+  stateId,
+}: TenantLocationSelectProps) => {
   const data = useLazyLoadQuery<LocationsQueryType>(
     LocationsQuery,
-    {},
+    {
+      filters: stateId ? { stateId } : undefined,
+    },
     { fetchPolicy: "store-and-network" },
   );
 
@@ -90,15 +98,50 @@ const RetailerForm = ({
   isSubmitting,
   mode = "create",
 }: RetailerFormProps) => {
+  const { tenantSlug } = useAuthStore();
   const { handleSubmit, watch, reset, setValue, control } =
     useForm<RetailerFormValues>({
       defaultValues,
     });
 
   const isEdit = mode === "edit";
+  const isJeeterTenant = tenantSlug?.toLowerCase() === "jeeter";
+  const shouldForceCaliforniaState = mode === "create" && isJeeterTenant;
+  const statesData = useLazyLoadQuery<StatesQueryType>(
+    StatesQuery,
+    { first: 100 },
+    { fetchPolicy: "store-and-network" },
+  );
 
   const tenantId = watch("tenantId");
+  const stateId = watch("stateId");
   const lastTenantIdRef = useRef(defaultValues.tenantId);
+  const lastStateIdRef = useRef(defaultValues.stateId);
+  const stateOptions = useMemo(
+    () =>
+      statesData.states.edges.map((edge) => ({
+        label: edge.node.code
+          ? `${edge.node.name} (${edge.node.code})`
+          : edge.node.name,
+        value: edge.node.id,
+      })),
+    [statesData],
+  );
+  const californiaStateId = useMemo(
+    () =>
+      statesData.states.edges.find(
+        (edge) =>
+          edge.node.name?.toLowerCase() === "california" ||
+          edge.node.code?.toLowerCase() === "ca",
+      )?.node.id ?? "",
+    [statesData],
+  );
+  const visibleStateOptions = useMemo(() => {
+    if (!shouldForceCaliforniaState || !californiaStateId) return stateOptions;
+    return stateOptions.filter(
+      (stateOption) => stateOption.value === californiaStateId,
+    );
+  }, [californiaStateId, shouldForceCaliforniaState, stateOptions]);
 
   useEffect(() => {
     reset(defaultValues);
@@ -110,6 +153,23 @@ const RetailerForm = ({
       lastTenantIdRef.current = tenantId;
     }
   }, [tenantId, setValue]);
+
+  useEffect(() => {
+    if (stateId !== lastStateIdRef.current) {
+      setValue("locationId", "");
+      lastStateIdRef.current = stateId;
+    }
+  }, [stateId, setValue]);
+
+  useEffect(() => {
+    if (
+      shouldForceCaliforniaState &&
+      californiaStateId &&
+      stateId !== californiaStateId
+    ) {
+      setValue("stateId", californiaStateId);
+    }
+  }, [californiaStateId, setValue, shouldForceCaliforniaState, stateId]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full">
@@ -196,10 +256,18 @@ const RetailerForm = ({
                 }}
               />
 
-              <TenantLocationSelect
+              <FormAutocomplete
                 control={control}
-                name="locationId"
+                name="stateId"
+                label="State"
+                placeholder="Select a state"
+                options={visibleStateOptions}
+                disabled={shouldForceCaliforniaState && !!californiaStateId}
               />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <TenantLocationSelect control={control} stateId={stateId} />
             </div>
           </section>
 
@@ -383,8 +451,18 @@ export const CreateRetailer = () => {
   const initialTenantId = tenantId || "";
 
   const handleSubmit = (values: RetailerFormValues) => {
+    const { name, address, storeContact, tenantId, locationId } = values;
+
     commitCreate({
-      variables: { input: values },
+      variables: {
+        input: {
+          name,
+          address,
+          storeContact,
+          tenantId,
+          locationId,
+        },
+      },
       onCompleted: (response) => {
         const payload = response.createRetailer;
         if (payload?.success) {
@@ -407,6 +485,7 @@ export const CreateRetailer = () => {
           name: "",
           address: "",
           storeContact: "",
+          stateId: "",
           tenantId: initialTenantId,
           locationId: "",
         }}
@@ -479,6 +558,7 @@ export const EditRetailer = () => {
           name: retailer.name,
           address: retailer.address ?? "",
           storeContact: retailer.storeContact ?? "",
+          stateId: "",
           tenantId: retailer.tenantId,
           locationId: retailer.location?.id ?? "",
         }}

@@ -145,7 +145,10 @@ const FormAutocomplete = <T extends FieldValues>({
   };
 
   return (
-    <div className={`form-control w-full ${containerClassName}`} ref={dropdownRef}>
+    <div
+      className={`form-control w-full ${containerClassName}`}
+      ref={dropdownRef}
+    >
       {label ? (
         <label className="label">
           <span className="label-text">{label}</span>
@@ -167,7 +170,7 @@ const FormAutocomplete = <T extends FieldValues>({
           onKeyDown={handleKeyDown}
           disabled={disabled}
           placeholder={placeholder}
-          className={`input input-bordered w-full pr-12 ${
+          className={`w-full min-h-11 input input-bordered rounded-full px-3 pr-12 ${
             error ? "input-error" : ""
           } ${loading ? "cursor-wait" : ""} ${inputClassName}`}
           autoComplete="off"

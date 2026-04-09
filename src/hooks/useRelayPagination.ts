@@ -4,12 +4,8 @@ import { fetchQuery, useRelayEnvironment } from "react-relay";
 import { useQueryLoader } from "react-relay/hooks";
 import type { OperationType } from "relay-runtime";
 
-type RequestsEdgesResult = {
-  requests?: {
-    edges?: Array<{
-      cursor?: string | null;
-    }> | null;
-  } | null;
+type ConnectionEdge = {
+  cursor?: string | null;
 };
 
 type PageCursorIndex = {
@@ -53,6 +49,26 @@ type UseRelayPaginationResult<TQuery extends OperationType> = {
 
 const DEFAULT_PAGE_SIZE = 10;
 const CHUNK_SIZE = 10;
+
+const resolveConnectionEdges = (data: unknown): ConnectionEdge[] => {
+  if (!data || typeof data !== "object") return [];
+
+  const root = data as Record<string, unknown>;
+
+  for (const value of Object.values(root)) {
+    if (!value || typeof value !== "object") continue;
+
+    const maybeConnection = value as { edges?: unknown };
+    if (!Array.isArray(maybeConnection.edges)) continue;
+
+    return maybeConnection.edges.filter(
+      (edge): edge is ConnectionEdge =>
+        Boolean(edge) && typeof edge === "object",
+    );
+  }
+
+  return [];
+};
 
 export function useRelayPagination<TQuery extends OperationType>({
   query,
@@ -180,9 +196,9 @@ export function useRelayPagination<TQuery extends OperationType>({
           after: fromEndCursor,
         }),
         { fetchPolicy: "network-only" },
-      ).toPromise()) as RequestsEdgesResult;
+      ).toPromise()) as unknown;
 
-      const edges = data?.requests?.edges ?? [];
+      const edges = resolveConnectionEdges(data);
 
       const cursors = edges
         .map((e) => e?.cursor ?? null)

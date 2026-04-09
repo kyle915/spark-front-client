@@ -16,6 +16,7 @@ import type { Path, PathValue } from "react-hook-form";
 import { useAutoTimezoneFromCoordinates } from "../hooks/useAutoTimezoneFromCoordinates";
 
 import { useMutation } from "react-relay/hooks";
+import type { OperationType } from "relay-runtime";
 import { useAlertStore } from "@store/alertStore";
 
 import { LocationsQuery } from "@api/queries/LocationsQuery";
@@ -34,6 +35,7 @@ import { DistributorsQuery } from "@api/queries/DistributorsQuery";
 import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__generated__/DistributorsQuery.graphql";
 import { RetailersQuery } from "@api/queries/RetailersQuery";
 import type { RetailersQuery as RetailersQueryType } from "@api/queries/__generated__/RetailersQuery.graphql";
+import { BillingEntitiesQuery } from "@api/queries/BillingEntitiesQuery";
 import { useEntitiesByLocation } from "../hooks/useEntitiesByLocation";
 import { useLocationsByState } from "../hooks/useLocationsByState";
 import { useSearchQuery } from "../hooks/useSearchQuery";
@@ -50,8 +52,10 @@ export interface RequestFormValues {
   timezoneId?: string | null;
   retailerId?: string | null;
   distributorId?: string | null;
+  billingEntityId?: string | null;
   requestTypeId?: string | null;
   rmmAsignedId?: string;
+  eventTypeId?: string | null;
   clientName?: string;
   clientEmail?: string;
   entitiesLocationId?: string | null;
@@ -109,12 +113,40 @@ interface StoreManagerItem {
   phone: string;
 }
 
+type BillingEntityItem = {
+  id: string;
+  uuid: string;
+  name: string;
+};
+
+type BillingEntitiesQueryType = OperationType & {
+  response: {
+    billingEntities?: {
+      edges?: Array<{
+        node?: BillingEntityItem | null;
+      } | null> | null;
+    } | null;
+  };
+  variables: {
+    filters?: {
+      tenantId?: string | null;
+      tenantUuid?: string | null;
+    } | null;
+    q?: string | null;
+    first?: number | null;
+    after?: string | null;
+    last?: number | null;
+    before?: string | null;
+  };
+};
+
 interface RequestFormProps {
   mode: "create" | "edit";
   tenantId: string;
   onSubmit: (data: RequestFormValues) => void;
   defaultValues?: Partial<RequestFormValues>;
   clients?: CatalogItem[];
+  eventTypes?: CatalogItem[];
   rmmClients?: RmmClientItem[];
   userIdLoggin: string;
   userUuidLoggin?: string;
@@ -124,10 +156,18 @@ interface RequestFormProps {
   timezones?: TimezoneItem[];
   productTypes?: CatalogItem[];
   products?: ProductItem[];
+  productsLoading?: boolean;
+  selectedProductType?: string;
+  onProductTypeChange?: (productTypeId: string) => void;
   requestId?: string | null;
   requestStoreManagers?: StoreManagerItem[];
   // locations?: CatalogItem[];
   states?: CatalogItem[];
+  disableStateSelect?: boolean;
+  hideTableNeededFields?: boolean;
+  hideDistributorFields?: boolean;
+  hideEventTypeField?: boolean;
+  showBillingEntityField?: boolean;
 
   onRefetch?: (
     key: "distributors" | "retailers" | "requestStoreManagers",
@@ -163,8 +203,12 @@ export default function RequestForm({
   // distributors = [],
   requestTypes,
   timezones = [],
+  eventTypes = [],
   productTypes = [],
   products = [],
+  productsLoading = false,
+  selectedProductType = "",
+  onProductTypeChange,
   tenantId,
   requestId = null,
   requestStoreManagers = [],
@@ -173,7 +217,21 @@ export default function RequestForm({
   contactMode,
   requestContactInfo,
   states = [],
+  disableStateSelect = false,
+  hideTableNeededFields = false,
+  hideDistributorFields = false,
+  hideEventTypeField = false,
+  showBillingEntityField = false,
 }: RequestFormProps) {
+  const [localSelectedProductType, setLocalSelectedProductType] = useState(
+    selectedProductType,
+  );
+
+  const resolvedSelectedProductType =
+    onProductTypeChange !== undefined
+      ? selectedProductType
+      : localSelectedProductType;
+
   const safeDefaultValues: RequestFormValues = {
     name: "",
     date: "",
@@ -184,6 +242,7 @@ export default function RequestForm({
     timezoneId: null,
     retailerId: null,
     distributorId: null,
+    eventTypeId: "",
     requestTypeId: null,
     rmmAsignedId: userIdLoggin,
     clientName: "",
@@ -227,6 +286,7 @@ export default function RequestForm({
   /* ================= WATCH FOR SECTION ENTITIES ================= */
   const distributorId = watch("distributorId");
   const retailerId = watch("retailerId");
+  const retailerNameValue = watch("retailerName");
   const storeManagerId = watch("storeManagerId");
   const distributorLocationId = watch("distributorLocationId");
   const retailerLocationId = watch("retailerLocationId");
@@ -340,6 +400,36 @@ export default function RequestForm({
     }));
   }, [rmmSearchHook.searchTerm, rmmSearchHook.items, rmmClients]);
 
+  const extractBillingEntities = useCallback(
+    (data: BillingEntitiesQueryType["response"]) =>
+      data.billingEntities?.edges?.flatMap((edge) =>
+        edge?.node ? [edge.node] : [],
+      ) ?? [],
+    [],
+  );
+
+  const billingEntitiesSearchHook = useSearchQuery<
+    BillingEntityItem,
+    BillingEntitiesQueryType
+  >({
+    queryDocument: BillingEntitiesQuery,
+    extractNodes: extractBillingEntities,
+    variables: {
+      filters: { tenantId },
+      first: 100,
+    },
+    minLength: 0,
+  });
+
+  const billingEntityOptions = useMemo(
+    () =>
+      billingEntitiesSearchHook.items.map((billingEntity) => ({
+        value: billingEntity.id,
+        label: billingEntity.name,
+      })),
+    [billingEntitiesSearchHook.items],
+  );
+
   // ========================
   // LOCATIONS (CITY) BY STATE WITH SEARCH
   // ========================
@@ -398,6 +488,22 @@ export default function RequestForm({
     queryDocument: RetailersQuery,
     extractNodes: extractRetailers,
   });
+
+  useEffect(() => {
+    if (!retailerId) return;
+
+    const selectedRetailer = retailersHook.items.find(
+      (item) => item.id === retailerId,
+    );
+    const selectedRetailerName = selectedRetailer?.name?.trim();
+    if (!selectedRetailerName) return;
+    if ((retailerNameValue ?? "").trim() === selectedRetailerName) return;
+
+    setValue("retailerName", selectedRetailerName, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }, [retailerId, retailerNameValue, retailersHook.items, setValue]);
 
   /* ================= UI STATE ================= */
   const [showDistributorLocation, setShowDistributorLocation] = useState(false);
@@ -471,18 +577,47 @@ export default function RequestForm({
           locationId: distributorLocationId,
         },
       },
+      updater: (store) => {
+        const payload = store.getRootField("createDistributor");
+        const newDistributor = payload?.getLinkedRecord("distributor");
+
+        if (!newDistributor) return;
+
+        const root = store.getRoot();
+        const distributors = root.getLinkedRecord("distributors");
+
+        if (!distributors) return;
+
+        const edges = distributors.getLinkedRecords("edges") ?? [];
+
+        const newEdge = store.create(
+          `edge:${newDistributor.getDataID()}`,
+          "DistributorEdge",
+        );
+
+        newEdge.setLinkedRecord(newDistributor, "node");
+
+        distributors.setLinkedRecords([...edges, newEdge], "edges");
+      },
       onCompleted: (res) => {
         const distributor = res.createDistributor?.distributor;
+
         if (res.createDistributor?.success && distributor) {
+          distributorsHook.addItem(distributor);
+
           setValue("distributorId", distributor.id, {
             shouldDirty: true,
             shouldTouch: true,
           });
+
           setShowDistributorLocation(false);
-          onRefetch?.("distributors");
+
+          // limpiar campos
+          setValue("distributorName", "");
+          setValue("distributorEmail", "");
+          setValue("distributorLocationId", null);
+
           showAlert(res.createDistributor.message, "success");
-        } else {
-          showAlert(res.createDistributor?.message ?? "Error", "error");
         }
       },
       onError: (e) => showAlert(e.message, "error"),
@@ -512,15 +647,42 @@ export default function RequestForm({
           locationId: retailerLocationId,
         },
       },
+      updater: (store) => {
+        const payload = store.getRootField("createRetailer");
+        const newRetailer = payload?.getLinkedRecord("retailer");
+        if (!newRetailer) return;
+
+        const root = store.getRoot();
+
+        const retailersConnection = root.getLinkedRecord("retailers");
+        if (!retailersConnection) return;
+
+        const edges = retailersConnection.getLinkedRecords("edges") ?? [];
+
+        const newEdge = store.create(
+          `client:newRetailerEdge:${newRetailer.getDataID()}`,
+          "RetailerEdge",
+        );
+
+        newEdge.setLinkedRecord(newRetailer, "node");
+
+        retailersConnection.setLinkedRecords([...edges, newEdge], "edges");
+      },
       onCompleted: (res) => {
         const retailer = res.createRetailer?.retailer;
         if (res.createRetailer?.success && retailer) {
+          retailersHook.addItem(retailer);
           setValue("retailerId", retailer.id, {
             shouldDirty: true,
             shouldTouch: true,
           });
           setShowRetailerLocation(false);
           onRefetch?.("retailers");
+          // limpiar campos
+          setValue("retailerName", "");
+          setValue("retailerAddress", "");
+          setValue("retailerStoreContact", "");
+          setValue("retailerLocationId", null);
           showAlert(res.createRetailer.message, "success");
         } else {
           showAlert(res.createRetailer?.message ?? "Error", "error");
@@ -554,6 +716,27 @@ export default function RequestForm({
           phone: storeManagerPhone,
         },
       },
+      updater: (store) => {
+        const payload = store.getRootField("createRequestStoreManager");
+        const newManager = payload?.getLinkedRecord("requestStoreManager");
+        if (!newManager) return;
+
+        const root = store.getRoot();
+
+        const managersConnection = root.getLinkedRecord("requestStoreManagers");
+        if (!managersConnection) return;
+
+        const edges = managersConnection.getLinkedRecords("edges") ?? [];
+
+        const newEdge = store.create(
+          `client:newStoreManagerEdge:${newManager.getDataID()}`,
+          "RequestStoreManagerEdge",
+        );
+
+        newEdge.setLinkedRecord(newManager, "node");
+
+        managersConnection.setLinkedRecords([...edges, newEdge], "edges");
+      },
       onCompleted: (res) => {
         const manager = res.createRequestStoreManager?.requestStoreManager;
         if (res.createRequestStoreManager?.success && manager) {
@@ -584,15 +767,15 @@ export default function RequestForm({
     initialFromBackend: Boolean(defaultValues.timezoneId),
   });
 
-  const [selectedProductType, setSelectedProductType] = useState<string>("");
-
   const isTableNeeded = watch("isTableNeeded");
   const selectedProducts = watch("products") || [];
 
   const filteredProducts = useMemo(() => {
-    if (!selectedProductType) return products;
-    return products.filter((p) => p.productType?.id === selectedProductType);
-  }, [products, selectedProductType]);
+    if (!resolvedSelectedProductType) return products;
+    return products.filter(
+      (p) => p.productType?.id === resolvedSelectedProductType,
+    );
+  }, [products, resolvedSelectedProductType]);
 
   const visibleProducts = useMemo(
     () => filteredProducts.slice(0, visibleCount),
@@ -601,7 +784,7 @@ export default function RequestForm({
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [selectedProductType]);
+  }, [resolvedSelectedProductType]);
 
   const toggleProduct = (productId: string) => {
     const current = selectedProducts;
@@ -711,22 +894,42 @@ export default function RequestForm({
       shouldTouch: true,
     });
     retailersHook.setSearchTerm("");
-
-    if (!isNationalRetailer) return;
-
-    setValue("entitiesLocationId", null, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("retailerId", null, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("retailerLocationId", null, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
   }, [isNationalRetailer, setValue, retailersHook]);
+
+  useEffect(() => {
+    if (!hideTableNeededFields) return;
+
+    setValue("isTableNeeded", false, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("tableSize", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }, [hideTableNeededFields, setValue]);
+
+  useEffect(() => {
+    if (!hideDistributorFields) return;
+
+    setShowDistributorLocation(false);
+    setValue("distributorId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("distributorName", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("distributorEmail", "", {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setValue("distributorLocationId", null, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+  }, [hideDistributorFields, setValue]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="w-full">
@@ -814,6 +1017,20 @@ export default function RequestForm({
                 rules={{ required: "Request Type is required" }}
               />
 
+              {!hideEventTypeField && (
+                <FormAutocomplete<RequestFormValues>
+                  name="eventTypeId"
+                  control={control}
+                  label="Event Type"
+                  placeholder="Search event type..."
+                  options={eventTypes.map((et) => ({
+                    value: et.id,
+                    label: et.name,
+                  }))}
+                  rules={{ required: "Event Type is required" }}
+                />
+              )}
+
               <FormDatePicker<RequestFormValues>
                 name="date"
                 control={control}
@@ -827,7 +1044,8 @@ export default function RequestForm({
                 name="timezoneId"
                 control={control}
                 label="Timezone"
-                placeholder="Search timezone..."
+                disabled
+                placeholder="Select location in map"
                 options={timezones.map((tz) => {
                   const sign = tz.offset >= 0 ? "+" : "-";
                   const abs = Math.abs(tz.offset);
@@ -855,7 +1073,7 @@ export default function RequestForm({
                 rules={{ required: "End Time is required" }}
               />
 
-              <FormAutocomplete
+              <FormAutocomplete<RequestFormValues>
                 name="rmmAsignedId"
                 control={control}
                 label="RMM Assigned"
@@ -865,7 +1083,7 @@ export default function RequestForm({
                 loading={rmmSearchHook.isLoading}
               />
 
-              <div className="md:col-span-2">
+              <div className={showBillingEntityField ? "" : "md:col-span-2"}>
                 <FormAddressSearch<RequestFormValues>
                   name="address"
                   placeholder="Enter address"
@@ -877,6 +1095,19 @@ export default function RequestForm({
                   }}
                 />
               </div>
+
+              {showBillingEntityField && (
+                <FormAutocomplete<RequestFormValues>
+                  name="billingEntityId"
+                  control={control}
+                  label="Billing Entity"
+                  placeholder="Search Billing Entity..."
+                  options={billingEntityOptions}
+                  onSearch={billingEntitiesSearchHook.setSearchTerm}
+                  loading={billingEntitiesSearchHook.isLoading}
+                  disabled={!tenantId}
+                />
+              )}
             </div>
           </section>
 
@@ -902,7 +1133,7 @@ export default function RequestForm({
                   label="State"
                   placeholder="Select state..."
                   options={stateOptions}
-                  disabled={!tenantId}
+                  disabled={!tenantId || disableStateSelect}
                 />
 
                 <FormCheckbox<RequestFormValues>
@@ -923,26 +1154,28 @@ export default function RequestForm({
                   }))}
                   loading={locationsHook.isLoading}
                   onSearch={locationsHook.setSearchTerm}
-                  disabled={!tenantId || !selectedStateId || isNationalRetailer}
+                  disabled={!tenantId || !selectedStateId}
                 />
               </div>
 
               {!isStateSelected && (
                 <p className="text-sm text-warning">
-                  Select a state first to enable distributor.
+                  {hideDistributorFields
+                    ? "Select a state first to enable retailer."
+                    : "Select a state first to enable distributor."}
                 </p>
               )}
 
               {isStateSelected &&
                 !isNationalRetailer &&
                 !isEntitiesLocationSelected && (
-                <p className="text-sm text-warning">
-                  Select a city first to enable retailer.
-                </p>
-              )}
+                  <p className="text-sm text-warning">
+                    Select a city first to enable retailer.
+                  </p>
+                )}
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {!isEventActivation && (
+                {!isEventActivation && !hideDistributorFields && (
                   <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
                     <p className="font-medium">Distributor</p>
 
@@ -1020,8 +1253,7 @@ export default function RequestForm({
                                 className="btn btn-primary btn-xs"
                                 onClick={handleCreateDistributor}
                                 disabled={
-                                  isCreatingDistributor ||
-                                  !isStateSelected
+                                  isCreatingDistributor || !isStateSelected
                                 }
                               >
                                 Confirm distributor
@@ -1233,26 +1465,28 @@ export default function RequestForm({
           )}
 
           {/* DETAILS  */}
-          <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
-            <p className="font-semibold text-lg">Details</p>
-            <div className="grid grid-cols-1 gap-4">
-              <FormCheckbox<RequestFormValues>
-                name="isTableNeeded"
-                control={control}
-                label="Table Needed?"
-              />
-              {isTableNeeded && (
-                <FormInputText<RequestFormValues>
-                  name="tableSize"
+          {!hideTableNeededFields && (
+            <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
+              <p className="font-semibold text-lg">Details</p>
+              <div className="grid grid-cols-1 gap-4">
+                <FormCheckbox<RequestFormValues>
+                  name="isTableNeeded"
                   control={control}
-                  label="Table Size"
-                  placeholder="Enter table size"
-                  type="number"
-                  rules={{ required: "Table Size is required" }}
+                  label="Table Needed?"
                 />
-              )}
-            </div>
-          </section>
+                {isTableNeeded && (
+                  <FormInputText<RequestFormValues>
+                    name="tableSize"
+                    control={control}
+                    label="Table Size"
+                    placeholder="Enter table size"
+                    type="number"
+                    rules={{ required: "Table Size is required" }}
+                  />
+                )}
+              </div>
+            </section>
+          )}
 
           {/* NOTES */}
           <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
@@ -1292,8 +1526,15 @@ export default function RequestForm({
                 <div className="w-56">
                   <select
                     className="select select-bordered select-sm w-full"
-                    value={selectedProductType}
-                    onChange={(e) => setSelectedProductType(e.target.value)}
+                    value={resolvedSelectedProductType}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      if (onProductTypeChange) {
+                        onProductTypeChange(nextValue);
+                        return;
+                      }
+                      setLocalSelectedProductType(nextValue);
+                    }}
                   >
                     <option value="">All Types</option>
                     {productTypes.map((t) => (
@@ -1305,14 +1546,20 @@ export default function RequestForm({
                 </div>
               </div>
 
-              {selectedProductType && visibleProducts.length > 0 && (
+              {resolvedSelectedProductType && visibleProducts.length > 0 && (
                 <p className="text-xs text-base-content/60">
                   Showing products of selected type
                 </p>
               )}
 
+              {productsLoading && (
+                <div className="flex justify-center py-4">
+                  <span className="loading loading-spinner loading-md" />
+                </div>
+              )}
+
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {visibleProducts.length === 0 && (
+                {!productsLoading && visibleProducts.length === 0 && (
                   <p className="text-base-content/60 col-span-full">
                     No products found.
                   </p>

@@ -8,6 +8,11 @@ input AcceptAmbassadorInvitationInput {
   coordinates: [Float!] = null
 }
 
+input AcceptAmbassadorJobInvitationInput {
+  clientMutationId: ID = null
+  ambassadorJobId: ID!
+}
+
 input AcceptByTokenInput {
   clientMutationId: ID = null
   token: String!
@@ -22,7 +27,7 @@ type AcceptInvitationResponse {
 }
 
 """
-AccountFeedback(id, uuid, do_differently_feedback, feedback, corpo_card, recap, created_by, updated_by, created_at, updated_at)
+AccountFeedback(id, uuid, do_differently_feedback, feedback, corpo_card, was_corpo_card_used, recap, created_by, updated_by, created_at, updated_at)
 """
 type AccountFeedback implements Node {
   """The Globally Unique ID of this object"""
@@ -31,6 +36,7 @@ type AccountFeedback implements Node {
   doDifferentlyFeedback: String
   feedback: String
   corpoCard: String
+  wasCorpoCardUsed: Boolean!
   createdAt: String!
   updatedAt: String!
 }
@@ -40,6 +46,7 @@ input AccountFeedbackInput {
   doDifferentlyFeedback: String = null
   feedback: String = null
   corpoCard: String = null
+  wasCorpoCardUsed: Boolean = null
 }
 
 input ActiveAmbassadorFiltersInput {
@@ -272,7 +279,7 @@ type AmbassadorInvitationTypeCountableEdge {
 }
 
 """
-AmbassadorJob(id, uuid, recap_uploaded, accepted_terms, appear_as_rfp, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
+AmbassadorJob(id, uuid, recap_uploaded, accepted_terms, real_amount, appear_as_rfp, reminder_sent_at, reminder_3h_sent_at, tenant, ambassador, job, status, rate, created_by, updated_by, created_at, updated_at)
 """
 type AmbassadorJob implements Node {
   """The Globally Unique ID of this object"""
@@ -742,6 +749,47 @@ type BestRecapMonth {
   consumersCount: Int!
 }
 
+"""
+BillingEntity(id, uuid, name, state, tenant, created_by, updated_by, created_at, updated_at)
+"""
+type BillingEntity implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  name: String!
+  state: State
+  tenantId: ID!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type BillingEntityCountableConnection {
+  pageInfo: PageInfo!
+  edges: [BillingEntityCountableEdge!]!
+  totalCount: Int!
+}
+
+type BillingEntityCountableEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: BillingEntity!
+}
+
+type BillingEntityDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  billingEntity: BillingEntity
+}
+
+input BillingEntityFiltersInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  tenantUuid: ID = null
+}
+
 input ChangeUserPasswordInput {
   clientMutationId: ID = null
   id: ID = null
@@ -990,22 +1038,22 @@ type ConsumerEngagements implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
-  totalConsumer: Int!
-  firstTimeConsumers: Int!
-  brandAwareConsumers: Int!
-  willingToPurchaseConsumers: Int!
-  notWillingConsumers: Int!
+  totalConsumer: Int
+  firstTimeConsumers: Int
+  brandAwareConsumers: Int
+  willingToPurchaseConsumers: Int
+  notWillingConsumers: Int
   createdAt: String!
   updatedAt: String!
 }
 
 input ConsumerEngagementsInput {
   clientMutationId: ID = null
-  totalConsumer: Int!
-  firstTimeConsumers: Int!
-  brandAwareConsumers: Int!
-  willingToPurchaseConsumers: Int!
-  notWillingConsumers: Int!
+  totalConsumer: Int = null
+  firstTimeConsumers: Int = null
+  brandAwareConsumers: Int = null
+  willingToPurchaseConsumers: Int = null
+  notWillingConsumers: Int = null
 }
 
 """
@@ -1139,12 +1187,14 @@ input CreateAmbassadorWithUserInput {
   clientMutationId: ID = null
   firstName: String!
   email: String!
-  password1: String!
-  password2: String!
+  password1: String = null
+  password2: String = null
   address: String = null
   phone: String = null
   aboutMe: String = null
   coordinates: [Float!] = null
+  lastName: String = null
+  locationId: ID = null
   isActive: Boolean = null
 }
 
@@ -1174,6 +1224,13 @@ input CreateAttendanceTypeInput {
   tenantId: ID = null
   name: String!
   slug: String = null
+}
+
+input CreateBillingEntityInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  stateId: ID = null
 }
 
 input CreateClientInput {
@@ -1246,6 +1303,8 @@ input CreateEventInput {
   requestId: ID = null
   retailerId: ID = null
   distributorId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   rmmAsignedId: ID = null
   timezoneId: ID = null
   date: String!
@@ -1269,6 +1328,12 @@ input CreateEventTypeInput {
   tenantId: ID = null
   name: String!
   isDefault: Boolean! = false
+}
+
+input CreateEventWithRequestInput {
+  clientMutationId: ID = null
+  event: CreateEventInput!
+  request: CreateRequestInput!
 }
 
 input CreateGroupTypeInput {
@@ -1432,13 +1497,20 @@ input CreateRecapInput {
   name: String!
   eventId: ID!
   files: [RecapFileInput!]!
+  fillingForAmbassador: Boolean = null
+  late: Boolean = null
+  incomplete: Boolean = null
   productsSold: Int = null
   totalCansSold: Int = null
   totalPacksSold: Int = null
   totalEarnings: Float = null
   accountSpendAmount: Float = null
+  trafficDescription: String = null
+  competitivePresence: String = null
   jobId: ID = null
   retailerId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   ambassadorId: ID = null
   consumerEngagements: ConsumerEngagementsInput = null
   productSamples: [ProductSampleInput!] = null
@@ -1467,9 +1539,14 @@ input CreateRequestInput {
   requestTypeId: ID!
   distributorId: ID = null
   retailerId: ID = null
+  billingEntityId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   storeManagerId: ID = null
   rmmAsignedId: ID = null
   requestorEmail: String = null
+  reviewed: Boolean = null
+  storeNumber: String = null
   clientName: String = null
   clientEmail: String = null
   distributorName: String = null
@@ -1524,7 +1601,11 @@ input CreateRequestWithDependenciesInput {
   requestTypeId: ID!
   distributorId: ID = null
   retailerId: ID = null
+  billingEntityId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   requestorEmail: String = null
+  storeNumber: String = null
   clientName: String!
   clientEmail: String!
   distributorName: String!
@@ -1545,6 +1626,7 @@ input CreateRetailerInput {
   address: String!
   storeContact: String!
   locationId: ID!
+  isNational: Boolean! = false
 }
 
 input CreateReviewScoreInput {
@@ -1663,6 +1745,12 @@ input DeleteAmbassadorGroupInput {
   id: ID!
 }
 
+type DeleteAmbassadorJobResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+}
+
 input DeleteAmbassadorNoteInput {
   clientMutationId: ID = null
   noteId: ID!
@@ -1736,6 +1824,18 @@ type DeleteSkillResponse {
   success: Boolean!
   message: String!
   clientMutationId: ID
+}
+
+input DisableAmbassadorInput {
+  clientMutationId: ID = null
+  ambassadorId: ID!
+}
+
+type DisableAmbassadorResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  ambassador: Ambassador
 }
 
 input DisconnectGoogleCalendarInput {
@@ -1812,8 +1912,18 @@ type DjangoImageType {
   height: Int!
 }
 
+type EnqueueCreateGoalsForAllTenantsPayload {
+  success: Boolean!
+  enqueued: Boolean!
+}
+
+type EnqueueCreateGoalsForTenantPayload {
+  success: Boolean!
+  enqueued: Boolean!
+}
+
 """
-Event(id, uuid, name, date, coordinates, timezone, tenant, request, event_type, status, retailer, distributor, start_time, end_time, address, notes, is_national, rmm_asigned, created_by, updated_by, created_at, updated_at)
+Event(id, uuid, name, date, coordinates, timezone, tenant, request, event_type, status, retailer, distributor, start_time, end_time, address, notes, is_national, rmm_asigned, location, state, created_by, updated_by, created_at, updated_at)
 """
 type Event implements Node {
   """The Globally Unique ID of this object"""
@@ -1826,6 +1936,8 @@ type Event implements Node {
   request: Request
   retailer: Retailer
   distributor: Distributor
+  location: Location
+  state: State
   createdAt: String!
   updatedAt: String!
   tenantId: ID!
@@ -1861,6 +1973,7 @@ type EventDashboard {
   monthlyTrends: MonthlyPerformanceTrend!
   performanceInsights: PerformanceInsights!
   recentEvents: [RecentEvent!]
+  goalsProgress: [GoalProgress!]
 }
 
 type EventDashboardFilterOptions {
@@ -1878,6 +1991,8 @@ input EventDashboardFiltersInput {
   quarter: String = null
   rmmAsignedId: ID = null
   distributorId: ID = null
+  distributorIds: [ID!] = null
+  year: Int = null
 }
 
 type EventDashboardMetrics {
@@ -1900,11 +2015,14 @@ input EventFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
+  rmmAsigned: ID = null
   eventTypeId: ID = null
   eventStatus: EventStatusFilterEnum = null
   requestId: ID = null
   retailerId: ID = null
   distributorId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   retailerStateId: ID = null
   distributorStateId: ID = null
   date: String = null
@@ -2006,6 +2124,14 @@ input EventTypeFiltersInput {
   tenantUuid: ID = null
 }
 
+type EventWithRequestDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  event: Event
+  request: Request
+}
+
 "\n     Errors messages and codes mapped to\n    fields or non fields errors.\n    Example:\n    {\n        field_name: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ],\n        other_field: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ],\n        nonFieldErrors: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ]\n    }\n    "
 scalar ExpectedError
 
@@ -2017,6 +2143,8 @@ input ExportRecapXlsxInput {
 input ExportRecapsXlsxInput {
   clientMutationId: ID = null
   tenantId: ID = null
+  startDate: String = null
+  endDate: String = null
 }
 
 """
@@ -2082,9 +2210,51 @@ input ForgotPasswordInput {
   email: String!
 }
 
+type GenerateInsightsPayload {
+  success: Boolean!
+  enqueued: Boolean!
+  insights: Insights
+}
+
 input GenerateRecapPdfInput {
   clientMutationId: ID = null
   id: ID!
+}
+
+type Goal {
+  id: ID!
+  uuid: String!
+  tenantId: ID!
+  user: GoalUser!
+  userId: ID!
+  year: Int!
+  eventTargetGoal: Int
+  consumerSamplingGoal: Int
+  brandAwarenessGoal: Float
+  purchaseIntentGoal: Float
+  femaleParticipationGoal: Float
+  firstTimeBuyersGoal: Int
+  currentEventsCount: Int
+  currentConsumerSampling: Int
+  currentBrandAwareness: Float
+  currentPurchaseIntent: Float
+  currentFirstTimeBuyers: Int
+  currentFemaleParticipation: Float
+}
+
+type GoalProgress {
+  name: String!
+  target: Float!
+  current: Float!
+  percentageComplete: Float!
+}
+
+type GoalUser {
+  id: ID!
+  uuid: String!
+  email: String!
+  firstName: String!
+  lastName: String!
 }
 
 input GoogleCalendarCallbackInput {
@@ -2589,6 +2759,16 @@ type MarketPerformanceData {
   efficiency: Float!
 }
 
+type MarketWithBrandAwareness {
+  marketName: String!
+  brandAwareCount: Int!
+}
+
+type MarketWithWillingness {
+  marketName: String!
+  willingCount: Int!
+}
+
 type MonthlyDataPoint {
   month: String!
   consumersSampled: Int!
@@ -2603,6 +2783,8 @@ type MonthlyPerformanceTrend {
 
 type Mutation {
   createEvent(input: CreateEventInput!): EventDetailResponse!
+  createEventWithRequest(input: CreateEventWithRequestInput!): EventWithRequestDetailResponse!
+  updateEventWithRequest(input: UpdateEventWithRequestInput!): EventWithRequestDetailResponse!
   updateEvent(input: UpdateEventInput!): EventDetailResponse!
   suspendEvent(input: SuspendEventInput!): EventDetailResponse!
   archiveEvent(input: ArchiveEventInput!): EventDetailResponse!
@@ -2628,6 +2810,8 @@ type Mutation {
   deleteProduct(input: DeleteProductInput!): ProductDetailResponse!
   createRequestType(input: CreateRequestTypeInput!): RequestTypeDetailResponse!
   updateRequestType(input: UpdateRequestTypeInput!): RequestTypeDetailResponse!
+  createBillingEntity(input: CreateBillingEntityInput!): BillingEntityDetailResponse!
+  updateBillingEntity(input: UpdateBillingEntityInput!): BillingEntityDetailResponse!
   createRequestStatus(input: CreateRequestStatusInput!): RequestStatusDetailResponse!
   updateRequestStatus(input: UpdateRequestStatusInput!): RequestStatusDetailResponse!
   requestBatchTemplateDownloadUrl(input: RequestBatchTemplateInput!): RequestBatchTemplateResponse!
@@ -2636,6 +2820,7 @@ type Mutation {
   updateRequest(input: UpdateRequestInput!): RequestDetailResponse!
   approveRequest(input: ApproveRequestInput!): ApproveRequestResponse!
   declineRequest(input: DeclineRequestInput!): DeclineRequestResponse!
+  upsertRequestReviewed(input: UpsertRequestReviewedInput!): RequestDetailResponse!
   createRequestStoreManager(input: CreateRequestStoreManagerInput!): RequestStoreManagerDetailResponse!
   updateRequestStoreManager(input: UpdateRequestStoreManagerInput!): RequestStoreManagerDetailResponse!
   createTimezone(input: CreateTimeZoneInput!): TimeZoneResponse!
@@ -2675,6 +2860,7 @@ type Mutation {
   verifyAccount(input: VerifyAccountInput!): MutationNormalOutput!
   createAmbassadorJob(input: CreateAmbassadorJobInput!): AmbassadorJobDetailResponse!
   updateAmbassadorJob(input: UpdateAmbassadorJobInput!): AmbassadorJobDetailResponse!
+  acceptAmbassadorJobInvitation(input: AcceptAmbassadorJobInvitationInput!): AmbassadorJobDetailResponse!
   createAmbassadorToAmbassadorReview(input: CreateAmbassadorToAmbassadorReviewInput!): AmbassadorToAmbassadorReviewDetailResponse!
   updateAmbassadorToAmbassadorReview(input: UpdateAmbassadorToAmbassadorReviewInput!): AmbassadorToAmbassadorReviewDetailResponse!
   createAmbassadorJobStatus(input: CreateStatusInput!): StatusDetailResponse!
@@ -2716,6 +2902,7 @@ type Mutation {
   createJobRequirementAnswer(input: CreateJobRequirementAnswerInput!): JobRequirementAnswerDetailResponse!
   updateJobRequirementAnswer(input: UpdateJobRequirementAnswerInput!): JobRequirementAnswerDetailResponse!
   manageAmbassadorJobAssignment(input: ManageAmbassadorJobAssignmentInput!): AmbassadorJobDetailResponse!
+  unassignAmbassadorJob(input: UnassignAmbassadorJobInput!): DeleteAmbassadorJobResponse!
   approveAmbassadorJob(input: ApproveAmbassadorJobInput!): AmbassadorJobDetailResponse!
   inviteAmbassadorsToJob(input: InviteAmbassadorsToJobInput!): InviteAmbassadorsToJobResponse!
   declineAmbassadorJob(input: DeclineAmbassadorJobInput!): AmbassadorJobDetailResponse!
@@ -2727,6 +2914,8 @@ type Mutation {
   acceptAmbassadorInvitation(input: AcceptAmbassadorInvitationInput!): AcceptInvitationResponse!
   acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
+  disableAmbassador(input: DisableAmbassadorInput!): DisableAmbassadorResponse!
+  regenerateAmbassadorPasswords(input: RegenerateAmbassadorPasswordsInput!): RegenerateAmbassadorPasswordsResponse!
   createAmbassador(input: CreateAmbassadorInput!): CreateAmbassadorResponse!
   updateAmbassador(input: UpdateAmbassadorInput!): UpdateAmbassadorResponse!
   upsertAmbassadorProfile(input: UpsertAmbassadorProfileInput!): UpsertAmbassadorProfileResponse!
@@ -2758,6 +2947,10 @@ type Mutation {
   deleteAmbassadorGroup(input: DeleteAmbassadorGroupInput!): AmbassadorGroupResponse!
   addAmbassadorsToGroup(input: AddAmbassadorsToGroupInput!): AddAmbassadorsToGroupResponse!
   removeAmbassadorsFromGroup(input: RemoveAmbassadorsFromGroupInput!): AmbassadorGroupResponse!
+  generateInsights(tenantId: ID = null, fromDate: String = null, toDate: String = null, enqueue: Boolean! = false): GenerateInsightsPayload!
+  setGoals(input: SetGoalsInput!): Goal!
+  enqueueCreateGoalsForTenant(tenantId: ID!, year: Int!): EnqueueCreateGoalsForTenantPayload!
+  enqueueCreateGoalsForAllTenants(year: Int!): EnqueueCreateGoalsForAllTenantsPayload!
 }
 
 type MutationNormalOutput {
@@ -2895,8 +3088,8 @@ input ProductFiltersInput {
 
 input ProductSampleInput {
   clientMutationId: ID = null
-  productId: ID!
-  quantity: Int!
+  productId: ID = null
+  quantity: Int = null
 }
 
 """
@@ -2993,6 +3186,9 @@ type Query {
   publicRequestType(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): RequestTypeCountableConnection!
   requestTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestTypeFiltersInput = null): RequestTypeCountableConnection!
   requestType(id: ID = null, uuid: ID = null): RequestType
+  publicBillingEntities(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): BillingEntityCountableConnection!
+  billingEntities(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: BillingEntityFiltersInput = null): BillingEntityCountableConnection!
+  billingEntity(id: ID = null, uuid: ID = null): BillingEntity
   requestStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: RequestStatusFiltersInput = null): RequestStatusCountableConnection!
   requestStatus(id: ID = null, uuid: ID = null): RequestStatus
   requests(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestFiltersInput = null): RequestCountableConnection!
@@ -3019,7 +3215,7 @@ type Query {
   sentInvitations(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorInvitationFiltersInput = null): AmbassadorInvitationTypeCountableConnection!
   availableAmbassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
   activeAmbassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ActiveAmbassadorFiltersInput = null): AmbassadorCountableConnection!
-  ambassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
+  ambassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
   ambassador(id: ID = null, uuid: ID = null): Ambassador
   ambassadorProfile(id: ID = null, uuid: ID = null, userId: ID = null): AmbassadorProfile
   ambassadorReviews(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorReviewFiltersInput = null): AmbassadorReviewTypeCountableConnection!
@@ -3027,7 +3223,7 @@ type Query {
   ambassadorNotes(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorNoteFiltersInput = null): AmbassadorNoteTypeCountableConnection!
   ambassadorNote(noteId: ID!): AmbassadorNoteType
   skills(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: SkillFiltersInput = null): SkillTypeCountableConnection!
-  skill(skillId: ID!): SkillType
+  skill(skillId: ID = null, skillUuid: ID = null): SkillType
   ambassadorSkills(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorSkillFiltersInput = null): AmbassadorSkillTypeCountableConnection!
   ambassadorSkill(ambassadorSkillId: ID!): AmbassadorSkillType
   attendanceTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): AttendanceTypeCountableConnection!
@@ -3103,6 +3299,8 @@ type Query {
   recapDashboardFilterOptions: RecapDashboardFilterOptions!
   recapDashboard(filters: RecapDashboardFiltersInput = null): RecapDashboard!
   latestInsights(tenantId: ID = null): Insights
+  goals(tenantId: ID!, year: Int!, userId: ID = null, startDate: String = null, endDate: String = null, quarter: String = null): Goal
+  goalsList(tenantId: ID!, year: Int = null, userId: ID = null): [Goal!]!
   getUploadUrl(filePath: String!, contentType: String! = "image/jpeg"): UploadUrlResponse!
   getDownloadUrl(filePath: String!): String!
 }
@@ -3263,7 +3461,7 @@ input RateTypeFiltersInput {
 }
 
 """
-Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, total_cans_sold, total_packs_sold, account_spend_amount, approved, timezone, event, ambassador, job, retailer, created_by, updated_by, created_at, updated_at)
+Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, total_cans_sold, total_packs_sold, filling_for_ambassador, late, incomplete, account_spend_amount, approved, traffic_description, competitive_presence, timezone, event, ambassador, job, retailer, location, state, created_by, updated_by, created_at, updated_at)
 """
 type Recap implements Node {
   """The Globally Unique ID of this object"""
@@ -3271,14 +3469,18 @@ type Recap implements Node {
   uuid: String!
   name: String!
   approved: Boolean!
+  fillingForAmbassador: Boolean!
   event: Event!
   eventId: ID!
+  ambassador: Ambassador
   jobId: ID
   job: Job
   retailerId: ID
   retailer: Retailer
-  recapFile: RecapFile!
-  recapFileId: ID!
+  locationId: ID
+  location: Location
+  stateId: ID
+  state: State
   createdAt: String!
   updatedAt: String!
   totalEngagements: Int
@@ -3287,13 +3489,17 @@ type Recap implements Node {
   totalPacksSold: Int
   totalEarnings: Float
   accountSpendAmount: Float
+  trafficDescription: String
+  competitivePresence: String
   consumerEngagements: [ConsumerEngagements!]!
   productSamples: [ProductSamples!]!
   salesPerformance: [SalesPerformance!]!
   consumerFeedback: [ConsumerFeedback!]!
   accountFeedback: [AccountFeedback!]!
+  recapFile: RecapFile
+  recapFileId: ID
   recapFiles: [RecapFile!]!
-  ambassadors: [Ambassador!]!
+  ambassadors: [Ambassador!]! @deprecated(reason: "Use ambassador instead.")
   requestStoreManagers: [RequestStoreManager!]!
 }
 
@@ -3341,6 +3547,7 @@ input RecapDashboardFiltersInput {
   quarter: String = null
   rmmAsignedId: ID = null
   distributorId: ID = null
+  distributorIds: [ID!] = null
 }
 
 type RecapDashboardMetrics {
@@ -3412,13 +3619,19 @@ type RecapFileUrlResponse {
 
 input RecapFiltersInput {
   clientMutationId: ID = null
+  tenantId: ID = null
   eventId: ID = null
   eventType: ID = null
   rmmAsignedId: ID = null
+  ambassadorId: ID = null
   retailerId: ID = null
+  locationId: ID = null
   stateId: ID = null
   eventDate: String = null
+  startDate: String = null
+  endDate: String = null
   eventAddress: String = null
+  approved: Boolean = null
   edited: Boolean = null
 }
 
@@ -3457,6 +3670,9 @@ type RecapPerformanceInsights {
   willingToPurchasePercentage: Float!
   bestMonth: BestRecapMonth
   growthRate: Float!
+  topConvertingMarket: TopConvertingMarket
+  highestWillingnessToBuy: MarketWithWillingness
+  strongestBrandAwareness: MarketWithBrandAwareness
 }
 
 type RecentEvent {
@@ -3489,6 +3705,25 @@ type RefreshTokenType {
   isExpired: Boolean!
 }
 
+type RegenerateAmbassadorPasswordResult {
+  ambassadorId: ID
+  email: String
+  success: Boolean!
+  message: String!
+}
+
+input RegenerateAmbassadorPasswordsInput {
+  clientMutationId: ID = null
+  ambassadorIds: [ID!]!
+}
+
+type RegenerateAmbassadorPasswordsResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  results: [RegenerateAmbassadorPasswordResult!]
+}
+
 type RegisterResponse {
   success: Boolean!
   message: String!
@@ -3504,7 +3739,7 @@ input RemoveAmbassadorsFromGroupInput {
 }
 
 """
-Request(id, uuid, name, date, start_time, end_time, address, decline_reason, requestor_email, notes, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, rmm_asigned, created_by, updated_by, approved_by, created_at, updated_at)
+Request(id, uuid, name, date, start_time, end_time, address, decline_reason, requestor_email, notes, reviewed, store_number, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, billing_entity, rmm_asigned, location, state, created_by, updated_by, approved_by, created_at, updated_at)
 """
 type Request implements Node {
   """The Globally Unique ID of this object"""
@@ -3512,6 +3747,8 @@ type Request implements Node {
   uuid: String!
   address: String!
   declineReason: String
+  reviewed: Boolean!
+  storeNumber: String
   notes: String
   coordinates: [Float!]!
   requestorEmail: String
@@ -3526,11 +3763,15 @@ type Request implements Node {
   storeManagerPhone: String
   timezone: TimeZone
   client: Client
+  billingEntity: BillingEntity
   distributor: Distributor
   retailer: Retailer
+  location: Location
+  state: State
   requestType: RequestType
   status: RequestStatus
   tenantId: ID!
+  tenant: TenantType
   rmmAsigned: SparkUserType
   createdBy: SparkUserType
   updatedBy: SparkUserType
@@ -3603,15 +3844,22 @@ input RequestFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
+  rmmAsigned: ID = null
   statusId: ID = null
   clientId: ID = null
+  billingEntityId: ID = null
   retailerId: ID = null
   distributorId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   requestTypeId: ID = null
   retailerStateId: ID = null
   distributorStateId: ID = null
+  storeNumber: String = null
   date: String = null
+  createdWithinHours: Int = null
   edited: Boolean = null
+  reviewed: Boolean = null
 }
 
 """
@@ -3867,9 +4115,22 @@ type SalesPerformance implements Node {
 
 input SalesPerformanceInput {
   clientMutationId: ID = null
-  productId: ID!
-  typeOfGoodId: ID!
-  price: Float!
+  productId: ID = null
+  typeOfGoodId: ID = null
+  price: Float = null
+}
+
+input SetGoalsInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  userId: ID = null
+  year: Int!
+  eventTargetGoal: Int = null
+  consumerSamplingGoal: Int = null
+  brandAwarenessGoal: Float = null
+  purchaseIntentGoal: Float = null
+  femaleParticipationGoal: Float = null
+  firstTimeBuyersGoal: Int = null
 }
 
 input SkillFiltersInput {
@@ -4057,13 +4318,14 @@ type TenantThemeType implements Node {
 }
 
 """
-Tenant(id, uuid, name, image, request_url_name, created_by, updated_by, created_at, updated_at)
+Tenant(id, uuid, name, image, request_url_name, slug, created_by, updated_by, created_at, updated_at)
 """
 type TenantType implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
   uuid: UUID!
   name: String!
+  slug: String
   requestUrlName: String
   image: String
 }
@@ -4135,6 +4397,11 @@ type TokenType {
   token: String!
 }
 
+type TopConvertingMarket {
+  marketName: String!
+  conversionRate: Float!
+}
+
 """
 TypeOfGood(id, uuid, name, tenant, created_by, updated_by, created_at, updated_at)
 """
@@ -4167,6 +4434,11 @@ input TypeOfGoodFiltersInput {
 }
 
 scalar UUID
+
+input UnassignAmbassadorJobInput {
+  clientMutationId: ID = null
+  ambassadorJobId: ID!
+}
 
 input UpdateAmbassadorGroupInput {
   clientMutationId: ID = null
@@ -4275,6 +4547,14 @@ input UpdateAttendanceTypeInput {
   id: ID!
 }
 
+input UpdateBillingEntityInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  stateId: ID = null
+  id: ID!
+}
+
 input UpdateClientInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -4351,6 +4631,8 @@ input UpdateEventInput {
   requestId: ID = null
   retailerId: ID = null
   distributorId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   rmmAsignedId: ID = null
   timezoneId: ID = null
   date: String!
@@ -4377,6 +4659,12 @@ input UpdateEventTypeInput {
   name: String!
   isDefault: Boolean! = false
   id: ID!
+}
+
+input UpdateEventWithRequestInput {
+  clientMutationId: ID = null
+  event: UpdateEventInput!
+  request: UpdateRequestInput!
 }
 
 input UpdateGroupTypeInput {
@@ -4537,13 +4825,20 @@ input UpdateRecapInput {
   name: String!
   eventId: ID!
   files: [RecapFileInput!]!
+  fillingForAmbassador: Boolean = null
+  late: Boolean = null
+  incomplete: Boolean = null
   productsSold: Int = null
   totalCansSold: Int = null
   totalPacksSold: Int = null
   totalEarnings: Float = null
   accountSpendAmount: Float = null
+  trafficDescription: String = null
+  competitivePresence: String = null
   jobId: ID = null
   retailerId: ID = null
+  locationId: ID = null
+  stateId: ID = null
   ambassadorId: ID = null
   consumerEngagements: ConsumerEngagementsInput = null
   productSamples: [ProductSampleInput!] = null
@@ -4566,10 +4861,16 @@ input UpdateRequestInput {
   coordinates: [Float!]!
   timezoneId: ID!
   requestTypeId: ID!
-  distributorId: ID!
-  retailerId: ID!
+  distributorId: ID = null
+  retailerId: ID = null
+  billingEntityId: ID = null
+  locationId: ID = null
+  stateId: ID = null
+  storeManagerId: ID = null
   rmmAsignedId: ID = null
   requestorEmail: String = null
+  reviewed: Boolean = null
+  storeNumber: String = null
   storeManagerName: String!
   storeManagerPhone: String!
   details: [CreateRequestDetailInput!]!
@@ -4608,6 +4909,7 @@ input UpdateRetailerInput {
   address: String!
   storeContact: String!
   locationId: ID!
+  isNational: Boolean! = false
   id: ID!
 }
 
@@ -4685,6 +4987,7 @@ input UpsertAmbassadorProfileInput {
   clientMutationId: ID = null
   ambassadorId: ID = null
   ambassadorUuid: ID = null
+  email: String = null
   firstName: String = null
   lastName: String = null
   locationId: ID = null
@@ -4708,6 +5011,12 @@ type UpsertAmbassadorProfileResponse {
   message: String!
   clientMutationId: ID
   profile: AmbassadorProfile
+}
+
+input UpsertRequestReviewedInput {
+  clientMutationId: ID = null
+  id: ID!
+  reviewed: Boolean!
 }
 
 input UserFiltersInput {
@@ -4759,8 +5068,8 @@ type UserType {
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
   lastName: String
-  email: String!
   firstName: String
+  email: String!
   id: ID!
   archived: Boolean!
   verified: Boolean!

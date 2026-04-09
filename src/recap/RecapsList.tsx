@@ -218,10 +218,12 @@ RecapsTableContentProps) => {
 // ======================================================
 type RecapsListInnerProps = {
   filters?: {
+    tenantId?: string;
     eventId?: string;
     eventAddress?: string;
     stateId?: string;
     eventDate?: string;
+    rmmAsignedId?: string;
   };
   emptyMessage: string;
   onRefreshReady?: (refreshFn: () => void) => void;
@@ -252,6 +254,14 @@ const RecapsListInner = ({
     return value && value.length > 0 ? value : null;
   }, [searchParams]);
 
+  const recapFilters = useMemo(
+    () => ({
+      ...filters,
+      approved: true,
+    }),
+    [filters],
+  );
+
   const {
     queryRef,
     displayPage,
@@ -265,7 +275,7 @@ const RecapsListInner = ({
   } = useRelayPagination<RecapsQueryType>({
     query: RecapsQuery,
     pageSize: PAGE_SIZE,
-    initialVariables: { filters },
+    initialVariables: { filters: recapFilters },
     initialPage: initialPageFromUrl,
     initialAfter: initialAfterFromUrl,
   });
@@ -536,20 +546,27 @@ const RecapList = () => {
     [statesData],
   );
 
-  const filters =
-    selectedEventId ||
-    eventAddress ||
-    selectedStateId ||
-    selectedEventDate ||
-    selectedRmmId
-      ? {
-          eventId: selectedEventId || undefined,
-          eventAddress: eventAddress || undefined,
-          stateId: selectedStateId || undefined,
-          eventDate: selectedEventDate || undefined,
-          rmmAsignedId: selectedRmmId || undefined,
-        }
-      : undefined;
+  const filters = useMemo(() => {
+    if (!tenantId) {
+      return undefined;
+    }
+
+    return {
+      tenantId,
+      eventId: selectedEventId || undefined,
+      eventAddress: eventAddress || undefined,
+      stateId: selectedStateId || undefined,
+      eventDate: selectedEventDate || undefined,
+      rmmAsignedId: selectedRmmId || undefined,
+    };
+  }, [
+    tenantId,
+    selectedEventId,
+    eventAddress,
+    selectedStateId,
+    selectedEventDate,
+    selectedRmmId,
+  ]);
 
   const emptyMessage =
     selectedEventId || selectedStateId || selectedEventDate
@@ -678,12 +695,18 @@ const RecapList = () => {
           {/* =========================
           TABLE
       ========================= */}
-          <RecapsListInner
-            key={`${selectedEventId}::${selectedStateId}::${eventAddress}::${selectedEventDate}-${selectedRmmId}`} // Reset inner state when filters change
-            filters={filters}
-            emptyMessage={emptyMessage}
-            onRefreshReady={(fn) => (refreshRef.current = fn)}
-          />
+          {tenantId ? (
+            <RecapsListInner
+              key={`${tenantId}::${selectedEventId}::${selectedStateId}::${eventAddress}::${selectedEventDate}-${selectedRmmId}`} // Reset inner state when filters change
+              filters={filters}
+              emptyMessage={emptyMessage}
+              onRefreshReady={(fn) => (refreshRef.current = fn)}
+            />
+          ) : (
+            <div className="alert alert-warning">
+              <span>Tenant ID is required to load recaps.</span>
+            </div>
+          )}
         </div>
       </div>
     </Layout>

@@ -7,9 +7,15 @@ interface Props {
   control: Control<{ username: string; password: string }>;
   handleSubmit: UseFormHandleSubmit<{ username: string; password: string }>;
   onSubmit: (data: { username: string; password: string }) => void;
+  loading?: boolean;
 }
 
-export default function AuthForm({ control, handleSubmit, onSubmit }: Props) {
+export default function AuthForm({
+  control,
+  handleSubmit,
+  onSubmit,
+  loading = false,
+}: Props) {
   return (
     <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
       <SocialAuthButtons />
@@ -59,6 +65,7 @@ export default function AuthForm({ control, handleSubmit, onSubmit }: Props) {
       <LoadingButton
         type="submit"
         text="Login"
+        loading={loading}
         fullWidth={true}
         onClick={handleSubmit(onSubmit)}
       />

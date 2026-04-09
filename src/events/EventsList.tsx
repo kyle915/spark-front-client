@@ -18,7 +18,11 @@ import {
   useRelayPagination,
   type PageLoadedPayload,
 } from "@/hooks/useRelayPagination";
-import { useMutation, usePreloadedQuery } from "react-relay/hooks";
+import {
+  useLazyLoadQuery,
+  useMutation,
+  usePreloadedQuery,
+} from "react-relay/hooks";
 import type { PreloadedQuery } from "react-relay";
 import type { EventRow } from "../types/columnsTypes";
 import { eventColumns } from "@utils/columns";
@@ -28,6 +32,10 @@ import CatalogsProvider from "@shared/CatalogsProvider";
 import FormAutocomplete from "@shared/FormAutocomplete";
 import FormDatePicker from "@/shared/FormDatePicker";
 import { useAuthStore } from "@/store/authStore";
+
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@/api/queries/__generated__/RmmClientsQuery.graphql";
+
 import { SuspendEventMutation } from "@api/mutations/SuspendEventMutation";
 import type { SuspendEventMutation as SuspendEventMutationType } from "@api/mutations/__generated__/SuspendEventMutation.graphql";
 import { ArchiveEventMutation } from "@api/mutations/ArchiveEventMutation";
@@ -564,17 +572,18 @@ type EventsListProps = {
   };
 };
 
+type EventsListFiltersForm = {
+  eventType: string;
+  status: EventStatusFilterEnum | "";
+  request: string;
+  date: string;
+  retailerStateId: string;
+  distributorStateId: string;
+  rmmAsigned: string;
+};
+
 const EventsList = ({ fixedFilters }: EventsListProps) => {
   const { tenantId } = useAuthStore();
-
-  type EventsListFiltersForm = {
-    eventType: string;
-    status: EventStatusFilterEnum | "";
-    request: string;
-    date: string;
-    retailerStateId: string;
-    distributorStateId: string;
-  };
 
   const { control, watch, reset } = useForm<EventsListFiltersForm>({
     defaultValues: {
@@ -585,8 +594,10 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
       date: "",
       retailerStateId: "",
       distributorStateId: "",
+      rmmAsigned: "",
     },
   });
+
   // const selectedTenant = watch("tenant");
   const selectedEventType = watch("eventType");
   const selectedStatus = watch("status");
@@ -594,6 +605,7 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
   const selectedDate = watch("date");
   const selectedRetailerStateId = watch("retailerStateId");
   const selectedDistributorStateId = watch("distributorStateId");
+  const selectedRmmClient = watch("rmmAsigned");
   const [retailerStateOptions, setRetailerStateOptions] = useState<
     StateOption[]
   >([]);
@@ -607,6 +619,13 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
     useState(false);
   const retailerStateRequestIdRef = useRef(0);
   const distributorStateRequestIdRef = useRef(0);
+
+  // rmm clients query (for filters)
+  const rmmClientsData = useLazyLoadQuery<RmmClientsQueryType>(
+    RmmClientsQuery,
+    { tenantId: tenantId ?? "" },
+    { fetchPolicy: "store-and-network" },
+  );
 
   useEffect(() => {
     const requestId = ++retailerStateRequestIdRef.current;
@@ -684,6 +703,7 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
     retailerStateId: selectedRetailerStateId || undefined,
     distributorStateId: selectedDistributorStateId || undefined,
     edited: fixedFilters?.edited || undefined,
+    rmmAsigned: selectedRmmClient || undefined,
   };
 
   const catalogFilters = undefined;
@@ -834,11 +854,22 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
                   label="Filter by Date"
                   placeholder="Select date"
                 />
+
+                <FormAutocomplete
+                  control={control}
+                  name="rmmAsigned"
+                  label="RMM Client"
+                  options={rmmClientsData.rmmClients.map((c) => ({
+                    label: `${c.firstName} ${c.lastName}`,
+                    value: c.id,
+                  }))}
+                  placeholder="Search client..."
+                />
               </div>
             </div>
 
             <EventsListInner
-              key={`${selectedEventType}-${selectedStatus}-${selectedRequest}-${selectedRetailerStateId}-${selectedDistributorStateId}-${selectedDate}`}
+              key={`${selectedEventType}-${selectedStatus}-${selectedRequest}-${selectedRetailerStateId}-${selectedDistributorStateId}-${selectedDate}-${selectedRmmClient}`}
               filters={filters}
               isArchivedView={isArchivedView}
             />

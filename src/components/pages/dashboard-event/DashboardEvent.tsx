@@ -1,11 +1,12 @@
 import { useState } from "react";
+import { useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { MetricCard } from "@/components/cards/metric-card";
 import FiltersPanel, {
   type DashboardFilters,
 } from "@/components/filters/FiltersPanel";
 import ChartCard from "@/components/charts/ChartCard";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Sparkles } from "lucide-react";
 
 import DashboardHeader from "../dashboard/DashboardHeader";
 import MonthlyTrendsChart from "../dashboard-event/MonthlyTrendsSection";
@@ -17,9 +18,10 @@ import RecentEventsCarousel from "../dashboard-event/RecentEventsCarousel";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { AiInsightsSection } from "@/components/ai-insights/AiInsightsSection";
 
-import { aiInsightsMock } from "@/data/dashboard-events/aiInsightsMock";
-import { regionalMarketMock } from "@/data/dashboard-events/regionalMarketMock";
 import { useAuthStore } from "@/store/authStore";
+import { useAlertStore } from "@/store/alertStore";
+import { GenerateInsightsMutation } from "@/api/mutations/GenerateInsightsMutation";
+import type { GenerateInsightsMutationType } from "@/api/mutations/GenerateInsightsMutation";
 
 /* =========================
    Helpers
@@ -43,14 +45,21 @@ const formatDelta = (current?: number | null, previous?: number | null) => {
   return `${sign}${diff.toFixed(1)}%`;
 };
 
+type DashboardGoalProgress = {
+  name?: string | null;
+  target?: number | null;
+  current?: number | null;
+};
+
 /* =========================
    Dashboard
 ========================= */
 export default function DashboardIndex() {
-  const { tenantId } = useAuthStore();
+  const { tenantId, tenantSlug } = useAuthStore();
+  const showAlert = useAlertStore((state) => state.showAlert);
 
   const [filters, setFilters] = useState<DashboardFilters>({
-    distributorId: null,
+    distributorIds: [],
     rmmAsignedId: null,
     quarter: null,
     startDate: null,
@@ -58,7 +67,9 @@ export default function DashboardIndex() {
   });
 
   const [fetchKey, setFetchKey] = useState(0);
-
+  const [aiInsightsRefreshKey, setAiInsightsRefreshKey] = useState(0);
+  const [commitGenerateInsights, isGeneratingInsights] =
+    useMutation<GenerateInsightsMutationType>(GenerateInsightsMutation);
   const { dashboard } = useEventDashboardData(
     tenantId || "",
     filters,
@@ -82,7 +93,7 @@ export default function DashboardIndex() {
       ),
     },
     {
-      key: "consumersSampled",
+      key: "totalConsumersSampled",
       title: "Consumers Sampled",
       value: formatNumber(metrics.consumersSampled),
       change: formatDelta(
@@ -120,7 +131,12 @@ export default function DashboardIndex() {
       value: formatNumber(globalKpis?.singleCansSold),
       change: "0%",
     },
-  ];
+  ].filter((metric) => {
+    if (tenantSlug?.toLowerCase() !== "jeeter") return true;
+    return (
+      metric.key !== "multiPacksSold" && metric.key !== "singleCansSold"
+    );
+  });
 
   const monthlyTrends = dashboard.monthlyTrends.dataPoints.map((point) => ({
     month: point.month,
@@ -137,6 +153,49 @@ export default function DashboardIndex() {
     intent: event.intentRate,
     status: event.status,
   }));
+
+  const goalsProgress = (
+    (dashboard as { goalsProgress?: DashboardGoalProgress[] }).goalsProgress ??
+    []
+  ).map((goal) => ({
+    label: goal.name ?? "Goal",
+    current: goal.current ?? 0,
+    target: goal.target ?? 0,
+  }));
+
+  const handleRegenerateInsights = () => {
+    if (!tenantId) {
+      showAlert("Select a tenant first to generate insights.", "warning");
+      return;
+    }
+
+    commitGenerateInsights({
+      variables: {
+        tenantId,
+        fromDate: filters.startDate,
+        toDate: filters.endDate,
+        enqueue: true,
+      },
+      onCompleted: (response) => {
+        if (response.generateInsights?.success) {
+          const enqueued = response.generateInsights.enqueued;
+          showAlert(
+            enqueued
+              ? "Insights regeneration queued successfully."
+              : "Insights regenerated successfully.",
+            "success",
+          );
+          setAiInsightsRefreshKey((k) => k + 1);
+          return;
+        }
+
+        showAlert("Unable to regenerate AI insights.", "error");
+      },
+      onError: (error) => {
+        showAlert(`Error regenerating AI insights: ${error.message}`, "error");
+      },
+    });
+  };
 
   return (
     <Layout>
@@ -155,7 +214,7 @@ export default function DashboardIndex() {
         </div>
 
         {/* METRICS */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3  gap-6">
           {metricItems.map((metric) => (
             <MetricCard
               key={metric.key}
@@ -188,19 +247,22 @@ export default function DashboardIndex() {
 
         <section className="w-full grid grid-cols-3 gap-6">
           <div className="col-span-1">
-            <GoalsProgressSection
-              goals={[
-                { label: "Events Target", current: 0, target: 200 },
-                { label: "Consumer Sampling", current: 0, target: 25000 },
-                { label: "Brand Awareness", current: 0, target: 50 },
-                { label: "Purchase Intent", current: 0, target: 75 },
-                { label: "Female Participation", current: 0, target: 65 },
-              ]}
-            />
+            {filters.rmmAsignedId ? (
+              <GoalsProgressSection goals={goalsProgress} />
+            ) : (
+              <div className="card bg-base-100 shadow-sm border border-base-300">
+                <div className="card-body">
+                  <h3 className="card-title text-base">Goals</h3>
+                  <p className="text-sm text-base-content/70">
+                    Select an RMM first to view goals.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="col-span-2">
-            <RegionalMarketPerformance data={regionalMarketMock} />
+            <RegionalMarketPerformance data={[]} />
           </div>
         </section>
 
@@ -209,7 +271,31 @@ export default function DashboardIndex() {
         </section>
 
         {/* AI INSIGHTS */}
-        <AiInsightsSection insights={aiInsightsMock} isLoading={false} />
+        <section className="w-full space-y-4">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="btn btn-primary btn-sm gap-2"
+              onClick={handleRegenerateInsights}
+              disabled={isGeneratingInsights || !tenantId}
+            >
+              {isGeneratingInsights ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <Sparkles size={16} />
+              )}
+              {isGeneratingInsights
+                ? "Regenerating Insights..."
+                : "Regenerate AI-Powered Insights"}
+            </button>
+          </div>
+
+          <AiInsightsSection
+            key={aiInsightsRefreshKey}
+            insights={[]}
+            isLoading={false}
+          />
+        </section>
       </main>
     </Layout>
   );

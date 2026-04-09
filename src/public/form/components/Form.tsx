@@ -12,6 +12,11 @@ interface SparkFormProps {
     id: string;
     name: string;
   }[];
+  billingEntities: {
+    id: string;
+    name: string;
+  }[];
+  onBillingEntitySearch: (value: string) => void;
   states: {
     id: string;
     name: string;
@@ -45,11 +50,18 @@ interface SparkFormProps {
       name: string;
     };
   }[];
+  productsLoading?: boolean;
+  productsHasMore?: boolean;
+  productsTotalCount?: number;
+  onLoadMoreProducts?: () => void;
+  selectedProductTypeId?: string | null;
+  onProductTypeChange?: (productTypeId: string | null) => void;
   productTypes: {
     id: string;
     name: string;
   }[];
   tenantId: string;
+  requestUrlName: string;
   timeZones: {
     id: string;
     name: string;
@@ -61,16 +73,25 @@ interface SparkFormProps {
 export default function SparkForm(props: SparkFormProps) {
   const {
     requestTypes,
+    billingEntities,
+    onBillingEntitySearch,
     states,
     onStateSearch,
     onStateChange,
     onRetailerSearch,
     onNationalRetailerChange,
     products,
+    productsLoading = false,
+    productsHasMore = false,
+    productsTotalCount = 0,
+    onLoadMoreProducts,
+    selectedProductTypeId = null,
+    onProductTypeChange,
     productTypes,
     distributors,
     retailers,
     tenantId,
+    requestUrlName,
     timeZones,
   } = props;
 
@@ -97,6 +118,9 @@ export default function SparkForm(props: SparkFormProps) {
           control={control}
           timeZones={timeZones}
           setValue={setValue}
+          requestUrlName={requestUrlName}
+          billingEntities={billingEntities}
+          onBillingEntitySearch={onBillingEntitySearch}
         />
       ),
     },
@@ -108,6 +132,12 @@ export default function SparkForm(props: SparkFormProps) {
         <Step2Products
           control={control}
           products={products}
+          productsLoading={productsLoading}
+          productsHasMore={productsHasMore}
+          productsTotalCount={productsTotalCount}
+          onLoadMoreProducts={onLoadMoreProducts}
+          selectedProductTypeId={selectedProductTypeId}
+          onProductTypeChange={onProductTypeChange}
           productTypes={productTypes}
         />
       ),
@@ -128,6 +158,7 @@ export default function SparkForm(props: SparkFormProps) {
           onNationalRetailerChange={onNationalRetailerChange}
           distributors={distributors}
           retailers={retailers}
+          requestUrlName={requestUrlName}
         />
       ),
     },
@@ -135,7 +166,14 @@ export default function SparkForm(props: SparkFormProps) {
       title: "Extra Details",
       description: "Optional details",
       validate: () => trigger(stepFields.step4),
-      content: <Step4Details control={control} values={values} />,
+      content: (
+        <Step4Details
+          control={control}
+          setValue={setValue}
+          requestUrlName={requestUrlName}
+          values={values}
+        />
+      ),
     },
   ];
 

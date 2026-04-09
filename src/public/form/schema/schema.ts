@@ -4,6 +4,7 @@ export const sparkFormSchema = yup.object({
   isNationalRetailer: yup.boolean().default(true),
   distributorId: yup.string().optional().nullable(),
   retailerId: yup.string().optional().nullable(),
+  billingEntityId: yup.string().optional().nullable(),
   stateId: yup.string().optional().nullable(),
   address: yup.string().required("Address is required"),
   latitude: yup

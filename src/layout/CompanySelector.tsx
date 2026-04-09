@@ -13,6 +13,7 @@ type Company = {
   name: string;
   logo?: string | null;
   requestUrlName?: string | null;
+  tenantSlug?: string | null;
 };
 
 type TenantEdge = TenantQueryType["response"]["tenants"]["edges"][number];
@@ -51,6 +52,7 @@ export default function CompanySelector() {
               name: tenant.name,
               logo: tenant.image,
               requestUrlName: tenant.requestUrlName,
+              tenantSlug: tenant.tenantSlug,
             };
           }) ?? [];
 
@@ -62,6 +64,7 @@ export default function CompanySelector() {
             tenantId: company.id,
             logo: company.logo,
             requestUrlName: company.requestUrlName,
+            tenantSlug: company.tenantSlug,
           });
 
           navigate(from, { replace: true });
@@ -131,6 +134,7 @@ export default function CompanySelector() {
                 tenantId: company.id,
                 logo: company.logo,
                 requestUrlName: company.requestUrlName,
+                tenantSlug: company.tenantSlug,
               });
               navigate(`/dashboard/${company.uuid}`);
             }}
