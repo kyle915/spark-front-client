@@ -749,6 +749,47 @@ type BestRecapMonth {
   consumersCount: Int!
 }
 
+"""
+BillingEntity(id, uuid, name, state, tenant, created_by, updated_by, created_at, updated_at)
+"""
+type BillingEntity implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  name: String!
+  state: State
+  tenantId: ID!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type BillingEntityCountableConnection {
+  pageInfo: PageInfo!
+  edges: [BillingEntityCountableEdge!]!
+  totalCount: Int!
+}
+
+type BillingEntityCountableEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: BillingEntity!
+}
+
+type BillingEntityDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  billingEntity: BillingEntity
+}
+
+input BillingEntityFiltersInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  tenantUuid: ID = null
+}
+
 input ChangeUserPasswordInput {
   clientMutationId: ID = null
   id: ID = null
@@ -997,22 +1038,22 @@ type ConsumerEngagements implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
   uuid: String!
-  totalConsumer: Int!
-  firstTimeConsumers: Int!
-  brandAwareConsumers: Int!
-  willingToPurchaseConsumers: Int!
-  notWillingConsumers: Int!
+  totalConsumer: Int
+  firstTimeConsumers: Int
+  brandAwareConsumers: Int
+  willingToPurchaseConsumers: Int
+  notWillingConsumers: Int
   createdAt: String!
   updatedAt: String!
 }
 
 input ConsumerEngagementsInput {
   clientMutationId: ID = null
-  totalConsumer: Int!
-  firstTimeConsumers: Int!
-  brandAwareConsumers: Int!
-  willingToPurchaseConsumers: Int!
-  notWillingConsumers: Int!
+  totalConsumer: Int = null
+  firstTimeConsumers: Int = null
+  brandAwareConsumers: Int = null
+  willingToPurchaseConsumers: Int = null
+  notWillingConsumers: Int = null
 }
 
 """
@@ -1146,12 +1187,14 @@ input CreateAmbassadorWithUserInput {
   clientMutationId: ID = null
   firstName: String!
   email: String!
-  password1: String!
-  password2: String!
+  password1: String = null
+  password2: String = null
   address: String = null
   phone: String = null
   aboutMe: String = null
   coordinates: [Float!] = null
+  lastName: String = null
+  locationId: ID = null
   isActive: Boolean = null
 }
 
@@ -1181,6 +1224,13 @@ input CreateAttendanceTypeInput {
   tenantId: ID = null
   name: String!
   slug: String = null
+}
+
+input CreateBillingEntityInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  stateId: ID = null
 }
 
 input CreateClientInput {
@@ -1278,6 +1328,12 @@ input CreateEventTypeInput {
   tenantId: ID = null
   name: String!
   isDefault: Boolean! = false
+}
+
+input CreateEventWithRequestInput {
+  clientMutationId: ID = null
+  event: CreateEventInput!
+  request: CreateRequestInput!
 }
 
 input CreateGroupTypeInput {
@@ -1483,6 +1539,7 @@ input CreateRequestInput {
   requestTypeId: ID!
   distributorId: ID = null
   retailerId: ID = null
+  billingEntityId: ID = null
   locationId: ID = null
   stateId: ID = null
   storeManagerId: ID = null
@@ -1544,6 +1601,7 @@ input CreateRequestWithDependenciesInput {
   requestTypeId: ID!
   distributorId: ID = null
   retailerId: ID = null
+  billingEntityId: ID = null
   locationId: ID = null
   stateId: ID = null
   requestorEmail: String = null
@@ -2064,6 +2122,14 @@ input EventTypeFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
   tenantUuid: ID = null
+}
+
+type EventWithRequestDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  event: Event
+  request: Request
 }
 
 "\n     Errors messages and codes mapped to\n    fields or non fields errors.\n    Example:\n    {\n        field_name: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ],\n        other_field: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ],\n        nonFieldErrors: [\n            {\n                \"message\": \"error message\",\n                \"code\": \"error_code\"\n            }\n        ]\n    }\n    "
@@ -2717,6 +2783,8 @@ type MonthlyPerformanceTrend {
 
 type Mutation {
   createEvent(input: CreateEventInput!): EventDetailResponse!
+  createEventWithRequest(input: CreateEventWithRequestInput!): EventWithRequestDetailResponse!
+  updateEventWithRequest(input: UpdateEventWithRequestInput!): EventWithRequestDetailResponse!
   updateEvent(input: UpdateEventInput!): EventDetailResponse!
   suspendEvent(input: SuspendEventInput!): EventDetailResponse!
   archiveEvent(input: ArchiveEventInput!): EventDetailResponse!
@@ -2742,6 +2810,8 @@ type Mutation {
   deleteProduct(input: DeleteProductInput!): ProductDetailResponse!
   createRequestType(input: CreateRequestTypeInput!): RequestTypeDetailResponse!
   updateRequestType(input: UpdateRequestTypeInput!): RequestTypeDetailResponse!
+  createBillingEntity(input: CreateBillingEntityInput!): BillingEntityDetailResponse!
+  updateBillingEntity(input: UpdateBillingEntityInput!): BillingEntityDetailResponse!
   createRequestStatus(input: CreateRequestStatusInput!): RequestStatusDetailResponse!
   updateRequestStatus(input: UpdateRequestStatusInput!): RequestStatusDetailResponse!
   requestBatchTemplateDownloadUrl(input: RequestBatchTemplateInput!): RequestBatchTemplateResponse!
@@ -2845,6 +2915,7 @@ type Mutation {
   acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
   disableAmbassador(input: DisableAmbassadorInput!): DisableAmbassadorResponse!
+  regenerateAmbassadorPasswords(input: RegenerateAmbassadorPasswordsInput!): RegenerateAmbassadorPasswordsResponse!
   createAmbassador(input: CreateAmbassadorInput!): CreateAmbassadorResponse!
   updateAmbassador(input: UpdateAmbassadorInput!): UpdateAmbassadorResponse!
   upsertAmbassadorProfile(input: UpsertAmbassadorProfileInput!): UpsertAmbassadorProfileResponse!
@@ -3017,8 +3088,8 @@ input ProductFiltersInput {
 
 input ProductSampleInput {
   clientMutationId: ID = null
-  productId: ID!
-  quantity: Int!
+  productId: ID = null
+  quantity: Int = null
 }
 
 """
@@ -3115,6 +3186,9 @@ type Query {
   publicRequestType(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): RequestTypeCountableConnection!
   requestTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestTypeFiltersInput = null): RequestTypeCountableConnection!
   requestType(id: ID = null, uuid: ID = null): RequestType
+  publicBillingEntities(requestUrlName: String!, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): BillingEntityCountableConnection!
+  billingEntities(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: BillingEntityFiltersInput = null): BillingEntityCountableConnection!
+  billingEntity(id: ID = null, uuid: ID = null): BillingEntity
   requestStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: RequestStatusFiltersInput = null): RequestStatusCountableConnection!
   requestStatus(id: ID = null, uuid: ID = null): RequestStatus
   requests(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestFiltersInput = null): RequestCountableConnection!
@@ -3141,7 +3215,7 @@ type Query {
   sentInvitations(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorInvitationFiltersInput = null): AmbassadorInvitationTypeCountableConnection!
   availableAmbassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
   activeAmbassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ActiveAmbassadorFiltersInput = null): AmbassadorCountableConnection!
-  ambassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
+  ambassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
   ambassador(id: ID = null, uuid: ID = null): Ambassador
   ambassadorProfile(id: ID = null, uuid: ID = null, userId: ID = null): AmbassadorProfile
   ambassadorReviews(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorReviewFiltersInput = null): AmbassadorReviewTypeCountableConnection!
@@ -3149,7 +3223,7 @@ type Query {
   ambassadorNotes(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorNoteFiltersInput = null): AmbassadorNoteTypeCountableConnection!
   ambassadorNote(noteId: ID!): AmbassadorNoteType
   skills(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: SkillFiltersInput = null): SkillTypeCountableConnection!
-  skill(skillId: ID!): SkillType
+  skill(skillId: ID = null, skillUuid: ID = null): SkillType
   ambassadorSkills(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorSkillFiltersInput = null): AmbassadorSkillTypeCountableConnection!
   ambassadorSkill(ambassadorSkillId: ID!): AmbassadorSkillType
   attendanceTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): AttendanceTypeCountableConnection!
@@ -3549,6 +3623,7 @@ input RecapFiltersInput {
   eventId: ID = null
   eventType: ID = null
   rmmAsignedId: ID = null
+  ambassadorId: ID = null
   retailerId: ID = null
   locationId: ID = null
   stateId: ID = null
@@ -3556,6 +3631,7 @@ input RecapFiltersInput {
   startDate: String = null
   endDate: String = null
   eventAddress: String = null
+  approved: Boolean = null
   edited: Boolean = null
 }
 
@@ -3629,6 +3705,25 @@ type RefreshTokenType {
   isExpired: Boolean!
 }
 
+type RegenerateAmbassadorPasswordResult {
+  ambassadorId: ID
+  email: String
+  success: Boolean!
+  message: String!
+}
+
+input RegenerateAmbassadorPasswordsInput {
+  clientMutationId: ID = null
+  ambassadorIds: [ID!]!
+}
+
+type RegenerateAmbassadorPasswordsResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  results: [RegenerateAmbassadorPasswordResult!]
+}
+
 type RegisterResponse {
   success: Boolean!
   message: String!
@@ -3644,7 +3739,7 @@ input RemoveAmbassadorsFromGroupInput {
 }
 
 """
-Request(id, uuid, name, date, start_time, end_time, address, decline_reason, requestor_email, notes, reviewed, store_number, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, rmm_asigned, location, state, created_by, updated_by, approved_by, created_at, updated_at)
+Request(id, uuid, name, date, start_time, end_time, address, decline_reason, requestor_email, notes, reviewed, store_number, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, billing_entity, rmm_asigned, location, state, created_by, updated_by, approved_by, created_at, updated_at)
 """
 type Request implements Node {
   """The Globally Unique ID of this object"""
@@ -3668,6 +3763,7 @@ type Request implements Node {
   storeManagerPhone: String
   timezone: TimeZone
   client: Client
+  billingEntity: BillingEntity
   distributor: Distributor
   retailer: Retailer
   location: Location
@@ -3751,6 +3847,7 @@ input RequestFiltersInput {
   rmmAsigned: ID = null
   statusId: ID = null
   clientId: ID = null
+  billingEntityId: ID = null
   retailerId: ID = null
   distributorId: ID = null
   locationId: ID = null
@@ -4018,9 +4115,9 @@ type SalesPerformance implements Node {
 
 input SalesPerformanceInput {
   clientMutationId: ID = null
-  productId: ID!
-  typeOfGoodId: ID!
-  price: Float!
+  productId: ID = null
+  typeOfGoodId: ID = null
+  price: Float = null
 }
 
 input SetGoalsInput {
@@ -4450,6 +4547,14 @@ input UpdateAttendanceTypeInput {
   id: ID!
 }
 
+input UpdateBillingEntityInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  stateId: ID = null
+  id: ID!
+}
+
 input UpdateClientInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -4554,6 +4659,12 @@ input UpdateEventTypeInput {
   name: String!
   isDefault: Boolean! = false
   id: ID!
+}
+
+input UpdateEventWithRequestInput {
+  clientMutationId: ID = null
+  event: UpdateEventInput!
+  request: UpdateRequestInput!
 }
 
 input UpdateGroupTypeInput {
@@ -4752,8 +4863,10 @@ input UpdateRequestInput {
   requestTypeId: ID!
   distributorId: ID = null
   retailerId: ID = null
+  billingEntityId: ID = null
   locationId: ID = null
   stateId: ID = null
+  storeManagerId: ID = null
   rmmAsignedId: ID = null
   requestorEmail: String = null
   reviewed: Boolean = null
@@ -4874,6 +4987,7 @@ input UpsertAmbassadorProfileInput {
   clientMutationId: ID = null
   ambassadorId: ID = null
   ambassadorUuid: ID = null
+  email: String = null
   firstName: String = null
   lastName: String = null
   locationId: ID = null
@@ -4950,13 +5064,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
-  id: ID!
-  lastName: String
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
+  lastName: String
   firstName: String
   email: String!
+  id: ID!
   archived: Boolean!
   verified: Boolean!
 }

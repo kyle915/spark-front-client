@@ -116,6 +116,7 @@ const CreateRequestForm = ({
     [statesData.states?.edges],
   );
   const isJeeterTenant = tenantSlug?.toLowerCase() === "jeeter";
+  const isCarblissTenant = tenantSlug?.toLowerCase() === "carbliss";
 
   const californiaState = useMemo(
     () =>
@@ -268,7 +269,13 @@ const CreateRequestForm = ({
     const dateForName = /^\d{4}-\d{2}-\d{2}$/.test(dateForNameSource)
       ? `${dateForNameSource.slice(5, 7)}/${dateForNameSource.slice(8, 10)}/${dateForNameSource.slice(0, 4)}`
       : dateForNameSource;
-    const requestName = `${(formData.name ?? "").trim()} - ${(formData.retailerName ?? "").trim()} - ${dateForName}`.trim();
+    const requestName = [
+      (formData.name ?? "").trim(),
+      (formData.retailerName ?? "").trim(),
+      dateForName,
+    ]
+      .filter(Boolean)
+      .join("-");
 
     commitCreateRequest({
       variables: {
@@ -297,6 +304,9 @@ const CreateRequestForm = ({
           requestTypeId: formData.requestTypeId!,
           distributorId: isJeeterTenant ? null : (formData.distributorId ?? null),
           retailerId: formData.retailerId ?? null,
+          ...(isCarblissTenant
+            ? { billingEntityId: formData.billingEntityId ?? null }
+            : {}),
           locationId: formData.entitiesLocationId,
           stateId: formData.stateId,
           storeManagerId: formData.storeManagerId ?? null,
@@ -398,6 +408,7 @@ const CreateRequestForm = ({
           disableStateSelect={isJeeterTenant}
           hideTableNeededFields={isJeeterTenant}
           hideDistributorFields={isJeeterTenant}
+          showBillingEntityField={isCarblissTenant}
           // distributors={distributors}
           requestStoreManagers={requestStoreManagers}
           enableContactSection={true}

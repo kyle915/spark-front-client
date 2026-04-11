@@ -1,4 +1,5 @@
 export * from "./usePublicClients";
+export * from "./usePublicBillingEntities";
 export * from "./usePublicDistributors";
 export * from "./usePublicLocations";
 export * from "./usePublicStates";

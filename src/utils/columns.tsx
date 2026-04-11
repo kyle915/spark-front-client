@@ -14,11 +14,17 @@ import type {
 } from "@/types/columnsTypes";
 import { formatDate, formatTime } from "@/utils";
 
-const getRecapPrimaryLocation = (row: RecapRow) =>
-  row.event?.retailer?.location ??
-  row.event?.distributor?.location ??
-  row.event?.request?.retailer?.location ??
-  row.event?.request?.distributor?.location;
+const getRecapState = (row: RecapRow) =>
+  row.state?.name ??
+  row.event?.state?.name ??
+  row.event?.request?.state?.name ??
+  "-";
+
+const getRecapLocation = (row: RecapRow) =>
+  row.location?.name ??
+  row.event?.location?.name ??
+  row.event?.request?.location?.name ??
+  "-";
 
 export const requestColumns: Column<RequestRow>[] = [
   {
@@ -55,11 +61,30 @@ export const requestColumns: Column<RequestRow>[] = [
     ),
   },
   {
-    key: "distributor",
-    label: "Distributor",
+    key: "address",
+    label: "Address",
     render: (_v, row) => (
-      <span className="opacity-70">{row.distributor?.name ?? "-"}</span>
+      <div className="group relative max-w-[220px]">
+        <span className="block truncate">{row.address ?? "-"}</span>
+        {row.address ? (
+          <div className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden w-max max-w-xs rounded-md border border-base-300 bg-base-100 px-3 py-2 text-xs shadow-lg group-hover:block whitespace-normal break-words">
+            {row.address}
+          </div>
+        ) : null}
+      </div>
     ),
+  },
+  {
+    key: "state",
+    label: "State",
+    render: (_v, row) => (
+      <span>{row.state?.name ?? row.retailer?.location?.state?.name ?? "-"}</span>
+    ),
+  },
+  {
+    key: "city",
+    label: "City",
+    render: (_v, row) => <span>{row.location?.name ?? row.retailer?.location?.name ?? "-"}</span>,
   },
   {
     key: "status",
@@ -190,12 +215,12 @@ export const createRecapColumns = (
   {
     key: "retailerState",
     label: "State",
-    render: (_value, row) => getRecapPrimaryLocation(row)?.state?.name ?? "-",
+    render: (_value, row) => getRecapState(row),
   },
   {
     key: "retailerLocation",
-    label: "Location",
-    render: (_value, row) => getRecapPrimaryLocation(row)?.name ?? "-",
+    label: "City",
+    render: (_value, row) => getRecapLocation(row),
   },
   {
     key: "eventAddress",

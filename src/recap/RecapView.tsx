@@ -25,7 +25,11 @@ import {
 } from "lucide-react";
 import { useAlertStore } from "@store/alertStore";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
-//
+
+type Heic2AnyConverter = (options: {
+  blob: Blob;
+  toType?: string;
+}) => Promise<Blob | Blob[]>;
 
 const KpiCardContainer = ({
   title,
@@ -52,16 +56,42 @@ const KpiCardContainer = ({
 const Gallery3DCard = ({
   src,
   alt,
+  debugName,
+  isLoading,
   onClick,
 }: {
   src: string;
   alt: string;
+  debugName?: string;
+  isLoading?: boolean;
   onClick?: () => void;
 }) => (
   <div className="hover-3d cursor-pointer" onClick={onClick}>
     {/* content */}
     <figure className="w-full aspect-4/3 overflow-hidden rounded-2xl bg-base-200">
-      <img src={src} alt={alt} className="w-full h-full object-contain" />
+      {isLoading ? (
+        <div className="flex h-full w-full items-center justify-center bg-base-300/40">
+          <div className="flex flex-col items-center gap-3 text-base-content/60">
+            <span className="loading loading-spinner loading-md" />
+            <span className="text-sm">Loading image...</span>
+          </div>
+        </div>
+      ) : (
+        <img
+          src={src}
+          alt={alt}
+          className="w-full h-full object-contain"
+          onError={(event) => {
+            console.error("Gallery image failed to render", {
+              debugName,
+              src,
+              currentSrc: event.currentTarget.currentSrc,
+              naturalWidth: event.currentTarget.naturalWidth,
+              naturalHeight: event.currentTarget.naturalHeight,
+            });
+          }}
+        />
+      )}
     </figure>
 
     {/* 8 empty divs required for DaisyUI 3D */}
@@ -148,6 +178,20 @@ const RecapView = () => {
     [getFileLabel],
   );
 
+  const isHeicFile = useCallback(
+    (file: (typeof recapFiles)[number]) => {
+      if (!file.file) return false;
+      const extension = file.fileType?.extension?.toLowerCase() ?? "";
+      const label = getFileLabel(file);
+
+      if (extension === "heic" || extension === "heif") return true;
+      if (/\.(heic|heif)(?:$|[?#])/i.test(label)) return true;
+
+      return false;
+    },
+    [getFileLabel],
+  );
+
   // ======================================================
   // CATEGORIES
   // ======================================================
@@ -212,6 +256,112 @@ const RecapView = () => {
     () => categoriesWithImages.flatMap((category) => category.imageFiles),
     [categoriesWithImages],
   );
+  const [imageSources, setImageSources] = useState<Record<string, string>>({});
+  const [convertingImageIds, setConvertingImageIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    const objectUrls: string[] = [];
+
+    const resolveImageSources = async () => {
+      const heicImageIds = flatImages
+        .filter((file) => isHeicFile(file))
+        .map((file) => file.id);
+
+      setConvertingImageIds(heicImageIds);
+
+      const nextSources = await Promise.all(
+        flatImages.map(async (file) => {
+          const fallbackSrc = file.file ?? "";
+          const heicDetected = isHeicFile(file);
+
+          console.info("Recap image resolution started", {
+            fileId: file.id,
+            fileName: file.name,
+            fileUrl: fallbackSrc,
+            fileTypeExtension: file.fileType?.extension ?? null,
+            heicDetected,
+          });
+
+          if (!fallbackSrc || !heicDetected) {
+            return [file.id, fallbackSrc] as const;
+          }
+
+          try {
+            const response = await fetch(fallbackSrc);
+            if (!response.ok) {
+              throw new Error(
+                `Failed to fetch HEIC image: ${response.status} ${response.statusText}`,
+              );
+            }
+
+            const blob = await response.blob();
+            const module = (await import("heic2any")) as {
+              default: Heic2AnyConverter;
+            };
+            const converted = await module.default({
+              blob,
+              toType: "image/jpeg",
+            });
+            const convertedBlob = Array.isArray(converted)
+              ? converted[0]
+              : converted;
+
+            if (!(convertedBlob instanceof Blob)) {
+              throw new Error("Unsupported HEIC conversion result");
+            }
+
+            const objectUrl = URL.createObjectURL(convertedBlob);
+            objectUrls.push(objectUrl);
+
+            console.info("HEIC image converted successfully", {
+              fileId: file.id,
+              fileName: file.name,
+              originalUrl: fallbackSrc,
+              convertedType: convertedBlob.type,
+              convertedSize: convertedBlob.size,
+              objectUrl,
+            });
+
+            return [file.id, objectUrl] as const;
+          } catch (error) {
+            const normalizedError = error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                  stack: error.stack,
+                }
+              : error;
+
+            console.error("Failed to convert HEIC image", {
+              fileId: file.id,
+              fileName: file.name,
+              fileUrl: fallbackSrc,
+              fileTypeExtension: file.fileType?.extension ?? null,
+              error: normalizedError,
+            });
+            return [file.id, fallbackSrc] as const;
+          }
+        }),
+      );
+
+      if (isCancelled) {
+        objectUrls.forEach((url) => URL.revokeObjectURL(url));
+        return;
+      }
+
+      setImageSources(Object.fromEntries(nextSources));
+      setConvertingImageIds([]);
+    };
+
+    void resolveImageSources();
+
+    return () => {
+      isCancelled = true;
+      setConvertingImageIds([]);
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [flatImages, isHeicFile]);
 
   // ======================================================
   // IMAGE CONTROLS
@@ -319,7 +469,7 @@ const RecapView = () => {
     );
   }
 
-  if (!recap) {
+  if (!recap || !recap.approved) {
     return (
       <Layout>
         <div className="alert alert-error">Recap not found.</div>
@@ -345,6 +495,7 @@ const RecapView = () => {
   const accountSpend = recap.accountSpendAmount;
   const statusLabel = recap.approved ? "Approved" : "Pending";
   const tenantSlug = recap.event?.tenant?.slug?.toLowerCase() ?? "";
+  const isTotalWirelessTenant = tenantSlug === "total-wireless";
   const canViewMarketContext =
     tenantSlug === "begoat" || tenantSlug === "zeroes";
   const hasMarketContext =
@@ -363,6 +514,9 @@ const RecapView = () => {
 
   const currentPreview =
     flatImages && previewIndex !== null ? flatImages[previewIndex] : null;
+  const currentPreviewSrc = currentPreview
+    ? (imageSources[currentPreview.id] ?? currentPreview.file ?? "")
+    : "";
 
   return (
     <Layout>
@@ -479,32 +633,34 @@ const RecapView = () => {
             KPI GRID
         ====================================================== */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <KpiCardContainer
-              title="Store Managers"
-              icon={<Store className="text-primary" />}
-            >
-              <div>
-                {storeManagers.length === 0 ? (
-                  <p className="text-sm text-base-content/60">
-                    No store managers linked to this recap.
-                  </p>
-                ) : (
-                  storeManagers.map((m) => (
-                    <div key={m.id} className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-base-200 flex items-center justify-center font-medium">
-                        {m.name?.[0]}
+            {!isTotalWirelessTenant && (
+              <KpiCardContainer
+                title="Store Managers"
+                icon={<Store className="text-primary" />}
+              >
+                <div>
+                  {storeManagers.length === 0 ? (
+                    <p className="text-sm text-base-content/60">
+                      No store managers linked to this recap.
+                    </p>
+                  ) : (
+                    storeManagers.map((m) => (
+                      <div key={m.id} className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-base-200 flex items-center justify-center font-medium">
+                          {m.name?.[0]}
+                        </div>
+                        <div>
+                          <p className="font-medium">{m.name}</p>
+                          <p className="text-sm text-base-content/60">
+                            {m.phone}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{m.name}</p>
-                        <p className="text-sm text-base-content/60">
-                          {m.phone}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </KpiCardContainer>
+                    ))
+                  )}
+                </div>
+              </KpiCardContainer>
+            )}
 
             <KpiCardContainer
               title="Ambassadors"
@@ -557,61 +713,63 @@ const RecapView = () => {
               </div>
             </KpiCardContainer>
 
-            <KpiCardContainer
-              title="KPIs "
-              icon={<Goal className="text-primary" />}
-            >
-              {!hasSalesData ? (
-                <p className="text-sm text-base-content/60">
-                  No sales data recorded for this event.
-                </p>
-              ) : (
-                <>
-                  <div className="flex justify-between items-center bg-base-200 rounded-lg p-3">
-                    <span className="text-sm">Total Engagements</span>
-                    <span className="text-xl font-bold">
-                      {totalEngagements}
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm border rounded-lg p-3">
-                      <span>Products Sold</span>
-                      <span className="font-medium">{productsSold}</span>
-                    </div>
-                    <div className="flex justify-between text-sm border rounded-lg p-3">
-                      <span>Total Cans Sold</span>
-                      <span className="font-medium">{totalCansSold}</span>
-                    </div>
-                    <div className="flex justify-between text-sm border rounded-lg p-3">
-                      <span>Total Packs Sold</span>
-                      <span className="font-medium">{totalPacksSold}</span>
-                    </div>
-                    {/* <div className="flex justify-between text-sm border rounded-lg p-3">
-                      <span>Total Earnings</span>
-                      <span className="font-medium">
-                        ${totalEarnings.toFixed(2)}
+            {!isTotalWirelessTenant && (
+              <KpiCardContainer
+                title="KPIs "
+                icon={<Goal className="text-primary" />}
+              >
+                {!hasSalesData ? (
+                  <p className="text-sm text-base-content/60">
+                    No sales data recorded for this event.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-center bg-base-200 rounded-lg p-3">
+                      <span className="text-sm">Total Engagements</span>
+                      <span className="text-xl font-bold">
+                        {totalEngagements}
                       </span>
-                    </div> */}
-                    {accountSpend !== null ? (
+                    </div>
+
+                    <div className="space-y-3">
                       <div className="flex justify-between text-sm border rounded-lg p-3">
-                        <span>Account Spend</span>
-                        <span className="font-medium">
-                          ${accountSpend?.toFixed(2)}
-                        </span>
+                        <span>Products Sold</span>
+                        <span className="font-medium">{productsSold}</span>
                       </div>
-                    ) : (
                       <div className="flex justify-between text-sm border rounded-lg p-3">
-                        <span>Account Spend</span>
-                        <span className="font-medium">
-                          <em className="text-base-content/60">N/A</em>
-                        </span>
+                        <span>Total Cans Sold</span>
+                        <span className="font-medium">{totalCansSold}</span>
                       </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </KpiCardContainer>
+                      <div className="flex justify-between text-sm border rounded-lg p-3">
+                        <span>Total Packs Sold</span>
+                        <span className="font-medium">{totalPacksSold}</span>
+                      </div>
+                      {/* <div className="flex justify-between text-sm border rounded-lg p-3">
+                        <span>Total Earnings</span>
+                        <span className="font-medium">
+                          ${totalEarnings.toFixed(2)}
+                        </span>
+                      </div> */}
+                      {accountSpend !== null ? (
+                        <div className="flex justify-between text-sm border rounded-lg p-3">
+                          <span>Account Spend</span>
+                          <span className="font-medium">
+                            ${accountSpend?.toFixed(2)}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between text-sm border rounded-lg p-3">
+                          <span>Account Spend</span>
+                          <span className="font-medium">
+                            <em className="text-base-content/60">N/A</em>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </KpiCardContainer>
+            )}
 
             <KpiCardContainer
               title="Consumer Engagement"
@@ -628,194 +786,108 @@ const RecapView = () => {
                     <span className="text-xl font-bold">{totalConsumers}</span>
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm border rounded-lg p-3">
-                      <span>First-time Consumers</span>
-                      <span className="font-medium">{firstTimeConsumers}</span>
+                  {!isTotalWirelessTenant && (
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm border rounded-lg p-3">
+                        <span>First-time Consumers</span>
+                        <span className="font-medium">{firstTimeConsumers}</span>
+                      </div>
+                      <div className="flex justify-between text-sm border rounded-lg p-3">
+                        <span>Brand Aware Consumers</span>
+                        <span className="font-medium">{brandAwareConsumers}</span>
+                      </div>
+                      <div className="flex justify-between text-sm border rounded-lg p-3">
+                        <span>Willing to Purchase</span>
+                        <span className="font-medium">{willingToPurchase}</span>
+                      </div>
+                      <div className="flex justify-between text-sm border rounded-lg p-3">
+                        <span>Not Willing to Purchase</span>
+                        <span className="font-medium">
+                          {notWillingToPurchase}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between text-sm border rounded-lg p-3">
-                      <span>Brand Aware Consumers</span>
-                      <span className="font-medium">{brandAwareConsumers}</span>
-                    </div>
-                    <div className="flex justify-between text-sm border rounded-lg p-3">
-                      <span>Willing to Purchase</span>
-                      <span className="font-medium">{willingToPurchase}</span>
-                    </div>
-                    <div className="flex justify-between text-sm border rounded-lg p-3">
-                      <span>Not Willing to Purchase</span>
-                      <span className="font-medium">
-                        {notWillingToPurchase}
-                      </span>
-                    </div>
-                  </div>
+                  )}
                 </>
               )}
             </KpiCardContainer>
 
-            <KpiCardContainer
-              title="Sales Performance"
-              className="col-span-2"
-              icon={<ShoppingCart className="text-primary" />}
-            >
-              {(recap.salesPerformance?.length ?? 0) === 0 ? (
-                <p className="text-sm text-base-content/60">
-                  No sales performance recorded for this event.
-                </p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {recap.salesPerformance.map((item) => (
-                    <div
-                      key={item.id}
-                      className="border border-base-200 rounded-xl p-4 space-y-1"
-                    >
-                      {/* PRODUCT NAME */}
-                      <p className="font-semibold">
-                        {item.product?.name ?? "—"}
-                      </p>
+            {!isTotalWirelessTenant && (
+              <KpiCardContainer
+                title="Sales Performance"
+                className="col-span-2"
+                icon={<ShoppingCart className="text-primary" />}
+              >
+                {(recap.salesPerformance?.length ?? 0) === 0 ? (
+                  <p className="text-sm text-base-content/60">
+                    No sales performance recorded for this event.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {recap.salesPerformance.map((item) => (
+                      <div
+                        key={item.id}
+                        className="border border-base-200 rounded-xl p-4 space-y-1"
+                      >
+                        {/* PRODUCT NAME */}
+                        <p className="font-semibold">
+                          {item.product?.name ?? "—"}
+                        </p>
 
-                      {/* TYPE */}
-                      <p className="text-sm text-base-content/60">
-                        Type: {item.typeOfGood?.name ?? "—"}
-                      </p>
+                        {/* TYPE */}
+                        <p className="text-sm text-base-content/60">
+                          Type: {item.typeOfGood?.name ?? "—"}
+                        </p>
 
-                      {/* PRICE */}
-                      <p className="text-sm">
-                        Price:{" "}
-                        <span className="font-medium">
-                          ${Number(item.price ?? 0).toFixed(2)}
-                        </span>
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </KpiCardContainer>
-
-            <KpiCardContainer
-              title="Product Samples"
-              className="col-span-2"
-              icon={<Package className="text-primary" />}
-            >
-              {(recap.productSamples?.length ?? 0) === 0 ? (
-                <p className="text-sm text-base-content/60">
-                  No product samples recorded for this event.
-                </p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {recap.productSamples.map((item) => (
-                    <div
-                      key={item.id}
-                      className="border border-base-200 rounded-xl p-4 space-y-1"
-                    >
-                      {/* PRODUCT NAME */}
-                      <p className="font-semibold">
-                        {item.product?.name ?? "—"}
-                      </p>
-
-                      {/* QUANTITY */}
-                      <p className="text-sm text-base-content/60">
-                        Quantity:{" "}
-                        <span className="font-medium">
-                          {item.quantity ?? 0}
-                        </span>
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </KpiCardContainer>
-          </div>
-
-          {/* ======================================================
-          GALLERY
-      ====================================================== */}
-
-          <div className="card bg-base-300/50 mb-8">
-            <div className="card-body space-y-8">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Event Gallery</h2>
-                <span className="text-sm text-base-content/60">
-                  {flatImages.length} photos
-                </span>
-              </div>
-
-              {categoriesWithImages.length === 0 ? (
-                <div className="alert alert-info">
-                  No images uploaded for this recap.
-                </div>
-              ) : (
-                categoriesWithImages.map((category) => (
-                  <div key={category.name} className="space-y-4">
-                    {/* CATEGORY HEADER */}
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold">{category.name}</h3>
-                      <span className="badge badge-outline">
-                        {category.imageFiles.length}
-                      </span>
-                    </div>
-
-                    {category.imageFiles.length === 0 ? (
-                      <p className="text-sm text-base-content/60">
-                        No images in this category.
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {category.imageFiles.map((file) => {
-                          const globalIndex = flatImages.findIndex(
-                            (f) => f.id === file.id,
-                          );
-
-                          return (
-                            <Gallery3DCard
-                              key={file.id}
-                              src={file.file ?? ""}
-                              alt={file.name}
-                              onClick={() => setPreviewIndex(globalIndex)}
-                            />
-                          );
-                        })}
+                        {/* PRICE */}
+                        <p className="text-sm">
+                          Price:{" "}
+                          <span className="font-medium">
+                            ${Number(item.price ?? 0).toFixed(2)}
+                          </span>
+                        </p>
                       </div>
-                    )}
-
-                    {category.pdfFiles.length > 0 && (
-                      <div className="space-y-4">
-                        <h4 className="text-base font-semibold">PDFs</h4>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          {category.pdfFiles.map((file) => (
-                            <div
-                              key={file.id}
-                              className="border border-base-200 rounded-xl p-4 space-y-3"
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="font-medium">
-                                  {file.name || "PDF"}
-                                </p>
-                                <a
-                                  className="btn btn-outline btn-xs rounded-full"
-                                  href={file.file ?? ""}
-                                  download
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  Download
-                                </a>
-                              </div>
-                              <div className="w-full aspect-4/3 rounded-lg overflow-hidden border border-base-300 bg-base-100">
-                                <iframe
-                                  src={file.file ?? ""}
-                                  title={file.name || "PDF preview"}
-                                  className="w-full h-full"
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    ))}
                   </div>
-                ))
-              )}
-            </div>
+                )}
+              </KpiCardContainer>
+            )}
+
+            {!isTotalWirelessTenant && (
+              <KpiCardContainer
+                title="Product Samples"
+                className="col-span-2"
+                icon={<Package className="text-primary" />}
+              >
+                {(recap.productSamples?.length ?? 0) === 0 ? (
+                  <p className="text-sm text-base-content/60">
+                    No product samples recorded for this event.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {recap.productSamples.map((item) => (
+                      <div
+                        key={item.id}
+                        className="border border-base-200 rounded-xl p-4 space-y-1"
+                      >
+                        {/* PRODUCT NAME */}
+                        <p className="font-semibold">
+                          {item.product?.name ?? "—"}
+                        </p>
+
+                        {/* QUANTITY */}
+                        <p className="text-sm text-base-content/60">
+                          Quantity:{" "}
+                          <span className="font-medium">
+                            {item.quantity ?? 0}
+                          </span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </KpiCardContainer>
+            )}
           </div>
 
           {/* ======================================================
@@ -846,17 +918,6 @@ const RecapView = () => {
                         key={item.id}
                         className="border border-base-200 rounded-xl p-4 space-y-3"
                       >
-                        {hasFeedback && (
-                          <div className="space-y-1">
-                            <p className="text-xs uppercase text-base-content/60">
-                              What was the account feedback provided?
-                            </p>
-                            <p className="text-sm text-base-content/80">
-                              {item.feedback}
-                            </p>
-                          </div>
-                        )}
-
                         {hasDoDifferently && (
                           <div className="space-y-1">
                             <p className="text-xs uppercase text-base-content/60">
@@ -977,13 +1038,111 @@ const RecapView = () => {
           </div>
 
           {/* ======================================================
+          GALLERY
+      ====================================================== */}
+
+          <div className="card bg-base-300/50 mb-8">
+            <div className="card-body space-y-8">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Event Gallery</h2>
+                <span className="text-sm text-base-content/60">
+                  {flatImages.length} photos
+                </span>
+              </div>
+
+              {categoriesWithImages.length === 0 ? (
+                <div className="alert alert-info">
+                  No images uploaded for this recap.
+                </div>
+              ) : (
+                categoriesWithImages.map((category) => (
+                  <div key={category.name} className="space-y-4">
+                    {/* CATEGORY HEADER */}
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-semibold">{category.name}</h3>
+                      <span className="badge badge-outline">
+                        {category.imageFiles.length}
+                      </span>
+                    </div>
+
+                    {category.imageFiles.length === 0 ? (
+                      <p className="text-sm text-base-content/60">
+                        No images in this category.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {category.imageFiles.map((file) => {
+                          const globalIndex = flatImages.findIndex(
+                            (f) => f.id === file.id,
+                          );
+
+                          return (
+                            <Gallery3DCard
+                              key={file.id}
+                              src={imageSources[file.id] ?? file.file ?? ""}
+                              alt={file.name}
+                              debugName={file.name}
+                              isLoading={
+                                isHeicFile(file) &&
+                                !imageSources[file.id] &&
+                                convertingImageIds.includes(file.id)
+                              }
+                              onClick={() => setPreviewIndex(globalIndex)}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {category.pdfFiles.length > 0 && (
+                      <div className="space-y-4">
+                        <h4 className="text-base font-semibold">PDFs</h4>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          {category.pdfFiles.map((file) => (
+                            <div
+                              key={file.id}
+                              className="border border-base-200 rounded-xl p-4 space-y-3"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="font-medium">
+                                  {file.name || "PDF"}
+                                </p>
+                                <a
+                                  className="btn btn-outline btn-xs rounded-full"
+                                  href={file.file ?? ""}
+                                  download
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  Download
+                                </a>
+                              </div>
+                              <div className="w-full aspect-4/3 rounded-lg overflow-hidden border border-base-300 bg-base-100">
+                                <iframe
+                                  src={file.file ?? ""}
+                                  title={file.name || "PDF preview"}
+                                  className="w-full h-full"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* ======================================================
           IMAGE PREVIEW MODAL
       ====================================================== */}
           {currentPreview && (
             <ImagePreviewModal
               image={{
                 name: currentPreview.name,
-                file: currentPreview.file ?? "",
+                file: currentPreviewSrc,
               }}
               onClose={closePreview}
               onNext={goNext}

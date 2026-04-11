@@ -16,6 +16,7 @@ import type { Path, PathValue } from "react-hook-form";
 import { useAutoTimezoneFromCoordinates } from "../hooks/useAutoTimezoneFromCoordinates";
 
 import { useMutation } from "react-relay/hooks";
+import type { OperationType } from "relay-runtime";
 import { useAlertStore } from "@store/alertStore";
 
 import { LocationsQuery } from "@api/queries/LocationsQuery";
@@ -34,6 +35,7 @@ import { DistributorsQuery } from "@api/queries/DistributorsQuery";
 import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__generated__/DistributorsQuery.graphql";
 import { RetailersQuery } from "@api/queries/RetailersQuery";
 import type { RetailersQuery as RetailersQueryType } from "@api/queries/__generated__/RetailersQuery.graphql";
+import { BillingEntitiesQuery } from "@api/queries/BillingEntitiesQuery";
 import { useEntitiesByLocation } from "../hooks/useEntitiesByLocation";
 import { useLocationsByState } from "../hooks/useLocationsByState";
 import { useSearchQuery } from "../hooks/useSearchQuery";
@@ -50,6 +52,7 @@ export interface RequestFormValues {
   timezoneId?: string | null;
   retailerId?: string | null;
   distributorId?: string | null;
+  billingEntityId?: string | null;
   requestTypeId?: string | null;
   rmmAsignedId?: string;
   eventTypeId?: string | null;
@@ -110,6 +113,33 @@ interface StoreManagerItem {
   phone: string;
 }
 
+type BillingEntityItem = {
+  id: string;
+  uuid: string;
+  name: string;
+};
+
+type BillingEntitiesQueryType = OperationType & {
+  response: {
+    billingEntities?: {
+      edges?: Array<{
+        node?: BillingEntityItem | null;
+      } | null> | null;
+    } | null;
+  };
+  variables: {
+    filters?: {
+      tenantId?: string | null;
+      tenantUuid?: string | null;
+    } | null;
+    q?: string | null;
+    first?: number | null;
+    after?: string | null;
+    last?: number | null;
+    before?: string | null;
+  };
+};
+
 interface RequestFormProps {
   mode: "create" | "edit";
   tenantId: string;
@@ -136,6 +166,8 @@ interface RequestFormProps {
   disableStateSelect?: boolean;
   hideTableNeededFields?: boolean;
   hideDistributorFields?: boolean;
+  hideEventTypeField?: boolean;
+  showBillingEntityField?: boolean;
 
   onRefetch?: (
     key: "distributors" | "retailers" | "requestStoreManagers",
@@ -188,7 +220,18 @@ export default function RequestForm({
   disableStateSelect = false,
   hideTableNeededFields = false,
   hideDistributorFields = false,
+  hideEventTypeField = false,
+  showBillingEntityField = false,
 }: RequestFormProps) {
+  const [localSelectedProductType, setLocalSelectedProductType] = useState(
+    selectedProductType,
+  );
+
+  const resolvedSelectedProductType =
+    onProductTypeChange !== undefined
+      ? selectedProductType
+      : localSelectedProductType;
+
   const safeDefaultValues: RequestFormValues = {
     name: "",
     date: "",
@@ -356,6 +399,36 @@ export default function RequestForm({
       label: `${c.firstName} ${c.lastName}`,
     }));
   }, [rmmSearchHook.searchTerm, rmmSearchHook.items, rmmClients]);
+
+  const extractBillingEntities = useCallback(
+    (data: BillingEntitiesQueryType["response"]) =>
+      data.billingEntities?.edges?.flatMap((edge) =>
+        edge?.node ? [edge.node] : [],
+      ) ?? [],
+    [],
+  );
+
+  const billingEntitiesSearchHook = useSearchQuery<
+    BillingEntityItem,
+    BillingEntitiesQueryType
+  >({
+    queryDocument: BillingEntitiesQuery,
+    extractNodes: extractBillingEntities,
+    variables: {
+      filters: { tenantId },
+      first: 100,
+    },
+    minLength: 0,
+  });
+
+  const billingEntityOptions = useMemo(
+    () =>
+      billingEntitiesSearchHook.items.map((billingEntity) => ({
+        value: billingEntity.id,
+        label: billingEntity.name,
+      })),
+    [billingEntitiesSearchHook.items],
+  );
 
   // ========================
   // LOCATIONS (CITY) BY STATE WITH SEARCH
@@ -698,9 +771,11 @@ export default function RequestForm({
   const selectedProducts = watch("products") || [];
 
   const filteredProducts = useMemo(() => {
-    if (!selectedProductType) return products;
-    return products.filter((p) => p.productType?.id === selectedProductType);
-  }, [products, selectedProductType]);
+    if (!resolvedSelectedProductType) return products;
+    return products.filter(
+      (p) => p.productType?.id === resolvedSelectedProductType,
+    );
+  }, [products, resolvedSelectedProductType]);
 
   const visibleProducts = useMemo(
     () => filteredProducts.slice(0, visibleCount),
@@ -709,7 +784,7 @@ export default function RequestForm({
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [selectedProductType]);
+  }, [resolvedSelectedProductType]);
 
   const toggleProduct = (productId: string) => {
     const current = selectedProducts;
@@ -819,21 +894,6 @@ export default function RequestForm({
       shouldTouch: true,
     });
     retailersHook.setSearchTerm("");
-
-    if (!isNationalRetailer) return;
-
-    setValue("entitiesLocationId", null, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("retailerId", null, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("retailerLocationId", null, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
   }, [isNationalRetailer, setValue, retailersHook]);
 
   useEffect(() => {
@@ -957,17 +1017,19 @@ export default function RequestForm({
                 rules={{ required: "Request Type is required" }}
               />
 
-              <FormAutocomplete<RequestFormValues>
-                name="eventTypeId"
-                control={control}
-                label="Event Type"
-                placeholder="Search event type..."
-                options={eventTypes.map((et) => ({
-                  value: et.id,
-                  label: et.name,
-                }))}
-                rules={{ required: "Event Type is required" }}
-              />
+              {!hideEventTypeField && (
+                <FormAutocomplete<RequestFormValues>
+                  name="eventTypeId"
+                  control={control}
+                  label="Event Type"
+                  placeholder="Search event type..."
+                  options={eventTypes.map((et) => ({
+                    value: et.id,
+                    label: et.name,
+                  }))}
+                  rules={{ required: "Event Type is required" }}
+                />
+              )}
 
               <FormDatePicker<RequestFormValues>
                 name="date"
@@ -1021,7 +1083,7 @@ export default function RequestForm({
                 loading={rmmSearchHook.isLoading}
               />
 
-              <div className="md:col-span-2">
+              <div className={showBillingEntityField ? "" : "md:col-span-2"}>
                 <FormAddressSearch<RequestFormValues>
                   name="address"
                   placeholder="Enter address"
@@ -1033,6 +1095,19 @@ export default function RequestForm({
                   }}
                 />
               </div>
+
+              {showBillingEntityField && (
+                <FormAutocomplete<RequestFormValues>
+                  name="billingEntityId"
+                  control={control}
+                  label="Billing Entity"
+                  placeholder="Search Billing Entity..."
+                  options={billingEntityOptions}
+                  onSearch={billingEntitiesSearchHook.setSearchTerm}
+                  loading={billingEntitiesSearchHook.isLoading}
+                  disabled={!tenantId}
+                />
+              )}
             </div>
           </section>
 
@@ -1079,7 +1154,7 @@ export default function RequestForm({
                   }))}
                   loading={locationsHook.isLoading}
                   onSearch={locationsHook.setSearchTerm}
-                  disabled={!tenantId || !selectedStateId || isNationalRetailer}
+                  disabled={!tenantId || !selectedStateId}
                 />
               </div>
 
@@ -1451,8 +1526,15 @@ export default function RequestForm({
                 <div className="w-56">
                   <select
                     className="select select-bordered select-sm w-full"
-                    value={selectedProductType}
-                    onChange={(e) => onProductTypeChange?.(e.target.value)}
+                    value={resolvedSelectedProductType}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      if (onProductTypeChange) {
+                        onProductTypeChange(nextValue);
+                        return;
+                      }
+                      setLocalSelectedProductType(nextValue);
+                    }}
                   >
                     <option value="">All Types</option>
                     {productTypes.map((t) => (
@@ -1464,7 +1546,7 @@ export default function RequestForm({
                 </div>
               </div>
 
-              {selectedProductType && visibleProducts.length > 0 && (
+              {resolvedSelectedProductType && visibleProducts.length > 0 && (
                 <p className="text-xs text-base-content/60">
                   Showing products of selected type
                 </p>

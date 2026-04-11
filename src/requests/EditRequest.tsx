@@ -33,7 +33,6 @@ type EditRequestContentProps = {
 };
 
 const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
-  const { tenantSlug } = useAuthStore();
   const data = useLazyLoadQuery<RequestUuidQueryType>(RequestUuidQuery, {
     uuid,
   });
@@ -79,7 +78,12 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     () => statesData.states?.edges.map((e) => e.node) ?? [],
     [statesData.states?.edges],
   );
-  const isJeeterTenant = tenantSlug?.toLowerCase() === "jeeter";
+  const requestTenantSlug = request?.tenant?.slug?.toLowerCase() ?? null;
+  const storeTenantSlug = useAuthStore((state) => state.tenantSlug);
+  const resolvedTenantSlug =
+    requestTenantSlug ?? storeTenantSlug?.toLowerCase() ?? null;
+  const isJeeterTenant = resolvedTenantSlug === "jeeter";
+  const isCarblissTenant = resolvedTenantSlug === "carbliss";
   const californiaState = useMemo(
     () =>
       states.find(
@@ -138,10 +142,12 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
           requestTypeId: formData.requestTypeId ?? "",
           distributorId: isJeeterTenant ? "" : (formData.distributorId ?? ""),
           retailerId: formData.retailerId ?? "",
+          ...(isCarblissTenant
+            ? { billingEntityId: formData.billingEntityId ?? null }
+            : {}),
           locationId: formData.entitiesLocationId,
           stateId: formData.stateId,
           rmmAsignedId: formData.rmmAsignedId,
-          // eventTypeId: formData.eventTypeId ?? "", // Falta en el schema UpdateRequestInput del backend
           storeManagerName: formData.storeManagerName ?? "",
           storeManagerPhone: formData.storeManagerPhone ?? "",
           details: [],
@@ -178,7 +184,6 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     notes: (request as { notes?: string | null }).notes ?? "",
     date: defaultDate,
     startTime: defaultStartTime,
-    // eventTypeId: request.eventTypeId ?? null,
     endTime: defaultEndTime,
     address: request.address ?? "",
     coordinates: request.coordinates?.length ? [...request.coordinates] : null,
@@ -187,6 +192,13 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
     distributorId:
       request.distributor?.id ?? request?.distributor?.id ?? undefined,
     retailerId: request.retailer?.id ?? request?.retailer?.id ?? undefined,
+    billingEntityId: isCarblissTenant
+      ? (
+          request as RequestUuidQueryType["response"]["request"] & {
+            billingEntity?: { id?: string | null } | null;
+          }
+        )?.billingEntity?.id ?? undefined
+      : undefined,
     stateId: isJeeterTenant
       ? californiaState?.id
       : (request.retailer?.location?.state?.id ??
@@ -228,8 +240,6 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
       <CatalogsProvider
         clients
         clientsFilters={filters}
-        eventTypes
-        eventTypesFilters={filters}
         retailers
         retailersFilters={filters}
         distributors
@@ -242,7 +252,6 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
         {({
           clients,
           requestTypes,
-          eventTypes,
           requestStoreManagers,
           loading,
           errors,
@@ -258,13 +267,14 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
               tenantId={request.tenantId}
               requestId={request.id}
               defaultValues={defaultValues}
-              eventTypes={eventTypes}
               onSubmit={handleSubmit}
               clients={clients}
               states={allowedStates}
               disableStateSelect={isJeeterTenant}
               hideTableNeededFields={isJeeterTenant}
               hideDistributorFields={isJeeterTenant}
+              hideEventTypeField
+              showBillingEntityField={isCarblissTenant}
               userIdLoggin=""
               rmmClients={rmmClients}
               requestTypes={requestTypes}
