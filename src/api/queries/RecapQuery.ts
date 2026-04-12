@@ -34,11 +34,11 @@ export const RecapQuery = graphql`
           slug
         }
         timezone {
-              id
-              name
-              code
-              offset
-            }
+          id
+          name
+          code
+          offset
+        }
         startTime
         endTime
         address
@@ -80,6 +80,7 @@ export const RecapQuery = graphql`
           id
           uuid
           name
+          image
         }
       }
       salesPerformance {
@@ -90,6 +91,7 @@ export const RecapQuery = graphql`
           id
           uuid
           name
+          image
         }
         typeOfGood {
           id

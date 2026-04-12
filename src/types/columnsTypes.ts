@@ -190,3 +190,89 @@ export type RequestTypeRow = {
   uuid: string;
   name: string;
 };
+
+export interface CustomRecapRow {
+  id: string;
+  uuid: string;
+  name: string;
+  submittedAt?: string | null;
+  totalEngagements?: number | null;
+  fillingForAmbassador?: boolean | null;
+  late?: boolean | null;
+  incomplete?: boolean | null;
+  approved?: boolean | null;
+  usedCorpoCard?: boolean | null;
+  event?: {
+    id: string;
+    name?: string | null;
+    date?: string | null;
+  } | null;
+  ambassador?: {
+    id: string;
+    user?: {
+      firstName?: string | null;
+      lastName?: string | null;
+    } | null;
+  } | null;
+  job?: {
+    id: string;
+    name?: string | null;
+  } | null;
+  retailer?: {
+    id: string;
+    name?: string | null;
+  } | null;
+  location?: {
+    id: string;
+    name?: string | null;
+  } | null;
+  state?: {
+    id: string;
+    name?: string | null;
+  } | null;
+  customRecapTemplate?: {
+    id: string;
+    name?: string | null;
+  } | null;
+  customRecapProductSample?: {
+    id: string;
+    quantity?: number | null;
+    product?: {
+      id: string;
+      name?: string | null;
+      image?: string | null;
+    } | null;
+  }[] | null;
+  customRecapSalePerformance?: {
+    id: string;
+    price?: number | null;
+    product?: {
+      id: string;
+      name?: string | null;
+      image?: string | null;
+    } | null;
+    typeOfGood?: {
+      id: string;
+      name?: string | null;
+    } | null;
+  }[] | null;
+  customRecapFiles?: {
+    id: string;
+    name?: string | null;
+    url?: string | null;
+    approved?: boolean | null;
+    fileRecapCategory?: {
+      id: string;
+      name?: string | null;
+    } | null;
+    fileType?: {
+      id: string;
+      name?: string | null;
+    } | null;
+  }[] | null;
+  customField?: {
+    id: string;
+    name?: string | null;
+    value?: string | null;
+  }[] | null;
+}
