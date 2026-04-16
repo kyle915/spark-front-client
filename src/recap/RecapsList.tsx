@@ -46,7 +46,7 @@ import {
 
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "@/store/authStore";
-import { FilterIcon, FunnelXIcon } from "lucide-react";
+import { Funnel, FunnelXIcon } from "lucide-react";
 import { useAlertStore } from "@/store/alertStore";
 import { useForm } from "react-hook-form";
 import FormInputText from "@/shared/FormInputText";
@@ -594,100 +594,106 @@ const RecapList = () => {
           FILTERS
       ========================= */}
       <div className="flex flex-col gap-4">
-        <div className="rounded-xl bg-base-100 p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-1">
-              <FilterIcon className="w-4 h-4" />
-              <h2 className="text-sm font-semibold text-base-content/70">
-                Filters
-              </h2>
-            </div>
+        <div className="bg-base-100 rounded-xl border border-base-300 shadow-sm">
+          <div className="flex items-center justify-between cursor-pointer px-6 py-4 select-none">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-2 rounded-lg">
+                  <Funnel size={18} className="text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold text-base-content">
+                  Filters
+                </h3>
+              </div>
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                onClick={() => refreshRef.current?.()}
-              >
-                <ArrowPathIcon className="w-4 h-4" />
-                Refresh
-              </button>
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => refreshRef.current?.()}
+                >
+                  <ArrowPathIcon className="w-4 h-4" />
+                  Refresh
+                </button>
 
-              {(selectedEventId ||
-                eventAddress ||
-                selectedStateId ||
-                selectedEventDate) && (
-                <>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => {
-                      setValue("eventId", null);
-                      setValue("stateId", null);
-                      setValue("eventDate", "");
-                      setEventAddress("");
-                      setValue("eventAddress", "");
-                      setEventSearchInput("");
-                      setStateSearchInput("");
-                    }}
-                  >
-                    <FunnelXIcon className="w-4 h-4" />
-                    Clear filters
-                  </button>
-                </>
-              )}
+                {(selectedEventId ||
+                  eventAddress ||
+                  selectedStateId ||
+                  selectedEventDate) && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        setValue("eventId", null);
+                        setValue("stateId", null);
+                        setValue("eventDate", "");
+                        setEventAddress("");
+                        setValue("eventAddress", "");
+                        setEventSearchInput("");
+                        setStateSearchInput("");
+                      }}
+                    >
+                      <FunnelXIcon className="w-4 h-4" />
+                      Clear filters
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-            <div className="w-full max-w-sm">
-              <FormAutocomplete
-                name="eventId"
-                control={control}
-                label="Event"
-                options={eventOptions}
-                placeholder="Search event"
-                disabled={eventOptions.length === 0}
-                onSearch={setEventSearchInput}
-              />
-            </div>
-            <div className="w-full max-w-sm">
-              <FormAutocomplete
-                name="rmmAsignedId"
-                control={control}
-                label="RMM Client"
-                options={rmmOptions}
-                placeholder="Search RMM client"
-                disabled={rmmOptions.length === 0}
-                onSearch={setRmmSearch}
-              />
-            </div>
-            <div className="w-full max-w-sm">
-              <FormAutocomplete
-                name="stateId"
-                control={control}
-                label="State"
-                options={stateOptions}
-                placeholder="Search state"
-                disabled={stateOptions.length === 0}
-                onSearch={setStateSearchInput}
-              />
-            </div>
-            <div className="w-full max-w-sm">
-              <FormInputText
-                name="eventAddress"
-                control={control}
-                label="Event Address"
-                placeholder="Search address"
-              />
-            </div>
-            <div className="w-full max-w-sm">
-              <FormDatePicker
-                name="eventDate"
-                control={control}
-                label="Event Date"
-                placeholder="MM/DD/YYYY"
-              />
+          <div className="px-6 pb-6 pt-2 flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+              <div className="w-full max-w-sm">
+                <FormAutocomplete
+                  name="eventId"
+                  control={control}
+                  label="Event"
+                  options={eventOptions}
+                  placeholder="Search event"
+                  disabled={eventOptions.length === 0}
+                  onSearch={setEventSearchInput}
+                />
+              </div>
+              <div className="w-full max-w-sm">
+                <FormAutocomplete
+                  name="rmmAsignedId"
+                  control={control}
+                  label="RMM Client"
+                  options={rmmOptions}
+                  placeholder="Search RMM client"
+                  disabled={rmmOptions.length === 0}
+                  onSearch={setRmmSearch}
+                />
+              </div>
+              <div className="w-full max-w-sm">
+                <FormAutocomplete
+                  name="stateId"
+                  control={control}
+                  label="State"
+                  options={stateOptions}
+                  placeholder="Search state"
+                  disabled={stateOptions.length === 0}
+                  onSearch={setStateSearchInput}
+                />
+              </div>
+              <div className="w-full max-w-sm">
+                <FormInputText
+                  name="eventAddress"
+                  control={control}
+                  label="Event Address"
+                  placeholder="Search address"
+                />
+              </div>
+              <div className="w-full max-w-sm">
+                <FormDatePicker
+                  name="eventDate"
+                  control={control}
+                  label="Event Date"
+                  placeholder="MM/DD/YYYY"
+                />
+              </div>
             </div>
           </div>
         </div>

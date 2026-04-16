@@ -1,4 +1,11 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate, useLocation } from "react-router";
 import type { ReactNode } from "react";
 import Layout from "@/layout/Layout";
@@ -386,6 +393,24 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
   const { tenantId } = useAuthStore();
   const navigate = useNavigate();
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [filtersOverflow, setFiltersOverflow] = useState<"hidden" | "visible">(
+    "hidden",
+  );
+  const filtersTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleToggleFilters = () => {
+    if (filtersTimerRef.current) clearTimeout(filtersTimerRef.current);
+    if (isFiltersOpen) {
+      setFiltersOverflow("hidden");
+      setIsFiltersOpen(false);
+    } else {
+      setIsFiltersOpen(true);
+      filtersTimerRef.current = setTimeout(
+        () => setFiltersOverflow("visible"),
+        320,
+      );
+    }
+  };
 
   // Reailer States
   const [retailerLocationSearchTerm, setRetailerLocationSearchTerm] =
@@ -689,15 +714,10 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                 placeholder="Select a tenant"
               />
             </div> */}
-              <div
-                className={cn(
-                  "collapse bg-base-100/50 rounded-xl border border-base-300 shadow-sm overflow-visible transition-all duration-300",
-                  isFiltersOpen && "collapse-open",
-                )}
-              >
+              <div className="bg-base-100 rounded-xl border border-base-300 shadow-sm">
                 <div
-                  className="collapse-title flex items-center justify-between cursor-pointer"
-                  onClick={() => setIsFiltersOpen((prev) => !prev)}
+                  className="flex items-center justify-between cursor-pointer px-6 py-4 select-none"
+                  onClick={handleToggleFilters}
                 >
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-3">
@@ -737,156 +757,163 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                   </div>
                 </div>
 
-                <div className="collapse-content mt-2 overflow-visible">
-                  <div className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 overflow-visible">
-                    {/** Retailer control filter */}
-                    <FormAutocomplete
-                      control={control}
-                      name="retailerState"
-                      label="Retailer State"
-                      options={catalogs.states.map((state) => ({
-                        label: state.code
-                          ? `${state.name} (${state.code})`
-                          : state.name,
-                        value: state.id,
-                      }))}
-                      placeholder="Search state..."
-                      loading={isLoading("states")}
-                    />
-                    <FormAutocomplete
-                      control={control}
-                      name="retailerLocation"
-                      label="Retailer Location"
-                      options={retailerLocations.map((location) => ({
-                        label: location.name,
-                        value: location.id,
-                      }))}
-                      placeholder={
-                        selectedRetailerState
-                          ? "Search location..."
-                          : "Select a state first"
-                      }
-                      loading={isRetailerLocationsLoading}
-                      disabled={!selectedRetailerState}
-                      onSearch={setRetailerLocationSearchTerm}
-                    />
-                    <FormAutocomplete
-                      control={control}
-                      name="retailer"
-                      label="Filter by Retailer"
-                      options={catalogs.retailers.map((r) => ({
-                        label: r.name,
-                        value: r.id,
-                      }))}
-                      placeholder={
-                        selectedRetailerLocation
-                          ? "Search retailer..."
-                          : "Select a location first"
-                      }
-                      loading={isLoading("retailers")}
-                      onSearch={setRetailerSearchTerm}
-                      disabled={!selectedRetailerLocation}
-                    />
+                <div
+                  style={{
+                    maxHeight: isFiltersOpen ? "900px" : "0px",
+                    overflow: filtersOverflow,
+                    transition: "max-height 0.3s ease",
+                  }}
+                >
+                  <div className="px-6 pb-6 pt-2 flex flex-col gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {/** Retailer control filter */}
+                      <FormAutocomplete
+                        control={control}
+                        name="retailerState"
+                        label="Retailer State"
+                        options={catalogs.states.map((state) => ({
+                          label: state.code
+                            ? `${state.name} (${state.code})`
+                            : state.name,
+                          value: state.id,
+                        }))}
+                        placeholder="Search state..."
+                        loading={isLoading("states")}
+                      />
+                      <FormAutocomplete
+                        control={control}
+                        name="retailerLocation"
+                        label="Retailer Location"
+                        options={retailerLocations.map((location) => ({
+                          label: location.name,
+                          value: location.id,
+                        }))}
+                        placeholder={
+                          selectedRetailerState
+                            ? "Search location..."
+                            : "Select a state first"
+                        }
+                        loading={isRetailerLocationsLoading}
+                        disabled={!selectedRetailerState}
+                        onSearch={setRetailerLocationSearchTerm}
+                      />
+                      <FormAutocomplete
+                        control={control}
+                        name="retailer"
+                        label="Filter by Retailer"
+                        options={catalogs.retailers.map((r) => ({
+                          label: r.name,
+                          value: r.id,
+                        }))}
+                        placeholder={
+                          selectedRetailerLocation
+                            ? "Search retailer..."
+                            : "Select a location first"
+                        }
+                        loading={isLoading("retailers")}
+                        onSearch={setRetailerSearchTerm}
+                        disabled={!selectedRetailerLocation}
+                      />
 
-                    {/** Distributor control filter */}
-                    <FormAutocomplete
-                      control={control}
-                      name="distributorState"
-                      label="Distributor State"
-                      options={catalogs.states.map((state) => ({
-                        label: state.code
-                          ? `${state.name} (${state.code})`
-                          : state.name,
-                        value: state.id,
-                        searchText: state.code
-                          ? `${state.name} ${state.code}`
-                          : state.name,
-                      }))}
-                      placeholder="Search state..."
-                      loading={isLoading("states")}
-                    />
+                      {/** Distributor control filter */}
+                      <FormAutocomplete
+                        control={control}
+                        name="distributorState"
+                        label="Distributor State"
+                        options={catalogs.states.map((state) => ({
+                          label: state.code
+                            ? `${state.name} (${state.code})`
+                            : state.name,
+                          value: state.id,
+                          searchText: state.code
+                            ? `${state.name} ${state.code}`
+                            : state.name,
+                        }))}
+                        placeholder="Search state..."
+                        loading={isLoading("states")}
+                      />
 
-                    <FormAutocomplete
-                      control={control}
-                      name="distributorLocation"
-                      label="Distributor Location"
-                      options={distributorLocations.map((location) => ({
-                        label: location.name,
-                        value: location.id,
-                      }))}
-                      placeholder={
-                        selectedDistributorState
-                          ? "Search location..."
-                          : "Select a state first"
-                      }
-                      loading={isDistributorLocationsLoading}
-                      disabled={!selectedDistributorState}
-                      onSearch={setDistributorLocationSearchTerm}
-                    />
+                      <FormAutocomplete
+                        control={control}
+                        name="distributorLocation"
+                        label="Distributor Location"
+                        options={distributorLocations.map((location) => ({
+                          label: location.name,
+                          value: location.id,
+                        }))}
+                        placeholder={
+                          selectedDistributorState
+                            ? "Search location..."
+                            : "Select a state first"
+                        }
+                        loading={isDistributorLocationsLoading}
+                        disabled={!selectedDistributorState}
+                        onSearch={setDistributorLocationSearchTerm}
+                      />
 
-                    <FormAutocomplete
-                      control={control}
-                      name="distributor"
-                      label="Distributor"
-                      options={catalogs.distributors.map((d) => ({
-                        label: d.name,
-                        value: d.id,
-                      }))}
-                      loading={isLoading("distributors")}
-                      placeholder={
-                        selectedDistributorLocation
-                          ? "Search distributor..."
-                          : "Select a location first"
-                      }
-                      onSearch={setDistributorSearchTerm}
-                      disabled={!selectedDistributorLocation}
-                    />
-                  </div>
-                  {/** Other filters */}
+                      <FormAutocomplete
+                        control={control}
+                        name="distributor"
+                        label="Distributor"
+                        options={catalogs.distributors.map((d) => ({
+                          label: d.name,
+                          value: d.id,
+                        }))}
+                        loading={isLoading("distributors")}
+                        placeholder={
+                          selectedDistributorLocation
+                            ? "Search distributor..."
+                            : "Select a location first"
+                        }
+                        onSearch={setDistributorSearchTerm}
+                        disabled={!selectedDistributorLocation}
+                      />
+                    </div>
+                    {/** Other filters */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <FormAutocomplete
+                        control={control}
+                        name="status"
+                        label="Status"
+                        options={catalogs.requestStatuses.map((s) => ({
+                          label: s.name,
+                          value: s.id,
+                        }))}
+                        loading={isLoading("requestStatuses")}
+                        placeholder="Search status..."
+                      />
 
-                  <div className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 overflow-visible">
-                    <FormAutocomplete
-                      control={control}
-                      name="status"
-                      label="Status"
-                      options={catalogs.requestStatuses.map((s) => ({
-                        label: s.name,
-                        value: s.id,
-                      }))}
-                      loading={isLoading("requestStatuses")}
-                      placeholder="Search status..."
-                    />
+                      <FormDatePicker
+                        control={control}
+                        name="date"
+                        label="Filter by Date"
+                        placeholder="Select date"
+                      />
 
-                    <FormDatePicker
-                      control={control}
-                      name="date"
-                      label="Filter by Date"
-                      placeholder="Select date"
-                    />
+                      <FormAutocomplete
+                        control={control}
+                        name="requestType"
+                        label="Request Type"
+                        options={catalogs.requestTypes.map((s) => ({
+                          label: s.name,
+                          value: s.id,
+                        }))}
+                        loading={isLoading("requestTypes")}
+                        placeholder="Search request type..."
+                      />
 
-                    <FormAutocomplete
-                      control={control}
-                      name="requestType"
-                      label="Request Type"
-                      options={catalogs.requestTypes.map((s) => ({
-                        label: s.name,
-                        value: s.id,
-                      }))}
-                      loading={isLoading("requestTypes")}
-                      placeholder="Search request type..."
-                    />
-
-                    <FormAutocomplete
-                      control={control}
-                      name="rmmAsigned"
-                      label="RMM Client"
-                      options={rmmClientsData.rmmClients.map((c) => ({
-                        label: `${c.firstName} ${c.lastName}`,
-                        value: c.id,
-                      }))}
-                      loading={isLoading("clients")}
-                      placeholder="Search client..."
-                    />
+                      <FormAutocomplete
+                        control={control}
+                        name="rmmAsigned"
+                        label="RMM Client"
+                        options={rmmClientsData.rmmClients.map((c) => ({
+                          label: `${c.firstName} ${c.lastName}`,
+                          value: c.id,
+                        }))}
+                        loading={isLoading("clients")}
+                        placeholder="Search client..."
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

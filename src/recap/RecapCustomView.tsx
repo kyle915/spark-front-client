@@ -15,6 +15,7 @@ import {
   ShoppingCart,
   UserCheck,
   Users,
+  List,
 } from "lucide-react";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 
@@ -171,6 +172,24 @@ const RecapCustomView = () => {
     () => categoriesWithImages.flatMap((category) => category.imageFiles),
     [categoriesWithImages],
   );
+
+  const customFieldsBySection = useMemo(() => {
+    if (!recap?.customField) return [];
+    const sections = new Map<string, typeof recap.customField>();
+    
+    recap.customField.forEach((field) => {
+      const sectionName = field.recapSection?.name ?? "Other Details";
+      if (!sections.has(sectionName)) {
+        sections.set(sectionName, []);
+      }
+      sections.get(sectionName)!.push(field);
+    });
+    
+    return Array.from(sections.entries()).map(([name, fields]) => ({
+      name,
+      fields
+    }));
+  }, [recap?.customField]);
 
   const [imageSources, setImageSources] = useState<Record<string, string>>({});
   const [convertingImageIds, setConvertingImageIds] = useState<string[]>([]);
@@ -459,29 +478,32 @@ const RecapCustomView = () => {
                 </KpiCardContainer>
               )}
 
-            {recap.customField && recap.customField.length > 0 && (
+            {customFieldsBySection.map((section) => (
               <KpiCardContainer
-                title="Custom Fields"
-                className="md:col-span-2"
-                icon={<ClipboardList className="text-primary" />}
+                key={section.name}
+                title={section.name}
+                icon={<List className="text-primary" />}
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recap.customField.map((field) => (
-                    <div
-                      key={field.id}
-                      className="border border-base-100/30 rounded-xl p-4 space-y-1 bg-base-100/40"
-                    >
-                      <p className="text-xs uppercase font-bold text-base-content/40 tracking-wider font-mono">
-                        {field.name}
-                      </p>
-                      <p className="text-lg font-medium">
-                        {field.value || "—"}
-                      </p>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  {section.fields.map((field) => {
+                    const isLongText = field.value && field.value.length > 50;
+                    return (
+                      <div
+                        key={field.id}
+                        className={`border border-base-100/30 rounded-xl p-4 space-y-2 bg-base-200/20 shadow-sm transition hover:border-primary/20 ${isLongText ? 'xl:col-span-2' : ''}`}
+                      >
+                        <p className="text-[11px] uppercase font-bold text-base-content/50 tracking-wider">
+                          {field.name}
+                        </p>
+                        <p className="text-sm md:text-base leading-relaxed font-medium text-base-content/90 whitespace-pre-wrap">
+                          {field.value || "—"}
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               </KpiCardContainer>
-            )}
+            ))}
           </div>
 
           <div className="card bg-base-300/50 mb-8">

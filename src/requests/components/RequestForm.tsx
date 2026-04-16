@@ -1126,7 +1126,7 @@ export default function RequestForm({
                 </span>
               </div>
 
-              <div className="flex items-end gap-4 mt-4 w-full">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 w-full items-end">
                 <FormAutocomplete<RequestFormValues>
                   name="stateId"
                   control={control}
@@ -1136,11 +1136,29 @@ export default function RequestForm({
                   disabled={!tenantId || disableStateSelect}
                 />
 
-                <FormCheckbox<RequestFormValues>
+                <Controller
                   name="isNationalRetailer"
                   control={control}
-                  label="National retailer"
-                  disabled={!tenantId}
+                  render={({ field }) => (
+                    <div className="form-control w-full">
+                      {/* Espacio invisible para equiparar la altura con el label superior de los autocomplete */}
+                      <label className="label">
+                        <span className="label-text opacity-0">.</span>
+                      </label>
+                      <label className="cursor-pointer flex items-center justify-center gap-3 border border-base-300 rounded-full min-h-11 bg-base-100/50 hover:bg-base-200/50 transition-colors w-full px-4">
+                        <span className="label-text font-medium text-sm text-base-content/80">
+                          National retailer
+                        </span>
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-primary toggle-sm"
+                          checked={!!field.value}
+                          onChange={(e) => field.onChange(e.target.checked)}
+                          disabled={!tenantId}
+                        />
+                      </label>
+                    </div>
+                  )}
                 />
 
                 <FormAutocomplete<RequestFormValues>
