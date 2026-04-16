@@ -109,10 +109,14 @@ const FormMultiAutocomplete = <T extends FieldValues>({
       <div className="relative">
         {/* INPUT CONTAINER */}
         <div
-          className={`input input-bordered rounded-full w-full flex items-center gap-1 pr-12 ${
+          className={`input input-bordered min-h-11 py-1 rounded-full w-full flex items-center gap-1 pr-12 transition-colors ${
             error ? "input-error" : ""
+          } ${
+            disabled
+              ? "bg-base-200/50 border-base-300 text-base-content/40 cursor-not-allowed"
+              : "cursor-text"
           }`}
-          onClick={() => setIsOpen(true)}
+          onClick={() => !disabled && setIsOpen(true)}
         >
           {/* CHIPS */}
           {visibleSelections.map((opt) => (
@@ -122,15 +126,18 @@ const FormMultiAutocomplete = <T extends FieldValues>({
             >
               <span className="truncate">{opt.label}</span>
 
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeOption(opt.value);
-                }}
-              >
-                <XMarkIcon className="w-3 h-3" />
-              </button>
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeOption(opt.value);
+                  }}
+                  className="hover:text-base-100 transition-colors"
+                >
+                  <XMarkIcon className="w-3 h-3" />
+                </button>
+              )}
             </span>
           ))}
 
@@ -142,6 +149,7 @@ const FormMultiAutocomplete = <T extends FieldValues>({
           {/* INPUT */}
           <input
             value={search}
+            disabled={disabled}
             onChange={(e) => {
               const val = e.target.value;
               setSearch(val);
@@ -149,13 +157,15 @@ const FormMultiAutocomplete = <T extends FieldValues>({
               setIsOpen(true);
             }}
             placeholder={selectedOptions.length === 0 ? placeholder : ""}
-            className="flex-1 bg-transparent outline-none text-sm"
+            className={`flex-1 bg-transparent outline-none text-sm w-full min-w-[50px] ${
+              disabled ? "cursor-not-allowed" : ""
+            }`}
           />
         </div>
 
         {/* ICONS (igual que Autocomplete) */}
-        <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1">
-          {selectedValues.length > 0 && (
+        <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1 z-10">
+          {selectedValues.length > 0 && !disabled && (
             <button
               type="button"
               onClick={(e) => {
@@ -172,7 +182,7 @@ const FormMultiAutocomplete = <T extends FieldValues>({
             <ChevronDownIcon
               className={`w-5 h-5 transition-transform ${
                 isOpen ? "rotate-180" : ""
-              }`}
+              } ${disabled ? "opacity-50" : "opacity-70"}`}
             />
           </div>
         </div>

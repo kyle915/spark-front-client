@@ -107,6 +107,10 @@ export const GetCustomRecapsQuery = graphql`
             id
             name
             value
+            recapSection {
+              id
+              name
+            }
           }
         }
       }
@@ -199,6 +203,10 @@ export const GetCustomRecapQuery = graphql`
         id
         name
         value
+        recapSection {
+          id
+          name
+        }
       }
     }
   }

@@ -8,13 +8,15 @@ import { formatDate } from "@/utils";
 import {
   ArrowLeftIcon,
   Calendar,
-  ClipboardList,
   Goal,
   MapPin,
   Package,
   ShoppingCart,
-  UserCheck,
   Users,
+  List,
+  Image as ImageIcon,
+  FolderOpen,
+  FileText,
 } from "lucide-react";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 
@@ -45,53 +47,53 @@ const KpiCardContainer = ({
   </div>
 );
 
-const Gallery3DCard = ({
-  src,
-  alt,
-  debugName,
-  isLoading,
-  onClick,
-}: {
-  src: string;
-  alt: string;
-  debugName?: string;
-  isLoading?: boolean;
-  onClick?: () => void;
-}) => (
-  <div className="hover-3d cursor-pointer" onClick={onClick}>
-    <figure className="w-full aspect-4/3 overflow-hidden rounded-2xl bg-base-200">
-      {isLoading ? (
-        <div className="flex h-full w-full items-center justify-center bg-base-300/40">
-          <div className="flex flex-col items-center gap-3 text-base-content/60">
-            <span className="loading loading-spinner loading-md" />
-            <span className="text-sm">Loading image...</span>
-          </div>
-        </div>
-      ) : (
-        <img
-          src={src}
-          alt={alt}
-          className="w-full h-full object-contain"
-          onError={(event) => {
-            console.error("Gallery image failed to render", {
-              debugName,
-              src,
-              event,
-            });
-          }}
-        />
-      )}
-    </figure>
-    <div></div>
-    <div></div>
-    <div></div>
-    <div></div>
-    <div></div>
-    <div></div>
-    <div></div>
-    <div></div>
-  </div>
-);
+// const Gallery3DCard = ({
+//   src,
+//   alt,
+//   debugName,
+//   isLoading,
+//   onClick,
+// }: {
+//   src: string;
+//   alt: string;
+//   debugName?: string;
+//   isLoading?: boolean;
+//   onClick?: () => void;
+// }) => (
+//   <div className="hover-3d cursor-pointer" onClick={onClick}>
+//     <figure className="w-full aspect-4/3 overflow-hidden rounded-2xl bg-base-200">
+//       {isLoading ? (
+//         <div className="flex h-full w-full items-center justify-center bg-base-300/40">
+//           <div className="flex flex-col items-center gap-3 text-base-content/60">
+//             <span className="loading loading-spinner loading-md" />
+//             <span className="text-sm">Loading image...</span>
+//           </div>
+//         </div>
+//       ) : (
+//         <img
+//           src={src}
+//           alt={alt}
+//           className="w-full h-full object-contain"
+//           onError={(event) => {
+//             console.error("Gallery image failed to render", {
+//               debugName,
+//               src,
+//               event,
+//             });
+//           }}
+//         />
+//       )}
+//     </figure>
+//     <div></div>
+//     <div></div>
+//     <div></div>
+//     <div></div>
+//     <div></div>
+//     <div></div>
+//     <div></div>
+//     <div></div>
+//   </div>
+// );
 
 const RecapCustomView = () => {
   const { uuid } = useParams();
@@ -171,6 +173,25 @@ const RecapCustomView = () => {
     () => categoriesWithImages.flatMap((category) => category.imageFiles),
     [categoriesWithImages],
   );
+
+  const customFieldsBySection = useMemo(() => {
+    if (!recap?.customField) return [];
+    type CustomFieldItem = NonNullable<typeof recap.customField>[number];
+    const sections = new Map<string, CustomFieldItem[]>();
+
+    recap.customField.forEach((field) => {
+      const sectionName = field.recapSection?.name ?? "Other Details";
+      if (!sections.has(sectionName)) {
+        sections.set(sectionName, []);
+      }
+      sections.get(sectionName)!.push(field);
+    });
+
+    return Array.from(sections.entries()).map(([name, fields]) => ({
+      name,
+      fields,
+    }));
+  }, [recap?.customField]);
 
   const [imageSources, setImageSources] = useState<Record<string, string>>({});
   const [convertingImageIds, setConvertingImageIds] = useState<string[]>([]);
@@ -459,124 +480,198 @@ const RecapCustomView = () => {
                 </KpiCardContainer>
               )}
 
-            {recap.customField && recap.customField.length > 0 && (
+            {customFieldsBySection.map((section) => (
               <KpiCardContainer
-                title="Custom Fields"
-                className="md:col-span-2"
-                icon={<ClipboardList className="text-primary" />}
+                key={section.name}
+                title={section.name}
+                icon={<List className="text-primary" />}
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recap.customField.map((field) => (
-                    <div
-                      key={field.id}
-                      className="border border-base-100/30 rounded-xl p-4 space-y-1 bg-base-100/40"
-                    >
-                      <p className="text-xs uppercase font-bold text-base-content/40 tracking-wider font-mono">
-                        {field.name}
-                      </p>
-                      <p className="text-lg font-medium">
-                        {field.value || "—"}
-                      </p>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  {section.fields.map((field) => {
+                    const isLongText = field.value && field.value.length > 50;
+                    return (
+                      <div
+                        key={field.id}
+                        className={`border border-base-100/30 rounded-xl p-4 space-y-2 bg-base-200/20 shadow-sm transition hover:border-primary/20 ${isLongText ? "xl:col-span-2" : ""}`}
+                      >
+                        <p className="text-[11px] uppercase font-bold text-base-content/50 tracking-wider">
+                          {field.name}
+                        </p>
+                        <p className="text-sm md:text-base leading-relaxed font-medium text-base-content/90 whitespace-pre-wrap">
+                          {field.value || "—"}
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               </KpiCardContainer>
-            )}
+            ))}
           </div>
 
-          <div className="card bg-base-300/50 mb-8">
-            <div className="card-body space-y-8">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xl font-bold">
-                  <UserCheck className="w-6 h-6 text-primary" />
-                  <h2>Event Gallery</h2>
-                </div>
-                <span className="text-sm text-base-content/60 font-medium">
-                  {flatImages.length} photos
-                </span>
+          {/* Evidence & Attachments Section */}
+          <div className="mt-8 border-t border-base-200 pt-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <ImageIcon className="h-6 w-6 text-primary" />
               </div>
-
-              {categoriesWithImages.length === 0 ? (
-                <div className="alert alert-soft alert-info">
-                  No evidence or files uploaded for this recap.
-                </div>
-              ) : (
-                categoriesWithImages.map((category) => (
-                  <div key={category.name} className="space-y-6">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold tracking-wide">
-                        {category.name}
-                      </h3>
-                      <span className="badge badge-soft badge-primary">
-                        {category.imageFiles.length} photos
-                      </span>
-                    </div>
-
-                    {category.imageFiles.length > 0 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {category.imageFiles.map((file) => {
-                          const idxInFlat = flatImages.findIndex(
-                            (img) => img.id === file.id,
-                          );
-                          return (
-                            <Gallery3DCard
-                              key={file.id}
-                              src={imageSources[file.id] || file.url || ""}
-                              alt={file.name || "Evidence"}
-                              isLoading={convertingImageIds.includes(file.id)}
-                              onClick={() => setPreviewIndex(idxInFlat)}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {category.pdfFiles.length > 0 && (
-                      <div className="space-y-4 pt-4 border-t border-base-100/20">
-                        <div className="flex items-center gap-2">
-                          <span className="badge badge-soft badge-secondary">
-                            PDFs
-                          </span>
-                          <span className="text-xs uppercase text-base-content/40 font-bold">
-                            {category.pdfFiles.length} Documents
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          {category.pdfFiles.map((file) => (
-                            <div
-                              key={file.id}
-                              className="border border-base-100/30 rounded-2xl p-4 space-y-3 bg-base-100/30"
-                            >
-                              <div className="flex items-center justify-between gap-3 px-2">
-                                <p className="font-semibold text-sm truncate max-w-[70%]">
-                                  {file.name || "PDF Document"}
-                                </p>
-                                <a
-                                  className="btn btn-primary btn-xs rounded-full px-4"
-                                  href={file.url ?? ""}
-                                  download
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  Download
-                                </a>
-                              </div>
-                              <div className="w-full aspect-4/3 rounded-xl overflow-hidden border border-base-300 bg-black/10">
-                                <iframe
-                                  src={file.url ?? ""}
-                                  title={file.name || "PDF preview"}
-                                  className="w-full h-full border-none"
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
+              <div>
+                <h2 className="text-xl font-bold">
+                  Evidences &amp; Attachments
+                </h2>
+                <p className="text-xs text-base-content/50 mt-0.5">
+                  {recapFiles?.filter((f) => f?.fileRecapCategory?.name != null)
+                    .length ?? 0}{" "}
+                  file(s) across {categories.length} categor
+                  {categories.length === 1 ? "y" : "ies"}
+                </p>
+              </div>
             </div>
+
+            {categories.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {categories.map((category) => {
+                  const files = category.files;
+                  const imageCount = files.filter(isImageFile).length;
+                  const pdfCount = files.filter(isPdfFile).length;
+
+                  return (
+                    <details
+                      key={category.name}
+                      className="group rounded-2xl border border-base-200 bg-base-100/50 shadow-sm overflow-hidden"
+                      open
+                    >
+                      <summary className="flex cursor-pointer list-none items-center gap-3 px-6 py-4 select-none hover:bg-base-200/40 transition-colors">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                          <FolderOpen className="h-5 w-5" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-base-content">
+                            {category.name}
+                          </span>
+                          <span className="text-[11px] text-base-content/50 font-medium">
+                            {` · ${imageCount} image${imageCount !== 1 ? "s" : ""}`}
+                            {pdfCount > 0
+                              ? ` · ${pdfCount} PDF${pdfCount !== 1 ? "s" : ""}`
+                              : ""}
+                          </span>
+                        </div>
+                        {/* Chevron indicator */}
+                        <svg
+                          className="ml-auto h-5 w-5 shrink-0 text-base-content/30 transition-transform duration-300 group-open:rotate-180"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </summary>
+
+                      <div className="border-t border-base-200 p-4">
+                        <div
+                          className="grid gap-3"
+                          style={{
+                            gridTemplateColumns:
+                              "repeat(auto-fill, minmax(160px, 1fr))",
+                            maxHeight: files.length > 20 ? "520px" : undefined,
+                            overflowY: files.length > 20 ? "auto" : undefined,
+                          }}
+                        >
+                          {files.map((file) => {
+                            const isImage = isImageFile(file);
+                            const isPdf = isPdfFile(file);
+
+                            return (
+                              <div
+                                key={file.id}
+                                className="group flex flex-col gap-1.5 rounded-xl border border-base-200 bg-base-100 p-2 shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 cursor-pointer"
+                                onClick={() => {
+                                  if (isImage) {
+                                    const idx = flatImages.findIndex(
+                                      (img) => img.id === file.id,
+                                    );
+                                    if (idx >= 0) setPreviewIndex(idx);
+                                  } else {
+                                    window.open(file.url || "#", "_blank");
+                                  }
+                                }}
+                              >
+                                <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-base-200/60">
+                                  {isImage ? (
+                                    convertingImageIds.includes(file.id) ? (
+                                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-base-content/60">
+                                        <span className="loading loading-spinner loading-md text-primary" />
+                                      </div>
+                                    ) : (
+                                      <img
+                                        src={
+                                          imageSources[file.id] ||
+                                          file.url ||
+                                          ""
+                                        }
+                                        alt={file.name || "Evidence"}
+                                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                      />
+                                    )
+                                  ) : (
+                                    <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-base-content/30">
+                                      {isPdf ? (
+                                        <FileText className="h-8 w-8" />
+                                      ) : (
+                                        <FolderOpen className="h-8 w-8" />
+                                      )}
+                                      <span className="text-[10px] font-black uppercase tracking-wider">
+                                        {(
+                                          file.fileType?.name || "FILE"
+                                        ).toUpperCase()}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {/* Hover overlay badge */}
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 rounded-lg">
+                                    <span className="rounded-lg bg-white/90 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-base-content shadow">
+                                      {isImage ? "View" : "Open"}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-0.5 px-0.5">
+                                  <span
+                                    className="truncate text-xs font-semibold text-base-content leading-tight"
+                                    title={file.name || ""}
+                                  >
+                                    {file.name || "Unnamed File"}
+                                  </span>
+                                  <span
+                                    className={`text-[10px] font-bold uppercase tracking-wider ${
+                                      file.approved
+                                        ? "text-success"
+                                        : "text-warning"
+                                    }`}
+                                  >
+                                    {file.approved ? "Approved" : "Pending"}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </details>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-16 bg-base-200/30 rounded-2xl border border-dashed border-base-300">
+                <ImageIcon className="h-14 w-14 text-base-content/20 mb-3" />
+                <p className="text-base-content/50 font-semibold">
+                  No files or evidences attached.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

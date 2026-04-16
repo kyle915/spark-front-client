@@ -170,9 +170,13 @@ const FormAutocomplete = <T extends FieldValues>({
           onKeyDown={handleKeyDown}
           disabled={disabled}
           placeholder={placeholder}
-          className={`w-full min-h-11 input input-bordered rounded-full px-3 pr-12 ${
+          className={`w-full min-h-11 input input-bordered rounded-full px-3 pr-12 transition-colors ${
             error ? "input-error" : ""
-          } ${loading ? "cursor-wait" : ""} ${inputClassName}`}
+          } ${loading ? "cursor-wait" : ""} ${
+            disabled
+              ? "disabled:bg-base-200/50 disabled:border-base-300 disabled:text-base-content/40 disabled:cursor-not-allowed"
+              : ""
+          } ${inputClassName}`}
           autoComplete="off"
         />
 

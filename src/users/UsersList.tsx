@@ -26,7 +26,7 @@ import { fetchQuery, graphql } from "react-relay";
 import type { GraphQLTaggedNode } from "react-relay";
 import environment from "@api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
-import { FilterIcon, FunnelXIcon, KeyIcon } from "lucide-react";
+import { Funnel, FunnelXIcon, KeyIcon } from "lucide-react";
 import FormInputPassword from "@/shared/FormInputPassword";
 
 const PAGE_SIZE = 10;
@@ -268,7 +268,7 @@ const UsersList = () => {
   const [commitUpdate] =
     useMutation<UpdateUserMutationType>(UpdateUserMutation);
   const [commitChangePassword] = useMutation<ChangeUserPasswordMutationType>(
-    ChangeUserPasswordMutation
+    ChangeUserPasswordMutation,
   );
 
   const selectedName = watch("name");
@@ -319,7 +319,7 @@ const UsersList = () => {
       {
         filePath: fileName,
         contentType: file.type,
-      }
+      },
     ).toPromise();
 
     const uploadUrl = uploadData?.getUploadUrl?.uploadUrl;
@@ -348,17 +348,17 @@ const UsersList = () => {
       email: selectedEmail || undefined,
       role: selectedRole === "all" || !selectedRole ? undefined : selectedRole,
       tenantId:
-        selectedRole === "CLIENT" ? selectedTenant ?? undefined : undefined,
+        selectedRole === "CLIENT" ? (selectedTenant ?? undefined) : undefined,
     }),
-    [selectedEmail, selectedName, selectedRole, selectedTenant]
+    [selectedEmail, selectedName, selectedRole, selectedTenant],
   );
 
   const hasActiveFilters = useMemo(() => {
     return Boolean(
       (filters?.name && filters.name.trim() !== "") ||
-        (filters?.email && filters.email.trim() !== "") ||
-        filters?.role ||
-        filters?.tenantId
+      (filters?.email && filters.email.trim() !== "") ||
+      filters?.role ||
+      filters?.tenantId,
     );
   }, [filters]);
 
@@ -502,42 +502,49 @@ const UsersList = () => {
       </div>
 
       <div className="flex flex-col gap-4">
-        <div className="rounded-xl  bg-base-100 p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-1">
-              <FilterIcon className="w-4 h-4" />
-              <h2 className="text-sm font-semibold text-base-content/70">
-                Filters
-              </h2>
-            </div>
+        <div className="bg-base-100 rounded-xl border border-base-300 shadow-sm">
+          <div className="flex items-center justify-between cursor-pointer px-6 py-4 select-none">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-2 rounded-lg">
+                  <Funnel size={18} className="text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold text-base-content">
+                  Filters
+                </h3>
+              </div>
 
-            {hasActiveFilters && (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => reset()}
-                >
-                  <FunnelXIcon className="w-4 h-4" />
-                  Clear filters
-                </button>
-              </>
-            )}
+              <div className="flex items-center justify-between gap-3">
+                {hasActiveFilters && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => reset()}
+                    >
+                      <FunnelXIcon className="w-4 h-4" />
+                      Clear filters
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormInputText
-              control={control}
-              name="name"
-              label="Filter by Name"
-              placeholder="Enter name"
-            />
-            <FormInputText
-              control={control}
-              name="email"
-              placeholder="e.g., demo@email.com"
-              label="Filter by Email"
-            />
-            {/*
+          <div className="px-6 pb-6 pt-2 flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormInputText
+                control={control}
+                name="name"
+                label="Filter by Name"
+                placeholder="Enter name"
+              />
+              <FormInputText
+                control={control}
+                name="email"
+                placeholder="e.g., demo@email.com"
+                label="Filter by Email"
+              />
+              {/*
             <FormAutocomplete
               control={control}
               name="role"
@@ -546,6 +553,7 @@ const UsersList = () => {
               placeholder="Select a role"
             />
             */}
+            </div>
           </div>
         </div>
 

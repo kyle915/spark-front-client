@@ -5,6 +5,7 @@ import type {
   Path,
   RegisterOptions,
 } from "react-hook-form";
+import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { extractDatePart } from "@/utils";
@@ -114,21 +115,52 @@ export default function FormDatePicker<T extends FieldValues>({
           </label>
 
           {/* Popover Button */}
-          <button
-            type="button"
-            disabled={disabled}
-            popoverTarget={popoverId}
-            className={`input input-bordered w-full rounded-full text-left ${
-              error ? "input-error" : ""
-            }`}
-            style={{ anchorName: anchorVar } as React.CSSProperties}
-          >
-            <span
-              className={field.value ? "text-base-content" : "text-gray-500"}
+          <div className="relative">
+            <button
+              type="button"
+              disabled={disabled}
+              popoverTarget={popoverId}
+              className={`w-full min-h-11 input input-bordered rounded-full px-3 pr-12 flex items-center text-left transition-colors ${
+                error ? "input-error" : ""
+              } ${
+                disabled
+                  ? "disabled:bg-base-200/50 disabled:border-base-300 disabled:text-base-content/40 disabled:cursor-not-allowed"
+                  : ""
+              }`}
+              style={{ anchorName: anchorVar } as React.CSSProperties}
             >
-              {field.value ? formatDate(field.value) : placeholder}
-            </span>
-          </button>
+              <span
+                className={
+                  field.value ? "text-base-content" : "text-base-content/50"
+                }
+              >
+                {field.value ? formatDate(field.value) : placeholder}
+              </span>
+            </button>
+
+            {/* Icons */}
+            <div className="absolute inset-y-0 right-0 flex items-center pr-2 gap-1 z-10">
+              {field.value && !disabled && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    field.onChange("");
+                  }}
+                  className="p-1 hover:bg-base-200 rounded-full text-base-content/50 hover:text-base-content transition-colors"
+                >
+                  <XMarkIcon className="w-4 h-4" />
+                </button>
+              )}
+              <div className="pointer-events-none pr-1">
+                <ChevronDownIcon
+                  className={`w-5 h-5 transition-transform ${
+                    disabled ? "opacity-50" : "opacity-70"
+                  }`}
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Popover */}
           <div
