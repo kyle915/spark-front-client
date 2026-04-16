@@ -26,7 +26,7 @@ import { fetchQuery, graphql } from "react-relay";
 import type { GraphQLTaggedNode } from "react-relay";
 import environment from "@api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
-import { FilterIcon, Funnel, FunnelXIcon, KeyIcon } from "lucide-react";
+import { Funnel, FunnelXIcon, KeyIcon } from "lucide-react";
 import FormInputPassword from "@/shared/FormInputPassword";
 
 const PAGE_SIZE = 10;
