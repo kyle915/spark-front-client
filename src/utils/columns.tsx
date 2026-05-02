@@ -11,6 +11,7 @@ import type {
   EventTypeRow,
   LocationRow,
   RequestTypeRow,
+  CustomRecapRow,
 } from "@/types/columnsTypes";
 import { formatDate, formatTime } from "@/utils";
 
@@ -231,6 +232,46 @@ export const createRecapColumns = (
     key: "eventDate",
     label: "Event Date",
     render: (_value, row) => formatDate(row.event?.date ?? null),
+  },
+];
+
+export const createCustomRecapColumns = (): Column<CustomRecapRow>[] => [
+  {
+    key: "name",
+    label: "Recap",
+  },
+  {
+    key: "event",
+    label: "Event",
+    render: (_value, row) => row.event?.name ?? "-",
+  },
+  {
+    key: "ambassador",
+    label: "Ambassador",
+    render: (_value, row) =>
+      row.ambassador?.user
+        ? `${row.ambassador.user.firstName} ${row.ambassador.user.lastName}`
+        : "-",
+  },
+  {
+    key: "state",
+    label: "State",
+    render: (_value, row) => row.state?.name ?? "-",
+  },
+  {
+    key: "location",
+    label: "City",
+    render: (_value, row) => row.location?.name ?? "-",
+  },
+  {
+    key: "retailer",
+    label: "Retailer",
+    render: (_value, row) => row.retailer?.name ?? "-",
+  },
+  {
+    key: "submittedAt",
+    label: "Submitted At",
+    render: (_value, row) => formatDate(row.submittedAt ?? null),
   },
 ];
 

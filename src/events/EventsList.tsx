@@ -55,6 +55,7 @@ import {
   FilterIcon,
   FunnelXIcon,
   PauseCircleIcon,
+  ChevronDown,
 } from "lucide-react";
 import { CalendarDaysIcon } from "@heroicons/react/24/solid";
 import { useAlertStore } from "@/store/alertStore";
@@ -620,6 +621,26 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
   const retailerStateRequestIdRef = useRef(0);
   const distributorStateRequestIdRef = useRef(0);
 
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [filtersOverflow, setFiltersOverflow] = useState<"hidden" | "visible">(
+    "hidden",
+  );
+  const filtersTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleToggleFilters = () => {
+    if (filtersTimerRef.current) clearTimeout(filtersTimerRef.current);
+    if (isFiltersOpen) {
+      setFiltersOverflow("hidden");
+      setIsFiltersOpen(false);
+    } else {
+      setIsFiltersOpen(true);
+      filtersTimerRef.current = setTimeout(
+        () => setFiltersOverflow("visible"),
+        320,
+      );
+    }
+  };
+
   // rmm clients query (for filters)
   const rmmClientsData = useLazyLoadQuery<RmmClientsQueryType>(
     RmmClientsQuery,
@@ -765,106 +786,138 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
                 placeholder="Search tenant..."
               />
             </div> */}
-            <div className="rounded-xl  bg-base-100 p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-1">
-                  <FilterIcon className="w-4 h-4" />
-                  <h2 className="text-sm font-semibold text-base-content/70">
-                    Filters
-                  </h2>
-                </div>
+            <div className="bg-base-100 rounded-xl border border-base-300 shadow-sm">
+              <div
+                className="flex items-center justify-between cursor-pointer px-6 py-4 select-none"
+                onClick={handleToggleFilters}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary/10 p-2 rounded-lg">
+                      <FilterIcon size={18} className="text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-base-content">
+                      Filters
+                    </h3>
+                  </div>
 
-                <div className="flex gap-2">
-                  {Object.entries(watch()).some(([, value]) => value) && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => reset()}
-                    >
-                      <FunnelXIcon className="w-4 h-4" />
-                      Clear filters
-                    </button>
-                  )}
+                  <div className="flex items-center justify-between gap-3">
+                    {Object.entries(watch()).some(([, value]) => value) && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          reset();
+                        }}
+                      >
+                        <FunnelXIcon className="w-4 h-4" />
+                        Clear
+                      </button>
+                    )}
+
+                    <span className="text-xs text-base-content/60">
+                      {isFiltersOpen ? "Hide" : "Show"}
+                    </span>
+
+                    <ChevronDown
+                      size={20}
+                      className={`transition-transform duration-300 ${
+                        isFiltersOpen ? "rotate-180" : "rotate-0"
+                      }`}
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <FormAutocomplete
-                  control={control}
-                  name="eventType"
-                  label="Filter by Event Type"
-                  options={catalogs.eventTypes.map((t) => ({
-                    label: t.name,
-                    value: t.id,
-                  }))}
-                  placeholder="Search event type..."
-                />
 
-                {!fixedFilters?.archived ? (
-                  <FormAutocomplete
-                    control={control}
-                    name="status"
-                    label="Filter by Status"
-                    options={catalogs.eventStatuses.flatMap((status) => {
-                      const enumValue = toEventStatusFilterEnum(status);
-                      return enumValue
-                        ? [{ label: status.name, value: enumValue }]
-                        : [];
-                    })}
-                    placeholder="Search status..."
-                  />
-                ) : null}
+              <div
+                style={{
+                  maxHeight: isFiltersOpen ? "900px" : "0px",
+                  overflow: filtersOverflow,
+                  transition: "max-height 0.3s ease",
+                }}
+              >
+                <div className="px-6 pb-6 pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <FormAutocomplete
+                      control={control}
+                      name="eventType"
+                      label="Filter by Event Type"
+                      options={catalogs.eventTypes.map((t) => ({
+                        label: t.name,
+                        value: t.id,
+                      }))}
+                      placeholder="Search event type..."
+                    />
 
-                <FormAutocomplete
-                  control={control}
-                  name="request"
-                  label="Filter by Request"
-                  options={catalogs.requests.map((r) => ({
-                    label: r.name,
-                    value: r.id,
-                  }))}
-                  placeholder="Search request..."
-                />
-                <FormAutocomplete
-                  control={control}
-                  name="retailerStateId"
-                  label="Filter by Retailer State"
-                  options={retailerStateOptions}
-                  placeholder={
-                    isRetailerStateLoading
-                      ? "Loading states..."
-                      : "Search state..."
-                  }
-                  onSearch={setRetailerStateSearch}
-                />
-                <FormAutocomplete
-                  control={control}
-                  name="distributorStateId"
-                  label="Filter by Distributor State"
-                  options={distributorStateOptions}
-                  placeholder={
-                    isDistributorStateLoading
-                      ? "Loading states..."
-                      : "Search state..."
-                  }
-                  onSearch={setDistributorStateSearch}
-                />
-                <FormDatePicker
-                  control={control}
-                  name="date"
-                  label="Filter by Date"
-                  placeholder="Select date"
-                />
+                    {!fixedFilters?.archived ? (
+                      <FormAutocomplete
+                        control={control}
+                        name="status"
+                        label="Filter by Status"
+                        options={catalogs.eventStatuses.flatMap((status) => {
+                          const enumValue = toEventStatusFilterEnum(status);
+                          return enumValue
+                            ? [{ label: status.name, value: enumValue }]
+                            : [];
+                        })}
+                        placeholder="Search status..."
+                      />
+                    ) : null}
 
-                <FormAutocomplete
-                  control={control}
-                  name="rmmAsigned"
-                  label="RMM Client"
-                  options={rmmClientsData.rmmClients.map((c) => ({
-                    label: `${c.firstName} ${c.lastName}`,
-                    value: c.id,
-                  }))}
-                  placeholder="Search client..."
-                />
+                    <FormAutocomplete
+                      control={control}
+                      name="request"
+                      label="Filter by Request"
+                      options={catalogs.requests.map((r) => ({
+                        label: r.name,
+                        value: r.id,
+                      }))}
+                      placeholder="Search request..."
+                    />
+                    <FormAutocomplete
+                      control={control}
+                      name="retailerStateId"
+                      label="Filter by Retailer State"
+                      options={retailerStateOptions}
+                      placeholder={
+                        isRetailerStateLoading
+                          ? "Loading states..."
+                          : "Search state..."
+                      }
+                      onSearch={setRetailerStateSearch}
+                    />
+                    <FormAutocomplete
+                      control={control}
+                      name="distributorStateId"
+                      label="Filter by Distributor State"
+                      options={distributorStateOptions}
+                      placeholder={
+                        isDistributorStateLoading
+                          ? "Loading states..."
+                          : "Search state..."
+                      }
+                      onSearch={setDistributorStateSearch}
+                    />
+                    <FormDatePicker
+                      control={control}
+                      name="date"
+                      label="Filter by Date"
+                      placeholder="Select date"
+                    />
+
+                    <FormAutocomplete
+                      control={control}
+                      name="rmmAsigned"
+                      label="RMM Client"
+                      options={rmmClientsData.rmmClients.map((c) => ({
+                        label: `${c.firstName} ${c.lastName}`,
+                        value: c.id,
+                      }))}
+                      placeholder="Search client..."
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

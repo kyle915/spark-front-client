@@ -137,9 +137,8 @@ const RecapView = () => {
 
   const backToListUrl = useMemo(() => {
     const pageRaw = Number(searchParams.get("fromPage") ?? "1");
-    const page = Number.isFinite(pageRaw) && pageRaw > 0
-      ? Math.floor(pageRaw)
-      : 1;
+    const page =
+      Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
     const after = searchParams.get("fromAfter");
 
     const params = new URLSearchParams();
@@ -326,13 +325,14 @@ const RecapView = () => {
 
             return [file.id, objectUrl] as const;
           } catch (error) {
-            const normalizedError = error instanceof Error
-              ? {
-                  name: error.name,
-                  message: error.message,
-                  stack: error.stack,
-                }
-              : error;
+            const normalizedError =
+              error instanceof Error
+                ? {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack,
+                  }
+                : error;
 
             console.error("Failed to convert HEIC image", {
               fileId: file.id,
@@ -791,11 +791,15 @@ const RecapView = () => {
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm border rounded-lg p-3">
                         <span>First-time Consumers</span>
-                        <span className="font-medium">{firstTimeConsumers}</span>
+                        <span className="font-medium">
+                          {firstTimeConsumers}
+                        </span>
                       </div>
                       <div className="flex justify-between text-sm border rounded-lg p-3">
                         <span>Brand Aware Consumers</span>
-                        <span className="font-medium">{brandAwareConsumers}</span>
+                        <span className="font-medium">
+                          {brandAwareConsumers}
+                        </span>
                       </div>
                       <div className="flex justify-between text-sm border rounded-lg p-3">
                         <span>Willing to Purchase</span>
@@ -828,25 +832,30 @@ const RecapView = () => {
                     {recap.salesPerformance.map((item) => (
                       <div
                         key={item.id}
-                        className="border border-base-200 rounded-xl p-4 space-y-1"
+                        className="border border-base-100/30 rounded-xl p-4 space-y-2 bg-base-200/20 shadow-sm"
                       >
-                        {/* PRODUCT NAME */}
-                        <p className="font-semibold">
-                          {item.product?.name ?? "—"}
-                        </p>
-
-                        {/* TYPE */}
-                        <p className="text-sm text-base-content/60">
-                          Type: {item.typeOfGood?.name ?? "—"}
-                        </p>
-
-                        {/* PRICE */}
-                        <p className="text-sm">
-                          Price:{" "}
-                          <span className="font-medium">
-                            ${Number(item.price ?? 0).toFixed(2)}
+                        <div className="flex items-center gap-3">
+                          {item.product?.image && (
+                            <div className="w-12 h-12 bg-white rounded-lg p-1">
+                              <img
+                                src={item.product.image}
+                                alt={item.product.name}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          )}
+                          <p className="font-semibold">
+                            {item.product?.name ?? "—"}
+                          </p>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-base-content/60">
+                            Type: {item.typeOfGood?.name ?? "—"}
                           </span>
-                        </p>
+                          <span className="font-bold text-primary">
+                            ${item.price?.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -869,20 +878,30 @@ const RecapView = () => {
                     {recap.productSamples.map((item) => (
                       <div
                         key={item.id}
-                        className="border border-base-200 rounded-xl p-4 space-y-1"
+                        className="border border-base-100/30 rounded-xl p-4 space-y-2 bg-base-200/20 shadow-sm transition hover:border-primary/20"
                       >
-                        {/* PRODUCT NAME */}
-                        <p className="font-semibold">
-                          {item.product?.name ?? "—"}
-                        </p>
-
-                        {/* QUANTITY */}
-                        <p className="text-sm text-base-content/60">
-                          Quantity:{" "}
-                          <span className="font-medium">
-                            {item.quantity ?? 0}
+                        <div className="flex items-center gap-3">
+                          {item.product?.image && (
+                            <div className="w-12 h-12 bg-white rounded-lg p-1">
+                              <img
+                                src={item.product.image}
+                                alt={item.product.name}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          )}
+                          <p className="font-semibold">
+                            {item.product?.name ?? "—"}
+                          </p>
+                        </div>
+                        <div className="flex justify-between items-center text-sm pt-2">
+                          <span className="text-base-content/60">
+                            Quantity Distributed
                           </span>
-                        </p>
+                          <span className="badge badge-primary badge-sm font-bold">
+                            {item.quantity}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -922,7 +941,7 @@ const RecapView = () => {
                         {hasDoDifferently && (
                           <div className="space-y-1">
                             <p className="text-xs uppercase text-base-content/60">
-                             What would have been done differently?
+                              What would have been done differently?
                             </p>
                             <p className="text-sm text-base-content/80">
                               {item.doDifferentlyFeedback}

@@ -79,6 +79,7 @@ import {
 // Recap
 // import CreateRecap from "@/recap/CreateRecap";
 import RecapList from "@/recap/RecapsList";
+import RecapCustomList from "@/recap/RecapCustomList";
 import RecapView from "@/recap/RecapView";
 // import EditRecap from "@/recap/EditRecap";
 
@@ -99,6 +100,7 @@ import CalendarConnection from "@/calendar/CalendarConnection";
 import ThemePage from "@/theme/ThemePage";
 import CreateGoals from "@/goals/CreateGoals";
 import GoalsList from "@/goals/GoalsList";
+import RecapCustomView from "@/recap/RecapCustomView";
 
 /* -----------------------------------------------------------
    PUBLIC ROUTES (NO AUTH REQUIRED)
@@ -308,13 +310,24 @@ const ProductLinks = {
 const RecapLinks = {
   menu: [
     { path: "/recap/list", name: "List", Icon: Bars4Icon },
+    { path: "/recaps/custom-list", name: "Custom List", Icon: QueueListIcon },
     // { path: "/recap/create", name: "Create", Icon: PlusCircleIcon },
   ],
 
   routes: [
     // { path: "/recap/create", component: <CreateRecap />, isPublic: false },
     { path: "/recap/list", component: <RecapList />, isPublic: false },
+    {
+      path: "/recaps/custom-list",
+      component: <RecapCustomList />,
+      isPublic: false,
+    },
     { path: "/recap/view/:uuid", component: <RecapView />, isPublic: false },
+    {
+      path: "/recap/view-custom/:uuid",
+      component: <RecapCustomView />,
+      isPublic: false,
+    },
     // { path: "/recap/edit/:uuid", component: <EditRecap />, isPublic: false },
   ],
 };

@@ -584,6 +584,12 @@ type ApproveAmbassadorResponse {
   ambassador: Ambassador
 }
 
+input ApproveCustomRecapInput {
+  clientMutationId: ID = null
+  id: ID!
+  approved: Boolean!
+}
+
 input ApproveEventInput {
   clientMutationId: ID = null
   id: ID!
@@ -1287,6 +1293,53 @@ input CreateCompanyToAmbassadorReviewInput {
   jobId: ID!
 }
 
+input CreateCustomFieldInput {
+  clientMutationId: ID = null
+  name: String!
+  customRecapTemplateId: ID!
+  customFieldTypeId: ID!
+  recapSectionId: ID!
+  required: Boolean = null
+}
+
+input CreateCustomRecapFieldTypeInput {
+  clientMutationId: ID = null
+  name: String!
+}
+
+input CreateCustomRecapInput {
+  clientMutationId: ID = null
+  name: String!
+  eventId: ID!
+  customRecapTemplateId: ID!
+  files: [RecapFileInput!] = null
+  productSamples: [ProductSampleInput!] = null
+  salesPerformance: [SalesPerformanceInput!] = null
+  timezoneId: ID = null
+  totalEngagements: Int = null
+  fillingForAmbassador: Boolean = null
+  late: Boolean = null
+  incomplete: Boolean = null
+  approved: Boolean = null
+  usedCorpoCard: Boolean = null
+  jobId: ID = null
+  retailerId: ID = null
+  locationId: ID = null
+  stateId: ID = null
+  ambassadorId: ID = null
+  customFieldValues: [CustomFieldValueInput!] = null
+}
+
+input CreateCustomRecapTemplateInput {
+  clientMutationId: ID = null
+  name: String!
+  eventTypeId: ID!
+  productSamples: Boolean = null
+  salesPerformance: Boolean = null
+  layout: JSON = null
+  customFields: [CustomRecapTemplateFieldInput!] = null
+}
+
 input CreateDistributorInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -1519,6 +1572,12 @@ input CreateRecapInput {
   accountFeedback: AccountFeedbackInput = null
 }
 
+input CreateRecapSectionInput {
+  clientMutationId: ID = null
+  name: String!
+  tenantId: ID!
+}
+
 input CreateRequestDetailInput {
   clientMutationId: ID = null
   isTableNeeded: Boolean! = false
@@ -1683,6 +1742,259 @@ input CreateUserInput {
 }
 
 """
+CustomField(id, uuid, name, required, custom_recap_template, custom_field_type, recap_section, created_by, updated_by, created_at, updated_at)
+"""
+type CustomField implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  name: String!
+  required: Boolean!
+  customRecapTemplateId: ID!
+  customFieldTypeId: ID!
+  customFieldType: CustomRecapFieldType!
+  recapSectionId: ID!
+  recapSection: RecapSection!
+  createdAt: String!
+  updatedAt: String!
+  value: String
+  customFieldValueId: ID
+}
+
+type CustomFieldDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  customField: CustomField
+}
+
+input CustomFieldValueInput {
+  clientMutationId: ID = null
+  customFieldId: ID = null
+  customFieldValueId: ID = null
+  value: String!
+}
+
+"""
+CustomRecap(id, uuid, name, submitted_at, total_engagements, filling_for_ambassador, late, incomplete, approved, used_corpo_card, timezone, event, ambassador, job, retailer, location, state, tenant, custom_recap_template, created_by, updated_by, created_at, updated_at)
+"""
+type CustomRecap implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  name: String!
+  submittedAt: String
+  totalEngagements: Int
+  fillingForAmbassador: Boolean!
+  late: Boolean!
+  incomplete: Boolean!
+  approved: Boolean!
+  usedCorpoCard: Boolean!
+  timezoneId: ID
+  eventId: ID!
+  event: Event!
+  ambassadorId: ID
+  ambassador: Ambassador
+  jobId: ID
+  job: Job
+  retailerId: ID
+  retailer: Retailer
+  locationId: ID
+  location: Location
+  stateId: ID
+  state: State
+  customRecapTemplateId: ID!
+  customRecapTemplate: CustomRecapTemplate!
+  createdAt: String!
+  updatedAt: String!
+  customRecapProductSample: [CustomRecapProductSample!]!
+  customRecapSalePerformance: [CustomRecapSalePerformance!]!
+  customRecapFiles: [CustomRecapFile!]!
+  customField: [CustomField!]!
+}
+
+type CustomRecapCountableConnection {
+  pageInfo: PageInfo!
+  edges: [CustomRecapCountableEdge!]!
+  totalCount: Int!
+}
+
+type CustomRecapCountableEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: CustomRecap!
+}
+
+type CustomRecapDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  customRecap: CustomRecap
+}
+
+"""
+CustomRecapFieldType(id, uuid, name, created_by, updated_by, created_at, updated_at)
+"""
+type CustomRecapFieldType implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  name: String!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type CustomRecapFieldTypeCountableConnection {
+  pageInfo: PageInfo!
+  edges: [CustomRecapFieldTypeCountableEdge!]!
+  totalCount: Int!
+}
+
+type CustomRecapFieldTypeCountableEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: CustomRecapFieldType!
+}
+
+type CustomRecapFieldTypeDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  customRecapFieldType: CustomRecapFieldType
+}
+
+"""
+CustomRecapFile(id, uuid, name, url, approved, custom_recap, file_type, file_recap_category, created_by, updated_by, created_at, updated_at)
+"""
+type CustomRecapFile implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  name: String!
+  approved: Boolean!
+  fileTypeId: ID!
+  fileRecapCategoryId: ID
+  createdAt: String!
+  updatedAt: String!
+  fileType: FileType!
+  fileRecapCategory: FileRecapCategory
+  url: String
+}
+
+type CustomRecapFileDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  customRecapFile: CustomRecapFile
+}
+
+input CustomRecapFiltersInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  eventId: ID = null
+  eventType: ID = null
+  rmmAsignedId: ID = null
+  ambassadorId: ID = null
+  retailerId: ID = null
+  locationId: ID = null
+  stateId: ID = null
+  eventDate: String = null
+  startDate: String = null
+  endDate: String = null
+  eventAddress: String = null
+  approved: Boolean = null
+  edited: Boolean = null
+  customRecapTemplateId: ID = null
+}
+
+"""
+CustomRecapProductSample(id, uuid, product, custom_recap, quantity, created_by, updated_by, created_at, updated_at)
+"""
+type CustomRecapProductSample implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  product: Product!
+  quantity: Int!
+  createdAt: String!
+  updatedAt: String!
+}
+
+"""
+CustomRecapSalePerformance(id, uuid, price, product, custom_recap, type_of_good, created_by, updated_by, created_at, updated_at)
+"""
+type CustomRecapSalePerformance implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  product: Product!
+  typeOfGood: TypeOfGood!
+  price: Float!
+  createdAt: String!
+  updatedAt: String!
+}
+
+"""
+CustomRecapTemplate(id, uuid, name, product_samples, sales_performance, layout, event_type, tenant, created_by, updated_by, created_at, updated_at)
+"""
+type CustomRecapTemplate implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  name: String!
+  productSamples: Boolean!
+  salesPerformance: Boolean!
+  layout: JSON!
+  eventTypeId: ID!
+  eventType: EventType!
+  tenantId: ID!
+  tenant: TenantType!
+  createdAt: String!
+  updatedAt: String!
+  customField: [CustomField!]!
+}
+
+type CustomRecapTemplateCountableConnection {
+  pageInfo: PageInfo!
+  edges: [CustomRecapTemplateCountableEdge!]!
+  totalCount: Int!
+}
+
+type CustomRecapTemplateCountableEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: CustomRecapTemplate!
+}
+
+type CustomRecapTemplateDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  customRecapTemplate: CustomRecapTemplate
+}
+
+input CustomRecapTemplateFieldInput {
+  clientMutationId: ID = null
+  name: String!
+  customFieldTypeId: ID!
+  recapSectionId: ID!
+  id: ID = null
+  required: Boolean = null
+}
+
+input CustomRecapTemplateFiltersInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  eventTypeId: ID = null
+}
+
+"""
 User(password, last_login, is_superuser, username, first_name, last_name, email, is_staff, date_joined, id, uuid, image, role, created_by, updated_by, created_at, updated_at, is_active)
 """
 type CustomUserType implements Node {
@@ -1720,6 +2032,11 @@ input DeclineAmbassadorJobInput {
   clientMutationId: ID = null
   tenantId: ID = null
   ambassadorJobId: ID!
+}
+
+input DeclineCustomRecapInput {
+  clientMutationId: ID = null
+  id: ID!
 }
 
 input DeclineEventInput {
@@ -2208,6 +2525,11 @@ type FileTypeCountableEdge {
 input ForgotPasswordInput {
   clientMutationId: ID = null
   email: String!
+}
+
+input GenerateCustomRecapPdfInput {
+  clientMutationId: ID = null
+  id: ID!
 }
 
 type GenerateInsightsPayload {
@@ -2827,10 +3149,23 @@ type Mutation {
   updateTimezone(input: UpdateTimeZoneInput!): TimeZoneResponse!
   createRecap(input: CreateRecapInput!): RecapDetailResponse!
   updateRecap(input: UpdateRecapInput!): RecapDetailResponse!
+  createCustomRecap(input: CreateCustomRecapInput!): CustomRecapDetailResponse!
+  updateCustomRecap(input: UpdateCustomRecapInput!): CustomRecapDetailResponse!
+  createCustomField(input: CreateCustomFieldInput!): CustomFieldDetailResponse!
+  updateCustomField(input: UpdateCustomFieldInput!): CustomFieldDetailResponse!
+  createCustomRecapTemplate(input: CreateCustomRecapTemplateInput!): CustomRecapTemplateDetailResponse!
+  updateCustomRecapTemplate(input: UpdateCustomRecapTemplateInput!): CustomRecapTemplateDetailResponse!
+  createCustomRecapFieldType(input: CreateCustomRecapFieldTypeInput!): CustomRecapFieldTypeDetailResponse!
+  updateCustomRecapFieldType(input: UpdateCustomRecapFieldTypeInput!): CustomRecapFieldTypeDetailResponse!
+  createRecapSection(input: CreateRecapSectionInput!): RecapSectionDetailResponse!
+  updateRecapSection(input: UpdateRecapSectionInput!): RecapSectionDetailResponse!
   deleteRecap(input: DeleteRecapInput!): RecapDetailResponse!
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
+  approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
+  declineCustomRecap(input: DeclineCustomRecapInput!): CustomRecapDetailResponse!
   generateRecapPdf(input: GenerateRecapPdfInput!): RecapFileDetailResponse!
+  generateCustomRecapPdf(input: GenerateCustomRecapPdfInput!): CustomRecapFileDetailResponse!
   exportRecapsXlsx(input: ExportRecapsXlsxInput!): RecapExportResponse!
   exportRecapXlsx(input: ExportRecapXlsxInput!): RecapExportResponse!
   recapFileDownloadUrl(input: RecapFileDownloadUrlInput!): RecapFileUrlResponse!
@@ -3205,10 +3540,18 @@ type Query {
   publicTimezones(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): TimeZoneCountableConnection!
   recaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RecapFiltersInput = null): RecapCountableConnection!
   recap(uuid: ID!): Recap
+  customRecaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: CustomRecapFiltersInput = null): CustomRecapCountableConnection!
+  customRecap(id: ID = null, uuid: ID = null): CustomRecap
   typeOfGoods(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: TypeOfGoodFiltersInput = null): TypeOfGoodCountableConnection!
   typeOfGood(id: ID = null, uuid: ID = null): TypeOfGood
   fileRecapCategories(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: FileRecapCategoryFiltersInput = null): FileRecapCategoryCountableConnection!
   fileRecapCategory(id: ID = null, uuid: ID = null): FileRecapCategory
+  customRecapTemplate(id: ID = null, uuid: ID = null, tenantId: ID = null, eventTypeId: ID = null): CustomRecapTemplate
+  customRecapTemplates(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: CustomRecapTemplateFiltersInput = null): CustomRecapTemplateCountableConnection!
+  customRecapFieldTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): CustomRecapFieldTypeCountableConnection!
+  customRecapFieldType(id: ID = null, uuid: ID = null): CustomRecapFieldType
+  recapSections(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, tenantId: ID = null): RecapSectionCountableConnection!
+  recapSection(id: ID = null, uuid: ID = null): RecapSection
   fileTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): FileTypeCountableConnection!
   fileType(uuid: ID!): FileType
   ambassadorEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorEventsFiltersInput = null): AmbassadorEventTypeCountableConnection!
@@ -3673,6 +4016,40 @@ type RecapPerformanceInsights {
   topConvertingMarket: TopConvertingMarket
   highestWillingnessToBuy: MarketWithWillingness
   strongestBrandAwareness: MarketWithBrandAwareness
+}
+
+"""
+RecapSection(id, uuid, name, tenant, created_by, updated_by, created_at, updated_at)
+"""
+type RecapSection implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  name: String!
+  tenantId: ID!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type RecapSectionCountableConnection {
+  pageInfo: PageInfo!
+  edges: [RecapSectionCountableEdge!]!
+  totalCount: Int!
+}
+
+type RecapSectionCountableEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: RecapSection!
+}
+
+type RecapSectionDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  recapSection: RecapSection
 }
 
 type RecentEvent {
@@ -4614,6 +4991,57 @@ input UpdateCompanyToAmbassadorReviewInput {
   id: ID!
 }
 
+input UpdateCustomFieldInput {
+  clientMutationId: ID = null
+  name: String!
+  customRecapTemplateId: ID!
+  customFieldTypeId: ID!
+  recapSectionId: ID!
+  required: Boolean = null
+  id: ID!
+}
+
+input UpdateCustomRecapFieldTypeInput {
+  clientMutationId: ID = null
+  name: String!
+  id: ID!
+}
+
+input UpdateCustomRecapInput {
+  clientMutationId: ID = null
+  name: String!
+  eventId: ID!
+  customRecapTemplateId: ID!
+  files: [RecapFileInput!] = null
+  productSamples: [ProductSampleInput!] = null
+  salesPerformance: [SalesPerformanceInput!] = null
+  timezoneId: ID = null
+  totalEngagements: Int = null
+  fillingForAmbassador: Boolean = null
+  late: Boolean = null
+  incomplete: Boolean = null
+  approved: Boolean = null
+  usedCorpoCard: Boolean = null
+  jobId: ID = null
+  retailerId: ID = null
+  locationId: ID = null
+  stateId: ID = null
+  ambassadorId: ID = null
+  customFieldValues: [CustomFieldValueInput!] = null
+  id: ID!
+}
+
+input UpdateCustomRecapTemplateInput {
+  clientMutationId: ID = null
+  name: String!
+  eventTypeId: ID!
+  productSamples: Boolean = null
+  salesPerformance: Boolean = null
+  layout: JSON = null
+  customFields: [CustomRecapTemplateFieldInput!] = null
+  id: ID!
+}
+
 input UpdateDistributorInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -4845,6 +5273,13 @@ input UpdateRecapInput {
   salesPerformance: [SalesPerformanceInput!] = null
   consumerFeedback: ConsumerFeedbackInput = null
   accountFeedback: AccountFeedbackInput = null
+  id: ID!
+}
+
+input UpdateRecapSectionInput {
+  clientMutationId: ID = null
+  name: String!
+  tenantId: ID!
   id: ID!
 }
 

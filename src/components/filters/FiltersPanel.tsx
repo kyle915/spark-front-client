@@ -46,16 +46,35 @@ interface FiltersPanelProps {
 export default function FiltersPanel({ onApplyFilters }: FiltersPanelProps) {
   const tenantId = useAuthStore((state) => state.tenantId);
   const [isOpen, setIsOpen] = useState(false);
+  const [bodyOverflow, setBodyOverflow] = useState<"hidden" | "visible">(
+    "hidden",
+  );
+  const overflowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { control, register, watch, setValue, handleSubmit } =
-    useForm<FiltersFormValues>({
+  const handleToggle = () => {
+    if (overflowTimerRef.current) clearTimeout(overflowTimerRef.current);
+    if (isOpen) {
+      setBodyOverflow("hidden");
+      setIsOpen(false);
+    } else {
+      setIsOpen(true);
+      overflowTimerRef.current = setTimeout(
+        () => setBodyOverflow("visible"),
+        320,
+      );
+    }
+  };
+
+  const { control, watch, setValue, handleSubmit } = useForm<FiltersFormValues>(
+    {
       defaultValues: {
         distributors: [],
         rmm: null,
         quarter: "",
         dateRange: undefined,
       },
-    });
+    },
+  );
 
   const dateRange = watch("dateRange");
 
@@ -175,17 +194,13 @@ export default function FiltersPanel({ onApplyFilters }: FiltersPanelProps) {
   ========================== */
 
   return (
-    <div className="w-full">
-      <div
-        className={cn(
-          "collapse bg-base-100/50 rounded-xl border border-base-300 shadow-sm overflow-visible transition-all duration-300",
-          isOpen && "collapse-open",
-        )}
-      >
+    <div className="w-full relative z-20">
+      {/* Card wrapper */}
+      <div className="bg-base-100/50 rounded-xl border border-base-300 shadow-sm">
         {/* HEADER */}
         <div
-          onClick={() => setIsOpen((prev) => !prev)}
-          className="collapse-title flex items-center justify-between py-4 cursor-pointer"
+          onClick={handleToggle}
+          className="flex items-center justify-between py-4 px-6 cursor-pointer select-none"
         >
           <div className="flex items-center gap-3">
             <div className="bg-primary/10 p-2 rounded-lg">
@@ -203,60 +218,68 @@ export default function FiltersPanel({ onApplyFilters }: FiltersPanelProps) {
           />
         </div>
 
-        {/* BODY */}
-        <div className="collapse-content mt-2 overflow-visible">
-          <div className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <FormMultiAutocomplete
-              control={control}
-              name="distributors"
-              label="Distributors"
-              options={distributorOptions}
-              onSearch={setDistributorSearch}
-              placeholder="Search distributors..."
-            />
+        {/* BODY — animated with controlled overflow */}
+        <div
+          style={{
+            maxHeight: isOpen ? "600px" : "0px",
+            overflow: bodyOverflow,
+            transition: "max-height 0.3s ease",
+          }}
+        >
+          <div className="px-6 pb-6 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <FormMultiAutocomplete
+                control={control}
+                name="distributors"
+                label="Distributors"
+                options={distributorOptions}
+                onSearch={setDistributorSearch}
+                placeholder="Search distributors..."
+              />
 
-            <FormAutocomplete
-              control={control}
-              name="rmm"
-              label="RMM"
-              options={rmmOptions}
-              onSearch={setRmmSearch}
-              placeholder="Search RMM..."
-            />
+              <FormAutocomplete
+                control={control}
+                name="rmm"
+                label="RMM"
+                options={rmmOptions}
+                onSearch={setRmmSearch}
+                placeholder="Search RMM..."
+              />
 
-            <div className="form-control">
-              <label className="label text-sm font-medium">Quarter</label>
-              <select
-                className="input input-bordered w-full"
-                {...register("quarter")}
-              >
-                <option value="">Select Quarter</option>
-                <option value="Q1">Q1</option>
-                <option value="Q2">Q2</option>
-                <option value="Q3">Q3</option>
-                <option value="Q4">Q4</option>
-              </select>
+              <FormAutocomplete
+                control={control}
+                name="quarter"
+                label="Quarter"
+                placeholder="Select Quarter"
+                options={[
+                  { value: "Q1", label: "Q1 - Jan, Feb, Mar" },
+                  { value: "Q2", label: "Q2 - Apr, May, Jun" },
+                  { value: "Q3", label: "Q3 - Jul, Aug, Sep" },
+                  { value: "Q4", label: "Q4 - Oct, Nov, Dec" },
+                ]}
+                showClear
+              />
+
+              <DateRangePicker
+                value={dateRange}
+                onChange={(range) =>
+                  setValue("dateRange", range, {
+                    shouldDirty: true,
+                    shouldTouch: true,
+                  })
+                }
+              />
             </div>
 
-            <DateRangePicker
-              value={dateRange}
-              onChange={(range) =>
-                setValue("dateRange", range, {
-                  shouldDirty: true,
-                  shouldTouch: true,
-                })
-              }
-            />
-          </div>
-
-          <div className="flex justify-end pt-3">
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={handleApply}
-            >
-              Apply Filters
-            </button>
+            <div className="flex justify-end pt-4">
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={handleApply}
+              >
+                Apply Filters
+              </button>
+            </div>
           </div>
         </div>
       </div>
