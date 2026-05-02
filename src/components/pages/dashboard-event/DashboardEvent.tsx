@@ -22,6 +22,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { GenerateInsightsMutation } from "@/api/mutations/GenerateInsightsMutation";
 import type { GenerateInsightsMutationType } from "@/api/mutations/GenerateInsightsMutation";
+import { formatDate } from "@/utils";
 
 /* =========================
    Helpers
@@ -147,7 +148,7 @@ export default function DashboardIndex() {
 
   const recentEvents = (dashboard.recentEvents ?? []).map((event) => ({
     title: event.name,
-    date: event.date,
+    date: formatDate(event.date),
     rmm: event.location,
     consumers: event.consumers,
     intent: event.intentRate,
