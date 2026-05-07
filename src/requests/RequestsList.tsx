@@ -140,6 +140,7 @@ type RequestsListInnerProps = {
     retailerId?: string;
     distributorId?: string;
     statusId?: string;
+    stateId?: string;
     date?: string;
     edited?: boolean;
     rmmClientId?: string;
@@ -444,6 +445,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
       distributor: "",
       requestType: "",
       status: "",
+      state: "",
       date: "",
     },
   });
@@ -457,6 +459,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
   const selectedDistributorLocation = watch("distributorLocation");
   const selectedDistributor = watch("distributor");
   const selectedStatus = watch("status");
+  const selectedState = watch("state");
   const selectedRequestType = watch("requestType");
   const selectedDate = watch("date");
   const selectedRmmClient = watch("rmmAsigned");
@@ -478,6 +481,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
       distributorStateId: selectedDistributorState || undefined,
       requestTypeId: selectedRequestType || undefined,
       statusId: selectedStatus || undefined,
+      stateId: selectedState || undefined,
       date: selectedDate || undefined,
       rmmAsigned: selectedRmmClient || undefined,
       ...fixedFilters,
@@ -488,6 +492,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
       selectedRequestType,
       selectedRetailer,
       selectedRetailerState,
+      selectedState,
       selectedStatus,
       tenantId,
       fixedFilters,
@@ -637,6 +642,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
       distributor: "",
       requestType: "",
       status: "",
+      state: "",
       date: "",
     });
     setRetailerSearchTerm("");
@@ -765,7 +771,66 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                   }}
                 >
                   <div className="px-6 pb-6 pt-2 flex flex-col gap-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                      <FormAutocomplete
+                        control={control}
+                        name="state"
+                        label="State"
+                        options={catalogs.states.map((state) => ({
+                          label: state.code
+                            ? `${state.name} (${state.code})`
+                            : state.name,
+                          value: state.id,
+                          searchText: state.code
+                            ? `${state.name} ${state.code}`
+                            : state.name,
+                        }))}
+                        loading={isLoading("states")}
+                        placeholder="Search state..."
+                      />
+
+                      <FormAutocomplete
+                        control={control}
+                        name="status"
+                        label="Status"
+                        options={catalogs.requestStatuses.map((s) => ({
+                          label: s.name,
+                          value: s.id,
+                        }))}
+                        loading={isLoading("requestStatuses")}
+                        placeholder="Search status..."
+                      />
+
+                      <FormDatePicker
+                        control={control}
+                        name="date"
+                        label="Filter by Date"
+                        placeholder="Select date"
+                      />
+
+                      <FormAutocomplete
+                        control={control}
+                        name="requestType"
+                        label="Request Type"
+                        options={catalogs.requestTypes.map((s) => ({
+                          label: s.name,
+                          value: s.id,
+                        }))}
+                        loading={isLoading("requestTypes")}
+                        placeholder="Search request type..."
+                      />
+
+                      <FormAutocomplete
+                        control={control}
+                        name="rmmAsigned"
+                        label="RMM Client"
+                        options={rmmClientsData.rmmClients.map((c) => ({
+                          label: `${c.firstName} ${c.lastName}`,
+                          value: c.id,
+                        }))}
+                        loading={isLoading("clients")}
+                        placeholder="Search client..."
+                      />
                       {/** Retailer control filter */}
                       <FormAutocomplete
                         control={control}
@@ -779,6 +844,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                         }))}
                         placeholder="Search state..."
                         loading={isLoading("states")}
+                        disabled={Boolean(selectedState)}
                       />
                       <FormAutocomplete
                         control={control}
@@ -831,6 +897,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                         }))}
                         placeholder="Search state..."
                         loading={isLoading("states")}
+                        disabled={Boolean(selectedState)}
                       />
 
                       <FormAutocomplete
@@ -869,58 +936,13 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                         disabled={!selectedDistributorLocation}
                       />
                     </div>
-                    {/** Other filters */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <FormAutocomplete
-                        control={control}
-                        name="status"
-                        label="Status"
-                        options={catalogs.requestStatuses.map((s) => ({
-                          label: s.name,
-                          value: s.id,
-                        }))}
-                        loading={isLoading("requestStatuses")}
-                        placeholder="Search status..."
-                      />
-
-                      <FormDatePicker
-                        control={control}
-                        name="date"
-                        label="Filter by Date"
-                        placeholder="Select date"
-                      />
-
-                      <FormAutocomplete
-                        control={control}
-                        name="requestType"
-                        label="Request Type"
-                        options={catalogs.requestTypes.map((s) => ({
-                          label: s.name,
-                          value: s.id,
-                        }))}
-                        loading={isLoading("requestTypes")}
-                        placeholder="Search request type..."
-                      />
-
-                      <FormAutocomplete
-                        control={control}
-                        name="rmmAsigned"
-                        label="RMM Client"
-                        options={rmmClientsData.rmmClients.map((c) => ({
-                          label: `${c.firstName} ${c.lastName}`,
-                          value: c.id,
-                        }))}
-                        loading={isLoading("clients")}
-                        placeholder="Search client..."
-                      />
-                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="mt-2">
                 <RequestsListInner
-                  key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedDate}-${selectedRequestType}-${selectedRmmClient}-${JSON.stringify(fixedFilters)}`} // Reset inner component when filters change to reset pagination
+                  key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedState}-${selectedDate}-${selectedRequestType}-${selectedRmmClient}-${JSON.stringify(fixedFilters)}`} // Reset inner component when filters change to reset pagination
                   filters={filters}
                 />
               </div>
