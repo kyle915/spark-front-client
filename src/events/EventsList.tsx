@@ -578,6 +578,7 @@ type EventsListFiltersForm = {
   status: EventStatusFilterEnum | "";
   request: string;
   date: string;
+  stateId: string;
   retailerStateId: string;
   distributorStateId: string;
   rmmAsigned: string;
@@ -593,6 +594,7 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
       status: "",
       request: "",
       date: "",
+      stateId: "",
       retailerStateId: "",
       distributorStateId: "",
       rmmAsigned: "",
@@ -604,6 +606,7 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
   const selectedStatus = watch("status");
   const selectedRequest = watch("request");
   const selectedDate = watch("date");
+  const selectedStateId = watch("stateId");
   const selectedRetailerStateId = watch("retailerStateId");
   const selectedDistributorStateId = watch("distributorStateId");
   const selectedRmmClient = watch("rmmAsigned");
@@ -721,6 +724,7 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
     eventStatus: derivedStatus,
     requestId: selectedRequest || undefined,
     date: selectedDate || undefined,
+    stateId: selectedStateId || undefined,
     retailerStateId: selectedRetailerStateId || undefined,
     distributorStateId: selectedDistributorStateId || undefined,
     edited: fixedFilters?.edited || undefined,
@@ -849,6 +853,18 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
                       }))}
                       placeholder="Search event type..."
                     />
+                    <FormAutocomplete
+                      control={control}
+                      name="stateId"
+                      label="Filter by State"
+                      options={retailerStateOptions}
+                      placeholder={
+                        isRetailerStateLoading
+                          ? "Loading states..."
+                          : "Search state..."
+                      }
+                      onSearch={setRetailerStateSearch}
+                    />
 
                     {!fixedFilters?.archived ? (
                       <FormAutocomplete
@@ -886,6 +902,7 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
                           : "Search state..."
                       }
                       onSearch={setRetailerStateSearch}
+                      disabled={Boolean(selectedStateId)}
                     />
                     <FormAutocomplete
                       control={control}
@@ -898,6 +915,7 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
                           : "Search state..."
                       }
                       onSearch={setDistributorStateSearch}
+                      disabled={Boolean(selectedStateId)}
                     />
                     <FormDatePicker
                       control={control}
@@ -922,7 +940,7 @@ const EventsList = ({ fixedFilters }: EventsListProps) => {
             </div>
 
             <EventsListInner
-              key={`${selectedEventType}-${selectedStatus}-${selectedRequest}-${selectedRetailerStateId}-${selectedDistributorStateId}-${selectedDate}-${selectedRmmClient}`}
+              key={`${selectedEventType}-${selectedStatus}-${selectedRequest}-${selectedStateId}-${selectedRetailerStateId}-${selectedDistributorStateId}-${selectedDate}-${selectedRmmClient}`}
               filters={filters}
               isArchivedView={isArchivedView}
             />
