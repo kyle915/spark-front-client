@@ -20,10 +20,21 @@ import {
 } from "lucide-react";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 
-type Heic2AnyConverter = (options: {
-  blob: Blob;
-  toType?: string;
-}) => Promise<Blob | Blob[]>;
+type HeifDecodedImage = {
+  get_width: () => number;
+  get_height: () => number;
+  display: (
+    imageData: ImageData,
+    callback: (displayData: ImageData | null) => void,
+  ) => void;
+  free?: () => void;
+};
+
+type LibHeifModule = {
+  HeifDecoder: new () => {
+    decode: (data: Uint8Array | ArrayBuffer) => HeifDecodedImage[];
+  };
+};
 
 const KpiCardContainer = ({
   title,
@@ -125,7 +136,8 @@ const RecapCustomView = () => {
   const isPdfFile = useCallback((file: (typeof recapFiles)[number]) => {
     const typeName = file.fileType?.name?.toLowerCase() ?? "";
     const url = file.url?.toLowerCase() ?? "";
-    return typeName === "pdf" || url.endsWith(".pdf");
+    const cleanUrl = url.split("?")[0]?.split("#")[0] ?? "";
+    return typeName === "pdf" || cleanUrl.endsWith(".pdf");
   }, []);
 
   const isImageFile = useCallback((file: (typeof recapFiles)[number]) => {
@@ -138,7 +150,8 @@ const RecapCustomView = () => {
 
   const isHeicFile = useCallback((file: (typeof recapFiles)[number]) => {
     const url = file.url?.toLowerCase() ?? "";
-    return url.endsWith(".heic") || url.endsWith(".heif");
+    const cleanUrl = url.split("?")[0]?.split("#")[0] ?? "";
+    return cleanUrl.endsWith(".heic") || cleanUrl.endsWith(".heif");
   }, []);
 
   const categories = useMemo(() => {
@@ -219,23 +232,121 @@ const RecapCustomView = () => {
           }
 
           try {
-            const response = await fetch(fallbackSrc);
-            const blob = await response.blob();
-            const module = (await import("heic2any")) as {
-              default: Heic2AnyConverter;
-            };
-            const converted = await module.default({
-              blob,
-              toType: "image/jpeg",
+            console.log("[HEIC] Starting conversion", {
+              fileId: file.id,
+              url: fallbackSrc,
             });
-            const convertedBlob = Array.isArray(converted)
-              ? converted[0]
-              : converted;
+            const response = await fetch(fallbackSrc);
+            console.log("[HEIC] Fetch response", {
+              fileId: file.id,
+              ok: response.ok,
+              status: response.status,
+              statusText: response.statusText,
+              contentType: response.headers.get("content-type"),
+            });
+            if (!response.ok) {
+              throw new Error(
+                `HEIC fetch failed with status ${response.status} ${response.statusText}`,
+              );
+            }
+            const blob = await response.blob();
+            console.log("[HEIC] Blob loaded", {
+              fileId: file.id,
+              size: blob.size,
+              type: blob.type,
+            });
+            const module = (await import("libheif-js/wasm-bundle")) as
+              | LibHeifModule
+              | { default: LibHeifModule };
+            const libheif =
+              "default" in module ? module.default : module;
+            console.log("[HEIC] libheif module ready", { fileId: file.id });
+
+            const buffer = await blob.arrayBuffer();
+            const decoder = new libheif.HeifDecoder();
+            const images = decoder.decode(new Uint8Array(buffer));
+            console.log("[HEIC] Decode result", {
+              fileId: file.id,
+              frames: images.length,
+            });
+            const image = images[0];
+            if (!image) throw new Error("No HEIC image frames decoded");
+
+            const width = image.get_width();
+            const height = image.get_height();
+            console.log("[HEIC] Frame selected", { fileId: file.id, width, height });
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+
+            const context = canvas.getContext("2d");
+            if (!context) throw new Error("Canvas 2D context unavailable");
+
+            const imageData = context.createImageData(width, height);
+            await new Promise<void>((resolve, reject) => {
+              image.display(imageData, (displayData) => {
+                if (!displayData) {
+                  console.error("[HEIC] display returned null", {
+                    fileId: file.id,
+                  });
+                  reject(new Error("HEIF processing error"));
+                  return;
+                }
+
+                context.putImageData(displayData, 0, 0);
+                console.log("[HEIC] Image drawn to canvas", { fileId: file.id });
+                resolve();
+              });
+            });
+
+            const convertedBlob = await new Promise<Blob>((resolve, reject) => {
+              canvas.toBlob((canvasBlob) => {
+                if (!canvasBlob) {
+                  console.error("[HEIC] canvas.toBlob returned null", {
+                    fileId: file.id,
+                  });
+                  reject(new Error("Failed to create JPEG blob"));
+                  return;
+                }
+                console.log("[HEIC] JPEG blob created", {
+                  fileId: file.id,
+                  size: canvasBlob.size,
+                  type: canvasBlob.type,
+                });
+                resolve(canvasBlob);
+              }, "image/jpeg");
+            });
+            image.free?.();
+            console.log("[HEIC] Converted blob details", {
+              fileId: file.id,
+              size: convertedBlob.size,
+              type: convertedBlob.type,
+            });
             const objectUrl = URL.createObjectURL(convertedBlob);
+            const objectUrlCheck = await fetch(objectUrl)
+              .then((r) => ({
+                ok: r.ok,
+                status: r.status,
+                type: r.headers.get("content-type"),
+              }))
+              .catch((err) => ({
+                ok: false,
+                status: -1,
+                type: String(err),
+              }));
             objectUrls.push(objectUrl);
+            console.log("[HEIC] Conversion success", {
+              fileId: file.id,
+              objectUrl,
+              objectUrlCheck,
+            });
             return [file.id, objectUrl] as const;
           } catch (error) {
-            console.error("Failed to convert HEIC", error);
+            console.error("[HEIC] Failed to convert", {
+              fileId: file.id,
+              url: fallbackSrc,
+              error,
+            });
             return [file.id, fallbackSrc] as const;
           }
         }),
@@ -615,6 +726,22 @@ const RecapCustomView = () => {
                                         }
                                         alt={file.name || "Evidence"}
                                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                        onError={(event) => {
+                                          const img = event.currentTarget;
+                                          console.error("[HEIC] <img> failed", {
+                                            fileId: file.id,
+                                            fileName: file.name,
+                                            originalUrl: file.url,
+                                            resolvedSrc:
+                                              imageSources[file.id] ||
+                                              file.url ||
+                                              "",
+                                            currentSrc: img.currentSrc,
+                                            complete: img.complete,
+                                            naturalWidth: img.naturalWidth,
+                                            naturalHeight: img.naturalHeight,
+                                          });
+                                        }}
                                       />
                                     )
                                   ) : (
