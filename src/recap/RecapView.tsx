@@ -26,10 +26,21 @@ import {
 import { useAlertStore } from "@store/alertStore";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 
-type Heic2AnyConverter = (options: {
-  blob: Blob;
-  toType?: string;
-}) => Promise<Blob | Blob[]>;
+type HeifDecodedImage = {
+  get_width: () => number;
+  get_height: () => number;
+  display: (
+    imageData: ImageData,
+    callback: (displayData: ImageData | null) => void,
+  ) => void;
+  free?: () => void;
+};
+
+type LibHeifModule = {
+  HeifDecoder: new () => {
+    decode: (data: Uint8Array | ArrayBuffer) => HeifDecodedImage[];
+  };
+};
 
 const KpiCardContainer = ({
   title,
@@ -296,20 +307,50 @@ const RecapView = () => {
             }
 
             const blob = await response.blob();
-            const module = (await import("heic2any")) as {
-              default: Heic2AnyConverter;
-            };
-            const converted = await module.default({
-              blob,
-              toType: "image/jpeg",
-            });
-            const convertedBlob = Array.isArray(converted)
-              ? converted[0]
-              : converted;
+            const module = (await import("libheif-js/wasm-bundle")) as
+              | LibHeifModule
+              | { default: LibHeifModule };
+            const libheif =
+              "default" in module ? module.default : module;
 
-            if (!(convertedBlob instanceof Blob)) {
-              throw new Error("Unsupported HEIC conversion result");
-            }
+            const buffer = await blob.arrayBuffer();
+            const decoder = new libheif.HeifDecoder();
+            const images = decoder.decode(new Uint8Array(buffer));
+            const image = images[0];
+            if (!image) throw new Error("No HEIC image frames decoded");
+
+            const width = image.get_width();
+            const height = image.get_height();
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+
+            const context = canvas.getContext("2d");
+            if (!context) throw new Error("Canvas 2D context unavailable");
+
+            const imageData = context.createImageData(width, height);
+            await new Promise<void>((resolve, reject) => {
+              image.display(imageData, (displayData) => {
+                if (!displayData) {
+                  reject(new Error("HEIF processing error"));
+                  return;
+                }
+
+                context.putImageData(displayData, 0, 0);
+                resolve();
+              });
+            });
+
+            const convertedBlob = await new Promise<Blob>((resolve, reject) => {
+              canvas.toBlob((canvasBlob) => {
+                if (!canvasBlob) {
+                  reject(new Error("Failed to create JPEG blob"));
+                  return;
+                }
+                resolve(canvasBlob);
+              }, "image/jpeg");
+            });
+            image.free?.();
 
             const objectUrl = URL.createObjectURL(convertedBlob);
             objectUrls.push(objectUrl);
