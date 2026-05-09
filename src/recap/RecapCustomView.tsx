@@ -774,12 +774,12 @@ const RecapCustomView = () => {
                                   </span>
                                   <span
                                     className={`text-[10px] font-bold uppercase tracking-wider ${
-                                      file.approved
+                                      recap.approved
                                         ? "text-success"
                                         : "text-warning"
                                     }`}
                                   >
-                                    {file.approved ? "Approved" : "Pending"}
+                                    {statusLabel}
                                   </span>
                                 </div>
                               </div>
