@@ -29,6 +29,7 @@ export const GetCustomRecapsQuery = graphql`
           uuid
           name
           submittedAt
+          createdAt
           totalEngagements
           fillingForAmbassador
           late
@@ -125,6 +126,7 @@ export const GetCustomRecapQuery = graphql`
       uuid
       name
       submittedAt
+      createdAt
       totalEngagements
       fillingForAmbassador
       late
