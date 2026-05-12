@@ -6,9 +6,30 @@ import type {
   RegisterOptions,
 } from "react-hook-form";
 import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { DayPicker } from "react-day-picker";
-import "react-day-picker/dist/style.css";
+import "cally";
 import { extractDatePart } from "@/utils";
+
+import React from "react";
+
+declare module "react" {
+  namespace JSX {
+    interface IntrinsicElements {
+      "calendar-date": React.DetailedHTMLProps<
+        React.HTMLAttributes<HTMLElement>,
+        HTMLElement
+      > & {
+        class?: string;
+        value?: string;
+        min?: string;
+        max?: string;
+      };
+      "calendar-month": React.DetailedHTMLProps<
+        React.HTMLAttributes<HTMLElement>,
+        HTMLElement
+      >;
+    }
+  }
+}
 
 interface FormDatePickerProps<T extends FieldValues> {
   name: Path<T>;
@@ -166,32 +187,39 @@ export default function FormDatePicker<T extends FieldValues>({
           <div
             id={popoverId}
             popover="auto"
-            className="dropdown bg-base-100 rounded-box shadow-xl p-3 mt-2 w-[calc(100vw-2.5rem)] sm:w-[320px] max-w-full overflow-hidden"
+            className="dropdown bg-base-100 rounded-box shadow-xl p-3 mt-2 overflow-hidden w-[calc(100vw-2.5rem)] sm:w-[320px] max-w-full"
             style={{ positionAnchor: anchorVar } as React.CSSProperties}
           >
-            <DayPicker
-              mode="single"
-              selected={
-                field.value &&
-                /^\d{4}-\d{2}-\d{2}$/.test(toDatePart(field.value))
-                  ? new Date(`${toDatePart(field.value)}T00:00:00`)
+            <calendar-date
+              className="cally mx-auto"
+              value={
+                field.value && /^\d{4}-\d{2}-\d{2}$/.test(toDatePart(field.value))
+                  ? toDatePart(field.value)
                   : undefined
               }
-              onSelect={(date) => {
-                if (!date) return;
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, "0");
-                const day = String(date.getDate()).padStart(2, "0");
-                field.onChange(`${year}-${month}-${day}`);
-                closePopover();
-              }}
-              disabled={
+              min={
                 minimumDaysFromToday !== null
-                  ? [{ before: getMinimumDate() ?? new Date() }]
+                  ? toDatePart(getMinimumDate() ?? new Date())
                   : undefined
               }
-              className="react-day-picker"
-            />
+              ref={(el: any) => {
+                if (el) {
+                  el.onchange = (e: Event) => {
+                    const target = e.target as any;
+                    if (target.value) {
+                      field.onChange(target.value);
+                      closePopover();
+                    }
+                  };
+                }
+              }}
+            >
+              {/* @ts-expect-error - React SVGProps is missing standard 'slot' attribute */}
+              <svg aria-label="Previous" className="fill-current w-4 h-4" slot="previous" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.75 19.5 8.25 12l7.5-7.5"></path></svg>
+              {/* @ts-expect-error - React SVGProps is missing standard 'slot' attribute */}
+              <svg aria-label="Next" className="fill-current w-4 h-4" slot="next" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m8.25 4.5 7.5 7.5-7.5 7.5"></path></svg>
+              <calendar-month></calendar-month>
+            </calendar-date>
 
             {/* Footer actions */}
             <div className="mt-2 flex justify-between border-t border-base-200 pt-2">

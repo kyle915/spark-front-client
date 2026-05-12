@@ -139,3 +139,252 @@ export const buildDateTimeWithOffset = (
 
   return `${datePart}T${timePart}${sign}${hours}:${minutes}`;
 };
+
+// --- TIPOS NECESARIOS ---
+
+export type TimezoneLike = {
+    id: string;
+    name?: string | null;
+    code?: string | null;
+    offset: number;
+};
+
+type TimezoneGroup = "eastern" | "central" | "mountain" | "pacific" | "alaska" | "hawaii";
+
+type PhotonSearchFeature = {
+    geometry?: {
+        coordinates?: [number, number];
+    };
+};
+
+type PhotonSearchResponse = {
+    features?: PhotonSearchFeature[];
+};
+
+type OpenMeteoTimezoneResponse = {
+    timezone?: string;
+    timezone_abbreviation?: string;
+    utc_offset_seconds?: number;
+};
+
+// --- CONFIGURACIÓN DE ZONAS HORARIAS PARA DST (HORARIO DE VERANO) ---
+
+const normalizeTimezoneToken = (value?: string | null) =>
+    value?.trim().toLowerCase().replace(/\s+/g, " ") ?? "";
+
+const TIMEZONE_PROFILE_BY_GROUP: Record<
+    TimezoneGroup,
+    { stdCode: string; dstCode: string; stdOffset: number; dstOffset: number; observesDst: boolean }
+> = {
+    eastern: { stdCode: "est", dstCode: "edt", stdOffset: -300, dstOffset: -240, observesDst: true },
+    central: { stdCode: "cst", dstCode: "cdt", stdOffset: -360, dstOffset: -300, observesDst: true },
+    mountain: { stdCode: "mst", dstCode: "mdt", stdOffset: -420, dstOffset: -360, observesDst: true },
+    pacific: { stdCode: "pst", dstCode: "pdt", stdOffset: -480, dstOffset: -420, observesDst: true },
+    alaska: { stdCode: "akst", dstCode: "akdt", stdOffset: -540, dstOffset: -480, observesDst: true },
+    hawaii: { stdCode: "hst", dstCode: "hdt", stdOffset: -600, dstOffset: -540, observesDst: false },
+};
+
+const getNthWeekdayOfMonth = (year: number, monthIndex: number, weekday: number, occurrence: number) => {
+    const firstDay = new Date(year, monthIndex, 1).getDay();
+    const delta = (weekday - firstDay + 7) % 7;
+    return 1 + delta + (occurrence - 1) * 7;
+};
+
+const parseDateForUsDst = (value?: string | null) => {
+    if (!value) return null;
+    const raw = value.trim();
+    let year: number | null = null;
+    let month: number | null = null;
+    let day: number | null = null;
+
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+        year = Number(isoMatch[1]);
+        month = Number(isoMatch[2]);
+        day = Number(isoMatch[3]);
+    } else {
+        const usMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (usMatch) {
+            month = Number(usMatch[1]);
+            day = Number(usMatch[2]);
+            year = Number(usMatch[3]);
+        } else {
+            const extractedIso = extractDatePart(raw);
+            if (extractedIso) {
+                const match = extractedIso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (match) {
+                    year = Number(match[1]);
+                    month = Number(match[2]);
+                    day = Number(match[3]);
+                }
+            }
+        }
+    }
+
+    if (!year || !month || !day) return null;
+    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+    return { year, month, day };
+};
+
+// --- LÓGICA PRINCIPAL ---
+
+export const resolveTimezoneIdByDate = (
+    timezones: TimezoneLike[],
+    dateValue?: string | null,
+    sourceTimezoneId?: string | null
+) => {
+    const parsed = parseDateForUsDst(dateValue);
+    if (!parsed || !timezones.length) return null;
+
+    const sourceTimezone =
+        (sourceTimezoneId ? timezones.find((tz) => tz.id === sourceTimezoneId) : null)
+        ?? timezones.find((tz) => {
+            const code = normalizeTimezoneToken(tz.code).replace(/\./g, "");
+            const name = normalizeTimezoneToken(tz.name);
+            return code === "pst" || code === "pdt" || name.includes("pacific") || name.includes("los angeles");
+        })
+        ?? null;
+    if (!sourceTimezone) return null;
+
+    const { year, month, day } = parsed;
+    const secondSundayInMarch = getNthWeekdayOfMonth(year, 2, 0, 2);
+    const firstSundayInNovember = getNthWeekdayOfMonth(year, 10, 0, 1);
+    const currentDateUtc = Date.UTC(year, month - 1, day);
+    const dstStartUtc = Date.UTC(year, 2, secondSundayInMarch);
+    const dstEndUtc = Date.UTC(year, 10, firstSundayInNovember);
+    const isDst = currentDateUtc >= dstStartUtc && currentDateUtc < dstEndUtc;
+
+    const code = normalizeTimezoneToken(sourceTimezone.code).replace(/\./g, "");
+    const name = normalizeTimezoneToken(sourceTimezone.name);
+    const group = (() => {
+        if (["est", "edt"].includes(code) || name.includes("eastern")) return "eastern";
+        if (["cst", "cdt"].includes(code) || name.includes("central")) return "central";
+        if (["mst", "mdt"].includes(code) || name.includes("mountain")) return "mountain";
+        if (["pst", "pdt"].includes(code) || name.includes("pacific") || name.includes("los angeles")) return "pacific";
+        if (["akst", "akdt"].includes(code) || name.includes("alaska")) return "alaska";
+        if (["hst", "hdt"].includes(code) || name.includes("hawaii")) return "hawaii";
+        return null;
+    })();
+    if (!group) return null;
+
+    const profile = TIMEZONE_PROFILE_BY_GROUP[group];
+    const shouldUseDst = profile.observesDst && isDst;
+    const targetCode = shouldUseDst ? profile.dstCode : profile.stdCode;
+    const targetOffset = shouldUseDst ? profile.dstOffset : profile.stdOffset;
+
+    return (
+        timezones.find((tz) => normalizeTimezoneToken(tz.code) === targetCode && tz.offset === targetOffset)?.id
+        ?? timezones.find((tz) => normalizeTimezoneToken(tz.code) === targetCode)?.id
+        ?? timezones.find((tz) => tz.offset === targetOffset)?.id
+        ?? null
+    );
+};
+
+export const getCoordinatesByCity = async (city: string, state?: string | null) => {
+    const trimmedCity = city.trim();
+    if (!trimmedCity) return null;
+
+    const buildResult = (feature?: PhotonSearchFeature) => {
+        const lng = feature?.geometry?.coordinates?.[0] ?? NaN;
+        const lat = feature?.geometry?.coordinates?.[1] ?? NaN;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return { lat, lng };
+    };
+
+    const primaryParams = new URLSearchParams({
+        q: state?.trim() ? `${trimmedCity}, ${state.trim()}, United States` : `${trimmedCity}, United States`,
+        limit: "1",
+    });
+    const primaryResponse = await fetch(`https://photon.komoot.io/api/?${primaryParams.toString()}`);
+    if (primaryResponse.ok) {
+        const primaryData = (await primaryResponse.json()) as PhotonSearchResponse;
+        const primaryMatch = buildResult(primaryData.features?.[0]);
+        if (primaryMatch) return primaryMatch;
+    }
+
+    const fallbackParams = new URLSearchParams({
+        q: trimmedCity,
+        limit: "1",
+    });
+    const fallbackResponse = await fetch(`https://photon.komoot.io/api/?${fallbackParams.toString()}`);
+    if (!fallbackResponse.ok) return null;
+    const fallbackData = (await fallbackResponse.json()) as PhotonSearchResponse;
+    return buildResult(fallbackData.features?.[0]);
+};
+
+export const resolveTimezoneIdByCoordinates = async (timezones: TimezoneLike[], lat: number, lng: number) => {
+    const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&timezone=auto`
+    );
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as OpenMeteoTimezoneResponse;
+    const timezoneName = typeof data.timezone === "string" ? data.timezone : null;
+    const timezoneAbbr = typeof data.timezone_abbreviation === "string" ? data.timezone_abbreviation : null;
+    const utcOffsetSeconds = typeof data.utc_offset_seconds === "number" ? data.utc_offset_seconds : null;
+
+    const normalizeToken = (value?: string | null) =>
+        value ? value.toLowerCase().replace(/\s+/g, "").replace(/_/g, "") : null;
+
+    const resolveRegionName = (iana?: string | null): string | null => {
+        if (!iana) return null;
+        const normalized = iana.toLowerCase();
+        if (
+            normalized.startsWith("america/new_york")
+            || normalized.startsWith("america/detroit")
+            || normalized.startsWith("america/indiana")
+        ) return "eastern";
+        if (normalized.startsWith("america/chicago")) return "central";
+        if (normalized.startsWith("america/denver") || normalized.startsWith("america/boise")) return "mountain";
+        if (normalized.startsWith("america/los_angeles")) return "pacific";
+        if (normalized.startsWith("america/anchorage") || normalized.startsWith("america/juneau")) return "alaska";
+        if (normalized.startsWith("pacific/honolulu")) return "hawaii-aleutian";
+        return null;
+    };
+
+    const normalizedToken = normalizeToken(timezoneName);
+    const normalizedAbbrToken = normalizeToken(timezoneAbbr);
+    const offsetMinutes = utcOffsetSeconds !== null ? Math.round(utcOffsetSeconds / 60) : null;
+    const regionName = resolveRegionName(timezoneName);
+
+    const resolvedTimezone =
+        (normalizedAbbrToken && offsetMinutes !== null
+            ? timezones.find((tz) => normalizeToken(tz.code) === normalizedAbbrToken && tz.offset === offsetMinutes)
+            : null)
+        ?? (normalizedAbbrToken ? timezones.find((tz) => normalizeToken(tz.code) === normalizedAbbrToken) : null)
+        ?? (normalizedToken ? timezones.find((tz) => normalizeToken(tz.name) === normalizedToken) : null)
+        ?? (normalizedToken ? timezones.find((tz) => normalizeToken(tz.code) === normalizedToken) : null)
+        ?? (
+            regionName && offsetMinutes !== null
+                ? timezones.find((tz) => normalizeToken(tz.name)?.startsWith(normalizeToken(regionName) || "") && tz.offset === offsetMinutes)
+                : null
+        )
+        ?? (regionName ? timezones.find((tz) => normalizeToken(tz.name)?.startsWith(normalizeToken(regionName) || "")) : null)
+        ?? (offsetMinutes !== null ? timezones.find((tz) => tz.offset === offsetMinutes) : null);
+
+    return resolvedTimezone?.id ?? null;
+};
+
+// >>> ESTA ES LA FUNCIÓN PRINCIPAL EXPORTADA <<<
+export const resolveTimezoneIdByCityAndDate = async (
+    timezones: TimezoneLike[],
+    city?: string | null,
+    state?: string | null,
+    dateValue?: string | null,
+    sourceTimezoneId?: string | null
+) => {
+    if (!timezones.length) return null;
+    if (!city?.trim()) return null;
+
+    try {
+        const coordinates = await getCoordinatesByCity(city, state);
+        if (!coordinates) return null;
+        
+        const timezoneId = await resolveTimezoneIdByCoordinates(timezones, coordinates.lat, coordinates.lng);
+        if (!timezoneId) return null;
+        
+        return resolveTimezoneIdByDate(timezones, dateValue, timezoneId ?? sourceTimezoneId ?? null);
+    } catch {
+        return null;
+    }
+};

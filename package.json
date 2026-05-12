@@ -1,7 +1,7 @@
 {
   "name": "spark-front-client",
   "private": true,
-  "version": "1.8.6",
+  "version": "1.8.7",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,6 +20,7 @@
     "@types/relay-runtime": "^19.0.3",
     "@wellbees/color-picker-input": "^1.0.3",
     "babel-plugin-relay": "^20.1.1",
+    "cally": "^0.9.2",
     "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
