@@ -196,6 +196,7 @@ export interface CustomRecapRow {
   uuid: string;
   name: string;
   submittedAt?: string | null;
+  createdAt?: string | null;
   totalEngagements?: number | null;
   fillingForAmbassador?: boolean | null;
   late?: boolean | null;

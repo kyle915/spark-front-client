@@ -271,7 +271,7 @@ export const createCustomRecapColumns = (): Column<CustomRecapRow>[] => [
   {
     key: "submittedAt",
     label: "Submitted At",
-    render: (_value, row) => formatDate(row.submittedAt ?? null),
+    render: (_value, row) => formatDate(row.submittedAt ?? row.createdAt ?? null),
   },
 ];
 
