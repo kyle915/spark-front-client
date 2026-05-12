@@ -13,7 +13,12 @@ import { ArrowLeftIcon, PencilIcon } from "@heroicons/react/24/solid";
 import { XCircleIcon } from "@heroicons/react/24/outline";
 import { SaveIcon } from "lucide-react";
 import type { Path, PathValue } from "react-hook-form";
-import { useAutoTimezoneFromCoordinates } from "../hooks/useAutoTimezoneFromCoordinates";
+import {
+  resolveTimezoneIdByCityAndDate,
+  resolveTimezoneIdByCoordinates,
+  resolveTimezoneIdByDate,
+  getCoordinatesByCity,
+} from "@/utils";
 
 import { useMutation } from "react-relay/hooks";
 import type { OperationType } from "relay-runtime";
@@ -758,14 +763,163 @@ export default function RequestForm({
     });
   };
 
-  useAutoTimezoneFromCoordinates<RequestFormValues, "timezoneId">({
-    coordinates: selectedCoordinates,
-    timezoneId: selectedTimezoneId,
+  const selectedDate = watch("date");
+  const previousCityRef = useRef<string | null>(undefined as any);
+  const previousDateRef = useRef<string | null>(undefined as any);
+  const previousCoordinatesRef = useRef<string | null>(undefined as any);
+  const isInitialMountRef = useRef(true);
+
+  useEffect(() => {
+    const handleTimezoneAndMap = async () => {
+      if (!timezones.length) return;
+
+      const currentCity =
+        locationsHook.items.find((l) => l.id === selectedEntitiesLocationId)
+          ?.name ?? null;
+      const currentState =
+        states.find((s) => s.id === selectedStateId)?.name ?? null;
+      const currentDate = selectedDate ?? null;
+      const coords = selectedCoordinates;
+
+      const coordsStr = coords ? `${coords[0]},${coords[1]}` : null;
+
+      const isInitial = isInitialMountRef.current;
+      if (isInitial) {
+        // Initialize refs without triggering updates
+        previousCityRef.current = currentCity;
+        previousDateRef.current = currentDate;
+        previousCoordinatesRef.current = coordsStr;
+        isInitialMountRef.current = false;
+        return;
+      }
+
+      const cityChanged = currentCity !== previousCityRef.current;
+      const dateChanged = currentDate !== previousDateRef.current;
+      const coordsChanged = coordsStr !== previousCoordinatesRef.current;
+
+      if (!cityChanged && !dateChanged && !coordsChanged) return;
+
+      previousCityRef.current = currentCity;
+      previousDateRef.current = currentDate;
+      previousCoordinatesRef.current = coordsStr;
+
+      // 1) City changed -> Update Map Coordinates & Timezone
+      if (cityChanged && currentCity) {
+        const newCoords = await getCoordinatesByCity(currentCity, currentState);
+        if (newCoords) {
+          setValue("coordinates", [newCoords.lat, newCoords.lng], {
+            shouldDirty: true,
+            shouldTouch: true,
+          });
+          previousCoordinatesRef.current = `${newCoords.lat},${newCoords.lng}`;
+
+          let tzId = await resolveTimezoneIdByCoordinates(
+            timezones,
+            newCoords.lat,
+            newCoords.lng,
+          );
+          if (tzId) {
+            tzId =
+              resolveTimezoneIdByDate(timezones, currentDate, tzId) ?? tzId;
+            setValue("timezoneId", tzId, {
+              shouldDirty: true,
+              shouldTouch: true,
+            });
+          }
+        } else {
+          // Fallback if no coords found
+          const result = await resolveTimezoneIdByCityAndDate(
+            timezones,
+            currentCity,
+            currentState,
+            currentDate,
+            selectedTimezoneId,
+          );
+          if (result) {
+            setValue("timezoneId", result, {
+              shouldDirty: true,
+              shouldTouch: true,
+            });
+          }
+        }
+        return;
+      }
+
+      // 2) Coordinates changed (from map click or address search) -> Update Timezone
+      if (coordsChanged && coords && coords.length === 2) {
+        let tzId = await resolveTimezoneIdByCoordinates(
+          timezones,
+          coords[0],
+          coords[1],
+        );
+        if (tzId) {
+          tzId = resolveTimezoneIdByDate(timezones, currentDate, tzId) ?? tzId;
+          setValue("timezoneId", tzId, {
+            shouldDirty: true,
+            shouldTouch: true,
+          });
+        }
+        return;
+      }
+
+      // 3) Only Date changed -> Recalculate DST without re-fetching coords if possible
+      if (dateChanged && currentDate) {
+        if (selectedTimezoneId) {
+          const tzId = resolveTimezoneIdByDate(
+            timezones,
+            currentDate,
+            selectedTimezoneId,
+          );
+          if (tzId && tzId !== selectedTimezoneId) {
+            setValue("timezoneId", tzId, {
+              shouldDirty: true,
+              shouldTouch: true,
+            });
+          }
+        } else if (coords && coords.length === 2) {
+          let tzId = await resolveTimezoneIdByCoordinates(
+            timezones,
+            coords[0],
+            coords[1],
+          );
+          if (tzId) {
+            tzId =
+              resolveTimezoneIdByDate(timezones, currentDate, tzId) ?? tzId;
+            setValue("timezoneId", tzId, {
+              shouldDirty: true,
+              shouldTouch: true,
+            });
+          }
+        } else if (currentCity) {
+          const result = await resolveTimezoneIdByCityAndDate(
+            timezones,
+            currentCity,
+            currentState,
+            currentDate,
+            selectedTimezoneId,
+          );
+          if (result) {
+            setValue("timezoneId", result, {
+              shouldDirty: true,
+              shouldTouch: true,
+            });
+          }
+        }
+      }
+    };
+
+    handleTimezoneAndMap();
+  }, [
+    selectedEntitiesLocationId,
+    selectedStateId,
+    selectedDate,
+    selectedCoordinates,
     timezones,
+    locationsHook.items,
+    states,
+    selectedTimezoneId,
     setValue,
-    timezoneFieldName: "timezoneId",
-    initialFromBackend: Boolean(defaultValues.timezoneId),
-  });
+  ]);
 
   const isTableNeeded = watch("isTableNeeded");
   const selectedProducts = watch("products") || [];
