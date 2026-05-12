@@ -473,7 +473,7 @@ const RecapCustomView = () => {
                 <div className="flex justify-between items-center py-2">
                   <span className="text-sm">Submitted At</span>
                   <span className="font-medium">
-                    {formatDate(recap.submittedAt ?? null)}
+                    {formatDate(recap.submittedAt ?? recap.createdAt ?? null)}
                   </span>
                 </div>
               </div>
