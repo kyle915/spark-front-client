@@ -64,6 +64,7 @@ export interface RequestFormValues {
   clientName?: string;
   clientEmail?: string;
   entitiesLocationId?: string | null;
+  entitiesLocationName?: string | null;
   distributorName?: string;
   distributorEmail?: string;
   retailerName?: string;
@@ -228,9 +229,8 @@ export default function RequestForm({
   hideEventTypeField = false,
   showBillingEntityField = false,
 }: RequestFormProps) {
-  const [localSelectedProductType, setLocalSelectedProductType] = useState(
-    selectedProductType,
-  );
+  const [localSelectedProductType, setLocalSelectedProductType] =
+    useState(selectedProductType);
 
   const resolvedSelectedProductType =
     onProductTypeChange !== undefined
@@ -327,13 +327,18 @@ export default function RequestForm({
 
   useEffect(() => {
     if (prevStateIdRef.current === undefined) {
-      prevStateIdRef.current = selectedStateId ?? null;
+      prevStateIdRef.current = selectedStateId;
       return;
     }
 
     if (prevStateIdRef.current === (selectedStateId ?? null)) return;
 
+    const isInitialEditLoad =
+      mode === "edit" && !prevStateIdRef.current && selectedStateId;
+
     prevStateIdRef.current = selectedStateId ?? null;
+
+    if (isInitialEditLoad) return;
 
     // =========================
     // RESET
@@ -451,6 +456,14 @@ export default function RequestForm({
     stateId: selectedStateId ?? null,
     queryDocument: LocationsQuery,
     extractNodes: extractLocations,
+    initialItems: defaultValues?.entitiesLocationId
+      ? [
+          {
+            id: defaultValues.entitiesLocationId,
+            name: (defaultValues as any).entitiesLocationName || "",
+          },
+        ]
+      : [],
   });
 
   /* ================= DISTRIBUTORS AND RETAILERS ================= */
@@ -468,7 +481,14 @@ export default function RequestForm({
     entitiesLocationId: selectedEntitiesLocationId ?? null,
     stateId: selectedStateId ?? null,
     filterByStateOnly: mode === "create",
-    // initialItems: distributors,
+    initialItems: defaultValues?.distributorId
+      ? [
+          {
+            id: defaultValues.distributorId,
+            name: (defaultValues as any).distributorName || "",
+          },
+        ]
+      : [],
     queryDocument: DistributorsQuery,
     extractNodes: extractDistributors,
   });
@@ -489,7 +509,14 @@ export default function RequestForm({
     entitiesLocationId: selectedEntitiesLocationId ?? null,
     locationIdRequired: !isNationalRetailer,
     additionalFilters: retailerAdditionalFilters,
-    // initialItems: retailers,
+    initialItems: defaultValues?.retailerId
+      ? [
+          {
+            id: defaultValues.retailerId,
+            name: (defaultValues as any).retailerName || "",
+          },
+        ]
+      : [],
     queryDocument: RetailersQuery,
     extractNodes: extractRetailers,
   });
@@ -1017,9 +1044,14 @@ export default function RequestForm({
       return;
     }
 
-    if (previousLocationId === currentLocationId) return;
+    if (previousLocationId === (currentLocationId ?? null)) return;
+
+    const isInitialEditLoad =
+      mode === "edit" && !previousLocationId && currentLocationId;
 
     prevEntitiesLocationIdRef.current = currentLocationId;
+
+    if (isInitialEditLoad) return;
 
     // =========================
     // RESET
@@ -1041,7 +1073,14 @@ export default function RequestForm({
 
     if (prevIsNationalRetailerRef.current === isNationalRetailer) return;
 
+    const isInitialEditLoad =
+      mode === "edit" &&
+      prevIsNationalRetailerRef.current === undefined &&
+      isNationalRetailer !== undefined;
+
     prevIsNationalRetailerRef.current = isNationalRetailer;
+
+    if (isInitialEditLoad) return;
 
     setValue("retailerId", null, {
       shouldDirty: true,
@@ -1288,6 +1327,7 @@ export default function RequestForm({
                   placeholder="Select state..."
                   options={stateOptions}
                   disabled={!tenantId || disableStateSelect}
+                  rules={{ required: "State is required" }}
                 />
 
                 <Controller
@@ -1327,6 +1367,7 @@ export default function RequestForm({
                   loading={locationsHook.isLoading}
                   onSearch={locationsHook.setSearchTerm}
                   disabled={!tenantId || !selectedStateId}
+                  rules={{ required: "City is required" }}
                 />
               </div>
 

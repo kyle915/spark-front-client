@@ -75,6 +75,7 @@ export interface EventFormValues {
   timezoneId?: string | null;
   stateId: string | null;
   entitiesLocationId?: string | null;
+  entitiesLocationName?: string | null;
   isNationalRetailer?: boolean;
   associateRequest?: boolean;
   requestLoading?: boolean;

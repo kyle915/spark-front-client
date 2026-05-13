@@ -116,6 +116,7 @@ export default function EventForm({
     retailerLocationId: null,
     stateId: null,
     entitiesLocationId: null,
+    entitiesLocationName: "",
     isNationalRetailer: true,
     ...defaultValues,
   };
@@ -250,8 +251,6 @@ export default function EventForm({
     }));
   }, [rmmSearchHook.searchTerm, rmmSearchHook.items, rmmClients]);
 
-
-
   useEffect(() => {
     if (!showRequestField) return;
     if (associateRequest) return;
@@ -266,8 +265,18 @@ export default function EventForm({
     if (!associateRequest) return;
     if (!selectedRequestId) return;
 
-    const selectedRequest = requests.find((request) => request.id === selectedRequestId);
+    const selectedRequest = requests.find(
+      (request) => request.id === selectedRequestId,
+    );
     if (!selectedRequest?.uuid) return;
+
+    const isInitialEditLoad =
+      mode === "edit" && !hasSkippedInitialRequestInheritRef.current;
+
+    if (isInitialEditLoad) {
+      hasSkippedInitialRequestInheritRef.current = true;
+      return;
+    }
 
     let isCancelled = false;
     setRequestDetailsLoading(true);
@@ -323,10 +332,14 @@ export default function EventForm({
           shouldDirty: true,
           shouldTouch: true,
         });
-        setValue("coordinates", request.coordinates?.length ? [...request.coordinates] : null, {
-          shouldDirty: true,
-          shouldTouch: true,
-        });
+        setValue(
+          "coordinates",
+          request.coordinates?.length ? [...request.coordinates] : null,
+          {
+            shouldDirty: true,
+            shouldTouch: true,
+          },
+        );
         setValue("rmmAsignedId", request.rmmAsigned?.id ?? null, {
           shouldDirty: true,
           shouldTouch: true,
@@ -341,14 +354,22 @@ export default function EventForm({
           shouldDirty: true,
           shouldTouch: true,
         });
-        setValue("distributorLocationId", request.distributor?.location?.id ?? locationId, {
-          shouldDirty: true,
-          shouldTouch: true,
-        });
-        setValue("retailerLocationId", request.retailer?.location?.id ?? locationId, {
-          shouldDirty: true,
-          shouldTouch: true,
-        });
+        setValue(
+          "distributorLocationId",
+          request.distributor?.location?.id ?? locationId,
+          {
+            shouldDirty: true,
+            shouldTouch: true,
+          },
+        );
+        setValue(
+          "retailerLocationId",
+          request.retailer?.location?.id ?? locationId,
+          {
+            shouldDirty: true,
+            shouldTouch: true,
+          },
+        );
         setValue("distributorId", request.distributor?.id ?? null, {
           shouldDirty: true,
           shouldTouch: true,
@@ -422,19 +443,25 @@ export default function EventForm({
     undefined,
   );
   const prevIsNationalRetailerRef = useRef<boolean | undefined>(undefined);
+  const hasSkippedInitialRequestInheritRef = useRef(false);
 
   // ========================
   // DISTRIBUTORS AND RETAILERS
   // ========================
   useEffect(() => {
     if (prevStateIdRef.current === undefined) {
-      prevStateIdRef.current = selectedStateId ?? null;
+      prevStateIdRef.current = selectedStateId;
       return;
     }
 
     if (prevStateIdRef.current === (selectedStateId ?? null)) return;
 
+    const isInitialEditLoad =
+      mode === "edit" && !prevStateIdRef.current && selectedStateId;
+
     prevStateIdRef.current = selectedStateId ?? null;
+
+    if (isInitialEditLoad) return;
 
     // =========================
     // RESET
@@ -489,6 +516,14 @@ export default function EventForm({
     stateId: selectedStateId ?? null,
     queryDocument: LocationsQuery,
     extractNodes: extractLocations,
+    initialItems: defaultValues?.entitiesLocationId
+      ? [
+          {
+            id: defaultValues.entitiesLocationId,
+            name: (defaultValues as any).entitiesLocationName || "",
+          },
+        ]
+      : [],
   });
 
   const selectedDate = watch("date");
@@ -664,6 +699,14 @@ export default function EventForm({
       selectedEntitiesLocationId ?? defaultValues.entitiesLocationId ?? null,
     stateId: selectedStateId ?? null,
     filterByStateOnly: true,
+    initialItems: defaultValues?.distributorId
+      ? [
+          {
+            id: defaultValues.distributorId,
+            name: (defaultValues as any).distributorName || "",
+          },
+        ]
+      : [],
     queryDocument: DistributorsQuery,
     extractNodes: extractDistributors,
   });
@@ -701,6 +744,14 @@ export default function EventForm({
       selectedEntitiesLocationId ?? defaultValues.entitiesLocationId ?? null,
     locationIdRequired: !isNationalRetailer,
     additionalFilters: retailerAdditionalFilters,
+    initialItems: defaultValues?.retailerId
+      ? [
+          {
+            id: defaultValues.retailerId,
+            name: (defaultValues as any).retailerName || "",
+          },
+        ]
+      : [],
     queryDocument: RetailersQuery,
     extractNodes: extractRetailers,
   });
@@ -864,9 +915,14 @@ export default function EventForm({
       return;
     }
 
-    if (previousLocationId === currentLocationId) return;
+    if (previousLocationId === (currentLocationId ?? null)) return;
+
+    const isInitialEditLoad =
+      mode === "edit" && !previousLocationId && currentLocationId;
 
     prevEntitiesLocationIdRef.current = currentLocationId;
+
+    if (isInitialEditLoad) return;
 
     // =========================
     // RESET
@@ -894,17 +950,6 @@ export default function EventForm({
       shouldTouch: true,
     });
     retailersHook.setSearchTerm("");
-
-    if (!isNationalRetailer) return;
-
-    setValue("entitiesLocationId", null, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
-    setValue("retailerLocationId", null, {
-      shouldDirty: true,
-      shouldTouch: true,
-    });
   }, [isNationalRetailer, retailersHook, setValue]);
 
   useEffect(() => {
@@ -1157,6 +1202,7 @@ export default function EventForm({
                 placeholder="Select state..."
                 options={stateOptions}
                 disabled={!tenantId || disableStateSelect}
+                rules={{ required: "State is required" }}
               />
 
               <Controller
@@ -1195,7 +1241,8 @@ export default function EventForm({
                 }))}
                 loading={locationsHook.isLoading}
                 onSearch={locationsHook.setSearchTerm}
-                disabled={!tenantId || !selectedStateId || isNationalRetailer}
+                disabled={!tenantId || !selectedStateId}
+                rules={{ required: "City is required" }}
               />
             </div>
 
@@ -1210,108 +1257,107 @@ export default function EventForm({
             {isStateSelected &&
               !isNationalRetailer &&
               !isEntitiesLocationSelected && (
-              <p className="text-sm text-warning">
-                Select a city first to enable retailer.
-              </p>
-            )}
+                <p className="text-sm text-warning">
+                  Select a city first to enable retailer.
+                </p>
+              )}
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {!hideDistributorFields && (
                 <div className="space-y-4 rounded-xl bg-base-200/60 p-4">
-                <p className="font-medium">Distributor</p>
+                  <p className="font-medium">Distributor</p>
 
-                <FormAutocomplete
-                  name="distributorId"
-                  control={control}
-                  label="Select distributor"
-                  placeholder="Search distributor..."
-                  options={distributorOptions}
-                  onSearch={distributorsHook.setSearchTerm}
-                  disabled={!isStateSelected}
-                />
+                  <FormAutocomplete
+                    name="distributorId"
+                    control={control}
+                    label="Select distributor"
+                    placeholder="Search distributor..."
+                    options={distributorOptions}
+                    onSearch={distributorsHook.setSearchTerm}
+                    disabled={!isStateSelected}
+                  />
 
-                {!distributorId && (
-                  <div className="space-y-3">
-                    <p className="text-base-content/60">or</p>
-                    {!showDistributorLocation ? (
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-xs"
-                        onClick={() => {
-                          setShowDistributorLocation(true);
+                  {!distributorId && (
+                    <div className="space-y-3">
+                      <p className="text-base-content/60">or</p>
+                      {!showDistributorLocation ? (
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-xs"
+                          onClick={() => {
+                            setShowDistributorLocation(true);
 
-                          if (selectedEntitiesLocationId) {
-                            setValue(
-                              "distributorLocationId",
-                              selectedEntitiesLocationId,
-                              {
-                                shouldDirty: true,
-                                shouldTouch: true,
-                              },
-                            );
-                          }
-                        }}
-                        disabled={!isStateSelected}
-                      >
-                        Create new distributor
-                      </button>
-                    ) : (
-                      <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormInputText
-                            name="distributorName"
-                            control={control}
-                            label="Distributor name"
-                            placeholder="Enter distributor name"
-                          />
-                          <FormInputText
-                            name="distributorEmail"
-                            control={control}
-                            label="Distributor email"
-                            placeholder="Enter distributor email"
-                          />
-                        </div>
-
-                        <FormAutocomplete
-                          name="distributorLocationId"
-                          control={control}
-                          label="Distributor location"
-                          placeholder="Select location"
-                          options={locationsHook.items.map((l) => ({
-                            value: l.id,
-                            label: l.name,
-                          }))}
-                          loading={locationsHook.isLoading}
-                          onSearch={locationsHook.setSearchTerm}
-                        />
-
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-xs"
-                            onClick={handleCreateDistributor}
-                            disabled={
-                              isCreatingDistributor ||
-                              !isStateSelected
+                            if (selectedEntitiesLocationId) {
+                              setValue(
+                                "distributorLocationId",
+                                selectedEntitiesLocationId,
+                                {
+                                  shouldDirty: true,
+                                  shouldTouch: true,
+                                },
+                              );
                             }
-                          >
-                            Confirm distributor
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-xs"
-                            onClick={() => {
-                              setShowDistributorLocation(false);
-                              setValue("distributorLocationId", null);
-                            }}
-                          >
-                            Cancel
-                          </button>
+                          }}
+                          disabled={!isStateSelected}
+                        >
+                          Create new distributor
+                        </button>
+                      ) : (
+                        <div className="space-y-3 border-t-2 border-base-300 p-4 pt-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormInputText
+                              name="distributorName"
+                              control={control}
+                              label="Distributor name"
+                              placeholder="Enter distributor name"
+                            />
+                            <FormInputText
+                              name="distributorEmail"
+                              control={control}
+                              label="Distributor email"
+                              placeholder="Enter distributor email"
+                            />
+                          </div>
+
+                          <FormAutocomplete
+                            name="distributorLocationId"
+                            control={control}
+                            label="Distributor location"
+                            placeholder="Select location"
+                            options={locationsHook.items.map((l) => ({
+                              value: l.id,
+                              label: l.name,
+                            }))}
+                            loading={locationsHook.isLoading}
+                            onSearch={locationsHook.setSearchTerm}
+                          />
+
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              className="btn btn-primary btn-xs"
+                              onClick={handleCreateDistributor}
+                              disabled={
+                                isCreatingDistributor || !isStateSelected
+                              }
+                            >
+                              Confirm distributor
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-xs"
+                              onClick={() => {
+                                setShowDistributorLocation(false);
+                                setValue("distributorLocationId", null);
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1424,23 +1470,8 @@ export default function EventForm({
 
           {/* ================= EVENT DETAILS ================= */}
           <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
-            <p className="font-semibold text-lg">Event Details</p>
-
-            <div className="grid grid-cols-1 gap-4">
-              <FormTextarea name="notes" control={control} label="Notes" />
-              {showIsNational && (
-                <FormCheckbox
-                  name="isNational"
-                  control={control}
-                  label="Is National?"
-                />
-              )}
-            </div>
-          </section>
-
-          <section className="space-y-4 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-lg">Notes</p>
+              <p className="font-semibold text-lg">Event Details</p>
               <span
                 className={`text-xs ${
                   notesValue.length > 280
@@ -1464,6 +1495,14 @@ export default function EventForm({
                 },
               }}
             />
+
+            {showIsNational && (
+              <FormCheckbox
+                name="isNational"
+                control={control}
+                label="Is National?"
+              />
+            )}
           </section>
 
           {/* ================= LOCATION ================= */}
