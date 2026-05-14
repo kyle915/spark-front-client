@@ -29,6 +29,7 @@ export default function SparkFormLayout({
   });
 
   const loading = loadingTenant || loadingTheme;
+  const invalidLink = !loading && (!slug || !tenant);
 
   useEffect(() => {
     const saved = localStorage.getItem(
@@ -82,7 +83,16 @@ export default function SparkFormLayout({
       </div>
 
       <div className="p-6 flex flex-col items-center flex-1 w-full">
-        {children}
+        {invalidLink ? (
+          <div className="w-full max-w-xl rounded-2xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
+            <h2 className="text-2xl font-semibold">Invalid link</h2>
+            <p className="mt-3 text-base-content/70">
+              The link provided in the URL is not valid.
+            </p>
+          </div>
+        ) : (
+          children
+        )}
       </div>
       {/*
       <footer className="footer footer-center p-4 bg-base-100 text-base-content/70">
