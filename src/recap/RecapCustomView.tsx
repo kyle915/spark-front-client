@@ -365,6 +365,52 @@ const RecapCustomView = () => {
     };
   }, [flatImages, isHeicFile]);
 
+  const closePreview = useCallback(() => {
+    setPreviewIndex(null);
+  }, []);
+
+  const goNext = useCallback(() => {
+    if (!flatImages.length) return;
+
+    setPreviewIndex((current) => {
+      if (current === null) return 0;
+      return (current + 1) % flatImages.length;
+    });
+  }, [flatImages.length]);
+
+  const goPrev = useCallback(() => {
+    if (!flatImages.length) return;
+
+    setPreviewIndex((current) => {
+      if (current === null) return flatImages.length - 1;
+      return (current - 1 + flatImages.length) % flatImages.length;
+    });
+  }, [flatImages.length]);
+
+  useEffect(() => {
+    if (previewIndex === null) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        goNext();
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        goPrev();
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closePreview();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [closePreview, goNext, goPrev, previewIndex]);
+
   const currentPreview =
     flatImages && previewIndex !== null ? flatImages[previewIndex] : null;
   const currentPreviewSrc = currentPreview
@@ -809,19 +855,9 @@ const RecapCustomView = () => {
             name: currentPreview.name ?? "Evidence",
             file: currentPreviewSrc,
           }}
-          onClose={() => setPreviewIndex(null)}
-          onNext={() =>
-            setPreviewIndex((prev) =>
-              prev !== null ? (prev + 1) % flatImages.length : null,
-            )
-          }
-          onPrev={() =>
-            setPreviewIndex((prev) =>
-              prev !== null
-                ? (prev - 1 + flatImages.length) % flatImages.length
-                : null,
-            )
-          }
+          onClose={closePreview}
+          onNext={goNext}
+          onPrev={goPrev}
         />
       )}
     </Layout>
