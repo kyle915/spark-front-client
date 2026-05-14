@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import { useRef } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export function ImagePreviewModal({
   image,
@@ -46,22 +47,46 @@ export function ImagePreviewModal({
           </button>
         </div>
 
-        <img
-          src={image.file}
-          className="max-h-[70vh] mx-auto rounded-lg"
-          onError={(event) => {
-            console.error("Preview image failed to render", {
-              name: image.name,
-              src: image.file,
-              currentSrc: event.currentTarget.currentSrc,
-              naturalWidth: event.currentTarget.naturalWidth,
-              naturalHeight: event.currentTarget.naturalHeight,
-            });
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        />
+        <div className="flex items-center gap-2">
+          {onPrev ? (
+            <button
+              type="button"
+              className="btn btn-circle btn-ghost shrink-0"
+              onClick={onPrev}
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          ) : null}
+
+          <img
+            src={image.file}
+            className="max-h-[70vh] min-w-0 mx-auto rounded-lg"
+            onError={(event) => {
+              console.error("Preview image failed to render", {
+                name: image.name,
+                src: image.file,
+                currentSrc: event.currentTarget.currentSrc,
+                naturalWidth: event.currentTarget.naturalWidth,
+                naturalHeight: event.currentTarget.naturalHeight,
+              });
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          />
+
+          {onNext ? (
+            <button
+              type="button"
+              className="btn btn-circle btn-ghost shrink-0"
+              onClick={onNext}
+              aria-label="Next image"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="modal-backdrop" onClick={onClose} />
