@@ -22,6 +22,7 @@ declare module "react" {
         value?: string;
         min?: string;
         max?: string;
+        locale?: string;
       };
       "calendar-month": React.DetailedHTMLProps<
         React.HTMLAttributes<HTMLElement>,
@@ -191,6 +192,7 @@ export default function FormDatePicker<T extends FieldValues>({
             style={{ positionAnchor: anchorVar } as React.CSSProperties}
           >
             <calendar-date
+              locale="en"
               className="cally mx-auto"
               value={
                 field.value && /^\d{4}-\d{2}-\d{2}$/.test(toDatePart(field.value))
@@ -239,9 +241,7 @@ export default function FormDatePicker<T extends FieldValues>({
                   closePopover();
                 }}
               >
-                {minimumDaysFromToday && minimumDaysFromToday > 0
-                  ? "Earliest"
-                  : "Today"}
+                Today
               </button>
 
               <button

@@ -11,11 +11,11 @@ interface UseEntitiesByLocationProps<TItem, TQuery extends OperationType> {
   filterByStateOnly?: boolean;
   locationIdRequired?: boolean;
   additionalFilters?: Record<string, unknown>;
-  // initialItems: TItem[];
   // selectedId?: string | null;
   queryDocument: GraphQLTaggedNode;
   extractNodes: (data: TQuery["response"]) => TItem[];
   debounceMs?: number;
+  initialItems?: TItem[];
 }
 
 const EMPTY_FILTERS: Record<string, unknown> = {};
@@ -30,7 +30,7 @@ export function useEntitiesByLocation<
   filterByStateOnly = false,
   locationIdRequired = true,
   additionalFilters = EMPTY_FILTERS,
-  // initialItems,
+  initialItems,
   // selectedId,
   queryDocument,
   extractNodes,
@@ -38,7 +38,7 @@ export function useEntitiesByLocation<
 }: UseEntitiesByLocationProps<TItem, TQuery>) {
   const [searchTerm, setSearchTerm] = useState("");
   const [remoteItems, setRemoteItems] = useState<TItem[]>([]);
-  const [localItems, setLocalItems] = useState<TItem[]>([]);
+  const [localItems, setLocalItems] = useState<TItem[]>(initialItems || []);
   const [isLoading, setIsLoading] = useState(false);
 
   const prevLocationRef = useRef<string | null | undefined>(undefined);

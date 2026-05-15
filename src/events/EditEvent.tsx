@@ -170,8 +170,29 @@ const EditEventContent = ({ uuid }: EditEventContentProps) => {
     requestId: event.request?.id ?? undefined,
     associateRequest: Boolean(event.request),
     rmmAsignedId: event.rmmAsigned?.id ?? null,
-    stateId: event.state?.id ?? null,
-    entitiesLocationId: event.location?.id ?? null,
+    stateId:
+      event.state?.id ??
+      event.retailer?.location?.state?.id ??
+      event.distributor?.location?.state?.id ??
+      event.request?.retailer?.location?.state?.id ??
+      event.request?.distributor?.location?.state?.id ??
+      null,
+    entitiesLocationId:
+      event.retailer?.location?.id ??
+      event.distributor?.location?.id ??
+      event.request?.retailer?.location?.id ??
+      event.request?.distributor?.location?.id ??
+      null,
+    entitiesLocationName:
+      event.retailer?.location?.name ??
+      event.distributor?.location?.name ??
+      event.request?.retailer?.location?.name ??
+      event.request?.distributor?.location?.name ??
+      "",
+    isNationalRetailer:
+      event.retailer?.isNational ??
+      event.request?.retailer?.isNational ??
+      true,
     distributorId:
       event.distributor?.id ?? event.request?.distributor?.id ?? undefined,
     distributorName:
