@@ -110,7 +110,7 @@ const FormAddressSearch = <T extends FieldValues>({
           onFocus={() => setShowResults(true)}
           placeholder={placeholder}
           disabled={disabled}
-          className={`text-gray-400 input input-bordered w-full rounded-full px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+          className={`input input-bordered h-12 w-full rounded-full pr-10 ${
             error ? "input-error" : ""
           }`}
           autoComplete="off"
@@ -121,7 +121,7 @@ const FormAddressSearch = <T extends FieldValues>({
         )}
 
         {showResults && !disabled && (results.length > 0 || searchError) && (
-          <div className="absolute z-[1200] mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow-lg max-h-60 overflow-auto">
+          <div className="absolute z-1200 mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow-lg max-h-60 overflow-auto">
             {searchError && (
               <div className="px-4 py-2 text-sm text-error">{searchError}</div>
             )}

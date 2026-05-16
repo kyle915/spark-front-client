@@ -43,9 +43,9 @@ const FormSelect = <T extends FieldValues>({
           {...field}
           value={field.value ?? ""}
           disabled={disabled}
-          className={`select select-bordered w-full rounded-full ${
+          className={`select select-bordered h-12 w-full rounded-full ${
             error ? "select-error" : ""
-          }`}
+          } disabled:bg-base-200/50 disabled:border-base-300 disabled:text-base-content/40 disabled:cursor-not-allowed`}
         >
           <option value="">{placeholder}</option>
           {options.map((option) => (

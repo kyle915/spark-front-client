@@ -1,10 +1,5 @@
 import { useSparkForm } from "../hooks/useSparkForm";
-import { useState } from "react";
-import FormWizard from "./FormWizard";
-import SideSummary from "./SideSummary";
 import { Step1Basic, Step2Products, Step4Details, Step3Clients } from "./steps";
-import { calculateProgress } from "../utils/calculateProgress";
-import { stepFields } from "../utils/stepValidation";
 import { useSparkSubmit } from "../hooks";
 
 interface SparkFormProps {
@@ -95,105 +90,132 @@ export default function SparkForm(props: SparkFormProps) {
     timeZones,
   } = props;
 
-  const { control, watch, reset, trigger, setValue } = useSparkForm();
+  const {
+    control,
+    watch,
+    reset,
+    trigger,
+    setValue,
+    formState: { isValid },
+  } = useSparkForm();
   const values = watch();
-  const [resetSignal, setResetSignal] = useState(0);
-
   const { handleSubmit, loading } = useSparkSubmit(
     tenantId,
     () => {
       reset();
-      setResetSignal(Math.random());
+      window.scrollTo({ top: 0, behavior: "smooth" });
     },
     timeZones,
   );
 
-  const steps = [
-    {
-      title: "Basic Information",
-      description: "Tell us about the visit",
-      validate: () => trigger(stepFields.step1),
-      content: (
-        <Step1Basic
-          control={control}
-          timeZones={timeZones}
-          setValue={setValue}
-          requestUrlName={requestUrlName}
-          billingEntities={billingEntities}
-          onBillingEntitySearch={onBillingEntitySearch}
-        />
-      ),
-    },
-    {
-      title: "Products",
-      description: "Choose SKUs",
-      validate: () => trigger(stepFields.step2),
-      content: (
-        <Step2Products
-          control={control}
-          products={products}
-          productsLoading={productsLoading}
-          productsHasMore={productsHasMore}
-          productsTotalCount={productsTotalCount}
-          onLoadMoreProducts={onLoadMoreProducts}
-          selectedProductTypeId={selectedProductTypeId}
-          onProductTypeChange={onProductTypeChange}
-          productTypes={productTypes}
-        />
-      ),
-    },
-    {
-      title: "Client Details",
-      description: "Select distributor, and retailer",
-      validate: () => trigger(stepFields.step3),
-      content: (
-        <Step3Clients
-          control={control}
-          setValue={setValue}
-          requestTypes={requestTypes}
-          states={states}
-          onStateSearch={onStateSearch}
-          onStateChange={onStateChange}
-          onRetailerSearch={onRetailerSearch}
-          onNationalRetailerChange={onNationalRetailerChange}
-          distributors={distributors}
-          retailers={retailers}
-          requestUrlName={requestUrlName}
-        />
-      ),
-    },
-    {
-      title: "Extra Details",
-      description: "Optional details",
-      validate: () => trigger(stepFields.step4),
-      content: (
-        <Step4Details
-          control={control}
-          setValue={setValue}
-          requestUrlName={requestUrlName}
-          values={values}
-        />
-      ),
-    },
-  ];
+  const handleFormSubmit = async () => {
+    // Trigger validation for all fields
+    const isValid = await trigger();
+    if (isValid) {
+      handleSubmit(values);
+    } else {
+      // Scroll to top or first error if needed
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 w-full max-w-6xl">
-      <div className="flex-1">
-        <FormWizard
-          steps={steps}
-          onSubmit={() => handleSubmit(values)}
-          resetSignal={resetSignal}
-          loadingSubmit={loading}
-        />
+    <div className="w-full max-w-4xl mx-auto pb-24 md:pb-32 px-4 sm:px-6 pt-6">
+      <div className="flex flex-col gap-8 md:gap-12">
+        <section className="card bg-base-100 p-5 sm:p-6 md:p-8 shadow-xl rounded-2xl border border-base-300/50">
+          <div className="mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold">Basic Information</h2>
+            <p className="opacity-60 mt-1 text-sm">Tell us about the visit</p>
+          </div>
+          <Step1Basic
+            control={control}
+            timeZones={timeZones}
+            setValue={setValue}
+            requestUrlName={requestUrlName}
+            billingEntities={billingEntities}
+            onBillingEntitySearch={onBillingEntitySearch}
+          />
+        </section>
+
+        <section className="card bg-base-100 p-5 sm:p-6 md:p-8 shadow-xl rounded-2xl border border-base-300/50">
+          <div className="mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold">Products</h2>
+            <p className="opacity-60 mt-1 text-sm">Choose SKUs</p>
+          </div>
+          <Step2Products
+            control={control}
+            products={products}
+            productsLoading={productsLoading}
+            productsHasMore={productsHasMore}
+            productsTotalCount={productsTotalCount}
+            onLoadMoreProducts={onLoadMoreProducts}
+            selectedProductTypeId={selectedProductTypeId}
+            onProductTypeChange={onProductTypeChange}
+            productTypes={productTypes}
+          />
+        </section>
+
+        <section className="card bg-base-100 p-5 sm:p-6 md:p-8 shadow-xl rounded-2xl border border-base-300/50">
+          <div className="mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold">Client Details</h2>
+            <p className="opacity-60 mt-1 text-sm">
+              Select distributor and retailer
+            </p>
+          </div>
+          <Step3Clients
+            control={control}
+            setValue={setValue}
+            requestTypes={requestTypes}
+            states={states}
+            onStateSearch={onStateSearch}
+            onStateChange={onStateChange}
+            onRetailerSearch={onRetailerSearch}
+            onNationalRetailerChange={onNationalRetailerChange}
+            distributors={distributors}
+            retailers={retailers}
+            requestUrlName={requestUrlName}
+          />
+        </section>
+
+        <section className="card bg-base-100 p-5 sm:p-6 md:p-8 shadow-xl rounded-2xl border border-base-300/50">
+          <div className="mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold">Extra Details</h2>
+            <p className="opacity-60 mt-1 text-sm">Optional details</p>
+          </div>
+          <Step4Details
+            control={control}
+            setValue={setValue}
+            requestUrlName={requestUrlName}
+            values={values}
+          />
+        </section>
       </div>
 
-      <SideSummary
-        values={values}
-        progress={calculateProgress(values)}
-        productsFull={products}
-        timeZones={timeZones}
-      />
+      {/* Sticky Bottom Action Bar */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-base-100/95 backdrop-blur-xl border-t border-base-300 z-50 flex justify-center shadow-[0_-8px_30px_rgba(0,0,0,0.1)]">
+        <div className="w-full max-w-4xl flex items-center justify-between gap-4">
+          <div className="hidden sm:block">
+            <p className="font-semibold">Ready to submit?</p>
+            <p className="text-xs opacity-70">
+              Review your information before submitting
+            </p>
+          </div>
+          <button
+            className={`btn w-full sm:w-auto px-10 transition-all duration-300 border-0 text-white font-bold
+              ${
+                isValid
+                  ? "transform bg-linear-to-r from-primary to-secondary shadow-[0_0_15px_rgba(100,255,100,0.3)] hover:scale-110 hover:-translate-y-1 hover:shadow-[0_10px_25px_rgba(100,255,100,0.6)]"
+                  : "bg-base-300 opacity-50 cursor-not-allowed"
+              }
+            `}
+            onClick={handleFormSubmit}
+            disabled={!isValid || loading}
+          >
+            {loading ? "Submitting..." : "Submit Request"}
+            {loading && <span className="loading loading-spinner ml-2"></span>}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

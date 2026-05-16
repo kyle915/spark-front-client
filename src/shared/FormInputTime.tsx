@@ -54,7 +54,7 @@ const FormInputTime = <T extends FieldValues>({
 
     return `${String(hour24).padStart(2, "0")}:${String(minute).padStart(
       2,
-      "0"
+      "0",
     )}`;
   };
 
@@ -63,12 +63,12 @@ const FormInputTime = <T extends FieldValues>({
     hour: number,
     minute: number,
     period: "AM" | "PM",
-    rawValue?: string
+    rawValue?: string,
   ) => {
     if (!rawValue) return placeholder;
     return `${String(hour).padStart(2, "0")}:${String(minute).padStart(
       2,
-      "0"
+      "0",
     )} ${period}`;
   };
 
@@ -128,7 +128,7 @@ const FormInputTime = <T extends FieldValues>({
 
         const handleChange = (
           type: "hour" | "minute" | "period",
-          value: number | string
+          value: number | string,
         ) => {
           const current = parseTime(field.value);
           const next = {
@@ -160,17 +160,22 @@ const FormInputTime = <T extends FieldValues>({
             <div className="relative" ref={popoverRef}>
               <input
                 type="text"
-                value={formatDisplay(hour, minute, period, field.value)}
+                value={
+                  field.value
+                    ? formatDisplay(hour, minute, period, field.value)
+                    : ""
+                }
+                placeholder={placeholder}
                 readOnly
                 onClick={() => !disabled && setIsOpen((prev) => !prev)}
                 disabled={disabled}
-                className={`input input-bordered w-full rounded-full px-4 py-2 cursor-pointer ${
+                className={`input input-bordered h-12 w-full rounded-full cursor-pointer ${
                   error ? "input-error" : ""
                 }`}
               />
 
               {isOpen && !disabled && (
-                <div className="absolute mt-2 bg-base-200 rounded-box shadow-xl p-3 w-full max-w-sm z-[9999999]">
+                <div className="absolute mt-2 bg-base-200 rounded-box shadow-xl p-3 w-full max-w-sm z-9999999">
                   <div className="grid grid-cols-3 gap-2 mb-3">
                     {/* Hours */}
                     <ScrollPicker

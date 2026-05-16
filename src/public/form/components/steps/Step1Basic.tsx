@@ -64,14 +64,14 @@ export function Step1Basic({
         name="name"
         label="Full Name"
         control={control}
-        placeholder="Full Name"
+        placeholder="e.g. Jane Doe"
       />
 
       <FormInputText
         name="requestorEmail"
         label="Requestor Email"
         control={control}
-        placeholder="Requestor Email"
+        placeholder="e.g. jane@example.com"
         type="email"
       />
 
@@ -114,7 +114,7 @@ export function Step1Basic({
           name="address"
           label="Address"
           control={control}
-          placeholder="Street, city, and store reference"
+          placeholder="e.g. 123 Main St, New York"
           onSelect={(result) => {
             setValue("latitude", result.lat, {
               shouldDirty: true,

@@ -30,7 +30,7 @@ const MapSearchControl: FC<MapSearchControlProps> = ({
 
   const canSearch = useMemo(
     () => query.trim().length >= minLength,
-    [query, minLength]
+    [query, minLength],
   );
 
   useEffect(() => {
@@ -51,7 +51,7 @@ const MapSearchControl: FC<MapSearchControlProps> = ({
       } catch (err) {
         if (controller.signal.aborted) return;
         setError(
-          err instanceof Error ? err.message : "Unable to search location"
+          err instanceof Error ? err.message : "Unable to search location",
         );
         setResults([]);
       } finally {
@@ -92,7 +92,7 @@ const MapSearchControl: FC<MapSearchControlProps> = ({
 
   return (
     <div
-      className="absolute top-3 right-3 z-[1000] w-72"
+      className="absolute top-3 right-3 z-1000 w-72 hidden sm:block"
       onClick={stopPropagation}
       onMouseDown={stopPropagation}
       onDoubleClick={stopPropagation}
@@ -102,7 +102,7 @@ const MapSearchControl: FC<MapSearchControlProps> = ({
       <div className="rounded-xl bg-base-100/90 backdrop-blur shadow-lg border border-base-200 p-3 space-y-2">
         <div className="relative">
           <input
-            className="input input-sm input-bordered w-full pr-10"
+            className="input input-sm input-bordered w-full rounded-full pr-10"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setShowResults(true)}

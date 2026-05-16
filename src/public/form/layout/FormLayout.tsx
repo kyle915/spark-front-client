@@ -51,31 +51,36 @@ export default function SparkFormLayout({
       )}
 
       <div className="navbar bg-base-100 shadow-sm sticky top-0 z-20">
-        <div className="grid grid-cols-1 sm:grid-cols-3 items-center w-full px-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 items-center w-full px-4 py-2">
           {/* LEFT: Logo */}
-          <div className="flex items-center gap-3 justify-center sm:justify-start">
-            <img
-              src={hasImage ? tenant!.image! : "/logo.svg"}
-              alt="Tenant logo"
-              className={`h-8 w-auto object-contain app-logo-public ${hasImage ? "" : "app-logo-public-default"}`}
-              onError={(e) => {
-                const img = e.currentTarget;
-                if (!img.src.endsWith("/logo.svg")) {
-                  img.src = "/logo.svg";
-                }
-              }}
-            />
+          <div className="flex items-center gap-3 justify-start">
+            <div className="relative">
+              <img
+                src={hasImage ? tenant!.image! : "/logo.svg"}
+                alt="Tenant logo"
+                className={`relative h-8 sm:h-10 w-auto object-contain app-logo-public transition-all duration-300 ${colorScheme === "dark" ? "brightness-0 invert" : ""} ${hasImage ? "" : "app-logo-public-default"}`}
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (!img.src.endsWith("/logo.svg")) {
+                    img.src = "/logo.svg";
+                  }
+                }}
+              />
+            </div>
           </div>
 
           {/* CENTER: Title */}
-          <div className="hidden sm:flex justify-center">
-            <h1 className="font-semibold text-lg tracking-tight">
-              Spark Request Form
-            </h1>
+          <div className="hidden sm:flex flex-col items-center justify-center">
+            <div className="relative">
+              <h1 className="font-extrabold text-xl sm:text-2xl tracking-tight bg-linear-to-br from-primary via-primary/80 to-secondary bg-clip-text text-transparent drop-shadow-sm">
+                Spark Request
+              </h1>
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1/2 h-1 bg-linear-to-r from-primary to-secondary rounded-full opacity-80" />
+            </div>
           </div>
 
           {/* RIGHT: Actions */}
-          <div className="hidden sm:flex justify-end">
+          <div className="flex justify-end">
             <ThemeToggle value={colorScheme} onChange={setColorScheme} />
           </div>
         </div>

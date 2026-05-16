@@ -142,7 +142,7 @@ export default function FormDatePicker<T extends FieldValues>({
               type="button"
               disabled={disabled}
               popoverTarget={popoverId}
-              className={`w-full min-h-11 input input-bordered rounded-full px-3 pr-12 flex items-center text-left transition-colors ${
+              className={`w-full h-12 input input-bordered rounded-full flex items-center text-left transition-colors pr-10 ${
                 error ? "input-error" : ""
               } ${
                 disabled

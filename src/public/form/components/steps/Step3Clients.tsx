@@ -290,7 +290,7 @@ export function Step3Clients({
                 name="distributor"
                 label="Other Distributor"
                 control={control}
-                placeholder="Other Distributor"
+                placeholder="e.g. Acme Distribution"
                 disabled={!!selectedDistributorId || !isLocationSelected}
               />
 
@@ -298,7 +298,7 @@ export function Step3Clients({
                 name="distributorEmail"
                 label="Distributor Email"
                 control={control}
-                placeholder="distributor@example.com"
+                placeholder="e.g. orders@distributor.com"
                 disabled={!!selectedDistributorId || !isLocationSelected}
               />
             </div>
@@ -331,14 +331,14 @@ export function Step3Clients({
             name="retailer"
             label="Other Retailer"
             control={control}
-            placeholder="Retail store name"
+            placeholder="e.g. Target Store #1234"
             disabled={!!selectedRetailerId || !isLocationSelected}
           />
           <FormInputText
             name="retailerAddress"
             label="Retailer Address"
             control={control}
-            placeholder="Street, city, and store reference"
+            placeholder="e.g. 456 Market St, City"
             disabled={!!selectedRetailerId || !isLocationSelected}
           />
         </div>
@@ -348,7 +348,7 @@ export function Step3Clients({
             name="retailerStoreContact"
             label="Store Contact"
             control={control}
-            placeholder="Main contact number"
+            placeholder="e.g. 555-0123"
           />
         </div>
 
@@ -357,14 +357,14 @@ export function Step3Clients({
             name="storeManagerName"
             label="Store Manager Name"
             control={control}
-            placeholder="Manager's full name"
+            placeholder="e.g. John Smith"
           />
 
           <FormInputText
             name="storeManagerContact"
             label="Store Manager Contact Phone"
             control={control}
-            placeholder="Manager's phone number"
+            placeholder="e.g. 555-0198"
           />
         </div>
       </div>
