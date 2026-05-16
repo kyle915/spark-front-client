@@ -28,6 +28,7 @@ export default function SparkFormLayout({
     colorScheme,
   });
 
+  const [scrollProgress, setScrollProgress] = useState(0);
   const loading = loadingTenant || loadingTheme;
 
   useEffect(() => {
@@ -36,6 +37,15 @@ export default function SparkFormLayout({
     ) as TenantColorScheme | null;
 
     if (saved) setColorScheme(saved);
+
+    const handleScroll = () => {
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = (window.scrollY / totalHeight) * 100;
+      setScrollProgress(progress);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
@@ -50,7 +60,7 @@ export default function SparkFormLayout({
         </div>
       )}
 
-      <div className="navbar bg-base-100 shadow-sm sticky top-0 z-20">
+      <div className="navbar bg-base-100 shadow-sm sticky top-0 z-20 flex-col p-0 overflow-hidden">
         <div className="grid grid-cols-2 sm:grid-cols-3 items-center w-full px-4 py-2">
           {/* LEFT: Logo */}
           <div className="flex items-center gap-3 justify-start">
@@ -83,6 +93,14 @@ export default function SparkFormLayout({
           <div className="flex justify-end">
             <ThemeToggle value={colorScheme} onChange={setColorScheme} />
           </div>
+        </div>
+
+        {/* Scroll Progress Bar */}
+        <div className="w-full h-[2px] bg-base-200 overflow-hidden mt-auto">
+          <div 
+            className="h-full bg-linear-to-r from-primary to-secondary transition-all duration-150 ease-out"
+            style={{ width: `${scrollProgress}%` }}
+          />
         </div>
       </div>
 

@@ -121,11 +121,32 @@ export default function SparkForm(props: SparkFormProps) {
 
   return (
     <div className="w-full max-w-4xl mx-auto pb-24 md:pb-32 px-4 sm:px-6 pt-6">
+      <style>{`
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-up {
+          animation: fadeUp 0.6s ease-out forwards;
+          opacity: 0;
+        }
+        input:focus, select:focus, button:focus-visible {
+          box-shadow: 0 0 0 2px var(--fallback-p,oklch(var(--p))), 0 0 15px rgba(oklch(var(--p)), 0.15);
+          outline: none;
+        }
+      `}</style>
+
       <div className="flex flex-col gap-8 md:gap-12">
-        <section className="card bg-base-100 p-5 sm:p-6 md:p-8 shadow-xl rounded-2xl border border-base-300/50">
+        <section 
+          className="animate-fade-up card bg-base-100/70 backdrop-blur-md p-5 sm:p-6 md:p-8 shadow-xl rounded-2xl border border-base-300/50"
+          style={{ animationDelay: '0.1s' }}
+        >
           <div className="mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold">Basic Information</h2>
-            <p className="opacity-60 mt-1 text-sm">Tell us about the visit</p>
+            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+              <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-base">01</span>
+              Basic Information
+            </h2>
+            <p className="opacity-60 mt-1 text-sm pl-10">Tell us about the visit</p>
           </div>
           <Step1Basic
             control={control}
@@ -137,10 +158,16 @@ export default function SparkForm(props: SparkFormProps) {
           />
         </section>
 
-        <section className="card bg-base-100 p-5 sm:p-6 md:p-8 shadow-xl rounded-2xl border border-base-300/50">
+        <section 
+          className="animate-fade-up card bg-base-100/70 backdrop-blur-md p-5 sm:p-6 md:p-8 shadow-xl rounded-2xl border border-base-300/50"
+          style={{ animationDelay: '0.2s' }}
+        >
           <div className="mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold">Products</h2>
-            <p className="opacity-60 mt-1 text-sm">Choose SKUs</p>
+            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+              <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-base">02</span>
+              Products
+            </h2>
+            <p className="opacity-60 mt-1 text-sm pl-10">Choose SKUs</p>
           </div>
           <Step2Products
             control={control}
@@ -155,10 +182,16 @@ export default function SparkForm(props: SparkFormProps) {
           />
         </section>
 
-        <section className="card bg-base-100 p-5 sm:p-6 md:p-8 shadow-xl rounded-2xl border border-base-300/50">
+        <section 
+          className="animate-fade-up card bg-base-100/70 backdrop-blur-md p-5 sm:p-6 md:p-8 shadow-xl rounded-2xl border border-base-300/50"
+          style={{ animationDelay: '0.3s' }}
+        >
           <div className="mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold">Client Details</h2>
-            <p className="opacity-60 mt-1 text-sm">
+            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+              <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-base">03</span>
+              Client Details
+            </h2>
+            <p className="opacity-60 mt-1 text-sm pl-10">
               Select distributor and retailer
             </p>
           </div>
@@ -177,10 +210,16 @@ export default function SparkForm(props: SparkFormProps) {
           />
         </section>
 
-        <section className="card bg-base-100 p-5 sm:p-6 md:p-8 shadow-xl rounded-2xl border border-base-300/50">
+        <section 
+          className="animate-fade-up card bg-base-100/70 backdrop-blur-md p-5 sm:p-6 md:p-8 shadow-xl rounded-2xl border border-base-300/50"
+          style={{ animationDelay: '0.4s' }}
+        >
           <div className="mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold">Extra Details</h2>
-            <p className="opacity-60 mt-1 text-sm">Optional details</p>
+            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+              <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-base">04</span>
+              Extra Details
+            </h2>
+            <p className="opacity-60 mt-1 text-sm pl-10">Optional details</p>
           </div>
           <Step4Details
             control={control}
