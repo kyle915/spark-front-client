@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Spark v2 — Approvals.
@@ -130,9 +131,10 @@ const ApprovalRow: React.FC<{ row: Row; onView: () => void }> = ({
 
 const ApprovalsInner: React.FC = () => {
   const navigate = useNavigate();
+  const { tenantId } = useAuthStore();
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
-    { first: 50, filters: null },
+    { first: 50, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
 

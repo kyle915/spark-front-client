@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/RecapsQuery.graphql";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Spark v2 — Recaps list.
@@ -127,9 +128,11 @@ const RecapsListInner: React.FC<{
   onMeta: (m: Meta) => void;
 }> = ({ search, retailerFilter, stateFilter, onMeta }) => {
   const navigate = useNavigate();
+  const { tenantId } = useAuthStore();
+  // Tenant scoping is REQUIRED for the recaps query to return rows.
   const data = useLazyLoadQuery<RecapsQueryType>(
     RecapsQuery,
-    { first: 100, filters: null },
+    { first: 100, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
 

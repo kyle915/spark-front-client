@@ -197,6 +197,7 @@ const MasterTrackerInner: React.FC<{
 
   // Wireframe shows up to ~10 rows; we fetch 50 and slice. A "Load more" /
   // proper pagination ships in v2.
+  // Tenant scoping is REQUIRED — without it the query returns nothing.
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
     {
@@ -204,7 +205,7 @@ const MasterTrackerInner: React.FC<{
       q: search || null,
       // Status filtering is applied client-side for v1 — the RequestFiltersInput
       // shape doesn't expose a status slug filter and adding one is backend work.
-      filters: null,
+      filters: tenantId ? { tenantId } : null,
     },
     { fetchPolicy: "store-or-network" },
   );

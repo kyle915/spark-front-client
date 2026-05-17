@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { EventsQuery } from "@/api/queries/EventsQuery";
 import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Spark v2 — Shifts Board / Calendar.
@@ -230,10 +231,14 @@ const ShiftGrid: React.FC<{ shifts: Shift[]; days: Date[] }> = ({
 
 const SparkCalendarInner: React.FC<{ anchor: Date }> = ({ anchor }) => {
   const days = useMemo(() => weekDays(anchor), [anchor]);
+  const { tenantId } = useAuthStore();
 
   const data = useLazyLoadQuery<EventsQueryType>(
     EventsQuery,
-    { first: 200 },
+    {
+      first: 200,
+      filters: tenantId ? { tenantId } : null,
+    },
     { fetchPolicy: "store-or-network" },
   );
 
