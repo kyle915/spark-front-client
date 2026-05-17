@@ -56,17 +56,24 @@ export default function CompanySelector() {
             };
           }) ?? [];
 
-        // 👉 CASO: SOLO UN TENANT → AUTOSELECT + REDIRECT
-        if (tenantCompanies.length === 1) {
-          const [company] = tenantCompanies;
+        // Spark v2: never show a picker page.
+        // - 0 tenants → log out (handled below as the no-companies branch).
+        // - 1+ tenants → auto-select. Prefer the last-used uuid from
+        //   localStorage if it's still in the list; otherwise take the first.
+        //   Admins switch via the sidebar TenantPicker; clients only have
+        //   one tenant so this is a silent pass-through.
+        if (tenantCompanies.length >= 1) {
+          const lastUuid = localStorage.getItem("@tenantUuid");
+          const preferred =
+            (lastUuid && tenantCompanies.find((c) => c.uuid === lastUuid)) ||
+            tenantCompanies[0];
           selectTenant({
-            tenantUuid: company.uuid,
-            tenantId: company.id,
-            logo: company.logo,
-            requestUrlName: company.requestUrlName,
-            tenantSlug: company.tenantSlug,
+            tenantUuid: preferred.uuid,
+            tenantId: preferred.id,
+            logo: preferred.logo,
+            requestUrlName: preferred.requestUrlName,
+            tenantSlug: preferred.tenantSlug,
           });
-
           navigate(from, { replace: true });
           return;
         }
