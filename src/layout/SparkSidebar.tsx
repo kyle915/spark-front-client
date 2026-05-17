@@ -4,31 +4,21 @@ import { useAuthStore } from "@/store/authStore";
 import TenantPicker from "./TenantPicker";
 
 /**
- * Spark v2 sidebar — wireframe-faithful version of spark-demo/index.html
- * (lines 409–466).
- *
- * The IA in the wireframe is deliberately different from the legacy
- * navigationMenuRoutes (which had a 10-group / collapsible structure). The
- * wireframe groups items into six flat sections (Workspace / Talent / Outputs
- * / Communication / Operations / System) with chip badges per item. We map
- * each wireframe item to a real route in the existing app when one exists,
- * and mark the rest as `stub: true` so click opens a toast instead of 404.
+ * Spark v2 sidebar — uses the verbatim .nav-item / .nav-section / .nav-badge
+ * classes lifted from spark-demo/index.html so React renders the same pixels.
  */
 
-type ChipTone = "lime" | "orange" | "sky" | "purple" | "gold" | null;
+type ChipTone = "lime" | "orange" | "sky" | "purple" | "gold";
 
 type NavItem = {
   label: string;
-  icon: string; // glyph from the wireframe — replaced with proper icons later
+  icon: string;
   to?: string;
   chip?: { text: string; tone: ChipTone; blink?: boolean };
   stub?: boolean;
 };
 
-type NavSection = {
-  title: string;
-  items: NavItem[];
-};
+type NavSection = { title: string; items: NavItem[] };
 
 const SECTIONS: NavSection[] = [
   {
@@ -123,35 +113,17 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-/** Map a slug like "ighn-liquid-death" → "Liquid Death" for display. */
 const slugToName = (slug: string | null | undefined): string => {
   if (!slug) return "—";
   const parts = slug.split("-").filter(Boolean);
-  // Drop common agency prefix segments
-  const dropPrefixes = new Set(["ighn", "ig", "ign"]);
-  const brandParts =
-    parts.length > 1 && dropPrefixes.has(parts[0].toLowerCase())
+  const drop = new Set(["ighn", "ig", "ign"]);
+  const brand =
+    parts.length > 1 && drop.has(parts[0].toLowerCase())
       ? parts.slice(1)
       : parts;
-  return brandParts
+  return brand
     .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
     .join(" ");
-};
-
-const chipClass = (tone: ChipTone, blink: boolean | undefined) => {
-  const base =
-    "ml-auto mono text-[10px] tracking-[0.1em] px-1.5 py-0.5 rounded border";
-  const toneClass =
-    tone === "orange"
-      ? "bg-warning/15 text-warning border-warning/30"
-      : tone === "sky"
-        ? "bg-info/15 text-info border-info/30"
-        : tone === "purple"
-          ? "bg-accent/15 text-accent border-accent/30"
-          : tone === "gold"
-            ? "bg-amber-400/15 text-amber-400 border-amber-400/30"
-            : "bg-primary/15 text-primary border-primary/30";
-  return `${base} ${toneClass} ${blink ? "animate-pulse" : ""}`;
 };
 
 const isActive = (path: string | undefined, pathname: string) => {
@@ -160,55 +132,69 @@ const isActive = (path: string | undefined, pathname: string) => {
   return pathname === path || pathname.startsWith(path + "/");
 };
 
-const NavItemRow: React.FC<{
+const chipClass = (tone: ChipTone): string => {
+  switch (tone) {
+    case "orange":
+      return "chip chip-orange";
+    case "sky":
+      return "chip chip-sky";
+    case "purple":
+      return "chip chip-purple";
+    case "gold":
+      return "chip chip-gold";
+    default:
+      return "chip chip-lime";
+  }
+};
+
+const NavRow: React.FC<{
   item: NavItem;
   pathname: string;
   onStub: (label: string) => void;
 }> = ({ item, pathname, onStub }) => {
   const active = isActive(item.to, pathname);
-
-  const inner = (
+  const cls = `nav-item ${active ? "active" : ""}`;
+  const content = (
     <>
-      <span
-        className={`mono text-[14px] w-5 text-center shrink-0 ${active ? "text-primary-content" : "text-base-content/55"}`}
-        aria-hidden
-      >
+      <span className="nav-icon" aria-hidden>
         {item.icon}
       </span>
       <span className="truncate">{item.label}</span>
       {item.chip && (
         <span
-          className={chipClass(
-            active ? "lime" : item.chip.tone,
-            item.chip.blink,
-          )}
+          className={`${chipClass(item.chip.tone)} nav-badge ${item.chip.blink ? "spark-blink" : ""}`}
         >
           {item.chip.text}
         </span>
       )}
     </>
   );
-
-  const className = [
-    "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition w-full",
-    active
-      ? "bg-primary text-primary-content font-semibold"
-      : "text-base-content/80 hover:text-base-content hover:bg-base-300/40",
-  ].join(" ");
-
   if (item.stub || !item.to) {
     return (
-      <button onClick={() => onStub(item.label)} className={className}>
-        {inner}
+      <button onClick={() => onStub(item.label)} className={cls}>
+        {content}
       </button>
     );
   }
-
   return (
-    <Link to={item.to} className={className}>
-      {inner}
+    <Link to={item.to} className={cls}>
+      {content}
     </Link>
   );
+};
+
+const onStub = (label: string) => {
+  const id = "spark-stub-toast";
+  document.getElementById(id)?.remove();
+  const el = document.createElement("div");
+  el.id = id;
+  el.className =
+    "fixed bottom-6 left-6 z-50 rounded-md px-4 py-3 shadow-lg max-w-xs";
+  el.style.cssText =
+    "background: var(--spark-surface); border:1px solid var(--spark-border);";
+  el.innerHTML = `<p style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;color:var(--spark-lime);margin-bottom:0.25rem;">COMING SOON</p><p style="font-size:0.875rem;color:var(--spark-text);">${label} ships in a later phase.</p>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2400);
 };
 
 export const SparkSidebar: React.FC = () => {
@@ -219,44 +205,54 @@ export const SparkSidebar: React.FC = () => {
     .toUpperCase();
   const tenantDisplay = slugToName(tenantMeta?.requestUrlName);
 
-  const onStub = (label: string) => {
-    // Lightweight inline toast — replaced by <Toast/> in Phase 1.4
-    const id = "stub-toast";
-    document.getElementById(id)?.remove();
-    const el = document.createElement("div");
-    el.id = id;
-    el.className =
-      "fixed bottom-6 left-6 z-50 bg-base-100 border border-base-300 rounded-md px-4 py-3 shadow-lg max-w-xs";
-    el.innerHTML = `<p class="mono text-[10px] tracking-[0.16em] text-primary mb-1">COMING SOON</p><p class="text-sm">${label} ships in a later phase.</p>`;
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 2400);
-  };
-
   return (
-    <aside className="w-64 shrink-0 border-r border-base-300 bg-base-100/80 backdrop-blur-xl flex flex-col h-screen min-h-0">
-      {/* Brand mark — italic display "Spark" + mono "BY IGNITE" */}
-      <div className="px-5 py-4 border-b border-base-300">
-        <div className="flex items-baseline gap-2">
-          <span
-            className="display italic text-3xl font-bold tracking-tight"
-            style={{ fontStyle: "italic" }}
-          >
-            Spark
-          </span>
-          <span className="mono text-[10px] tracking-[0.22em] text-base-content/45">
-            BY IGNITE
-          </span>
+    <aside
+      className="w-64 shrink-0 flex flex-col h-screen min-h-0"
+      style={{
+        background: "rgba(10,13,9,0.85)",
+        borderRight: "1px solid var(--spark-border)",
+        backdropFilter: "blur(12px)",
+      }}
+    >
+      {/* Brand mark */}
+      <div
+        className="px-5 py-5"
+        style={{ borderBottom: "1px solid var(--spark-border)" }}
+      >
+        <div className="spark-mark text-2xl">
+          <span className="word">Spark</span>
+          <span className="tag">BY IGNITE</span>
         </div>
       </div>
 
       {/* Tenant picker */}
-      <div className="px-3 py-3 border-b border-base-300">
-        <div className="label-mini mb-1.5">Tenant</div>
+      <div
+        className="px-3 py-3"
+        style={{ borderBottom: "1px solid var(--spark-border)" }}
+      >
+        <div className="label-mini mb-1.5 px-1">Tenant</div>
         <Suspense
           fallback={
-            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-base-300/40 border border-base-300">
-              <span className="w-5 h-5 rounded-sm bg-base-300" />
-              <span className="text-sm truncate flex-1 text-base-content/55">
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-md"
+              style={{
+                background: "rgba(255,255,255,0.025)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              <span
+                className="w-5 h-5 rounded-sm text-[10px] font-bold flex items-center justify-center shrink-0"
+                style={{
+                  background: "rgba(197,245,70,0.15)",
+                  color: "var(--spark-lime)",
+                }}
+              >
+                {tenantDisplay.slice(0, 2).toUpperCase()}
+              </span>
+              <span
+                className="text-sm truncate flex-1"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
                 {tenantDisplay}
               </span>
             </div>
@@ -266,14 +262,14 @@ export const SparkSidebar: React.FC = () => {
         </Suspense>
       </div>
 
-      {/* Nav — flat sections */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3 hide-scroll space-y-3">
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-2 py-2 hide-scroll">
         {SECTIONS.map((section) => (
           <div key={section.title}>
-            <div className="label-mini px-3 mb-1.5">{section.title}</div>
-            <div className="space-y-0.5">
+            <div className="nav-section">{section.title}</div>
+            <div className="space-y-0.5 px-1">
               {section.items.map((item) => (
-                <NavItemRow
+                <NavRow
                   key={item.label}
                   item={item}
                   pathname={pathname}
@@ -286,15 +282,19 @@ export const SparkSidebar: React.FC = () => {
       </nav>
 
       {/* Footer */}
-      <div className="px-3 py-3 border-t border-base-300 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-primary text-primary-content text-xs font-bold flex items-center justify-center shrink-0">
-          {initial}
-        </div>
+      <div
+        className="px-3 py-3 flex items-center gap-3"
+        style={{ borderTop: "1px solid var(--spark-border)" }}
+      >
+        <span className="spark-avatar">{initial}</span>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold truncate">
             {user?.firstName ?? user?.email ?? "User"}
           </p>
-          <p className="mono text-[10px] text-base-content/40 truncate">
+          <p
+            className="mono text-[10px] truncate"
+            style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.4)" }}
+          >
             IGNITE PRODUCTIONS
           </p>
         </div>
