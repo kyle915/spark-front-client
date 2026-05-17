@@ -186,19 +186,44 @@ const SparkRequestInner: React.FC = () => {
     }
   }, [requestTypes, timezones, rmms, requestTypeId, timezoneId, rmmId]);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const geocode = async (
+    raw: string,
+  ): Promise<[number, number] | null> => {
+    // Use Google Geocoding API via the same key we use for Maps. Server-
+    // side proxying would be cleaner but for v1 we hit it client-side.
+    const key = (import.meta as { env?: Record<string, string> }).env
+      ?.VITE_GOOGLE_MAPS_API_KEY;
+    if (!key || !raw) return null;
+    try {
+      const resp = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(raw)}&key=${key}`,
+      );
+      const data = await resp.json();
+      const loc = data?.results?.[0]?.geometry?.location;
+      if (typeof loc?.lat === "number" && typeof loc?.lng === "number") {
+        return [loc.lat, loc.lng];
+      }
+    } catch {
+      /* ignore — fall back to [0,0] */
+    }
+    return null;
+  };
+
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!date || !venue || !requestTypeId || !timezoneId) {
       showAlert("Fill in venue, date, time, and type.", "warning");
       return;
     }
     const composedName = `${venue} · ${date}`;
+    const geocoded = await geocode(address || venue);
+    const coords: ReadonlyArray<number> = geocoded ?? [0, 0];
     commit({
       variables: {
         input: {
           name: composedName,
           address: address || venue,
-          coordinates: [0, 0],
+          coordinates: coords,
           date,
           startTime,
           endTime,
