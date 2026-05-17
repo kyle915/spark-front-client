@@ -63,6 +63,7 @@ const SECTIONS: NavSection[] = [
     title: "Outputs",
     items: [
       { label: "Recaps", icon: "◈", to: "/recaps/list" },
+      { label: "Recap Templates", icon: "▤", to: "/recaps/templates" },
       { label: "Reports", icon: "📈", to: "/reports" },
     ],
   },

@@ -92,6 +92,7 @@ import SparkInbox from "@/components/pages/inbox/SparkInbox";
 import SparkAlerts from "@/components/pages/alerts/SparkAlerts";
 import SparkTalent from "@/components/pages/talent/SparkTalent";
 import SparkJobDetail from "@/components/pages/jobs/SparkJobDetail";
+import SparkRecapTemplates from "@/recap/SparkRecapTemplates";
 import RecapCustomList from "@/recap/RecapCustomList";
 import RecapView from "@/recap/RecapView";
 // import EditRecap from "@/recap/EditRecap";
@@ -376,6 +377,7 @@ const RecapLinks = {
     // { path: "/recap/create", component: <CreateRecap />, isPublic: false },
     { path: "/recap/list", component: <SparkRecapsList />, isPublic: false },
     { path: "/recaps/list", component: <SparkRecapsList />, isPublic: false },
+    { path: "/recaps/templates", component: <SparkRecapTemplates />, isPublic: false },
     { path: "/recap/legacy", component: <RecapList />, isPublic: false },
     {
       path: "/recaps/custom-list",
