@@ -80,6 +80,7 @@ import {
 // Recap
 // import CreateRecap from "@/recap/CreateRecap";
 import RecapList from "@/recap/RecapsList";
+import SparkRecapsList from "@/recap/SparkRecapsList";
 import RecapCustomList from "@/recap/RecapCustomList";
 import RecapView from "@/recap/RecapView";
 // import EditRecap from "@/recap/EditRecap";
@@ -322,7 +323,9 @@ const RecapLinks = {
 
   routes: [
     // { path: "/recap/create", component: <CreateRecap />, isPublic: false },
-    { path: "/recap/list", component: <RecapList />, isPublic: false },
+    { path: "/recap/list", component: <SparkRecapsList />, isPublic: false },
+    { path: "/recaps/list", component: <SparkRecapsList />, isPublic: false },
+    { path: "/recap/legacy", component: <RecapList />, isPublic: false },
     {
       path: "/recaps/custom-list",
       component: <RecapCustomList />,
