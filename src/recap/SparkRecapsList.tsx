@@ -18,6 +18,9 @@ type Recap = {
   retailerName: string;
   stateCode: string | null;
   approved: boolean;
+  heroImage: string | null;
+  engagements: number | null;
+  productsSold: number | null;
 };
 
 const formatDate = (raw: string | null | undefined) => {
@@ -42,15 +45,32 @@ const RecapCard: React.FC<{ recap: Recap; onOpen: () => void }> = ({
     className="spark-card hov overflow-hidden cursor-pointer"
   >
     <div
-      className="h-28 grid place-items-center relative"
+      className="h-32 relative overflow-hidden"
       style={{
         background:
           "radial-gradient(circle at 50% 50%, rgba(197,245,70,0.10), transparent 70%)",
       }}
     >
-      <span className="text-4xl" aria-hidden>
-        ◈
-      </span>
+      {recap.heroImage ? (
+        <img
+          src={recap.heroImage}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.5))",
+          }}
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
+        />
+      ) : (
+        <div className="absolute inset-0 grid place-items-center">
+          <span className="text-4xl" aria-hidden>
+            ◈
+          </span>
+        </div>
+      )}
       <span
         className="absolute top-2 left-2 mono"
         style={{
@@ -93,12 +113,18 @@ const RecapCard: React.FC<{ recap: Recap; onOpen: () => void }> = ({
             className="tab-num text-base font-bold"
             style={{ color: "var(--spark-lime)" }}
           >
-            —
+            {recap.engagements != null
+              ? recap.engagements.toLocaleString()
+              : "—"}
           </p>
           <p className="label-mini">ENG</p>
         </div>
         <div>
-          <p className="tab-num text-base font-bold">—</p>
+          <p className="tab-num text-base font-bold">
+            {recap.productsSold != null
+              ? recap.productsSold.toLocaleString()
+              : "—"}
+          </p>
           <p className="label-mini">SOLD</p>
         </div>
         <div>
@@ -106,7 +132,9 @@ const RecapCard: React.FC<{ recap: Recap; onOpen: () => void }> = ({
             className="tab-num text-base font-bold"
             style={{ color: "var(--spark-lime)" }}
           >
-            —
+            {recap.engagements && recap.productsSold && recap.engagements > 0
+              ? `${Math.round((recap.productsSold / recap.engagements) * 100)}%`
+              : "—"}
           </p>
           <p className="label-mini">CONV</p>
         </div>
@@ -119,6 +147,8 @@ type Meta = {
   retailers: string[];
   states: string[];
   total: number;
+  totalConsumers: number;
+  totalProducts: number;
 };
 
 const RecapsListInner: React.FC<{
@@ -132,7 +162,7 @@ const RecapsListInner: React.FC<{
   // Tenant scoping is REQUIRED for the recaps query to return rows.
   const data = useLazyLoadQuery<RecapsQueryType>(
     RecapsQuery,
-    { first: 100, filters: tenantId ? { tenantId } : null },
+    { first: 1000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
 
@@ -151,6 +181,16 @@ const RecapsListInner: React.FC<{
             n.event?.retailer?.location?.state?.code ??
             n.state?.code ??
             null;
+          // Pick the first image-typed file as the hero. file field is a
+          // URL when present.
+          const imageFile = (n.recapFiles ?? []).find((f) => {
+            const ext = (f?.fileType?.extension ?? "").toLowerCase();
+            const url = (f?.file ?? "").toLowerCase();
+            return (
+              ["jpg", "jpeg", "png", "webp", "gif"].includes(ext) ||
+              /\.(jpg|jpeg|png|webp|gif)(\?|$)/.test(url)
+            );
+          });
           return {
             uuid: String(n.uuid),
             name: n.name ?? n.event?.name ?? "Untitled recap",
@@ -158,6 +198,9 @@ const RecapsListInner: React.FC<{
             retailerName,
             stateCode,
             approved: Boolean(n.approved),
+            heroImage: imageFile?.file ?? null,
+            engagements: n.totalEngagements ?? null,
+            productsSold: n.productsSold ?? null,
           };
         }) ?? []
     );
@@ -179,12 +222,22 @@ const RecapsListInner: React.FC<{
   );
 
   useMemo(() => {
+    const totalConsumers = recaps.reduce(
+      (s, r) => s + (r.engagements ?? 0),
+      0,
+    );
+    const totalProducts = recaps.reduce(
+      (s, r) => s + (r.productsSold ?? 0),
+      0,
+    );
     onMeta({
       retailers,
       states,
       total: data?.recaps?.totalCount ?? recaps.length,
+      totalConsumers,
+      totalProducts,
     });
-  }, [retailers, states, data?.recaps?.totalCount, recaps.length, onMeta]);
+  }, [retailers, states, data?.recaps?.totalCount, recaps, onMeta]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -232,6 +285,8 @@ export default function SparkRecapsList() {
     retailers: [],
     states: [],
     total: 0,
+    totalConsumers: 0,
+    totalProducts: 0,
   });
 
   const onMeta = useMemo(() => (next: Meta) => setMeta(next), []);
@@ -298,7 +353,11 @@ export default function SparkRecapsList() {
           </div>
           <div className="spark-card p-4">
             <p className="label-mini">CONSUMERS</p>
-            <p className="tab-num text-3xl font-bold mt-1">—</p>
+            <p className="tab-num text-3xl font-bold mt-1">
+              {meta.totalConsumers > 0
+                ? meta.totalConsumers.toLocaleString()
+                : "—"}
+            </p>
           </div>
           <div className="spark-card p-4">
             <p className="label-mini">PRODUCTS SOLD</p>
@@ -306,12 +365,18 @@ export default function SparkRecapsList() {
               className="tab-num text-3xl font-bold mt-1"
               style={{ color: "var(--spark-lime)" }}
             >
-              —
+              {meta.totalProducts > 0
+                ? meta.totalProducts.toLocaleString()
+                : "—"}
             </p>
           </div>
           <div className="spark-card p-4">
-            <p className="label-mini">CANS SOLD</p>
-            <p className="tab-num text-3xl font-bold mt-1">—</p>
+            <p className="label-mini">AVG · CONV</p>
+            <p className="tab-num text-3xl font-bold mt-1">
+              {meta.totalConsumers > 0 && meta.totalProducts > 0
+                ? `${Math.round((meta.totalProducts / meta.totalConsumers) * 100)}%`
+                : "—"}
+            </p>
           </div>
         </div>
 

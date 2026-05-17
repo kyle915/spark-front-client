@@ -61,6 +61,7 @@ type Row = {
   statusSlug: string;
   market: string;
   venue: string;
+  address: string;
   type: string;
   eventUuid: string | null;
 };
@@ -106,7 +107,7 @@ const TrackerTable: React.FC<{ rows: Row[] }> = ({ rows }) => {
       <div className="overflow-x-auto">
         <table
           className="w-full text-sm"
-          style={{ minWidth: 1000 }}
+          style={{ minWidth: 1200 }}
         >
           <thead
             style={{
@@ -126,6 +127,7 @@ const TrackerTable: React.FC<{ rows: Row[] }> = ({ rows }) => {
               <th className="px-4 py-3">STATUS</th>
               <th className="px-4 py-3">MARKET</th>
               <th className="px-4 py-3">VENUE</th>
+              <th className="px-4 py-3">ADDRESS</th>
               <th className="px-4 py-3">TYPE</th>
               <th className="px-4 py-3 text-right">CONSUMERS</th>
               <th className="px-4 py-3 text-right">1ST-TIME</th>
@@ -137,7 +139,7 @@ const TrackerTable: React.FC<{ rows: Row[] }> = ({ rows }) => {
             {rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={10}
                   className="px-4 py-10 text-center text-sm"
                   style={{ color: "rgba(255,255,255,0.55)" }}
                 >
@@ -199,6 +201,12 @@ const TrackerTable: React.FC<{ rows: Row[] }> = ({ rows }) => {
                   <td className="px-4 py-3">{r.market}</td>
                   <td className="px-4 py-3 font-medium">{r.venue}</td>
                   <td
+                    className="px-4 py-3 text-xs max-w-[280px]"
+                    style={{ color: "rgba(255,255,255,0.7)" }}
+                  >
+                    <span className="line-clamp-2">{r.address || "—"}</span>
+                  </td>
+                  <td
                     className="px-4 py-3 text-xs"
                     style={{ color: "rgba(255,255,255,0.7)" }}
                   >
@@ -251,16 +259,14 @@ const MasterTrackerInner: React.FC<{
 }> = ({ activeStatus, search, onCountsChange }) => {
   const { tenantId } = useAuthStore();
 
-  // Wireframe shows up to ~10 rows; we fetch 50 and slice. A "Load more" /
-  // proper pagination ships in v2.
+  // Fetch a large page so all current requests render. Real pagination
+  // with cursor-based "Load more" comes in v2.
   // Tenant scoping is REQUIRED — without it the query returns nothing.
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
     {
-      first: 50,
+      first: 1000,
       q: search || null,
-      // Status filtering is applied client-side for v1 — the RequestFiltersInput
-      // shape doesn't expose a status slug filter and adding one is backend work.
       filters: tenantId ? { tenantId } : null,
     },
     { fetchPolicy: "store-or-network" },
@@ -285,6 +291,7 @@ const MasterTrackerInner: React.FC<{
               .toLowerCase(),
             market: market || "—",
             venue: n.retailer?.name ?? n.name ?? "—",
+            address: n.address ?? "",
             type: n.requestType?.name ?? "—",
             eventUuid: n.event?.uuid ? String(n.event.uuid) : null,
           };

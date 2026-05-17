@@ -12,6 +12,8 @@ import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
+import { ProductsQuery } from "@/api/queries/ProductsQuery";
+import type { ProductsQuery as ProductsQueryType } from "@api/queries/__generated__/ProductsQuery.graphql";
 
 /**
  * Spark v2 — minimal "Express" request form.
@@ -62,6 +64,14 @@ const SparkRequestInner: React.FC = () => {
     { tenantId: tenantId ?? "" },
     { fetchPolicy: "store-or-network" },
   );
+  const productsData = useLazyLoadQuery<ProductsQueryType>(
+    ProductsQuery,
+    {
+      first: 60,
+      filters: { tenantId: tenantId ?? "" },
+    },
+    { fetchPolicy: "store-or-network" },
+  );
 
   const requestTypes = useMemo(
     () =>
@@ -81,6 +91,13 @@ const SparkRequestInner: React.FC = () => {
     () => (rmmData?.rmmClients ?? []).filter(Boolean),
     [rmmData],
   );
+  const products = useMemo(
+    () =>
+      productsData?.products?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [],
+    [productsData],
+  );
 
   // Form state
   const [fullName, setFullName] = useState(
@@ -96,6 +113,7 @@ const SparkRequestInner: React.FC = () => {
   const [timezoneId, setTimezoneId] = useState("");
   const [rmmId, setRmmId] = useState("");
   const [notes, setNotes] = useState("");
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
 
   // Pick sensible defaults once the catalog loads.
   useEffect(() => {
@@ -139,7 +157,10 @@ const SparkRequestInner: React.FC = () => {
           requestorEmail: email || undefined,
           notes: notes || undefined,
           details: [],
-          products: [],
+          products: Array.from(selectedProducts).map((productId) => ({
+            productId,
+            quantity: 1,
+          })),
         },
       },
       onCompleted: (res) => {
@@ -322,6 +343,103 @@ const SparkRequestInner: React.FC = () => {
             )}
           </select>
         </div>
+
+        {/* Products picker */}
+        {products.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="label-mini">
+                Products to sample · {selectedProducts.size} selected
+              </label>
+              {selectedProducts.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedProducts(new Set())}
+                  className="mono text-[10px] transition"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "rgba(255,255,255,0.45)",
+                  }}
+                >
+                  × CLEAR
+                </button>
+              )}
+            </div>
+            <div
+              className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2"
+              style={{ maxHeight: 280, overflowY: "auto" }}
+            >
+              {products.map((p) => {
+                const on = selectedProducts.has(String(p.id));
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() =>
+                      setSelectedProducts((prev) => {
+                        const next = new Set(prev);
+                        const id = String(p.id);
+                        if (next.has(id)) next.delete(id);
+                        else next.add(id);
+                        return next;
+                      })
+                    }
+                    className="aspect-square rounded-xl relative overflow-hidden transition"
+                    style={{
+                      background: on
+                        ? "rgba(197,245,70,0.10)"
+                        : "rgba(255,255,255,0.025)",
+                      border: on
+                        ? "2px solid var(--spark-lime)"
+                        : "1px solid var(--spark-border)",
+                      boxShadow: on
+                        ? "0 0 18px rgba(197,245,70,0.25)"
+                        : "none",
+                    }}
+                    title={p.name}
+                  >
+                    {p.image ? (
+                      <img
+                        src={p.image}
+                        alt={p.name}
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-contain p-2"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display =
+                            "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 grid place-items-center">
+                        <span
+                          className="mono text-[10px]"
+                          style={{
+                            letterSpacing: "0.14em",
+                            color: "rgba(255,255,255,0.55)",
+                          }}
+                        >
+                          {p.name?.slice(0, 14)}
+                        </span>
+                      </div>
+                    )}
+                    {on && (
+                      <span
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full grid place-items-center font-bold"
+                        style={{
+                          background: "var(--spark-lime)",
+                          color: "#0a0d09",
+                          fontSize: 12,
+                        }}
+                      >
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="label-mini block mb-1.5">Notes (optional)</label>
