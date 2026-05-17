@@ -374,16 +374,22 @@ export default function DashboardIndex() {
   const navigate = useNavigate();
   const [range, setRange] = useState<RangeKey>("30d");
 
-  const filters: DashboardFilters = useMemo(
-    () => ({
+  // Map the date-range pill into a real DashboardFilters startDate.
+  const filters: DashboardFilters = useMemo(() => {
+    const today = new Date();
+    const start = new Date(today);
+    const daysBack =
+      range === "7d" ? 7 : range === "30d" ? 30 : 90;
+    start.setDate(today.getDate() - daysBack);
+    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    return {
       distributorIds: [],
       rmmAsignedId: null,
       quarter: null,
-      startDate: null,
-      endDate: null,
-    }),
-    [],
-  );
+      startDate: fmt(start),
+      endDate: fmt(today),
+    };
+  }, [range]);
 
   const { dashboard } = useEventDashboardData(tenantId || "", filters, 0);
   const m = dashboard.metrics;

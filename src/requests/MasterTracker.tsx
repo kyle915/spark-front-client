@@ -120,10 +120,10 @@ const ADMIN_ROSTER: Mentionable[] = [
   { id: "manuela", name: "Manuela C.", email: "manuela@igniteproductions.co" },
 ];
 
-const TrackerTable: React.FC<{ rows: Row[]; mentionables: Mentionable[] }> = ({
-  rows,
-  mentionables,
-}) => {
+const TrackerTable: React.FC<{
+  rows: Row[];
+  mentionables: Mentionable[];
+}> = ({ rows, mentionables }) => {
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
