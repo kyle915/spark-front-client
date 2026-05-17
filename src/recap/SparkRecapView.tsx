@@ -9,6 +9,7 @@ import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@
 import { recapFileKind, recapFileUrl } from "@/utils/recapFileUrl";
 import { useAlertStore } from "@/store/alertStore";
 import HeicImage from "./HeicImage";
+import RecapUploader from "./RecapUploader";
 
 /**
  * Spark v2 — Recap Detail.
@@ -99,6 +100,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
 
   const event = recap.event;
   const engagement = (recap.consumerEngagements ?? [])[0];
+  const consumerFeedback = (recap.consumerFeedback ?? [])[0];
+  const accountFeedback = (recap.accountFeedback ?? [])[0];
   const totalConsumer = engagement?.totalConsumer ?? null;
   const firstTime = engagement?.firstTimeConsumers ?? null;
   const brandAware = engagement?.brandAwareConsumers ?? null;
@@ -397,6 +400,258 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           </div>
         </div>
       )}
+
+      {/* Consumer voice — quotes, demographics, positive stories, reasons-to-decline */}
+      {consumerFeedback && (
+        consumerFeedback.feedback ||
+        consumerFeedback.quotes ||
+        consumerFeedback.demographics ||
+        consumerFeedback.positiveStories ||
+        consumerFeedback.reasonsToDecline
+      ) ? (
+        <div className="spark-card p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="display font-bold">Consumer voice</h3>
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.16em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              QUOTES · DEMOGRAPHICS · WHAT WORKED
+            </p>
+          </div>
+          {consumerFeedback.quotes && (
+            <div>
+              <p
+                className="mono text-[10px] mb-2"
+                style={{
+                  letterSpacing: "0.18em",
+                  color: "var(--spark-lime)",
+                }}
+              >
+                QUOTES FROM THE FLOOR
+              </p>
+              <blockquote
+                className="italic text-sm leading-relaxed pl-4"
+                style={{
+                  color: "rgba(255,255,255,0.85)",
+                  borderLeft: "2px solid rgba(197,245,70,0.5)",
+                }}
+              >
+                "{consumerFeedback.quotes}"
+              </blockquote>
+            </div>
+          )}
+          <div className="grid lg:grid-cols-2 gap-5">
+            {consumerFeedback.feedback && (
+              <div>
+                <p
+                  className="mono text-[10px] mb-2"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-sky)",
+                  }}
+                >
+                  GENERAL FEEDBACK
+                </p>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.85)" }}
+                >
+                  {consumerFeedback.feedback}
+                </p>
+              </div>
+            )}
+            {consumerFeedback.demographics && (
+              <div>
+                <p
+                  className="mono text-[10px] mb-2"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-sky)",
+                  }}
+                >
+                  DEMOGRAPHICS
+                </p>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.85)" }}
+                >
+                  {consumerFeedback.demographics}
+                </p>
+              </div>
+            )}
+            {consumerFeedback.positiveStories && (
+              <div>
+                <p
+                  className="mono text-[10px] mb-2"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-lime)",
+                  }}
+                >
+                  POSITIVE STORIES
+                </p>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.85)" }}
+                >
+                  {consumerFeedback.positiveStories}
+                </p>
+              </div>
+            )}
+            {consumerFeedback.reasonsToDecline && (
+              <div>
+                <p
+                  className="mono text-[10px] mb-2"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-orange)",
+                  }}
+                >
+                  REASONS TO DECLINE
+                </p>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.85)" }}
+                >
+                  {consumerFeedback.reasonsToDecline}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Account feedback */}
+      {accountFeedback &&
+        (accountFeedback.feedback ||
+          accountFeedback.doDifferentlyFeedback ||
+          accountFeedback.wasCorpoCardUsed) ? (
+        <div className="spark-card p-6 space-y-4">
+          <h3 className="display font-bold">Account feedback</h3>
+          <div className="grid lg:grid-cols-2 gap-5">
+            {accountFeedback.feedback && (
+              <div>
+                <p
+                  className="mono text-[10px] mb-2"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-sky)",
+                  }}
+                >
+                  WHAT WENT WELL
+                </p>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.85)" }}
+                >
+                  {accountFeedback.feedback}
+                </p>
+              </div>
+            )}
+            {accountFeedback.doDifferentlyFeedback && (
+              <div>
+                <p
+                  className="mono text-[10px] mb-2"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-orange)",
+                  }}
+                >
+                  DO DIFFERENTLY
+                </p>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.85)" }}
+                >
+                  {accountFeedback.doDifferentlyFeedback}
+                </p>
+              </div>
+            )}
+          </div>
+          {accountFeedback.wasCorpoCardUsed !== null && (
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.16em",
+                color: accountFeedback.wasCorpoCardUsed
+                  ? "var(--spark-lime)"
+                  : "rgba(255,255,255,0.45)",
+              }}
+            >
+              CORPORATE CARD ·{" "}
+              {accountFeedback.wasCorpoCardUsed ? "USED" : "NOT USED"}
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      {/* Upload zone — admin/BA can add photos + receipts on the fly */}
+      <div
+        className="spark-card p-6"
+        style={{
+          borderColor: "rgba(197,245,70,0.25)",
+          background:
+            "linear-gradient(180deg, rgba(197,245,70,0.04), transparent)",
+        }}
+      >
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <div>
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-lime)",
+              }}
+            >
+              UPLOAD · CAPTURES + RECEIPTS
+            </p>
+            <h3
+              className="display font-bold mt-1"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              Add files to this recap
+            </h3>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <RecapUploader
+              recapUuid={uuid}
+              category="photo"
+              onUploaded={(blobName) => {
+                // Backend AddRecapFile mutation is the next step. For now
+                // we surface the uploaded blob name so an admin can verify
+                // the file landed in GCS.
+                showAlert(
+                  `Photo uploaded: ${blobName}. (Linking to recap requires the AddRecapFile backend mutation.)`,
+                  "success",
+                );
+              }}
+            />
+            <RecapUploader
+              recapUuid={uuid}
+              category="receipt"
+              onUploaded={(blobName) => {
+                showAlert(
+                  `Receipt uploaded: ${blobName}. Visible in the Files grid once linked server-side.`,
+                  "success",
+                );
+              }}
+            />
+          </div>
+        </div>
+        <p
+          className="text-xs"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+        >
+          Photos and receipts upload directly to GCS via signed URL.
+          Server-side linking via{" "}
+          <span className="mono">AddRecapFile</span> mutation is the last
+          backend step before they appear in the file grid automatically.
+        </p>
+      </div>
 
       {/* Field intelligence — traffic + competitive presence */}
       {(recap.trafficDescription || recap.competitivePresence) && (
