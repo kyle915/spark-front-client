@@ -6,6 +6,7 @@ import useSparkRole from "@/hooks/useSparkRole";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import AttentionEngine from "./AttentionEngine";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useNavigate } from "react-router";
 
@@ -558,11 +559,10 @@ export default function DashboardIndex() {
           <ActivationBreakdown />
         </Suspense>
 
-        {/*
-         * "What needs you" — data-driven attention engine TBD. For now we
-         * hide the section entirely when there's nothing real to surface
-         * (no static placeholder cards eroding trust).
-         */}
+        {/* "What needs you" — real attention signals, hidden when empty */}
+        <Suspense fallback={null}>
+          <AttentionEngine />
+        </Suspense>
 
         {/* Unified timeline: upcoming + recent in one vertical flow */}
         <div className="spark-card p-6 lg:p-8">
