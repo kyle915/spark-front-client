@@ -81,6 +81,7 @@ import {
 // import CreateRecap from "@/recap/CreateRecap";
 import RecapList from "@/recap/RecapsList";
 import SparkRecapsList from "@/recap/SparkRecapsList";
+import SparkCalendar from "@/components/pages/calendar/SparkCalendar";
 import RecapCustomList from "@/recap/RecapCustomList";
 import RecapView from "@/recap/RecapView";
 // import EditRecap from "@/recap/EditRecap";
@@ -605,14 +606,22 @@ const CalendarLinks = {
   menu: [
     {
       path: "/connect-calendar",
-      name: "Connect with Calendar",
-      component: <CalendarConnection />,
+      name: "Calendar",
+      component: <SparkCalendar />,
       Icon: CalendarIcon,
     },
   ],
   routes: [
+    // Spark v2: /connect-calendar shows the wireframe Shifts Board.
+    // The Google Calendar integration UI moves to /settings/calendar
+    // (sidebar Settings group).
     {
       path: "/connect-calendar",
+      component: <SparkCalendar />,
+      isPublic: false,
+    },
+    {
+      path: "/settings/calendar",
       component: <CalendarConnection />,
       isPublic: false,
     },

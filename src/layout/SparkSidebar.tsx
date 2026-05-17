@@ -108,6 +108,7 @@ const SECTIONS: NavSection[] = [
     title: "System",
     items: [
       { label: "Settings", icon: "⚙", to: "/settings" },
+      { label: "Calendar Integration", icon: "📅", to: "/settings/calendar" },
       { label: "Help", icon: "?", stub: true },
     ],
   },
