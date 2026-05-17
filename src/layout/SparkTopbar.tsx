@@ -160,9 +160,16 @@ export const SparkTopbar: React.FC = () => {
         </button>
 
         <button
-          onClick={() =>
-            showAlert("⌘K palette coming in next session", "success")
-          }
+          onClick={() => {
+            // Dispatch ⌘K to open the CommandPalette listener
+            const evt = new KeyboardEvent("keydown", {
+              key: "k",
+              metaKey: true,
+              ctrlKey: true,
+              bubbles: true,
+            });
+            document.dispatchEvent(evt);
+          }}
           className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-base-300 text-xs text-base-content/55 hover:text-primary hover:border-primary transition"
         >
           <MagnifyingGlassIcon className="w-3.5 h-3.5" />

@@ -1,7 +1,10 @@
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useLazyLoadQuery } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
+import { RequestsQuery } from "@/api/queries/RequestsQuery";
+import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useNavigate } from "react-router";
 
@@ -251,6 +254,117 @@ void AttentionCard;
 void UpcomingRow;
 void RecapRow;
 
+/* ─────────────── ACTIVATION-TYPE BREAKDOWN ─────────────── */
+
+const TYPE_CONFIG: Array<{
+  match: RegExp;
+  label: string;
+  color: string;
+}> = [
+  // Order matters — first match wins.
+  { match: /retail/i, label: "Retail samplings", color: "var(--spark-lime)" },
+  { match: /on[-\s]?prem|bar|venue/i, label: "On-premise", color: "var(--spark-purple)" },
+  { match: /event|activation|festival|pop[-\s]?up/i, label: "Events", color: "var(--spark-sky)" },
+];
+
+const classifyType = (name: string | null | undefined): string => {
+  if (!name) return "Other";
+  for (const t of TYPE_CONFIG) {
+    if (t.match.test(name)) return t.label;
+  }
+  return "Other";
+};
+
+const ActivationBreakdown: React.FC = () => {
+  const { tenantId } = useAuthStore();
+  const data = useLazyLoadQuery<RequestsQueryType>(
+    RequestsQuery,
+    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+
+  const counts = useMemo(() => {
+    const buckets: Record<string, number> = {};
+    const edges = data?.requests?.edges ?? [];
+    for (const e of edges) {
+      const n = e?.node;
+      if (!n) continue;
+      // Only count events that have a confirmed/scheduled/done status — they
+      // happened or are happening. Pending/Queue are speculative.
+      const slug = (n.status?.slug ?? n.status?.name ?? "")
+        .toString()
+        .toLowerCase();
+      const counted =
+        slug.includes("done") ||
+        slug.includes("complete") ||
+        slug.includes("scheduled") ||
+        slug.includes("approved");
+      if (!counted) continue;
+      const label = classifyType(n.requestType?.name);
+      buckets[label] = (buckets[label] ?? 0) + 1;
+    }
+    return buckets;
+  }, [data]);
+
+  const display = TYPE_CONFIG.map((t) => ({
+    label: t.label,
+    color: t.color,
+    value: counts[t.label] ?? 0,
+  }));
+
+  return (
+    <div
+      className="spark-card p-6 lg:p-8"
+      style={{ borderRadius: 22 }}
+    >
+      <div className="flex items-center justify-between mb-5">
+        <h2
+          className="display text-lg lg:text-xl font-bold"
+          style={{ letterSpacing: "-0.02em" }}
+        >
+          By activation type
+        </h2>
+        <p
+          className="mono text-[10px]"
+          style={{
+            letterSpacing: "0.18em",
+            color: "rgba(255,255,255,0.45)",
+          }}
+        >
+          CONFIRMED + COMPLETED
+        </p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        {display.map((s) => (
+          <div key={s.label}>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span
+                className="spark-dot"
+                style={{
+                  background: s.color,
+                  boxShadow: `0 0 8px ${s.color}`,
+                }}
+              />
+              <p className="label-mini">{s.label.toUpperCase()}</p>
+            </div>
+            <p
+              className="display tab-num font-bold"
+              style={{
+                fontSize: "2.5rem",
+                letterSpacing: "-0.04em",
+                lineHeight: 1,
+                color: s.color,
+              }}
+            >
+              {s.value.toLocaleString()}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 /* ───────────────────────────── PAGE ───────────────────────────── */
 
 export default function DashboardIndex() {
@@ -420,6 +534,20 @@ export default function DashboardIndex() {
             ))}
           </div>
         </div>
+
+        {/* Activation-type breakdown (Retail · Event · On-Premise) */}
+        <Suspense
+          fallback={
+            <div
+              className="spark-card p-6 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Loading activation breakdown…
+            </div>
+          }
+        >
+          <ActivationBreakdown />
+        </Suspense>
 
         {/*
          * "What needs you" — data-driven attention engine TBD. For now we

@@ -2,6 +2,7 @@ import React, { type ReactNode } from "react";
 import { PageTransition } from "./PageTransition";
 import SparkSidebar from "./SparkSidebar";
 import SparkTopbar from "./SparkTopbar";
+import CommandPalette from "./CommandPalette";
 
 /**
  * Spark v2 layout shell. SparkSidebar + SparkTopbar render the wireframe
@@ -20,6 +21,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="flex h-screen bg-base-200 text-base-content">
+      <CommandPalette />
       <SparkSidebar />
 
       <div className="flex flex-col flex-1 min-w-0">

@@ -1,0 +1,273 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router";
+import {
+  LayoutDashboard,
+  ListChecks,
+  Calendar,
+  MapPin,
+  CheckCircle2,
+  Hammer,
+  Users,
+  FileText,
+  BarChart3,
+  Mail,
+  Bell,
+  Settings,
+  Plus,
+  Star,
+  CalendarClock,
+} from "lucide-react";
+
+/**
+ * Spark v2 — Command Palette (⌘K).
+ *
+ * Apple Spotlight pattern. Press ⌘K (or Ctrl+K) anywhere to open a fuzzy
+ * search modal that jumps to any route.
+ *
+ * Entries are static for v1; we'll layer in dynamic entries (tenant
+ * switcher, recent recaps, specific requests by ID) as follow-ups.
+ */
+
+type CommandEntry = {
+  id: string;
+  label: string;
+  hint: string;
+  to: string;
+  Icon: React.ComponentType<{
+    size?: number;
+    className?: string;
+    style?: React.CSSProperties;
+  }>;
+  keywords?: string;
+};
+
+const ENTRIES: CommandEntry[] = [
+  { id: "dashboard", label: "Dashboard", hint: "Overview · KPIs", to: "/", Icon: LayoutDashboard, keywords: "home overview" },
+  { id: "tracker", label: "Master Tracker", hint: "All events, every status", to: "/requests/list", Icon: ListChecks, keywords: "events list table" },
+  { id: "calendar", label: "Calendar", hint: "Shifts board", to: "/connect-calendar", Icon: Calendar, keywords: "schedule shifts" },
+  { id: "map", label: "Account Map", hint: "Venues by status", to: "/account-map", Icon: MapPin, keywords: "map accounts retailers" },
+  { id: "approvals", label: "Approvals", hint: "Review pending requests", to: "/approvals", Icon: CheckCircle2, keywords: "pending review approve" },
+  { id: "jobs", label: "Jobs", hint: "Open + filling roles", to: "/jobs", Icon: Hammer, keywords: "ba shifts hire" },
+  { id: "talent", label: "Search Talent", hint: "BA roster", to: "/talent", Icon: Users, keywords: "ba ambassador roster" },
+  { id: "recaps", label: "Recaps", hint: "Field reports", to: "/recaps/list", Icon: FileText, keywords: "reports recap photos" },
+  { id: "templates", label: "Recap Templates", hint: "Custom recap shapes", to: "/recaps/templates", Icon: Star, keywords: "templates" },
+  { id: "reports", label: "Reports", hint: "Analytics dashboards", to: "/reports", Icon: BarChart3, keywords: "analytics charts" },
+  { id: "inbox", label: "Inbox", hint: "Messages with BAs", to: "/inbox", Icon: Mail, keywords: "messages chat" },
+  { id: "alerts", label: "Alerts", hint: "Notifications feed", to: "/alerts", Icon: Bell, keywords: "notifications" },
+  { id: "settings", label: "Settings", hint: "Workspace + integrations", to: "/settings", Icon: Settings, keywords: "preferences workspace" },
+  { id: "cal-sync", label: "Calendar Sync", hint: "Google Calendar integration", to: "/settings/calendar", Icon: CalendarClock, keywords: "google sync" },
+  { id: "create", label: "Create Request", hint: "Submit a new request", to: "/requests/create", Icon: Plus, keywords: "new request submit" },
+];
+
+const score = (entry: CommandEntry, q: string) => {
+  if (!q) return 1;
+  const target = `${entry.label} ${entry.hint} ${entry.keywords ?? ""}`.toLowerCase();
+  if (target.includes(q)) return 2;
+  // basic letter-by-letter fuzzy
+  let i = 0;
+  for (const c of target) {
+    if (c === q[i]) i++;
+    if (i === q.length) return 1;
+  }
+  return 0;
+};
+
+export const CommandPalette: React.FC = () => {
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setOpen((v) => !v);
+      } else if (e.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      setQuery("");
+      setActive(0);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [open]);
+
+  const filtered = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    return ENTRIES.map((e) => ({ entry: e, s: score(e, q) }))
+      .filter((x) => x.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .map((x) => x.entry);
+  }, [query]);
+
+  const select = (entry: CommandEntry) => {
+    navigate(entry.to);
+    setOpen(false);
+  };
+
+  const onKey: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((a) => Math.min(filtered.length - 1, a + 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((a) => Math.max(0, a - 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (filtered[active]) select(filtered[active]);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div
+      onClick={() => setOpen(false)}
+      className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]"
+      style={{
+        background: "rgba(10,13,9,0.55)",
+        backdropFilter: "blur(8px)",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-xl rounded-2xl overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2))",
+          border: "1px solid var(--spark-border)",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.55)",
+        }}
+      >
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setActive(0);
+          }}
+          onKeyDown={onKey}
+          placeholder="Jump to a screen, search anything…"
+          className="w-full text-base"
+          style={{
+            background: "transparent",
+            border: "none",
+            outline: "none",
+            color: "var(--spark-text)",
+            padding: "1rem 1.25rem",
+            fontFamily: "Space Grotesk, sans-serif",
+          }}
+        />
+        <div
+          style={{
+            borderTop: "1px solid rgba(255,255,255,0.06)",
+          }}
+        />
+        <div
+          className="max-h-[60vh] overflow-y-auto p-2 hide-scroll"
+          style={{ scrollbarWidth: "none" }}
+        >
+          {filtered.length === 0 && (
+            <p
+              className="px-4 py-6 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              No matches.
+            </p>
+          )}
+          {filtered.map((entry, i) => {
+            const on = i === active;
+            const Icon = entry.Icon;
+            return (
+              <button
+                key={entry.id}
+                onMouseEnter={() => setActive(i)}
+                onClick={() => select(entry)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition"
+                style={{
+                  background: on
+                    ? "rgba(197,245,70,0.08)"
+                    : "transparent",
+                  color: on ? "var(--spark-lime)" : "var(--spark-text)",
+                }}
+              >
+                <Icon
+                  size={16}
+                  className="shrink-0"
+                  style={{
+                    color: on
+                      ? "var(--spark-lime)"
+                      : "rgba(255,255,255,0.55)",
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">
+                    {entry.label}
+                  </p>
+                  <p
+                    className="mono text-[10px] truncate"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: on
+                        ? "rgba(197,245,70,0.65)"
+                        : "rgba(255,255,255,0.4)",
+                    }}
+                  >
+                    {entry.hint.toUpperCase()}
+                  </p>
+                </div>
+                {on && (
+                  <span
+                    className="mono text-[10px] shrink-0"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "var(--spark-lime)",
+                    }}
+                  >
+                    ↵ OPEN
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <div
+          className="flex items-center justify-between px-4 py-2.5"
+          style={{
+            borderTop: "1px solid rgba(255,255,255,0.06)",
+            background: "rgba(255,255,255,0.02)",
+          }}
+        >
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            ↑↓ NAVIGATE · ↵ OPEN · ESC CLOSE
+          </p>
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            ⌘K
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CommandPalette;
