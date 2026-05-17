@@ -84,6 +84,8 @@ import SparkRecapsList from "@/recap/SparkRecapsList";
 import SparkRecapView from "@/recap/SparkRecapView";
 import SparkCalendar from "@/components/pages/calendar/SparkCalendar";
 import SparkApprovals from "@/components/pages/approvals/SparkApprovals";
+import SparkSettings from "@/components/pages/settings/SparkSettings";
+import SparkJobs from "@/components/pages/jobs/SparkJobs";
 import RecapCustomList from "@/recap/RecapCustomList";
 import RecapView from "@/recap/RecapView";
 // import EditRecap from "@/recap/EditRecap";
@@ -211,6 +213,11 @@ const RequestsLinks = {
     {
       path: "/approvals",
       component: <SparkApprovals />,
+      isPublic: false,
+    },
+    {
+      path: "/jobs",
+      component: <SparkJobs />,
       isPublic: false,
     },
   ],
@@ -642,6 +649,12 @@ const CalendarLinks = {
 const SettingsLinks = {
   menu: [
     {
+      path: "/settings",
+      name: "Workspace",
+      component: <SparkSettings />,
+      Icon: Palette,
+    },
+    {
       path: "/customize-theme",
       name: "Customize Theme",
       component: <ThemePage />,
@@ -649,6 +662,11 @@ const SettingsLinks = {
     },
   ],
   routes: [
+    {
+      path: "/settings",
+      component: <SparkSettings />,
+      isPublic: false,
+    },
     {
       path: "/customize-theme",
       component: <ThemePage />,

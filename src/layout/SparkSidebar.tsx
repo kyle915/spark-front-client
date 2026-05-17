@@ -52,7 +52,7 @@ const SECTIONS: NavSection[] = [
       {
         label: "Jobs",
         icon: "⚒",
-        stub: true,
+        to: "/jobs",
         chip: { text: "14", tone: "orange" },
       },
       { label: "Search Talent", icon: "◍", stub: true },
