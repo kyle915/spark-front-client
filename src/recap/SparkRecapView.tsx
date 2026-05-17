@@ -1,10 +1,13 @@
-import { Suspense } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { Suspense, useState } from "react";
+import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapQuery } from "@/api/queries/RecapQuery";
 import type { RecapQuery as RecapQueryType } from "@api/queries/__generated__/RecapQuery.graphql";
+import { GenerateRecapPdfMutation } from "@/api/mutations/GenerateRecapPdfMutation";
+import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateRecapPdfMutation.graphql";
 import { recapFileKind, recapFileUrl } from "@/utils/recapFileUrl";
+import { useAlertStore } from "@/store/alertStore";
 import HeicImage from "./HeicImage";
 
 /**
@@ -70,6 +73,11 @@ const KpiTile: React.FC<{
 
 const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const navigate = useNavigate();
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [commitPdf, isPdfRunning] = useMutation<GenerateRecapPdfMutationType>(
+    GenerateRecapPdfMutation,
+  );
+  const [isZipping, setIsZipping] = useState(false);
   const data = useLazyLoadQuery<RecapQueryType>(
     RecapQuery,
     { uuid },
@@ -164,18 +172,117 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               {fieldTime ? ` · ${fieldTime}` : ""}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button
+              disabled={isPdfRunning}
+              onClick={() => {
+                commitPdf({
+                  variables: { input: { id: recap.id } },
+                  onCompleted: (res) => {
+                    if (res.generateRecapPdf?.success) {
+                      const file = res.generateRecapPdf.recapFile?.file;
+                      if (file) {
+                        window.open(recapFileUrl(file), "_blank");
+                      }
+                      showAlert("PDF generated.", "success");
+                    } else {
+                      showAlert(
+                        res.generateRecapPdf?.message ??
+                          "PDF generation failed.",
+                        "error",
+                      );
+                    }
+                  },
+                  onError: (err) =>
+                    showAlert(`PDF failed: ${err.message}`, "error"),
+                });
+              }}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "transparent",
                 color: "var(--spark-text)",
                 border: "1px solid var(--spark-border)",
+                opacity: isPdfRunning ? 0.5 : 1,
               }}
             >
-              ⬇ PDF
+              {isPdfRunning ? "Generating…" : "⬇ PDF"}
             </button>
             <button
+              disabled={isZipping || allFiles.length === 0}
+              onClick={async () => {
+                setIsZipping(true);
+                try {
+                  const { default: JSZip } = await import("jszip");
+                  const zip = new JSZip();
+                  // Cap at 200 files for sanity. Order doesn't matter; the
+                  // backend can mass-export later.
+                  const subset = allFiles.slice(0, 200);
+                  let added = 0;
+                  for (const f of subset) {
+                    const url = recapFileUrl(f?.file);
+                    if (!url) continue;
+                    try {
+                      const resp = await fetch(url);
+                      if (!resp.ok) continue;
+                      const blob = await resp.blob();
+                      const filename =
+                        (f?.file ?? "").split("/").pop() || `file-${added}`;
+                      zip.file(filename, blob);
+                      added += 1;
+                    } catch {
+                      /* skip individual failures */
+                    }
+                  }
+                  if (added === 0) {
+                    showAlert("No downloadable files.", "warning");
+                    setIsZipping(false);
+                    return;
+                  }
+                  const out = await zip.generateAsync({
+                    type: "blob",
+                    compression: "DEFLATE",
+                    compressionOptions: { level: 6 },
+                  });
+                  const a = document.createElement("a");
+                  const downloadUrl = URL.createObjectURL(out);
+                  a.href = downloadUrl;
+                  a.download = `recap-${uuid.slice(-6)}-photos.zip`;
+                  a.click();
+                  URL.revokeObjectURL(downloadUrl);
+                  showAlert(`Downloaded ${added} files.`, "success");
+                } catch (e) {
+                  showAlert(`Download failed: ${(e as Error).message}`, "error");
+                } finally {
+                  setIsZipping(false);
+                }
+              }}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+                opacity:
+                  isZipping || allFiles.length === 0 ? 0.5 : 1,
+              }}
+            >
+              {isZipping
+                ? "Zipping…"
+                : `⬇ All photos (${allFiles.length})`}
+            </button>
+            <button
+              onClick={() => {
+                if (navigator.share) {
+                  navigator
+                    .share({
+                      title: recap.name ?? "Spark recap",
+                      url: window.location.href,
+                    })
+                    .catch(() => {});
+                } else {
+                  navigator.clipboard.writeText(window.location.href);
+                  showAlert("Link copied.", "success");
+                }
+              }}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "transparent",
@@ -383,9 +490,9 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           )}
 
           {/* Files: images render inline, HEIC + PDF + video shown as
-              kind-labeled tiles that open in a new tab. */}
-          {allFiles.length > 0 && (
-            <div className="spark-card p-6">
+              kind-labeled tiles that open in a new tab. Always rendered
+              so missing-data states are visible, not silent. */}
+          <div className="spark-card p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="display font-bold">
                   Files · {allFiles.length}
@@ -480,8 +587,16 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   + {allFiles.length - 36} more files
                 </p>
               )}
+              {allFiles.length === 0 && (
+                <p
+                  className="text-sm py-6 text-center"
+                  style={{ color: "rgba(255,255,255,0.55)" }}
+                >
+                  No files attached yet. BAs upload photos + PDFs from the
+                  field; they show up here.
+                </p>
+              )}
             </div>
-          )}
 
           {/* BA notes */}
           {notes && (
