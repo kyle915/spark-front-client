@@ -1,9 +1,11 @@
-import { Suspense, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { useAuthStore } from "@/store/authStore";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
@@ -97,8 +99,23 @@ const fmtTimeRange = (
 
 /* ─────────────────────────── TABLE ────────────────────────────── */
 
-const TrackerTable: React.FC<{ rows: Row[] }> = ({ rows }) => {
+import InternalNotesPanel from "./InternalNotesPanel";
+
+type Mentionable = { id: string; name: string; email: string };
+
+const ADMIN_ROSTER: Mentionable[] = [
+  { id: "kyle", name: "Kyle Christiansen", email: "kyle@igniteproductions.co" },
+  { id: "tim", name: "Tim H.", email: "tim@igniteproductions.co" },
+  { id: "maya", name: "Maya R.", email: "maya@igniteproductions.co" },
+  { id: "manuela", name: "Manuela C.", email: "manuela@igniteproductions.co" },
+];
+
+const TrackerTable: React.FC<{ rows: Row[]; mentionables: Mentionable[] }> = ({
+  rows,
+  mentionables,
+}) => {
   const navigate = useNavigate();
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   return (
     <div
       className="spark-card overflow-hidden"
@@ -132,7 +149,7 @@ const TrackerTable: React.FC<{ rows: Row[] }> = ({ rows }) => {
               <th className="px-4 py-3 text-right">CONSUMERS</th>
               <th className="px-4 py-3 text-right">1ST-TIME</th>
               <th className="px-4 py-3 text-right">$/SAMPLE</th>
-              <th className="px-4 py-3">RECAP</th>
+              <th className="px-4 py-3">NOTES</th>
             </tr>
           </thead>
           <tbody>
@@ -152,6 +169,16 @@ const TrackerTable: React.FC<{ rows: Row[] }> = ({ rows }) => {
               const isDone = slug === "done";
               const chipClass = STATUS_CHIP[slug] ?? "chip chip-muted";
               const label = STATUS_LABEL[slug] ?? r.statusSlug.toUpperCase();
+              const isExpanded = expanded.has(r.uuid);
+              const toggleExpand = (e: React.MouseEvent) => {
+                e.stopPropagation();
+                setExpanded((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(r.uuid)) next.delete(r.uuid);
+                  else next.add(r.uuid);
+                  return next;
+                });
+              };
               // Past/done rows open the recap area; in-progress rows open
               // the event view; pending rows open the request editor.
               const onClick = () => {
@@ -166,8 +193,8 @@ const TrackerTable: React.FC<{ rows: Row[] }> = ({ rows }) => {
                 }
               };
               return (
+                <React.Fragment key={r.uuid}>
                 <tr
-                  key={r.uuid}
                   className="cursor-pointer transition"
                   style={{ borderBottom: "1px solid var(--spark-border)" }}
                   onMouseEnter={(e) =>
@@ -229,18 +256,34 @@ const TrackerTable: React.FC<{ rows: Row[] }> = ({ rows }) => {
                     —
                   </td>
                   <td className="px-4 py-3 text-right tab-num">—</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className="mono text-[10px]"
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <button
+                      onClick={toggleExpand}
+                      className="mono text-[10px] transition"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.3)",
+                        color: isExpanded
+                          ? "var(--spark-lime)"
+                          : "rgba(255,255,255,0.55)",
                       }}
+                      title="Internal notes & shipments"
                     >
-                      —
-                    </span>
+                      {isExpanded ? "× CLOSE" : "✎ NOTES"}
+                    </button>
                   </td>
                 </tr>
+                {isExpanded && (
+                  <tr style={{ borderBottom: "1px solid var(--spark-border)" }}>
+                    <td colSpan={10} style={{ padding: "0.5rem 1rem 1rem" }}>
+                      <InternalNotesPanel
+                        requestUuid={r.uuid}
+                        requestLabel={`${r.venue} · ${r.market}`}
+                        mentionables={mentionables}
+                      />
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               );
             })}
           </tbody>
@@ -255,8 +298,10 @@ const TrackerTable: React.FC<{ rows: Row[] }> = ({ rows }) => {
 const MasterTrackerInner: React.FC<{
   activeStatus: string;
   search: string;
+  rmmFilter: string;
+  mentionables: Mentionable[];
   onCountsChange: (counts: Record<string, number>, total: number) => void;
-}> = ({ activeStatus, search, onCountsChange }) => {
+}> = ({ activeStatus, search, rmmFilter, mentionables, onCountsChange }) => {
   const { tenantId } = useAuthStore();
 
   // Fetch a large page so all current requests render. Real pagination
@@ -267,7 +312,9 @@ const MasterTrackerInner: React.FC<{
     {
       first: 1000,
       q: search || null,
-      filters: tenantId ? { tenantId } : null,
+      filters: tenantId
+        ? { tenantId, rmmAsigned: rmmFilter === "all" ? null : rmmFilter }
+        : null,
     },
     { fetchPolicy: "store-or-network" },
   );
@@ -320,16 +367,73 @@ const MasterTrackerInner: React.FC<{
     onCountsChange(counts, total);
   }, [allRows, data?.requests?.totalCount, onCountsChange]);
 
-  return <TrackerTable rows={rows} />;
+  return <TrackerTable rows={rows} mentionables={mentionables} />;
 };
 
 /* ─────────────────────────── PAGE ────────────────────────────── */
+
+const RmmFilterInner: React.FC<{
+  tenantId: string;
+  value: string;
+  onChange: (v: string) => void;
+  onRmms: (rmms: Mentionable[]) => void;
+}> = ({ tenantId, value, onChange, onRmms }) => {
+  const data = useLazyLoadQuery<RmmClientsQueryType>(
+    RmmClientsQuery,
+    { tenantId },
+    { fetchPolicy: "store-or-network" },
+  );
+  const rmms = useMemo(
+    () => (data?.rmmClients ?? []).filter(Boolean),
+    [data],
+  );
+  useEffect(() => {
+    onRmms(
+      rmms.map((r) => ({
+        id: String(r!.id),
+        name:
+          [r!.firstName, r!.lastName].filter(Boolean).join(" ") ||
+          r!.username ||
+          "RMM",
+        email: r!.username ?? "rmm@spark.app",
+      })),
+    );
+  }, [rmms, onRmms]);
+
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="rounded-xl text-xs"
+      style={{
+        padding: "0.45rem 0.9rem",
+        background: "var(--spark-bg)",
+        border: "1px solid var(--spark-border)",
+        color: "var(--spark-text)",
+        maxWidth: 200,
+        outline: "none",
+      }}
+    >
+      <option value="all">All RMMs</option>
+      {rmms.map((r) =>
+        r ? (
+          <option key={r.id} value={String(r.id)}>
+            {[r.firstName, r.lastName].filter(Boolean).join(" ") ||
+              r.username}
+          </option>
+        ) : null,
+      )}
+    </select>
+  );
+};
 
 export default function MasterTracker() {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   const [activeStatus, setActiveStatus] = useState<string>("all");
   const [search, setSearch] = useState<string>("");
+  const [rmmFilter, setRmmFilter] = useState<string>("all");
+  const [rmmList, setRmmList] = useState<Mentionable[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [total, setTotal] = useState<number>(0);
 
@@ -444,17 +548,27 @@ export default function MasterTracker() {
             );
           })}
           <span className="flex-1" />
+          {tenantId && (
+            <Suspense fallback={null}>
+              <RmmFilterInner
+                tenantId={tenantId}
+                value={rmmFilter}
+                onChange={setRmmFilter}
+                onRmms={setRmmList}
+              />
+            </Suspense>
+          )}
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search…"
+            placeholder="Search venue, address, market…"
             className="rounded-xl text-xs"
             style={{
               padding: "0.45rem 0.9rem",
               background: "var(--spark-bg)",
               border: "1px solid var(--spark-border)",
               color: "var(--spark-text)",
-              maxWidth: 200,
+              maxWidth: 240,
               outline: "none",
             }}
           />
@@ -510,6 +624,8 @@ export default function MasterTracker() {
           <MasterTrackerInner
             activeStatus={activeStatus}
             search={search}
+            rmmFilter={rmmFilter}
+            mentionables={[...rmmList, ...ADMIN_ROSTER]}
             onCountsChange={handleCounts}
           />
         </Suspense>

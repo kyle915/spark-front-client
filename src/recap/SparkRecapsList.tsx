@@ -4,6 +4,8 @@ import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/RecapsQuery.graphql";
+import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 
 /**
@@ -155,14 +157,22 @@ const RecapsListInner: React.FC<{
   search: string;
   retailerFilter: string;
   stateFilter: string;
+  rmmFilter: string;
   onMeta: (m: Meta) => void;
-}> = ({ search, retailerFilter, stateFilter, onMeta }) => {
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, onMeta }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
-  // Tenant scoping is REQUIRED for the recaps query to return rows.
   const data = useLazyLoadQuery<RecapsQueryType>(
     RecapsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
+    {
+      first: 1000,
+      filters: tenantId
+        ? {
+            tenantId,
+            rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
+          }
+        : null,
+    },
     { fetchPolicy: "store-or-network" },
   );
 
@@ -277,10 +287,50 @@ const RecapsListInner: React.FC<{
   );
 };
 
+const RmmFilterDropdown: React.FC<{
+  tenantId: string;
+  value: string;
+  onChange: (v: string) => void;
+}> = ({ tenantId, value, onChange }) => {
+  const data = useLazyLoadQuery<RmmClientsQueryType>(
+    RmmClientsQuery,
+    { tenantId },
+    { fetchPolicy: "store-or-network" },
+  );
+  const rmms = (data?.rmmClients ?? []).filter(Boolean);
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="rounded-xl text-sm"
+      style={{
+        padding: "0.75rem 0.95rem",
+        background: "var(--spark-bg)",
+        border: "1px solid var(--spark-border)",
+        color: "var(--spark-text)",
+        maxWidth: 200,
+        outline: "none",
+      }}
+    >
+      <option value="all">All RMMs</option>
+      {rmms.map((r) =>
+        r ? (
+          <option key={r.id} value={String(r.id)}>
+            {[r.firstName, r.lastName].filter(Boolean).join(" ") ||
+              r.username}
+          </option>
+        ) : null,
+      )}
+    </select>
+  );
+};
+
 export default function SparkRecapsList() {
+  const { tenantId } = useAuthStore();
   const [search, setSearch] = useState("");
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
+  const [rmmFilter, setRmmFilter] = useState("all");
   const [meta, setMeta] = useState<Meta>({
     retailers: [],
     states: [],
@@ -437,6 +487,15 @@ export default function SparkRecapsList() {
               </option>
             ))}
           </select>
+          {tenantId && (
+            <Suspense fallback={null}>
+              <RmmFilterDropdown
+                tenantId={tenantId}
+                value={rmmFilter}
+                onChange={setRmmFilter}
+              />
+            </Suspense>
+          )}
         </div>
 
         <Suspense
@@ -453,6 +512,7 @@ export default function SparkRecapsList() {
             search={search}
             retailerFilter={retailerFilter}
             stateFilter={stateFilter}
+            rmmFilter={rmmFilter}
             onMeta={onMeta}
           />
         </Suspense>
