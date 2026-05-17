@@ -99,6 +99,8 @@ import SparkToday from "@/components/pages/today/SparkToday";
 import SparkUpcomingEvents from "@/components/pages/upcoming/SparkUpcomingEvents";
 import SparkRecentSubmissions from "@/components/pages/recent/SparkRecentSubmissions";
 import SparkPeople from "@/components/pages/people/SparkPeople";
+import SparkFormBuilder from "@/components/pages/builder/SparkFormBuilder";
+import SparkNewClient from "@/components/pages/clients/SparkNewClient";
 import RecapCustomList from "@/recap/RecapCustomList";
 import RecapView from "@/recap/RecapView";
 // import EditRecap from "@/recap/EditRecap";
@@ -300,6 +302,24 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkPeople />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/forms/builder",
+      component: (
+        <AdminOnly>
+          <SparkFormBuilder />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/clients/new",
+      component: (
+        <AdminOnly>
+          <SparkNewClient />
         </AdminOnly>
       ),
       isPublic: false,

@@ -30,6 +30,8 @@ import {
   Radio,
   CalendarRange,
   Inbox,
+  Wrench,
+  Plus,
 } from "lucide-react";
 
 /**
@@ -115,12 +117,6 @@ const SECTIONS: NavSection[] = [
         to: "/recaps/list",
         clientLabel: "My Recaps",
       },
-      {
-        label: "Templates",
-        Icon: Star,
-        to: "/recaps/templates",
-        adminOnly: true,
-      },
       { label: "Reports", Icon: BarChart3, to: "/reports" },
     ],
   },
@@ -129,6 +125,15 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Inbox", Icon: Mail, to: "/inbox" },
       { label: "Alerts", Icon: Bell, to: "/alerts" },
+    ],
+  },
+  {
+    title: "Build",
+    adminOnly: true,
+    items: [
+      { label: "Form Builder", Icon: Wrench, to: "/forms/builder" },
+      { label: "Recap Templates", Icon: Star, to: "/recaps/templates" },
+      { label: "New Client", Icon: Plus, to: "/clients/new" },
     ],
   },
   {
