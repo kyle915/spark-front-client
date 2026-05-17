@@ -41,7 +41,7 @@ const SECTIONS: NavSection[] = [
       {
         label: "Approvals",
         icon: "✓",
-        to: "/requests/edited",
+        to: "/approvals",
         chip: { text: "5", tone: "orange", blink: true },
       },
     ],

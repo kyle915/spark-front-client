@@ -82,6 +82,7 @@ import {
 import RecapList from "@/recap/RecapsList";
 import SparkRecapsList from "@/recap/SparkRecapsList";
 import SparkCalendar from "@/components/pages/calendar/SparkCalendar";
+import SparkApprovals from "@/components/pages/approvals/SparkApprovals";
 import RecapCustomList from "@/recap/RecapCustomList";
 import RecapView from "@/recap/RecapView";
 // import EditRecap from "@/recap/EditRecap";
@@ -204,6 +205,11 @@ const RequestsLinks = {
     {
       path: "/requests/edited",
       component: <RequestsList fixedFilters={{ edited: true }} />,
+      isPublic: false,
+    },
+    {
+      path: "/approvals",
+      component: <SparkApprovals />,
       isPublic: false,
     },
   ],
