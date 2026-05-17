@@ -144,8 +144,21 @@ export const SparkTopbar: React.FC = () => {
         )}
       </div>
 
-      {/* Right: ⌘K, platform toggle, role toggle, avatar, logout */}
+      {/* Right: + Create Request, ⌘K, platform toggle, role toggle, avatar, logout */}
       <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={() => navigate("/requests/create")}
+          className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition"
+          style={{
+            background: "var(--spark-lime)",
+            color: "#0a0d09",
+            boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+          }}
+        >
+          <span aria-hidden>+</span>
+          <span>Create Request</span>
+        </button>
+
         <button
           onClick={() =>
             showAlert("⌘K palette coming in next session", "success")

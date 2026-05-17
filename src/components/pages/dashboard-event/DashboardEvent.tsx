@@ -309,16 +309,30 @@ export default function DashboardIndex() {
               )}
             </p>
           </div>
-          <div className="pill-group">
-            {RANGES.map((r) => (
-              <button
-                key={r.key}
-                onClick={() => setRange(r.key)}
-                className={`pill-btn ${r.key === range ? "on" : ""}`}
-              >
-                {r.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="pill-group">
+              {RANGES.map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() => setRange(r.key)}
+                  className={`pill-btn ${r.key === range ? "on" : ""}`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => navigate("/requests/create")}
+              className="flex items-center gap-1.5 px-5 py-2.5 rounded-2xl text-sm font-semibold transition"
+              style={{
+                background: "var(--spark-lime)",
+                color: "#0a0d09",
+                boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+              }}
+            >
+              <span aria-hidden>+</span>
+              <span>Submit a request</span>
+            </button>
           </div>
         </div>
 
