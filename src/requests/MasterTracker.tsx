@@ -56,10 +56,42 @@ const fmtNum = (v: number | null | undefined) =>
 type Row = {
   uuid: string;
   date: string;
+  dateLabel: string;
+  timeLabel: string;
   statusSlug: string;
   market: string;
   venue: string;
   type: string;
+  eventUuid: string | null;
+};
+
+const fmtDateLabel = (raw: string | null | undefined) => {
+  if (!raw) return "—";
+  try {
+    return new Date(raw).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return raw;
+  }
+};
+
+const fmtTimeRange = (
+  start: string | null | undefined,
+  end: string | null | undefined,
+) => {
+  const tone = (raw: string) => {
+    const [h, m] = raw.split(":");
+    const hh = parseInt(h ?? "0", 10);
+    const ampm = hh >= 12 ? "p" : "a";
+    const h12 = ((hh + 11) % 12) + 1;
+    return m && m !== "00" ? `${h12}:${m}${ampm}` : `${h12}${ampm}`;
+  };
+  if (!start && !end) return "";
+  if (start && end) return `${tone(start)}–${tone(end)}`;
+  return tone(start ?? end ?? "");
 };
 
 /* ─────────────────────────── TABLE ────────────────────────────── */
@@ -118,6 +150,19 @@ const TrackerTable: React.FC<{ rows: Row[] }> = ({ rows }) => {
               const isDone = slug === "done";
               const chipClass = STATUS_CHIP[slug] ?? "chip chip-muted";
               const label = STATUS_LABEL[slug] ?? r.statusSlug.toUpperCase();
+              // Past/done rows open the recap area; in-progress rows open
+              // the event view; pending rows open the request editor.
+              const onClick = () => {
+                if (isDone && r.eventUuid) {
+                  navigate(`/event/view/${r.eventUuid}`);
+                } else if (isDone) {
+                  navigate("/recap/list");
+                } else if (r.eventUuid) {
+                  navigate(`/event/view/${r.eventUuid}`);
+                } else {
+                  navigate(`/request/edit/${r.uuid}`);
+                }
+              };
               return (
                 <tr
                   key={r.uuid}
@@ -129,13 +174,24 @@ const TrackerTable: React.FC<{ rows: Row[] }> = ({ rows }) => {
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = "transparent")
                   }
-                  onClick={() => navigate(`/requests/edit/${r.uuid}`)}
+                  onClick={onClick}
                 >
                   <td
-                    className="px-4 py-3 mono text-xs"
-                    style={{ color: "rgba(255,255,255,0.7)" }}
+                    className="px-4 py-3 align-top"
+                    style={{ color: "rgba(255,255,255,0.85)" }}
                   >
-                    {r.date}
+                    <p className="text-sm">{r.dateLabel}</p>
+                    {r.timeLabel && (
+                      <p
+                        className="mono text-[10px] mt-0.5"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "rgba(255,255,255,0.45)",
+                        }}
+                      >
+                        {r.timeLabel}
+                      </p>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className={chipClass}>{label}</span>
@@ -222,12 +278,15 @@ const MasterTrackerInner: React.FC<{
           return {
             uuid: String(n.uuid),
             date: n.date ?? "",
+            dateLabel: fmtDateLabel(n.date),
+            timeLabel: fmtTimeRange(n.startTime, n.endTime),
             statusSlug: (n.status?.slug ?? n.status?.name ?? "pending")
               .toString()
               .toLowerCase(),
             market: market || "—",
             venue: n.retailer?.name ?? n.name ?? "—",
             type: n.requestType?.name ?? "—",
+            eventUuid: n.event?.uuid ? String(n.event.uuid) : null,
           };
         }) ?? []
     );
