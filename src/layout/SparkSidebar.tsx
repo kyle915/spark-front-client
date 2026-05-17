@@ -63,7 +63,7 @@ const SECTIONS: NavSection[] = [
     title: "Outputs",
     items: [
       { label: "Recaps", icon: "◈", to: "/recaps/list" },
-      { label: "Reports", icon: "📈", stub: true },
+      { label: "Reports", icon: "📈", to: "/reports" },
     ],
   },
   {
@@ -72,13 +72,13 @@ const SECTIONS: NavSection[] = [
       {
         label: "Inbox",
         icon: "✉",
-        stub: true,
+        to: "/inbox",
         chip: { text: "23", tone: "lime" },
       },
       {
         label: "Alerts",
         icon: "🔔",
-        stub: true,
+        to: "/alerts",
         chip: { text: "12", tone: "lime" },
       },
     ],
