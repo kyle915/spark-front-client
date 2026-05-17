@@ -81,6 +81,7 @@ import {
 // import CreateRecap from "@/recap/CreateRecap";
 import RecapList from "@/recap/RecapsList";
 import SparkRecapsList from "@/recap/SparkRecapsList";
+import SparkRecapView from "@/recap/SparkRecapView";
 import SparkCalendar from "@/components/pages/calendar/SparkCalendar";
 import SparkApprovals from "@/components/pages/approvals/SparkApprovals";
 import RecapCustomList from "@/recap/RecapCustomList";
@@ -338,7 +339,8 @@ const RecapLinks = {
       component: <RecapCustomList />,
       isPublic: false,
     },
-    { path: "/recap/view/:uuid", component: <RecapView />, isPublic: false },
+    { path: "/recap/view/:uuid", component: <SparkRecapView />, isPublic: false },
+    { path: "/recap/view-legacy/:uuid", component: <RecapView />, isPublic: false },
     {
       path: "/recap/view-custom/:uuid",
       component: <RecapCustomView />,
