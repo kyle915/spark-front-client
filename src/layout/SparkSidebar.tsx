@@ -27,6 +27,9 @@ import {
   Settings,
   CalendarClock,
   HelpCircle,
+  Radio,
+  CalendarRange,
+  Inbox,
 } from "lucide-react";
 
 /**
@@ -65,6 +68,14 @@ const SECTIONS: NavSection[] = [
     title: "Workspace",
     items: [
       { label: "Dashboard", Icon: LayoutDashboard, to: "/" },
+      { label: "Today", Icon: Radio, to: "/today" },
+      { label: "Upcoming", Icon: CalendarRange, to: "/upcoming" },
+      {
+        label: "Recent submissions",
+        Icon: Inbox,
+        to: "/recent",
+        adminOnly: true,
+      },
       {
         label: "Master Tracker",
         Icon: ListChecks,
@@ -72,8 +83,18 @@ const SECTIONS: NavSection[] = [
         clientLabel: "My Requests",
       },
       { label: "Calendar", Icon: Calendar, to: "/connect-calendar" },
-      { label: "Account Map", Icon: MapPin, to: "/account-map", adminOnly: true },
-      { label: "Approvals", Icon: CheckCircle2, to: "/approvals", adminOnly: true },
+      {
+        label: "Account Map",
+        Icon: MapPin,
+        to: "/account-map",
+        adminOnly: true,
+      },
+      {
+        label: "Approvals",
+        Icon: CheckCircle2,
+        to: "/approvals",
+        adminOnly: true,
+      },
     ],
   },
   {
@@ -82,6 +103,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Jobs", Icon: Hammer, to: "/jobs" },
       { label: "Search Talent", Icon: Users, to: "/talent" },
+      { label: "People", Icon: UsersRound, to: "/people" },
     ],
   },
   {
@@ -119,14 +141,12 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-// Imports referenced for future expansion of Operations group when those
-// routes exist.
+// Imports referenced for future expansion of Operations group.
 void Clock;
 void CreditCard;
 void DollarSign;
 void Upload;
 void Building2;
-void UsersRound;
 void HelpCircle;
 
 const slugToName = (slug: string | null | undefined): string => {

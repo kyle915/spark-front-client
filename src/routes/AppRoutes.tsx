@@ -95,6 +95,10 @@ import SparkJobDetail from "@/components/pages/jobs/SparkJobDetail";
 import SparkRecapTemplates from "@/recap/SparkRecapTemplates";
 import SparkAccountMap from "@/components/pages/map/SparkAccountMap";
 import AdminOnly from "@/layout/AdminOnly";
+import SparkToday from "@/components/pages/today/SparkToday";
+import SparkUpcomingEvents from "@/components/pages/upcoming/SparkUpcomingEvents";
+import SparkRecentSubmissions from "@/components/pages/recent/SparkRecentSubmissions";
+import SparkPeople from "@/components/pages/people/SparkPeople";
 import RecapCustomList from "@/recap/RecapCustomList";
 import RecapView from "@/recap/RecapView";
 // import EditRecap from "@/recap/EditRecap";
@@ -276,6 +280,26 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkAccountMap />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    { path: "/today", component: <SparkToday />, isPublic: false },
+    { path: "/upcoming", component: <SparkUpcomingEvents />, isPublic: false },
+    {
+      path: "/recent",
+      component: (
+        <AdminOnly>
+          <SparkRecentSubmissions />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/people",
+      component: (
+        <AdminOnly>
+          <SparkPeople />
         </AdminOnly>
       ),
       isPublic: false,
