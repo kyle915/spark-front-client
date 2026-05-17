@@ -1,6 +1,52 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+/* Spark v2 fonts — Space Grotesk for display + body, JetBrains Mono for labels/code */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* ========================================================================
+ * Spark v2 theme (new build default)
+ * ----------------------------------------------------------------------
+ * Lime accent (#c5f546) on near-black (#0a0d09). Designed to feel like a
+ * modern Apple-grade operations console — generous whitespace, soft hover
+ * lifts, subtle glow on accent text/icons. Mirrors the design system from
+ * the spark-by-ignite/index.html wireframes.
+ * ====================================================================== */
+@plugin "daisyui/theme" {
+  name: "spark-v2";
+  default: true;
+  prefersdark: true;
+  color-scheme: "dark";
+  --color-base-100: #11140f;
+  --color-base-200: #0a0d09;
+  --color-base-300: #181c14;
+  --color-base-content: rgba(255, 255, 255, 0.92);
+  --color-primary: #c5f546;
+  --color-primary-content: #0a0d09;
+  --color-secondary: rgba(255, 255, 255, 0.08);
+  --color-secondary-content: rgba(255, 255, 255, 0.92);
+  --color-accent: #c5f546;
+  --color-accent-content: #0a0d09;
+  --color-neutral: #181c14;
+  --color-neutral-content: rgba(255, 255, 255, 0.92);
+  --color-info: #6dd5fa;
+  --color-info-content: #0a0d09;
+  --color-success: #c5f546;
+  --color-success-content: #0a0d09;
+  --color-warning: #ff8a4c;
+  --color-warning-content: #0a0d09;
+  --color-error: #ff5470;
+  --color-error-content: #ffffff;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
 /* @plugin "daisyui/theme" {
   name: "fantajia";
   default: true;
@@ -208,4 +254,107 @@ html[color-scheme="light"] .app-logo-public-default {
 .animate-border-flow {
   background-size: 200% 200%;
   animation: border-flow 4s ease infinite;
+}
+
+/* ========================================================================
+ * Spark v2 typography + utility classes
+ * Mirrors the wireframe design in spark-by-ignite/index.html so screens
+ * can be ported across without re-deciding type or spacing tokens.
+ * ====================================================================== */
+
+body {
+  font-family: 'Space Grotesk', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Display headings tighten letter-spacing for that Apple-keynote feel */
+h1, h2, h3, h4, h5, h6, .display {
+  font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* Mono for labels, mono numbers, and small tracking-widest meta text */
+.mono, code, kbd, samp, pre {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Tabular numbers for any column showing $/counts — keeps things aligned */
+.tab-num { font-variant-numeric: tabular-nums; }
+
+/* Lime accent text with a soft glow — used for headline highlights */
+.spark-accent {
+  color: var(--color-primary);
+  filter: drop-shadow(0 0 12px rgba(197, 245, 70, 0.35));
+}
+
+/* The Spark wordmark style: italic, tightened, with a quiet "BY IGNITE" tag */
+.spark-mark {
+  font-family: 'Space Grotesk', sans-serif;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.spark-mark > .tag {
+  font-style: normal;
+  font-weight: 500;
+  font-size: 0.6em;
+  letter-spacing: 0.18em;
+  margin-left: 0.4rem;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Mono micro-label used on metric cards: "RECAPS · 90D", etc. */
+.label-mini {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* Subtle hover lift used on clickable cards */
+.hov {
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.hov:hover {
+  transform: translateY(-2px);
+  border-color: rgba(197, 245, 70, 0.3);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* Pill chip used for status indicators. Pair with chip-lime / chip-orange / chip-sky / chip-muted. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border: 1px solid currentColor;
+  background: rgba(255, 255, 255, 0.04);
+}
+.chip-lime    { color: var(--color-primary); background: rgba(197, 245, 70, 0.10); }
+.chip-orange  { color: var(--color-warning); background: rgba(255, 138, 76, 0.10); }
+.chip-sky     { color: var(--color-info);    background: rgba(109, 213, 250, 0.10); }
+.chip-muted   { color: rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.04); }
+.chip-gold    { color: #ffc960; background: rgba(255, 201, 96, 0.10); }
+.chip-purple  { color: #c9a4ff; background: rgba(201, 164, 255, 0.10); }
+
+/* Subtle grid background used on hero panels (e.g. login splash) */
+.spark-grid-bg {
+  background-image:
+    linear-gradient(rgba(197, 245, 70, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(197, 245, 70, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Soft radial glow behind hero numbers / headlines */
+.spark-glow {
+  background: radial-gradient(circle at 50% 0%, rgba(197, 245, 70, 0.18), transparent 60%);
 }

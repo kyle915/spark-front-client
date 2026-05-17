@@ -136,7 +136,10 @@ export default function CompanySelector() {
                 requestUrlName: company.requestUrlName,
                 tenantSlug: company.tenantSlug,
               });
-              navigate(`/dashboard/${company.uuid}`);
+              // Dashboard lives at "/" (see AppRoutes DashboardLinks).
+              // Previously navigated to /dashboard/<uuid> which had no
+              // matching route, leaving the screen blank.
+              navigate(from, { replace: true });
             }}
             className="card bg-base-200 shadow-xl cursor-pointer transition transform hover:scale-105 border-2 border-transparent hover:border-primary"
           >
