@@ -27,6 +27,7 @@ import CompanySelector from "@/layout/CompanySelector";
 
 // Requests
 import RequestsList from "@/requests/RequestsList";
+import MasterTracker from "@/requests/MasterTracker";
 import RequestView from "@/requests/RequestView";
 import EditRequest from "@/requests/EditRequest";
 import CreateRequest from "@/requests/CreateRequest";
@@ -175,6 +176,11 @@ const RequestsLinks = {
   routes: [
     {
       path: "/requests/list",
+      component: <MasterTracker />,
+      isPublic: false,
+    },
+    {
+      path: "/requests/legacy",
       component: <RequestsList />,
       isPublic: false,
     },
