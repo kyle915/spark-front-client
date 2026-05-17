@@ -8,6 +8,7 @@ import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { useAuthStore } from "@/store/authStore";
+import useSparkRole from "@/hooks/useSparkRole";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 
 /**
@@ -124,6 +125,7 @@ const TrackerTable: React.FC<{ rows: Row[]; mentionables: Mentionable[] }> = ({
   mentionables,
 }) => {
   const navigate = useNavigate();
+  const { isClient } = useSparkRole();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   return (
     <div
@@ -266,22 +268,34 @@ const TrackerTable: React.FC<{ rows: Row[]; mentionables: Mentionable[] }> = ({
                   </td>
                   <td className="px-4 py-3 text-right tab-num">—</td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <button
-                      onClick={toggleExpand}
-                      className="mono text-[10px] transition"
-                      style={{
-                        letterSpacing: "0.14em",
-                        color: isExpanded
-                          ? "var(--spark-lime)"
-                          : "rgba(255,255,255,0.55)",
-                      }}
-                      title="Internal notes & shipments"
-                    >
-                      {isExpanded ? "× CLOSE" : "✎ NOTES"}
-                    </button>
+                    {isClient ? (
+                      <span
+                        className="mono text-[10px]"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "rgba(255,255,255,0.3)",
+                        }}
+                      >
+                        —
+                      </span>
+                    ) : (
+                      <button
+                        onClick={toggleExpand}
+                        className="mono text-[10px] transition"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: isExpanded
+                            ? "var(--spark-lime)"
+                            : "rgba(255,255,255,0.55)",
+                        }}
+                        title="Internal notes & shipments"
+                      >
+                        {isExpanded ? "× CLOSE" : "✎ NOTES"}
+                      </button>
+                    )}
                   </td>
                 </tr>
-                {isExpanded && (
+                {isExpanded && !isClient && (
                   <tr style={{ borderBottom: "1px solid var(--spark-border)" }}>
                     <td colSpan={10} style={{ padding: "0.5rem 1rem 1rem" }}>
                       <InternalNotesPanel
@@ -437,6 +451,7 @@ const RmmFilterInner: React.FC<{
 export default function MasterTracker() {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
+  const { isClient } = useSparkRole();
   const [activeStatus, setActiveStatus] = useState<string>("active");
   const [groupBy, setGroupBy] = useState<"none" | "date" | "rmm">("none");
   const [search, setSearch] = useState<string>("");
@@ -480,33 +495,37 @@ export default function MasterTracker() {
                 color: "rgba(255,255,255,0.45)",
               }}
             >
-              ALL EVENTS · ONE TABLE
+              {isClient ? "YOUR EVENTS" : "ALL EVENTS · ONE TABLE"}
             </p>
             <h1
               className="display text-4xl font-bold mt-2"
               style={{ letterSpacing: "-0.04em" }}
             >
-              Master tracker.
+              {isClient ? "My requests." : "Master tracker."}
             </h1>
             <p
               className="mt-2"
               style={{ color: "rgba(255,255,255,0.55)" }}
             >
-              Every event, every status, every recap link.
+              {isClient
+                ? "Every request you've submitted, with live status updates from your RMM."
+                : "Every event, every status, every recap link."}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => navigate("/requests/create")}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              ⤴ Bulk upload
-            </button>
+            {!isClient && (
+              <button
+                onClick={() => navigate("/requests/create")}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                ⤴ Bulk upload
+              </button>
+            )}
             <button
               onClick={() => alert("CSV export coming soon")}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
@@ -527,7 +546,7 @@ export default function MasterTracker() {
                 boxShadow: "0 0 24px rgba(197,245,70,0.35)",
               }}
             >
-              + Log event
+              {isClient ? "+ Submit request" : "+ Log event"}
             </button>
           </div>
         </div>

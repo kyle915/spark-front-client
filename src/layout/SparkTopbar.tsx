@@ -81,7 +81,11 @@ export const SparkTopbar: React.FC = () => {
     () => localStorage.setItem("@spark.platform", platform),
     [platform],
   );
-  useEffect(() => localStorage.setItem("@spark.role", role), [role]);
+  useEffect(() => {
+    localStorage.setItem("@spark.role", role);
+    // Notify the rest of the app so the sidebar + page-level gates update.
+    window.dispatchEvent(new Event("spark:role-changed"));
+  }, [role]);
 
   const publicFormUrl = useMemo(() => {
     const slug = tenantMeta?.requestUrlName?.trim();

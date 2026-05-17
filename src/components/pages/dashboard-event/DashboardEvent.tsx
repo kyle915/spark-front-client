@@ -2,6 +2,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
+import useSparkRole from "@/hooks/useSparkRole";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
@@ -369,6 +370,7 @@ const ActivationBreakdown: React.FC = () => {
 
 export default function DashboardIndex() {
   const { tenantId, user, tenantMeta } = useAuthStore();
+  const { isClient } = useSparkRole();
   const navigate = useNavigate();
   const [range, setRange] = useState<RangeKey>("30d");
 
@@ -410,6 +412,7 @@ export default function DashboardIndex() {
                 color: "rgba(255,255,255,0.45)",
               }}
             >
+              {isClient ? "YOUR PROGRAM · " : ""}
               {tenantDisplay.toUpperCase()} · {monthLabel()}
             </p>
             <h1

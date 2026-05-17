@@ -1,6 +1,7 @@
 import React, { Suspense, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useAuthStore } from "@/store/authStore";
+import useSparkRole from "@/hooks/useSparkRole";
 import TenantPicker from "./TenantPicker";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import {
@@ -40,26 +41,43 @@ type NavItem = {
   to?: string;
   chip?: { text: string; tone: ChipTone; blink?: boolean };
   stub?: boolean;
+  adminOnly?: boolean;
+  // Optional alternate label for the client view.
+  clientLabel?: string;
 };
 
-type NavSection = { title: string; items: NavItem[] };
+type NavSection = {
+  title: string;
+  items: NavItem[];
+  adminOnly?: boolean;
+  clientTitle?: string;
+};
 
 // Stub items removed entirely (Apple pattern: don't show what doesn't exist).
 // Chip badges stripped for now until live counts are wired — fake numbers
 // erode trust faster than missing decoration.
+// `adminOnly` items + sections are hidden from client view. Client view
+// surfaces only what brand stakeholders need: their requests, their
+// recaps, reports, and the inbox to message Ignite.
 const SECTIONS: NavSection[] = [
   {
     title: "Workspace",
     items: [
       { label: "Dashboard", Icon: LayoutDashboard, to: "/" },
-      { label: "Master Tracker", Icon: ListChecks, to: "/requests/list" },
+      {
+        label: "Master Tracker",
+        Icon: ListChecks,
+        to: "/requests/list",
+        clientLabel: "My Requests",
+      },
       { label: "Calendar", Icon: Calendar, to: "/connect-calendar" },
-      { label: "Account Map", Icon: MapPin, to: "/account-map" },
-      { label: "Approvals", Icon: CheckCircle2, to: "/approvals" },
+      { label: "Account Map", Icon: MapPin, to: "/account-map", adminOnly: true },
+      { label: "Approvals", Icon: CheckCircle2, to: "/approvals", adminOnly: true },
     ],
   },
   {
     title: "Talent",
+    adminOnly: true,
     items: [
       { label: "Jobs", Icon: Hammer, to: "/jobs" },
       { label: "Search Talent", Icon: Users, to: "/talent" },
@@ -68,8 +86,18 @@ const SECTIONS: NavSection[] = [
   {
     title: "Outputs",
     items: [
-      { label: "Recaps", Icon: FileText, to: "/recaps/list" },
-      { label: "Templates", Icon: Star, to: "/recaps/templates" },
+      {
+        label: "Recaps",
+        Icon: FileText,
+        to: "/recaps/list",
+        clientLabel: "My Recaps",
+      },
+      {
+        label: "Templates",
+        Icon: Star,
+        to: "/recaps/templates",
+        adminOnly: true,
+      },
       { label: "Reports", Icon: BarChart3, to: "/reports" },
     ],
   },
@@ -82,6 +110,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     title: "System",
+    adminOnly: true,
     items: [
       { label: "Settings", Icon: Settings, to: "/settings" },
       { label: "Calendar Sync", Icon: CalendarClock, to: "/settings/calendar" },
@@ -138,8 +167,11 @@ const CollapsibleNavSection: React.FC<{
   pathname: string;
   defaultOpen: boolean;
   onStub: (label: string) => void;
-}> = ({ section, pathname, defaultOpen, onStub }) => {
+  isClient?: boolean;
+}> = ({ section, pathname, defaultOpen, onStub, isClient }) => {
   const [open, setOpen] = useState(defaultOpen);
+  const title =
+    isClient && section.clientTitle ? section.clientTitle : section.title;
   return (
     <div>
       <button
@@ -147,7 +179,7 @@ const CollapsibleNavSection: React.FC<{
         className="nav-section w-full flex items-center justify-between transition"
         style={{ background: "transparent", border: "none", cursor: "pointer" }}
       >
-        <span>{section.title}</span>
+        <span>{title}</span>
         {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
       </button>
       {open && (
@@ -158,6 +190,7 @@ const CollapsibleNavSection: React.FC<{
               item={item}
               pathname={pathname}
               onStub={onStub}
+              isClient={isClient}
             />
           ))}
         </div>
@@ -170,10 +203,12 @@ const NavRow: React.FC<{
   item: NavItem;
   pathname: string;
   onStub: (label: string) => void;
-}> = ({ item, pathname, onStub }) => {
+  isClient?: boolean;
+}> = ({ item, pathname, onStub, isClient }) => {
   const active = isActive(item.to, pathname);
   const cls = `nav-item ${active ? "active" : ""}`;
   const Icon = item.Icon;
+  const label = isClient && item.clientLabel ? item.clientLabel : item.label;
   const content = (
     <>
       <span
@@ -183,7 +218,7 @@ const NavRow: React.FC<{
       >
         <Icon size={16} />
       </span>
-      <span className="truncate">{item.label}</span>
+      <span className="truncate">{label}</span>
       {item.chip && (
         <span
           className={`${chipClass(item.chip.tone)} nav-badge ${item.chip.blink ? "spark-blink" : ""}`}
@@ -224,6 +259,14 @@ const onStub = (label: string) => {
 export const SparkSidebar: React.FC = () => {
   const { user, tenantMeta } = useAuthStore();
   const { pathname } = useLocation();
+  const { isClient } = useSparkRole();
+  // Filter sections + items by role.
+  const visibleSections: NavSection[] = SECTIONS.filter(
+    (s) => !s.adminOnly || !isClient,
+  ).map((s) => ({
+    ...s,
+    items: s.items.filter((it) => !it.adminOnly || !isClient),
+  }));
   const initial = (user?.firstName ?? user?.email ?? "U")
     .charAt(0)
     .toUpperCase();
@@ -287,9 +330,10 @@ export const SparkSidebar: React.FC = () => {
       </div>
 
       {/* Nav — collapsed by default except Workspace and the section
-          containing the active route */}
+          containing the active route. Client view shows fewer sections,
+          all open since there are only ~3. */}
       <nav className="flex-1 overflow-y-auto px-2 py-2 hide-scroll">
-        {SECTIONS.map((section) => {
+        {visibleSections.map((section) => {
           const activeInSection = section.items.some(
             (it) => it.to && isActive(it.to, pathname),
           );
@@ -298,8 +342,11 @@ export const SparkSidebar: React.FC = () => {
               key={section.title}
               section={section}
               pathname={pathname}
-              defaultOpen={section.title === "Workspace" || activeInSection}
+              defaultOpen={
+                isClient || section.title === "Workspace" || activeInSection
+              }
               onStub={onStub}
+              isClient={isClient}
             />
           );
         })}

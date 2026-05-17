@@ -14,6 +14,8 @@ import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import type { ProductsQuery as ProductsQueryType } from "@api/queries/__generated__/ProductsQuery.graphql";
+import { RequestsQuery } from "@/api/queries/RequestsQuery";
+import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 
 /**
  * Spark v2 — minimal "Express" request form.
@@ -73,6 +75,42 @@ const SparkRequestInner: React.FC = () => {
     { fetchPolicy: "store-or-network" },
   );
 
+  // Pull existing requests so we can offer type-ahead venue suggestions
+  // for the 80%+ of activations that repeat at known addresses.
+  const recentRequestsData = useLazyLoadQuery<RequestsQueryType>(
+    RequestsQuery,
+    {
+      first: 500,
+      filters: tenantId ? { tenantId } : null,
+    },
+    { fetchPolicy: "store-or-network" },
+  );
+
+  const venueIndex = useMemo(() => {
+    const seen = new Map<
+      string,
+      { name: string; address: string; count: number; lastDate: string }
+    >();
+    const edges = recentRequestsData?.requests?.edges ?? [];
+    for (const e of edges) {
+      const n = e?.node;
+      if (!n) continue;
+      const name = n.retailer?.name ?? n.name ?? "";
+      if (!name) continue;
+      const addr = n.address ?? "";
+      const key = `${name.toLowerCase()}|${addr.toLowerCase()}`;
+      const existing = seen.get(key);
+      const date = n.date ?? "";
+      if (!existing) {
+        seen.set(key, { name, address: addr, count: 1, lastDate: date });
+      } else {
+        existing.count += 1;
+        if (date > existing.lastDate) existing.lastDate = date;
+      }
+    }
+    return Array.from(seen.values()).sort((a, b) => b.count - a.count);
+  }, [recentRequestsData]);
+
   const requestTypes = useMemo(
     () =>
       requestTypesData?.requestTypes?.edges
@@ -116,6 +154,20 @@ const SparkRequestInner: React.FC = () => {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   // Apple-style progressive disclosure: hero fields visible, rest expand.
   const [showDetail, setShowDetail] = useState(false);
+  // Venue type-ahead state.
+  const [venueFocused, setVenueFocused] = useState(false);
+
+  const venueMatches = useMemo(() => {
+    const q = venue.toLowerCase().trim();
+    if (!q || q.length < 2) return [];
+    return venueIndex
+      .filter(
+        (v) =>
+          v.name.toLowerCase().includes(q) ||
+          v.address.toLowerCase().includes(q),
+      )
+      .slice(0, 6);
+  }, [venue, venueIndex]);
 
   // Pick sensible defaults once the catalog loads.
   useEffect(() => {
@@ -216,15 +268,75 @@ const SparkRequestInner: React.FC = () => {
       <div className="spark-card p-6 lg:p-8 space-y-6" style={{ paddingBottom: "6rem" }}>
         {/* HERO — 3 fields visible by default. Everything else collapses. */}
         <div className="space-y-5">
-          <div>
+          <div className="relative">
             <label className="label-mini block mb-1.5">Venue *</label>
             <input
               style={inputStyle}
               value={venue}
               onChange={(e) => setVenue(e.target.value)}
-              placeholder="Whole Foods · Lamar"
+              onFocus={() => setVenueFocused(true)}
+              onBlur={() =>
+                // Delay so click on a suggestion lands first
+                setTimeout(() => setVenueFocused(false), 150)
+              }
+              placeholder="Start typing… we'll suggest repeat venues"
               required
+              autoComplete="off"
             />
+            {venueFocused && venueMatches.length > 0 && (
+              <div
+                className="absolute z-10 left-0 right-0 mt-1 rounded-xl overflow-hidden"
+                style={{
+                  background: "var(--spark-surface)",
+                  border: "1px solid var(--spark-border)",
+                  boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
+                }}
+              >
+                {venueMatches.map((v, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setVenue(v.name);
+                      if (v.address) setAddress(v.address);
+                      setVenueFocused(false);
+                    }}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left transition"
+                    style={{ background: "transparent" }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background =
+                        "rgba(197,245,70,0.06)")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "transparent")
+                    }
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{v.name}</p>
+                      {v.address && (
+                        <p
+                          className="text-xs truncate"
+                          style={{ color: "rgba(255,255,255,0.55)" }}
+                        >
+                          {v.address}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className="mono shrink-0"
+                      style={{
+                        fontSize: 9,
+                        letterSpacing: "0.14em",
+                        color: "var(--spark-lime)",
+                      }}
+                    >
+                      ×{v.count} REQUESTS
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">

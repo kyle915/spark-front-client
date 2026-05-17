@@ -7,6 +7,7 @@ import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import useSparkRole from "@/hooks/useSparkRole";
 
 /**
  * Spark v2 — Recaps list.
@@ -327,6 +328,7 @@ const RmmFilterDropdown: React.FC<{
 
 export default function SparkRecapsList() {
   const { tenantId } = useAuthStore();
+  const { isClient } = useSparkRole();
   const [search, setSearch] = useState("");
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
@@ -359,10 +361,12 @@ export default function SparkRecapsList() {
               className="display text-4xl font-bold mt-2"
               style={{ letterSpacing: "-0.04em" }}
             >
-              Every recap.
+              {isClient ? "Your recaps." : "Every recap."}
             </h1>
             <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
-              Real field data, synced nightly from BA submissions.
+              {isClient
+                ? "Field reports from your activations, synced nightly with photos + numbers."
+                : "Real field data, synced nightly from BA submissions."}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -377,17 +381,19 @@ export default function SparkRecapsList() {
             >
               ↓ Export CSV
             </button>
-            <button
-              onClick={() => alert("Recap template builder coming soon")}
-              className="px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{
-                background: "var(--spark-lime)",
-                color: "#0a0d09",
-                boxShadow: "0 0 24px rgba(197,245,70,0.35)",
-              }}
-            >
-              + Build template
-            </button>
+            {!isClient && (
+              <button
+                onClick={() => alert("Recap template builder coming soon")}
+                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "#0a0d09",
+                  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+                }}
+              >
+                + Build template
+              </button>
+            )}
           </div>
         </div>
 
