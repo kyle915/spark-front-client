@@ -2,6 +2,29 @@ import React, { Suspense } from "react";
 import { Link, useLocation } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import TenantPicker from "./TenantPicker";
+import {
+  LayoutDashboard,
+  ListChecks,
+  Calendar,
+  MapPin,
+  CheckCircle2,
+  Hammer,
+  Users,
+  Star,
+  FileText,
+  BarChart3,
+  Mail,
+  Bell,
+  Clock,
+  CreditCard,
+  DollarSign,
+  Upload,
+  Building2,
+  UsersRound,
+  Settings,
+  CalendarClock,
+  HelpCircle,
+} from "lucide-react";
 
 /**
  * Spark v2 sidebar — uses the verbatim .nav-item / .nav-section / .nav-badge
@@ -12,7 +35,7 @@ type ChipTone = "lime" | "orange" | "sky" | "purple" | "gold";
 
 type NavItem = {
   label: string;
-  icon: string;
+  Icon: React.ComponentType<{ className?: string; size?: number }>;
   to?: string;
   chip?: { text: string; tone: ChipTone; blink?: boolean };
   stub?: boolean;
@@ -20,100 +43,60 @@ type NavItem = {
 
 type NavSection = { title: string; items: NavItem[] };
 
+// Stub items removed entirely (Apple pattern: don't show what doesn't exist).
+// Chip badges stripped for now until live counts are wired — fake numbers
+// erode trust faster than missing decoration.
 const SECTIONS: NavSection[] = [
   {
     title: "Workspace",
     items: [
-      { label: "Dashboard", icon: "◐", to: "/" },
-      {
-        label: "Master Tracker",
-        icon: "▤",
-        to: "/requests/list",
-        chip: { text: "42", tone: "lime" },
-      },
-      { label: "Calendar", icon: "📅", to: "/connect-calendar" },
-      {
-        label: "Account Map",
-        icon: "⌖",
-        stub: true,
-        chip: { text: "22", tone: "lime" },
-      },
-      {
-        label: "Approvals",
-        icon: "✓",
-        to: "/approvals",
-        chip: { text: "5", tone: "orange", blink: true },
-      },
+      { label: "Dashboard", Icon: LayoutDashboard, to: "/" },
+      { label: "Master Tracker", Icon: ListChecks, to: "/requests/list" },
+      { label: "Calendar", Icon: Calendar, to: "/connect-calendar" },
+      { label: "Account Map", Icon: MapPin, to: "/account-map" },
+      { label: "Approvals", Icon: CheckCircle2, to: "/approvals" },
     ],
   },
   {
     title: "Talent",
     items: [
-      {
-        label: "Jobs",
-        icon: "⚒",
-        to: "/jobs",
-        chip: { text: "14", tone: "orange" },
-      },
-      { label: "Search Talent", icon: "◍", to: "/talent" },
-      { label: "Favorites", icon: "★", stub: true },
+      { label: "Jobs", Icon: Hammer, to: "/jobs" },
+      { label: "Search Talent", Icon: Users, to: "/talent" },
     ],
   },
   {
     title: "Outputs",
     items: [
-      { label: "Recaps", icon: "◈", to: "/recaps/list" },
-      { label: "Recap Templates", icon: "▤", to: "/recaps/templates" },
-      { label: "Reports", icon: "📈", to: "/reports" },
+      { label: "Recaps", Icon: FileText, to: "/recaps/list" },
+      { label: "Templates", Icon: Star, to: "/recaps/templates" },
+      { label: "Reports", Icon: BarChart3, to: "/reports" },
     ],
   },
   {
     title: "Communication",
     items: [
-      {
-        label: "Inbox",
-        icon: "✉",
-        to: "/inbox",
-        chip: { text: "23", tone: "lime" },
-      },
-      {
-        label: "Alerts",
-        icon: "🔔",
-        to: "/alerts",
-        chip: { text: "12", tone: "lime" },
-      },
-    ],
-  },
-  {
-    title: "Operations",
-    items: [
-      { label: "Payroll · Hours", icon: "⏱", stub: true },
-      {
-        label: "Payments",
-        icon: "🪶",
-        stub: true,
-        chip: { text: "$8.4k", tone: "lime" },
-      },
-      { label: "Billing", icon: "$", stub: true },
-      {
-        label: "Bulk Upload",
-        icon: "⤴",
-        stub: true,
-        chip: { text: "FAST", tone: "lime" },
-      },
-      { label: "Clients", icon: "◐", stub: true },
-      { label: "Team", icon: "👥", stub: true },
+      { label: "Inbox", Icon: Mail, to: "/inbox" },
+      { label: "Alerts", Icon: Bell, to: "/alerts" },
     ],
   },
   {
     title: "System",
     items: [
-      { label: "Settings", icon: "⚙", to: "/settings" },
-      { label: "Calendar Integration", icon: "📅", to: "/settings/calendar" },
-      { label: "Help", icon: "?", stub: true },
+      { label: "Settings", Icon: Settings, to: "/settings" },
+      { label: "Calendar Sync", Icon: CalendarClock, to: "/settings/calendar" },
     ],
   },
 ];
+
+// Imports referenced for future expansion of Operations group when those
+// routes exist.
+void Clock;
+void CreditCard;
+void DollarSign;
+void Upload;
+void Building2;
+void UsersRound;
+void HelpCircle;
 
 const slugToName = (slug: string | null | undefined): string => {
   if (!slug) return "—";
@@ -156,10 +139,15 @@ const NavRow: React.FC<{
 }> = ({ item, pathname, onStub }) => {
   const active = isActive(item.to, pathname);
   const cls = `nav-item ${active ? "active" : ""}`;
+  const Icon = item.Icon;
   const content = (
     <>
-      <span className="nav-icon" aria-hidden>
-        {item.icon}
+      <span
+        className="shrink-0 flex items-center justify-center"
+        style={{ width: 22, opacity: 0.85 }}
+        aria-hidden
+      >
+        <Icon size={16} />
       </span>
       <span className="truncate">{item.label}</span>
       {item.chip && (

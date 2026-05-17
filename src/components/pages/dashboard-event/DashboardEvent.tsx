@@ -15,12 +15,12 @@ import { useNavigate } from "react-router";
 
 type RangeKey = "today" | "7d" | "30d" | "qtd" | "ytd";
 
+// Apple-style: three meaningful ranges only. Today and YTD removed —
+// workflow rarely lands there.
 const RANGES: { key: RangeKey; label: string }[] = [
-  { key: "today", label: "Today" },
   { key: "7d", label: "7d" },
   { key: "30d", label: "30d" },
-  { key: "qtd", label: "QTD" },
-  { key: "ytd", label: "YTD" },
+  { key: "qtd", label: "90d" },
 ];
 
 const fmtNum = (v: number | null | undefined) =>
@@ -309,30 +309,16 @@ export default function DashboardIndex() {
               )}
             </p>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="pill-group">
-              {RANGES.map((r) => (
-                <button
-                  key={r.key}
-                  onClick={() => setRange(r.key)}
-                  className={`pill-btn ${r.key === range ? "on" : ""}`}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => navigate("/requests/create")}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-2xl text-sm font-semibold transition"
-              style={{
-                background: "var(--spark-lime)",
-                color: "#0a0d09",
-                boxShadow: "0 0 24px rgba(197,245,70,0.35)",
-              }}
-            >
-              <span aria-hidden>+</span>
-              <span>Submit a request</span>
-            </button>
+          <div className="pill-group">
+            {RANGES.map((r) => (
+              <button
+                key={r.key}
+                onClick={() => setRange(r.key)}
+                className={`pill-btn ${r.key === range ? "on" : ""}`}
+              >
+                {r.label}
+              </button>
+            ))}
           </div>
         </div>
 

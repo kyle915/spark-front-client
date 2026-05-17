@@ -93,6 +93,7 @@ import SparkAlerts from "@/components/pages/alerts/SparkAlerts";
 import SparkTalent from "@/components/pages/talent/SparkTalent";
 import SparkJobDetail from "@/components/pages/jobs/SparkJobDetail";
 import SparkRecapTemplates from "@/recap/SparkRecapTemplates";
+import SparkAccountMap from "@/components/pages/map/SparkAccountMap";
 import RecapCustomList from "@/recap/RecapCustomList";
 import RecapView from "@/recap/RecapView";
 // import EditRecap from "@/recap/EditRecap";
@@ -255,6 +256,11 @@ const RequestsLinks = {
     {
       path: "/job/view/:uuid",
       component: <SparkJobDetail />,
+      isPublic: false,
+    },
+    {
+      path: "/account-map",
+      component: <SparkAccountMap />,
       isPublic: false,
     },
   ],
