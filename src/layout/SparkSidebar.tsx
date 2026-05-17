@@ -1,7 +1,8 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import TenantPicker from "./TenantPicker";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import {
   LayoutDashboard,
   ListChecks,
@@ -132,6 +133,39 @@ const chipClass = (tone: ChipTone): string => {
   }
 };
 
+const CollapsibleNavSection: React.FC<{
+  section: NavSection;
+  pathname: string;
+  defaultOpen: boolean;
+  onStub: (label: string) => void;
+}> = ({ section, pathname, defaultOpen, onStub }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="nav-section w-full flex items-center justify-between transition"
+        style={{ background: "transparent", border: "none", cursor: "pointer" }}
+      >
+        <span>{section.title}</span>
+        {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+      </button>
+      {open && (
+        <div className="space-y-0.5 px-1">
+          {section.items.map((item) => (
+            <NavRow
+              key={item.label}
+              item={item}
+              pathname={pathname}
+              onStub={onStub}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const NavRow: React.FC<{
   item: NavItem;
   pathname: string;
@@ -252,23 +286,23 @@ export const SparkSidebar: React.FC = () => {
         </Suspense>
       </div>
 
-      {/* Nav */}
+      {/* Nav — collapsed by default except Workspace and the section
+          containing the active route */}
       <nav className="flex-1 overflow-y-auto px-2 py-2 hide-scroll">
-        {SECTIONS.map((section) => (
-          <div key={section.title}>
-            <div className="nav-section">{section.title}</div>
-            <div className="space-y-0.5 px-1">
-              {section.items.map((item) => (
-                <NavRow
-                  key={item.label}
-                  item={item}
-                  pathname={pathname}
-                  onStub={onStub}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
+        {SECTIONS.map((section) => {
+          const activeInSection = section.items.some(
+            (it) => it.to && isActive(it.to, pathname),
+          );
+          return (
+            <CollapsibleNavSection
+              key={section.title}
+              section={section}
+              pathname={pathname}
+              defaultOpen={section.title === "Workspace" || activeInSection}
+              onStub={onStub}
+            />
+          );
+        })}
       </nav>
 
       {/* Footer */}

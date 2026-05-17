@@ -114,6 +114,8 @@ const SparkRequestInner: React.FC = () => {
   const [rmmId, setRmmId] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  // Apple-style progressive disclosure: hero fields visible, rest expand.
+  const [showDetail, setShowDetail] = useState(false);
 
   // Pick sensible defaults once the catalog loads.
   useEffect(() => {
@@ -211,138 +213,202 @@ const SparkRequestInner: React.FC = () => {
       </div>
 
       {/* Card */}
-      <div className="spark-card p-6 space-y-5">
-        <div className="grid sm:grid-cols-2 gap-4">
+      <div className="spark-card p-6 lg:p-8 space-y-6" style={{ paddingBottom: "6rem" }}>
+        {/* HERO — 3 fields visible by default. Everything else collapses. */}
+        <div className="space-y-5">
           <div>
-            <label className="label-mini block mb-1.5">Your name</label>
+            <label className="label-mini block mb-1.5">Venue *</label>
             <input
               style={inputStyle}
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Jane Doe"
-            />
-          </div>
-          <div>
-            <label className="label-mini block mb-1.5">Email</label>
-            <input
-              style={inputStyle}
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="jane@distributor.com"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="label-mini block mb-1.5">Venue *</label>
-          <input
-            style={inputStyle}
-            value={venue}
-            onChange={(e) => setVenue(e.target.value)}
-            placeholder="Whole Foods · Lamar"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="label-mini block mb-1.5">Address</label>
-          <input
-            style={inputStyle}
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="Street, city, state"
-          />
-        </div>
-
-        <div className="grid sm:grid-cols-3 gap-4">
-          <div>
-            <label className="label-mini block mb-1.5">Date *</label>
-            <input
-              style={inputStyle}
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
+              value={venue}
+              onChange={(e) => setVenue(e.target.value)}
+              placeholder="Whole Foods · Lamar"
               required
             />
           </div>
-          <div>
-            <label className="label-mini block mb-1.5">Start</label>
-            <input
-              style={inputStyle}
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label className="label-mini block mb-1.5">End</label>
-            <input
-              style={inputStyle}
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              required
-            />
-          </div>
-        </div>
 
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <label className="label-mini block mb-1.5">Activation type</label>
-            <select
-              style={inputStyle}
-              value={requestTypeId}
-              onChange={(e) => setRequestTypeId(e.target.value)}
-              required
-            >
-              <option value="">Select type</option>
-              {requestTypes.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label-mini block mb-1.5">Date *</label>
+              <input
+                style={inputStyle}
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="label-mini block mb-1.5">Activation type *</label>
+              <select
+                style={inputStyle}
+                value={requestTypeId}
+                onChange={(e) => setRequestTypeId(e.target.value)}
+                required
+              >
+                <option value="">Select type</option>
+                {requestTypes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="label-mini block mb-1.5">Time zone</label>
-            <select
-              style={inputStyle}
-              value={timezoneId}
-              onChange={(e) => setTimezoneId(e.target.value)}
-              required
-            >
-              <option value="">Select timezone</option>
-              {timezones.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
 
-        <div>
-          <label className="label-mini block mb-1.5">
-            Routes to RMM (auto-approval)
-          </label>
-          <select
-            style={inputStyle}
-            value={rmmId}
-            onChange={(e) => setRmmId(e.target.value)}
+          {/* Auto-routed RMM display + Change inline (no dropdown by default) */}
+          <div
+            className="flex items-center justify-between gap-2 px-4 py-3 rounded-xl"
+            style={{
+              background: "rgba(197,245,70,0.06)",
+              border: "1px solid rgba(197,245,70,0.25)",
+            }}
           >
-            <option value="">First available RMM</option>
-            {rmms.map((r) =>
-              r ? (
-                <option key={r.id} value={r.id}>
-                  {[r.firstName, r.lastName].filter(Boolean).join(" ") ||
-                    r.username}
-                </option>
-              ) : null,
-            )}
-          </select>
+            <div className="flex items-center gap-2 min-w-0">
+              <span
+                className="mono text-[10px]"
+                style={{
+                  letterSpacing: "0.16em",
+                  color: "var(--spark-lime)",
+                }}
+              >
+                ROUTING →
+              </span>
+              <p className="text-sm truncate">
+                {(() => {
+                  const r = rmms.find((m) => String(m?.id) === rmmId);
+                  return r
+                    ? [r.firstName, r.lastName].filter(Boolean).join(" ") ||
+                        r.username
+                    : "First available RMM";
+                })()}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowDetail(true)}
+              className="mono text-[10px] transition shrink-0"
+              style={{
+                letterSpacing: "0.14em",
+                color: "rgba(255,255,255,0.55)",
+              }}
+            >
+              CHANGE
+            </button>
+          </div>
         </div>
+
+        {/* DETAIL — collapsed until "Add detail" */}
+        {!showDetail && (
+          <button
+            type="button"
+            onClick={() => setShowDetail(true)}
+            className="w-full py-3 rounded-xl text-sm transition"
+            style={{
+              background: "transparent",
+              color: "rgba(255,255,255,0.55)",
+              border: "1px dashed var(--spark-border)",
+            }}
+          >
+            + Add detail (time, requestor, products, notes, RMM)
+          </button>
+        )}
+
+        {showDetail && (
+          <div
+            className="space-y-5 pt-5"
+            style={{ borderTop: "1px solid var(--spark-border)" }}
+          >
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="label-mini block mb-1.5">Your name</label>
+                <input
+                  style={inputStyle}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Jane Doe"
+                />
+              </div>
+              <div>
+                <label className="label-mini block mb-1.5">Email</label>
+                <input
+                  style={inputStyle}
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="jane@distributor.com"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="label-mini block mb-1.5">Address</label>
+              <input
+                style={inputStyle}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Street, city, state"
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div>
+                <label className="label-mini block mb-1.5">Start time</label>
+                <input
+                  style={inputStyle}
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label-mini block mb-1.5">End time</label>
+                <input
+                  style={inputStyle}
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label-mini block mb-1.5">Time zone</label>
+                <select
+                  style={inputStyle}
+                  value={timezoneId}
+                  onChange={(e) => setTimezoneId(e.target.value)}
+                >
+                  <option value="">Select timezone</option>
+                  {timezones.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="label-mini block mb-1.5">
+                Routes to RMM (auto-approval)
+              </label>
+              <select
+                style={inputStyle}
+                value={rmmId}
+                onChange={(e) => setRmmId(e.target.value)}
+              >
+                <option value="">First available RMM</option>
+                {rmms.map((r) =>
+                  r ? (
+                    <option key={r.id} value={r.id}>
+                      {[r.firstName, r.lastName].filter(Boolean).join(" ") ||
+                        r.username}
+                    </option>
+                  ) : null,
+                )}
+              </select>
+            </div>
+          </div>
+        )}
 
         {/* Products picker */}
         {products.length > 0 && (
@@ -452,35 +518,6 @@ const SparkRequestInner: React.FC = () => {
           />
         </div>
 
-        <div
-          className="flex items-center justify-between pt-4"
-          style={{ borderTop: "1px solid var(--spark-border)" }}
-        >
-          <button
-            type="button"
-            onClick={() => navigate("/requests/create-detailed")}
-            className="mono text-[11px] transition"
-            style={{
-              letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.55)",
-            }}
-          >
-            ⛁ NEED MORE DETAIL? Switch to detailed form →
-          </button>
-          <button
-            type="submit"
-            disabled={isCommitting}
-            className="px-6 py-3 rounded-2xl text-sm font-semibold transition"
-            style={{
-              background: "var(--spark-lime)",
-              color: "#0a0d09",
-              boxShadow: "0 0 24px rgba(197,245,70,0.35)",
-              opacity: isCommitting ? 0.6 : 1,
-            }}
-          >
-            {isCommitting ? "Submitting…" : "Submit request →"}
-          </button>
-        </div>
       </div>
 
       {/* Routing footer */}
@@ -505,11 +542,50 @@ const SparkRequestInner: React.FC = () => {
           className="mt-2 text-sm"
           style={{ color: "rgba(255,255,255,0.75)" }}
         >
-          Submission lands in the RMM's queue (Master Tracker ·{" "}
-          <span style={{ color: "var(--spark-gold)" }}>QUEUE FOR IGNITE</span>
-          ). Once approved, Spark auto-posts a job and emails confirmation
-          to your team.
+          Submission lands in the RMM's queue. Once approved, Spark auto-posts
+          a job and emails confirmation to your team.
         </p>
+      </div>
+
+      {/* Sticky submit bar — always in view */}
+      <div
+        className="fixed left-0 right-0 z-40"
+        style={{
+          bottom: 0,
+          background: "rgba(10,13,9,0.92)",
+          backdropFilter: "blur(14px)",
+          borderTop: "1px solid var(--spark-border)",
+        }}
+      >
+        <div className="max-w-3xl mx-auto px-6 lg:px-8 py-4 flex items-center justify-between gap-3 flex-wrap">
+          <button
+            type="button"
+            onClick={() => navigate("/requests/create-detailed")}
+            className="mono text-[10px] transition"
+            style={{
+              letterSpacing: "0.14em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            ⛁ DETAILED FORM →
+          </button>
+          <button
+            type="submit"
+            disabled={isCommitting || !venue || !date}
+            className="px-6 py-3 rounded-2xl text-sm font-semibold transition"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              boxShadow:
+                !venue || !date
+                  ? "none"
+                  : "0 0 24px rgba(197,245,70,0.35)",
+              opacity: isCommitting || !venue || !date ? 0.5 : 1,
+            }}
+          >
+            {isCommitting ? "Submitting…" : "Submit & route to RMM →"}
+          </button>
+        </div>
       </div>
     </form>
   );

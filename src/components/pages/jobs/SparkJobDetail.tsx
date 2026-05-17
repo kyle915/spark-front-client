@@ -117,7 +117,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   {status.toUpperCase()}
                 </span>
                 {urgent && (
-                  <span className="chip chip-orange spark-blink">URGENT</span>
+                  <span className="chip chip-orange">URGENT</span>
                 )}
               </div>
               <h1

@@ -43,13 +43,22 @@ const STATUS_LABEL: Record<string, string> = {
   pending: "PENDING",
 };
 
+// "Active" = anything not yet completed. Default landing for admins.
+const ACTIVE_STATUSES = new Set([
+  "pending",
+  "queue",
+  "approved",
+  "scheduled",
+]);
+
 const STATUS_FILTERS: { key: string; label: string; chip: string }[] = [
-  { key: "all", label: "All", chip: "chip chip-muted" },
+  { key: "active", label: "Active", chip: "chip chip-lime" },
   { key: "pending", label: "Pending", chip: "chip chip-orange" },
-  { key: "queue", label: "Queue for Ignite", chip: "chip chip-gold" },
+  { key: "queue", label: "Queue", chip: "chip chip-gold" },
   { key: "approved", label: "Approved", chip: "chip chip-purple" },
   { key: "scheduled", label: "Scheduled", chip: "chip chip-sky" },
-  { key: "done", label: "Done", chip: "chip chip-lime" },
+  { key: "done", label: "Done", chip: "chip chip-muted" },
+  { key: "all", label: "All", chip: "chip chip-muted" },
 ];
 
 const fmtNum = (v: number | null | undefined) =>
@@ -346,15 +355,13 @@ const MasterTrackerInner: React.FC<{
     );
   }, [data, tenantId]);
 
-  // Apply status filter client-side (the backend filter shape would change
-  // this to a server-side filter — v2).
-  const rows = useMemo(
-    () =>
-      activeStatus === "all"
-        ? allRows
-        : allRows.filter((r) => r.statusSlug === activeStatus),
-    [allRows, activeStatus],
-  );
+  // Apply status filter client-side. "active" maps to anything not done.
+  const rows = useMemo(() => {
+    if (activeStatus === "all") return allRows;
+    if (activeStatus === "active")
+      return allRows.filter((r) => ACTIVE_STATUSES.has(r.statusSlug));
+    return allRows.filter((r) => r.statusSlug === activeStatus);
+  }, [allRows, activeStatus]);
 
   // Tally counts off the unfiltered rows so chips show consistent totals
   // regardless of which status is currently active.
@@ -430,7 +437,8 @@ const RmmFilterInner: React.FC<{
 export default function MasterTracker() {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
-  const [activeStatus, setActiveStatus] = useState<string>("all");
+  const [activeStatus, setActiveStatus] = useState<string>("active");
+  const [groupBy, setGroupBy] = useState<"none" | "date" | "rmm">("none");
   const [search, setSearch] = useState<string>("");
   const [rmmFilter, setRmmFilter] = useState<string>("all");
   const [rmmList, setRmmList] = useState<Mentionable[]>([]);
@@ -524,30 +532,58 @@ export default function MasterTracker() {
           </div>
         </div>
 
-        {/* Status chips + search */}
+        {/* Status chips + group toggle + search */}
         <div className="spark-card p-4 flex flex-wrap items-center gap-2">
           <span className="label-mini mr-2">STATUS</span>
           {STATUS_FILTERS.map((f) => {
             const n =
-              f.key === "all" ? total : (counts[f.key] ?? 0);
+              f.key === "all"
+                ? total
+                : f.key === "active"
+                  ? (counts.pending ?? 0) +
+                    (counts.queue ?? 0) +
+                    (counts.approved ?? 0) +
+                    (counts.scheduled ?? 0)
+                  : (counts[f.key] ?? 0);
             const active = f.key === activeStatus;
             return (
               <button
                 key={f.key}
                 onClick={() => setActiveStatus(f.key)}
-                className={`${f.chip} ${active ? "ring-2 ring-offset-0" : ""}`}
+                className={f.chip}
                 style={
                   active
                     ? { outline: "1.5px solid currentColor", outlineOffset: 0 }
                     : undefined
                 }
               >
-                {f.key !== "all" && "● "}
+                {f.key !== "all" && f.key !== "active" && "● "}
                 {f.label} · {n}
               </button>
             );
           })}
           <span className="flex-1" />
+          {/* Group-by toggle */}
+          <div className="pill-group">
+            <button
+              onClick={() => setGroupBy("none")}
+              className={`pill-btn ${groupBy === "none" ? "on" : ""}`}
+            >
+              Flat
+            </button>
+            <button
+              onClick={() => setGroupBy("date")}
+              className={`pill-btn ${groupBy === "date" ? "on" : ""}`}
+            >
+              By date
+            </button>
+            <button
+              onClick={() => setGroupBy("rmm")}
+              className={`pill-btn ${groupBy === "rmm" ? "on" : ""}`}
+            >
+              By RMM
+            </button>
+          </div>
           {tenantId && (
             <Suspense fallback={null}>
               <RmmFilterInner

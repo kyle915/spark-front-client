@@ -93,7 +93,7 @@ const JobsInner: React.FC = () => {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex items-start gap-3 min-w-0 flex-1">
               <span
-                className={`spark-dot mt-2 ${j.urgent ? "spark-blink" : ""}`}
+                className={`spark-dot mt-2 ${j.urgent ? "" : ""}`}
                 style={
                   j.urgent
                     ? { background: "var(--spark-orange)", boxShadow: "0 0 10px var(--spark-orange)" }
@@ -121,7 +121,7 @@ const JobsInner: React.FC = () => {
                     {j.status.toUpperCase()}
                   </span>
                   {j.urgent && (
-                    <span className="chip chip-orange spark-blink">URGENT</span>
+                    <span className="chip chip-orange">URGENT</span>
                   )}
                 </div>
                 <h3 className="font-bold truncate">{j.venue}</h3>

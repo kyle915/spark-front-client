@@ -71,6 +71,9 @@ const slugToName = (slug: string | null | undefined): string => {
 };
 
 /* ───────────────────────────── KPI TILE ───────────────────────────── */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// These primitives are kept around for the Reports page and future
+// dashboard variants. Not used in the current hero layout.
 
 const KpiTile: React.FC<{
   icon: string;
@@ -241,6 +244,13 @@ const RecapRow: React.FC<{
   </div>
 );
 
+// Keep dead-but-useful primitives around for future variants. Tell TS
+// they're intentional so the build doesn't fail on TS6133.
+void KpiTile;
+void AttentionCard;
+void UpcomingRow;
+void RecapRow;
+
 /* ───────────────────────────── PAGE ───────────────────────────── */
 
 export default function DashboardIndex() {
@@ -272,12 +282,10 @@ export default function DashboardIndex() {
   const consumerDelta = computeDelta(m.consumersSampled, cmp.consumersSampled);
 
   const recent = dashboard.recentEvents ?? [];
-  const upcoming = recent.slice(0, 5);
-  const latest = recent.slice(0, 5);
 
   return (
     <Layout>
-      <div className="space-y-8 max-w-7xl">
+      <div className="space-y-10 lg:space-y-12 max-w-7xl">
         {/* Greeting + period pills */}
         <div className="flex items-end justify-between flex-wrap gap-4">
           <div>
@@ -322,146 +330,214 @@ export default function DashboardIndex() {
           </div>
         </div>
 
-        {/* 4 hero KPI tiles */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiTile
-            icon="▦"
-            label="Consumers sampled"
-            value={fmtNum(m.consumersSampled)}
-            delta={consumerDelta}
-            glow
-          />
-          <KpiTile
-            icon="★"
-            label="Total events"
-            value={fmtNum(m.totalEvents)}
-            delta={computeDelta(m.totalEvents, cmp.totalEvents)}
-          />
-          <KpiTile
-            icon="◐"
-            label="Brand awareness"
-            value={fmtPct(m.brandAwareness)}
-            delta={computeDelta(m.brandAwareness, cmp.brandAwareness)}
-          />
-          <KpiTile
-            icon="◉"
-            label="Purchase intent"
-            value={fmtPct(m.purchaseIntent)}
-            delta={computeDelta(m.purchaseIntent, cmp.purchaseIntent)}
-          />
-        </div>
-
-        {/* What needs you */}
-        <div>
-          <h2
-            className="display text-xl font-bold mb-3"
-            style={{ letterSpacing: "-0.02em" }}
+        {/* Single hero metric + thin ribbon underneath (Apple Health pattern) */}
+        <div
+          className="spark-card-glow rounded-3xl px-8 lg:px-12 py-10 lg:py-14"
+        >
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.22em",
+              color: "var(--spark-lime)",
+            }}
           >
-            What needs you
-          </h2>
-          <div className="grid lg:grid-cols-2 gap-4">
-            <AttentionCard
-              tone="orange"
-              badge="MIAMI EFFICIENCY"
-              headline="$/sample at $2.86 (32% above market avg)"
-              body="Cooler temp issue at Bayside venue. 3 BAs logged wastage."
-              cta="Run audit"
-            />
-            <AttentionCard
-              tone="gold"
-              badge="5 REQUESTS PENDING"
-              headline="Atlanta · Austin · Denver · Phoenix · Miami"
-              body="Avg age 18 min. Approval triggers job posting auto."
-              cta="Review"
-              onClick={() => navigate("/requests/list")}
-            />
+            CONSUMERS SAMPLED
+          </p>
+          <p
+            className="display tab-num font-bold mt-2"
+            style={{
+              fontSize: "clamp(4rem, 11vw, 7.5rem)",
+              lineHeight: 0.95,
+              letterSpacing: "-0.05em",
+              color: "var(--spark-text)",
+            }}
+          >
+            {fmtNum(m.consumersSampled)}
+          </p>
+          {consumerDelta && (
+            <p
+              className="mt-3 mono text-sm"
+              style={{
+                letterSpacing: "0.08em",
+                color: consumerDelta.positive
+                  ? "var(--spark-lime)"
+                  : "var(--spark-orange)",
+              }}
+            >
+              {consumerDelta.positive ? "▲" : "▼"} {consumerDelta.text} vs
+              previous period
+            </p>
+          )}
+
+          {/* Thin secondary ribbon */}
+          <div
+            className="mt-8 pt-6 grid grid-cols-3 gap-6"
+            style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            {[
+              {
+                label: "Events",
+                value: fmtNum(m.totalEvents),
+                delta: computeDelta(m.totalEvents, cmp.totalEvents),
+              },
+              {
+                label: "Brand awareness",
+                value: fmtPct(m.brandAwareness),
+                delta: computeDelta(m.brandAwareness, cmp.brandAwareness),
+              },
+              {
+                label: "Purchase intent",
+                value: fmtPct(m.purchaseIntent),
+                delta: computeDelta(m.purchaseIntent, cmp.purchaseIntent),
+              },
+            ].map((s) => (
+              <div key={s.label}>
+                <p className="label-mini">{s.label.toUpperCase()}</p>
+                <p
+                  className="display tab-num font-bold mt-1"
+                  style={{
+                    fontSize: "1.75rem",
+                    letterSpacing: "-0.03em",
+                    lineHeight: 1,
+                  }}
+                >
+                  {s.value}
+                </p>
+                {s.delta && (
+                  <p
+                    className="mono text-[11px] mt-1"
+                    style={{
+                      letterSpacing: "0.06em",
+                      color: s.delta.positive
+                        ? "var(--spark-lime)"
+                        : "var(--spark-orange)",
+                    }}
+                  >
+                    {s.delta.text}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Coming up + Latest recaps */}
-        <div className="grid lg:grid-cols-2 gap-4">
-          <div className="spark-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2
-                className="display text-lg font-bold"
-                style={{ letterSpacing: "-0.02em" }}
-              >
-                Coming up this week
-              </h2>
-              <button
-                onClick={() => navigate("/events/list")}
-                className="mono text-[10px] transition"
-                style={{
-                  letterSpacing: "0.18em",
-                  color: "rgba(255,255,255,0.55)",
-                }}
-              >
-                ALL →
-              </button>
-            </div>
-            {upcoming.length === 0 ? (
-              <p
-                className="text-sm py-6 text-center"
-                style={{ color: "rgba(255,255,255,0.55)" }}
-              >
-                No upcoming events.
-              </p>
-            ) : (
-              upcoming.map((e, i) => (
-                <UpcomingRow
-                  key={i}
-                  date={e.date ?? ""}
-                  venue={e.name ?? "—"}
-                  info={e.location ?? ""}
-                  status={e.status ?? "Scheduled"}
-                />
-              ))
-            )}
+        {/*
+         * "What needs you" — data-driven attention engine TBD. For now we
+         * hide the section entirely when there's nothing real to surface
+         * (no static placeholder cards eroding trust).
+         */}
+
+        {/* Unified timeline: upcoming + recent in one vertical flow */}
+        <div className="spark-card p-6 lg:p-8">
+          <div className="flex items-center justify-between mb-5">
+            <h2
+              className="display text-lg lg:text-xl font-bold"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              Timeline
+            </h2>
+            <button
+              onClick={() => navigate("/requests/list")}
+              className="mono text-[10px] transition"
+              style={{
+                letterSpacing: "0.18em",
+                color: "rgba(255,255,255,0.55)",
+              }}
+            >
+              ALL EVENTS →
+            </button>
           </div>
 
-          <div className="spark-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2
-                className="display text-lg font-bold"
-                style={{ letterSpacing: "-0.02em" }}
-              >
-                Latest recaps
-              </h2>
-              <button
-                onClick={() => navigate("/recaps/list")}
-                className="mono text-[10px] transition"
-                style={{
-                  letterSpacing: "0.18em",
-                  color: "rgba(255,255,255,0.55)",
-                }}
-              >
-                ALL →
-              </button>
+          {recent.length === 0 ? (
+            <p
+              className="text-sm py-10 text-center"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              No data yet. New events show up here as they're scheduled.
+            </p>
+          ) : (
+            <div>
+              {recent.slice(0, 10).map((e, i) => {
+                const dateStr = e.date ?? "";
+                const isToday =
+                  dateStr &&
+                  new Date(dateStr).toDateString() ===
+                    new Date().toDateString();
+                const isPast = dateStr && new Date(dateStr) < new Date();
+                const dot = isToday
+                  ? "var(--spark-lime)"
+                  : isPast
+                    ? "rgba(255,255,255,0.3)"
+                    : "var(--spark-sky)";
+                return (
+                  <div
+                    key={i}
+                    onClick={() =>
+                      isPast
+                        ? navigate("/recap/list")
+                        : navigate("/requests/list")
+                    }
+                    className="flex items-center gap-4 py-3 cursor-pointer"
+                    style={{
+                      borderBottom:
+                        i < Math.min(recent.length, 10) - 1
+                          ? "1px solid var(--spark-border)"
+                          : "none",
+                      opacity: isPast ? 0.72 : 1,
+                    }}
+                  >
+                    <span
+                      className="spark-dot shrink-0"
+                      style={{
+                        background: dot,
+                        boxShadow: `0 0 8px ${dot}`,
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">
+                        {e.name ?? "Untitled"}
+                      </p>
+                      <p
+                        className="mono text-[10px] mt-0.5 truncate"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "rgba(255,255,255,0.45)",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {e.location ?? ""}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p
+                        className="text-sm"
+                        style={{ color: "rgba(255,255,255,0.85)" }}
+                      >
+                        {dateStr || "—"}
+                      </p>
+                      <p
+                        className="mono text-[10px]"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: isToday
+                            ? "var(--spark-lime)"
+                            : isPast
+                              ? "rgba(255,255,255,0.45)"
+                              : "var(--spark-sky)",
+                        }}
+                      >
+                        {isToday
+                          ? "TODAY"
+                          : isPast
+                            ? (e.status ?? "DONE").toUpperCase()
+                            : (e.status ?? "SCHEDULED").toUpperCase()}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            {latest.length === 0 ? (
-              <p
-                className="text-sm py-6 text-center"
-                style={{ color: "rgba(255,255,255,0.55)" }}
-              >
-                No recaps yet.
-              </p>
-            ) : (
-              latest.map((e, i) => (
-                <RecapRow
-                  key={i}
-                  venue={e.name ?? "—"}
-                  market={e.location ?? "—"}
-                  date={e.date ?? ""}
-                  samples={fmtNum(e.consumers)}
-                  conv={
-                    typeof e.intentRate === "number"
-                      ? `${e.intentRate.toFixed(0)}%`
-                      : "—"
-                  }
-                />
-              ))
-            )}
-          </div>
+          )}
         </div>
       </div>
     </Layout>
