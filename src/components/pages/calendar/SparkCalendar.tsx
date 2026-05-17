@@ -5,28 +5,18 @@ import Layout from "@/layout/Layout";
 import { EventsQuery } from "@/api/queries/EventsQuery";
 import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
- * Spark v2 — Shifts Board / Calendar.
- * Wireframe: spark-demo/index.html lines 1315-1356 + calChip/calRow helpers.
+ * Spark v2 — Shifts Board, Google-Calendar style.
  *
- * Week-view grid with a Time column + 7 day columns. Each shift renders as
- * a tinted block with a left-bar matching its kind (retail = lime,
- * on-prem = purple, event = sky).
+ * Hourly time column on the left, day columns across. Events are
+ * absolutely positioned in their day column based on start/end times
+ * (height = duration). Each event chip shows its own time range inline,
+ * the way Google Calendar does.
  */
 
 type ShiftKind = "retail" | "onprem" | "event";
-
-type Shift = {
-  uuid: string;
-  title: string;
-  time: string;
-  market: string;
-  ba: string;
-  kind: ShiftKind;
-  dayIndex: number; // 0=Mon … 6=Sun
-  hourBand: "8AM" | "12PM" | "2PM" | "6PM";
-};
 
 const KIND_COLOR: Record<ShiftKind, string> = {
   retail: "var(--spark-lime)",
@@ -34,19 +24,25 @@ const KIND_COLOR: Record<ShiftKind, string> = {
   event: "var(--spark-sky)",
 };
 
-const HOURS: Shift["hourBand"][] = ["8AM", "12PM", "2PM", "6PM"];
-const HOUR_LABELS: Record<Shift["hourBand"], string> = {
-  "8AM": "8 AM",
-  "12PM": "12 PM",
-  "2PM": "2 PM",
-  "6PM": "6 PM",
+type Shift = {
+  uuid: string;
+  title: string;
+  market: string;
+  startHour: number; // float hours (e.g. 13.5)
+  endHour: number;
+  startLabel: string;
+  endLabel: string;
+  kind: ShiftKind;
+  dayIndex: number;
 };
 
-/* ───────────────── helpers ───────────────── */
+const HOUR_START = 7; // 7 AM
+const HOUR_END = 23; // 11 PM
+const HOUR_PX = 56; // 56px per hour row (matches Google's compact week view)
 
 const startOfWeek = (d: Date) => {
   const x = new Date(d);
-  const day = (x.getDay() + 6) % 7; // Mon=0
+  const day = (x.getDay() + 6) % 7;
   x.setDate(x.getDate() - day);
   x.setHours(0, 0, 0, 0);
   return x;
@@ -69,13 +65,27 @@ const isSameDay = (a: Date, b: Date) =>
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
 
-const hourBandFromTime = (start: string | null | undefined): Shift["hourBand"] => {
-  if (!start) return "12PM";
-  const h = parseInt(start.split(":")[0] ?? "12", 10);
-  if (h < 11) return "8AM";
-  if (h < 14) return "12PM";
-  if (h < 17) return "2PM";
-  return "6PM";
+const parseHour = (raw: string | null | undefined): number | null => {
+  if (!raw) return null;
+  const [h, m] = raw.split(":");
+  const hh = parseInt(h ?? "0", 10);
+  const mm = parseInt(m ?? "0", 10);
+  if (Number.isNaN(hh)) return null;
+  return hh + mm / 60;
+};
+
+const fmtHour12 = (h: number): string => {
+  const wholeH = Math.floor(h);
+  const mins = Math.round((h - wholeH) * 60);
+  const ampm = wholeH >= 12 ? "p" : "a";
+  const h12 = ((wholeH + 11) % 12) + 1;
+  return mins === 0 ? `${h12}${ampm}` : `${h12}:${String(mins).padStart(2, "0")}${ampm}`;
+};
+
+const fmtHourLabel = (h: number): string => {
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = ((h + 11) % 12) + 1;
+  return `${h12} ${ampm}`;
 };
 
 const inferKind = (label: string | null | undefined): ShiftKind => {
@@ -83,7 +93,12 @@ const inferKind = (label: string | null | undefined): ShiftKind => {
   if (
     s.includes("retail") ||
     s.includes("whole foods") ||
-    s.includes("trader joe")
+    s.includes("trader joe") ||
+    s.includes("kroger") ||
+    s.includes("walmart") ||
+    s.includes("circle k") ||
+    s.includes("7 eleven") ||
+    s.includes("target")
   )
     return "retail";
   if (s.includes("on-prem") || s.includes("on prem") || s.includes("bar"))
@@ -91,143 +106,286 @@ const inferKind = (label: string | null | undefined): ShiftKind => {
   return "event";
 };
 
-/* ───────────────── chip ───────────────── */
-
-const ShiftChip: React.FC<{ s: Shift; onClick: () => void }> = ({
-  s,
-  onClick,
-}) => {
-  const c = KIND_COLOR[s.kind];
-  return (
-    <div
-      onClick={onClick}
-      className="rounded-lg p-2 cursor-pointer transition"
-      style={{
-        background: `${c}1a`,
-        borderLeft: `3px solid ${c}`,
-      }}
-      onMouseEnter={(e) =>
-        (e.currentTarget.style.transform = "scale(1.02)")
-      }
-      onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-    >
-      <p
-        className="mono"
-        style={{
-          fontSize: 9,
-          letterSpacing: "0.14em",
-          color: c,
-        }}
-      >
-        {s.time}
-      </p>
-      <p className="text-xs font-semibold mt-0.5 leading-tight">{s.title}</p>
-      <p
-        className="text-[10px] mt-0.5"
-        style={{ color: "rgba(255,255,255,0.55)" }}
-      >
-        {s.market}
-      </p>
-      <p
-        className="text-[10px] mt-0.5 truncate"
-        style={{ color: "rgba(255,255,255,0.65)" }}
-      >
-        {s.ba}
-      </p>
-    </div>
-  );
-};
-
 /* ───────────────── grid ───────────────── */
 
-const ShiftGrid: React.FC<{ shifts: Shift[]; days: Date[] }> = ({
+const TimeGrid: React.FC<{ shifts: Shift[]; days: Date[] }> = ({
   shifts,
   days,
 }) => {
   const navigate = useNavigate();
   const today = new Date();
-
-  const cellShifts = (dayIdx: number, band: Shift["hourBand"]) =>
-    shifts.filter((s) => s.dayIndex === dayIdx && s.hourBand === band);
+  const hours = useMemo(
+    () =>
+      Array.from(
+        { length: HOUR_END - HOUR_START + 1 },
+        (_, i) => HOUR_START + i,
+      ),
+    [],
+  );
 
   return (
-    <div className="spark-card overflow-x-auto" style={{ borderRadius: 22 }}>
-      <table className="w-full" style={{ minWidth: 800 }}>
-        <thead>
-          <tr style={{ borderBottom: "1px solid var(--spark-border)" }}>
-            <th
-              className="p-3 text-left mono"
+    <div
+      className="spark-card overflow-hidden"
+      style={{ borderRadius: 22 }}
+    >
+      {/* Day headers */}
+      <div
+        className="grid"
+        style={{
+          gridTemplateColumns: "70px repeat(7, 1fr)",
+          borderBottom: "1px solid var(--spark-border)",
+        }}
+      >
+        <div />
+        {days.map((d, i) => {
+          const isToday = isSameDay(d, today);
+          return (
+            <div
+              key={i}
+              className="px-3 py-3 text-center"
               style={{
-                fontSize: 10,
-                letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.45)",
-                width: 80,
+                borderLeft: "1px solid var(--spark-border)",
               }}
             >
-              TIME
-            </th>
-            {days.map((d, i) => {
-              const isToday = isSameDay(d, today);
-              return (
-                <th
-                  key={i}
-                  className="p-3 text-left mono"
+              <p
+                className="mono"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.18em",
+                  color: isToday
+                    ? "var(--spark-lime)"
+                    : "rgba(255,255,255,0.45)",
+                }}
+              >
+                {d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase()}
+              </p>
+              <p
+                className="display tab-num font-bold mt-0.5"
+                style={{
+                  fontSize: 22,
+                  letterSpacing: "-0.03em",
+                  color: isToday
+                    ? "var(--spark-lime)"
+                    : "var(--spark-text)",
+                }}
+              >
+                {d.getDate()}
+              </p>
+              {isToday && (
+                <p
+                  className="mono mt-0.5"
                   style={{
-                    fontSize: 10,
-                    letterSpacing: "0.14em",
-                    color: isToday
-                      ? "var(--spark-lime)"
-                      : "rgba(255,255,255,0.45)",
-                    width: "13%",
+                    fontSize: 9,
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-lime)",
                   }}
                 >
-                  {d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase()}{" "}
-                  {d.getDate()}
-                  {isToday && " · TODAY"}
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {HOURS.map((band) => (
-            <tr
-              key={band}
-              style={{ borderBottom: "1px solid var(--spark-border)" }}
-              className="align-top"
+                  TODAY
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Time grid + events */}
+      <div
+        className="grid relative"
+        style={{
+          gridTemplateColumns: "70px repeat(7, 1fr)",
+        }}
+      >
+        {/* Time column */}
+        <div
+          style={{
+            position: "relative",
+          }}
+        >
+          {hours.map((h, idx) => (
+            <div
+              key={h}
+              className="text-right pr-3"
+              style={{
+                height: HOUR_PX,
+                paddingTop: idx === 0 ? 0 : "0.25rem",
+                borderTop:
+                  idx === 0 ? "none" : "1px solid var(--spark-border)",
+              }}
             >
-              <td
-                className="p-3 mono align-top"
+              <span
+                className="mono"
                 style={{
                   fontSize: 10,
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "rgba(255,255,255,0.4)",
+                  position: "relative",
+                  top: -7,
                 }}
               >
-                {HOUR_LABELS[band]}
-              </td>
-              {days.map((_, dayIdx) => (
-                <td key={dayIdx} className="p-2 align-top">
-                  <div className="space-y-2">
-                    {cellShifts(dayIdx, band).map((s) => (
-                      <ShiftChip
-                        key={s.uuid}
-                        s={s}
-                        onClick={() => navigate(`/event/view/${s.uuid}`)}
-                      />
-                    ))}
-                  </div>
-                </td>
-              ))}
-            </tr>
+                {fmtHourLabel(h)}
+              </span>
+            </div>
           ))}
-        </tbody>
-      </table>
+        </div>
+
+        {/* Day columns */}
+        {days.map((day, dayIdx) => {
+          const isToday = isSameDay(day, today);
+          const dayShifts = shifts.filter((s) => s.dayIndex === dayIdx);
+          // Now-line position for today
+          const nowH = today.getHours() + today.getMinutes() / 60;
+          const showNow =
+            isToday && nowH >= HOUR_START && nowH <= HOUR_END;
+          const nowTop = (nowH - HOUR_START) * HOUR_PX;
+
+          return (
+            <div
+              key={dayIdx}
+              style={{
+                position: "relative",
+                borderLeft: "1px solid var(--spark-border)",
+                background: isToday
+                  ? "linear-gradient(180deg, rgba(197,245,70,0.025), transparent)"
+                  : "transparent",
+                height: hours.length * HOUR_PX,
+              }}
+            >
+              {/* Hour gridlines */}
+              {hours.map((_, idx) =>
+                idx === 0 ? null : (
+                  <div
+                    key={idx}
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      top: idx * HOUR_PX,
+                      borderTop: "1px solid var(--spark-border)",
+                    }}
+                  />
+                ),
+              )}
+
+              {/* Now line */}
+              {showNow && (
+                <>
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: -3,
+                      top: nowTop - 4,
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      background: "var(--spark-lime)",
+                      boxShadow: "0 0 8px var(--spark-lime)",
+                      zIndex: 4,
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      top: nowTop,
+                      borderTop: "1.5px solid var(--spark-lime)",
+                      zIndex: 3,
+                    }}
+                  />
+                </>
+              )}
+
+              {/* Events */}
+              {dayShifts.map((s) => {
+                const top = Math.max(0, (s.startHour - HOUR_START) * HOUR_PX);
+                const heightRaw = Math.max(
+                  24,
+                  (s.endHour - s.startHour) * HOUR_PX - 4,
+                );
+                const color = KIND_COLOR[s.kind];
+                return (
+                  <button
+                    key={s.uuid}
+                    onClick={() => navigate(`/event/view/${s.uuid}`)}
+                    style={{
+                      position: "absolute",
+                      left: 4,
+                      right: 4,
+                      top: top + 2,
+                      height: heightRaw,
+                      background: `${color}1a`,
+                      borderLeft: `3px solid ${color}`,
+                      borderRadius: 6,
+                      padding: "4px 8px",
+                      textAlign: "left",
+                      color: "var(--spark-text)",
+                      cursor: "pointer",
+                      overflow: "hidden",
+                      transition: "transform 150ms ease, box-shadow 150ms ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = "scale(1.02)";
+                      e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.4)`;
+                      e.currentTarget.style.zIndex = "5";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "scale(1)";
+                      e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.zIndex = "1";
+                    }}
+                    title={s.title}
+                  >
+                    <p
+                      className="mono"
+                      style={{
+                        fontSize: 9,
+                        letterSpacing: "0.1em",
+                        color,
+                      }}
+                    >
+                      {s.startLabel}–{s.endLabel}
+                    </p>
+                    <p
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        lineHeight: 1.2,
+                        marginTop: 2,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        display: "-webkit-box",
+                        WebkitLineClamp: heightRaw > 50 ? 2 : 1,
+                        WebkitBoxOrient: "vertical",
+                      }}
+                    >
+                      {s.title}
+                    </p>
+                    {heightRaw > 70 && s.market && (
+                      <p
+                        style={{
+                          fontSize: 10,
+                          color: "rgba(255,255,255,0.55)",
+                          marginTop: 2,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {s.market}
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
 
-/* ───────────────── inner (queries) ───────────────── */
+/* ───────────────── inner ───────────────── */
 
 const SparkCalendarInner: React.FC<{ anchor: Date }> = ({ anchor }) => {
   const days = useMemo(() => weekDays(anchor), [anchor]);
@@ -236,7 +394,7 @@ const SparkCalendarInner: React.FC<{ anchor: Date }> = ({ anchor }) => {
   const data = useLazyLoadQuery<EventsQueryType>(
     EventsQuery,
     {
-      first: 200,
+      first: 500,
       filters: tenantId ? { tenantId } : null,
     },
     { fetchPolicy: "store-or-network" },
@@ -260,41 +418,44 @@ const SparkCalendarInner: React.FC<{ anchor: Date }> = ({ anchor }) => {
             0,
             Math.min(6, Math.floor((d.getTime() - start.getTime()) / 86400000)),
           );
-          const fmtTime = (raw: string | null | undefined) => {
-            if (!raw) return "";
-            const h = parseInt(raw.split(":")[0] ?? "0", 10);
-            const m = raw.split(":")[1] ?? "00";
-            const ampm = h >= 12 ? "p" : "a";
-            const h12 = ((h + 11) % 12) + 1;
-            return m === "00" ? `${h12}${ampm}` : `${h12}:${m}${ampm}`;
-          };
-          const time =
-            n.startTime && n.endTime
-              ? `${fmtTime(n.startTime)}-${fmtTime(n.endTime)}`
-              : "all day";
+          let sh = parseHour(n.startTime) ?? 12;
+          let eh = parseHour(n.endTime) ?? sh + 1;
+          if (eh <= sh) eh = sh + 1; // minimum 1h block
+          // Clamp into visible window
+          sh = Math.max(HOUR_START, Math.min(HOUR_END - 0.25, sh));
+          eh = Math.max(sh + 0.25, Math.min(HOUR_END, eh));
           return {
             uuid: String(n.uuid),
             title: n.name ?? "Untitled",
-            time,
-            market: n.request?.retailer?.name ?? n.address ?? "—",
-            ba: "—",
-            kind: inferKind(n.eventType?.name ?? n.name),
+            market: n.request?.retailer?.name ?? n.address ?? "",
+            startHour: sh,
+            endHour: eh,
+            startLabel: fmtHour12(sh),
+            endLabel: fmtHour12(eh),
+            kind: inferKind(
+              n.eventType?.name ?? n.request?.retailer?.name ?? n.name,
+            ),
             dayIndex,
-            hourBand: hourBandFromTime(n.startTime ?? undefined),
           } as Shift;
         })
         ?.filter((s): s is Shift => s !== null) ?? []
     );
   }, [data, days]);
 
-  return <ShiftGrid shifts={shifts} days={days} />;
+  return <TimeGrid shifts={shifts} days={days} />;
 };
 
 /* ───────────────── page ───────────────── */
 
 export default function SparkCalendar() {
   const [view, setView] = useState<"day" | "week" | "month">("week");
-  const [anchor] = useState(new Date());
+  const [anchor, setAnchor] = useState(new Date());
+
+  const stepWeek = (delta: number) => {
+    const next = new Date(anchor);
+    next.setDate(anchor.getDate() + 7 * delta);
+    setAnchor(next);
+  };
 
   return (
     <Layout>
@@ -318,48 +479,59 @@ export default function SparkCalendar() {
               Every shift, at a glance.
             </h1>
           </div>
-          <div className="pill-group">
-            {(["day", "week", "month"] as const).map((v) => (
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1">
               <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`pill-btn ${v === view ? "on" : ""}`}
+                onClick={() => stepWeek(-1)}
+                className="w-9 h-9 rounded-full grid place-items-center transition"
+                style={{
+                  background: "transparent",
+                  border: "1px solid var(--spark-border)",
+                  color: "var(--spark-text)",
+                }}
+                title="Previous week"
               >
-                {v.charAt(0).toUpperCase() + v.slice(1)}
+                <ChevronLeft size={16} />
               </button>
-            ))}
+              <button
+                onClick={() => setAnchor(new Date())}
+                className="px-3 py-1.5 rounded-full text-xs font-semibold transition"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                Today
+              </button>
+              <button
+                onClick={() => stepWeek(1)}
+                className="w-9 h-9 rounded-full grid place-items-center transition"
+                style={{
+                  background: "transparent",
+                  border: "1px solid var(--spark-border)",
+                  color: "var(--spark-text)",
+                }}
+                title="Next week"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            <div className="pill-group">
+              {(["day", "week", "month"] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={`pill-btn ${v === view ? "on" : ""}`}
+                >
+                  {v.charAt(0).toUpperCase() + v.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Stats strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="spark-card p-4">
-            <p className="label-mini">THIS WEEK</p>
-            <p
-              className="tab-num text-3xl font-bold mt-1"
-              style={{ color: "var(--spark-lime)" }}
-            >
-              —
-            </p>
-          </div>
-          <div className="spark-card p-4">
-            <p className="label-mini">UNDER-STAFFED</p>
-            <p
-              className="tab-num text-3xl font-bold mt-1"
-              style={{ color: "var(--spark-orange)" }}
-            >
-              —
-            </p>
-          </div>
-          <div className="spark-card p-4">
-            <p className="label-mini">HOURS</p>
-            <p className="tab-num text-3xl font-bold mt-1">—</p>
-          </div>
-          <div className="spark-card p-4">
-            <p className="label-mini">PAYROLL</p>
-            <p className="tab-num text-3xl font-bold mt-1">—</p>
-          </div>
-        </div>
+        {/* Stats — hidden until backend exposes shift counts */}
 
         {/* Grid */}
         <Suspense
@@ -374,6 +546,35 @@ export default function SparkCalendar() {
         >
           <SparkCalendarInner anchor={anchor} />
         </Suspense>
+
+        {/* Legend */}
+        <div className="flex items-center gap-5 px-2 flex-wrap">
+          {[
+            { label: "Retail", color: KIND_COLOR.retail },
+            { label: "On-premise", color: KIND_COLOR.onprem },
+            { label: "Event", color: KIND_COLOR.event },
+          ].map((k) => (
+            <div key={k.label} className="flex items-center gap-2">
+              <span
+                className="w-2.5 h-2.5 rounded-full"
+                style={{
+                  background: k.color,
+                  boxShadow: `0 0 6px ${k.color}`,
+                }}
+              />
+              <span
+                className="mono"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.18em",
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                {k.label.toUpperCase()}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </Layout>
   );

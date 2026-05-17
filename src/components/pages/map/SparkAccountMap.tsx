@@ -1,30 +1,31 @@
 import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
-import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+import {
+  APIProvider,
+  Map as GMap,
+  AdvancedMarker,
+  InfoWindow,
+} from "@vis.gl/react-google-maps";
 import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 
 /**
- * Spark v2 — Account Map.
- * Wireframe: spark-demo/index.html lines 2565-2628.
+ * Spark v2 — Account Map (Google Maps).
  *
- * Renders accounts (= unique retailers with coordinates) on a Leaflet map,
- * with status-coded dots (recent / scheduled / unvisited) and a sortable
- * side rail. Source data is RequestsQuery — each request has coordinates
- * and a retailer, so we group by retailer.uuid and infer status from the
- * most recent request's status.
+ * Set VITE_GOOGLE_MAPS_API_KEY in your env to enable. Without a key the
+ * map area shows a clear setup card so users aren't staring at a blank
+ * grey rectangle.
  */
 
 type Status = "recent" | "scheduled" | "unvisited";
 
 const STATUS_COLOR: Record<Status, string> = {
-  recent: "#c5f546", // lime
-  scheduled: "#5fb8ef", // sky
-  unvisited: "#ef5a2a", // orange
+  recent: "#c5f546",
+  scheduled: "#5fb8ef",
+  unvisited: "#ef5a2a",
 };
 
 type Account = {
@@ -32,15 +33,75 @@ type Account = {
   name: string;
   market: string;
   status: Status;
-  coords: [number, number];
+  coords: { lat: number; lng: number };
   lastDate: string | null;
 };
 
-const Inner: React.FC = () => {
+// Google Maps "Aubergine" / dark-friendly style trimmed for Spark.
+// Typed loosely so we don't pull in the @types/google.maps namespace.
+type MapStyleRule = {
+  featureType?: string;
+  elementType?: string;
+  stylers: Array<Record<string, string | number>>;
+};
+
+const DARK_MAP_STYLE: MapStyleRule[] = [
+  { elementType: "geometry", stylers: [{ color: "#0a0d09" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0a0d09" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8b8e84" }] },
+  {
+    featureType: "administrative.locality",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#d0d2c8" }],
+  },
+  {
+    featureType: "poi",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#8b8e84" }],
+  },
+  {
+    featureType: "poi.park",
+    elementType: "geometry",
+    stylers: [{ color: "#11140e" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#1f2418" }],
+  },
+  {
+    featureType: "road",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#8b8e84" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry",
+    stylers: [{ color: "#2a3020" }],
+  },
+  {
+    featureType: "transit",
+    elementType: "geometry",
+    stylers: [{ color: "#11140e" }],
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#050605" }],
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#3b4030" }],
+  },
+];
+
+const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   const [filter, setFilter] = useState<"all" | Status>("all");
   const [search, setSearch] = useState("");
+  const [openKey, setOpenKey] = useState<string | null>(null);
 
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
@@ -79,11 +140,10 @@ const Inner: React.FC = () => {
           name: retailerName,
           market: market || "—",
           status: inferred,
-          coords: [lat, lng],
+          coords: { lat, lng },
           lastDate: r.date ?? null,
         });
       } else {
-        // Promote status: recent > scheduled > unvisited
         if (inferred === "recent") existing.status = "recent";
         else if (
           inferred === "scheduled" &&
@@ -118,12 +178,14 @@ const Inner: React.FC = () => {
     [accounts],
   );
 
-  // Center the map: median of filtered, fallback to continental US.
-  const center: [number, number] = useMemo(() => {
-    if (filtered.length === 0) return [39.5, -98.35];
-    const lats = filtered.map((a) => a.coords[0]).sort((a, b) => a - b);
-    const lngs = filtered.map((a) => a.coords[1]).sort((a, b) => a - b);
-    return [lats[Math.floor(lats.length / 2)], lngs[Math.floor(lngs.length / 2)]];
+  const center = useMemo(() => {
+    if (filtered.length === 0) return { lat: 39.5, lng: -98.35 };
+    const lats = filtered.map((a) => a.coords.lat).sort((a, b) => a - b);
+    const lngs = filtered.map((a) => a.coords.lng).sort((a, b) => a - b);
+    return {
+      lat: lats[Math.floor(lats.length / 2)],
+      lng: lngs[Math.floor(lngs.length / 2)],
+    };
   }, [filtered]);
 
   return (
@@ -197,50 +259,28 @@ const Inner: React.FC = () => {
       {/* Filter row */}
       <div className="spark-card p-4 flex flex-wrap items-center gap-2">
         <span className="label-mini mr-2">STATUS</span>
-        <button
-          onClick={() => setFilter("all")}
-          className={`chip chip-muted ${filter === "all" ? "ring-2" : ""}`}
-          style={
-            filter === "all"
-              ? { outline: "1.5px solid currentColor" }
-              : undefined
-          }
-        >
-          All · {counts.all}
-        </button>
-        <button
-          onClick={() => setFilter("recent")}
-          className="chip chip-lime"
-          style={
-            filter === "recent"
-              ? { outline: "1.5px solid currentColor" }
-              : undefined
-          }
-        >
-          ● Visited · {counts.recent}
-        </button>
-        <button
-          onClick={() => setFilter("scheduled")}
-          className="chip chip-sky"
-          style={
-            filter === "scheduled"
-              ? { outline: "1.5px solid currentColor" }
-              : undefined
-          }
-        >
-          ● Scheduled · {counts.scheduled}
-        </button>
-        <button
-          onClick={() => setFilter("unvisited")}
-          className="chip chip-orange"
-          style={
-            filter === "unvisited"
-              ? { outline: "1.5px solid currentColor" }
-              : undefined
-          }
-        >
-          ● Needs visit · {counts.unvisited}
-        </button>
+        {(
+          [
+            { key: "all" as const, label: "All", chip: "chip chip-muted", n: counts.all },
+            { key: "recent" as const, label: "Visited", chip: "chip chip-lime", n: counts.recent },
+            { key: "scheduled" as const, label: "Scheduled", chip: "chip chip-sky", n: counts.scheduled },
+            { key: "unvisited" as const, label: "Needs visit", chip: "chip chip-orange", n: counts.unvisited },
+          ]
+        ).map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={f.chip}
+            style={
+              filter === f.key
+                ? { outline: "1.5px solid currentColor" }
+                : undefined
+            }
+          >
+            {f.key !== "all" && "● "}
+            {f.label} · {f.n}
+          </button>
+        ))}
         <span className="flex-1" />
         <input
           value={search}
@@ -265,107 +305,137 @@ const Inner: React.FC = () => {
       >
         <div
           className="spark-card overflow-hidden relative"
-          style={{ borderRadius: 20, height: 600 }}
+          style={{ borderRadius: 20, height: 640 }}
         >
-          <MapContainer
-            center={center}
-            zoom={4}
-            style={{ width: "100%", height: "100%", background: "#0a0d09" }}
-            scrollWheelZoom
-          >
-            <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-              attribution=""
-            />
-            {filtered.map((a) => (
-              <CircleMarker
-                key={a.key}
-                center={a.coords}
-                radius={7}
-                pathOptions={{
-                  color: STATUS_COLOR[a.status],
-                  fillColor: STATUS_COLOR[a.status],
-                  fillOpacity: 0.85,
-                  weight: 1.5,
-                }}
-              >
-                <Popup>
-                  <div style={{ fontFamily: "Space Grotesk, sans-serif" }}>
-                    <p style={{ fontWeight: 700 }}>{a.name}</p>
-                    <p
-                      style={{
-                        fontSize: 11,
-                        opacity: 0.7,
-                        marginTop: 2,
-                      }}
-                    >
-                      {a.market}
-                    </p>
-                    {a.lastDate && (
-                      <p
-                        style={{
-                          fontSize: 10,
-                          fontFamily: "JetBrains Mono, monospace",
-                          letterSpacing: "0.14em",
-                          opacity: 0.55,
-                          marginTop: 4,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        Last · {a.lastDate}
-                      </p>
-                    )}
-                  </div>
-                </Popup>
-              </CircleMarker>
-            ))}
-          </MapContainer>
-
-          {/* Legend */}
-          <div
-            className="absolute top-4 left-4 z-[400] spark-card p-3"
-            style={{
-              background: "rgba(10,13,9,0.85)",
-              backdropFilter: "blur(8px)",
-            }}
-          >
+          {!apiKey ? (
             <div
-              className="mono"
+              className="absolute inset-0 grid place-items-center px-6"
               style={{
-                fontSize: 10,
-                letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.65)",
+                background:
+                  "linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2))",
               }}
             >
-              <div className="flex items-center gap-2 mb-1">
-                <span
-                  className="spark-dot"
-                  style={{ background: STATUS_COLOR.recent, boxShadow: `0 0 6px ${STATUS_COLOR.recent}` }}
-                />
-                VISITED
-              </div>
-              <div className="flex items-center gap-2 mb-1">
-                <span
-                  className="spark-dot"
-                  style={{ background: STATUS_COLOR.scheduled, boxShadow: `0 0 6px ${STATUS_COLOR.scheduled}` }}
-                />
-                SCHEDULED
-              </div>
-              <div className="flex items-center gap-2">
-                <span
-                  className="spark-dot"
-                  style={{ background: STATUS_COLOR.unvisited, boxShadow: `0 0 6px ${STATUS_COLOR.unvisited}` }}
-                />
-                NEEDS VISIT
+              <div className="max-w-md text-center">
+                <p
+                  className="mono text-[10px] mb-2"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-orange)",
+                  }}
+                >
+                  GOOGLE MAPS NOT CONFIGURED
+                </p>
+                <h3
+                  className="display text-lg font-bold mb-2"
+                  style={{ letterSpacing: "-0.02em" }}
+                >
+                  Add your API key to enable the map.
+                </h3>
+                <p
+                  className="text-sm mb-4"
+                  style={{ color: "rgba(255,255,255,0.65)" }}
+                >
+                  Set{" "}
+                  <span
+                    className="mono"
+                    style={{ color: "var(--spark-lime)" }}
+                  >
+                    VITE_GOOGLE_MAPS_API_KEY
+                  </span>{" "}
+                  in <span className="mono">.env.local</span> and redeploy.
+                  Pin data + the rail on the right still work without
+                  the map.
+                </p>
+                <a
+                  href="https://console.cloud.google.com/google/maps-apis"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mono"
+                  style={{
+                    fontSize: 10,
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-lime)",
+                  }}
+                >
+                  GET A KEY →
+                </a>
               </div>
             </div>
-          </div>
+          ) : (
+            <APIProvider apiKey={apiKey}>
+              <GMap
+                defaultCenter={center}
+                defaultZoom={4}
+                mapId="spark-v2-map"
+                styles={DARK_MAP_STYLE as never}
+                disableDefaultUI={false}
+                gestureHandling="greedy"
+                style={{ width: "100%", height: "100%" }}
+              >
+                {filtered.map((a) => (
+                  <AdvancedMarker
+                    key={a.key}
+                    position={a.coords}
+                    onClick={() => setOpenKey(a.key)}
+                  >
+                    <div
+                      style={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: 7,
+                        background: STATUS_COLOR[a.status],
+                        border: "2px solid #0a0d09",
+                        boxShadow: `0 0 10px ${STATUS_COLOR[a.status]}`,
+                      }}
+                    />
+                  </AdvancedMarker>
+                ))}
+                {openKey &&
+                  (() => {
+                    const a = filtered.find((x) => x.key === openKey);
+                    if (!a) return null;
+                    return (
+                      <InfoWindow
+                        position={a.coords}
+                        onCloseClick={() => setOpenKey(null)}
+                      >
+                        <div
+                          style={{
+                            fontFamily: "Space Grotesk, sans-serif",
+                            color: "#0a0d09",
+                          }}
+                        >
+                          <p style={{ fontWeight: 700 }}>{a.name}</p>
+                          <p style={{ fontSize: 11, marginTop: 2 }}>
+                            {a.market}
+                          </p>
+                          {a.lastDate && (
+                            <p
+                              style={{
+                                fontSize: 10,
+                                fontFamily: "JetBrains Mono, monospace",
+                                letterSpacing: "0.14em",
+                                opacity: 0.7,
+                                marginTop: 4,
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              Last · {a.lastDate}
+                            </p>
+                          )}
+                        </div>
+                      </InfoWindow>
+                    );
+                  })()}
+              </GMap>
+            </APIProvider>
+          )}
         </div>
 
         {/* List */}
         <div
           className="spark-card overflow-hidden flex flex-col"
-          style={{ maxHeight: 600 }}
+          style={{ maxHeight: 640 }}
         >
           <div
             className="p-4 flex items-center justify-between"
@@ -393,7 +463,7 @@ const Inner: React.FC = () => {
             {filtered.slice(0, 200).map((a) => (
               <li
                 key={a.key}
-                onClick={() => navigate(`/requests/list`)}
+                onClick={() => navigate("/requests/list")}
                 className="px-4 py-3 cursor-pointer transition"
                 style={{
                   borderBottom: "1px solid var(--spark-border)",
@@ -436,6 +506,8 @@ const Inner: React.FC = () => {
 };
 
 export default function SparkAccountMap() {
+  const apiKey = (import.meta as { env?: Record<string, string> }).env
+    ?.VITE_GOOGLE_MAPS_API_KEY;
   return (
     <Layout>
       <Suspense
@@ -448,7 +520,7 @@ export default function SparkAccountMap() {
           </div>
         }
       >
-        <Inner />
+        <Inner apiKey={apiKey} />
       </Suspense>
     </Layout>
   );
