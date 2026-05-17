@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapQuery } from "@/api/queries/RecapQuery";
 import type { RecapQuery as RecapQueryType } from "@api/queries/__generated__/RecapQuery.graphql";
+import { recapFileKind, recapFileUrl } from "@/utils/recapFileUrl";
 
 /**
  * Spark v2 — Recap Detail.
@@ -95,11 +96,10 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const willing = engagement?.willingToPurchaseConsumers ?? null;
   const productsSold = recap.productsSold ?? null;
   const ambassadors = (recap.ambassadors ?? []).filter(Boolean);
-  const photos = (recap.recapFiles ?? []).filter(
-    (f) =>
-      f &&
-      (f.file?.toString() || "").length > 0 &&
-      /(jpg|jpeg|png|webp)$/i.test(f.file ?? ""),
+  // All non-empty files. We split into renderable images (img tag) vs
+  // unrenderable (HEIC + PDF + video), shown as labeled tiles.
+  const allFiles = (recap.recapFiles ?? []).filter(
+    (f) => f && (f.file?.toString() || "").length > 0,
   );
   const sales = (recap.salesPerformance ?? []).filter(Boolean);
   const notes = (recap.accountFeedback ?? [])[0]?.feedback ?? null;
@@ -260,38 +260,103 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             </div>
           )}
 
-          {/* Photos */}
-          {photos.length > 0 && (
+          {/* Files: images render inline, HEIC + PDF + video shown as
+              kind-labeled tiles that open in a new tab. */}
+          {allFiles.length > 0 && (
             <div className="spark-card p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="display font-bold">
-                  Photos · {photos.length}
+                  Files · {allFiles.length}
                 </h3>
+                <p
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.16em",
+                    color: "rgba(255,255,255,0.45)",
+                  }}
+                >
+                  CLICK ANY TILE →
+                </p>
               </div>
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                {photos.slice(0, 24).map((p, i) => (
-                  <a
-                    key={p?.uuid ?? i}
-                    href={p?.file ?? "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block aspect-square rounded-lg overflow-hidden"
-                    style={{
-                      background: "rgba(255,255,255,0.04)",
-                      border: "1px solid var(--spark-border)",
-                    }}
-                  >
-                    {p?.file && (
-                      <img
-                        src={p.file}
-                        alt=""
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                  </a>
-                ))}
+                {allFiles.slice(0, 36).map((p, i) => {
+                  const kind = recapFileKind(p?.file);
+                  const url = recapFileUrl(p?.file);
+                  const labelByKind: Record<typeof kind, string> = {
+                    image: "",
+                    heic: "HEIC",
+                    pdf: "PDF",
+                    video: "VIDEO",
+                    other: "FILE",
+                  };
+                  return (
+                    <a
+                      key={p?.uuid ?? i}
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block aspect-square rounded-lg overflow-hidden relative"
+                      style={{
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid var(--spark-border)",
+                      }}
+                    >
+                      {kind === "image" ? (
+                        <img
+                          src={url}
+                          alt=""
+                          loading="lazy"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const t = e.currentTarget as HTMLImageElement;
+                            t.style.display = "none";
+                            t.parentElement?.setAttribute(
+                              "data-err",
+                              "1",
+                            );
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full grid place-items-center">
+                          <div className="text-center">
+                            <span
+                              className="mono"
+                              style={{
+                                fontSize: 10,
+                                letterSpacing: "0.16em",
+                                color: "var(--spark-lime)",
+                              }}
+                            >
+                              {labelByKind[kind]}
+                            </span>
+                            <p
+                              className="mono mt-1"
+                              style={{
+                                fontSize: 8,
+                                letterSpacing: "0.14em",
+                                color: "rgba(255,255,255,0.45)",
+                              }}
+                            >
+                              OPEN →
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </a>
+                  );
+                })}
               </div>
+              {allFiles.length > 36 && (
+                <p
+                  className="mt-3 mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.16em",
+                    color: "rgba(255,255,255,0.45)",
+                  }}
+                >
+                  + {allFiles.length - 36} more files
+                </p>
+              )}
             </div>
           )}
 

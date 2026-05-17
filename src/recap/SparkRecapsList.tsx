@@ -8,6 +8,7 @@ import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import { pickHeroImage } from "@/utils/recapFileUrl";
 
 /**
  * Spark v2 — Recaps list.
@@ -192,16 +193,9 @@ const RecapsListInner: React.FC<{
             n.event?.retailer?.location?.state?.code ??
             n.state?.code ??
             null;
-          // Pick the first image-typed file as the hero. file field is a
-          // URL when present.
-          const imageFile = (n.recapFiles ?? []).find((f) => {
-            const ext = (f?.fileType?.extension ?? "").toLowerCase();
-            const url = (f?.file ?? "").toLowerCase();
-            return (
-              ["jpg", "jpeg", "png", "webp", "gif"].includes(ext) ||
-              /\.(jpg|jpeg|png|webp|gif)(\?|$)/.test(url)
-            );
-          });
+          // Pick the first browser-renderable image, prepend GCS bucket
+          // URL via recapFileUrl(). HEIC/PDF aren't valid img sources.
+          const hero = pickHeroImage(n.recapFiles ?? []);
           return {
             uuid: String(n.uuid),
             name: n.name ?? n.event?.name ?? "Untitled recap",
@@ -209,7 +203,7 @@ const RecapsListInner: React.FC<{
             retailerName,
             stateCode,
             approved: Boolean(n.approved),
-            heroImage: imageFile?.file ?? null,
+            heroImage: hero,
             engagements: n.totalEngagements ?? null,
             productsSold: n.productsSold ?? null,
           };
