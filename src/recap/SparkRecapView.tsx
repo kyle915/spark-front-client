@@ -214,6 +214,127 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         <KpiTile icon="$" label="Products sold" value={fmtNum(productsSold)} />
       </div>
 
+      {/* Performance row — financial + qualitative signals */}
+      {(recap.totalEarnings != null ||
+        recap.accountSpendAmount != null ||
+        recap.totalCansSold != null ||
+        recap.totalPacksSold != null) && (
+        <div className="spark-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="display font-bold">Performance</h3>
+            <span
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.16em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              FIELD-LOGGED · UNITS + DOLLARS
+            </span>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <div>
+              <p className="label-mini">CANS SOLD</p>
+              <p
+                className="display tab-num font-bold mt-1"
+                style={{
+                  fontSize: "1.75rem",
+                  letterSpacing: "-0.03em",
+                  color: "var(--spark-lime)",
+                }}
+              >
+                {fmtNum(recap.totalCansSold)}
+              </p>
+            </div>
+            <div>
+              <p className="label-mini">PACKS SOLD</p>
+              <p
+                className="display tab-num font-bold mt-1"
+                style={{
+                  fontSize: "1.75rem",
+                  letterSpacing: "-0.03em",
+                }}
+              >
+                {fmtNum(recap.totalPacksSold)}
+              </p>
+            </div>
+            <div>
+              <p className="label-mini">REVENUE</p>
+              <p
+                className="display tab-num font-bold mt-1"
+                style={{
+                  fontSize: "1.75rem",
+                  letterSpacing: "-0.03em",
+                  color: "var(--spark-lime)",
+                }}
+              >
+                {typeof recap.totalEarnings === "number"
+                  ? `$${recap.totalEarnings.toLocaleString()}`
+                  : "—"}
+              </p>
+            </div>
+            <div>
+              <p className="label-mini">ACCOUNT SPEND</p>
+              <p
+                className="display tab-num font-bold mt-1"
+                style={{
+                  fontSize: "1.75rem",
+                  letterSpacing: "-0.03em",
+                }}
+              >
+                {typeof recap.accountSpendAmount === "number"
+                  ? `$${recap.accountSpendAmount.toLocaleString()}`
+                  : "—"}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Field intelligence — traffic + competitive presence */}
+      {(recap.trafficDescription || recap.competitivePresence) && (
+        <div className="grid lg:grid-cols-2 gap-5">
+          {recap.trafficDescription && (
+            <div className="spark-card p-6">
+              <p
+                className="mono text-[10px] mb-3"
+                style={{
+                  letterSpacing: "0.18em",
+                  color: "var(--spark-sky)",
+                }}
+              >
+                TRAFFIC · ON THE GROUND
+              </p>
+              <p
+                className="text-sm leading-relaxed"
+                style={{ color: "rgba(255,255,255,0.85)" }}
+              >
+                {recap.trafficDescription}
+              </p>
+            </div>
+          )}
+          {recap.competitivePresence && (
+            <div className="spark-card p-6">
+              <p
+                className="mono text-[10px] mb-3"
+                style={{
+                  letterSpacing: "0.18em",
+                  color: "var(--spark-orange)",
+                }}
+              >
+                COMPETITIVE PRESENCE
+              </p>
+              <p
+                className="text-sm leading-relaxed"
+                style={{ color: "rgba(255,255,255,0.85)" }}
+              >
+                {recap.competitivePresence}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Two-col: SKU + Photos + Notes | Team + Compare */}
       <div className="grid lg:grid-cols-[1fr_300px] gap-5">
         <div className="space-y-5">
