@@ -1,6 +1,7 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { Link, useLocation } from "react-router";
 import { useAuthStore } from "@/store/authStore";
+import TenantPicker from "./TenantPicker";
 
 /**
  * Spark v2 sidebar — wireframe-faithful version of spark-demo/index.html
@@ -248,23 +249,21 @@ export const SparkSidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Tenant — name display (dropdown switcher lands with CommandPalette) */}
+      {/* Tenant picker */}
       <div className="px-3 py-3 border-b border-base-300">
         <div className="label-mini mb-1.5">Tenant</div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-base-300/40 border border-base-300">
-          {tenantMeta?.logo ? (
-            <img
-              src={tenantMeta.logo}
-              alt=""
-              className="w-5 h-5 object-contain rounded-sm"
-            />
-          ) : (
-            <span className="w-5 h-5 rounded-sm bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center">
-              {tenantDisplay.slice(0, 2).toUpperCase()}
-            </span>
-          )}
-          <span className="text-sm truncate flex-1">{tenantDisplay}</span>
-        </div>
+        <Suspense
+          fallback={
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-base-300/40 border border-base-300">
+              <span className="w-5 h-5 rounded-sm bg-base-300" />
+              <span className="text-sm truncate flex-1 text-base-content/55">
+                {tenantDisplay}
+              </span>
+            </div>
+          }
+        >
+          <TenantPicker />
+        </Suspense>
       </div>
 
       {/* Nav — flat sections */}
