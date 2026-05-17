@@ -4,6 +4,7 @@ import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import TenantPicker from "./TenantPicker";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import useSidebarCounts from "@/hooks/useSidebarCounts";
 import {
   LayoutDashboard,
   ListChecks,
@@ -256,6 +257,56 @@ const onStub = (label: string) => {
   setTimeout(() => el.remove(), 2400);
 };
 
+// Inner component reads the counts query (suspending), then applies them
+// to nav items as chip badges before rendering the nav. Keeps the
+// Suspense boundary clean.
+const SidebarNav: React.FC<{
+  sections: NavSection[];
+  pathname: string;
+  isClient: boolean;
+  onStub: (label: string) => void;
+}> = ({ sections, pathname, isClient, onStub }) => {
+  const counts = useSidebarCounts();
+  const withChips: NavSection[] = sections.map((s) => ({
+    ...s,
+    items: s.items.map((it) => {
+      let chip: NavItem["chip"];
+      if (it.to === "/requests/list" && counts.tracker > 0)
+        chip = { text: String(counts.tracker), tone: "lime" };
+      if (it.to === "/approvals" && counts.approvals > 0)
+        chip = {
+          text: String(counts.approvals),
+          tone: "orange",
+        };
+      if (it.to === "/recaps/list" && counts.done30d > 0)
+        chip = { text: String(counts.done30d), tone: "lime" };
+      return chip ? { ...it, chip } : it;
+    }),
+  }));
+
+  return (
+    <nav className="flex-1 overflow-y-auto px-2 py-2 hide-scroll">
+      {withChips.map((section) => {
+        const activeInSection = section.items.some(
+          (it) => it.to && isActive(it.to, pathname),
+        );
+        return (
+          <CollapsibleNavSection
+            key={section.title}
+            section={section}
+            pathname={pathname}
+            defaultOpen={
+              isClient || section.title === "Workspace" || activeInSection
+            }
+            onStub={onStub}
+            isClient={isClient}
+          />
+        );
+      })}
+    </nav>
+  );
+};
+
 export const SparkSidebar: React.FC = () => {
   const { user, tenantMeta } = useAuthStore();
   const { pathname } = useLocation();
@@ -330,27 +381,40 @@ export const SparkSidebar: React.FC = () => {
       </div>
 
       {/* Nav — collapsed by default except Workspace and the section
-          containing the active route. Client view shows fewer sections,
-          all open since there are only ~3. */}
-      <nav className="flex-1 overflow-y-auto px-2 py-2 hide-scroll">
-        {visibleSections.map((section) => {
-          const activeInSection = section.items.some(
-            (it) => it.to && isActive(it.to, pathname),
-          );
-          return (
-            <CollapsibleNavSection
-              key={section.title}
-              section={section}
-              pathname={pathname}
-              defaultOpen={
-                isClient || section.title === "Workspace" || activeInSection
-              }
-              onStub={onStub}
-              isClient={isClient}
-            />
-          );
-        })}
-      </nav>
+          containing the active route. Counts on chip badges come from
+          useSidebarCounts (suspends on first load). */}
+      <Suspense
+        fallback={
+          <nav className="flex-1 overflow-y-auto px-2 py-2 hide-scroll">
+            {visibleSections.map((section) => {
+              const activeInSection = section.items.some(
+                (it) => it.to && isActive(it.to, pathname),
+              );
+              return (
+                <CollapsibleNavSection
+                  key={section.title}
+                  section={section}
+                  pathname={pathname}
+                  defaultOpen={
+                    isClient ||
+                    section.title === "Workspace" ||
+                    activeInSection
+                  }
+                  onStub={onStub}
+                  isClient={isClient}
+                />
+              );
+            })}
+          </nav>
+        }
+      >
+        <SidebarNav
+          sections={visibleSections}
+          pathname={pathname}
+          isClient={isClient}
+          onStub={onStub}
+        />
+      </Suspense>
 
       {/* Footer */}
       <div
