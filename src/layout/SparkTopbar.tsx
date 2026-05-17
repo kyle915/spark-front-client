@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
   ArrowRightEndOnRectangleIcon,
@@ -11,12 +11,13 @@ import { useAlertStore } from "@/store/alertStore";
 
 /**
  * Spark v2 topbar — wireframe-faithful version of spark-demo/index.html
- * (lines 467–490). Sticky, blur, monospace breadcrumb, ⌘K stub, public-form
- * link chip, user avatar + logout.
+ * lines 467–490.
  *
- * The ⌘K palette itself ships in a follow-up (CommandPalette). For now the
- * button is a visible affordance; click is a no-op stub.
+ *   spark.app / DASHBOARD                         [Search ⌘K] [Desktop|Mobile] [Admin|Client] avatar Logout
  */
+
+type Platform = "desktop" | "mobile";
+type Role = "admin" | "client";
 
 const useBreadcrumb = () => {
   const { pathname } = useLocation();
@@ -27,13 +28,60 @@ const useBreadcrumb = () => {
   }, [pathname]);
 };
 
+/** Pill-group toggle (lime fill on active, mono label). */
+const PillGroup: React.FC<{
+  options: { value: string; label: string; icon?: string }[];
+  value: string;
+  onChange: (v: string) => void;
+}> = ({ options, value, onChange }) => (
+  <div className="inline-flex items-center bg-base-300/40 border border-base-300 rounded-full p-0.5">
+    {options.map((o) => {
+      const on = o.value === value;
+      return (
+        <button
+          key={o.value}
+          onClick={() => onChange(o.value)}
+          className={[
+            "px-3 py-1 rounded-full text-xs transition flex items-center gap-1.5",
+            on
+              ? "bg-primary text-primary-content font-semibold"
+              : "text-base-content/65 hover:text-base-content",
+          ].join(" ")}
+        >
+          {o.icon && (
+            <span className="mono text-[11px]" aria-hidden>
+              {o.icon}
+            </span>
+          )}
+          <span>{o.label}</span>
+        </button>
+      );
+    })}
+  </div>
+);
+
 export const SparkTopbar: React.FC = () => {
   const { user, tenantMeta } = useAuthStore();
   const { showAlert } = useAlertStore();
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const crumb = useBreadcrumb();
-  const initial = (user?.firstName ?? user?.email ?? "U").charAt(0).toUpperCase();
+  const initial = (user?.firstName ?? user?.email ?? "U")
+    .charAt(0)
+    .toUpperCase();
+
+  // Toggles — persist in localStorage so they survive route changes.
+  const [platform, setPlatform] = useState<Platform>(
+    (localStorage.getItem("@spark.platform") as Platform) || "desktop",
+  );
+  const [role, setRole] = useState<Role>(
+    (localStorage.getItem("@spark.role") as Role) || "admin",
+  );
+  useEffect(
+    () => localStorage.setItem("@spark.platform", platform),
+    [platform],
+  );
+  useEffect(() => localStorage.setItem("@spark.role", role), [role]);
 
   const publicFormUrl = useMemo(() => {
     const slug = tenantMeta?.requestUrlName?.trim();
@@ -63,7 +111,7 @@ export const SparkTopbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-30 bg-base-100/80 backdrop-blur-xl border-b border-base-300 px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
-      {/* Left: breadcrumb + public form chip */}
+      {/* Left: breadcrumb + (optional) public form chip */}
       <div className="flex items-center gap-3 min-w-0">
         <span className="mono text-[11px] tracking-[0.18em] text-base-content/40">
           spark.app /
@@ -73,9 +121,9 @@ export const SparkTopbar: React.FC = () => {
         </span>
 
         {publicFormUrl && (
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-base-300/40 border border-base-300 text-xs ml-2">
+          <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-base-300/40 border border-base-300 text-xs ml-2">
             <span className="text-base-content/55">Public form</span>
-            <span className="font-medium text-primary truncate max-w-[180px]">
+            <span className="font-medium text-primary truncate max-w-[140px]">
               {tenantMeta?.requestUrlName}
             </span>
             <button
@@ -96,7 +144,7 @@ export const SparkTopbar: React.FC = () => {
         )}
       </div>
 
-      {/* Right: search stub + user + logout */}
+      {/* Right: ⌘K, platform toggle, role toggle, avatar, logout */}
       <div className="flex items-center gap-2 flex-wrap">
         <button
           onClick={() =>
@@ -111,6 +159,24 @@ export const SparkTopbar: React.FC = () => {
           </span>
         </button>
 
+        <PillGroup
+          value={platform}
+          onChange={(v) => setPlatform(v as Platform)}
+          options={[
+            { value: "desktop", label: "Desktop", icon: "▢" },
+            { value: "mobile", label: "Mobile", icon: "▯" },
+          ]}
+        />
+
+        <PillGroup
+          value={role}
+          onChange={(v) => setRole(v as Role)}
+          options={[
+            { value: "admin", label: "Admin", icon: "⚒" },
+            { value: "client", label: "Client", icon: "◐" },
+          ]}
+        />
+
         <div className="w-8 h-8 rounded-full bg-primary text-primary-content text-xs font-bold flex items-center justify-center">
           {initial}
         </div>
@@ -120,7 +186,7 @@ export const SparkTopbar: React.FC = () => {
           className="btn btn-ghost btn-sm text-base-content hover:text-error flex items-center gap-1"
         >
           <ArrowRightEndOnRectangleIcon className="w-4 h-4" />
-          <span className="hidden sm:block">Logout</span>
+          <span className="hidden md:block">Logout</span>
         </button>
       </div>
     </header>

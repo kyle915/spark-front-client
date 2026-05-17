@@ -1,15 +1,16 @@
-import React, { type ReactNode, useEffect, useState } from "react";
-import { useAuthStore } from "@/store/authStore";
+import React, { type ReactNode } from "react";
 import { PageTransition } from "./PageTransition";
-import useTenantTheme from "@/hooks/useTenantTheme";
-import { type TenantColorScheme } from "@utils/tenantThemeConfig";
 import SparkSidebar from "./SparkSidebar";
 import SparkTopbar from "./SparkTopbar";
 
 /**
- * Spark v2 layout shell. Combines the new SparkSidebar + SparkTopbar so the
- * whole app renders inside the wireframe chrome. The legacy sidebar/topbar
- * code lives in git history (commit 4ccb5cc).
+ * Spark v2 layout shell. SparkSidebar + SparkTopbar render the wireframe
+ * chrome. The legacy sidebar/topbar code is preserved in git history.
+ *
+ * Note: useTenantTheme is intentionally NOT called here. It was overriding
+ * the spark-v2 theme tokens (e.g. lime primary) with per-tenant brand colors
+ * (Liquid Death's blue). The admin shell should always be Spark v2 lime —
+ * tenant-brand theming is for client-facing content panels, not the chrome.
  */
 
 interface LayoutProps {
@@ -17,28 +18,6 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
-    (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark",
-  );
-  const { tenantId } = useAuthStore();
-
-  useTenantTheme({
-    tenantId,
-    colorScheme,
-    enabled: Boolean(tenantId),
-  });
-
-  useEffect(() => {
-    const saved = localStorage.getItem(
-      "@color-scheme",
-    ) as TenantColorScheme | null;
-    if (saved) setColorScheme(saved);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("@color-scheme", colorScheme);
-  }, [colorScheme]);
-
   return (
     <div className="flex h-screen bg-base-200 text-base-content">
       <SparkSidebar />
