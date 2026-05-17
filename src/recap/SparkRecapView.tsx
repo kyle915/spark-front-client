@@ -5,6 +5,7 @@ import Layout from "@/layout/Layout";
 import { RecapQuery } from "@/api/queries/RecapQuery";
 import type { RecapQuery as RecapQueryType } from "@api/queries/__generated__/RecapQuery.graphql";
 import { recapFileKind, recapFileUrl } from "@/utils/recapFileUrl";
+import HeicImage from "./HeicImage";
 
 /**
  * Spark v2 — Recap Detail.
@@ -310,11 +311,12 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                           onError={(e) => {
                             const t = e.currentTarget as HTMLImageElement;
                             t.style.display = "none";
-                            t.parentElement?.setAttribute(
-                              "data-err",
-                              "1",
-                            );
                           }}
+                        />
+                      ) : kind === "heic" ? (
+                        <HeicImage
+                          url={url}
+                          className="w-full h-full object-cover"
                         />
                       ) : (
                         <div className="w-full h-full grid place-items-center">

@@ -120,10 +120,25 @@ const ADMIN_ROSTER: Mentionable[] = [
   { id: "manuela", name: "Manuela C.", email: "manuela@igniteproductions.co" },
 ];
 
+const fmtGroupHeading = (raw: string): string => {
+  if (!raw) return "Undated";
+  try {
+    return new Date(raw).toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return raw;
+  }
+};
+
 const TrackerTable: React.FC<{
   rows: Row[];
   mentionables: Mentionable[];
-}> = ({ rows, mentionables }) => {
+  groupBy: "none" | "date";
+}> = ({ rows, mentionables, groupBy }) => {
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -175,7 +190,32 @@ const TrackerTable: React.FC<{
                 </td>
               </tr>
             )}
-            {rows.map((r) => {
+            {rows.map((r, rowIdx) => {
+              // Date-group headers — insert when the date changes vs the
+              // previous row. Rows are already in DB order; for date grouping
+              // we rely on that ordering being date-sorted (descending).
+              const prevDate = rowIdx > 0 ? rows[rowIdx - 1].date.slice(0, 10) : "";
+              const thisDate = r.date.slice(0, 10);
+              const showGroupHeader =
+                groupBy === "date" && thisDate !== prevDate;
+              const headerEl = showGroupHeader ? (
+                <tr key={`hdr-${rowIdx}`}>
+                  <td
+                    colSpan={10}
+                    className="px-4 py-3 mono"
+                    style={{
+                      letterSpacing: "0.16em",
+                      fontSize: 11,
+                      color: "var(--spark-lime)",
+                      background: "rgba(197,245,70,0.04)",
+                      borderTop: "1px solid var(--spark-border)",
+                      borderBottom: "1px solid var(--spark-border)",
+                    }}
+                  >
+                    {fmtGroupHeading(thisDate).toUpperCase()}
+                  </td>
+                </tr>
+              ) : null;
               const slug = r.statusSlug.toLowerCase();
               const isDone = slug === "done";
               const chipClass = STATUS_CHIP[slug] ?? "chip chip-muted";
@@ -205,6 +245,7 @@ const TrackerTable: React.FC<{
               };
               return (
                 <React.Fragment key={r.uuid}>
+                {headerEl}
                 <tr
                   className="cursor-pointer transition"
                   style={{ borderBottom: "1px solid var(--spark-border)" }}
@@ -322,9 +363,17 @@ const MasterTrackerInner: React.FC<{
   activeStatus: string;
   search: string;
   rmmFilter: string;
+  groupBy: "none" | "date";
   mentionables: Mentionable[];
   onCountsChange: (counts: Record<string, number>, total: number) => void;
-}> = ({ activeStatus, search, rmmFilter, mentionables, onCountsChange }) => {
+}> = ({
+  activeStatus,
+  search,
+  rmmFilter,
+  groupBy,
+  mentionables,
+  onCountsChange,
+}) => {
   const { tenantId } = useAuthStore();
 
   // Fetch a large page so all current requests render. Real pagination
@@ -388,7 +437,9 @@ const MasterTrackerInner: React.FC<{
     onCountsChange(counts, total);
   }, [allRows, data?.requests?.totalCount, onCountsChange]);
 
-  return <TrackerTable rows={rows} mentionables={mentionables} />;
+  return (
+    <TrackerTable rows={rows} mentionables={mentionables} groupBy={groupBy} />
+  );
 };
 
 /* ─────────────────────────── PAGE ────────────────────────────── */
@@ -453,7 +504,9 @@ export default function MasterTracker() {
   const { tenantId } = useAuthStore();
   const { isClient } = useSparkRole();
   const [activeStatus, setActiveStatus] = useState<string>("active");
-  const [groupBy, setGroupBy] = useState<"none" | "date" | "rmm">("none");
+  // "By RMM" group is on the roadmap — needs rmmAsigned info per row,
+  // which requires extending RequestsQuery.
+  const [groupBy, setGroupBy] = useState<"none" | "date">("none");
   const [search, setSearch] = useState<string>("");
   const [rmmFilter, setRmmFilter] = useState<string>("all");
   const [rmmList, setRmmList] = useState<Mentionable[]>([]);
@@ -596,12 +649,6 @@ export default function MasterTracker() {
             >
               By date
             </button>
-            <button
-              onClick={() => setGroupBy("rmm")}
-              className={`pill-btn ${groupBy === "rmm" ? "on" : ""}`}
-            >
-              By RMM
-            </button>
           </div>
           {tenantId && (
             <Suspense fallback={null}>
@@ -680,6 +727,7 @@ export default function MasterTracker() {
             activeStatus={activeStatus}
             search={search}
             rmmFilter={rmmFilter}
+            groupBy={groupBy}
             mentionables={[...rmmList, ...ADMIN_ROSTER]}
             onCountsChange={handleCounts}
           />
