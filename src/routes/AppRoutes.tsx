@@ -86,6 +86,7 @@ import SparkCalendar from "@/components/pages/calendar/SparkCalendar";
 import SparkApprovals from "@/components/pages/approvals/SparkApprovals";
 import SparkSettings from "@/components/pages/settings/SparkSettings";
 import SparkJobs from "@/components/pages/jobs/SparkJobs";
+import SparkRequestCreate from "@/requests/SparkRequestCreate";
 import RecapCustomList from "@/recap/RecapCustomList";
 import RecapView from "@/recap/RecapView";
 // import EditRecap from "@/recap/EditRecap";
@@ -192,6 +193,11 @@ const RequestsLinks = {
     },
     {
       path: "/requests/create",
+      component: <SparkRequestCreate />,
+      isPublic: false,
+    },
+    {
+      path: "/requests/create-detailed",
       component: <CreateRequest />,
       isPublic: false,
     },
