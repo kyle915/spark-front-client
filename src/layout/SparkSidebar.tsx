@@ -366,7 +366,7 @@ export const SparkSidebar: React.FC = () => {
             className="mono text-[10px] truncate"
             style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.4)" }}
           >
-            IGNITE PRODUCTIONS
+            {isClient ? "CLIENT VIEW" : "IGNITE PRODUCTIONS"}
           </p>
         </div>
       </div>

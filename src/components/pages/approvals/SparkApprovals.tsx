@@ -5,6 +5,7 @@ import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import useSparkRole from "@/hooks/useSparkRole";
 
 /**
  * Spark v2 — Approvals.
@@ -196,6 +197,9 @@ const ApprovalsInner: React.FC = () => {
 /* ─────────────────── page ─────────────────── */
 
 export default function SparkApprovals() {
+  // Approvals are admin-only; route is also wrapped in AdminOnly. Keep the
+  // hook usage in case it's referenced elsewhere; auth gate at route level.
+  void useSparkRole;
   return (
     <Layout>
       <div className="space-y-6 max-w-5xl">
