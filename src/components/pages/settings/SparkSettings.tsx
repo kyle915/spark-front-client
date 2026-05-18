@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
+import { useAlertStore } from "@/store/alertStore";
 
 /**
  * Spark v2 — Settings (Workspace).
@@ -22,15 +23,72 @@ const TZ_OPTIONS = [
   "America/Phoenix",
 ];
 
+// localStorage keys for the per-user UI prefs that don't yet have a
+// backend home. Scoped under @spark.settings.* so we can add a real
+// tenant-level save later without colliding.
+const TZ_KEY = "@spark.settings.timezone";
+const CUR_KEY = "@spark.settings.currency";
+const ACTIVATION_KEY = "@spark.settings.activations";
+
+const readJson = <T,>(key: string, fallback: T): T => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+};
+
+const readString = (key: string, fallback: string): string => {
+  try {
+    return localStorage.getItem(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 export default function SparkSettings() {
   const { tenantMeta } = useAuthStore();
-  const [tzSel, setTzSel] = useState("America/Chicago");
-  const [curSel, setCurSel] = useState("USD ($)");
-  const [enabled, setEnabled] = useState<Record<string, boolean>>({
-    retail: true,
-    onprem: true,
-    event: true,
-  });
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [tzSel, setTzSel] = useState(() =>
+    readString(TZ_KEY, "America/Chicago"),
+  );
+  const [curSel, setCurSel] = useState(() =>
+    readString(CUR_KEY, "USD ($)"),
+  );
+  const [enabled, setEnabled] = useState<Record<string, boolean>>(() =>
+    readJson<Record<string, boolean>>(ACTIVATION_KEY, {
+      retail: true,
+      onprem: true,
+      event: true,
+    }),
+  );
+
+  // Persist on change so a refresh doesn't reset choices. Quiet —
+  // no toast for routine prefs; we'd over-notify.
+  useEffect(() => {
+    try {
+      localStorage.setItem(TZ_KEY, tzSel);
+    } catch {
+      /* ignore quota */
+    }
+  }, [tzSel]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(CUR_KEY, curSel);
+    } catch {
+      /* ignore */
+    }
+  }, [curSel]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(ACTIVATION_KEY, JSON.stringify(enabled));
+    } catch {
+      /* ignore */
+    }
+  }, [enabled]);
+  void showAlert;
 
   const slug = tenantMeta?.requestUrlName ?? "—";
   const displayName = slug
