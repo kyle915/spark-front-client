@@ -6,7 +6,7 @@ import { RecapQuery } from "@/api/queries/RecapQuery";
 import type { RecapQuery as RecapQueryType } from "@api/queries/__generated__/RecapQuery.graphql";
 import { GenerateRecapPdfMutation } from "@/api/mutations/GenerateRecapPdfMutation";
 import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateRecapPdfMutation.graphql";
-import { recapFileKind, recapFileUrl } from "@/utils/recapFileUrl";
+import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
 import { useAlertStore } from "@/store/alertStore";
 import HeicImage from "./HeicImage";
 import RecapUploader from "./RecapUploader";
@@ -765,7 +765,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                 {allFiles.slice(0, 36).map((p, i) => {
                   const kind = recapFileKind(p?.file);
-                  const url = recapFileUrl(p?.file);
+                  const url = recapFileUrlFresh(p?.file);
                   const labelByKind: Record<typeof kind, string> = {
                     image: "",
                     heic: "HEIC",

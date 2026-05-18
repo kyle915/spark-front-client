@@ -44,6 +44,24 @@ export const recapFileUrl = (path: string | null | undefined): string => {
 };
 
 /**
+ * Same as recapFileUrl but appends a one-time cache-buster query string.
+ * Use sparingly — only when you've changed bucket permissions and need
+ * to force the browser to re-fetch URLs that previously 403'd.
+ *
+ * The build version is baked at compile time; each new deploy invalidates
+ * cached failures without thrashing on every render.
+ */
+const CACHE_BUST =
+  (import.meta as { env?: Record<string, string> }).env?.VITE_RECAP_CACHE_BUST ??
+  "v2";
+export const recapFileUrlFresh = (path: string | null | undefined): string => {
+  const url = recapFileUrl(path);
+  if (!url) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}cb=${CACHE_BUST}`;
+};
+
+/**
  * Pick the best hero image candidate from a list of recap files.
  * Order of preference:
  *   1. .jpg/.png/.webp/.gif — browsers can render directly
@@ -55,7 +73,7 @@ export const pickHeroImage = (
 ): string | null => {
   for (const f of files) {
     if (!f?.file) continue;
-    if (recapFileKind(f.file) === "image") return recapFileUrl(f.file);
+    if (recapFileKind(f.file) === "image") return recapFileUrlFresh(f.file);
   }
   return null;
 };

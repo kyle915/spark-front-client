@@ -4,12 +4,16 @@ import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { EventsQuery } from "@/api/queries/EventsQuery";
 import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
+import { RequestsQuery } from "@/api/queries/RequestsQuery";
+import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 
 /**
- * "Upcoming events" — next 7 days, grouped by day. Shows event info,
- * BA assignment, and link to detail. Visible to both admin + client.
+ * "Upcoming events" — next 7 days, grouped by day. Combines two sources:
+ *  - Approved/scheduled events from EventsQuery (event row already exists)
+ *  - Pending/queue/approved requests from RequestsQuery (no event row yet)
+ * so admins see what's locked in AND what's still working through approval.
  */
 
 const fmtDay = (d: Date) =>
@@ -33,13 +37,13 @@ type Row = {
   uuid: string;
   name: string;
   date: string;
-  dateLabel: string;
   startTime: string;
   endTime: string;
   retailer: string;
-  state: string;
   status: string;
+  source: "event" | "request";
   isToday: boolean;
+  isPending: boolean;
 };
 
 const Inner: React.FC = () => {
@@ -58,51 +62,84 @@ const Inner: React.FC = () => {
 
   const fmtIso = (d: Date) => d.toISOString().slice(0, 10);
 
-  const data = useLazyLoadQuery<EventsQueryType>(
+  const eventsData = useLazyLoadQuery<EventsQueryType>(
     EventsQuery,
     {
       first: 200,
       filters: tenantId
-        ? {
-            tenantId,
-            startDate: fmtIso(today),
-            endDate: fmtIso(end),
-          }
+        ? { tenantId, startDate: fmtIso(today), endDate: fmtIso(end) }
         : null,
     },
     { fetchPolicy: "store-or-network" },
   );
 
-  const rows: Row[] = useMemo(() => {
-    return (
-      data?.events?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
-        ?.filter((n) => {
-          if (!n.date) return false;
-          const d = new Date(n.date);
-          return d >= today && d <= end;
-        })
-        ?.map((n) => {
-          const d = new Date(n.date!);
-          return {
-            uuid: String(n.uuid),
-            name: n.name ?? "Untitled",
-            date: n.date ?? "",
-            dateLabel: fmtDay(d),
-            startTime: fmtTime12(n.startTime),
-            endTime: fmtTime12(n.endTime),
-            retailer: n.request?.retailer?.name ?? n.address ?? "—",
-            state: "",
-            status: n.status?.name ?? "Scheduled",
-            isToday: d.toDateString() === today.toDateString(),
-          };
-        })
-        ?.sort((a, b) => a.date.localeCompare(b.date)) ?? []
-    );
-  }, [data, today, end]);
+  const requestsData = useLazyLoadQuery<RequestsQueryType>(
+    RequestsQuery,
+    { first: 500, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
 
-  // Group by day
+  const rows: Row[] = useMemo(() => {
+    const out: Row[] = [];
+
+    // 1. Scheduled / approved events with a real event row.
+    const events =
+      eventsData?.events?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+    for (const n of events) {
+      if (!n.date) continue;
+      const d = new Date(n.date);
+      if (d < today || d > end) continue;
+      out.push({
+        uuid: String(n.uuid),
+        name: n.name ?? "Untitled",
+        date: n.date,
+        startTime: fmtTime12(n.startTime),
+        endTime: fmtTime12(n.endTime),
+        retailer: n.request?.retailer?.name ?? n.address ?? "—",
+        status: n.status?.name ?? "Scheduled",
+        source: "event",
+        isToday: d.toDateString() === today.toDateString(),
+        isPending: false,
+      });
+    }
+
+    // 2. Pending/queue/approved requests in the same window that haven't
+    //    been promoted to events yet. Avoid duplicates by checking the
+    //    event.uuid set we already added.
+    const seenEventUuids = new Set(out.map((r) => r.uuid));
+    const requests =
+      requestsData?.requests?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+    for (const r of requests) {
+      if (!r.date) continue;
+      const d = new Date(r.date);
+      if (d < today || d > end) continue;
+      const slug = (r.status?.slug ?? r.status?.name ?? "")
+        .toString()
+        .toLowerCase();
+      // Skip rows already covered by events query and skip done/declined.
+      if (r.event?.uuid && seenEventUuids.has(String(r.event.uuid))) continue;
+      if (slug === "done" || slug === "completed" || slug === "declined") continue;
+      out.push({
+        uuid: String(r.uuid),
+        name: r.retailer?.name ?? r.name ?? "Untitled",
+        date: r.date,
+        startTime: r.startTime ? fmtTime12(r.startTime) : "",
+        endTime: r.endTime ? fmtTime12(r.endTime) : "",
+        retailer: r.retailer?.name ?? r.address ?? "—",
+        status: r.status?.name ?? "Pending",
+        source: "request",
+        isToday: d.toDateString() === today.toDateString(),
+        isPending: slug === "pending" || slug === "queue",
+      });
+    }
+
+    return out.sort((a, b) => a.date.localeCompare(b.date));
+  }, [eventsData, requestsData, today, end]);
+
   const groups = useMemo(() => {
     const map = new Map<string, Row[]>();
     for (const r of rows) {
@@ -156,59 +193,66 @@ const Inner: React.FC = () => {
                   color: "rgba(255,255,255,0.45)",
                 }}
               >
-                {items.length} EVENT{items.length === 1 ? "" : "S"}
+                {items.length} ITEM{items.length === 1 ? "" : "S"}
               </span>
             </div>
             <div className="space-y-2">
-              {items.map((r) => (
-                <div
-                  key={r.uuid}
-                  onClick={() => navigate(`/event/view/${r.uuid}`)}
-                  className="spark-card hov p-4 cursor-pointer flex items-center gap-4"
-                >
+              {items.map((r) => {
+                const color = r.isToday
+                  ? "var(--spark-lime)"
+                  : r.isPending
+                    ? "var(--spark-orange)"
+                    : "var(--spark-sky)";
+                return (
                   <div
-                    className="shrink-0 w-1 self-stretch rounded-full"
-                    style={{
-                      background: r.isToday
-                        ? "var(--spark-lime)"
-                        : "var(--spark-sky)",
-                      boxShadow: r.isToday
-                        ? "0 0 8px var(--spark-lime)"
-                        : "0 0 6px var(--spark-sky)",
-                    }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate">{r.name}</p>
-                    <p
-                      className="mono text-[10px] uppercase mt-0.5 truncate"
+                    key={`${r.source}-${r.uuid}`}
+                    onClick={() =>
+                      r.source === "event"
+                        ? navigate(`/event/view/${r.uuid}`)
+                        : navigate(r.isPending ? "/approvals" : "/requests/list")
+                    }
+                    className="spark-card hov p-4 cursor-pointer flex items-center gap-4"
+                  >
+                    <div
+                      className="shrink-0 w-1 self-stretch rounded-full"
                       style={{
-                        letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.55)",
+                        background: color,
+                        boxShadow: `0 0 8px ${color}`,
                       }}
-                    >
-                      {r.retailer}
-                      {r.state ? ` · ${r.state}` : ""}
-                    </p>
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate">{r.name}</p>
+                      <p
+                        className="mono text-[10px] uppercase mt-0.5 truncate"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "rgba(255,255,255,0.55)",
+                        }}
+                      >
+                        {r.retailer}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-semibold">
+                        {r.startTime || "—"}
+                        {r.endTime ? ` – ${r.endTime}` : ""}
+                      </p>
+                      <p
+                        className="mono text-[10px] mt-0.5"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color,
+                        }}
+                      >
+                        {r.status.toUpperCase()}
+                        {r.source === "request" && (
+                          <span style={{ opacity: 0.7 }}> · NO EVENT YET</span>
+                        )}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold">
-                      {r.startTime || "—"}
-                      {r.endTime ? ` – ${r.endTime}` : ""}
-                    </p>
-                    <p
-                      className="mono text-[10px] mt-0.5"
-                      style={{
-                        letterSpacing: "0.14em",
-                        color: r.isToday
-                          ? "var(--spark-lime)"
-                          : "var(--spark-sky)",
-                      }}
-                    >
-                      {r.status.toUpperCase()}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         );
@@ -230,7 +274,7 @@ export default function SparkUpcomingEvents() {
               color: "rgba(255,255,255,0.45)",
             }}
           >
-            NEXT 7 DAYS
+            NEXT 7 DAYS · APPROVED + PENDING
           </p>
           <h1
             className="display text-4xl font-bold mt-2"
@@ -239,8 +283,10 @@ export default function SparkUpcomingEvents() {
             {isClient ? "Your upcoming activations." : "Upcoming events."}
           </h1>
           <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
-            Every event in the next 7 days, grouped by day. Click any row
-            for the full brief.
+            Approved events + pending approvals coming up in the next 7
+            days, grouped by day. Pending rows route to{" "}
+            <span className="mono">/approvals</span>; approved rows open
+            the event brief.
           </p>
         </div>
         <Suspense
