@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
@@ -328,21 +328,6 @@ const Inner: React.FC = () => {
     </div>
   );
 };
-
-// Sentinel so the unread badge on the nav can update when this page loads.
-// Wired here instead of in a global store to keep the page self-contained.
-function useDispatchUnreadCountEffect(count: number) {
-  useEffect(() => {
-    try {
-      window.dispatchEvent(
-        new CustomEvent("spark:alerts:unread", { detail: count }),
-      );
-    } catch {
-      /* ignore */
-    }
-  }, [count]);
-}
-void useDispatchUnreadCountEffect;
 
 export default function SparkAlerts() {
   return (

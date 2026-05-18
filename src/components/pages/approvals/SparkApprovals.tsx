@@ -187,13 +187,14 @@ const ApprovalsInner: React.FC = () => {
 
   // Derive everything from the same dataset so the stats reflect what
   // the queue actually sees (no double-fetch, no stale numbers).
-  const { pendingRows, stats } = useMemo(() => {
+  const { pendingRows, recentlyDecided, stats } = useMemo(() => {
     const allNodes =
       data?.requests?.edges
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
 
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     let pending = 0;
     let approvedLast30 = 0;
     let declinedLast30 = 0;
@@ -202,6 +203,7 @@ const ApprovalsInner: React.FC = () => {
     const slaMs = 24 * 60 * 60 * 1000; // 24h decision SLA
 
     const pendingNodes = [] as typeof allNodes;
+    const decidedRecent: { n: (typeof allNodes)[number]; slug: string; updated: number }[] = [];
 
     for (const n of allNodes) {
       const slug = (n.status?.slug ?? n.status?.name ?? "").toLowerCase();
@@ -219,11 +221,22 @@ const ApprovalsInner: React.FC = () => {
           decidedCount += 1;
           if (updated - created <= slaMs) withinSlaCount += 1;
         }
+        if (
+          Number.isFinite(updated) &&
+          Number.isFinite(created) &&
+          updated >= sevenDaysAgo &&
+          updated - created > 5_000 // skip auto-approves
+        ) {
+          decidedRecent.push({ n, slug, updated });
+        }
       } else if (slug === "declined") {
         if (recent) declinedLast30 += 1;
         if (Number.isFinite(updated) && Number.isFinite(created)) {
           decidedCount += 1;
           if (updated - created <= slaMs) withinSlaCount += 1;
+        }
+        if (Number.isFinite(updated) && updated >= sevenDaysAgo) {
+          decidedRecent.push({ n, slug, updated });
         }
       }
     }
@@ -231,7 +244,7 @@ const ApprovalsInner: React.FC = () => {
     const slaPct =
       decidedCount > 0 ? Math.round((withinSlaCount / decidedCount) * 100) : null;
 
-    const pendingRows: Row[] = pendingNodes.slice(0, 200).map((n) => {
+    const toRow = (n: (typeof allNodes)[number]): Row => {
       const market =
         n.retailer?.location?.name ?? n.location?.name ?? "—";
       const stateCode = n.retailer?.location?.state?.code ?? n.state?.code;
@@ -247,10 +260,20 @@ const ApprovalsInner: React.FC = () => {
         source: "external" as const,
         statusNote: `Awaiting review · ${n.status?.name ?? "Pending"}`,
       };
-    });
+    };
+
+    const pendingRows: Row[] = pendingNodes.slice(0, 200).map(toRow);
+
+    decidedRecent.sort((a, b) => b.updated - a.updated);
+    const recentlyDecided = decidedRecent.slice(0, 12).map((d) => ({
+      row: toRow(d.n),
+      slug: d.slug,
+      updated: d.updated,
+    }));
 
     return {
       pendingRows,
+      recentlyDecided,
       stats: {
         pending,
         approvedLast30,
@@ -260,12 +283,28 @@ const ApprovalsInner: React.FC = () => {
     };
   }, [data]);
 
+  // Quick-filter the pending queue by venue / requester / req-id.
+  const [search, setSearch] = useState("");
+  const matchesSearch = (r: Row, q: string) => {
+    if (!q) return true;
+    const needle = q.toLowerCase();
+    return (
+      r.venue.toLowerCase().includes(needle) ||
+      r.requester.toLowerCase().includes(needle) ||
+      r.reqId.toLowerCase().includes(needle) ||
+      r.locationDate.toLowerCase().includes(needle)
+    );
+  };
+
   // Local removal so we don't have to round-trip the page after each
   // decision — the row simply disappears with a tiny fade.
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const rows = useMemo(
-    () => pendingRows.filter((r) => !removedIds.has(r.id)),
-    [pendingRows, removedIds],
+    () =>
+      pendingRows
+        .filter((r) => !removedIds.has(r.id))
+        .filter((r) => matchesSearch(r, search)),
+    [pendingRows, removedIds, search],
   );
 
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -378,16 +417,145 @@ const ApprovalsInner: React.FC = () => {
     </div>
   );
 
+  const SearchBar = (
+    <div className="spark-card px-4 py-3">
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search pending queue — venue, requester, REQ-id…"
+        className="w-full bg-transparent text-sm focus:outline-none"
+        style={{ color: "var(--spark-text)" }}
+      />
+    </div>
+  );
+
+  const RecentlyDecided = recentlyDecided.length === 0 ? null : (
+    <div className="spark-card overflow-hidden">
+      <div
+        className="px-5 py-3 flex items-center justify-between"
+        style={{ borderBottom: "1px solid var(--spark-border)" }}
+      >
+        <p
+          className="mono text-[10px]"
+          style={{
+            letterSpacing: "0.18em",
+            color: "rgba(255,255,255,0.55)",
+          }}
+        >
+          RECENTLY DECIDED · LAST 7D
+        </p>
+        <span
+          className="mono text-[10px]"
+          style={{
+            letterSpacing: "0.14em",
+            color: "rgba(255,255,255,0.4)",
+          }}
+        >
+          {recentlyDecided.length} ITEMS
+        </span>
+      </div>
+      <ul>
+        {recentlyDecided.map((d, i) => {
+          const isApproved = d.slug === "approved";
+          const color = isApproved ? "var(--spark-lime)" : "var(--spark-orange)";
+          const label = isApproved ? "✓ APPROVED" : "✗ DECLINED";
+          const when = (() => {
+            const diffMs = Date.now() - d.updated;
+            const mins = Math.floor(diffMs / 60_000);
+            if (mins < 60) return `${Math.max(1, mins)}m ago`;
+            const hrs = Math.floor(mins / 60);
+            if (hrs < 24) return `${hrs}h ago`;
+            const days = Math.floor(hrs / 24);
+            return `${days}d ago`;
+          })();
+          return (
+            <li
+              key={d.row.uuid}
+              onClick={() => navigate(`/request/view/${d.row.uuid}`)}
+              className="px-5 py-3 cursor-pointer transition"
+              style={{
+                borderBottom:
+                  i < recentlyDecided.length - 1
+                    ? "1px solid var(--spark-border)"
+                    : "none",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = "rgba(255,255,255,0.03)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = "transparent")
+              }
+            >
+              <div className="flex items-center gap-3 flex-wrap">
+                <span
+                  className="mono text-[10px] px-2 py-1 rounded-md"
+                  style={{
+                    letterSpacing: "0.14em",
+                    background: `${color}1a`,
+                    border: `1px solid ${color}40`,
+                    color,
+                  }}
+                >
+                  {label}
+                </span>
+                <span
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "rgba(255,255,255,0.55)",
+                  }}
+                >
+                  {d.row.reqId}
+                </span>
+                <span className="text-sm font-semibold flex-1 min-w-0 truncate">
+                  {d.row.venue}
+                </span>
+                <span
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "rgba(255,255,255,0.4)",
+                  }}
+                >
+                  {when.toUpperCase()}
+                </span>
+              </div>
+              <p
+                className="text-xs mt-1"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
+                {d.row.locationDate} · {d.row.requester}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+
   if (rows.length === 0) {
     return (
       <div className="space-y-6">
         {StatsGrid}
-        <div
-          className="spark-card p-8 text-center text-sm"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          Nothing in the approval queue. Nice work.
-        </div>
+        {pendingRows.length > 0 && search ? (
+          <>
+            {SearchBar}
+            <div
+              className="spark-card p-8 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              No pending requests match "{search}".
+            </div>
+          </>
+        ) : (
+          <div
+            className="spark-card p-8 text-center text-sm"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            Nothing in the approval queue. Nice work.
+          </div>
+        )}
+        {RecentlyDecided}
       </div>
     );
   }
@@ -395,6 +563,7 @@ const ApprovalsInner: React.FC = () => {
   return (
     <div className="space-y-6">
       {StatsGrid}
+      {pendingRows.length > 4 && SearchBar}
       <div className="space-y-3">
       {rows.map((r) => (
         <ApprovalRow
@@ -408,6 +577,8 @@ const ApprovalsInner: React.FC = () => {
       ))}
 
       </div>
+
+      {RecentlyDecided}
 
       {/* Approve confirmation — in Spark chrome instead of browser-native
           confirm(). Surfaces what actually happens downstream so kyle
