@@ -478,14 +478,17 @@ export default function SparkReports() {
                   {r.method.toUpperCase()}
                 </p>
                 <button
+                  disabled
+                  title="Scheduled-exports backend ships in the next sprint"
                   className="mt-3 w-full px-3 py-2 rounded-xl text-xs transition"
                   style={{
                     background: "transparent",
-                    color: "var(--spark-text)",
+                    color: "rgba(255,255,255,0.4)",
                     border: "1px solid var(--spark-border)",
+                    cursor: "not-allowed",
                   }}
                 >
-                  Manage →
+                  Manage → (soon)
                 </button>
               </div>
             ))}
