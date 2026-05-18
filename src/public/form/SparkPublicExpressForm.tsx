@@ -203,9 +203,10 @@ export default function SparkPublicExpressForm() {
               onChange={setVenue}
               bias="establishment"
               onResolved={(p) => {
-                // When the BA picks a real store from the suggestions,
-                // auto-fill the address + timezone too — saves a step.
-                setVenue(p.formattedAddress.split(",")[0] || p.formattedAddress);
+                // Set the venue to the canonical retailer name (no
+                // location suffix) so metrics aggregate by chain.
+                // The full address goes into the Address field.
+                setVenue(p.retailerName || p.placeName || "");
                 if (!address) setAddress(p.formattedAddress);
                 if (p.timezoneId) {
                   const match = matchTimezoneOption(p.timezoneId, timeZones);

@@ -18,6 +18,13 @@ import { useEffect, useId, useRef, useState } from "react";
  */
 
 export type ResolvedPlace = {
+  /** Google's `name` field on a Place (e.g. "Whole Foods Market",
+   *  "7-Eleven"). Empty for raw addresses with no establishment. */
+  placeName?: string;
+  /** Canonical retailer / chain name with location suffixes stripped
+   *  (e.g. "Whole Foods Market" from "Whole Foods Market – Brentwood
+   *  #1234"). Falls back to placeName, then the first comma segment. */
+  retailerName?: string;
   formattedAddress: string;
   lat: number;
   lng: number;
@@ -26,6 +33,26 @@ export type ResolvedPlace = {
   zip?: string;
   /** IANA tz id, e.g. "America/Chicago". Empty if the lookup failed. */
   timezoneId?: string;
+};
+
+/**
+ * Normalize a Google establishment name to a clean retailer brand.
+ *   "Whole Foods Market - Brentwood"  → "Whole Foods Market"
+ *   "Target Store T-1234"              → "Target"
+ *   "7-Eleven #25448"                  → "7-Eleven"
+ *   "Costco Wholesale (La Quinta)"     → "Costco Wholesale"
+ */
+const canonicalRetailerName = (raw: string): string => {
+  let s = raw.trim();
+  // Strip everything after an em/en/hyphen separator
+  s = s.split(/\s+[-–—]\s+/)[0];
+  // Strip parenthesized location suffixes
+  s = s.replace(/\s*\([^)]+\)\s*$/g, "");
+  // Strip store-number suffixes ("#1234", "Store 25448", "T-1234")
+  s = s.replace(/\s*[#№]\s*\d+.*$/i, "");
+  s = s.replace(/\s*\b(store|location|unit)\s+[\w-]+.*$/i, "");
+  // Final pass — drop trailing whitespace + punctuation
+  return s.replace(/[\s,]+$/, "").trim();
 };
 
 type Props = {
@@ -69,6 +96,7 @@ declare global {
               cb: (
                 result:
                   | {
+                      name?: string;
                       formatted_address?: string;
                       geometry?: { location?: { lat: () => number; lng: () => number } };
                       address_components?: Array<{
@@ -259,11 +287,15 @@ export default function GooglePlacesInput({
     svc.getDetails(
       {
         placeId,
-        fields: ["formatted_address", "geometry", "address_components"],
+        fields: ["name", "formatted_address", "geometry", "address_components"],
       },
       async (place) => {
         if (!place) return;
         const fa = place.formatted_address ?? label;
+        const placeName = place.name ?? "";
+        const retailerName = canonicalRetailerName(
+          placeName || fa.split(",")[0] || "",
+        );
         const loc = place.geometry?.location;
         const lat = loc?.lat() ?? 0;
         const lng = loc?.lng() ?? 0;
@@ -276,10 +308,16 @@ export default function GooglePlacesInput({
         const state = comp("administrative_area_level_1")?.short_name;
         const zip = comp("postal_code")?.long_name;
         const tz = await timezoneForLatLng(lat, lng);
-        onChange(fa);
+        // Default onChange (no onResolved override) → write the place
+        // name when biased to establishments (so the venue field shows
+        // "Whole Foods Market"), otherwise write the formatted address.
+        // Callers can override via onResolved.
+        onChange(bias === "establishment" ? retailerName || fa : fa);
         setOpen(false);
         setSuggestions([]);
         onResolved?.({
+          placeName,
+          retailerName,
           formattedAddress: fa,
           lat,
           lng,
