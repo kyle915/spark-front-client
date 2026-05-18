@@ -406,6 +406,10 @@ const ApprovalsInner: React.FC = () => {
   // displayed rows so a search-filtered list doesn't deselect.
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkConfirm, setBulkConfirm] = useState(false);
+  // Separate modal state for bulk decline since it needs a shared
+  // reason input, unlike bulk approve which is one-click.
+  const [bulkDeclineOpen, setBulkDeclineOpen] = useState(false);
+  const [bulkDeclineReason, setBulkDeclineReason] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
 
   const toggleSelected = (id: string) => {
@@ -480,6 +484,67 @@ const ApprovalsInner: React.FC = () => {
     } else {
       showAlert(
         `All ${failures.length} approves failed. First: ${failures[0]}`,
+        "error",
+      );
+    }
+  };
+
+  // Bulk decline — same shared reason for every selected row. Each
+  // requestor still gets a personalised email via the branded
+  // request_declined template; only the reason text is shared.
+  const confirmBulkDecline = async () => {
+    const targets = rows.filter((r) => selectedIds.has(r.id));
+    if (targets.length === 0) {
+      setBulkDeclineOpen(false);
+      return;
+    }
+    const reason = bulkDeclineReason.trim();
+    if (reason.length < 8) {
+      showAlert(
+        "Tell the requestors at least a sentence about why — they need that context.",
+        "warning",
+      );
+      return;
+    }
+    setBulkBusy(true);
+    let okCount = 0;
+    const failures: string[] = [];
+    for (const r of targets) {
+      try {
+        const result = await callApprovalMutation("declineRequest", {
+          input: { id: r.id, declineReason: reason },
+        });
+        if (result.success) {
+          okCount += 1;
+          setRemovedIds((prev) => {
+            const next = new Set(prev);
+            next.add(r.id);
+            return next;
+          });
+        } else {
+          failures.push(`${r.reqId}: ${result.message || "rejected"}`);
+        }
+      } catch (e) {
+        failures.push(`${r.reqId}: ${(e as Error).message}`);
+      }
+    }
+    setBulkBusy(false);
+    setBulkDeclineOpen(false);
+    setBulkDeclineReason("");
+    clearSelection();
+    if (failures.length === 0) {
+      showAlert(
+        `Declined ${okCount} request${okCount === 1 ? "" : "s"} — requestors notified.`,
+        "success",
+      );
+    } else if (okCount > 0) {
+      showAlert(
+        `Declined ${okCount}, failed ${failures.length}: ${failures.slice(0, 2).join("; ")}${failures.length > 2 ? "…" : ""}`,
+        "warning",
+      );
+    } else {
+      showAlert(
+        `All ${failures.length} declines failed. First: ${failures[0]}`,
         "error",
       );
     }
@@ -565,11 +630,18 @@ const ApprovalsInner: React.FC = () => {
     };
     const onKey = (e: KeyboardEvent) => {
       // Modal-open guards
-      if (approving || declining || bulkConfirm || showHelp) {
+      if (
+        approving ||
+        declining ||
+        bulkConfirm ||
+        bulkDeclineOpen ||
+        showHelp
+      ) {
         if (e.key === "Escape") {
           setApproving(null);
           setDeclining(null);
           setBulkConfirm(false);
+          setBulkDeclineOpen(false);
           setShowHelp(false);
         }
         return;
@@ -947,6 +1019,20 @@ const ApprovalsInner: React.FC = () => {
       <span className="flex-1" />
       <button
         type="button"
+        onClick={() => setBulkDeclineOpen(true)}
+        disabled={bulkBusy}
+        className="px-4 py-2 rounded-xl text-sm font-semibold"
+        style={{
+          background: "transparent",
+          color: "var(--spark-orange)",
+          border: "1px solid rgba(239,90,42,0.4)",
+          opacity: bulkBusy ? 0.5 : 1,
+        }}
+      >
+        ✗ Decline {selectedCount}
+      </button>
+      <button
+        type="button"
         onClick={() => setBulkConfirm(true)}
         disabled={bulkBusy}
         className="px-4 py-2 rounded-xl text-sm font-semibold"
@@ -1179,6 +1265,132 @@ const ApprovalsInner: React.FC = () => {
                 {bulkBusy
                   ? `Approving… (${selectedCount})`
                   : `✓ Approve ${selectedCount} + notify`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk decline modal. Shared reason for the whole batch — each
+          requestor still gets a personalised email via the branded
+          template, only the reason text is shared. ≥8 chars enforced
+          per the single-row decline pattern. */}
+      {bulkDeclineOpen && (
+        <div
+          onClick={() => !bulkBusy && setBulkDeclineOpen(false)}
+          className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
+          style={{
+            background: "rgba(10,11,13,0.7)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg spark-card p-6"
+            style={{ borderRadius: 20 }}
+          >
+            <p
+              className="mono text-[10px] mb-1"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-orange)",
+              }}
+            >
+              BULK DECLINE
+            </p>
+            <h2
+              className="display text-2xl font-bold"
+              style={{ letterSpacing: "-0.03em" }}
+            >
+              Decline {selectedCount} request{selectedCount === 1 ? "" : "s"}?
+            </h2>
+            <p
+              className="text-sm mt-2"
+              style={{ color: "rgba(255,255,255,0.7)" }}
+            >
+              One reason for the whole batch. Each requestor gets their
+              own branded email with this note.
+            </p>
+            {/* Common-reason chips — same presets as the single-row
+                decline. Speed up the common case of inventory/timing. */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {[
+                "No inventory in these markets right now — please re-pitch for Q3.",
+                "Dates don't work for this batch — could you push by 1-2 weeks?",
+                "These accounts aren't on our priority list this quarter.",
+              ].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setBulkDeclineReason(preset)}
+                  className="mono text-[10px] px-2.5 py-1.5 rounded-lg transition"
+                  style={{
+                    letterSpacing: "0.12em",
+                    background: "rgba(239,90,42,0.08)",
+                    border: "1px solid rgba(239,90,42,0.25)",
+                    color: "rgba(255,255,255,0.75)",
+                  }}
+                >
+                  {preset.split(" — ")[0].toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <textarea
+              autoFocus
+              value={bulkDeclineReason}
+              onChange={(e) => setBulkDeclineReason(e.target.value)}
+              rows={4}
+              placeholder="e.g., We don't have inventory in these markets until Q3."
+              className="w-full mt-3 rounded-xl px-3 py-2 text-sm"
+              style={{
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+              }}
+            />
+            <p
+              className="mono text-[10px] mt-1.5"
+              style={{
+                letterSpacing: "0.14em",
+                color:
+                  bulkDeclineReason.trim().length < 8
+                    ? "var(--spark-orange)"
+                    : "rgba(255,255,255,0.45)",
+              }}
+            >
+              {bulkDeclineReason.trim().length < 8
+                ? "AT LEAST A SENTENCE — REQUIRED"
+                : `${bulkDeclineReason.trim().length} CHARS · WILL SEND TO ${selectedCount} REQUESTORS`}
+            </p>
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                onClick={() => {
+                  if (bulkBusy) return;
+                  setBulkDeclineOpen(false);
+                  setBulkDeclineReason("");
+                }}
+                className="mono text-[11px] px-3"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={confirmBulkDecline}
+                disabled={bulkBusy || bulkDeclineReason.trim().length < 8}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "var(--spark-orange)",
+                  color: "#0a0d09",
+                  opacity:
+                    bulkBusy || bulkDeclineReason.trim().length < 8 ? 0.5 : 1,
+                }}
+              >
+                {bulkBusy
+                  ? `Declining… (${selectedCount})`
+                  : `✗ Decline ${selectedCount} + send comment`}
               </button>
             </div>
           </div>
