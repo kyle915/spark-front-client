@@ -882,7 +882,11 @@ const ApprovalsInner: React.FC = () => {
           return (
             <li
               key={d.row.uuid}
-              onClick={() => navigate(`/request/view/${d.row.uuid}`)}
+              onClick={() =>
+                navigate(`/request/view/${d.row.uuid}`, {
+                  state: { from: "/approvals" },
+                })
+              }
               className="px-5 py-3 cursor-pointer transition"
               style={{
                 borderBottom:
