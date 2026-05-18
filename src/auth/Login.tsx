@@ -186,21 +186,166 @@ const Login = () => {
           </div>
         </div>
 
-        <div className="hidden lg:flex w-1/2 items-center justify-center bg-linear-to-br from-primary to-secondary relative">
+        {/* Right panel — mirrors the creative on igniteproductions.co/spark:
+            dark navy ground, big lime "SPARK" stencil-style mark, ticker
+            of operational metrics underneath, soft orange + lime radial
+            glows. All CSS / inline — no external assets. */}
+        <div
+          className="hidden lg:flex w-1/2 items-center justify-center relative overflow-hidden"
+          style={{
+            background: "#0A0B0D",
+            color: "#FAFAF7",
+          }}
+        >
           <div className="absolute top-4 right-4 z-20">
             <ThemeToggle value={colorScheme} onChange={setColorScheme} />
           </div>
 
-          <div className="absolute inset-0 bg-primary"></div>
+          {/* Radial glow mesh (lime + orange + sky) — matches the
+              same .spark-mesh language used across the app. */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(circle at 18% 12%, rgba(214,243,95,0.18), transparent 45%)," +
+                "radial-gradient(circle at 88% 88%, rgba(255,90,31,0.12), transparent 50%)," +
+                "radial-gradient(circle at 80% 8%, rgba(90,184,255,0.08), transparent 55%)",
+            }}
+          />
+          {/* 28px dot grid — Ignite's signature ticker texture, masked
+              vertically so the headline reads clean. */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage:
+                "radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)",
+              backgroundSize: "28px 28px",
+              maskImage:
+                "linear-gradient(180deg, transparent, rgba(0,0,0,0.95) 25%, rgba(0,0,0,0.95) 75%, transparent)",
+            }}
+          />
+          {/* LIVE pill — top-left, sets the field-ops mood. */}
+          <div
+            className="absolute top-6 left-6 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full"
+            style={{
+              background: "rgba(255,77,77,0.12)",
+              border: "1px solid rgba(255,77,77,0.35)",
+              fontFamily:
+                "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace",
+              fontSize: 10,
+              letterSpacing: "0.18em",
+              color: "#FF4D4D",
+            }}
+          >
+            <span
+              style={{
+                display: "inline-block",
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: "#FF4D4D",
+                boxShadow: "0 0 8px #FF4D4D",
+                animation: "livepulse 1.4s ease-in-out infinite",
+              }}
+            />
+            LIVE
+          </div>
 
-          <div className="relative z-10 text-center text-base-100 px-6">
-            <h2 className="text-3xl font-semibold mb-4">
-              Turn your ideas into reality.
-            </h2>
-            <p className="text-sm opacity-80">
-              Consistent quality and experience across all platforms and
-              devices.
+          {/* Hero block */}
+          <div className="relative z-10 text-center px-10 max-w-md">
+            <p
+              style={{
+                fontFamily:
+                  "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace",
+                fontSize: 10,
+                letterSpacing: "0.32em",
+                color: "#D6F35F",
+              }}
+            >
+              SPARK · BY IGNITE
             </p>
+            <h2
+              style={{
+                fontFamily:
+                  "'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
+                fontWeight: 700,
+                fontSize: "clamp(40px, 4.5vw, 56px)",
+                letterSpacing: "-0.03em",
+                lineHeight: 1.02,
+                marginTop: 10,
+                color: "#FAFAF7",
+              }}
+            >
+              See everything.
+              <br />
+              <span style={{ color: "#D6F35F" }}>In real time.</span>
+            </h2>
+            <p
+              style={{
+                marginTop: 16,
+                fontSize: 15,
+                lineHeight: 1.55,
+                color: "#B8BCC5",
+              }}
+            >
+              Field marketing's command center. Live dashboards, GPS
+              clock-ins, auto-generated recaps.
+            </p>
+
+            {/* Metric ticker — three faux signals so the panel feels
+                connected to something operational. */}
+            <div
+              className="grid grid-cols-3 gap-4 mt-10 text-left"
+              style={{
+                fontFamily:
+                  "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace",
+              }}
+            >
+              {[
+                { v: "42K+", l: "AMBASSADORS" },
+                { v: "50", l: "STATES" },
+                { v: "100%", l: "REAL-TIME" },
+              ].map((m) => (
+                <div key={m.l}>
+                  <div
+                    style={{
+                      fontSize: 26,
+                      letterSpacing: "-0.02em",
+                      color: "#FAFAF7",
+                      fontFamily:
+                        "'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {m.v}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 9,
+                      letterSpacing: "0.18em",
+                      color: "#9499A3",
+                      marginTop: 4,
+                    }}
+                  >
+                    {m.l}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom-left orange tag */}
+          <div
+            className="absolute bottom-6 left-6"
+            style={{
+              fontFamily:
+                "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace",
+              fontSize: 10,
+              letterSpacing: "0.18em",
+              color: "#FF5A1F",
+            }}
+          >
+            ◢ VETERAN-OWNED · IGNITE PRODUCTIONS
           </div>
         </div>
       </div>

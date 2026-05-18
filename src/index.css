@@ -617,6 +617,11 @@ h1, h2, h3, h4, h5, h6, .display {
   box-shadow: 0 0 10px var(--spark-lime);
   flex-shrink: 0;
 }
+@keyframes livepulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.85); }
+}
+
 @keyframes spark-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
