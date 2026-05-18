@@ -437,6 +437,63 @@ export default function SparkRecapsList() {
     URL.revokeObjectURL(url);
   };
 
+  // TSV-to-clipboard so kyle can paste straight into a Google Sheet
+  // tab (Recap rollup). Same pattern as the Master Tracker.
+  const [recapCopyState, setRecapCopyState] = useState<
+    "idle" | "copying" | "copied"
+  >("idle");
+  const copyForSheets = async () => {
+    if (visibleRecaps.length === 0 || recapCopyState !== "idle") return;
+    setRecapCopyState("copying");
+    const headers = [
+      "R-ID",
+      "Name",
+      "Retailer",
+      "State",
+      "Date",
+      "Status",
+      "Engagements",
+      "Products Sold",
+      "Conv %",
+      "Files",
+      "UUID",
+    ];
+    const sanitize = (raw: string | number | null | undefined) =>
+      (raw ?? "").toString().replace(/\t/g, " ").replace(/\r?\n/g, " ");
+    const rows = [headers.join("\t")];
+    for (const r of visibleRecaps) {
+      const conv =
+        r.engagements && r.productsSold && r.engagements > 0
+          ? Math.round((r.productsSold / r.engagements) * 100) + "%"
+          : "";
+      rows.push(
+        [
+          `R-${r.uuid.slice(-4).toUpperCase()}`,
+          r.name,
+          r.retailerName,
+          r.stateCode ?? "",
+          r.date,
+          r.approved ? "approved" : "draft",
+          r.engagements ?? "",
+          r.productsSold ?? "",
+          conv,
+          r.fileCount,
+          r.uuid,
+        ]
+          .map(sanitize)
+          .join("\t"),
+      );
+    }
+    try {
+      await navigator.clipboard.writeText(rows.join("\n"));
+      setRecapCopyState("copied");
+      window.setTimeout(() => setRecapCopyState("idle"), 2000);
+    } catch {
+      setRecapCopyState("idle");
+      window.alert("Couldn't reach the clipboard. Try the CSV download.");
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6 max-w-7xl">
@@ -464,6 +521,40 @@ export default function SparkRecapsList() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={copyForSheets}
+              disabled={
+                visibleRecaps.length === 0 || recapCopyState === "copying"
+              }
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{
+                background:
+                  recapCopyState === "copied"
+                    ? "rgba(95,184,239,0.18)"
+                    : "transparent",
+                color:
+                  recapCopyState === "copied"
+                    ? "var(--spark-sky)"
+                    : "var(--spark-text)",
+                border: `1px solid ${
+                  recapCopyState === "copied"
+                    ? "rgba(95,184,239,0.5)"
+                    : "var(--spark-border)"
+                }`,
+                opacity: visibleRecaps.length === 0 ? 0.5 : 1,
+              }}
+              title={
+                visibleRecaps.length === 0
+                  ? "Nothing to copy"
+                  : `Copy ${visibleRecaps.length} recap${visibleRecaps.length === 1 ? "" : "s"} as TSV — paste into Google Sheets`
+              }
+            >
+              {recapCopyState === "copied"
+                ? `✓ Copied (${visibleRecaps.length})`
+                : recapCopyState === "copying"
+                  ? "Copying…"
+                  : `📋 Copy for Sheets ${visibleRecaps.length > 0 ? `(${visibleRecaps.length})` : ""}`}
+            </button>
             <button
               onClick={exportCsv}
               disabled={visibleRecaps.length === 0}
