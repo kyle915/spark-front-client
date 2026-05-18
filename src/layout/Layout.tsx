@@ -20,7 +20,7 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
-    <div className="flex h-screen bg-base-200 text-base-content">
+    <div className="flex h-screen bg-base-200 text-base-content spark-mesh">
       <CommandPalette />
       <SparkSidebar />
 

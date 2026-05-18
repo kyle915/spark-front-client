@@ -381,6 +381,55 @@ h1, h2, h3, h4, h5, h6, .display {
   --spark-text: #f2f3ee;
 }
 
+/* === Spark mesh — shared decorative backdrop ===
+   Mirrors the Ignite site's creative on /spark: deep black-navy base,
+   soft lime + orange radial glows in opposing corners, a faint dot
+   grid overlay. Used on every full-page shell via the .spark-mesh
+   class. Fixed-position pseudo-element so it doesn't scroll. */
+.spark-mesh {
+  position: relative;
+  background-color: var(--spark-bg, #0a0d09);
+  isolation: isolate;
+}
+.spark-mesh::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(197, 245, 70, 0.10), transparent 40%),
+    radial-gradient(circle at 100% 12%, rgba(239, 90, 42, 0.08), transparent 45%),
+    radial-gradient(circle at 50% 100%, rgba(95, 184, 239, 0.06), transparent 55%);
+}
+.spark-mesh::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  /* Subtle dot grid at 0.04 alpha — same vibe as the Ignite hero
+     ticker pattern but quieter so dashboard / form cards remain legible. */
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.9) 30%, rgba(0, 0, 0, 0.9) 70%, transparent);
+}
+
+/* === Form input (Spark v2) — used across public + internal forms === */
+.spark-input {
+  background: var(--spark-bg, #0a0d09);
+  border: 1px solid var(--spark-border, #1f2418);
+  color: var(--spark-text, #f2f3ee);
+  transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
+}
+.spark-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+.spark-input:hover { border-color: rgba(197, 245, 70, 0.25); }
+.spark-input:focus {
+  border-color: var(--spark-lime, #c5f546);
+  box-shadow: 0 0 0 3px rgba(197, 245, 70, 0.15);
+  background: rgba(17, 20, 14, 0.95);
+}
+
 /* === Card === */
 .spark-card {
   background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));

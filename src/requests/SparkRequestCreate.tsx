@@ -2,7 +2,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
-import GooglePlacesInput from "@/components/inputs/GooglePlacesInput";
+import GooglePlacesInput, { matchTimezoneOption } from "@/components/inputs/GooglePlacesInput";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
@@ -683,14 +683,8 @@ const SparkRequestInner: React.FC = () => {
                 onChange={setAddress}
                 onResolved={(p) => {
                   setAddress(p.formattedAddress);
-                  // Auto-pick the timezone if the API returned an IANA
-                  // id we have in the backend dropdown.
                   if (p.timezoneId) {
-                    const match = timezones.find((t) =>
-                      (t?.name ?? "").toLowerCase().includes(
-                        p.timezoneId!.split("/").pop()!.toLowerCase().replace(/_/g, " "),
-                      ),
-                    );
+                    const match = matchTimezoneOption(p.timezoneId, timezones);
                     if (match) setTimezoneId(String(match.id));
                   }
                 }}

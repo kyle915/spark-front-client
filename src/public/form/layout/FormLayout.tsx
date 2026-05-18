@@ -45,7 +45,7 @@ export default function SparkFormLayout({
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col spark-mesh"
       style={{ background: "var(--spark-bg, #0a0d09)" }}
     >
       {loading && (

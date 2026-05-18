@@ -123,6 +123,80 @@ const timezoneForLatLng = async (lat: number, lng: number): Promise<string | nul
   }
 };
 
+/**
+ * Map a Google IANA tz id (e.g. America/Los_Angeles) to the Spark
+ * timezone dropdown label format the backend stores (e.g.
+ * "Pacific-PDT (UTC-07:00)"). We pick the DST or STD variant based on
+ * whether DST is in effect right now at that location.
+ *
+ * Caller passes the dropdown options so we don't hard-code IDs.
+ */
+export const matchTimezoneOption = <T extends { id: string; name: string | null }>(
+  ianaId: string,
+  options: ReadonlyArray<T | null | undefined>,
+): T | null => {
+  // DST is observed in most of the lower 48 today if we're between
+  // ~Mar 2nd Sunday and ~Nov 1st Sunday. Pull from a real Date for
+  // the IANA zone to handle Arizona / Hawaii correctly.
+  const isDst = (() => {
+    try {
+      const now = new Date();
+      // Compare the current offset vs January's offset for the IANA tz.
+      const jan = new Date(now.getFullYear(), 0, 1).toLocaleString("en-US", {
+        timeZone: ianaId,
+        timeZoneName: "short",
+      });
+      const jul = new Date(now.getFullYear(), 6, 1).toLocaleString("en-US", {
+        timeZone: ianaId,
+        timeZoneName: "short",
+      });
+      const cur = now.toLocaleString("en-US", {
+        timeZone: ianaId,
+        timeZoneName: "short",
+      });
+      // If the current tz abbr matches Jul's (DST month) and differs
+      // from Jan's, DST is on.
+      const curAbbr = cur.split(" ").pop();
+      const janAbbr = jan.split(" ").pop();
+      const julAbbr = jul.split(" ").pop();
+      return curAbbr === julAbbr && julAbbr !== janAbbr;
+    } catch {
+      return false;
+    }
+  })();
+
+  // IANA → preferred dropdown name fragment (DST first, STD fallback).
+  const map: Record<string, [string, string]> = {
+    "America/Los_Angeles": ["PDT", "PST"],
+    "America/Tijuana":     ["PDT", "PST"],
+    "America/Denver":      ["MDT", "MST"],
+    "America/Boise":       ["MDT", "MST"],
+    "America/Phoenix":     ["MST", "MST"], // no DST
+    "America/Chicago":     ["CDT", "CST"],
+    "America/Indiana/Indianapolis": ["EDT", "EST"],
+    "America/Detroit":     ["EDT", "EST"],
+    "America/New_York":    ["EDT", "EST"],
+    "America/Anchorage":   ["AKDT", "AKST"],
+    "America/Juneau":      ["AKDT", "AKST"],
+    "Pacific/Honolulu":    ["HST", "HST"],
+    "America/Adak":        ["HDT", "HST"],
+  };
+  const target = map[ianaId];
+  if (!target) return null;
+  const want = (isDst ? target[0] : target[1]).toUpperCase();
+  // Match options whose name contains the abbreviation, e.g.
+  // "Pacific-PDT (UTC-07:00)" or "PDT" — we match a few patterns.
+  const match = options.find(
+    (o) =>
+      !!o &&
+      (o.name ?? "").toUpperCase().includes(`-${want} `) ||
+      (o.name ?? "").toUpperCase().includes(`-${want}(`) ||
+      (o.name ?? "").toUpperCase().includes(` ${want} `) ||
+      (o.name ?? "").toUpperCase().endsWith(want),
+  );
+  return (match as T | undefined) ?? null;
+};
+
 export default function GooglePlacesInput({
   value,
   onChange,

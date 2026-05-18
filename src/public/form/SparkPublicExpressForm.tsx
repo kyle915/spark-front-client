@@ -9,7 +9,7 @@ import {
 } from "./hooks";
 import { useCreateRequest } from "./hooks/useCreateRequest";
 import type { CreateRequestInput } from "./types/CreateRequestByUrl";
-import GooglePlacesInput from "@/components/inputs/GooglePlacesInput";
+import GooglePlacesInput, { matchTimezoneOption } from "@/components/inputs/GooglePlacesInput";
 
 /**
  * Spark v2 — public Express request form.
@@ -167,19 +167,31 @@ export default function SparkPublicExpressForm() {
     <SparkFormLayout slug={slug}>
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-3xl mx-auto px-1 sm:px-0 space-y-5"
+        className="w-full max-w-2xl mx-auto px-1 sm:px-0 space-y-3"
       >
         {/* Header */}
-        <div className="rounded-2xl p-5" style={{ background: "var(--spark-surface, #11140e)", border: "1px solid var(--spark-border, #1f2418)" }}>
-          <p className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "var(--spark-lime, #c5f546)" }}>
-            ⚡ REQUEST A DEMO
+        <div className="py-2">
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.22em",
+              color: "var(--spark-lime, #c5f546)",
+            }}
+          >
+            REQUEST A DEMO
           </p>
-          <h1 className="display text-2xl font-bold mt-1" style={{ letterSpacing: "-0.02em" }}>
+          <h1
+            className="display text-2xl font-bold mt-1"
+            style={{ letterSpacing: "-0.02em", lineHeight: 1.1 }}
+          >
             {brandName} BA Request Form
           </h1>
-          <p className="text-sm mt-2" style={{ color: "rgba(255,255,255,0.65)" }}>
-            Tell us where you'd like a sample team. Submissions on this form
-            will be routed to the applicable {brandName} RMM for approval.
+          <p
+            className="text-[13px] mt-2 leading-relaxed"
+            style={{ color: "rgba(255,255,255,0.65)" }}
+          >
+            Tell us where you'd like a sample team. Submissions are routed to
+            the applicable {brandName} RMM for approval.
           </p>
         </div>
 
@@ -194,13 +206,8 @@ export default function SparkPublicExpressForm() {
               onChange={setAddress}
               onResolved={(p) => {
                 setAddress(p.formattedAddress);
-                // Auto-match the IANA timezone if we got one back.
                 if (p.timezoneId) {
-                  const match = timeZones.find((t) =>
-                    (t.name ?? "").toLowerCase().includes(
-                      p.timezoneId!.split("/").pop()!.toLowerCase().replace(/_/g, " "),
-                    ),
-                  );
+                  const match = matchTimezoneOption(p.timezoneId, timeZones);
                   if (match) setTimezoneId(String(match.id));
                 }
               }}
@@ -461,11 +468,17 @@ export default function SparkPublicExpressForm() {
 }
 
 const inputCls =
-  "w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2";
+  "w-full rounded-lg px-3 py-2 text-[15px] focus:outline-none focus:ring-2 spark-input";
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <label className="block">
-    <span className="mono text-[10px] block mb-1.5" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.55)" }}>
+    <span
+      className="mono text-[9px] block mb-1"
+      style={{
+        letterSpacing: "0.16em",
+        color: "rgba(255,255,255,0.5)",
+      }}
+    >
       {label.toUpperCase()}
     </span>
     {children}
@@ -474,13 +487,20 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, 
 
 const Card: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div
-    className="rounded-2xl p-5 space-y-3"
+    className="rounded-xl px-4 py-3 space-y-2"
     style={{
-      background: "var(--spark-surface, #11140e)",
+      background: "rgba(17,20,14,0.7)",
       border: "1px solid var(--spark-border, #1f2418)",
+      backdropFilter: "blur(8px)",
     }}
   >
-    <p className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "var(--spark-lime, #c5f546)" }}>
+    <p
+      className="mono text-[10px]"
+      style={{
+        letterSpacing: "0.18em",
+        color: "var(--spark-lime, #c5f546)",
+      }}
+    >
       {title}
     </p>
     {children}
