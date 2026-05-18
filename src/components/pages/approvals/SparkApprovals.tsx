@@ -185,56 +185,112 @@ const ApprovalsInner: React.FC = () => {
     { fetchPolicy: "store-or-network" },
   );
 
-  const rows: Row[] = useMemo(() => {
-    return (
+  // Derive everything from the same dataset so the stats reflect what
+  // the queue actually sees (no double-fetch, no stale numbers).
+  const { pendingRows, stats } = useMemo(() => {
+    const allNodes =
       data?.requests?.edges
         ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
-        // Only "pending" requests need a decision. Approved and
-        // declined ones are terminal — they live on the requests list,
-        // not in the approval queue.
-        ?.filter((n) => {
-          const slug = (n.status?.slug ?? n.status?.name ?? "").toLowerCase();
-          return slug === "pending";
-        })
-        ?.slice(0, 200)
-        ?.map((n) => {
-          const market =
-            n.retailer?.location?.name ?? n.location?.name ?? "—";
-          const stateCode = n.retailer?.location?.state?.code ?? n.state?.code;
-          const date = formatDate(n.date);
-          return {
-            id: String(n.id),
-            uuid: String(n.uuid),
-            reqId: `REQ-${String(n.id).slice(-4).toUpperCase()}`,
-            venue: n.retailer?.name ?? n.name ?? "—",
-            locationDate: `${[market, stateCode].filter(Boolean).join(", ")} · ${date}`,
-            requester: n.client?.name ?? n.distributor?.name ?? "—",
-            type: n.requestType?.name ?? "Activation",
-            source: "external" as const,
-            statusNote: `Awaiting review · ${n.status?.name ?? "Pending"}`,
-          };
-        }) ?? []
-    );
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    let pending = 0;
+    let approvedLast30 = 0;
+    let declinedLast30 = 0;
+    let withinSlaCount = 0;
+    let decidedCount = 0;
+    const slaMs = 24 * 60 * 60 * 1000; // 24h decision SLA
+
+    const pendingNodes = [] as typeof allNodes;
+
+    for (const n of allNodes) {
+      const slug = (n.status?.slug ?? n.status?.name ?? "").toLowerCase();
+      if (slug === "pending") {
+        pending += 1;
+        pendingNodes.push(n);
+        continue;
+      }
+      const updated = n.updatedAt ? new Date(n.updatedAt).getTime() : NaN;
+      const created = n.createdAt ? new Date(n.createdAt).getTime() : NaN;
+      const recent = Number.isFinite(updated) && updated >= thirtyDaysAgo;
+      if (slug === "approved") {
+        if (recent) approvedLast30 += 1;
+        if (Number.isFinite(updated) && Number.isFinite(created)) {
+          decidedCount += 1;
+          if (updated - created <= slaMs) withinSlaCount += 1;
+        }
+      } else if (slug === "declined") {
+        if (recent) declinedLast30 += 1;
+        if (Number.isFinite(updated) && Number.isFinite(created)) {
+          decidedCount += 1;
+          if (updated - created <= slaMs) withinSlaCount += 1;
+        }
+      }
+    }
+
+    const slaPct =
+      decidedCount > 0 ? Math.round((withinSlaCount / decidedCount) * 100) : null;
+
+    const pendingRows: Row[] = pendingNodes.slice(0, 200).map((n) => {
+      const market =
+        n.retailer?.location?.name ?? n.location?.name ?? "—";
+      const stateCode = n.retailer?.location?.state?.code ?? n.state?.code;
+      const date = formatDate(n.date);
+      return {
+        id: String(n.id),
+        uuid: String(n.uuid),
+        reqId: `REQ-${String(n.id).slice(-4).toUpperCase()}`,
+        venue: n.retailer?.name ?? n.name ?? "—",
+        locationDate: `${[market, stateCode].filter(Boolean).join(", ")} · ${date}`,
+        requester: n.client?.name ?? n.distributor?.name ?? "—",
+        type: n.requestType?.name ?? "Activation",
+        source: "external" as const,
+        statusNote: `Awaiting review · ${n.status?.name ?? "Pending"}`,
+      };
+    });
+
+    return {
+      pendingRows,
+      stats: {
+        pending,
+        approvedLast30,
+        declinedLast30,
+        slaPct,
+      },
+    };
   }, [data]);
+
+  // Local removal so we don't have to round-trip the page after each
+  // decision — the row simply disappears with a tiny fade.
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+  const rows = useMemo(
+    () => pendingRows.filter((r) => !removedIds.has(r.id)),
+    [pendingRows, removedIds],
+  );
 
   const showAlert = useAlertStore((s) => s.showAlert);
   const [busyId, setBusyId] = useState<string | null>(null);
-  // Denial modal state — captures the required comment that goes back
-  // to the requestor in the decline email.
+  // Confirmation modals — Spark chrome, not browser-native.
+  const [approving, setApproving] = useState<Row | null>(null);
   const [declining, setDeclining] = useState<Row | null>(null);
   const [declineReason, setDeclineReason] = useState("");
 
-  const approve = async (r: Row) => {
-    if (!window.confirm(`Approve "${r.venue}"?`)) return;
+  const confirmApprove = async () => {
+    if (!approving) return;
+    const r = approving;
     setBusyId(r.id);
     try {
       const result = await callApprovalMutation("approveRequest", {
         input: { id: r.id },
       });
       if (!result.success) throw new Error(result.message || "Approve failed.");
-      showAlert(`Approved ${r.reqId}.`, "success");
-      window.location.reload();
+      showAlert(`Approved ${r.reqId} — event queued for staffing.`, "success");
+      setRemovedIds((prev) => {
+        const next = new Set(prev);
+        next.add(r.id);
+        return next;
+      });
+      setApproving(null);
     } catch (e) {
       showAlert(`Couldn't approve: ${(e as Error).message}`, "error");
     } finally {
@@ -258,9 +314,13 @@ const ApprovalsInner: React.FC = () => {
       });
       if (!result.success) throw new Error(result.message || "Decline failed.");
       showAlert(`Declined ${declining.reqId} — requestor notified.`, "success");
+      setRemovedIds((prev) => {
+        const next = new Set(prev);
+        next.add(declining.id);
+        return next;
+      });
       setDeclining(null);
       setDeclineReason("");
-      window.location.reload();
     } catch (e) {
       showAlert(`Couldn't decline: ${(e as Error).message}`, "error");
     } finally {
@@ -268,29 +328,174 @@ const ApprovalsInner: React.FC = () => {
     }
   };
 
+  const slaLabel = stats.slaPct === null ? "—" : `${stats.slaPct}%`;
+
+  const StatsGrid = (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="spark-card p-4">
+        <p className="label-mini">PENDING</p>
+        <p
+          className="tab-num text-3xl font-bold mt-1"
+          style={{ color: "var(--spark-orange)" }}
+        >
+          {stats.pending}
+        </p>
+      </div>
+      <div className="spark-card p-4">
+        <p className="label-mini">APPROVED · 30D</p>
+        <p
+          className="tab-num text-3xl font-bold mt-1"
+          style={{ color: "var(--spark-lime)" }}
+        >
+          {stats.approvedLast30}
+        </p>
+      </div>
+      <div className="spark-card p-4">
+        <p className="label-mini">DECLINED · 30D</p>
+        <p
+          className="tab-num text-3xl font-bold mt-1"
+          style={{ color: "var(--spark-orange)" }}
+        >
+          {stats.declinedLast30}
+        </p>
+      </div>
+      <div className="spark-card p-4">
+        <p className="label-mini">DECIDED &lt; 24H</p>
+        <p
+          className="tab-num text-3xl font-bold mt-1"
+          style={{
+            color:
+              stats.slaPct === null
+                ? "rgba(255,255,255,0.55)"
+                : stats.slaPct >= 80
+                  ? "var(--spark-lime)"
+                  : "var(--spark-orange)",
+          }}
+        >
+          {slaLabel}
+        </p>
+      </div>
+    </div>
+  );
+
   if (rows.length === 0) {
     return (
-      <div
-        className="spark-card p-8 text-center text-sm"
-        style={{ color: "rgba(255,255,255,0.55)" }}
-      >
-        Nothing in the approval queue. Nice work.
+      <div className="space-y-6">
+        {StatsGrid}
+        <div
+          className="spark-card p-8 text-center text-sm"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+        >
+          Nothing in the approval queue. Nice work.
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-6">
+      {StatsGrid}
+      <div className="space-y-3">
       {rows.map((r) => (
         <ApprovalRow
           key={r.uuid}
           row={r}
           busy={busyId === r.id}
-          onApprove={() => approve(r)}
+          onApprove={() => setApproving(r)}
           onDecline={() => setDeclining(r)}
           onView={() => navigate(`/request/view/${r.uuid}`)}
         />
       ))}
+
+      </div>
+
+      {/* Approve confirmation — in Spark chrome instead of browser-native
+          confirm(). Surfaces what actually happens downstream so kyle
+          isn't flying blind on a "yes" click. */}
+      {approving && (
+        <div
+          onClick={() => !busyId && setApproving(null)}
+          className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
+          style={{
+            background: "rgba(10,11,13,0.7)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg spark-card p-6"
+            style={{ borderRadius: 20 }}
+          >
+            <p
+              className="mono text-[10px] mb-1"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-lime)",
+              }}
+            >
+              APPROVE REQUEST
+            </p>
+            <h2
+              className="display text-2xl font-bold"
+              style={{ letterSpacing: "-0.03em" }}
+            >
+              Approve {approving.reqId}?
+            </h2>
+            <p
+              className="text-sm mt-2"
+              style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.55 }}
+            >
+              <strong>{approving.venue}</strong> · {approving.locationDate}
+            </p>
+            <div
+              className="mt-4 p-4 rounded-xl text-xs"
+              style={{
+                background: "rgba(197,245,70,0.06)",
+                border: "1px solid rgba(197,245,70,0.18)",
+                color: "rgba(255,255,255,0.75)",
+                lineHeight: 1.6,
+              }}
+            >
+              <p className="mono text-[10px] mb-1" style={{ letterSpacing: "0.16em", color: "var(--spark-lime)" }}>
+                WHAT HAPPENS
+              </p>
+              1. Event row is created and queued for staffing.
+              <br />
+              2. <strong>{approving.requester}</strong> gets the branded approval email + calendar invite.
+              <br />
+              3. Ignite staffs a BA and a clock-in link goes out the day of.
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                onClick={() => {
+                  if (busyId) return;
+                  setApproving(null);
+                }}
+                className="mono text-[11px] px-3"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={confirmApprove}
+                disabled={busyId !== null}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "#0a0d09",
+                  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+                  opacity: busyId !== null ? 0.5 : 1,
+                }}
+              >
+                {busyId ? "Approving…" : "✓ Approve + notify"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Decline modal — requires a comment per Kyle's spec. The
           comment goes back to the requestor in the branded decline
@@ -519,47 +724,7 @@ export default function SparkApprovals() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="spark-card p-4">
-            <p className="label-mini">PENDING</p>
-            <p
-              className="tab-num text-3xl font-bold mt-1"
-              style={{ color: "var(--spark-orange)" }}
-            >
-              —
-            </p>
-          </div>
-          <div className="spark-card p-4">
-            <p className="label-mini">APPROVED · 30D</p>
-            <p
-              className="tab-num text-3xl font-bold mt-1"
-              style={{ color: "var(--spark-lime)" }}
-            >
-              —
-            </p>
-          </div>
-          <div className="spark-card p-4">
-            <p className="label-mini">SLA</p>
-            <p
-              className="tab-num text-3xl font-bold mt-1"
-              style={{ color: "var(--spark-lime)" }}
-            >
-              —
-            </p>
-          </div>
-          <div className="spark-card p-4">
-            <p className="label-mini">AUTO-APPROVED</p>
-            <p
-              className="tab-num text-3xl font-bold mt-1"
-              style={{ color: "var(--spark-lime)" }}
-            >
-              —
-            </p>
-          </div>
-        </div>
-
-        {/* Queue */}
+        {/* Queue (stats live inside ApprovalsInner so they share the data fetch) */}
         <Suspense
           fallback={
             <div
