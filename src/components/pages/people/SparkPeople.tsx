@@ -104,6 +104,65 @@ const Inner: React.FC<{
   }, [rows]);
   void navigate;
 
+  // Remove flow — Spark-chrome modal + optimistic local removal so the
+  // table doesn't have to full-reload after each delete.
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [removing, setRemoving] = useState<PersonRow | null>(null);
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+  const [removeBusy, setRemoveBusy] = useState(false);
+
+  const visibleFiltered = useMemo(
+    () => filtered.filter((r) => !removedIds.has(r.id)),
+    [filtered, removedIds],
+  );
+
+  const confirmRemove = async () => {
+    if (!removing) return;
+    setRemoveBusy(true);
+    try {
+      const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+        },
+        body: JSON.stringify({
+          query: `
+            mutation DeleteUser($input: DeleteUserInput!) {
+              deleteUser(input: $input) {
+                success
+                message
+              }
+            }
+          `,
+          variables: { input: { userId: removing.id } },
+        }),
+      });
+      const json = await res.json();
+      const r = json?.data?.deleteUser;
+      if (json.errors?.length || !r?.success) {
+        showAlert(
+          `Couldn't remove ${removing.name}: ${
+            r?.message ?? json.errors?.[0]?.message ?? "unknown error"
+          }`,
+          "error",
+        );
+        return;
+      }
+      setRemovedIds((prev) => {
+        const next = new Set(prev);
+        next.add(removing.id);
+        return next;
+      });
+      showAlert(`${removing.name} removed.`, "success");
+      setRemoving(null);
+    } catch (e) {
+      showAlert(`Remove failed: ${(e as Error).message}`, "error");
+    } finally {
+      setRemoveBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -211,7 +270,7 @@ const Inner: React.FC<{
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
+              {visibleFiltered.length === 0 && (
                 <tr>
                   <td
                     colSpan={4}
@@ -222,7 +281,7 @@ const Inner: React.FC<{
                   </td>
                 </tr>
               )}
-              {filtered.map((p) => (
+              {visibleFiltered.map((p) => (
                 <tr
                   key={p.uuid}
                   style={{ borderBottom: "1px solid var(--spark-border)" }}
@@ -261,54 +320,7 @@ const Inner: React.FC<{
                         COPY EMAIL
                       </button>
                       <button
-                        onClick={async () => {
-                          if (
-                            !window.confirm(
-                              `Remove ${p.name}?\n\nThey'll lose access immediately. Existing recaps, requests, and events stay attached for audit. You can re-invite them with the same email later.`,
-                            )
-                          )
-                            return;
-                          try {
-                            const res = await fetch(
-                              import.meta.env.VITE_GRAPHQL_ENDPOINT,
-                              {
-                                method: "POST",
-                                headers: {
-                                  "Content-Type": "application/json",
-                                  Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
-                                },
-                                body: JSON.stringify({
-                                  query: `
-                                    mutation DeleteUser($input: DeleteUserInput!) {
-                                      deleteUser(input: $input) {
-                                        success
-                                        message
-                                      }
-                                    }
-                                  `,
-                                  variables: { input: { userId: p.id } },
-                                }),
-                              },
-                            );
-                            const json = await res.json();
-                            const r = json?.data?.deleteUser;
-                            if (json.errors?.length || !r?.success) {
-                              alert(
-                                `Couldn't remove: ${
-                                  r?.message ??
-                                  json.errors?.[0]?.message ??
-                                  "unknown error"
-                                }`,
-                              );
-                              return;
-                            }
-                            // Optimistic: just reload. Cheap on a small
-                            // user table.
-                            window.location.reload();
-                          } catch (e) {
-                            alert(`Remove failed: ${(e as Error).message}`);
-                          }
-                        }}
+                        onClick={() => setRemoving(p)}
                         className="mono text-[10px]"
                         style={{
                           letterSpacing: "0.14em",
@@ -361,6 +373,107 @@ const Inner: React.FC<{
           + Invite ambassador
         </button>
       </div>
+
+      {/* Remove confirmation — in Spark chrome, not browser-native confirm().
+          Spells out exactly what removing them does (and doesn't do) so kyle
+          knows what happens to historical recaps/requests/events. */}
+      {removing && (
+        <div
+          onClick={() => !removeBusy && setRemoving(null)}
+          className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
+          style={{
+            background: "rgba(10,11,13,0.7)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg spark-card p-6"
+            style={{ borderRadius: 20 }}
+          >
+            <p
+              className="mono text-[10px] mb-1"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-orange)",
+              }}
+            >
+              REMOVE FROM WORKSPACE
+            </p>
+            <h2
+              className="display text-2xl font-bold"
+              style={{ letterSpacing: "-0.03em" }}
+            >
+              Remove {removing.name}?
+            </h2>
+            <p
+              className="text-sm mt-2"
+              style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.55 }}
+            >
+              {removing.email}{" "}
+              <span
+                className={ROLE_CHIP[removing.roleSlug] ?? "chip chip-muted"}
+                style={{ marginLeft: 6 }}
+              >
+                {removing.role.toUpperCase()}
+              </span>
+            </p>
+            <div
+              className="mt-4 p-4 rounded-xl text-xs"
+              style={{
+                background: "rgba(239,90,42,0.06)",
+                border: "1px solid rgba(239,90,42,0.18)",
+                color: "rgba(255,255,255,0.75)",
+                lineHeight: 1.6,
+              }}
+            >
+              <p
+                className="mono text-[10px] mb-1"
+                style={{
+                  letterSpacing: "0.16em",
+                  color: "var(--spark-orange)",
+                }}
+              >
+                WHAT HAPPENS
+              </p>
+              1. They lose access to the workspace immediately.
+              <br />
+              2. Their historical recaps, requests, and events stay attached
+              for audit.
+              <br />
+              3. You can re-invite them later with the same email — they'll
+              keep their history.
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                onClick={() => {
+                  if (removeBusy) return;
+                  setRemoving(null);
+                }}
+                className="mono text-[11px] px-3"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={confirmRemove}
+                disabled={removeBusy}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "var(--spark-orange)",
+                  color: "#0a0d09",
+                  opacity: removeBusy ? 0.5 : 1,
+                }}
+              >
+                {removeBusy ? "Removing…" : "Remove from workspace"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
