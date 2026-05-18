@@ -19,6 +19,7 @@ import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { DistributorsQuery } from "@/api/queries/DistributorsQuery";
 import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__generated__/DistributorsQuery.graphql";
+import TimeSlotSelect from "@/components/inputs/TimeSlotSelect";
 
 /**
  * Spark v2 — minimal "Express" request form.
@@ -698,20 +699,18 @@ const SparkRequestInner: React.FC = () => {
             <div className="grid sm:grid-cols-3 gap-4">
               <div>
                 <label className="label-mini block mb-1.5">Start time</label>
-                <input
+                <TimeSlotSelect
                   style={inputStyle}
-                  type="time"
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  onChange={setStartTime}
                 />
               </div>
               <div>
                 <label className="label-mini block mb-1.5">End time</label>
-                <input
+                <TimeSlotSelect
                   style={inputStyle}
-                  type="time"
                   value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
+                  onChange={setEndTime}
                 />
               </div>
               <div>

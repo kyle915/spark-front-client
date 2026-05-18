@@ -9,6 +9,7 @@ import {
   usePublicDistributors,
 } from "./hooks";
 import { useCreateRequest } from "./hooks/useCreateRequest";
+import SharedTimeSlotSelect from "@/components/inputs/TimeSlotSelect";
 import type { CreateRequestInput } from "./types/CreateRequestByUrl";
 import GooglePlacesInput, { matchTimezoneOption } from "@/components/inputs/GooglePlacesInput";
 
@@ -778,39 +779,19 @@ export default function SparkPublicExpressForm() {
 const inputCls =
   "w-full rounded-lg px-3 py-2 text-[15px] focus:outline-none focus:ring-2 spark-input";
 
-// 30-minute slots from 6:00 AM to 11:30 PM. Activations are scheduled
-// on the half-hour in ~95% of cases, so a flat dropdown is dramatically
-// easier on mobile than the native clock picker (and renders as a
-// native scrollable wheel on iOS/Android).
-const TIME_SLOTS: { value: string; label: string }[] = (() => {
-  const out: { value: string; label: string }[] = [];
-  for (let m = 6 * 60; m <= 23 * 60 + 30; m += 30) {
-    const h24 = Math.floor(m / 60);
-    const min = m % 60;
-    const h12 = ((h24 + 11) % 12) + 1;
-    const ampm = h24 < 12 ? "AM" : "PM";
-    const value = `${String(h24).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-    const label = `${h12}:${String(min).padStart(2, "0")} ${ampm}`;
-    out.push({ value, label });
-  }
-  return out;
-})();
-
+// Time-slot picker moved to a shared component used here + on the
+// internal /requests/create form. Local thin wrapper keeps the
+// inputCls binding so the visual styling stays in sync with the rest
+// of this form.
 const TimeSlotSelect: React.FC<{
   value: string;
   onChange: (v: string) => void;
 }> = ({ value, onChange }) => (
-  <select
+  <SharedTimeSlotSelect
     value={value}
-    onChange={(e) => onChange(e.target.value)}
+    onChange={onChange}
     className={inputCls}
-  >
-    {TIME_SLOTS.map((s) => (
-      <option key={s.value} value={s.value}>
-        {s.label}
-      </option>
-    ))}
-  </select>
+  />
 );
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
