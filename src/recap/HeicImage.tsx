@@ -22,7 +22,9 @@ export const HeicImage: React.FC<{
     let revokeUrl: string | null = null;
     (async () => {
       try {
-        const res = await fetch(url);
+        // mode:"cors" makes the failure explicit if the bucket isn't
+        // CORS-configured (rather than failing silently in opaque mode).
+        const res = await fetch(url, { mode: "cors", credentials: "omit" });
         if (!res.ok) throw new Error(`fetch ${res.status}`);
         const blob = await res.blob();
         const { default: heic2any } = await import("heic2any");
