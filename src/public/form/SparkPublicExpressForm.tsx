@@ -9,6 +9,7 @@ import {
 } from "./hooks";
 import { useCreateRequest } from "./hooks/useCreateRequest";
 import type { CreateRequestInput } from "./types/CreateRequestByUrl";
+import GooglePlacesInput from "@/components/inputs/GooglePlacesInput";
 
 /**
  * Spark v2 — public Express request form.
@@ -49,7 +50,7 @@ export default function SparkPublicExpressForm() {
   const [storeContact, setStoreContact] = useState("");
   const [storeManagerName, setStoreManagerName] = useState("");
   const [storeManagerPhone, setStoreManagerPhone] = useState("");
-  const [baCount, setBaCount] = useState(2);
+  const [baCount, setBaCount] = useState(1);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -73,7 +74,8 @@ export default function SparkPublicExpressForm() {
     !!timezoneId &&
     !!requestTypeId &&
     productIds.length > 0 &&
-    !!requestorEmail &&
+    !!requestorName.trim() &&
+    !!requestorEmail.trim() &&
     !submitting;
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -172,7 +174,24 @@ export default function SparkPublicExpressForm() {
             <input value={venue} onChange={(e) => setVenue(e.target.value)} className={inputCls} placeholder="e.g., Whole Foods - Brentwood" />
           </Field>
           <Field label="Full Address *">
-            <input value={address} onChange={(e) => setAddress(e.target.value)} className={inputCls} placeholder="Street, City, State, Zip" />
+            <GooglePlacesInput
+              value={address}
+              onChange={setAddress}
+              onResolved={(p) => {
+                setAddress(p.formattedAddress);
+                // Auto-match the IANA timezone if we got one back.
+                if (p.timezoneId) {
+                  const match = timeZones.find((t) =>
+                    (t.name ?? "").toLowerCase().includes(
+                      p.timezoneId!.split("/").pop()!.toLowerCase().replace(/_/g, " "),
+                    ),
+                  );
+                  if (match) setTimezoneId(String(match.id));
+                }
+              }}
+              placeholder="Start typing — Google suggestions appear"
+              className={inputCls}
+            />
           </Field>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Store Contact (optional)">
@@ -246,9 +265,22 @@ export default function SparkPublicExpressForm() {
           <Field label="Request Type *">
             <select value={requestTypeId} onChange={(e) => setRequestTypeId(e.target.value)} className={inputCls}>
               <option value="">— Select —</option>
-              {requestTypes.map((rt) => (
-                <option key={rt.id} value={rt.id}>{rt.name}</option>
-              ))}
+              {requestTypes
+                .filter((rt) =>
+                  [
+                    "retail sampling",
+                    "event activation",
+                    "on-premise sampling",
+                    "on-premise",
+                  ].includes((rt.name ?? "").toLowerCase()),
+                )
+                .map((rt) => (
+                  <option key={rt.id} value={rt.id}>
+                    {(rt.name ?? "").toLowerCase() === "on-premise"
+                      ? "On-Premise Sampling"
+                      : rt.name}
+                  </option>
+                ))}
             </select>
           </Field>
           <Field label="Brand Ambassadors Needed">
@@ -346,11 +378,24 @@ export default function SparkPublicExpressForm() {
         {/* Requestor */}
         <Card title="YOUR INFO">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Your Name">
-              <input value={requestorName} onChange={(e) => setRequestorName(e.target.value)} className={inputCls} />
+            <Field label="Your Name *">
+              <input
+                value={requestorName}
+                onChange={(e) => setRequestorName(e.target.value)}
+                className={inputCls}
+                placeholder="Full name"
+                required
+              />
             </Field>
             <Field label="Your Email *">
-              <input type="email" value={requestorEmail} onChange={(e) => setRequestorEmail(e.target.value)} className={inputCls} />
+              <input
+                type="email"
+                value={requestorEmail}
+                onChange={(e) => setRequestorEmail(e.target.value)}
+                className={inputCls}
+                placeholder="you@distributor.com"
+                required
+              />
             </Field>
           </div>
           <Field label="Notes">

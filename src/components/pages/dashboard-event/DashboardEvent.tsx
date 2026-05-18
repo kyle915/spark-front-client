@@ -26,6 +26,7 @@ const RANGES: { key: RangeKey; label: string }[] = [
   { key: "7d", label: "7d" },
   { key: "30d", label: "30d" },
   { key: "qtd", label: "90d" },
+  { key: "ytd", label: "YTD" },
 ];
 
 const fmtNum = (v: number | null | undefined) =>
@@ -379,9 +380,15 @@ export default function DashboardIndex() {
   const filters: DashboardFilters = useMemo(() => {
     const today = new Date();
     const start = new Date(today);
-    const daysBack =
-      range === "7d" ? 7 : range === "30d" ? 30 : 90;
-    start.setDate(today.getDate() - daysBack);
+    if (range === "ytd") {
+      // Jan 1 of the current year — captures the full calendar year.
+      start.setMonth(0, 1);
+      start.setHours(0, 0, 0, 0);
+    } else {
+      const daysBack =
+        range === "7d" ? 7 : range === "30d" ? 30 : 90;
+      start.setDate(today.getDate() - daysBack);
+    }
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
     return {
       distributorIds: [],

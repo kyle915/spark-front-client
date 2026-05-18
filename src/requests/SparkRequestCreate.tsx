@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
+import GooglePlacesInput from "@/components/inputs/GooglePlacesInput";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
@@ -16,6 +17,8 @@ import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import type { ProductsQuery as ProductsQueryType } from "@api/queries/__generated__/ProductsQuery.graphql";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { DistributorsQuery } from "@/api/queries/DistributorsQuery";
+import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__generated__/DistributorsQuery.graphql";
 
 /**
  * Spark v2 — minimal "Express" request form.
@@ -73,6 +76,18 @@ const SparkRequestInner: React.FC = () => {
       filters: { tenantId: tenantId ?? "" },
     },
     { fetchPolicy: "store-or-network" },
+  );
+  const distributorsData = useLazyLoadQuery<DistributorsQueryType>(
+    DistributorsQuery,
+    { filters: { tenantId: tenantId ?? "" }, first: 50 },
+    { fetchPolicy: "store-or-network" },
+  );
+  const distributors = useMemo(
+    () =>
+      (distributorsData?.distributors?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => !!n),
+    [distributorsData],
   );
 
   // Pull existing requests so we can offer type-ahead venue suggestions
@@ -158,7 +173,8 @@ const SparkRequestInner: React.FC = () => {
   // Bulk mode — add multiple dates at the same venue in one shot.
   const [extraDates, setExtraDates] = useState<string[]>([]);
   // Events at a venue need a BA count; retail samplings usually 1-2.
-  const [baCount, setBaCount] = useState<number>(2);
+  const [baCount, setBaCount] = useState<number>(1);
+  const [distributorId, setDistributorId] = useState("");
 
   const venueMatches = useMemo(() => {
     const q = venue.toLowerCase().trim();
@@ -261,6 +277,9 @@ const SparkRequestInner: React.FC = () => {
               clientName: fullName || undefined,
               clientEmail: email || undefined,
               requestorEmail: email || undefined,
+              distributorId: distributorId || undefined,
+              distributorName:
+                distributors.find((d) => String(d.id) === distributorId)?.name ?? undefined,
               notes: notesPlus || undefined,
               details: [],
               products: Array.from(selectedProducts).map((productId) => ({
@@ -426,9 +445,36 @@ const SparkRequestInner: React.FC = () => {
                 required
               >
                 <option value="">Select type</option>
-                {requestTypes.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
+                {requestTypes
+                  .filter((t) =>
+                    [
+                      "retail sampling",
+                      "event activation",
+                      "on-premise sampling",
+                      "on-premise",
+                    ].includes((t.name ?? "").toLowerCase()),
+                  )
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {/* Normalize backend label "On-Premise" → "On-Premise Sampling" */}
+                      {(t.name ?? "").toLowerCase() === "on-premise"
+                        ? "On-Premise Sampling"
+                        : t.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div>
+              <label className="label-mini block mb-1.5">Distributor</label>
+              <select
+                style={inputStyle}
+                value={distributorId}
+                onChange={(e) => setDistributorId(e.target.value)}
+              >
+                <option value="">— Optional —</option>
+                {distributors.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
                   </option>
                 ))}
               </select>
@@ -630,11 +676,25 @@ const SparkRequestInner: React.FC = () => {
 
             <div>
               <label className="label-mini block mb-1.5">Address</label>
-              <input
-                style={inputStyle}
+              <GooglePlacesInput
                 value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Street, city, state"
+                onChange={setAddress}
+                onResolved={(p) => {
+                  setAddress(p.formattedAddress);
+                  // Auto-pick the timezone if the API returned an IANA
+                  // id we have in the backend dropdown.
+                  if (p.timezoneId) {
+                    const match = timezones.find((t) =>
+                      (t?.name ?? "").toLowerCase().includes(
+                        p.timezoneId!.split("/").pop()!.toLowerCase().replace(/_/g, " "),
+                      ),
+                    );
+                    if (match) setTimezoneId(String(match.id));
+                  }
+                }}
+                placeholder="Start typing — Google suggestions appear"
+                className=""
+                style={inputStyle}
               />
             </div>
 

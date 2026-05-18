@@ -1,0 +1,277 @@
+import { useEffect, useId, useRef, useState } from "react";
+
+/**
+ * Spark v2 — Google Places autocomplete input.
+ *
+ * Lightweight wrapper around `google.maps.places.AutocompleteService` +
+ * `PlacesService`. We load the Maps JS SDK once on mount (idempotent —
+ * subsequent inputs share the same loaded script) and proxy keystrokes
+ * to the suggestion endpoint with a 200ms debounce.
+ *
+ * On selection we resolve the place to its full formatted address + lat
+ * /lng, then look up the IANA timezone via the Google Timezone API so
+ * parent forms can auto-fill the time-zone field.
+ *
+ * Props are intentionally minimal so this works as a drop-in replacement
+ * for `<input>` — pass `value`, `onChange`, and `onResolved` and forget
+ * the rest.
+ */
+
+export type ResolvedPlace = {
+  formattedAddress: string;
+  lat: number;
+  lng: number;
+  city?: string;
+  state?: string;
+  zip?: string;
+  /** IANA tz id, e.g. "America/Chicago". Empty if the lookup failed. */
+  timezoneId?: string;
+};
+
+type Props = {
+  value: string;
+  onChange: (v: string) => void;
+  onResolved?: (place: ResolvedPlace) => void;
+  placeholder?: string;
+  className?: string;
+  style?: React.CSSProperties;
+  /** Bias predictions toward Account/Venue names instead of street
+   *  addresses. When true we use the "establishment" type. */
+  bias?: "address" | "establishment";
+};
+
+declare global {
+  interface Window {
+    google?: {
+      maps?: {
+        places?: {
+          AutocompleteService: new () => {
+            getPlacePredictions: (
+              req: { input: string; types?: string[] },
+              cb: (
+                preds:
+                  | Array<{
+                      place_id: string;
+                      description: string;
+                      structured_formatting?: {
+                        main_text: string;
+                        secondary_text: string;
+                      };
+                    }>
+                  | null,
+                status: string,
+              ) => void,
+            ) => void;
+          };
+          PlacesService: new (attr: HTMLElement) => {
+            getDetails: (
+              req: { placeId: string; fields: string[] },
+              cb: (
+                result:
+                  | {
+                      formatted_address?: string;
+                      geometry?: { location?: { lat: () => number; lng: () => number } };
+                      address_components?: Array<{
+                        long_name: string;
+                        short_name: string;
+                        types: string[];
+                      }>;
+                    }
+                  | null,
+                status: string,
+              ) => void,
+            ) => void;
+          };
+          PlacesServiceStatus?: { OK: string };
+        };
+      };
+    };
+    __sparkMapsLoading?: Promise<void>;
+  }
+}
+
+const loadMapsSdk = (): Promise<void> => {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (window.google?.maps?.places) return Promise.resolve();
+  if (window.__sparkMapsLoading) return window.__sparkMapsLoading;
+  const key = (import.meta as { env?: Record<string, string> }).env?.VITE_GOOGLE_MAPS_API_KEY;
+  if (!key) return Promise.reject(new Error("VITE_GOOGLE_MAPS_API_KEY missing"));
+  window.__sparkMapsLoading = new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Google Maps JS SDK"));
+    document.head.appendChild(script);
+  });
+  return window.__sparkMapsLoading;
+};
+
+const timezoneForLatLng = async (lat: number, lng: number): Promise<string | null> => {
+  const key = (import.meta as { env?: Record<string, string> }).env?.VITE_GOOGLE_MAPS_API_KEY;
+  if (!key) return null;
+  try {
+    const ts = Math.floor(Date.now() / 1000);
+    const res = await fetch(
+      `https://maps.googleapis.com/maps/api/timezone/json?location=${lat},${lng}&timestamp=${ts}&key=${key}`,
+    );
+    const json = await res.json();
+    return typeof json?.timeZoneId === "string" ? json.timeZoneId : null;
+  } catch {
+    return null;
+  }
+};
+
+export default function GooglePlacesInput({
+  value,
+  onChange,
+  onResolved,
+  placeholder,
+  className,
+  style,
+  bias = "address",
+}: Props) {
+  const [suggestions, setSuggestions] = useState<
+    Array<{ place_id: string; main: string; sub: string }>
+  >([]);
+  const [open, setOpen] = useState(false);
+  const [ready, setReady] = useState(false);
+  const debounceRef = useRef<number | null>(null);
+  const inputId = useId();
+  const attrEl = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    loadMapsSdk()
+      .then(() => setReady(true))
+      .catch(() => setReady(false));
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    if (!value || value.length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    debounceRef.current = window.setTimeout(() => {
+      const svc = new window.google!.maps!.places!.AutocompleteService();
+      svc.getPlacePredictions(
+        {
+          input: value,
+          types: bias === "establishment" ? ["establishment"] : ["address"],
+        },
+        (preds) => {
+          setSuggestions(
+            (preds ?? []).map((p) => ({
+              place_id: p.place_id,
+              main: p.structured_formatting?.main_text ?? p.description,
+              sub: p.structured_formatting?.secondary_text ?? "",
+            })),
+          );
+        },
+      );
+    }, 200);
+  }, [value, ready, bias]);
+
+  const pick = (placeId: string, label: string) => {
+    if (!ready) return;
+    if (!attrEl.current) {
+      attrEl.current = document.createElement("div");
+    }
+    const svc = new window.google!.maps!.places!.PlacesService(attrEl.current);
+    svc.getDetails(
+      {
+        placeId,
+        fields: ["formatted_address", "geometry", "address_components"],
+      },
+      async (place) => {
+        if (!place) return;
+        const fa = place.formatted_address ?? label;
+        const loc = place.geometry?.location;
+        const lat = loc?.lat() ?? 0;
+        const lng = loc?.lng() ?? 0;
+        const comp = (type: string) =>
+          place.address_components?.find((c) => c.types.includes(type));
+        const city =
+          comp("locality")?.long_name ??
+          comp("sublocality")?.long_name ??
+          comp("postal_town")?.long_name;
+        const state = comp("administrative_area_level_1")?.short_name;
+        const zip = comp("postal_code")?.long_name;
+        const tz = await timezoneForLatLng(lat, lng);
+        onChange(fa);
+        setOpen(false);
+        setSuggestions([]);
+        onResolved?.({
+          formattedAddress: fa,
+          lat,
+          lng,
+          city,
+          state,
+          zip,
+          timezoneId: tz ?? undefined,
+        });
+      },
+    );
+  };
+
+  return (
+    <div className="relative" style={{ width: "100%" }}>
+      <input
+        id={inputId}
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        placeholder={placeholder}
+        className={className}
+        style={style}
+        autoComplete="off"
+      />
+      {open && suggestions.length > 0 && (
+        <div
+          className="absolute left-0 right-0 z-30 mt-1 rounded-xl overflow-hidden"
+          style={{
+            background: "var(--spark-surface, #11140e)",
+            border: "1px solid var(--spark-border, #1f2418)",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+          }}
+        >
+          {suggestions.map((s) => (
+            <button
+              type="button"
+              key={s.place_id}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                pick(s.place_id, `${s.main}${s.sub ? ", " + s.sub : ""}`);
+              }}
+              className="block w-full text-left px-3 py-2.5 transition"
+              style={{
+                color: "var(--spark-text, #f2f3ee)",
+                borderTop: "1px solid rgba(255,255,255,0.04)",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = "rgba(197,245,70,0.06)")
+              }
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <div className="text-sm font-semibold">{s.main}</div>
+              {s.sub && (
+                <div
+                  className="mono text-[10px] mt-0.5"
+                  style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.5)" }}
+                >
+                  {s.sub.toUpperCase()}
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
