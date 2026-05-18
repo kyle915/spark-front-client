@@ -517,6 +517,19 @@ export default function DashboardIndex() {
   const navigate = useNavigate();
   const [range, setRange] = useState<RangeKey>("30d");
 
+  // Read the per-tenant linked Google Sheet URL (set in onboarding
+  // or from the Master Tracker header) so we can surface a quick
+  // shortcut at the top of the dashboard.
+  const linkedSheetUrl = tenantId
+    ? (() => {
+        try {
+          return localStorage.getItem(`@spark.linkedSheet.url/${tenantId}`) ?? "";
+        } catch {
+          return "";
+        }
+      })()
+    : "";
+
   // Map the date-range pill into a real DashboardFilters startDate.
   const filters: DashboardFilters = useMemo(() => {
     const today = new Date();
@@ -589,16 +602,35 @@ export default function DashboardIndex() {
               )}
             </p>
           </div>
-          <div className="pill-group">
-            {RANGES.map((r) => (
-              <button
-                key={r.key}
-                onClick={() => setRange(r.key)}
-                className={`pill-btn ${r.key === range ? "on" : ""}`}
+          <div className="flex items-center gap-2 flex-wrap">
+            {linkedSheetUrl && (
+              <a
+                href={linkedSheetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-2"
+                style={{
+                  background: "rgba(95,184,239,0.10)",
+                  color: "var(--spark-sky)",
+                  border: "1px solid rgba(95,184,239,0.35)",
+                  textDecoration: "none",
+                }}
+                title="Open the brand's linked Google Sheet in a new tab"
               >
-                {r.label}
-              </button>
-            ))}
+                📊 Sheet ↗
+              </a>
+            )}
+            <div className="pill-group">
+              {RANGES.map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() => setRange(r.key)}
+                  className={`pill-btn ${r.key === range ? "on" : ""}`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
