@@ -103,10 +103,18 @@ const SparkRequestInner: React.FC = () => {
   );
 
   const venueIndex = useMemo(() => {
-    const seen = new Map<
-      string,
-      { name: string; address: string; count: number; lastDate: string }
-    >();
+    type VenueEntry = {
+      name: string;
+      address: string;
+      count: number;
+      lastDate: string;
+      // Carried forward from the most-recent prior request at this
+      // venue so picking a repeat venue can auto-fill distributor +
+      // activation type on the new request.
+      distributorId: string | null;
+      requestTypeId: string | null;
+    };
+    const seen = new Map<string, VenueEntry>();
     const edges = recentRequestsData?.requests?.edges ?? [];
     for (const e of edges) {
       const n = e?.node;
@@ -117,11 +125,25 @@ const SparkRequestInner: React.FC = () => {
       const key = `${name.toLowerCase()}|${addr.toLowerCase()}`;
       const existing = seen.get(key);
       const date = n.date ?? "";
+      const distId = n.distributor?.id ? String(n.distributor.id) : null;
+      const typeId = n.requestType?.id ? String(n.requestType.id) : null;
       if (!existing) {
-        seen.set(key, { name, address: addr, count: 1, lastDate: date });
+        seen.set(key, {
+          name,
+          address: addr,
+          count: 1,
+          lastDate: date,
+          distributorId: distId,
+          requestTypeId: typeId,
+        });
       } else {
         existing.count += 1;
-        if (date > existing.lastDate) existing.lastDate = date;
+        if (date > existing.lastDate) {
+          existing.lastDate = date;
+          // Prefer the FK ids from the most-recent prior request.
+          if (distId) existing.distributorId = distId;
+          if (typeId) existing.requestTypeId = typeId;
+        }
       }
     }
     return Array.from(seen.values()).sort((a, b) => b.count - a.count);
@@ -153,10 +175,13 @@ const SparkRequestInner: React.FC = () => {
     [productsData],
   );
 
-  // Form state
-  const [fullName, setFullName] = useState(
-    [user?.firstName, user?.lastName].filter(Boolean).join(" "),
-  );
+  // Form state. fullName + email come from the logged-in user
+  // silently (no more visible fields for them — they're duplicative
+  // with auth data and confused users with editable inputs that
+  // hint they could be different from the profile).
+  const fullName = [user?.firstName, user?.lastName]
+    .filter(Boolean)
+    .join(" ");
   const [searchParams] = useSearchParams();
   // Duplicate-from-existing flow: any of these query params pre-fill
   // the form. Used by the "Duplicate" action on SparkRequestView so
@@ -174,7 +199,7 @@ const SparkRequestInner: React.FC = () => {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const [email, setEmail] = useState(user?.email ?? "");
+  const email = user?.email ?? "";
   // Date is intentionally NOT pre-filled on duplicate — that's the
   // whole point of cloning (new date for same venue/setup).
   const [date, setDate] = useState("");
@@ -189,7 +214,7 @@ const SparkRequestInner: React.FC = () => {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
     new Set(qpProducts),
   );
-  const [showDetail, setShowDetail] = useState(false);
+  // Form is now always flat (no "Add detail" expander).
   const [venueFocused, setVenueFocused] = useState(false);
   // Bulk mode — add multiple dates at the same venue in one shot.
   const [extraDates, setExtraDates] = useState<string[]>([]);
@@ -339,10 +364,18 @@ const SparkRequestInner: React.FC = () => {
       );
       setTimezoneId(String((chicago ?? timezones[0])?.id));
     }
-    if (!rmmId && rmms[0]) {
-      setRmmId(String(rmms[0].id));
+    if (!rmmId && rmms.length > 0) {
+      // If the logged-in user is themselves one of the RMMs (typical
+      // client-role flow — Kristyn / Lauren / etc. submit on their
+      // own behalf), default routing to them. Otherwise fall back
+      // to the first available RMM.
+      const meAsRmm = rmms.find(
+        (m) => m && String(m.id) === String(user?.id),
+      );
+      const target = meAsRmm ?? rmms[0];
+      if (target) setRmmId(String(target.id));
     }
-  }, [requestTypes, timezones, rmms, requestTypeId, timezoneId, rmmId]);
+  }, [requestTypes, timezones, rmms, requestTypeId, timezoneId, rmmId, user?.id]);
 
   const geocode = async (
     raw: string,
@@ -575,6 +608,14 @@ const SparkRequestInner: React.FC = () => {
                     onClick={() => {
                       setVenue(v.name);
                       if (v.address) setAddress(v.address);
+                      // Auto-fill distributor + activation type from
+                      // the most-recent prior request at this venue.
+                      // Skips when those defaults are already user-set
+                      // (don't clobber a deliberate choice).
+                      if (v.distributorId && !distributorId)
+                        setDistributorId(v.distributorId);
+                      if (v.requestTypeId && !requestTypeId)
+                        setRequestTypeId(v.requestTypeId);
                       setVenueFocused(false);
                     }}
                     className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left transition"
@@ -808,7 +849,15 @@ const SparkRequestInner: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => setShowDetail(true)}
+              onClick={() => {
+                // Scroll the RMM dropdown into view so the user can
+                // pick a different recipient. Form is now always
+                // visible so no expander toggle needed.
+                document
+                  .getElementById("rmm-select")
+                  ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                document.getElementById("rmm-select")?.focus();
+              }}
               className="mono text-[10px] transition shrink-0"
               style={{
                 letterSpacing: "0.14em",
@@ -820,66 +869,68 @@ const SparkRequestInner: React.FC = () => {
           </div>
         </div>
 
-        {/* DETAIL — collapsed until "Add detail" */}
-        {!showDetail && (
-          <button
-            type="button"
-            onClick={() => setShowDetail(true)}
-            className="w-full py-3 rounded-xl text-sm transition"
-            style={{
-              background: "transparent",
-              color: "rgba(255,255,255,0.55)",
-              border: "1px dashed var(--spark-border)",
-            }}
-          >
-            + Add detail (time, requestor, products, notes, RMM)
-          </button>
-        )}
-
-        {showDetail && (
-          <div
-            className="space-y-5 pt-5"
-            style={{ borderTop: "1px solid var(--spark-border)" }}
-          >
-            <div className="grid sm:grid-cols-2 gap-4">
+        {/* DETAIL — always visible for logged-in users. Name + Email
+            removed (we have them from auth); Address shows only if it
+            hasn't been auto-filled by the venue picker. Start/End time,
+            time zone, and RMM routing are surfaced by default because
+            they're required for every request. */}
+        <div
+          className="space-y-5 pt-5"
+          style={{ borderTop: "1px solid var(--spark-border)" }}
+        >
+            {!address && (
               <div>
-                <label className="label-mini block mb-1.5">Your name</label>
-                <input
+                <label className="label-mini block mb-1.5">Address *</label>
+                <GooglePlacesInput
+                  value={address}
+                  onChange={setAddress}
+                  onResolved={(p) => {
+                    setAddress(p.formattedAddress);
+                    if (p.timezoneId) {
+                      const match = matchTimezoneOption(p.timezoneId, timezones);
+                      if (match) setTimezoneId(String(match.id));
+                    }
+                  }}
+                  placeholder="Start typing — Google suggestions appear"
+                  className=""
                   style={inputStyle}
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Jane Doe"
                 />
               </div>
-              <div>
-                <label className="label-mini block mb-1.5">Email</label>
-                <input
-                  style={inputStyle}
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="jane@distributor.com"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="label-mini block mb-1.5">Address</label>
-              <GooglePlacesInput
-                value={address}
-                onChange={setAddress}
-                onResolved={(p) => {
-                  setAddress(p.formattedAddress);
-                  if (p.timezoneId) {
-                    const match = matchTimezoneOption(p.timezoneId, timezones);
-                    if (match) setTimezoneId(String(match.id));
-                  }
+            )}
+            {address && (
+              <div
+                className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm"
+                style={{
+                  background: "rgba(197,245,70,0.06)",
+                  border: "1px solid rgba(197,245,70,0.25)",
+                  color: "rgba(255,255,255,0.85)",
                 }}
-                placeholder="Start typing — Google suggestions appear"
-                className=""
-                style={inputStyle}
-              />
-            </div>
+              >
+                <span className="truncate">
+                  <span
+                    className="mono text-[10px] mr-2"
+                    style={{
+                      letterSpacing: "0.16em",
+                      color: "var(--spark-lime)",
+                    }}
+                  >
+                    ADDRESS →
+                  </span>
+                  {address}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAddress("")}
+                  className="mono text-[10px] shrink-0"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "rgba(255,255,255,0.55)",
+                  }}
+                >
+                  CHANGE
+                </button>
+              </div>
+            )}
 
             <div className="grid sm:grid-cols-3 gap-4">
               <div>
@@ -920,6 +971,7 @@ const SparkRequestInner: React.FC = () => {
                 Routes to RMM (auto-approval)
               </label>
               <select
+                id="rmm-select"
                 style={inputStyle}
                 value={rmmId}
                 onChange={(e) => setRmmId(e.target.value)}
@@ -936,7 +988,6 @@ const SparkRequestInner: React.FC = () => {
               </select>
             </div>
           </div>
-        )}
 
         {/* Products picker */}
         {products.length > 0 && (
