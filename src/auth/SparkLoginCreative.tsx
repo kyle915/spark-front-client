@@ -126,7 +126,10 @@ export default function SparkLoginCreative({
         SPARK
       </div>
 
-      {/* Top eyebrow */}
+      {/* Top — Spark wordmark only. Per Kyle's call, the
+          'LIVE OPS · BY IGNITE' pill was redundant with the wordmark
+          right next to it and the bigger 'FIELD MARKETING, FINALLY'
+          crumb below, so it's gone. */}
       <div
         style={{
           position: "absolute",
@@ -134,45 +137,11 @@ export default function SparkLoginCreative({
           left: 56,
           right: 56,
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "flex-end",
           alignItems: "center",
           zIndex: 5,
         }}
       >
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "8px 14px",
-            borderRadius: 999,
-            background: "rgba(214,243,95,0.1)",
-            border: "1px solid rgba(214,243,95,0.4)",
-          }}
-        >
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 999,
-              background: "#D6F35F",
-              boxShadow: "0 0 12px #D6F35F",
-              animation: "spk-pulse 1.6s infinite",
-            }}
-          />
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: "0.22em",
-              color: "#D6F35F",
-              textTransform: "uppercase",
-            }}
-          >
-            LIVE OPS · BY IGNITE
-          </span>
-        </div>
         <img
           src="/legal/spark-logo-full.png"
           alt="Spark by Ignite"
