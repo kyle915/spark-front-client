@@ -1,51 +1,203 @@
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useLazyLoadQuery } from "react-relay/hooks";
+import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
+import { RequestsQuery } from "@/api/queries/RequestsQuery";
+import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Spark v2 — Alerts / Notifications.
- * Wireframe: spark-demo/index.html lines 2399-2415 + notifRow helper.
  *
- * Currently static demo data. Real notifications require a backend feed
- * (request submitted / approval / new applicant / recap published / alert).
+ * Built from the requests dataset (no separate feed yet). Surfaces:
+ *  - new submissions in the last 48h
+ *  - recent approvals + declines (status updated in the last 48h)
+ *
+ * "Read" state is tracked per-user in localStorage so a refresh doesn't
+ * un-read everything. When a real notifications backend ships, swap the
+ * derive() body — the UI shape stays.
  */
 
-type NotifKind = "request" | "approval" | "application" | "recap" | "alert";
+type NotifKind = "request" | "approval" | "decline";
+
+type Row = {
+  key: string;
+  uuid: string;
+  kind: NotifKind;
+  title: string;
+  body: string;
+  whenIso: string;
+  unread: boolean;
+};
 
 const KIND_ICON: Record<NotifKind, string> = {
   request: "✉",
   approval: "✓",
-  application: "👥",
-  recap: "◈",
-  alert: "⚠",
+  decline: "✗",
 };
 
 const KIND_COLOR: Record<NotifKind, string> = {
   request: "var(--spark-sky)",
   approval: "var(--spark-lime)",
-  application: "var(--spark-purple)",
-  recap: "var(--spark-lime)",
-  alert: "var(--spark-orange)",
+  decline: "var(--spark-orange)",
 };
 
-const ROWS: {
-  kind: NotifKind;
-  title: string;
-  body: string;
-  when: string;
-  unread: boolean;
-}[] = [
-  { kind: "request", title: "Ross K. submitted a new request", body: "Buckhead Block Party · Atlanta · June 5", when: "12 min ago", unread: true },
-  { kind: "approval", title: "You approved 2 requests", body: "Atlanta + Domain Demo", when: "1 h ago", unread: true },
-  { kind: "application", title: "3 new applicants for Whole Foods Lamar", body: "Maya R., Jordan T., Sasha P.", when: "2 h ago", unread: true },
-  { kind: "recap", title: "Recap auto-published: Mohawk Patio", body: "218 samples · 39% conv · 48 photos", when: "3 h ago", unread: false },
-  { kind: "alert", title: "Miami efficiency alert", body: "$/sample +32% vs avg", when: "6 h ago", unread: true },
-];
+const READ_KEY = "@spark.alerts.readKeys.v1";
 
-export default function SparkAlerts() {
-  const unread = ROWS.filter((r) => r.unread).length;
+function loadRead(): Set<string> {
+  try {
+    const raw = localStorage.getItem(READ_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveRead(set: Set<string>) {
+  try {
+    localStorage.setItem(READ_KEY, JSON.stringify([...set]));
+  } catch {
+    /* ignore quota */
+  }
+}
+
+function timeAgo(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return "";
+  const diffMs = Date.now() - t;
+  if (diffMs < 0) return "just now";
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days} d ago`;
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+const Inner: React.FC = () => {
+  const navigate = useNavigate();
+  const { tenantId } = useAuthStore();
+  const data = useLazyLoadQuery<RequestsQueryType>(
+    RequestsQuery,
+    { first: 300, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+
+  const [readKeys, setReadKeys] = useState<Set<string>>(() => loadRead());
+
+  const rows: Row[] = useMemo(() => {
+    const all =
+      data?.requests?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+
+    const cutoffMs = Date.now() - 48 * 60 * 60 * 1000;
+    const out: Row[] = [];
+
+    for (const n of all) {
+      const slug = (n.status?.slug ?? n.status?.name ?? "").toLowerCase();
+      const requester = n.client?.name ?? n.distributor?.name ?? "Someone";
+      const venue = n.retailer?.name ?? n.name ?? "an account";
+      const market = n.retailer?.location?.name ?? n.location?.name ?? "";
+      const stateCode =
+        n.retailer?.location?.state?.code ?? n.state?.code ?? "";
+      const locTag = [market, stateCode].filter(Boolean).join(", ");
+      const created = n.createdAt
+        ? new Date(n.createdAt).getTime()
+        : Number.NaN;
+      const updated = n.updatedAt
+        ? new Date(n.updatedAt).getTime()
+        : Number.NaN;
+      const id = String(n.id);
+      const reqLabel = `REQ-${id.slice(-4).toUpperCase()}`;
+
+      // New submission (pending in the last 48h)
+      if (slug === "pending" && Number.isFinite(created) && created >= cutoffMs) {
+        const key = `req:${id}:${n.createdAt}`;
+        out.push({
+          key,
+          uuid: String(n.uuid),
+          kind: "request",
+          title: `${requester} submitted ${reqLabel}`,
+          body: `${venue}${locTag ? ` · ${locTag}` : ""}`,
+          whenIso: n.createdAt ?? "",
+          unread: !readKeys.has(key),
+        });
+      }
+
+      // Approval/decline in the last 48h
+      if (
+        (slug === "approved" || slug === "declined") &&
+        Number.isFinite(updated) &&
+        updated >= cutoffMs &&
+        // skip auto-approves that fire at creation time
+        Number.isFinite(created) &&
+        updated - created > 5_000
+      ) {
+        const kind: NotifKind = slug === "approved" ? "approval" : "decline";
+        const key = `${kind}:${id}:${n.updatedAt}`;
+        out.push({
+          key,
+          uuid: String(n.uuid),
+          kind,
+          title:
+            kind === "approval"
+              ? `${reqLabel} approved`
+              : `${reqLabel} declined — requestor notified`,
+          body: `${venue}${locTag ? ` · ${locTag}` : ""}`,
+          whenIso: n.updatedAt ?? "",
+          unread: !readKeys.has(key),
+        });
+      }
+    }
+
+    out.sort(
+      (a, b) =>
+        new Date(b.whenIso).getTime() - new Date(a.whenIso).getTime(),
+    );
+    return out.slice(0, 60);
+  }, [data, readKeys]);
+
+  const unread = rows.filter((r) => r.unread).length;
+
+  const markRead = (key: string) => {
+    setReadKeys((prev) => {
+      const next = new Set(prev);
+      next.add(key);
+      saveRead(next);
+      return next;
+    });
+  };
+
+  const markAllRead = () => {
+    setReadKeys((prev) => {
+      const next = new Set(prev);
+      for (const r of rows) next.add(r.key);
+      saveRead(next);
+      return next;
+    });
+  };
+
+  const openRow = (r: Row) => {
+    markRead(r.key);
+    if (r.kind === "request") {
+      navigate("/approvals");
+    } else {
+      navigate(`/request/view/${r.uuid}`);
+    }
+  };
 
   return (
-    <Layout>
-      <div className="space-y-5 max-w-4xl">
+    <div className="space-y-5 max-w-4xl">
+      <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
           <p
             className="mono text-[10px]"
@@ -54,7 +206,7 @@ export default function SparkAlerts() {
               color: "rgba(255,255,255,0.45)",
             }}
           >
-            {unread} UNREAD
+            {unread} UNREAD · LAST 48H
           </p>
           <h1
             className="display text-4xl font-bold mt-2"
@@ -63,18 +215,42 @@ export default function SparkAlerts() {
             What you missed.
           </h1>
         </div>
+        {unread > 0 && (
+          <button
+            onClick={markAllRead}
+            className="mono text-[10px] px-3 py-2 rounded-xl"
+            style={{
+              letterSpacing: "0.18em",
+              background: "rgba(255,255,255,0.04)",
+              color: "rgba(255,255,255,0.7)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            MARK ALL READ
+          </button>
+        )}
+      </div>
 
+      {rows.length === 0 ? (
+        <div
+          className="spark-card p-8 text-center text-sm"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+        >
+          Quiet on the wire. Nothing new in the last 48 hours.
+        </div>
+      ) : (
         <div className="spark-card overflow-hidden">
           <ul>
-            {ROWS.map((r, i) => {
+            {rows.map((r, i) => {
               const color = KIND_COLOR[r.kind];
               return (
                 <li
-                  key={i}
+                  key={r.key}
                   className="px-5 py-4 transition cursor-pointer"
+                  onClick={() => openRow(r)}
                   style={{
                     borderBottom:
-                      i < ROWS.length - 1
+                      i < rows.length - 1
                         ? "1px solid var(--spark-border)"
                         : "none",
                     background: r.unread
@@ -82,7 +258,8 @@ export default function SparkAlerts() {
                       : "transparent",
                   }}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "rgba(255,255,255,0.03)")
+                    (e.currentTarget.style.background =
+                      "rgba(255,255,255,0.03)")
                   }
                   onMouseLeave={(e) =>
                     (e.currentTarget.style.background = r.unread
@@ -120,7 +297,7 @@ export default function SparkAlerts() {
                             color: "rgba(255,255,255,0.4)",
                           }}
                         >
-                          · {r.when.toUpperCase()}
+                          · {timeAgo(r.whenIso).toUpperCase()}
                         </span>
                       </div>
                       <p
@@ -133,7 +310,12 @@ export default function SparkAlerts() {
                     {r.unread && (
                       <span
                         className="spark-dot mt-2"
-                        style={{ width: 8, height: 8, background: color, boxShadow: `0 0 8px ${color}` }}
+                        style={{
+                          width: 8,
+                          height: 8,
+                          background: color,
+                          boxShadow: `0 0 8px ${color}`,
+                        }}
                       />
                     )}
                   </div>
@@ -142,7 +324,41 @@ export default function SparkAlerts() {
             })}
           </ul>
         </div>
-      </div>
+      )}
+    </div>
+  );
+};
+
+// Sentinel so the unread badge on the nav can update when this page loads.
+// Wired here instead of in a global store to keep the page self-contained.
+function useDispatchUnreadCountEffect(count: number) {
+  useEffect(() => {
+    try {
+      window.dispatchEvent(
+        new CustomEvent("spark:alerts:unread", { detail: count }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [count]);
+}
+void useDispatchUnreadCountEffect;
+
+export default function SparkAlerts() {
+  return (
+    <Layout>
+      <Suspense
+        fallback={
+          <div
+            className="spark-card p-8 text-center text-sm max-w-4xl"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            Loading alerts…
+          </div>
+        }
+      >
+        <Inner />
+      </Suspense>
     </Layout>
   );
 }
