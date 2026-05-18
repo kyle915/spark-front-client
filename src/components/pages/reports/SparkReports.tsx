@@ -355,15 +355,21 @@ export default function SparkReports() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            {/* Uses the same @media print stylesheet that powers the
+                request-view 'Print brief'. The page strips chrome,
+                inverts to dark-on-white for ink, and renders the
+                KPI strip + charts. Save-as-PDF works in any browser. */}
             <button
+              onClick={() => window.print()}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "transparent",
                 color: "var(--spark-text)",
                 border: "1px solid var(--spark-border)",
               }}
+              title="Save the current view as PDF via the browser print dialog"
             >
-              ↓ Export PDF
+              🖨 Export PDF
             </button>
           </div>
         </div>
