@@ -302,8 +302,12 @@ const SidebarNav: React.FC<{
         chip = { text: String(counts.tracker), tone: "lime" };
       if (it.to === "/approvals" && counts.approvals > 0)
         chip = {
+          // Pulse orange when there's at least one SLA-breached pending
+          // request (>72h). Without a breach we use the calmer gold tone
+          // so the sidebar doesn't scream just because requests exist.
           text: String(counts.approvals),
-          tone: "orange",
+          tone: counts.approvalsSlaBreach > 0 ? "orange" : "gold",
+          blink: counts.approvalsSlaBreach > 0,
         };
       if (it.to === "/recaps/list" && counts.done30d > 0)
         chip = { text: String(counts.done30d), tone: "lime" };

@@ -14,6 +14,7 @@ import { useAuthStore } from "@/store/authStore";
 export type SidebarCounts = {
   tracker: number; // total active (non-done)
   approvals: number; // pending + queue
+  approvalsSlaBreach: number; // pending >72h — these need attention NOW
   upcoming: number; // approved + scheduled in next 14d
   done30d: number; // done in last 30 days
   alertsUnread: number; // last-48h request activity minus localStorage-read keys
@@ -47,11 +48,13 @@ export function useSidebarCounts(): SidebarCounts {
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
     let tracker = 0;
     let approvals = 0;
+    let approvalsSlaBreach = 0;
     let upcoming = 0;
     let done30d = 0;
     let alertsUnread = 0;
     const readKeys = loadReadKeys();
     const cutoff48 = Date.now() - 48 * 60 * 60 * 1000;
+    const cutoff72 = Date.now() - 72 * 60 * 60 * 1000;
     const now = Date.now();
     const days = (n: number) => n * 86_400_000;
     for (const r of rows) {
@@ -60,7 +63,15 @@ export function useSidebarCounts(): SidebarCounts {
         .toLowerCase();
       const isDone = slug === "done" || slug === "completed";
       if (!isDone) tracker += 1;
-      if (slug === "pending" || slug === "queue") approvals += 1;
+      if (slug === "pending" || slug === "queue") {
+        approvals += 1;
+        const createdMs = r.createdAt
+          ? new Date(r.createdAt).getTime()
+          : Number.NaN;
+        if (Number.isFinite(createdMs) && createdMs <= cutoff72) {
+          approvalsSlaBreach += 1;
+        }
+      }
       // Mirror the keying used by SparkAlerts so this count tracks
       // exactly what the user sees there.
       const id = String(r.id);
@@ -89,7 +100,14 @@ export function useSidebarCounts(): SidebarCounts {
         if (isDone && t > now - days(30) && t < now) done30d += 1;
       }
     }
-    return { tracker, approvals, upcoming, done30d, alertsUnread };
+    return {
+      tracker,
+      approvals,
+      approvalsSlaBreach,
+      upcoming,
+      done30d,
+      alertsUnread,
+    };
   }, [data]);
 }
 
