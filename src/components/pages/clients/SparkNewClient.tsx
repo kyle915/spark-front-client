@@ -4,6 +4,33 @@ import Layout from "@/layout/Layout";
 import { useAlertStore } from "@/store/alertStore";
 
 /**
+ * Inline GraphQL POST helper. Use this when we don't have / don't want
+ * to thread a Relay mutation through the codegen pipeline. Kept here
+ * because the wizard is admin-only and called rarely (once per brand
+ * onboarding).
+ */
+async function gqlPost<T>(
+  query: string,
+  variables: Record<string, unknown>,
+): Promise<T> {
+  const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+  const json = await res.json();
+  if (json.errors?.length) {
+    throw new Error(
+      json.errors.map((e: { message: string }) => e.message).join("; "),
+    );
+  }
+  return json.data as T;
+}
+
+/**
  * Spark v2 — New Client / Tenant onboarding.
  *
  * Captures everything needed to spin up a new brand workspace inside
@@ -61,25 +88,125 @@ export default function SparkNewClient() {
   const set = <K extends keyof ClientDraft>(k: K, v: ClientDraft[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
-  const onSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!draft.name.trim() || !draft.primaryContactEmail.trim()) {
       showAlert("Brand name and primary contact email are required.", "warning");
       return;
     }
+    if (submitting) return;
+    setSubmitting(true);
+
+    // Snapshot to localStorage first so a network hiccup doesn't
+    // erase what kyle just typed. Cleared on success.
+    const draftKey = "@spark.newClients.draft";
     try {
-      const key = "@spark.newClients";
-      const list = JSON.parse(localStorage.getItem(key) ?? "[]");
-      list.push({ ...draft, at: new Date().toISOString() });
-      localStorage.setItem(key, JSON.stringify(list));
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({ ...draft, at: new Date().toISOString() }),
+      );
     } catch {
       /* ignore quota */
     }
-    showAlert(
-      `${draft.name} queued. Backend wiring will spin up the tenant + invite the primary contact.`,
-      "success",
-    );
-    navigate("/people");
+
+    try {
+      // Step 1: create the tenant. createTenant is admin-only on the
+      // backend (spark-admin role check); the mutation also seeds
+      // default RequestStatus / EventStatus rows for the new tenant.
+      const tenantRes = await gqlPost<{
+        createTenant: {
+          success: boolean;
+          message: string;
+          tenant: { id: string; uuid: string; name: string } | null;
+        };
+      }>(
+        `
+          mutation CreateTenant($input: CreateTenantInput!) {
+            createTenant(input: $input) {
+              success
+              message
+              tenant { id uuid name }
+            }
+          }
+        `,
+        {
+          input: {
+            name: draft.name.trim(),
+            image: draft.logoUrl.trim() || null,
+          },
+        },
+      );
+      const tc = tenantRes.createTenant;
+      if (!tc?.success || !tc.tenant) {
+        throw new Error(tc?.message || "Tenant create failed.");
+      }
+      const newTenantId = tc.tenant.id;
+
+      // Step 2: invite the primary contact as a client of this tenant.
+      // Best-effort — if it fails (e.g., email collision), we surface
+      // a warning but don't undo the tenant create.
+      let contactInvited = false;
+      let contactError: string | null = null;
+      try {
+        const [firstName, ...rest] = draft.primaryContactName
+          .trim()
+          .split(/\s+/);
+        const inviteRes = await gqlPost<{
+          inviteUser: { success: boolean; message: string };
+        }>(
+          `
+            mutation Invite($input: InviteUserInput!) {
+              inviteUser(input: $input) { success message }
+            }
+          `,
+          {
+            input: {
+              email: draft.primaryContactEmail.trim(),
+              firstName: firstName || null,
+              lastName: rest.join(" ") || null,
+              role: "client",
+              tenantId: newTenantId,
+              note: draft.notes || null,
+            },
+          },
+        );
+        if (inviteRes.inviteUser?.success) {
+          contactInvited = true;
+        } else {
+          contactError = inviteRes.inviteUser?.message ?? "unknown";
+        }
+      } catch (e) {
+        contactError = (e as Error).message;
+      }
+
+      try {
+        localStorage.removeItem(draftKey);
+      } catch {
+        /* ignore */
+      }
+
+      if (contactInvited) {
+        showAlert(
+          `${tc.tenant.name} is live. Magic-link sent to ${draft.primaryContactEmail}.`,
+          "success",
+        );
+      } else {
+        showAlert(
+          `${tc.tenant.name} is live, but the invite to ${draft.primaryContactEmail} didn't send: ${contactError}. Invite manually from People.`,
+          "warning",
+        );
+      }
+      navigate("/people");
+    } catch (err) {
+      showAlert(
+        `Couldn't onboard ${draft.name}: ${(err as Error).message}. Your draft is saved — try again.`,
+        "error",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -331,14 +458,16 @@ export default function SparkNewClient() {
             </button>
             <button
               type="submit"
+              disabled={submitting}
               className="px-6 py-3 rounded-2xl text-sm font-semibold"
               style={{
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
                 boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+                opacity: submitting ? 0.5 : 1,
               }}
             >
-              Spin up brand →
+              {submitting ? "Spinning up…" : "Spin up brand →"}
             </button>
           </div>
         </div>
