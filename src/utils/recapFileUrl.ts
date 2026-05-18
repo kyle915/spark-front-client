@@ -53,7 +53,7 @@ export const recapFileUrl = (path: string | null | undefined): string => {
  */
 const CACHE_BUST =
   (import.meta as { env?: Record<string, string> }).env?.VITE_RECAP_CACHE_BUST ??
-  "v4";
+  "v5";
 export const recapFileUrlFresh = (path: string | null | undefined): string => {
   const url = recapFileUrl(path);
   if (!url) return url;
