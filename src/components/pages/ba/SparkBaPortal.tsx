@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
+import { useLazyLoadQuery } from "react-relay/hooks";
 import { useAuthStore } from "@/store/authStore";
+import { EventsQuery } from "@/api/queries/EventsQuery";
+import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
 import {
   Calendar as CalendarIcon,
   FileText,
@@ -141,104 +144,223 @@ const Shell: React.FC<{
 
 /* ───────────────────────── Shifts ───────────────────────── */
 
-const ShiftsPane: React.FC = () => (
-  <div className="space-y-6">
-    <div>
-      <p
-        className="mono text-[10px]"
-        style={{
-          letterSpacing: "0.18em",
-          color: "rgba(255,255,255,0.45)",
-        }}
-      >
-        YOUR SHIFTS
-      </p>
-      <h1
-        className="display text-4xl font-bold mt-2"
-        style={{ letterSpacing: "-0.04em" }}
-      >
-        What's on the books.
-      </h1>
-    </div>
+const fmtTime12 = (raw: string | null | undefined): string => {
+  if (!raw) return "";
+  try {
+    const d = new Date(raw);
+    return d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+};
 
-    {[
-      {
-        venue: "Whole Foods · Lamar",
-        market: "Austin, TX",
-        date: "Today",
-        time: "12 PM – 8 PM",
-        pay: "$28/hr",
-        status: "active" as const,
-      },
-      {
-        venue: "Mohawk Patio",
-        market: "Brooklyn, NY",
-        date: "Sat May 18",
-        time: "6 PM – 11 PM",
-        pay: "$35/hr",
-        status: "scheduled" as const,
-      },
-    ].map((s, i) => {
-      const color =
-        s.status === "active"
-          ? "var(--spark-lime)"
-          : "var(--spark-sky)";
-      return (
-        <div key={i} className="spark-card p-5">
-          <div className="flex items-start gap-4">
-            <div
-              className="shrink-0 w-1 self-stretch rounded-full"
-              style={{ background: color, boxShadow: `0 0 8px ${color}` }}
-            />
-            <div className="flex-1 min-w-0">
-              <p
-                className="mono text-[10px]"
-                style={{
-                  letterSpacing: "0.18em",
-                  color,
-                }}
-              >
-                {s.status.toUpperCase()} · {s.pay}
-              </p>
-              <p
-                className="display text-xl font-bold mt-1"
-                style={{ letterSpacing: "-0.02em" }}
-              >
-                {s.venue}
-              </p>
-              <p
-                className="text-sm mt-1"
-                style={{ color: "rgba(255,255,255,0.55)" }}
-              >
-                {s.market} · {s.date}
-              </p>
-              <p
-                className="mono text-xs mt-2"
-                style={{
-                  letterSpacing: "0.14em",
-                  color: "var(--spark-lime)",
-                }}
-              >
-                {s.time}
-              </p>
-            </div>
-          </div>
-          {s.status === "active" && (
-            <button
-              className="mt-4 w-full px-4 py-3 rounded-xl text-sm font-semibold"
-              style={{
-                background: "var(--spark-lime)",
-                color: "#0a0d09",
-                boxShadow: "0 0 18px rgba(197,245,70,0.35)",
-              }}
-            >
-              📍 Clock in
-            </button>
-          )}
+const fmtDayLabel = (raw: string | null | undefined, today: Date): string => {
+  if (!raw) return "";
+  try {
+    const d = new Date(raw);
+    if (d.toDateString() === today.toDateString()) return "Today";
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    if (d.toDateString() === tomorrow.toDateString()) return "Tomorrow";
+    return d.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return raw;
+  }
+};
+
+type Shift = {
+  uuid: string;
+  venue: string;
+  market: string;
+  dayLabel: string;
+  time: string;
+  status: "active" | "upcoming";
+};
+
+const ShiftsInner: React.FC = () => {
+  const { tenantId } = useAuthStore();
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+  const horizon = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + 14);
+    return d;
+  }, [today]);
+
+  const fmtIso = (d: Date) => d.toISOString().slice(0, 10);
+  const data = useLazyLoadQuery<EventsQueryType>(
+    EventsQuery,
+    {
+      first: 50,
+      filters: tenantId
+        ? { tenantId, startDate: fmtIso(today), endDate: fmtIso(horizon) }
+        : null,
+    },
+    { fetchPolicy: "store-or-network" },
+  );
+
+  const shifts: Shift[] = useMemo(() => {
+    const events =
+      data?.events?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+    const out: Shift[] = events
+      .filter((n) => n.date)
+      .map((n) => {
+        const eventDate = new Date(n.date!);
+        const isToday = eventDate.toDateString() === today.toDateString();
+        const venue = n.request?.retailer?.name ?? n.name ?? "Untitled";
+        const market = n.address ?? "";
+        const time =
+          n.startTime && n.endTime
+            ? `${fmtTime12(n.startTime)} – ${fmtTime12(n.endTime)}`
+            : "";
+        return {
+          uuid: String(n.uuid),
+          venue,
+          market,
+          dayLabel: fmtDayLabel(n.date, today),
+          time,
+          status: isToday ? ("active" as const) : ("upcoming" as const),
+        };
+      })
+      .sort((a, b) => {
+        // Active (today) first, then by date.
+        if (a.status === "active" && b.status !== "active") return -1;
+        if (b.status === "active" && a.status !== "active") return 1;
+        return 0;
+      });
+    return out;
+  }, [data, today]);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <p
+          className="mono text-[10px]"
+          style={{
+            letterSpacing: "0.18em",
+            color: "rgba(255,255,255,0.45)",
+          }}
+        >
+          YOUR SHIFTS · NEXT 14D
+        </p>
+        <h1
+          className="display text-4xl font-bold mt-2"
+          style={{ letterSpacing: "-0.04em" }}
+        >
+          What's on the books.
+        </h1>
+        <p
+          className="mt-2 text-sm"
+          style={{ color: "rgba(255,255,255,0.5)" }}
+        >
+          Live from Spark — events scheduled in the next two weeks.
+          BA-specific filtering arrives when the mobile clock-in
+          attendance feed lands.
+        </p>
+      </div>
+
+      {shifts.length === 0 ? (
+        <div
+          className="spark-card p-8 text-center text-sm"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+        >
+          No shifts on the books in the next 14 days. Check back later.
         </div>
-      );
-    })}
-  </div>
+      ) : (
+        shifts.map((s) => {
+          const color =
+            s.status === "active"
+              ? "var(--spark-lime)"
+              : "var(--spark-sky)";
+          return (
+            <div key={s.uuid} className="spark-card p-5">
+              <div className="flex items-start gap-4">
+                <div
+                  className="shrink-0 w-1 self-stretch rounded-full"
+                  style={{ background: color, boxShadow: `0 0 8px ${color}` }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="mono text-[10px]"
+                    style={{
+                      letterSpacing: "0.18em",
+                      color,
+                    }}
+                  >
+                    {s.status.toUpperCase()}
+                  </p>
+                  <p
+                    className="display text-xl font-bold mt-1"
+                    style={{ letterSpacing: "-0.02em" }}
+                  >
+                    {s.venue}
+                  </p>
+                  {s.market && (
+                    <p
+                      className="text-sm mt-1"
+                      style={{ color: "rgba(255,255,255,0.55)" }}
+                    >
+                      {s.market} · {s.dayLabel}
+                    </p>
+                  )}
+                  {s.time && (
+                    <p
+                      className="mono text-xs mt-2"
+                      style={{
+                        letterSpacing: "0.14em",
+                        color: "var(--spark-lime)",
+                      }}
+                    >
+                      {s.time}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {s.status === "active" && (
+                <button
+                  className="mt-4 w-full px-4 py-3 rounded-xl text-sm font-semibold"
+                  style={{
+                    background: "var(--spark-lime)",
+                    color: "#0a0d09",
+                    boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                  }}
+                >
+                  📍 Clock in
+                </button>
+              )}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+};
+
+const ShiftsPane: React.FC = () => (
+  <Suspense
+    fallback={
+      <div
+        className="spark-card p-8 text-center text-sm"
+        style={{ color: "rgba(255,255,255,0.55)" }}
+      >
+        Loading your shifts…
+      </div>
+    }
+  >
+    <ShiftsInner />
+  </Suspense>
 );
 
 /* ───────────────────────── Recap ───────────────────────── */

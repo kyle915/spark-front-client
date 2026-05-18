@@ -350,28 +350,54 @@ const Inner: React.FC = () => {
   // Lets users debug rejected rows offline. We export the row numbers
   // + error messages so kyle can paste them next to his original sheet
   // and fix in bulk.
-  const exportFailedRows = () => {
-    if (failedRows.length === 0) return;
-    const esc = (raw: string) => {
-      const s = (raw ?? "").toString();
-      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-      return s;
-    };
-    const lines = ["row,error_message"];
-    for (const r of failedRows) {
-      lines.push(`${r.rowNumber},${esc(r.message ?? "Unspecified error")}`);
-    }
-    const blob = new Blob([lines.join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    });
+  const esc = (raw: string) => {
+    const s = (raw ?? "").toString();
+    if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+
+  const triggerCsvDownload = (filename: string, body: string) => {
+    const blob = new Blob([body], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `spark-bulk-failed-rows-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const exportFailedRows = () => {
+    if (failedRows.length === 0) return;
+    const lines = ["row,error_message"];
+    for (const r of failedRows) {
+      lines.push(`${r.rowNumber},${esc(r.message ?? "Unspecified error")}`);
+    }
+    triggerCsvDownload(
+      `spark-bulk-failed-rows-${new Date().toISOString().slice(0, 10)}.csv`,
+      lines.join("\n"),
+    );
+  };
+
+  // After a commit, kyle's clients want to paste the new REQ-IDs +
+  // UUIDs back into their tracking sheets. Exports row number from
+  // their original file plus the REQ-id and UUID we assigned.
+  const exportImportedRows = () => {
+    if (successRows.length === 0) return;
+    const lines = ["row,req_id,request_uuid"];
+    for (const r of successRows) {
+      const reqId = r.requestId
+        ? `REQ-${r.requestId.slice(-4).toUpperCase()}`
+        : "";
+      lines.push(
+        `${r.rowNumber},${esc(reqId)},${esc(r.requestUuid ?? "")}`,
+      );
+    }
+    triggerCsvDownload(
+      `spark-bulk-imported-${new Date().toISOString().slice(0, 10)}.csv`,
+      lines.join("\n"),
+    );
   };
 
   return (
@@ -911,15 +937,32 @@ const Inner: React.FC = () => {
               style={{ border: "1px solid var(--spark-border)" }}
             >
               <div
-                className="px-4 py-2 mono text-[10px]"
+                className="px-4 py-2 flex items-center justify-between"
                 style={{
-                  letterSpacing: "0.18em",
-                  color: "var(--spark-lime)",
                   background: "rgba(197,245,70,0.06)",
                   borderBottom: "1px solid var(--spark-border)",
                 }}
               >
-                IMPORTED · {successRows.length}
+                <span
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-lime)",
+                  }}
+                >
+                  IMPORTED · {successRows.length}
+                </span>
+                <button
+                  onClick={exportImportedRows}
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "var(--spark-lime)",
+                  }}
+                  title="Download a CSV of the imported rows + new REQ-IDs so you can paste back into your tracking sheet"
+                >
+                  ↓ DOWNLOAD CSV
+                </button>
               </div>
               <ul>
                 {successRows.slice(0, 30).map((r) => (
