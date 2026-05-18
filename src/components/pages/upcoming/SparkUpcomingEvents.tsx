@@ -8,6 +8,7 @@ import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 
 /**
  * "Upcoming events" — next 7 days, grouped by day. Combines two sources:
@@ -275,28 +276,29 @@ export default function SparkUpcomingEvents() {
   return (
     <Layout>
       <div className="space-y-6 max-w-5xl">
-        <div>
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            NEXT 7 DAYS · APPROVED + PENDING
-          </p>
-          <h1
-            className="display text-4xl font-bold mt-2"
-            style={{ letterSpacing: "-0.04em" }}
-          >
-            {isClient ? "Your upcoming activations." : "Upcoming events."}
-          </h1>
-          <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
-            Approved events + pending approvals coming up in the next 7
-            days, grouped by day. Pending rows route to{" "}
-            <span className="mono">/approvals</span>; approved rows open
-            the event brief.
-          </p>
+        <div className="flex items-end justify-between flex-wrap gap-4">
+          <div>
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.18em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              NEXT 7 DAYS · APPROVED + PENDING
+            </p>
+            <h1
+              className="display text-4xl font-bold mt-2"
+              style={{ letterSpacing: "-0.04em" }}
+            >
+              {isClient ? "Your upcoming activations." : "Upcoming events."}
+            </h1>
+            <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+              Approved events + pending approvals in the next 7 days,
+              grouped by day. Click a row to open the Spark v2 detail.
+            </p>
+          </div>
+          <LinkedSheetChip />
         </div>
         <Suspense
           fallback={
