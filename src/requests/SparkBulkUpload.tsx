@@ -1,6 +1,7 @@
 import { Suspense, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { fetchQuery } from "relay-runtime";
+import * as XLSX from "xlsx";
 import environment from "@api/relay/environment";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
@@ -276,11 +277,51 @@ const Inner: React.FC = () => {
     }
   };
 
-  const onPick = (f: File | null | undefined) => {
+  // Convert a CSV File into an XLSX File client-side so the backend
+  // import_requests_batch mutation (which only accepts XLSX) can parse
+  // it. We use the same `xlsx` library that's already shipping in the
+  // bundle, so no new dep. We aim for a sheet named "Requests" to
+  // match the template default the backend expects when sheet_name=0.
+  const csvToXlsx = async (csvFile: File): Promise<File> => {
+    const text = await csvFile.text();
+    const wb = XLSX.read(text, { type: "string" });
+    // Rename the first sheet to "Requests" so it matches the backend
+    // template convention regardless of what the source CSV calls it.
+    if (wb.SheetNames.length > 0 && wb.SheetNames[0] !== "Requests") {
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      delete wb.Sheets[wb.SheetNames[0]];
+      wb.Sheets["Requests"] = sheet;
+      wb.SheetNames[0] = "Requests";
+    }
+    const xlsxArray = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const xlsxBlob = new Blob([xlsxArray], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const newName = csvFile.name.replace(/\.csv$/i, ".xlsx");
+    return new File([xlsxBlob], newName, { type: xlsxBlob.type });
+  };
+
+  const onPick = async (f: File | null | undefined) => {
     if (!f) return;
-    // Accept .xlsx/.xls only — anything else likely won't parse
+    if (/\.csv$/i.test(f.name)) {
+      // Convert CSV → XLSX in-browser, then send through the normal flow.
+      try {
+        const converted = await csvToXlsx(f);
+        showAlert(
+          `Converted ${f.name} to XLSX in your browser — running validation now…`,
+          "info",
+        );
+        uploadAndValidate(converted);
+      } catch (e) {
+        showAlert(
+          `Couldn't read CSV: ${(e as Error).message}`,
+          "error",
+        );
+      }
+      return;
+    }
     if (!/\.xlsx?$/i.test(f.name)) {
-      showAlert("Pick a .xlsx or .xls file.", "warning");
+      showAlert("Pick a .xlsx, .xls, or .csv file.", "warning");
       return;
     }
     uploadAndValidate(f);
@@ -636,7 +677,7 @@ const Inner: React.FC = () => {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             className="hidden"
             onChange={(e) => onPick(e.target.files?.[0])}
           />
@@ -669,7 +710,7 @@ const Inner: React.FC = () => {
                 className="display text-lg font-bold"
                 style={{ letterSpacing: "-0.02em" }}
               >
-                Drop XLSX here
+                Drop XLSX or CSV here
               </p>
               <p
                 className="mono text-[10px] mt-2"
@@ -678,7 +719,7 @@ const Inner: React.FC = () => {
                   color: "rgba(255,255,255,0.45)",
                 }}
               >
-                OR CLICK TO PICK
+                OR CLICK TO PICK · .xlsx, .xls, .csv
               </p>
             </>
           )}
