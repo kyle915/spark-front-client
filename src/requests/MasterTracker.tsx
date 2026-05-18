@@ -404,6 +404,7 @@ const MasterTrackerInner: React.FC<{
   groupBy: "none" | "date";
   mentionables: Mentionable[];
   onCountsChange: (counts: Record<string, number>, total: number) => void;
+  onVisibleRowsChange?: (rows: Row[]) => void;
 }> = ({
   activeStatus,
   search,
@@ -411,6 +412,7 @@ const MasterTrackerInner: React.FC<{
   groupBy,
   mentionables,
   onCountsChange,
+  onVisibleRowsChange,
 }) => {
   const { tenantId } = useAuthStore();
 
@@ -474,6 +476,12 @@ const MasterTrackerInner: React.FC<{
     const total = data?.requests?.totalCount ?? allRows.length;
     onCountsChange(counts, total);
   }, [allRows, data?.requests?.totalCount, onCountsChange]);
+
+  // Bubble the currently-visible rows up so the outer page can wire
+  // them to the CSV export button.
+  useEffect(() => {
+    if (onVisibleRowsChange) onVisibleRowsChange(rows);
+  }, [rows, onVisibleRowsChange]);
 
   return (
     <TrackerTable rows={rows} mentionables={mentionables} groupBy={groupBy} />
@@ -549,6 +557,63 @@ export default function MasterTracker() {
   const [rmmFilter, setRmmFilter] = useState<string>("all");
   const [rmmList, setRmmList] = useState<Mentionable[]>([]);
   const [adminList, setAdminList] = useState<Mentionable[]>([]);
+  const [visibleRows, setVisibleRows] = useState<Row[]>([]);
+
+  // CSV export of the currently-visible tracker rows. Quotes any field
+  // containing commas/quotes/newlines. Filename includes the status
+  // filter + date so kyle gets a self-describing download.
+  const exportCsv = () => {
+    if (visibleRows.length === 0) {
+      window.alert("Nothing to export.");
+      return;
+    }
+    const header = [
+      "Date",
+      "Status",
+      "Market",
+      "Venue",
+      "Address",
+      "Type",
+      "Time",
+      "Event UUID",
+      "Request UUID",
+    ];
+    const esc = (raw: string) => {
+      const s = (raw ?? "").toString();
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const lines = [header.join(",")];
+    for (const r of visibleRows) {
+      lines.push(
+        [
+          r.dateLabel,
+          r.statusSlug,
+          r.market,
+          r.venue,
+          r.address,
+          r.type,
+          r.timeLabel,
+          r.eventUuid ?? "",
+          r.uuid,
+        ]
+          .map(esc)
+          .join(","),
+      );
+    }
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const today = new Date().toISOString().slice(0, 10);
+    a.download = `spark-tracker-${activeStatus}-${today}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [total, setTotal] = useState<number>(0);
 
@@ -619,15 +684,22 @@ export default function MasterTracker() {
               </button>
             )}
             <button
-              onClick={() => alert("CSV export coming soon")}
+              onClick={exportCsv}
+              disabled={visibleRows.length === 0}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "transparent",
                 color: "var(--spark-text)",
                 border: "1px solid var(--spark-border)",
+                opacity: visibleRows.length === 0 ? 0.5 : 1,
               }}
+              title={
+                visibleRows.length === 0
+                  ? "Nothing to export"
+                  : `Download ${visibleRows.length} rows as CSV`
+              }
             >
-              ↗ Export CSV
+              ↗ Export CSV {visibleRows.length > 0 ? `(${visibleRows.length})` : ""}
             </button>
             <button
               onClick={() => navigate("/requests/create")}
@@ -785,6 +857,7 @@ export default function MasterTracker() {
               ...(adminList.length > 0 ? adminList : ADMIN_ROSTER_FALLBACK),
             ]}
             onCountsChange={handleCounts}
+            onVisibleRowsChange={setVisibleRows}
           />
         </Suspense>
       </div>
