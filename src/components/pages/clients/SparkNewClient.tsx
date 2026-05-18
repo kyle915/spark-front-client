@@ -48,6 +48,7 @@ type ClientDraft = {
   primaryContactPhone: string;
   rmmEmail: string;
   notes: string;
+  linkedSheetUrl: string;
 };
 
 const inputStyle: React.CSSProperties = {
@@ -83,6 +84,7 @@ export default function SparkNewClient() {
     primaryContactPhone: "",
     rmmEmail: "",
     notes: "",
+    linkedSheetUrl: "",
   });
 
   const set = <K extends keyof ClientDraft>(k: K, v: ClientDraft[K]) =>
@@ -185,6 +187,21 @@ export default function SparkNewClient() {
         localStorage.removeItem(draftKey);
       } catch {
         /* ignore */
+      }
+
+      // Stash the per-tenant linked Sheet URL if kyle entered one
+      // during onboarding. Read back on Master Tracker via the same
+      // localStorage key pattern.
+      const sheetUrl = draft.linkedSheetUrl.trim();
+      if (sheetUrl && newTenantId) {
+        try {
+          localStorage.setItem(
+            `@spark.linkedSheet.url/${newTenantId}`,
+            sheetUrl,
+          );
+        } catch {
+          /* ignore quota */
+        }
       }
 
       if (contactInvited) {
@@ -385,6 +402,28 @@ export default function SparkNewClient() {
               onChange={(e) => set("rmmEmail", e.target.value)}
               placeholder="maya@igniteproductions.co"
             />
+          </div>
+          <div>
+            <label className="label-mini block mb-1.5">
+              Linked Google Sheet (optional)
+            </label>
+            <input
+              style={inputStyle}
+              type="url"
+              value={draft.linkedSheetUrl}
+              onChange={(e) => set("linkedSheetUrl", e.target.value)}
+              placeholder="https://docs.google.com/spreadsheets/d/.../edit"
+            />
+            <p
+              className="mono text-[10px] mt-1.5"
+              style={{
+                letterSpacing: "0.14em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              SHOWS A "📊 LINKED SHEET" BUTTON ON THE BRAND'S MASTER
+              TRACKER. CAN ADD LATER FROM THE TRACKER HEADER.
+            </p>
           </div>
           <div>
             <label className="label-mini block mb-1.5">
