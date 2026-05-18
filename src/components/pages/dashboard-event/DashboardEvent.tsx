@@ -3,12 +3,153 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import useSidebarCounts from "@/hooks/useSidebarCounts";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import AttentionEngine from "./AttentionEngine";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useNavigate } from "react-router";
+
+/**
+ * Compact priority-glance card: shows pending approvals (with SLA
+ * breach call-out), upcoming events in the next 14d, and unread
+ * alerts. Each tile is clickable and routes to the relevant page.
+ *
+ * Sourced from useSidebarCounts so it shares the same RequestsQuery
+ * cache the sidebar already paid for — no extra network hit.
+ */
+const TodaysSnapshot: React.FC = () => {
+  const navigate = useNavigate();
+  const counts = useSidebarCounts();
+  const tiles: Array<{
+    label: string;
+    value: number;
+    sub?: string;
+    tone: "lime" | "orange" | "sky" | "gold";
+    to: string;
+    hide?: boolean;
+  }> = [
+    {
+      label: "Need your call",
+      value: counts.approvals,
+      sub:
+        counts.approvalsSlaBreach > 0
+          ? `${counts.approvalsSlaBreach} SLA breach`
+          : undefined,
+      tone: counts.approvalsSlaBreach > 0 ? "orange" : "gold",
+      to: "/approvals",
+      hide: counts.approvals === 0 && counts.approvalsSlaBreach === 0,
+    },
+    {
+      label: "Upcoming · 14d",
+      value: counts.upcoming,
+      tone: "sky",
+      to: "/upcoming",
+      hide: counts.upcoming === 0,
+    },
+    {
+      label: "Unread alerts",
+      value: counts.alertsUnread,
+      tone: "lime",
+      to: "/alerts",
+      hide: counts.alertsUnread === 0,
+    },
+    {
+      label: "Active requests",
+      value: counts.tracker,
+      tone: "lime",
+      to: "/requests/list",
+    },
+  ];
+  const visible = tiles.filter((t) => !t.hide);
+  if (visible.length === 0) return null;
+  const toneColor = (t: string) =>
+    t === "orange"
+      ? "var(--spark-orange)"
+      : t === "sky"
+        ? "var(--spark-sky)"
+        : t === "gold"
+          ? "var(--spark-gold)"
+          : "var(--spark-lime)";
+  return (
+    <div
+      className="spark-card p-4 lg:p-5"
+      style={{ borderRadius: 18 }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <p
+          className="mono text-[10px]"
+          style={{
+            letterSpacing: "0.18em",
+            color: "rgba(255,255,255,0.45)",
+          }}
+        >
+          TODAY'S SNAPSHOT
+        </p>
+        <p
+          className="mono text-[10px]"
+          style={{
+            letterSpacing: "0.14em",
+            color: "rgba(255,255,255,0.4)",
+          }}
+        >
+          TAP TO JUMP
+        </p>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {visible.map((t) => {
+          const color = toneColor(t.tone);
+          return (
+            <button
+              key={t.label}
+              type="button"
+              onClick={() => navigate(t.to)}
+              className="text-left rounded-xl p-3 transition"
+              style={{
+                background: `${color}10`,
+                border: `1px solid ${color}40`,
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = `${color}1a`)
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = `${color}10`)
+              }
+            >
+              <p
+                className="mono text-[10px] mb-1"
+                style={{
+                  letterSpacing: "0.16em",
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                {t.label.toUpperCase()}
+              </p>
+              <p
+                className="tab-num text-2xl lg:text-3xl font-bold leading-none"
+                style={{ color }}
+              >
+                {t.value.toLocaleString()}
+              </p>
+              {t.sub && (
+                <p
+                  className="mono text-[10px] mt-1.5"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "var(--spark-orange)",
+                  }}
+                >
+                  ⚠ {t.sub.toUpperCase()}
+                </p>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 /**
  * Phase 2.1 — Spark v2 Dashboard.
@@ -460,6 +601,17 @@ export default function DashboardIndex() {
             ))}
           </div>
         </div>
+
+        {/* Today's snapshot — one-glance priority card. Pulls counts
+            from useSidebarCounts so it shares the same RequestsQuery
+            cache the sidebar already paid for. Hidden when nothing
+            urgent (zero counts everywhere) so the workspace doesn't
+            shout for attention when it doesn't have any. Suspense
+            wrapper: snapshot has its own fetch and we don't want it
+            to block the hero metrics rendering. */}
+        <Suspense fallback={null}>
+          <TodaysSnapshot />
+        </Suspense>
 
         {/* Compact hero + dense CPG KPI grid.
             Tile design is Apple Stocks-style — small label up top,
