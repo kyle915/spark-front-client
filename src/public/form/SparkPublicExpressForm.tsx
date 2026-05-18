@@ -757,16 +757,68 @@ export default function SparkPublicExpressForm() {
                 MOST APPROVALS COME THROUGH WITHIN 24–48 HOURS
               </p>
 
+              {/* Two clear next-step paths. Submitting more from the
+                  public link is a common pattern — distributor reps
+                  often have 5–10 venues to schedule in one sitting. */}
+              <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    // Same venue, new date. Keep venue, address, store
+                    // contact, store manager, distributor, requestor
+                    // info, products, BA count, request type, timezone.
+                    // Reset only the date(s).
+                    setDate("");
+                    setExtraDates([]);
+                    setConfirmation(null);
+                  }}
+                  className="px-4 py-3 rounded-xl text-sm font-semibold"
+                  style={{
+                    background: "transparent",
+                    color: "var(--spark-lime, #c5f546)",
+                    border: "1px solid rgba(197,245,70,0.4)",
+                  }}
+                >
+                  + Add another visit (same venue)
+                </button>
+                <button
+                  onClick={() => {
+                    // Different venue. Clear venue-specific data but
+                    // keep requestor name/email + distributor since
+                    // those typically span multiple venues for one
+                    // submitter.
+                    setVenue("");
+                    setAddress("");
+                    setDate("");
+                    setExtraDates([]);
+                    setStoreContact("");
+                    setStoreManagerName("");
+                    setStoreManagerPhone("");
+                    setProductIds([]);
+                    setSelectedProductTypeId(null);
+                    setBaCount(1);
+                    setNotes("");
+                    setConfirmation(null);
+                  }}
+                  className="px-4 py-3 rounded-xl text-sm font-semibold"
+                  style={{
+                    background: "transparent",
+                    color: "var(--spark-sky, #5fb8ef)",
+                    border: "1px solid rgba(95,184,239,0.4)",
+                  }}
+                >
+                  + Schedule a different venue
+                </button>
+              </div>
               <button
                 onClick={() => setConfirmation(null)}
-                className="mt-5 w-full px-5 py-3 rounded-xl text-sm font-semibold"
+                className="mt-2 w-full px-5 py-3 rounded-xl text-sm font-semibold"
                 style={{
                   background: "var(--spark-lime, #c5f546)",
                   color: "#0a0d09",
                   boxShadow: "0 0 24px rgba(197,245,70,0.4)",
                 }}
               >
-                Got it
+                Done — close this
               </button>
             </div>
           </div>
