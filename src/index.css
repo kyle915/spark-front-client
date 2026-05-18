@@ -420,6 +420,48 @@ h1, h2, h3, h4, h5, h6, .display {
   mask-image: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.9) 30%, rgba(0, 0, 0, 0.9) 70%, transparent);
 }
 
+/* === Spark Login — scoped overrides ===
+   The login page uses DaisyUI's shared LoadingButton + FormInputText,
+   both of which default to btn-primary blue and a light input. This
+   block scopes a Spark v2 dark theme to the login form ONLY so we
+   don't touch buttons/inputs across the rest of the app. */
+.spark-login-form input.input,
+.spark-login-form input.input-bordered {
+  background: rgba(245,242,236,0.04) !important;
+  border: 1px solid rgba(245,242,236,0.15) !important;
+  color: #F5F2EC !important;
+  border-radius: 999px !important;
+}
+.spark-login-form input.input::placeholder {
+  color: rgba(245,242,236,0.4) !important;
+}
+.spark-login-form input.input:focus {
+  border-color: #D6F35F !important;
+  box-shadow: 0 0 0 3px rgba(214,243,95,0.18) !important;
+  background: rgba(245,242,236,0.06) !important;
+}
+.spark-login-form .label-text {
+  color: rgba(245,242,236,0.65) !important;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace) !important;
+  font-size: 10px !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase !important;
+}
+.spark-login-form .btn.btn-primary {
+  background: #D6F35F !important;
+  border-color: #D6F35F !important;
+  color: #0A0B0D !important;
+  font-family: var(--font-display, 'Space Grotesk', sans-serif) !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  box-shadow: 0 0 24px rgba(214,243,95,0.25) !important;
+}
+.spark-login-form .btn.btn-primary:hover {
+  background: #C2DF4D !important;
+  border-color: #C2DF4D !important;
+  filter: brightness(1.05);
+}
+
 /* === Form input (Spark v2) — used across public + internal forms === */
 .spark-input {
   background: var(--spark-bg, #0a0d09);

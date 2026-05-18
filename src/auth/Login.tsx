@@ -13,8 +13,6 @@ import MagicLinkButton from "@/auth/MagicLinkButton";
 import SparkLoginCreative from "@/auth/SparkLoginCreative";
 import type { RegisterFormFields } from "@/types/auth";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
-import sparkLogoDark from "../assets/spark_logo_dark.png";
-import sparkLogoLight from "../assets/spark_logo_light.png";
 import { themes } from "@/utils";
 import {
   buildThemeDefaults,
@@ -104,20 +102,62 @@ const Login = () => {
           "radial-gradient(circle at 20% 10%, rgba(197,245,70,0.18), transparent 55%), radial-gradient(circle at 80% 90%, rgba(95,184,239,0.10), transparent 55%), #0a0d09",
       }}
     >
-      <div className="flex flex-col lg:flex-row w-full max-w-5xl rounded-3xl bg-base-100 shadow-xl overflow-hidden">
-        <div className="flex flex-col justify-center items-center w-full lg:w-1/2 bg-base-100 px-8 sm:px-12 md:px-16 py-10 rounded-l-3xl transition-all duration-300 ease-in-out">
+      <div
+        className="flex flex-col lg:flex-row w-full max-w-5xl rounded-3xl shadow-xl overflow-hidden"
+        style={{
+          background: "#0A0B0D",
+          boxShadow:
+            "0 60px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(214,243,95,0.15), 0 0 80px rgba(214,243,95,0.10)",
+        }}
+      >
+        <div
+          className="spark-login-form flex flex-col justify-center items-center w-full lg:w-1/2 px-8 sm:px-12 md:px-16 py-10 transition-all duration-300 ease-in-out"
+          style={{
+            background: "#0A0B0D",
+            color: "#F5F2EC",
+          }}
+        >
           <div
             key={isLogin ? "login" : "signup"}
             className={`w-full max-w-sm transition-opacity duration-500 ease-in-out ${fade ? "opacity-100" : "opacity-0"
               }`}
           >
             <img
-                src={colorScheme === "dark" ? sparkLogoLight : sparkLogoDark}
-                alt="Spark logo"
-                className="h-16 mb-6 mx-auto"
+                src="/legal/spark-logo.png"
+                alt="Spark by Ignite"
+                style={{
+                  height: 36,
+                  width: "auto",
+                  display: "block",
+                  margin: "0 auto 20px",
+                  filter: "invert(1) hue-rotate(180deg)",
+                }}
             />
-            <h1 className="text-3xl font-bold text-base-content mb-2">
-              {isLogin ? "Login" : "Sign Up"}
+            <p
+              style={{
+                fontFamily: "var(--font-mono, monospace)",
+                fontSize: 10,
+                letterSpacing: "0.28em",
+                color: "#D6F35F",
+                textTransform: "uppercase",
+                textAlign: "center",
+              }}
+            >
+              {isLogin ? "Welcome Back" : "Get Started"}
+            </p>
+            <h1
+              style={{
+                fontFamily: "var(--font-display, sans-serif)",
+                fontWeight: 800,
+                fontSize: 36,
+                letterSpacing: "-0.03em",
+                color: "#F5F2EC",
+                textAlign: "center",
+                marginTop: 6,
+                marginBottom: 24,
+              }}
+            >
+              {isLogin ? "Sign in to Spark." : "Create your account."}
             </h1>
             {isLogin ? (
               <AuthForm
@@ -164,21 +204,32 @@ const Login = () => {
             </div> */}
           
             <div className="mt-10 text-center space-y-2">
-              <p className="text-xs text-base-content/40">
-                ©{currentYear} Ignite Productions. All rights reserved.
+              <p
+                style={{
+                  fontFamily: "var(--font-mono, monospace)",
+                  fontSize: 10,
+                  letterSpacing: "0.18em",
+                  color: "rgba(245,242,236,0.4)",
+                }}
+              >
+                © {currentYear} IGNITE PRODUCTIONS LLC
               </p>
-              <div className="flex items-center justify-center gap-3">
-                <Link to="/privacy-policy" className="link link-primary text-xs">
-                  Privacy Policy
+              <div
+                className="flex items-center justify-center gap-3"
+                style={{
+                  fontFamily: "var(--font-mono, monospace)",
+                  fontSize: 10,
+                  letterSpacing: "0.18em",
+                }}
+              >
+                <Link to="/privacy-policy" style={{ color: "rgba(245,242,236,0.55)" }}>
+                  PRIVACY
                 </Link>
-                <span className="text-xs text-base-content/40" aria-hidden="true">
-                  •
+                <span style={{ color: "rgba(245,242,236,0.3)" }} aria-hidden="true">
+                  ·
                 </span>
-                <Link
-                  to="/terms-of-service"
-                  className="link link-primary text-xs"
-                >
-                  Terms of Service
+                <Link to="/terms-of-service" style={{ color: "rgba(245,242,236,0.55)" }}>
+                  TERMS
                 </Link>
               </div>
             </div>

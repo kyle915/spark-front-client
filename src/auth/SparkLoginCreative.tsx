@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import ThemeToggle from "@/shared/ThemeToggle";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
 
 /**
@@ -13,12 +12,13 @@ import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
  * TypeScript prop for the theme toggle.
  */
 export default function SparkLoginCreative({
-  colorScheme,
-  onColorScheme,
+  colorScheme: _cs,
+  onColorScheme: _set,
 }: {
   colorScheme: TenantColorScheme;
   onColorScheme: (s: TenantColorScheme) => void;
 }) {
+  // Theme toggle moved out — used to overlap the Spark wordmark.
   const words = [
     "Book staff quicker.",
     "Manage your field team.",
@@ -42,12 +42,6 @@ export default function SparkLoginCreative({
         fontFamily: "var(--font-body, system-ui, sans-serif)",
       }}
     >
-      {/* Theme toggle floats top-right corner so the design isn't
-          intruded on. */}
-      <div className="absolute top-4 right-4 z-30">
-        <ThemeToggle value={colorScheme} onChange={onColorScheme} />
-      </div>
-
       {/* Drifting grid */}
       <div
         style={{
