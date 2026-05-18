@@ -310,6 +310,7 @@ const Inner: React.FC<{
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(p.email);
+                          showAlert(`Copied ${p.email}.`, "info");
                         }}
                         className="mono text-[10px]"
                         style={{
@@ -318,6 +319,66 @@ const Inner: React.FC<{
                         }}
                       >
                         COPY EMAIL
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(
+                              import.meta.env.VITE_GRAPHQL_ENDPOINT,
+                              {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                  Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+                                },
+                                body: JSON.stringify({
+                                  query: `
+                                    mutation RequestMagicLink($input: RequestMagicLinkInput!) {
+                                      requestMagicLink(input: $input) { success message }
+                                    }
+                                  `,
+                                  variables: {
+                                    input: {
+                                      email: p.email,
+                                      // Admin-frontend magic-link entry.
+                                      redirect: "/",
+                                    },
+                                  },
+                                }),
+                              },
+                            );
+                            const json = await res.json();
+                            const r = json?.data?.requestMagicLink;
+                            if (json.errors?.length || !r?.success) {
+                              showAlert(
+                                `Couldn't resend: ${
+                                  r?.message ??
+                                  json.errors?.[0]?.message ??
+                                  "unknown error"
+                                }`,
+                                "error",
+                              );
+                              return;
+                            }
+                            showAlert(
+                              `Sign-in link sent to ${p.email}.`,
+                              "success",
+                            );
+                          } catch (e) {
+                            showAlert(
+                              `Resend failed: ${(e as Error).message}`,
+                              "error",
+                            );
+                          }
+                        }}
+                        className="mono text-[10px]"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "var(--spark-sky)",
+                        }}
+                        title="Re-send a magic-link sign-in email to this user"
+                      >
+                        RESEND LINK
                       </button>
                       <button
                         onClick={() => setRemoving(p)}
