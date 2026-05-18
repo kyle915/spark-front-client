@@ -111,15 +111,17 @@ export default function SparkPublicExpressForm() {
     const failures: string[] = [];
 
     for (const d of allDates) {
-      // Backend Request.date is a DateTimeField — must be ISO, not a
-      // bare YYYY-MM-DD. Combine the picked date with the start time
-      // so the resolver gets the right type.
-      const dateIso = `${d}T${(startTime || "12:00").padEnd(5, "0")}:00`;
+      // Backend Request.date, start_time, and end_time are ALL
+      // DateTimeFields on the Django model — they each need to be ISO
+      // strings, not bare YYYY-MM-DD or HH:MM. Combine date + time on
+      // every field before posting so Django's validator accepts.
+      const isoFor = (hhmm: string) =>
+        `${d}T${(hhmm || "12:00").padEnd(5, "0")}:00`;
       const input: CreateRequestInput = {
         name: venue,
-        date: dateIso,
-        startTime,
-        endTime,
+        date: isoFor(startTime),
+        startTime: isoFor(startTime),
+        endTime: isoFor(endTime),
         address,
         coordinates: [0, 0],
         requestorEmail,

@@ -267,11 +267,12 @@ const SparkRequestInner: React.FC = () => {
               name: composedName,
               address: address || venue,
               coordinates: coords,
-              // Backend Request.date is DateTimeField — combine date +
-              // startTime into ISO so we don't trip the format validator.
+              // Backend Request.date / start_time / end_time are all
+              // DateTimeField — every one needs an ISO string, not
+              // bare YYYY-MM-DD or HH:MM.
               date: `${d}T${(startTime || "12:00").padEnd(5, "0")}:00`,
-              startTime,
-              endTime,
+              startTime: `${d}T${(startTime || "12:00").padEnd(5, "0")}:00`,
+              endTime: `${d}T${(endTime || "16:00").padEnd(5, "0")}:00`,
               timezoneId,
               requestTypeId,
               rmmAsignedId: rmmId || undefined,
