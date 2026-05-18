@@ -1,302 +1,454 @@
-import { useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useLazyLoadQuery } from "react-relay/hooks";
+import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
+import { useAuthStore } from "@/store/authStore";
+import { RequestsQuery } from "@/api/queries/RequestsQuery";
+import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 
 /**
- * Spark v2 — Inbox.
- * Wireframe: spark-demo/index.html lines 2359-2395.
+ * Spark v2 — Workflow Inbox.
  *
- * Two-pane: conversation list (left) + active thread (right). Currently
- * static demo data — wires to a chats backend when chats_* tables are
- * exposed via the GraphQL API.
+ * Pivot from the original "chats UI" placeholder to a real action-
+ * items list. Surfaces what needs kyle's attention right now,
+ * sorted by urgency:
+ *
+ *   1. SLA breach — pending request >72h old
+ *   2. Pending — needs approve/decline call
+ *   3. Recently declined — kyle's team usually wants to follow up
+ *
+ * Each item is clickable, routes to the relevant detail page.
+ * Empty state celebrates the absence of work to do.
  */
 
-type Convo = {
-  id: string;
-  name: string;
-  initials: string;
-  subject: string;
-  preview: string;
-  when: string;
-  unread: boolean;
-  location?: string;
+type ActionItem = {
+  uuid: string;
+  reqId: string;
+  venue: string;
+  market: string;
+  requester: string;
+  whenIso: string;
+  kind: "sla" | "pending" | "declined";
 };
 
-type Msg = { who: "me" | "them"; initials: string; body: string; at: string };
-
-const CONVOS: Convo[] = [
-  {
-    id: "maya",
-    name: "Maya R.",
-    initials: "MR",
-    subject: "Re: Whole Foods Lamar",
-    preview: "Wait — should I bring the cooler?",
-    when: "2m",
-    unread: true,
-    location: "AUSTIN · ★ 4.9 · 142 JOBS",
-  },
-  {
-    id: "devon",
-    name: "Devon K.",
-    initials: "DK",
-    subject: "Mohawk Patio Saturday",
-    preview: "Confirmed. Heading down 5:30.",
-    when: "14m",
-    unread: true,
-  },
-  {
-    id: "priya",
-    name: "Priya S.",
-    initials: "PS",
-    subject: "Denver setup",
-    preview: "Storage room access?",
-    when: "1h",
-    unread: true,
-  },
-  {
-    id: "ross",
-    name: "Ross K.",
-    initials: "RK",
-    subject: "Re: Master Tracker",
-    preview: "Can we filter by RMM?",
-    when: "3h",
-    unread: false,
-  },
-  {
-    id: "jordan",
-    name: "Jordan T.",
-    initials: "JT",
-    subject: "Cooler hand-off",
-    preview: "I have one in the trunk.",
-    when: "5h",
-    unread: false,
-  },
-];
-
-const MSGS: Record<string, Msg[]> = {
-  maya: [
-    { who: "them", initials: "MR", body: "Confirmed for Saturday — 12 to 8. I have my own apron + black tee.", at: "11:42 AM" },
-    { who: "me", initials: "K", body: "Perfect. Manager contact in the brief. Pull from cooler stock, not floor stock.", at: "11:43 AM" },
-    { who: "them", initials: "MR", body: "Got it. Mohawk last weekend ran out by 7pm — pace different here?", at: "11:48 AM" },
-    { who: "me", initials: "K", body: "Start at 6oz pours, not 8. Whole Foods is short Q afternoon, dinner rush 5–7.", at: "11:50 AM" },
-    { who: "them", initials: "MR", body: "Wait — should I bring the cooler from the Brooklyn job?", at: "12:01 PM" },
-  ],
+const fmtAgo = (iso: string): string => {
+  try {
+    const then = new Date(iso).getTime();
+    const diff = Date.now() - then;
+    if (diff < 60_000) return "just now";
+    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+    if (diff < 7 * 86_400_000)
+      return `${Math.floor(diff / 86_400_000)}d ago`;
+    return new Date(iso).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return iso;
+  }
 };
 
-export default function SparkInbox() {
-  const [active, setActive] = useState<string>("maya");
-  const [draft, setDraft] = useState("");
-  const current = CONVOS.find((c) => c.id === active) ?? CONVOS[0];
-  const thread = MSGS[active] ?? [];
+const KIND_META: Record<
+  ActionItem["kind"],
+  { label: string; tone: string; cta: string }
+> = {
+  sla: {
+    label: "SLA BREACH · OPEN >72H",
+    tone: "var(--spark-orange)",
+    cta: "Approve / decline →",
+  },
+  pending: {
+    label: "PENDING · NEEDS CALL",
+    tone: "var(--spark-gold)",
+    cta: "Review →",
+  },
+  declined: {
+    label: "DECLINED · FOLLOW UP",
+    tone: "var(--spark-sky)",
+    cta: "Open →",
+  },
+};
+
+const Inner: React.FC = () => {
+  const navigate = useNavigate();
+  const { tenantId } = useAuthStore();
+  const data = useLazyLoadQuery<RequestsQueryType>(
+    RequestsQuery,
+    { first: 500, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+
+  // Track which items kyle has dismissed (per-user localStorage).
+  // Lets him clear the inbox progressively without a backend.
+  const [dismissed, setDismissed] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem("@spark.inbox.dismissed");
+      const arr = raw ? JSON.parse(raw) : [];
+      return new Set(Array.isArray(arr) ? arr : []);
+    } catch {
+      return new Set();
+    }
+  });
+
+  const persistDismissed = (next: Set<string>) => {
+    try {
+      localStorage.setItem(
+        "@spark.inbox.dismissed",
+        JSON.stringify([...next]),
+      );
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const items: ActionItem[] = useMemo(() => {
+    const rows =
+      data?.requests?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+
+    const cutoff72 = Date.now() - 72 * 60 * 60 * 1000;
+    const cutoff7d = Date.now() - 7 * 86_400_000;
+    const out: ActionItem[] = [];
+
+    for (const r of rows) {
+      const slug = (r.status?.slug ?? r.status?.name ?? "")
+        .toString()
+        .toLowerCase();
+      const created = r.createdAt ? new Date(r.createdAt).getTime() : NaN;
+      const updated = r.updatedAt ? new Date(r.updatedAt).getTime() : NaN;
+      const id = String(r.id);
+      const reqId = `REQ-${id.slice(-4).toUpperCase()}`;
+      const venue = r.retailer?.name ?? r.name ?? "—";
+      const market =
+        [r.retailer?.location?.name, r.retailer?.location?.state?.code]
+          .filter(Boolean)
+          .join(", ") || "—";
+      const requester = r.client?.name ?? r.distributor?.name ?? "—";
+
+      if (slug === "pending") {
+        const isBreach = Number.isFinite(created) && created <= cutoff72;
+        out.push({
+          uuid: String(r.uuid),
+          reqId,
+          venue,
+          market,
+          requester,
+          whenIso: r.createdAt ?? "",
+          kind: isBreach ? "sla" : "pending",
+        });
+      } else if (
+        slug === "declined" &&
+        Number.isFinite(updated) &&
+        updated >= cutoff7d
+      ) {
+        out.push({
+          uuid: String(r.uuid),
+          reqId,
+          venue,
+          market,
+          requester,
+          whenIso: r.updatedAt ?? "",
+          kind: "declined",
+        });
+      }
+    }
+
+    // Sort: SLA breach first, then by age (oldest pending first since
+    // it's been waiting longest), then declined by recency.
+    const rank: Record<ActionItem["kind"], number> = {
+      sla: 0,
+      pending: 1,
+      declined: 2,
+    };
+    return out
+      .filter((i) => !dismissed.has(i.uuid))
+      .sort((a, b) => {
+        if (rank[a.kind] !== rank[b.kind]) return rank[a.kind] - rank[b.kind];
+        // Within sla/pending: oldest first (most urgent).
+        if (a.kind !== "declined") {
+          return (
+            new Date(a.whenIso).getTime() - new Date(b.whenIso).getTime()
+          );
+        }
+        // Within declined: most recent first.
+        return new Date(b.whenIso).getTime() - new Date(a.whenIso).getTime();
+      });
+  }, [data, dismissed]);
+
+  const counts = useMemo(
+    () => ({
+      sla: items.filter((i) => i.kind === "sla").length,
+      pending: items.filter((i) => i.kind === "pending").length,
+      declined: items.filter((i) => i.kind === "declined").length,
+    }),
+    [items],
+  );
+
+  const dismissOne = (uuid: string) => {
+    setDismissed((prev) => {
+      const next = new Set(prev);
+      next.add(uuid);
+      persistDismissed(next);
+      return next;
+    });
+  };
+
+  const dismissAll = () => {
+    setDismissed((prev) => {
+      const next = new Set(prev);
+      for (const i of items) next.add(i.uuid);
+      persistDismissed(next);
+      return next;
+    });
+  };
 
   return (
-    <Layout>
-      <div
-        className="grid gap-5"
-        style={{
-          gridTemplateColumns: "320px 1fr",
-          minHeight: "calc(100vh - 200px)",
-        }}
-      >
-        {/* List */}
-        <div className="spark-card overflow-hidden flex flex-col">
-          <div
-            className="p-4"
-            style={{ borderBottom: "1px solid var(--spark-border)" }}
+    <div className="space-y-5 max-w-4xl">
+      <div className="flex items-end justify-between flex-wrap gap-4">
+        <div>
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.45)",
+            }}
           >
-            <h2
-              className="display font-bold"
-              style={{ letterSpacing: "-0.02em" }}
-            >
-              Inbox
-            </h2>
-            <input
-              placeholder="Search messages…"
-              className="rounded-xl text-sm mt-3"
+            {items.length} ITEMS · ACTION REQUIRED
+          </p>
+          <h1
+            className="display text-4xl font-bold mt-2"
+            style={{ letterSpacing: "-0.04em" }}
+          >
+            What needs you.
+          </h1>
+          <p
+            className="mt-2"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            Workflow items pulled from your live request queue —
+            triaged by urgency. Dismissing an item hides it just for
+            you; the underlying request stays put.
+          </p>
+        </div>
+        {items.length > 0 && (
+          <button
+            onClick={dismissAll}
+            className="mono text-[10px] px-3 py-2 rounded-xl"
+            style={{
+              letterSpacing: "0.18em",
+              background: "rgba(255,255,255,0.04)",
+              color: "rgba(255,255,255,0.7)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            DISMISS ALL
+          </button>
+        )}
+      </div>
+
+      {/* Mini stat strip */}
+      {items.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="spark-card p-4">
+            <p
+              className="mono text-[10px] mb-1"
               style={{
-                width: "100%",
-                padding: "0.6rem 0.85rem",
-                background: "var(--spark-bg)",
-                border: "1px solid var(--spark-border)",
-                color: "var(--spark-text)",
-                outline: "none",
+                letterSpacing: "0.18em",
+                color: "var(--spark-orange)",
               }}
-            />
+            >
+              SLA BREACH
+            </p>
+            <p
+              className="tab-num text-2xl font-bold"
+              style={{ color: "var(--spark-orange)" }}
+            >
+              {counts.sla}
+            </p>
           </div>
-          <ul className="overflow-y-auto flex-1">
-            {CONVOS.map((c) => {
-              const on = c.id === active;
+          <div className="spark-card p-4">
+            <p
+              className="mono text-[10px] mb-1"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-gold)",
+              }}
+            >
+              PENDING
+            </p>
+            <p
+              className="tab-num text-2xl font-bold"
+              style={{ color: "var(--spark-gold)" }}
+            >
+              {counts.pending}
+            </p>
+          </div>
+          <div className="spark-card p-4">
+            <p
+              className="mono text-[10px] mb-1"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-sky)",
+              }}
+            >
+              DECLINED · 7D
+            </p>
+            <p
+              className="tab-num text-2xl font-bold"
+              style={{ color: "var(--spark-sky)" }}
+            >
+              {counts.declined}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* List */}
+      {items.length === 0 ? (
+        <div
+          className="spark-card p-10 text-center"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+        >
+          <p
+            className="mono text-[10px] mb-2"
+            style={{
+              letterSpacing: "0.22em",
+              color: "var(--spark-lime)",
+            }}
+          >
+            ALL CLEAR
+          </p>
+          <p className="text-sm">
+            Inbox zero. Nothing in the queue needs your attention
+            right now.
+          </p>
+        </div>
+      ) : (
+        <div className="spark-card overflow-hidden">
+          <ul>
+            {items.map((it, i) => {
+              const meta = KIND_META[it.kind];
+              const target =
+                it.kind === "declined"
+                  ? `/request/view/${it.uuid}`
+                  : "/approvals";
               return (
                 <li
-                  key={c.id}
-                  onClick={() => setActive(c.id)}
-                  className="px-4 py-3 cursor-pointer transition"
+                  key={it.uuid}
+                  className="px-5 py-4 transition"
                   style={{
-                    borderBottom: "1px solid var(--spark-border)",
-                    background: on ? "rgba(197,245,70,0.06)" : "transparent",
-                    borderLeft: on
-                      ? "2px solid var(--spark-lime)"
-                      : "2px solid transparent",
+                    borderBottom:
+                      i < items.length - 1
+                        ? "1px solid var(--spark-border)"
+                        : "none",
                   }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background =
+                      "rgba(255,255,255,0.025)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="spark-avatar" style={{ width: 36, height: 36 }}>
-                      {c.initials}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold truncate">
-                          {c.name}
-                        </p>
+                  <div className="flex items-start gap-3">
+                    <span
+                      className="w-1 self-stretch rounded-full shrink-0"
+                      style={{
+                        background: meta.tone,
+                        boxShadow: `0 0 8px ${meta.tone}`,
+                      }}
+                    />
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => navigate(target)}
+                    >
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className="mono text-[10px]"
+                          style={{
+                            letterSpacing: "0.18em",
+                            color: meta.tone,
+                          }}
+                        >
+                          {meta.label}
+                        </span>
                         <span
                           className="mono text-[10px]"
                           style={{
                             letterSpacing: "0.14em",
-                            color: c.unread
-                              ? "var(--spark-lime)"
-                              : "rgba(255,255,255,0.45)",
+                            color: "rgba(255,255,255,0.4)",
                           }}
                         >
-                          {c.when}
+                          · {it.reqId} · {fmtAgo(it.whenIso).toUpperCase()}
                         </span>
                       </div>
                       <p
-                        className="text-xs truncate"
-                        style={{
-                          color: c.unread
-                            ? "var(--spark-text)"
-                            : "rgba(255,255,255,0.55)",
-                          fontWeight: c.unread ? 600 : 400,
-                        }}
+                        className="font-semibold mt-1"
+                        style={{ color: "var(--spark-text)" }}
                       >
-                        {c.preview}
+                        {it.venue}
+                      </p>
+                      <p
+                        className="text-xs mt-0.5"
+                        style={{ color: "rgba(255,255,255,0.55)" }}
+                      >
+                        {it.market} · {it.requester}
                       </p>
                     </div>
-                    {c.unread && (
-                      <span
-                        className="spark-dot"
-                        style={{ width: 8, height: 8 }}
-                      />
-                    )}
+                    <div className="flex flex-col gap-1 shrink-0 items-end">
+                      <button
+                        onClick={() => navigate(target)}
+                        className="mono text-[10px]"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: meta.tone,
+                        }}
+                      >
+                        {meta.cta.toUpperCase()}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          dismissOne(it.uuid);
+                        }}
+                        className="mono text-[10px]"
+                        title="Hide this item from your inbox (doesn't affect the request)"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "rgba(255,255,255,0.4)",
+                        }}
+                      >
+                        × DISMISS
+                      </button>
+                    </div>
                   </div>
                 </li>
               );
             })}
           </ul>
         </div>
+      )}
+    </div>
+  );
+};
 
-        {/* Thread */}
-        <div className="spark-card overflow-hidden flex flex-col">
+export default function SparkInbox() {
+  return (
+    <Layout>
+      <Suspense
+        fallback={
           <div
-            className="p-4 flex items-center justify-between"
-            style={{ borderBottom: "1px solid var(--spark-border)" }}
+            className="spark-card p-8 text-center text-sm max-w-4xl"
+            style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            <div className="flex items-center gap-3">
-              <span className="spark-avatar" style={{ width: 40, height: 40 }}>
-                {current.initials}
-              </span>
-              <div>
-                <p className="font-bold">{current.name}</p>
-                <p
-                  className="mono text-[10px]"
-                  style={{
-                    letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.45)",
-                  }}
-                >
-                  {current.location ?? "BA"}
-                </p>
-              </div>
-            </div>
+            Loading inbox…
           </div>
-
-          <div className="flex-1 p-5 space-y-4 overflow-y-auto">
-            {thread.length === 0 ? (
-              <p
-                className="text-sm text-center mt-12"
-                style={{ color: "rgba(255,255,255,0.55)" }}
-              >
-                No messages yet.
-              </p>
-            ) : (
-              thread.map((m, i) => {
-                const mine = m.who === "me";
-                return (
-                  <div
-                    key={i}
-                    className={`flex items-end gap-2 ${mine ? "justify-end" : ""}`}
-                  >
-                    {!mine && (
-                      <span
-                        className="spark-avatar"
-                        style={{ width: 28, height: 28, fontSize: "0.65rem" }}
-                      >
-                        {m.initials}
-                      </span>
-                    )}
-                    <div
-                      className="rounded-2xl px-4 py-2.5 max-w-[70%]"
-                      style={{
-                        background: mine
-                          ? "var(--spark-lime)"
-                          : "var(--spark-surface-2)",
-                        color: mine ? "#0a0d09" : "var(--spark-text)",
-                        border: mine
-                          ? "none"
-                          : "1px solid var(--spark-border)",
-                      }}
-                    >
-                      <p className="text-sm leading-relaxed">{m.body}</p>
-                      <p
-                        className="mono text-[9px] mt-1"
-                        style={{
-                          letterSpacing: "0.14em",
-                          color: mine
-                            ? "rgba(10,13,9,0.55)"
-                            : "rgba(255,255,255,0.45)",
-                        }}
-                      >
-                        {m.at}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          <div
-            className="p-3 flex items-center gap-2"
-            style={{ borderTop: "1px solid var(--spark-border)" }}
-          >
-            <input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder={`Message ${current.name}…`}
-              className="rounded-xl flex-1 text-sm"
-              style={{
-                padding: "0.6rem 0.85rem",
-                background: "var(--spark-bg)",
-                border: "1px solid var(--spark-border)",
-                color: "var(--spark-text)",
-                outline: "none",
-              }}
-            />
-            <button
-              onClick={() => setDraft("")}
-              disabled={!draft.trim()}
-              className="px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{
-                background: "var(--spark-lime)",
-                color: "#0a0d09",
-                boxShadow: "0 0 18px rgba(197,245,70,0.35)",
-                opacity: draft.trim() ? 1 : 0.4,
-              }}
-            >
-              Send
-            </button>
-          </div>
-        </div>
-      </div>
+        }
+      >
+        <Inner />
+      </Suspense>
     </Layout>
   );
 }
