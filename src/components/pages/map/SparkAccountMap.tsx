@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import {
@@ -11,6 +11,11 @@ import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import {
+  loadUploadedAccounts,
+  type UploadedAccount,
+} from "@/lib/accounts";
+import AccountUploader from "./AccountUploader";
 
 /**
  * Spark v2 — Account Map (Google Maps).
@@ -102,6 +107,11 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const [filter, setFilter] = useState<"all" | Status>("all");
   const [search, setSearch] = useState("");
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [uploaded, setUploaded] = useState<UploadedAccount[]>([]);
+
+  useEffect(() => {
+    if (tenantId) setUploaded(loadUploadedAccounts(tenantId));
+  }, [tenantId]);
 
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
@@ -155,8 +165,30 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         }
       }
     }
+    // Merge in client-uploaded accounts. Only include those with coords
+    // or addresses we can later geocode. They show as "unvisited" by
+    // default — admin/client schedules a demo to flip them to scheduled.
+    for (const u of uploaded) {
+      const lat = u.lat;
+      const lng = u.lng;
+      const key = `upload:${u.id}`;
+      const market = [u.city, u.state].filter(Boolean).join(", ");
+      if (lat && lng && lat !== 0 && lng !== 0) {
+        if (!map.has(key)) {
+          map.set(key, {
+            key,
+            name: u.name,
+            market: market || "—",
+            status: u.status,
+            coords: { lat, lng },
+            lastDate: null,
+          });
+        }
+      }
+    }
+
     return Array.from(map.values());
-  }, [data]);
+  }, [data, uploaded]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -215,6 +247,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           </p>
         </div>
       </div>
+
+      {/* Uploader */}
+      <AccountUploader onImported={setUploaded} />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -463,8 +498,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             {filtered.slice(0, 200).map((a) => (
               <li
                 key={a.key}
-                onClick={() => navigate("/requests/list")}
-                className="px-4 py-3 cursor-pointer transition"
+                className="px-4 py-3 transition"
                 style={{
                   borderBottom: "1px solid var(--spark-border)",
                 }}
@@ -495,6 +529,25 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                       {a.market}
                     </p>
                   </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Prefill the request form with this account's venue
+                      // + address via query params.
+                      const params = new URLSearchParams({
+                        venue: a.name,
+                        address: a.market,
+                      });
+                      navigate(`/requests/create?${params.toString()}`);
+                    }}
+                    className="mono text-[10px] shrink-0"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "var(--spark-lime)",
+                    }}
+                  >
+                    SCHEDULE →
+                  </button>
                 </div>
               </li>
             ))}

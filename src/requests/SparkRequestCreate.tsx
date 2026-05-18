@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
@@ -145,17 +145,20 @@ const SparkRequestInner: React.FC = () => {
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState("12:00");
   const [endTime, setEndTime] = useState("16:00");
-  const [venue, setVenue] = useState("");
-  const [address, setAddress] = useState("");
+  const [searchParams] = useSearchParams();
+  const [venue, setVenue] = useState(searchParams.get("venue") ?? "");
+  const [address, setAddress] = useState(searchParams.get("address") ?? "");
   const [requestTypeId, setRequestTypeId] = useState("");
   const [timezoneId, setTimezoneId] = useState("");
   const [rmmId, setRmmId] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
-  // Apple-style progressive disclosure: hero fields visible, rest expand.
   const [showDetail, setShowDetail] = useState(false);
-  // Venue type-ahead state.
   const [venueFocused, setVenueFocused] = useState(false);
+  // Bulk mode — add multiple dates at the same venue in one shot.
+  const [extraDates, setExtraDates] = useState<string[]>([]);
+  // Events at a venue need a BA count; retail samplings usually 1-2.
+  const [baCount, setBaCount] = useState<number>(2);
 
   const venueMatches = useMemo(() => {
     const q = venue.toLowerCase().trim();
@@ -215,54 +218,93 @@ const SparkRequestInner: React.FC = () => {
       showAlert("Fill in venue, date, time, and type.", "warning");
       return;
     }
-    const composedName = `${venue} · ${date}`;
+    const allDates = [date, ...extraDates.filter(Boolean)];
     const geocoded = await geocode(address || venue);
     const coords: ReadonlyArray<number> = geocoded ?? [0, 0];
-    commit({
-      variables: {
-        input: {
-          name: composedName,
-          address: address || venue,
-          coordinates: coords,
-          date,
-          startTime,
-          endTime,
-          timezoneId,
-          requestTypeId,
-          rmmAsignedId: rmmId || undefined,
-          tenantId: tenantId ?? undefined,
-          clientName: fullName || undefined,
-          clientEmail: email || undefined,
-          requestorEmail: email || undefined,
-          notes: notes || undefined,
-          details: [],
-          products: Array.from(selectedProducts).map((productId) => ({
-            productId,
-            quantity: 1,
-          })),
-        },
-      },
-      onCompleted: (res) => {
-        if (res.createRequest?.success) {
-          showAlert(
-            "Request submitted. Auto-routed to your RMM for approval.",
-            "success",
-          );
-          navigate("/requests/list");
-        } else {
-          showAlert(
-            res.createRequest?.message ?? "Couldn't submit the request.",
-            "error",
-          );
-        }
-      },
-      onError: (err) =>
-        showAlert(`Submit failed: ${err.message}`, "error"),
-    });
+    // Embed BA count + bulk size in notes so it's visible to the RMM
+    // until first-class fields are added to the mutation input.
+    const notesPlus = [
+      notes,
+      `BA count: ${baCount}`,
+      allDates.length > 1
+        ? `Bulk submission — ${allDates.length} visits at this venue.`
+        : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    let successes = 0;
+    const failures: string[] = [];
+
+    for (const d of allDates) {
+      const composedName =
+        allDates.length > 1
+          ? `${venue} · ${d} (${allDates.indexOf(d) + 1}/${allDates.length})`
+          : `${venue} · ${d}`;
+      // We fan out N parallel mutations one after another so the user gets
+      // a clean per-date error message if any fails. A batch mutation
+      // would be cleaner — tracked in BACKEND-PATCH.md.
+      await new Promise<void>((resolve) => {
+        commit({
+          variables: {
+            input: {
+              name: composedName,
+              address: address || venue,
+              coordinates: coords,
+              date: d,
+              startTime,
+              endTime,
+              timezoneId,
+              requestTypeId,
+              rmmAsignedId: rmmId || undefined,
+              tenantId: tenantId ?? undefined,
+              clientName: fullName || undefined,
+              clientEmail: email || undefined,
+              requestorEmail: email || undefined,
+              notes: notesPlus || undefined,
+              details: [],
+              products: Array.from(selectedProducts).map((productId) => ({
+                productId,
+                quantity: 1,
+              })),
+            },
+          },
+          onCompleted: (res) => {
+            if (res.createRequest?.success) successes += 1;
+            else failures.push(d);
+            resolve();
+          },
+          onError: () => {
+            failures.push(d);
+            resolve();
+          },
+        });
+      });
+    }
+
+    if (failures.length === 0) {
+      showAlert(
+        successes > 1
+          ? `Submitted ${successes} requests · auto-routed to your RMM.`
+          : "Request submitted · auto-routed to your RMM.",
+        "success",
+      );
+      navigate("/requests/list");
+    } else if (successes > 0) {
+      showAlert(
+        `Submitted ${successes} · ${failures.length} failed: ${failures.join(", ")}`,
+        "warning",
+      );
+    } else {
+      showAlert(`All submissions failed. Try again.`, "error");
+    }
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6 max-w-3xl">
+    <form
+      onSubmit={onSubmit}
+      className="space-y-6 max-w-3xl mx-auto px-1 sm:px-0"
+    >
       {/* Header */}
       <div>
         <p
@@ -366,7 +408,7 @@ const SparkRequestInner: React.FC = () => {
 
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="label-mini block mb-1.5">Date *</label>
+              <label className="label-mini block mb-1.5">Visit date *</label>
               <input
                 style={inputStyle}
                 type="date"
@@ -390,6 +432,114 @@ const SparkRequestInner: React.FC = () => {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Bulk dates — add more visits at the same venue */}
+          {extraDates.length > 0 && (
+            <div
+              className="rounded-xl p-3 space-y-2"
+              style={{
+                background: "rgba(197,245,70,0.06)",
+                border: "1px solid rgba(197,245,70,0.25)",
+              }}
+            >
+              <p
+                className="mono text-[10px]"
+                style={{
+                  letterSpacing: "0.18em",
+                  color: "var(--spark-lime)",
+                }}
+              >
+                + {extraDates.length} ADDITIONAL VISIT{extraDates.length === 1 ? "" : "S"}
+              </p>
+              {extraDates.map((d, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    style={inputStyle}
+                    type="date"
+                    value={d}
+                    onChange={(e) =>
+                      setExtraDates((prev) =>
+                        prev.map((x, i) => (i === idx ? e.target.value : x)),
+                      )
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExtraDates((prev) => prev.filter((_, i) => i !== idx))
+                    }
+                    className="mono text-[10px] px-3"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "var(--spark-orange)",
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <p
+                className="mono text-[10px]"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                Each becomes its own request (same venue · same staffing).
+              </p>
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setExtraDates((d) => [...d, ""])}
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.14em",
+                color: "var(--spark-lime)",
+              }}
+            >
+              + ANOTHER VISIT AT THIS VENUE
+            </button>
+            {/* BA count selector */}
+            <div className="flex items-center gap-2">
+              <span className="label-mini">BAs</span>
+              <div
+                className="inline-flex items-center rounded-full"
+                style={{
+                  background: "var(--spark-bg)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setBaCount((n) => Math.max(1, n - 1))}
+                  className="w-9 h-9 grid place-items-center"
+                  style={{
+                    color: "var(--spark-text)",
+                  }}
+                >
+                  −
+                </button>
+                <span
+                  className="tab-num px-3 text-base font-semibold"
+                  style={{ minWidth: 28, textAlign: "center" }}
+                >
+                  {baCount}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setBaCount((n) => Math.min(20, n + 1))}
+                  className="w-9 h-9 grid place-items-center"
+                  style={{
+                    color: "var(--spark-lime)",
+                  }}
+                >
+                  +
+                </button>
+              </div>
             </div>
           </div>
 
