@@ -2,7 +2,205 @@ import Layout from "@/layout/Layout";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { useAuthStore } from "@/store/authStore";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
+import { useLazyLoadQuery } from "react-relay/hooks";
+import { RequestsQuery } from "@/api/queries/RequestsQuery";
+import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { Bar, Doughnut } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  type ChartData,
+  type ChartOptions,
+} from "chart.js";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+);
+
+const SPARK_PALETTE = [
+  "#c5f546", // lime
+  "#5fb8ef", // sky
+  "#a08bd9", // purple
+  "#d6c45f", // gold
+  "#ef5a2a", // orange
+  "#7a8074", // muted
+];
+
+const isoWeekKey = (d: Date): string => {
+  // Monday-start week label "MMM D" (week start). Cheap to compute,
+  // easy to read on a 12-bar chart.
+  const start = new Date(d);
+  start.setHours(0, 0, 0, 0);
+  const dow = (start.getDay() + 6) % 7;
+  start.setDate(start.getDate() - dow);
+  return start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+};
+
+const EventsPerWeekChart: React.FC = () => {
+  const { tenantId } = useAuthStore();
+  const data = useLazyLoadQuery<RequestsQueryType>(
+    RequestsQuery,
+    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+  const { labels, values } = useMemo(() => {
+    const rows =
+      data?.requests?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const cutoff = new Date(today);
+    cutoff.setDate(today.getDate() - 7 * 12); // 12 weeks
+
+    // Build a list of 12 contiguous week buckets (oldest → newest)
+    // so the X-axis shows zero-count weeks instead of gaps.
+    const buckets: { key: string; count: number }[] = [];
+    const start = new Date(cutoff);
+    const dow = (start.getDay() + 6) % 7;
+    start.setDate(start.getDate() - dow);
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i * 7);
+      buckets.push({ key: isoWeekKey(d), count: 0 });
+    }
+    const idxByKey = new Map(buckets.map((b, i) => [b.key, i]));
+
+    for (const r of rows) {
+      const raw = r.createdAt;
+      if (!raw) continue;
+      const d = new Date(raw);
+      if (d < cutoff || d > today) continue;
+      const key = isoWeekKey(d);
+      const idx = idxByKey.get(key);
+      if (idx !== undefined) buckets[idx].count += 1;
+    }
+    return {
+      labels: buckets.map((b) => b.key),
+      values: buckets.map((b) => b.count),
+    };
+  }, [data]);
+
+  const chartData: ChartData<"bar"> = {
+    labels,
+    datasets: [
+      {
+        label: "Requests created",
+        data: values,
+        backgroundColor: "rgba(197,245,70,0.65)",
+        borderColor: "rgba(197,245,70,1)",
+        borderWidth: 1,
+        borderRadius: 6,
+      },
+    ],
+  };
+  const options: ChartOptions<"bar"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => `${ctx.parsed.y} created`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        ticks: { color: "rgba(255,255,255,0.55)", maxRotation: 0 },
+        grid: { display: false },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { color: "rgba(255,255,255,0.55)", precision: 0 },
+        grid: { color: "rgba(255,255,255,0.06)" },
+      },
+    },
+  };
+  return <Bar data={chartData} options={options} />;
+};
+
+const ActivationMixChart: React.FC = () => {
+  const { tenantId } = useAuthStore();
+  const data = useLazyLoadQuery<RequestsQueryType>(
+    RequestsQuery,
+    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+  const { labels, values } = useMemo(() => {
+    const rows =
+      data?.requests?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+    const cutoff = Date.now() - 90 * 86_400_000;
+    const counts = new Map<string, number>();
+    for (const r of rows) {
+      const t = r.createdAt ? new Date(r.createdAt).getTime() : NaN;
+      if (!Number.isFinite(t) || t < cutoff) continue;
+      const key = r.requestType?.name ?? "Other";
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    return {
+      labels: sorted.map(([k]) => k),
+      values: sorted.map(([, v]) => v),
+    };
+  }, [data]);
+
+  const chartData: ChartData<"doughnut"> = {
+    labels,
+    datasets: [
+      {
+        data: values,
+        backgroundColor: labels.map(
+          (_, i) => SPARK_PALETTE[i % SPARK_PALETTE.length],
+        ),
+        borderColor: "#0a0d09",
+        borderWidth: 2,
+      },
+    ],
+  };
+  const options: ChartOptions<"doughnut"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "right",
+        labels: {
+          color: "rgba(255,255,255,0.75)",
+          font: { size: 12 },
+          padding: 12,
+          boxWidth: 12,
+          boxHeight: 12,
+          usePointStyle: true,
+        },
+      },
+    },
+    cutout: "62%",
+  };
+  return values.length === 0 ? (
+    <div
+      className="grid place-items-center h-full text-xs"
+      style={{ color: "rgba(255,255,255,0.45)" }}
+    >
+      No requests in the last 90 days.
+    </div>
+  ) : (
+    <Doughnut data={chartData} options={options} />
+  );
+};
 
 /**
  * Spark v2 — Reports.
@@ -24,6 +222,42 @@ const SCHEDULED = [
   { name: "Activation pipeline", category: "Operations", method: "PDF", cadence: "daily" },
   { name: "RMM scorecard", category: "Market & RMM", method: "PDF · Slack", cadence: "weekly" },
 ];
+
+const ChartCard: React.FC<{
+  title: string;
+  subtitle: string;
+  tall?: boolean;
+  children: React.ReactNode;
+}> = ({ title, subtitle, tall, children }) => (
+  <div className="spark-card p-5">
+    <h3
+      className="display font-bold mb-2"
+      style={{ letterSpacing: "-0.02em" }}
+    >
+      {title}
+    </h3>
+    <p
+      className="text-xs mb-3"
+      style={{ color: "rgba(255,255,255,0.55)" }}
+    >
+      {subtitle}
+    </p>
+    <div style={{ position: "relative", height: tall ? 280 : 260 }}>
+      <Suspense
+        fallback={
+          <div
+            className="grid place-items-center h-full text-xs"
+            style={{ color: "rgba(255,255,255,0.45)" }}
+          >
+            Loading…
+          </div>
+        }
+      >
+        {children}
+      </Suspense>
+    </div>
+  </div>
+);
 
 const ChartPlaceholder: React.FC<{ title: string; subtitle: string; tall?: boolean }> = ({
   title,
@@ -178,15 +412,19 @@ export default function SparkReports() {
         {/* Charts row */}
         <div className="grid lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2">
-            <ChartPlaceholder
-              title="Events per week · last 12 weeks"
-              subtitle="Trend by activation type."
-            />
+            <ChartCard
+              title="Requests per week · last 12 weeks"
+              subtitle="Inbound activation volume."
+            >
+              <EventsPerWeekChart />
+            </ChartCard>
           </div>
-          <ChartPlaceholder
+          <ChartCard
             title="Activation mix"
             subtitle="90d share by type."
-          />
+          >
+            <ActivationMixChart />
+          </ChartCard>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-5">
