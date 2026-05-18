@@ -175,20 +175,88 @@ export const InternalNotesPanel: React.FC<{
     return Array.from(out);
   };
 
-  const submitNote = () => {
+  // Map @-handles in the draft back to recipient emails via the
+  // mentionables list. The insertMention pathway uses
+  // `${email.split('@')[0]}` as the visible handle, so we match the
+  // local-part of each mentionable's email.
+  const handlesToEmails = (handles: string[]): string[] => {
+    const byHandle = new Map<string, string>();
+    for (const m of mentionables) {
+      const handle = (m.email || "").split("@")[0].toLowerCase();
+      if (handle) byHandle.set(handle, m.email);
+    }
+    const out = new Set<string>();
+    for (const h of handles) {
+      const e = byHandle.get(h.toLowerCase());
+      if (e) out.add(e);
+    }
+    return Array.from(out);
+  };
+
+  const fireMentionEmails = async (
+    handles: string[],
+    body: string,
+  ): Promise<{ sent: number; failed: string[] }> => {
+    const emails = handlesToEmails(handles);
+    if (emails.length === 0) return { sent: 0, failed: [] };
+    try {
+      const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+        },
+        body: JSON.stringify({
+          query: `
+            mutation NotifyNoteMention($input: NotifyNoteMentionInput!) {
+              notifyNoteMention(input: $input) {
+                success
+                message
+                sentCount
+                failedEmails
+              }
+            }
+          `,
+          variables: {
+            input: {
+              requestId: requestUuid,
+              noteBody: body,
+              recipientEmails: emails,
+              requestUrl: `${window.location.origin}/request/view/${requestUuid}`,
+            },
+          },
+        }),
+      });
+      const json = await res.json();
+      const r = json?.data?.notifyNoteMention;
+      if (json.errors?.length || !r) {
+        return { sent: 0, failed: emails };
+      }
+      return {
+        sent: r.sentCount ?? 0,
+        failed: r.failedEmails ?? [],
+      };
+    } catch {
+      return { sent: 0, failed: emails };
+    }
+  };
+
+  const submitNote = async () => {
     if (!tenantId) return;
     if (!draft.trim() && !shipmentMode) return;
     if (shipmentMode && !shipLabel.trim()) {
       showAlert("Add an asset label before shipping.", "warning");
       return;
     }
+    const body = draft.trim() || (shipmentMode ? "Shipped asset." : "");
+    const handles = extractMentions(draft);
     const note: Note = {
       id: `n_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      body: draft.trim() || (shipmentMode ? "Shipped asset." : ""),
+      body,
       authorName,
       authorEmail,
       createdAt: new Date().toISOString(),
-      mentions: extractMentions(draft),
+      mentions: handles,
       shipment: shipmentMode
         ? {
             label: shipLabel.trim(),
@@ -203,11 +271,28 @@ export const InternalNotesPanel: React.FC<{
     setShipLabel("");
     setShipRecipient("");
     setShipmentMode(false);
-    if (note.mentions.length > 0) {
-      showAlert(
-        `Note added · @${note.mentions.join(", @")} will be notified`,
-        "success",
-      );
+
+    // Fire the email notification mutation in the background. We
+    // optimistically render the note immediately and surface a
+    // per-status toast once the fanout returns.
+    if (handles.length > 0) {
+      const { sent, failed } = await fireMentionEmails(handles, body);
+      if (sent > 0 && failed.length === 0) {
+        showAlert(
+          `Note added · emailed ${sent} teammate${sent === 1 ? "" : "s"}.`,
+          "success",
+        );
+      } else if (sent > 0) {
+        showAlert(
+          `Note added · emailed ${sent}, ${failed.length} bounced.`,
+          "warning",
+        );
+      } else {
+        showAlert(
+          `Note saved locally, but the @-mention email didn't go out. Check that the tagged user has a real email on file.`,
+          "warning",
+        );
+      }
     } else {
       showAlert("Note added.", "success");
     }
