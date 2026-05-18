@@ -1067,7 +1067,11 @@ const ApprovalsInner: React.FC = () => {
           onToggleSelect={() => toggleSelected(r.id)}
           onApprove={() => setApproving(r)}
           onDecline={() => setDeclining(r)}
-          onView={() => navigate(`/request/view/${r.uuid}`)}
+          onView={() =>
+            navigate(`/request/view/${r.uuid}`, {
+              state: { from: "/approvals" },
+            })
+          }
         />
       ))}
 

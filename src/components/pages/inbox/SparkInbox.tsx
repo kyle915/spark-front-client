@@ -334,6 +334,12 @@ const Inner: React.FC = () => {
                 it.kind === "declined"
                   ? `/request/view/${it.uuid}`
                   : "/approvals";
+              // Pass /inbox as the back-target so SparkRequestView's
+              // "← BACK" returns here instead of /requests/list.
+              const navOpts =
+                it.kind === "declined"
+                  ? ({ state: { from: "/inbox" } } as const)
+                  : undefined;
               return (
                 <li
                   key={it.uuid}
@@ -362,7 +368,7 @@ const Inner: React.FC = () => {
                     />
                     <div
                       className="flex-1 min-w-0 cursor-pointer"
-                      onClick={() => navigate(target)}
+                      onClick={() => navigate(target, navOpts)}
                     >
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
@@ -399,7 +405,7 @@ const Inner: React.FC = () => {
                     </div>
                     <div className="flex flex-col gap-1 shrink-0 items-end">
                       <button
-                        onClick={() => navigate(target)}
+                        onClick={() => navigate(target, navOpts)}
                         className="mono text-[10px]"
                         style={{
                           letterSpacing: "0.14em",
