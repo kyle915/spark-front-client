@@ -23,6 +23,7 @@ type Recap = {
   stateCode: string | null;
   approved: boolean;
   heroImage: string | null;
+  fileCount: number;
   engagements: number | null;
   productsSold: number | null;
 };
@@ -89,6 +90,26 @@ const RecapCard: React.FC<{ recap: Recap; onOpen: () => void }> = ({
         className={`absolute top-2 right-2 chip ${recap.approved ? "chip-lime" : "chip-orange"}`}
       >
         ● {recap.approved ? "APPROVED" : "DRAFT"}
+      </span>
+      <span
+        className="absolute bottom-2 left-2 mono"
+        style={{
+          fontSize: 9,
+          letterSpacing: "0.14em",
+          padding: "2px 6px",
+          borderRadius: 999,
+          background:
+            recap.fileCount > 0
+              ? "rgba(197,245,70,0.15)"
+              : "rgba(239,90,42,0.15)",
+          color:
+            recap.fileCount > 0
+              ? "var(--spark-lime)"
+              : "var(--spark-orange)",
+          border: `1px solid ${recap.fileCount > 0 ? "rgba(197,245,70,0.35)" : "rgba(239,90,42,0.35)"}`,
+        }}
+      >
+        ◉ {recap.fileCount} FILE{recap.fileCount === 1 ? "" : "S"}
       </span>
     </div>
 
@@ -196,6 +217,9 @@ const RecapsListInner: React.FC<{
           // Pick the first browser-renderable image, prepend GCS bucket
           // URL via recapFileUrl(). HEIC/PDF aren't valid img sources.
           const hero = pickHeroImage(n.recapFiles ?? []);
+          const fileCount = (n.recapFiles ?? []).filter(
+            (f) => f && (f.file?.toString() || "").length > 0,
+          ).length;
           return {
             uuid: String(n.uuid),
             name: n.name ?? n.event?.name ?? "Untitled recap",
@@ -204,6 +228,7 @@ const RecapsListInner: React.FC<{
             stateCode,
             approved: Boolean(n.approved),
             heroImage: hero,
+            fileCount,
             engagements: n.totalEngagements ?? null,
             productsSold: n.productsSold ?? null,
           };
