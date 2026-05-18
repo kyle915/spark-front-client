@@ -101,6 +101,7 @@ import SparkRecentSubmissions from "@/components/pages/recent/SparkRecentSubmiss
 import SparkPeople from "@/components/pages/people/SparkPeople";
 import SparkFormBuilder from "@/components/pages/builder/SparkFormBuilder";
 import SparkNewClient from "@/components/pages/clients/SparkNewClient";
+import SparkBaPortal from "@/components/pages/ba/SparkBaPortal";
 import RecapCustomList from "@/recap/RecapCustomList";
 import RecapView from "@/recap/RecapView";
 // import EditRecap from "@/recap/EditRecap";
@@ -322,6 +323,13 @@ const RequestsLinks = {
           <SparkNewClient />
         </AdminOnly>
       ),
+      isPublic: false,
+    },
+    {
+      // BA portal — separate chrome (no admin sidebar, top tabs only).
+      // Anyone signed in can hit this; the route owns its own layout.
+      path: "/ba",
+      component: <SparkBaPortal />,
       isPublic: false,
     },
   ],
