@@ -614,6 +614,60 @@ export default function MasterTracker() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  // Copy the currently-visible rows to clipboard as TSV (tab-
+  // separated). Pasted directly into a Google Sheet cell, Sheets
+  // parses the tabs as column boundaries and lays the rows out
+  // correctly — no Import dialog needed. Fast path to keep the
+  // linked sheet in sync with the live tracker.
+  const [copyState, setCopyState] = useState<"idle" | "copying" | "copied">(
+    "idle",
+  );
+  const copyForSheets = async () => {
+    if (visibleRows.length === 0 || copyState !== "idle") return;
+    setCopyState("copying");
+    const headers = [
+      "Date",
+      "Status",
+      "Market",
+      "Venue",
+      "Address",
+      "Type",
+      "Time",
+      "Event UUID",
+      "Request UUID",
+    ];
+    const sanitize = (raw: string) =>
+      (raw ?? "").toString().replace(/\t/g, " ").replace(/\r?\n/g, " ");
+    const rows = [headers.join("\t")];
+    for (const r of visibleRows) {
+      rows.push(
+        [
+          r.dateLabel,
+          r.statusSlug,
+          r.market,
+          r.venue,
+          r.address,
+          r.type,
+          r.timeLabel,
+          r.eventUuid ?? "",
+          r.uuid,
+        ]
+          .map(sanitize)
+          .join("\t"),
+      );
+    }
+    try {
+      await navigator.clipboard.writeText(rows.join("\n"));
+      setCopyState("copied");
+      window.setTimeout(() => setCopyState("idle"), 2000);
+    } catch {
+      setCopyState("idle");
+      window.alert(
+        "Couldn't access the clipboard. Try the CSV download instead.",
+      );
+    }
+  };
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [total, setTotal] = useState<number>(0);
 
@@ -751,6 +805,38 @@ export default function MasterTracker() {
               }}
             >
               ⤴ Bulk upload
+            </button>
+            <button
+              onClick={copyForSheets}
+              disabled={visibleRows.length === 0 || copyState === "copying"}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{
+                background:
+                  copyState === "copied"
+                    ? "rgba(95,184,239,0.18)"
+                    : "transparent",
+                color:
+                  copyState === "copied"
+                    ? "var(--spark-sky)"
+                    : "var(--spark-text)",
+                border: `1px solid ${
+                  copyState === "copied"
+                    ? "rgba(95,184,239,0.5)"
+                    : "var(--spark-border)"
+                }`,
+                opacity: visibleRows.length === 0 ? 0.5 : 1,
+              }}
+              title={
+                visibleRows.length === 0
+                  ? "Nothing to copy"
+                  : `Copy ${visibleRows.length} rows as TSV — paste straight into Google Sheets`
+              }
+            >
+              {copyState === "copied"
+                ? `✓ Copied (${visibleRows.length})`
+                : copyState === "copying"
+                  ? "Copying…"
+                  : `📋 Copy for Sheets ${visibleRows.length > 0 ? `(${visibleRows.length})` : ""}`}
             </button>
             <button
               onClick={exportCsv}
