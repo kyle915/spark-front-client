@@ -85,6 +85,12 @@ const SECTIONS: NavSection[] = [
         to: "/requests/list",
         clientLabel: "My Requests",
       },
+      {
+        label: "Bulk Upload",
+        Icon: Upload,
+        to: "/requests/bulk-upload",
+        clientLabel: "Bulk Upload",
+      },
       { label: "Calendar", Icon: Calendar, to: "/connect-calendar" },
       {
         label: "Account Map",
@@ -152,7 +158,6 @@ const SECTIONS: NavSection[] = [
 void Clock;
 void CreditCard;
 void DollarSign;
-void Upload;
 void Building2;
 void HelpCircle;
 

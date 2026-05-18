@@ -88,6 +88,7 @@ import SparkApprovals from "@/components/pages/approvals/SparkApprovals";
 import SparkSettings from "@/components/pages/settings/SparkSettings";
 import SparkJobs from "@/components/pages/jobs/SparkJobs";
 import SparkRequestCreate from "@/requests/SparkRequestCreate";
+import SparkBulkUpload from "@/requests/SparkBulkUpload";
 import SparkReports from "@/components/pages/reports/SparkReports";
 import SparkInbox from "@/components/pages/inbox/SparkInbox";
 import SparkAlerts from "@/components/pages/alerts/SparkAlerts";
@@ -236,6 +237,11 @@ const RequestsLinks = {
     {
       path: "/requests/create",
       component: <SparkRequestCreate />,
+      isPublic: false,
+    },
+    {
+      path: "/requests/bulk-upload",
+      component: <SparkBulkUpload />,
       isPublic: false,
     },
     {

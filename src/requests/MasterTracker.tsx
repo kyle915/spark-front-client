@@ -670,19 +670,17 @@ export default function MasterTracker() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {!isClient && (
-              <button
-                onClick={() => navigate("/requests/create")}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                style={{
-                  background: "transparent",
-                  color: "var(--spark-text)",
-                  border: "1px solid var(--spark-border)",
-                }}
-              >
-                ⤴ Bulk upload
-              </button>
-            )}
+            <button
+              onClick={() => navigate("/requests/bulk-upload")}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              ⤴ Bulk upload
+            </button>
             <button
               onClick={exportCsv}
               disabled={visibleRows.length === 0}
