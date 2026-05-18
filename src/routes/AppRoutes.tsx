@@ -114,6 +114,7 @@ import CreateUser from "@/users/CreateUser";
 
 // Public
 import SparkFormPage from "@/public/form/FormPage";
+import SparkPublicExpressForm from "@/public/form/SparkPublicExpressForm";
 import PrivacyPolicyView from "@/utils/PrivacyPolicyView";
 import TermsOfServiceView from "@/utils/TermsOfServiceView";
 import IndependentContractorAgreementPage from "@/utils/IndependentContractorAgreement";
@@ -134,6 +135,11 @@ const PublicRoutes = {
   routes: [
     {
       path: "/spark-form/:tenantSlug",
+      component: <SparkPublicExpressForm />,
+      isPublic: true,
+    },
+    {
+      path: "/spark-form-legacy/:tenantSlug",
       component: <SparkFormPage />,
       isPublic: true,
     },
