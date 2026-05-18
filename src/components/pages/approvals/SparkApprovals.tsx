@@ -1730,6 +1730,41 @@ const ApprovalsCopyQueueButton: React.FC = () => (
   </Suspense>
 );
 
+/**
+ * Per-tenant linked Google Sheet shortcut. Reads the same
+ * @spark.linkedSheet.url/{tenantId} localStorage key the Master
+ * Tracker writes, so the chip auto-appears once it's set.
+ */
+const LinkedSheetChip: React.FC = () => {
+  const { tenantId } = useAuthStore();
+  const url = (() => {
+    if (!tenantId) return "";
+    try {
+      return localStorage.getItem(`@spark.linkedSheet.url/${tenantId}`) ?? "";
+    } catch {
+      return "";
+    }
+  })();
+  if (!url) return null;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="px-3 py-2 rounded-xl text-sm font-semibold transition inline-flex items-center gap-2"
+      style={{
+        background: "rgba(95,184,239,0.10)",
+        color: "var(--spark-sky)",
+        border: "1px solid rgba(95,184,239,0.35)",
+        textDecoration: "none",
+      }}
+      title="Open the brand's linked Google Sheet"
+    >
+      📊 Sheet ↗
+    </a>
+  );
+};
+
 /* ─────────────────── page ─────────────────── */
 
 export default function SparkApprovals() {
@@ -1769,7 +1804,11 @@ export default function SparkApprovals() {
               .
             </p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            {/* Per-tenant linked Google Sheet shortcut, mirroring the
+                tracker / dashboard / settings deep-links. Same
+                localStorage key. */}
+            <LinkedSheetChip />
             {/* Quick Slack/email copy: dumps the current pending queue
                 as text so kyle can paste into a team channel. Uses
                 whatever's currently rendered (respects filters). */}
