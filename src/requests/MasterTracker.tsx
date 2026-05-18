@@ -268,8 +268,14 @@ const TrackerTable: React.FC<{
                   return next;
                 });
               };
-              // Past/done rows open the recap area; in-progress rows open
-              // the event view; pending rows open the request editor.
+              // Click target by row state:
+              //   done + has event → event detail
+              //   done, no event   → recap list
+              //   has event row    → event detail
+              //   pending / queue  → Spark v2 request DETAIL (not
+              //                      the edit form — kyle wants to
+              //                      see context first, then edit
+              //                      via the Edit button there).
               const onClick = () => {
                 if (isDone && r.eventUuid) {
                   navigate(`/event/view/${r.eventUuid}`);
@@ -278,7 +284,9 @@ const TrackerTable: React.FC<{
                 } else if (r.eventUuid) {
                   navigate(`/event/view/${r.eventUuid}`);
                 } else {
-                  navigate(`/request/edit/${r.uuid}`);
+                  navigate(`/request/view/${r.uuid}`, {
+                    state: { from: "/requests/list" },
+                  });
                 }
               };
               return (
