@@ -14,6 +14,36 @@ import InternalNotesPanel from "./InternalNotesPanel";
 
 type Mentionable = { id: string; name: string; email: string };
 
+const LinkedSheetChipForView: React.FC = () => {
+  const { tenantId } = useAuthStore();
+  const url = (() => {
+    if (!tenantId) return "";
+    try {
+      return localStorage.getItem(`@spark.linkedSheet.url/${tenantId}`) ?? "";
+    } catch {
+      return "";
+    }
+  })();
+  if (!url) return null;
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="px-3 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-2"
+      style={{
+        background: "rgba(95,184,239,0.10)",
+        color: "var(--spark-sky)",
+        border: "1px solid rgba(95,184,239,0.35)",
+        textDecoration: "none",
+      }}
+      title="Open the brand's linked Google Sheet"
+    >
+      📊 Sheet ↗
+    </a>
+  );
+};
+
 const NotesLoader: React.FC<{
   requestUuid: string;
   requestLabel: string;
@@ -302,18 +332,21 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               : ""}
           </p>
         </div>
-        <button
-          onClick={() => navigate(from)}
-          className="mono text-[10px] px-3 py-2 rounded-xl"
-          style={{
-            letterSpacing: "0.18em",
-            background: "rgba(255,255,255,0.04)",
-            color: "rgba(255,255,255,0.7)",
-            border: "1px solid var(--spark-border)",
-          }}
-        >
-          ← BACK
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <LinkedSheetChipForView />
+          <button
+            onClick={() => navigate(from)}
+            className="mono text-[10px] px-3 py-2 rounded-xl"
+            style={{
+              letterSpacing: "0.18em",
+              background: "rgba(255,255,255,0.04)",
+              color: "rgba(255,255,255,0.7)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            ← BACK
+          </button>
+        </div>
       </div>
 
       {/* Decline reason banner */}
