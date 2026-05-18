@@ -16,7 +16,21 @@ export type SidebarCounts = {
   approvals: number; // pending + queue
   upcoming: number; // approved + scheduled in next 14d
   done30d: number; // done in last 30 days
+  alertsUnread: number; // last-48h request activity minus localStorage-read keys
 };
+
+const ALERTS_READ_KEY = "@spark.alerts.readKeys.v1";
+
+function loadReadKeys(): Set<string> {
+  try {
+    const raw = localStorage.getItem(ALERTS_READ_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
 
 export function useSidebarCounts(): SidebarCounts {
   const { tenantId } = useAuthStore();
@@ -35,6 +49,9 @@ export function useSidebarCounts(): SidebarCounts {
     let approvals = 0;
     let upcoming = 0;
     let done30d = 0;
+    let alertsUnread = 0;
+    const readKeys = loadReadKeys();
+    const cutoff48 = Date.now() - 48 * 60 * 60 * 1000;
     const now = Date.now();
     const days = (n: number) => n * 86_400_000;
     for (const r of rows) {
@@ -44,6 +61,26 @@ export function useSidebarCounts(): SidebarCounts {
       const isDone = slug === "done" || slug === "completed";
       if (!isDone) tracker += 1;
       if (slug === "pending" || slug === "queue") approvals += 1;
+      // Mirror the keying used by SparkAlerts so this count tracks
+      // exactly what the user sees there.
+      const id = String(r.id);
+      const created = r.createdAt ? new Date(r.createdAt).getTime() : NaN;
+      const updated = r.updatedAt ? new Date(r.updatedAt).getTime() : NaN;
+      if (slug === "pending" && Number.isFinite(created) && created >= cutoff48) {
+        const key = `req:${id}:${r.createdAt}`;
+        if (!readKeys.has(key)) alertsUnread += 1;
+      }
+      if (
+        (slug === "approved" || slug === "declined") &&
+        Number.isFinite(updated) &&
+        updated >= cutoff48 &&
+        Number.isFinite(created) &&
+        updated - created > 5_000
+      ) {
+        const kind = slug === "approved" ? "approval" : "decline";
+        const key = `${kind}:${id}:${r.updatedAt}`;
+        if (!readKeys.has(key)) alertsUnread += 1;
+      }
       if (r.date) {
         const t = new Date(r.date).getTime();
         if (slug === "approved" || slug === "scheduled") {
@@ -52,7 +89,7 @@ export function useSidebarCounts(): SidebarCounts {
         if (isDone && t > now - days(30) && t < now) done30d += 1;
       }
     }
-    return { tracker, approvals, upcoming, done30d };
+    return { tracker, approvals, upcoming, done30d, alertsUnread };
   }, [data]);
 }
 

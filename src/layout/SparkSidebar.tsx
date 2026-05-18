@@ -307,6 +307,8 @@ const SidebarNav: React.FC<{
         };
       if (it.to === "/recaps/list" && counts.done30d > 0)
         chip = { text: String(counts.done30d), tone: "lime" };
+      if (it.to === "/alerts" && counts.alertsUnread > 0)
+        chip = { text: String(counts.alertsUnread), tone: "orange" };
       return chip ? { ...it, chip } : it;
     }),
   }));
