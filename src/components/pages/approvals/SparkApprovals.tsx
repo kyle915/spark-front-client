@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
@@ -83,9 +83,21 @@ const ApprovalRow: React.FC<{
   onApprove: () => void;
   onDecline: () => void;
   onToggleSelect: () => void;
+  onFocus: () => void;
   selected: boolean;
+  focused: boolean;
   busy: boolean;
-}> = ({ row, onView, onApprove, onDecline, onToggleSelect, selected, busy }) => {
+}> = ({
+  row,
+  onView,
+  onApprove,
+  onDecline,
+  onToggleSelect,
+  onFocus,
+  selected,
+  focused,
+  busy,
+}) => {
   const sourceChip =
     row.source === "external" ? (
       <span className="chip chip-sky">EXTERNAL · NEEDS CLIENT APPROVAL</span>
@@ -126,12 +138,18 @@ const ApprovalRow: React.FC<{
   })();
   return (
     <div
+      onClick={onFocus}
       className="spark-card p-5 transition"
       style={{
         outline: selected
           ? "2px solid var(--spark-lime)"
-          : "1px solid transparent",
-        outlineOffset: selected ? -1 : 0,
+          : focused
+            ? "2px solid var(--spark-sky)"
+            : "1px solid transparent",
+        outlineOffset: selected || focused ? -1 : 0,
+        boxShadow: focused
+          ? "0 0 24px rgba(95,184,239,0.25)"
+          : undefined,
       }}
     >
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -344,6 +362,10 @@ const ApprovalsInner: React.FC = () => {
 
   // Quick-filter the pending queue by venue / requester / req-id.
   const [search, setSearch] = useState("");
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  // Index of the keyboard-focused row (j/k navigation). -1 = no focus.
+  const [focusedIdx, setFocusedIdx] = useState<number>(-1);
+  const [showHelp, setShowHelp] = useState(false);
   const matchesSearch = (r: Row, q: string) => {
     if (!q) return true;
     const needle = q.toLowerCase();
@@ -511,6 +533,120 @@ const ApprovalsInner: React.FC = () => {
 
   const slaLabel = stats.slaPct === null ? "—" : `${stats.slaPct}%`;
 
+  // Keep the focused index in range as rows change (removed/filtered).
+  useEffect(() => {
+    if (rows.length === 0) {
+      if (focusedIdx !== -1) setFocusedIdx(-1);
+      return;
+    }
+    if (focusedIdx >= rows.length) setFocusedIdx(rows.length - 1);
+  }, [rows.length, focusedIdx]);
+
+  // Keyboard shortcuts. Skip when a modal is open or the user is typing
+  // into an input/textarea (so 'a' in the decline reason field doesn't
+  // approve the row).
+  useEffect(() => {
+    const isTypingTarget = (el: EventTarget | null) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName.toLowerCase();
+      return (
+        tag === "input" ||
+        tag === "textarea" ||
+        tag === "select" ||
+        el.isContentEditable
+      );
+    };
+    const onKey = (e: KeyboardEvent) => {
+      // Modal-open guards
+      if (approving || declining || bulkConfirm || showHelp) {
+        if (e.key === "Escape") {
+          setApproving(null);
+          setDeclining(null);
+          setBulkConfirm(false);
+          setShowHelp(false);
+        }
+        return;
+      }
+      // "/" focuses search — Gmail/Linear convention
+      if (e.key === "/" && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        searchRef.current?.focus();
+        return;
+      }
+      if (e.key === "?" && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        setShowHelp(true);
+        return;
+      }
+      if (isTypingTarget(e.target)) {
+        // Allow Esc to drop focus from search
+        if (e.key === "Escape" && document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        return;
+      }
+      if (rows.length === 0) return;
+      const focused = focusedIdx >= 0 ? rows[focusedIdx] : null;
+      switch (e.key) {
+        case "j":
+        case "ArrowDown":
+          e.preventDefault();
+          setFocusedIdx((i) => Math.min(rows.length - 1, i + 1 < 0 ? 0 : i + 1));
+          break;
+        case "k":
+        case "ArrowUp":
+          e.preventDefault();
+          setFocusedIdx((i) => Math.max(0, (i < 0 ? 0 : i) - 1));
+          break;
+        case "a":
+          if (focused) {
+            e.preventDefault();
+            setApproving(focused);
+          }
+          break;
+        case "d":
+          if (focused) {
+            e.preventDefault();
+            setDeclining(focused);
+          }
+          break;
+        case " ":
+        case "x":
+          if (focused) {
+            e.preventDefault();
+            toggleSelected(focused.id);
+          }
+          break;
+        case "Enter":
+          if (focused) {
+            e.preventDefault();
+            navigate(`/request/view/${focused.uuid}`);
+          }
+          break;
+        case "Escape":
+          if (selectedIds.size > 0) {
+            e.preventDefault();
+            clearSelection();
+          } else if (focusedIdx !== -1) {
+            e.preventDefault();
+            setFocusedIdx(-1);
+          }
+          break;
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    rows,
+    focusedIdx,
+    approving,
+    declining,
+    bulkConfirm,
+    showHelp,
+    selectedIds,
+  ]);
+
   const StatsGrid = (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       <div className="spark-card p-4">
@@ -560,14 +696,29 @@ const ApprovalsInner: React.FC = () => {
   );
 
   const SearchBar = (
-    <div className="spark-card px-4 py-3">
+    <div className="spark-card px-4 py-3 flex items-center gap-3">
       <input
+        ref={searchRef}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search pending queue — venue, requester, REQ-id…"
-        className="w-full bg-transparent text-sm focus:outline-none"
+        placeholder="Search pending queue — venue, requester, REQ-id…  ( / to focus )"
+        className="flex-1 bg-transparent text-sm focus:outline-none"
         style={{ color: "var(--spark-text)" }}
       />
+      <button
+        type="button"
+        onClick={() => setShowHelp(true)}
+        className="mono text-[10px] px-2 py-1 rounded-md"
+        title="Keyboard shortcuts"
+        style={{
+          letterSpacing: "0.14em",
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.1)",
+          color: "rgba(255,255,255,0.5)",
+        }}
+      >
+        ?
+      </button>
     </div>
   );
 
@@ -771,12 +922,14 @@ const ApprovalsInner: React.FC = () => {
       {pendingRows.length > 4 && SearchBar}
       {BulkBar}
       <div className="space-y-3">
-      {rows.map((r) => (
+      {rows.map((r, idx) => (
         <ApprovalRow
           key={r.uuid}
           row={r}
           busy={busyId === r.id}
           selected={selectedIds.has(r.id)}
+          focused={focusedIdx === idx}
+          onFocus={() => setFocusedIdx(idx)}
           onToggleSelect={() => toggleSelected(r.id)}
           onApprove={() => setApproving(r)}
           onDecline={() => setDeclining(r)}
@@ -787,6 +940,89 @@ const ApprovalsInner: React.FC = () => {
       </div>
 
       {RecentlyDecided}
+
+      {/* Keyboard shortcuts help — appears on '?' key or '?' button click.
+          Lifted from the Gmail/Linear playbook: power users want these,
+          mouse users never see them. */}
+      {showHelp && (
+        <div
+          onClick={() => setShowHelp(false)}
+          className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
+          style={{
+            background: "rgba(10,11,13,0.7)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md spark-card p-6"
+            style={{ borderRadius: 20 }}
+          >
+            <p
+              className="mono text-[10px] mb-1"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-sky)",
+              }}
+            >
+              KEYBOARD SHORTCUTS
+            </p>
+            <h2
+              className="display text-2xl font-bold mb-4"
+              style={{ letterSpacing: "-0.03em" }}
+            >
+              Fly through the queue.
+            </h2>
+            <div className="space-y-2 text-sm">
+              {[
+                ["j / ↓", "Next request"],
+                ["k / ↑", "Previous request"],
+                ["a", "Approve focused"],
+                ["d", "Decline focused"],
+                ["space / x", "Toggle bulk-select"],
+                ["enter", "Open full view"],
+                ["/", "Focus search"],
+                ["esc", "Clear selection / drop focus"],
+                ["?", "This help"],
+              ].map(([key, desc]) => (
+                <div
+                  key={key}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <span
+                    style={{ color: "rgba(255,255,255,0.7)" }}
+                  >
+                    {desc}
+                  </span>
+                  <kbd
+                    className="mono px-2 py-0.5 rounded-md text-[11px]"
+                    style={{
+                      letterSpacing: "0.04em",
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      color: "var(--spark-text)",
+                    }}
+                  >
+                    {key}
+                  </kbd>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end mt-5">
+              <button
+                onClick={() => setShowHelp(false)}
+                className="mono text-[11px] px-3"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                ESC
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bulk approve confirmation. Selected rows get approved sequentially
           so backend errors don't blast all at once and the user gets a
