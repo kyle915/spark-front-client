@@ -362,6 +362,9 @@ const ApprovalsInner: React.FC = () => {
 
   // Quick-filter the pending queue by venue / requester / req-id.
   const [search, setSearch] = useState("");
+  // SLA-only filter — when ON, show only requests pending >72h.
+  // Defaults OFF so the queue isn't hidden when there are no breaches.
+  const [slaOnly, setSlaOnly] = useState(false);
   const searchRef = useRef<HTMLInputElement | null>(null);
   // Index of the keyboard-focused row (j/k navigation). -1 = no focus.
   const [focusedIdx, setFocusedIdx] = useState<number>(-1);
@@ -384,8 +387,12 @@ const ApprovalsInner: React.FC = () => {
     () =>
       pendingRows
         .filter((r) => !removedIds.has(r.id))
-        .filter((r) => matchesSearch(r, search)),
-    [pendingRows, removedIds, search],
+        .filter((r) => matchesSearch(r, search))
+        .filter((r) => {
+          if (!slaOnly) return true;
+          return typeof r.pendingHours === "number" && r.pendingHours >= 72;
+        }),
+    [pendingRows, removedIds, search, slaOnly],
   );
 
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -695,8 +702,19 @@ const ApprovalsInner: React.FC = () => {
     </div>
   );
 
+  // Count of pending rows that have breached the 72h SLA — used to
+  // surface the filter only when it's actually useful (no fire = no
+  // distraction).
+  const slaBreachCount = useMemo(
+    () =>
+      pendingRows.filter(
+        (r) => !removedIds.has(r.id) && typeof r.pendingHours === "number" && r.pendingHours >= 72,
+      ).length,
+    [pendingRows, removedIds],
+  );
+
   const SearchBar = (
-    <div className="spark-card px-4 py-3 flex items-center gap-3">
+    <div className="spark-card px-4 py-3 flex items-center gap-3 flex-wrap">
       <input
         ref={searchRef}
         value={search}
@@ -705,6 +723,34 @@ const ApprovalsInner: React.FC = () => {
         className="flex-1 bg-transparent text-sm focus:outline-none"
         style={{ color: "var(--spark-text)" }}
       />
+      {/* SLA-breach quick-filter — only renders when there's actually
+          something to filter. Toggles between "show only >72h pending"
+          and the full queue. */}
+      {slaBreachCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setSlaOnly((v) => !v)}
+          className="mono text-[10px] px-2.5 py-1.5 rounded-md transition"
+          title={
+            slaOnly
+              ? "Show the full pending queue again"
+              : `Filter to only the ${slaBreachCount} request${slaBreachCount === 1 ? "" : "s"} pending >72h`
+          }
+          style={{
+            letterSpacing: "0.14em",
+            background: slaOnly
+              ? "var(--spark-orange)"
+              : "rgba(239,90,42,0.12)",
+            border: `1px solid ${slaOnly ? "var(--spark-orange)" : "rgba(239,90,42,0.4)"}`,
+            color: slaOnly ? "#0a0d09" : "var(--spark-orange)",
+            fontWeight: slaOnly ? 700 : 400,
+          }}
+        >
+          {slaOnly
+            ? `✓ SLA BREACH · ${slaBreachCount}`
+            : `⚠ SLA BREACH · ${slaBreachCount}`}
+        </button>
+      )}
       <button
         type="button"
         onClick={() => setShowHelp(true)}
@@ -919,7 +965,9 @@ const ApprovalsInner: React.FC = () => {
   return (
     <div className="space-y-6">
       {StatsGrid}
-      {pendingRows.length > 4 && SearchBar}
+      {/* Show SearchBar when there's enough to search, OR when there
+          are any SLA breaches (so the toggle is always reachable). */}
+      {(pendingRows.length > 4 || slaBreachCount > 0) && SearchBar}
       {BulkBar}
       <div className="space-y-3">
       {rows.map((r, idx) => (
