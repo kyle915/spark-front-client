@@ -2,6 +2,7 @@ import { Suspense, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useLocation, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
+import LocationMap from "@shared/LocationMap";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { RequestUuidQuery } from "@api/queries/RequestUuidQuery";
@@ -446,6 +447,26 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           )}
         </div>
       </div>
+
+      {/* Venue map — only when coordinates are on the request. Many
+          legacy rows are missing them, so we degrade silently rather
+          than render an empty/grey map. */}
+      {request.coordinates &&
+        request.coordinates.length === 2 &&
+        Number.isFinite(Number(request.coordinates[0])) &&
+        Number.isFinite(Number(request.coordinates[1])) && (
+          <div
+            className="spark-card overflow-hidden"
+            style={{ height: 280 }}
+          >
+            <LocationMap
+              coordinates={request.coordinates as readonly number[]}
+              label={venue}
+              address={request.address ?? undefined}
+              zoom={15}
+            />
+          </div>
+        )}
 
       {/* Contacts */}
       <div className="spark-card p-6">
