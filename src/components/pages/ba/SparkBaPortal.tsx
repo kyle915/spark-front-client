@@ -244,37 +244,10 @@ const ShiftsPane: React.FC = () => (
 /* ───────────────────────── Recap ───────────────────────── */
 
 const RecapPane: React.FC = () => {
-  const inputStyle: React.CSSProperties = {
-    background: "var(--spark-bg)",
-    border: "1px solid var(--spark-border)",
-    borderRadius: 12,
-    padding: "0.75rem 0.95rem",
-    color: "var(--spark-text)",
-    fontSize: "0.95rem",
-    outline: "none",
-    width: "100%",
-  };
+  const navigate = useNavigate();
   return (
     <div className="space-y-6">
-      <div>
-        <p
-          className="mono text-[10px]"
-          style={{
-            letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
-          }}
-        >
-          NEW RECAP
-        </p>
-        <h1
-          className="display text-4xl font-bold mt-2"
-          style={{ letterSpacing: "-0.04em" }}
-        >
-          Tell us how it went.
-        </h1>
-      </div>
-
-      <div className="spark-card p-6 space-y-4">
+      <div className="spark-card p-6 text-center">
         <p
           className="mono text-[10px]"
           style={{
@@ -282,119 +255,31 @@ const RecapPane: React.FC = () => {
             color: "var(--spark-lime)",
           }}
         >
-          NUMBERS
+          READY TO RECAP?
         </p>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div>
-            <p className="label-mini mb-1">SAMPLES *</p>
-            <input style={inputStyle} type="number" placeholder="0" />
-          </div>
-          <div>
-            <p className="label-mini mb-1">FIRST-TIME</p>
-            <input style={inputStyle} type="number" placeholder="0" />
-          </div>
-          <div>
-            <p className="label-mini mb-1">PRODUCTS SOLD</p>
-            <input style={inputStyle} type="number" placeholder="0" />
-          </div>
-          <div>
-            <p className="label-mini mb-1">ACCOUNT SPEND ($)</p>
-            <input style={inputStyle} type="number" step="0.01" placeholder="0.00" />
-          </div>
-        </div>
-      </div>
-
-      <div className="spark-card p-6 space-y-4">
-        <p
-          className="mono text-[10px]"
+        <h2 className="display text-3xl font-bold mt-2" style={{ letterSpacing: "-0.02em" }}>
+          Use the full recap form.
+        </h2>
+        <p className="text-sm mt-3" style={{ color: "rgba(255,255,255,0.65)" }}>
+          Numbers · consumer voice · account feedback · photos + receipts —
+          all in one place. We'll pre-link it to your assigned shift.
+        </p>
+        <button
+          onClick={() => navigate("/recap/create")}
+          className="mt-5 px-6 py-3 rounded-2xl text-sm font-semibold"
           style={{
-            letterSpacing: "0.18em",
-            color: "var(--spark-lime)",
+            background: "var(--spark-lime)",
+            color: "#0a0d09",
+            boxShadow: "0 0 24px rgba(197,245,70,0.35)",
           }}
         >
-          CONSUMER VOICE
-        </p>
-        <div>
-          <p className="label-mini mb-1">QUOTES</p>
-          <textarea
-            style={{ ...inputStyle, resize: "vertical", minHeight: 90 }}
-            rows={4}
-            placeholder="Pull quotes from consumers you talked to."
-          />
-        </div>
-        <div>
-          <p className="label-mini mb-1">GENERAL FEEDBACK</p>
-          <textarea
-            style={{ ...inputStyle, resize: "vertical", minHeight: 90 }}
-            rows={4}
-            placeholder="How did the event feel? What surprised you?"
-          />
-        </div>
+          Start a recap →
+        </button>
       </div>
-
-      <div className="grid sm:grid-cols-2 gap-3">
-        <label
-          className="spark-card p-5 text-center cursor-pointer"
-          style={{ borderColor: "rgba(197,245,70,0.3)" }}
-        >
-          <input type="file" multiple accept="image/*" className="hidden" />
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "var(--spark-lime)",
-            }}
-          >
-            📷 PHOTOS
-          </p>
-          <p
-            className="mt-2 text-sm"
-            style={{ color: "rgba(255,255,255,0.75)" }}
-          >
-            Tap to add from your roll
-          </p>
-        </label>
-        <label
-          className="spark-card p-5 text-center cursor-pointer"
-          style={{ borderColor: "rgba(95,184,239,0.3)" }}
-        >
-          <input
-            type="file"
-            accept="image/*,application/pdf"
-            className="hidden"
-          />
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "var(--spark-sky)",
-            }}
-          >
-            📎 RECEIPT
-          </p>
-          <p
-            className="mt-2 text-sm"
-            style={{ color: "rgba(255,255,255,0.75)" }}
-          >
-            Tap to capture
-          </p>
-        </label>
-      </div>
-
-      <button
-        className="w-full px-6 py-4 rounded-2xl text-base font-semibold"
-        style={{
-          background: "var(--spark-lime)",
-          color: "#0a0d09",
-          boxShadow: "0 0 24px rgba(197,245,70,0.35)",
-          fontFamily: "Space Grotesk, sans-serif",
-        }}
-      >
-        Submit recap →
-      </button>
     </div>
   );
 };
+
 
 /* ───────────────────────── Earnings + Profile ───────────────────────── */
 

@@ -82,6 +82,7 @@ import {
 import RecapList from "@/recap/RecapsList";
 import SparkRecapsList from "@/recap/SparkRecapsList";
 import SparkRecapView from "@/recap/SparkRecapView";
+import SparkRecapCreate from "@/recap/SparkRecapCreate";
 import SparkCalendar from "@/components/pages/calendar/SparkCalendar";
 import SparkApprovals from "@/components/pages/approvals/SparkApprovals";
 import SparkSettings from "@/components/pages/settings/SparkSettings";
@@ -462,12 +463,12 @@ const ProductLinks = {
 const RecapLinks = {
   menu: [
     { path: "/recap/list", name: "List", Icon: Bars4Icon },
+    { path: "/recap/create", name: "New Recap", Icon: PlusCircleIcon },
     { path: "/recaps/custom-list", name: "Custom List", Icon: QueueListIcon },
-    // { path: "/recap/create", name: "Create", Icon: PlusCircleIcon },
   ],
 
   routes: [
-    // { path: "/recap/create", component: <CreateRecap />, isPublic: false },
+    { path: "/recap/create", component: <SparkRecapCreate />, isPublic: false },
     { path: "/recap/list", component: <SparkRecapsList />, isPublic: false },
     { path: "/recaps/list", component: <SparkRecapsList />, isPublic: false },
     { path: "/recaps/templates", component: <AdminOnly><SparkRecapTemplates /></AdminOnly>, isPublic: false },
