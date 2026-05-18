@@ -31,6 +31,7 @@ import MasterTracker from "@/requests/MasterTracker";
 import RequestView from "@/requests/RequestView";
 import SparkRequestView from "@/requests/SparkRequestView";
 import EditRequest from "@/requests/EditRequest";
+import SparkRequestEdit from "@/requests/SparkRequestEdit";
 import CreateRequest from "@/requests/CreateRequest";
 
 // Events
@@ -265,6 +266,13 @@ const RequestsLinks = {
     },
     {
       path: "/request/edit/:uuid",
+      component: <SparkRequestEdit />,
+      isPublic: false,
+    },
+    {
+      // Legacy full edit form, reachable from the v2 edit page's
+      // 'Edit in full form' link when products/details need work.
+      path: "/request/edit-legacy/:uuid",
       component: <EditRequest />,
       isPublic: false,
     },
