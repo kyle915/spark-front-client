@@ -306,6 +306,33 @@ const Inner: React.FC = () => {
   const allClean = dryResult !== null && (dryResult.failedCount ?? 0) === 0;
   const committed = commitResult !== null;
 
+  // Lets users debug rejected rows offline. We export the row numbers
+  // + error messages so kyle can paste them next to his original sheet
+  // and fix in bulk.
+  const exportFailedRows = () => {
+    if (failedRows.length === 0) return;
+    const esc = (raw: string) => {
+      const s = (raw ?? "").toString();
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const lines = ["row,error_message"];
+    for (const r of failedRows) {
+      lines.push(`${r.rowNumber},${esc(r.message ?? "Unspecified error")}`);
+    }
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `spark-bulk-failed-rows-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
@@ -397,6 +424,156 @@ const Inner: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Quick column reference — so kyle's clients know what they're
+          looking at before they crack open the XLSX. Required columns
+          flagged with a lime *. */}
+      <details
+        className="spark-card p-5"
+        style={{ borderRadius: 20 }}
+      >
+        <summary
+          className="cursor-pointer flex items-center gap-3"
+          style={{ listStyle: "none" }}
+        >
+          <span
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "var(--spark-gold)",
+            }}
+          >
+            COLUMN REFERENCE
+          </span>
+          <span
+            className="text-sm font-semibold"
+            style={{ color: "rgba(255,255,255,0.8)" }}
+          >
+            What goes in each column
+          </span>
+          <span
+            className="ml-auto mono text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              color: "rgba(255,255,255,0.4)",
+            }}
+          >
+            TAP TO EXPAND
+          </span>
+        </summary>
+        <div
+          className="mt-4 overflow-x-auto rounded-xl"
+          style={{ border: "1px solid var(--spark-border)" }}
+        >
+          <table className="w-full text-xs" style={{ minWidth: 640 }}>
+            <thead
+              style={{
+                background: "var(--spark-surface-2)",
+                borderBottom: "1px solid var(--spark-border)",
+              }}
+            >
+              <tr
+                className="text-left mono"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.45)",
+                }}
+              >
+                <th className="px-3 py-2">COLUMN</th>
+                <th className="px-3 py-2">REQ?</th>
+                <th className="px-3 py-2">DESCRIPTION</th>
+                <th className="px-3 py-2">EXAMPLE</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(
+                [
+                  // [column, required, description, example]
+                  ["date", true, "Activation date (MM/DD/YYYY)", "02/20/2026"],
+                  ["start_time", true, "24h start (HH:MM)", "10:00"],
+                  ["end_time", true, "24h end (HH:MM)", "14:00"],
+                  ["address", true, "Full venue address", "123 Main St"],
+                  ["store_number", true, "Retailer store # / identifier", "102"],
+                  ["name", false, "Friendly label", "LD Sampling — Whole Foods Lamar"],
+                  ["retailer_name", false, "Retailer/chain name", "Whole Foods"],
+                  ["city", false, "City", "Austin"],
+                  ["state", false, "2-letter state code", "TX"],
+                  ["latitude", false, "Decimal latitude (optional)", "30.2672"],
+                  ["longitude", false, "Decimal longitude (optional)", "-97.7431"],
+                  ["notes", false, "Anything ops needs to know", "Park behind dumpster"],
+                  ["requestor_email", false, "Who's submitting", "you@distributor.com"],
+                  ["distributor_name", false, "Distributor (free text or template ID)", "RNDC"],
+                  ["store_manager_name", false, "Store contact", "John Smith"],
+                  ["store_manager_phone", false, "Store contact phone", "+1-555-0101"],
+                  ["timezone_code", false, "TZ code (see TimeZones sheet)", "EST"],
+                  ["request_type_id", false, "ID from RequestTypes sheet", "1"],
+                  ["event_type_id", false, "ID from EventTypes sheet", "1"],
+                  ["billing_entity_id", false, "ID from BillingEntities sheet", ""],
+                  ["table_size", false, "BA count", "1"],
+                  ["product_ids", false, "Comma-sep IDs from Products sheet", "3,7,10"],
+                ] as Array<[string, boolean, string, string]>
+              ).map(([col, required, desc, example]) => (
+                <tr
+                  key={col}
+                  style={{ borderBottom: "1px solid var(--spark-border)" }}
+                >
+                  <td
+                    className="px-3 py-2 mono"
+                    style={{
+                      letterSpacing: "0.04em",
+                      color: required
+                        ? "var(--spark-lime)"
+                        : "rgba(255,255,255,0.75)",
+                    }}
+                  >
+                    {col}
+                    {required && (
+                      <span style={{ color: "var(--spark-lime)" }}> *</span>
+                    )}
+                  </td>
+                  <td
+                    className="px-3 py-2 mono text-[10px]"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: required
+                        ? "var(--spark-lime)"
+                        : "rgba(255,255,255,0.4)",
+                    }}
+                  >
+                    {required ? "REQ" : "OPT"}
+                  </td>
+                  <td
+                    className="px-3 py-2"
+                    style={{ color: "rgba(255,255,255,0.7)" }}
+                  >
+                    {desc}
+                  </td>
+                  <td
+                    className="px-3 py-2 mono text-[11px]"
+                    style={{
+                      letterSpacing: "0.04em",
+                      color: "rgba(255,255,255,0.55)",
+                    }}
+                  >
+                    {example}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p
+          className="text-xs mt-3"
+          style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+        >
+          The downloaded template has companion sheets (TimeZones,
+          RequestTypes, EventTypes, BillingEntities, Cities, Products)
+          with the correct IDs for your tenant — keep the file open
+          alongside your data so you can look up values without
+          guessing.
+        </p>
+      </details>
 
       {/* Step 2: drop file */}
       <div className="spark-card p-5">
@@ -622,15 +799,32 @@ const Inner: React.FC = () => {
               style={{ border: "1px solid var(--spark-border)" }}
             >
               <div
-                className="px-4 py-2 mono text-[10px]"
+                className="px-4 py-2 flex items-center justify-between"
                 style={{
-                  letterSpacing: "0.18em",
-                  color: "var(--spark-orange)",
                   background: "rgba(239,90,42,0.06)",
                   borderBottom: "1px solid var(--spark-border)",
                 }}
               >
-                ROWS TO FIX
+                <span
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-orange)",
+                  }}
+                >
+                  ROWS TO FIX · {failedRows.length}
+                </span>
+                <button
+                  onClick={exportFailedRows}
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "var(--spark-orange)",
+                  }}
+                  title="Download a CSV of the failed rows + error messages so you can fix them in your sheet."
+                >
+                  ↓ DOWNLOAD CSV
+                </button>
               </div>
               <ul>
                 {failedRows.slice(0, 50).map((r) => (
