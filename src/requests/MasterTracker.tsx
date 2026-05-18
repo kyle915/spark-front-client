@@ -6,6 +6,8 @@ import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
+import { UsersQuery } from "@/api/queries/UsersQuery";
+import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -113,12 +115,48 @@ import InternalNotesPanel from "./InternalNotesPanel";
 
 type Mentionable = { id: string; name: string; email: string };
 
-const ADMIN_ROSTER: Mentionable[] = [
+// Fallback roster used only when the live admin lookup hasn't loaded
+// yet or returns nothing. Real admins come from the UsersQuery below.
+const ADMIN_ROSTER_FALLBACK: Mentionable[] = [
   { id: "kyle", name: "Kyle Christiansen", email: "kyle@igniteproductions.co" },
-  { id: "tim", name: "Tim H.", email: "tim@igniteproductions.co" },
-  { id: "maya", name: "Maya R.", email: "maya@igniteproductions.co" },
-  { id: "manuela", name: "Manuela C.", email: "manuela@igniteproductions.co" },
 ];
+
+const AdminMentionablesLoader: React.FC<{
+  tenantId: string;
+  onLoaded: (admins: Mentionable[]) => void;
+}> = ({ tenantId, onLoaded }) => {
+  const data = useLazyLoadQuery<UsersQueryType>(
+    UsersQuery,
+    { filters: tenantId ? { tenantId } : null, first: 500 },
+    { fetchPolicy: "store-or-network" },
+  );
+  // Build the @-mention list from real admins (role.name = "admin"
+  // or "spark-admin") so notes can tag the actual humans in the
+  // workspace instead of the old hardcoded sample names.
+  const admins = useMemo(() => {
+    const rows = (data?.users?.edges ?? [])
+      .map((e) => e?.node)
+      .filter((n): n is NonNullable<typeof n> => Boolean(n));
+    return rows
+      .filter((u) => {
+        const role = (u.role?.name ?? "").toLowerCase();
+        return role === "admin" || role === "spark-admin";
+      })
+      .map<Mentionable>((u) => ({
+        id: String(u.id),
+        name:
+          [u.firstName, u.lastName].filter(Boolean).join(" ") ||
+          u.email ||
+          "Admin",
+        email: u.email ?? "",
+      }))
+      .filter((m) => m.email);
+  }, [data]);
+  useEffect(() => {
+    onLoaded(admins);
+  }, [admins, onLoaded]);
+  return null;
+};
 
 const fmtGroupHeading = (raw: string): string => {
   if (!raw) return "Undated";
@@ -510,6 +548,7 @@ export default function MasterTracker() {
   const [search, setSearch] = useState<string>("");
   const [rmmFilter, setRmmFilter] = useState<string>("all");
   const [rmmList, setRmmList] = useState<Mentionable[]>([]);
+  const [adminList, setAdminList] = useState<Mentionable[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [total, setTotal] = useState<number>(0);
 
@@ -712,6 +751,19 @@ export default function MasterTracker() {
           </div>
         </div>
 
+        {/* Background loader: populates the @-mention roster with the
+            tenant's real admins. Suspends inside its own boundary so a
+            slow Users query doesn't block the events table from
+            rendering. */}
+        {tenantId && (
+          <Suspense fallback={null}>
+            <AdminMentionablesLoader
+              tenantId={tenantId}
+              onLoaded={setAdminList}
+            />
+          </Suspense>
+        )}
+
         {/* Table */}
         <Suspense
           fallback={
@@ -728,7 +780,10 @@ export default function MasterTracker() {
             search={search}
             rmmFilter={rmmFilter}
             groupBy={groupBy}
-            mentionables={[...rmmList, ...ADMIN_ROSTER]}
+            mentionables={[
+              ...rmmList,
+              ...(adminList.length > 0 ? adminList : ADMIN_ROSTER_FALLBACK),
+            ]}
             onCountsChange={handleCounts}
           />
         </Suspense>
