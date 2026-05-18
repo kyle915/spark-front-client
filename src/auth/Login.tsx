@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import AuthForm from "@auth/components/AuthForm";
 import RegisterForm from "@auth/components/RegisterForm";
-import bgImage from "../assets/background.png";
+// Removed the 3.5 MB background.png import — it added ~700 KB of
+// unnecessary blocking weight to the cold-load on /login and isn't
+// part of the Spark v2 chrome. CSS gradient below renders identically.
 import { useForm } from "react-hook-form";
 import { useAlertStore } from "@store/alertStore";
 import ThemeToggle from "@/shared/ThemeToggle";
 import { Link, useNavigate } from "react-router";
 import { useAuthStore } from "@store/authStore";
 import { register } from "@api/auth/register";
+import MagicLinkButton from "@/auth/MagicLinkButton";
 import type { RegisterFormFields } from "@/types/auth";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
 import sparkLogoDark from "../assets/spark_logo_dark.png";
@@ -97,7 +100,8 @@ const Login = () => {
     <div
       className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat p-4"
       style={{
-        backgroundImage: `url(${bgImage})`,
+        background:
+          "radial-gradient(circle at 20% 10%, rgba(197,245,70,0.18), transparent 55%), radial-gradient(circle at 80% 90%, rgba(95,184,239,0.10), transparent 55%), #0a0d09",
       }}
     >
       <div className="flex flex-col lg:flex-row w-full max-w-5xl rounded-3xl bg-base-100 shadow-xl overflow-hidden">
@@ -129,6 +133,8 @@ const Login = () => {
                 onSubmit={onRegister}
               />
             )}
+
+            {isLogin && <MagicLinkButton />}
 
             {/* <div className="text-center text-sm mt-6">
               {isLogin ? (

@@ -408,7 +408,7 @@ export default function DashboardIndex() {
 
   return (
     <Layout>
-      <div className="space-y-10 lg:space-y-12 max-w-7xl">
+      <div className="space-y-6 lg:space-y-8 max-w-7xl">
         {/* Greeting + period pills */}
         <div className="flex items-end justify-between flex-wrap gap-4">
           <div>
@@ -423,8 +423,8 @@ export default function DashboardIndex() {
               {tenantDisplay.toUpperCase()} · {monthLabel()}
             </p>
             <h1
-              className="display text-4xl lg:text-5xl font-bold mt-2 leading-[1.05]"
-              style={{ letterSpacing: "-0.04em" }}
+              className="display text-2xl lg:text-3xl font-bold mt-2 leading-[1.1]"
+              style={{ letterSpacing: "-0.03em" }}
             >
               {greeting()}, {user?.firstName ?? "there"}.
             </h1>
@@ -454,96 +454,126 @@ export default function DashboardIndex() {
           </div>
         </div>
 
-        {/* Single hero metric + thin ribbon underneath (Apple Health pattern) */}
-        <div
-          className="spark-card-glow rounded-3xl px-8 lg:px-12 py-10 lg:py-14"
-        >
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.22em",
-              color: "var(--spark-lime)",
-            }}
-          >
-            CONSUMERS SAMPLED
-          </p>
-          <p
-            className="display tab-num font-bold mt-2"
-            style={{
-              fontSize: "clamp(4rem, 11vw, 7.5rem)",
-              lineHeight: 0.95,
-              letterSpacing: "-0.05em",
-              color: "var(--spark-text)",
-            }}
-          >
-            {fmtNum(m.consumersSampled)}
-          </p>
-          {consumerDelta && (
-            <p
-              className="mt-3 mono text-sm"
-              style={{
-                letterSpacing: "0.08em",
-                color: consumerDelta.positive
-                  ? "var(--spark-lime)"
-                  : "var(--spark-orange)",
-              }}
-            >
-              {consumerDelta.positive ? "▲" : "▼"} {consumerDelta.text} vs
-              previous period
-            </p>
-          )}
-
-          {/* Thin secondary ribbon */}
-          <div
-            className="mt-8 pt-6 grid grid-cols-3 gap-6"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
-          >
-            {[
-              {
-                label: "Events",
-                value: fmtNum(m.totalEvents),
-                delta: computeDelta(m.totalEvents, cmp.totalEvents),
-              },
-              {
-                label: "Brand awareness",
-                value: fmtPct(m.brandAwareness),
-                delta: computeDelta(m.brandAwareness, cmp.brandAwareness),
-              },
-              {
-                label: "Purchase intent",
-                value: fmtPct(m.purchaseIntent),
-                delta: computeDelta(m.purchaseIntent, cmp.purchaseIntent),
-              },
-            ].map((s) => (
-              <div key={s.label}>
-                <p className="label-mini">{s.label.toUpperCase()}</p>
-                <p
-                  className="display tab-num font-bold mt-1"
+        {/* Compact hero + dense CPG KPI grid.
+            Tile design is Apple Stocks-style — small label up top,
+            tab-num value in the middle, lime/orange delta underneath.
+            Half the height of the legacy hero. */}
+        {(() => {
+          const cans = m.consumersSampled ?? 0; // total samples poured
+          const single = dashboard.globalKpis?.singleCansSold ?? 0;
+          const multi = dashboard.globalKpis?.multiPacksSold ?? 0;
+          const ins = dashboard.performanceInsights;
+          const willingPct = ins?.willingToPurchasePercentage ?? m.purchaseIntent ?? null;
+          const knewPct = ins?.knewAboutBrandPercentage ?? m.brandAwareness ?? null;
+          const tiles: Array<{
+            label: string;
+            value: string;
+            tone?: "lime" | "sky" | "gold" | "purple";
+            delta?: { text: string; positive: boolean } | null;
+            sub?: string | null;
+          }> = [
+            {
+              label: "Consumers sampled",
+              value: fmtNum(m.consumersSampled),
+              tone: "lime",
+              delta: consumerDelta,
+            },
+            {
+              label: "Cans sampled",
+              value: fmtNum(cans + single + multi * 12),
+              tone: "lime",
+              sub: `${fmtNum(single)} single · ${fmtNum(multi)} packs`,
+            },
+            {
+              label: "Brand awareness",
+              value: fmtPct(knewPct),
+              tone: "sky",
+              delta: computeDelta(m.brandAwareness, cmp.brandAwareness),
+            },
+            {
+              label: "Purchase intent",
+              value: fmtPct(willingPct),
+              tone: "sky",
+              delta: computeDelta(m.purchaseIntent, cmp.purchaseIntent),
+            },
+            {
+              label: "Multi-packs sold",
+              value: fmtNum(multi),
+              tone: "gold",
+              sub: multi ? `≈ ${fmtNum(multi * 12)} cans` : null,
+            },
+            {
+              label: "Events run",
+              value: fmtNum(m.totalEvents),
+              tone: "purple",
+              delta: computeDelta(m.totalEvents, cmp.totalEvents),
+            },
+          ];
+          const toneColor: Record<string, string> = {
+            lime: "var(--spark-lime)",
+            sky: "var(--spark-sky)",
+            gold: "var(--spark-gold)",
+            purple: "var(--spark-purple)",
+          };
+          return (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {tiles.map((t) => (
+                <div
+                  key={t.label}
+                  className="spark-card rounded-2xl px-4 py-4"
                   style={{
-                    fontSize: "1.75rem",
-                    letterSpacing: "-0.03em",
-                    lineHeight: 1,
+                    background:
+                      "linear-gradient(180deg, rgba(197,245,70,0.04), transparent 60%)",
+                    borderTop: `2px solid ${toneColor[t.tone ?? "lime"]}`,
                   }}
                 >
-                  {s.value}
-                </p>
-                {s.delta && (
                   <p
-                    className="mono text-[11px] mt-1"
+                    className="mono text-[9px]"
                     style={{
-                      letterSpacing: "0.06em",
-                      color: s.delta.positive
-                        ? "var(--spark-lime)"
-                        : "var(--spark-orange)",
+                      letterSpacing: "0.18em",
+                      color: "rgba(255,255,255,0.55)",
+                      textTransform: "uppercase",
                     }}
                   >
-                    {s.delta.text}
+                    {t.label}
                   </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+                  <p
+                    className="display tab-num font-bold mt-1.5"
+                    style={{
+                      fontSize: "clamp(1.5rem, 3.2vw, 2rem)",
+                      letterSpacing: "-0.03em",
+                      lineHeight: 1.05,
+                      color: "var(--spark-text)",
+                    }}
+                  >
+                    {t.value}
+                  </p>
+                  {t.sub && (
+                    <p
+                      className="mono text-[10px] mt-1"
+                      style={{ color: "rgba(255,255,255,0.45)" }}
+                    >
+                      {t.sub}
+                    </p>
+                  )}
+                  {t.delta && (
+                    <p
+                      className="mono text-[10px] mt-1"
+                      style={{
+                        letterSpacing: "0.04em",
+                        color: t.delta.positive
+                          ? "var(--spark-lime)"
+                          : "var(--spark-orange)",
+                      }}
+                    >
+                      {t.delta.positive ? "▲" : "▼"} {t.delta.text}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Activation-type breakdown (Retail · Event · On-Premise) */}
         <Suspense

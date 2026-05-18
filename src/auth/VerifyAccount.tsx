@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
-import bgImage from "@/assets/background.png";
+// 3.5MB PNG removed — using the same Spark v2 gradient as /login.
 import { verifyAccount } from "@/api/auth/verifyAccount";
 import Loading from "@/shared/Loading";
 
@@ -40,7 +40,10 @@ const VerifyAccount = () => {
     return (
         <div
             className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat p-4"
-            style={{ backgroundImage: `url(${bgImage})` }}
+            style={{
+                background:
+                    "radial-gradient(circle at 20% 10%, rgba(197,245,70,0.18), transparent 55%), radial-gradient(circle at 80% 90%, rgba(95,184,239,0.10), transparent 55%), #0a0d09",
+            }}
         >
             <div className="w-full max-w-lg bg-base-100 shadow-2xl rounded-3xl p-10 text-center space-y-6">
                 <div className="space-y-2">

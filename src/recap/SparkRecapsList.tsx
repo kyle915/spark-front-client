@@ -185,10 +185,13 @@ const RecapsListInner: React.FC<{
 }> = ({ search, retailerFilter, stateFilter, rmmFilter, onMeta }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
+  // Page in chunks of 60 instead of 1,000 — fetches ~6× less data per
+  // request, lets the page paint immediately, and avoids the Cloud Run
+  // resolver timeout when each recap fans out N file rows.
   const data = useLazyLoadQuery<RecapsQueryType>(
     RecapsQuery,
     {
-      first: 1000,
+      first: 60,
       filters: tenantId
         ? {
             tenantId,
