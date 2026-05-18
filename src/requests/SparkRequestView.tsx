@@ -1,12 +1,58 @@
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useLocation, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import LocationMap from "@shared/LocationMap";
 import { useAlertStore } from "@/store/alertStore";
+import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { RequestUuidQuery } from "@api/queries/RequestUuidQuery";
 import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__generated__/RequestUuidQuery.graphql";
+import { UsersQuery } from "@api/queries/UsersQuery";
+import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
+import InternalNotesPanel from "./InternalNotesPanel";
+
+type Mentionable = { id: string; name: string; email: string };
+
+const NotesLoader: React.FC<{
+  requestUuid: string;
+  requestLabel: string;
+}> = ({ requestUuid, requestLabel }) => {
+  const { tenantId } = useAuthStore();
+  const data = useLazyLoadQuery<UsersQueryType>(
+    UsersQuery,
+    { filters: tenantId ? { tenantId } : null, first: 500 },
+    { fetchPolicy: "store-or-network" },
+  );
+  // Build mention roster from real admin users so @-handles resolve
+  // to actual emails for the notifyNoteMention fanout.
+  const mentionables: Mentionable[] = useMemo(() => {
+    const rows = (data?.users?.edges ?? [])
+      .map((e) => e?.node)
+      .filter((n): n is NonNullable<typeof n> => Boolean(n));
+    return rows
+      .filter((u) => {
+        const role = (u.role?.name ?? "").toLowerCase();
+        return role === "admin" || role === "spark-admin";
+      })
+      .map<Mentionable>((u) => ({
+        id: String(u.id),
+        name:
+          [u.firstName, u.lastName].filter(Boolean).join(" ") ||
+          u.email ||
+          "Admin",
+        email: u.email ?? "",
+      }))
+      .filter((m) => m.email);
+  }, [data]);
+  return (
+    <InternalNotesPanel
+      requestUuid={requestUuid}
+      requestLabel={requestLabel}
+      mentionables={mentionables}
+    />
+  );
+};
 
 /**
  * Spark v2 — Request detail view.
@@ -621,6 +667,25 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           </div>
         </div>
       )}
+
+      {/* Internal notes + @-mention. Same panel as Master Tracker
+          expanded rows — shares the localStorage bucket, so notes
+          added here show up there and vice versa. */}
+      <Suspense
+        fallback={
+          <div
+            className="spark-card p-5 text-sm"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            Loading notes…
+          </div>
+        }
+      >
+        <NotesLoader
+          requestUuid={String(request.uuid)}
+          requestLabel={reqId}
+        />
+      </Suspense>
 
       {/* Audit footer */}
       <div className="spark-card p-5">
