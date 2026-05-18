@@ -708,13 +708,48 @@ const ApprovalsInner: React.FC = () => {
               decline email so they can revise and resubmit. Be specific —
               "out of inventory in this market" beats "no".
             </p>
+            {/* Common-reason chips — kyle can tap one to seed the textarea
+                and tweak from there. Speeds up the "no inventory in market"
+                case (the most common decline) without skipping the required
+                comment. */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {[
+                "No inventory in this market right now — please re-pitch for Q3.",
+                "Date doesn't work — could you push by 1–2 weeks?",
+                "Wrong activation type for this account — let's regroup.",
+                "Account isn't on our priority list this quarter.",
+              ].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setDeclineReason(preset)}
+                  className="mono text-[10px] px-2.5 py-1.5 rounded-lg transition"
+                  style={{
+                    letterSpacing: "0.12em",
+                    background: "rgba(239,90,42,0.08)",
+                    border: "1px solid rgba(239,90,42,0.25)",
+                    color: "rgba(255,255,255,0.75)",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background =
+                      "rgba(239,90,42,0.16)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background =
+                      "rgba(239,90,42,0.08)")
+                  }
+                >
+                  {preset.split(" — ")[0].toUpperCase()}
+                </button>
+              ))}
+            </div>
             <textarea
               autoFocus
               value={declineReason}
               onChange={(e) => setDeclineReason(e.target.value)}
               rows={4}
               placeholder="e.g., We don't have inventory in this market until Q3, please push the date."
-              className="w-full mt-4 rounded-xl px-3 py-2 text-sm"
+              className="w-full mt-3 rounded-xl px-3 py-2 text-sm"
               style={{
                 background: "var(--spark-bg)",
                 border: "1px solid var(--spark-border)",
