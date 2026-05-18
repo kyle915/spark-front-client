@@ -48,6 +48,82 @@ const readString = (key: string, fallback: string): string => {
   }
 };
 
+/**
+ * Read-only deep-link row for the per-tenant linked Google Sheet
+ * (the value lives in localStorage @spark.linkedSheet.url/{tenantId}
+ * and is edited from the Master Tracker header).
+ */
+const LinkedSheetRow: React.FC = () => {
+  const { tenantId } = useAuthStore();
+  const url = (() => {
+    if (!tenantId) return "";
+    try {
+      return localStorage.getItem(`@spark.linkedSheet.url/${tenantId}`) ?? "";
+    } catch {
+      return "";
+    }
+  })();
+  return (
+    <div
+      className="flex items-center gap-3 py-3 px-3 rounded-xl"
+      style={{
+        background: "rgba(255,255,255,0.025)",
+        border: "1px solid var(--spark-border)",
+      }}
+    >
+      <span
+        className="mono w-8 h-8 rounded-lg flex items-center justify-center"
+        style={{
+          background: "rgba(95,184,239,0.10)",
+          border: "1px solid rgba(95,184,239,0.25)",
+          color: "var(--spark-sky)",
+        }}
+      >
+        📊
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium">Linked Google Sheet</p>
+        <p
+          className="text-xs truncate"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+        >
+          {url
+            ? "Brand-specific tracker mirror — opens in a new tab."
+            : "Not set. Add the URL from the Master Tracker header."}
+        </p>
+      </div>
+      {url ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+          style={{
+            background: "rgba(95,184,239,0.12)",
+            color: "var(--spark-sky)",
+            border: "1px solid rgba(95,184,239,0.35)",
+            textDecoration: "none",
+          }}
+        >
+          Open ↗
+        </a>
+      ) : (
+        <Link
+          to="/requests/list"
+          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+          style={{
+            background: "transparent",
+            color: "var(--spark-text)",
+            border: "1px solid var(--spark-border)",
+          }}
+        >
+          Set up →
+        </Link>
+      )}
+    </div>
+  );
+};
+
 export default function SparkSettings() {
   const { tenantMeta } = useAuthStore();
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -214,8 +290,8 @@ export default function SparkSettings() {
         </div>
 
         {/* Integrations card */}
-        <div className="spark-card p-6">
-          <h3 className="font-bold mb-3">Integrations</h3>
+        <div className="spark-card p-6 space-y-3">
+          <h3 className="font-bold mb-1">Integrations</h3>
           <div
             className="flex items-center gap-3 py-3 px-3 rounded-xl"
             style={{
@@ -254,6 +330,11 @@ export default function SparkSettings() {
               Manage →
             </Link>
           </div>
+
+          {/* Linked Google Sheet for this tenant. URL is set/edited
+              from the Master Tracker header; this row is read-only
+              + provides a deep-link. */}
+          <LinkedSheetRow />
         </div>
       </div>
     </Layout>
