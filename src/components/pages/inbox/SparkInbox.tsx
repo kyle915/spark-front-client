@@ -5,6 +5,7 @@ import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 
 /**
  * Spark v2 — Workflow Inbox.
@@ -232,20 +233,23 @@ const Inner: React.FC = () => {
             you; the underlying request stays put.
           </p>
         </div>
-        {items.length > 0 && (
-          <button
-            onClick={dismissAll}
-            className="mono text-[10px] px-3 py-2 rounded-xl"
-            style={{
-              letterSpacing: "0.18em",
-              background: "rgba(255,255,255,0.04)",
-              color: "rgba(255,255,255,0.7)",
-              border: "1px solid var(--spark-border)",
-            }}
-          >
-            DISMISS ALL
-          </button>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          <LinkedSheetChip />
+          {items.length > 0 && (
+            <button
+              onClick={dismissAll}
+              className="mono text-[10px] px-3 py-2 rounded-xl"
+              style={{
+                letterSpacing: "0.18em",
+                background: "rgba(255,255,255,0.04)",
+                color: "rgba(255,255,255,0.7)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              DISMISS ALL
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Mini stat strip */}
