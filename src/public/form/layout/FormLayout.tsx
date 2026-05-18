@@ -63,23 +63,17 @@ export default function SparkFormLayout({
           backdropFilter: "blur(12px)",
         }}
       >
-        {/* Left: Spark mark */}
-        <div className="flex items-baseline gap-2">
-          <span
-            className="display italic text-2xl font-bold"
-            style={{ letterSpacing: "-0.02em" }}
-          >
-            Spark
-          </span>
-          <span
-            className="mono text-[10px]"
+        {/* Left: real Spark logo, inverted to white for the dark band */}
+        <a href="/" style={{ display: "flex", alignItems: "center" }}>
+          <img
+            src="/legal/spark-logo.png"
+            alt="Spark by Ignite"
             style={{
-              letterSpacing: "0.22em",
-              color: "rgba(255,255,255,0.45)",
+              height: 28,
+              width: "auto",
+              filter: "invert(1) hue-rotate(180deg)",
             }}
-          >
-            BY IGNITE
-          </span>
+          />
           <span
             className="hidden sm:inline mono text-[10px] ml-3"
             style={{
@@ -90,7 +84,7 @@ export default function SparkFormLayout({
             /
           </span>
           <span
-            className="hidden sm:inline mono text-[10px]"
+            className="hidden sm:inline mono text-[10px] ml-2"
             style={{
               letterSpacing: "0.18em",
               color: "var(--spark-lime, #c5f546)",
@@ -98,23 +92,28 @@ export default function SparkFormLayout({
           >
             REQUEST FORM
           </span>
-        </div>
+        </a>
 
-        {/* Right: tenant logo + tag */}
+        {/* Right: tenant logo, force-rendered white so it reads on the
+            dark Spark v2 chrome regardless of source colour. */}
         <div className="flex items-center gap-3">
-          <span className="chip chip-lime">
-            ● {(tenant?.requestUrlName ?? "PUBLIC").toUpperCase()}
-          </span>
           {hasImage && tenant?.image ? (
             <img
               src={tenant.image}
               alt=""
               className="h-8 w-auto object-contain"
+              style={{
+                filter: "brightness(0) invert(1)",
+              }}
               onError={(e) => {
                 e.currentTarget.style.display = "none";
               }}
             />
-          ) : null}
+          ) : (
+            <span className="chip chip-lime">
+              ● {(tenant?.requestUrlName ?? "PUBLIC").toUpperCase()}
+            </span>
+          )}
         </div>
       </header>
 

@@ -24,6 +24,16 @@ export default function SparkPublicExpressForm() {
   const { tenantSlug } = useParams();
   const slug = tenantSlug ?? "";
   const [searchParams] = useSearchParams();
+  // Derive a human brand name from the slug. "ighn-liquid-death" →
+  // "Liquid Death". Drops the leading "ighn-" agency prefix if present.
+  const brandName = useMemo(() => {
+    const cleaned = slug.replace(/^ighn-/, "").replace(/-/g, " ").trim();
+    if (!cleaned) return "Brand";
+    return cleaned
+      .split(" ")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+  }, [slug]);
 
   const [selectedProductTypeId, setSelectedProductTypeId] = useState<string | null>(null);
   const { products, loading: productsLoading, hasMore, loadMore } = usePublicProducts(
@@ -101,9 +111,13 @@ export default function SparkPublicExpressForm() {
     const failures: string[] = [];
 
     for (const d of allDates) {
+      // Backend Request.date is a DateTimeField — must be ISO, not a
+      // bare YYYY-MM-DD. Combine the picked date with the start time
+      // so the resolver gets the right type.
+      const dateIso = `${d}T${(startTime || "12:00").padEnd(5, "0")}:00`;
       const input: CreateRequestInput = {
         name: venue,
-        date: d,
+        date: dateIso,
         startTime,
         endTime,
         address,
@@ -161,10 +175,11 @@ export default function SparkPublicExpressForm() {
             ⚡ REQUEST A DEMO
           </p>
           <h1 className="display text-2xl font-bold mt-1" style={{ letterSpacing: "-0.02em" }}>
-            Tell us where you'd like a sampling team.
+            {brandName} BA Request Form
           </h1>
           <p className="text-sm mt-2" style={{ color: "rgba(255,255,255,0.65)" }}>
-            Mobile-friendly · multi-date · pick your products.
+            Tell us where you'd like a sample team. Submissions on this form
+            will be routed to the applicable {brandName} RMM for approval.
           </p>
         </div>
 
