@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
@@ -182,7 +182,8 @@ const RecapsListInner: React.FC<{
   stateFilter: string;
   rmmFilter: string;
   onMeta: (m: Meta) => void;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, onMeta }) => {
+  onVisibleRecapsChange?: (recaps: Recap[]) => void;
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, onMeta, onVisibleRecapsChange }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Page in chunks of 60 instead of 1,000 — fetches ~6× less data per
@@ -286,6 +287,12 @@ const RecapsListInner: React.FC<{
     });
   }, [recaps, search, retailerFilter, stateFilter]);
 
+  // Bubble the currently-visible recaps up so the outer page can
+  // wire them to the CSV export button.
+  useEffect(() => {
+    if (onVisibleRecapsChange) onVisibleRecapsChange(filtered);
+  }, [filtered, onVisibleRecapsChange]);
+
   if (filtered.length === 0) {
     return (
       <div
@@ -365,6 +372,71 @@ export default function SparkRecapsList() {
 
   const onMeta = useMemo(() => (next: Meta) => setMeta(next), []);
 
+  const [visibleRecaps, setVisibleRecaps] = useState<Recap[]>([]);
+
+  // CSV export of the currently-visible recaps (respects retailer /
+  // state / RMM / search filters). Filename includes today's date.
+  const exportCsv = () => {
+    if (visibleRecaps.length === 0) {
+      window.alert("Nothing to export — no recaps match the current filters.");
+      return;
+    }
+    const esc = (raw: string | number | null | undefined) => {
+      const s = (raw ?? "").toString();
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const header = [
+      "R-ID",
+      "Name",
+      "Retailer",
+      "State",
+      "Date",
+      "Status",
+      "Engagements",
+      "Products Sold",
+      "Conv %",
+      "Files",
+      "UUID",
+    ];
+    const lines = [header.join(",")];
+    for (const r of visibleRecaps) {
+      const conv =
+        r.engagements && r.productsSold && r.engagements > 0
+          ? Math.round((r.productsSold / r.engagements) * 100) + "%"
+          : "";
+      lines.push(
+        [
+          `R-${r.uuid.slice(-4).toUpperCase()}`,
+          r.name,
+          r.retailerName,
+          r.stateCode ?? "",
+          r.date,
+          r.approved ? "approved" : "draft",
+          r.engagements ?? "",
+          r.productsSold ?? "",
+          conv,
+          r.fileCount,
+          r.uuid,
+        ]
+          .map(esc)
+          .join(","),
+      );
+    }
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const today = new Date().toISOString().slice(0, 10);
+    a.download = `spark-recaps-${today}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Layout>
       <div className="space-y-6 max-w-7xl">
@@ -393,15 +465,23 @@ export default function SparkRecapsList() {
           </div>
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={() => alert("CSV export coming soon")}
+              onClick={exportCsv}
+              disabled={visibleRecaps.length === 0}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "transparent",
                 color: "var(--spark-text)",
                 border: "1px solid var(--spark-border)",
+                opacity: visibleRecaps.length === 0 ? 0.5 : 1,
               }}
+              title={
+                visibleRecaps.length === 0
+                  ? "Nothing matches the current filters"
+                  : `Download ${visibleRecaps.length} recap${visibleRecaps.length === 1 ? "" : "s"} as CSV`
+              }
             >
-              ↓ Export CSV
+              ↓ Export CSV{" "}
+              {visibleRecaps.length > 0 ? `(${visibleRecaps.length})` : ""}
             </button>
             {!isClient && (
               <button
@@ -542,6 +622,7 @@ export default function SparkRecapsList() {
             stateFilter={stateFilter}
             rmmFilter={rmmFilter}
             onMeta={onMeta}
+            onVisibleRecapsChange={setVisibleRecaps}
           />
         </Suspense>
       </div>
