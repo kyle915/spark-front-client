@@ -306,48 +306,113 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         </div>
       )}
 
-      {/* Quick actions for pending */}
-      {canDecide && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setApproveOpen(true)}
-            disabled={busy}
-            className="px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{
-              background: "var(--spark-lime)",
-              color: "#0a0d09",
-              boxShadow: "0 0 18px rgba(197,245,70,0.35)",
-              opacity: busy ? 0.5 : 1,
-            }}
-          >
-            ✓ Approve
-          </button>
-          <button
-            onClick={() => setDecliningOpen(true)}
-            disabled={busy}
-            className="px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{
-              background: "transparent",
-              color: "var(--spark-orange)",
-              border: "1px solid rgba(239,90,42,0.4)",
-              opacity: busy ? 0.5 : 1,
-            }}
-          >
-            ✗ Decline
-          </button>
-          <button
-            onClick={() => navigate(`/request/edit/${request.uuid}`)}
-            className="px-4 py-2 rounded-xl text-sm"
-            style={{
-              background: "transparent",
-              color: "var(--spark-text)",
-              border: "1px solid var(--spark-border)",
-            }}
-          >
-            ✎ Edit
-          </button>
-        </div>
-      )}
+      {/* Quick actions row. Approve/Decline only when pending +
+          viewer is admin. Duplicate is always available because that's
+          the common pattern: "schedule another visit at the same
+          venue". Edit always available too (legacy edit form). */}
+      <div className="flex flex-wrap gap-2">
+        {canDecide && (
+          <>
+            <button
+              onClick={() => setApproveOpen(true)}
+              disabled={busy}
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{
+                background: "var(--spark-lime)",
+                color: "#0a0d09",
+                boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                opacity: busy ? 0.5 : 1,
+              }}
+            >
+              ✓ Approve
+            </button>
+            <button
+              onClick={() => setDecliningOpen(true)}
+              disabled={busy}
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{
+                background: "transparent",
+                color: "var(--spark-orange)",
+                border: "1px solid rgba(239,90,42,0.4)",
+                opacity: busy ? 0.5 : 1,
+              }}
+            >
+              ✗ Decline
+            </button>
+          </>
+        )}
+        <button
+          onClick={() => {
+            // Build the prefill query for the create form. We pass
+            // relay IDs as-is since the form's <select> values
+            // compare against the same relay IDs from the catalog.
+            // Date is intentionally omitted — duplicating to a new
+            // date is the whole point.
+            const params = new URLSearchParams();
+            if (venue) params.set("venue", venue);
+            if (request.address) params.set("address", request.address);
+            if (request.startTime) {
+              try {
+                const d = new Date(request.startTime);
+                params.set(
+                  "startTime",
+                  `${String(d.getHours()).padStart(2, "0")}:${String(
+                    d.getMinutes(),
+                  ).padStart(2, "0")}`,
+                );
+              } catch {
+                /* fall through */
+              }
+            }
+            if (request.endTime) {
+              try {
+                const d = new Date(request.endTime);
+                params.set(
+                  "endTime",
+                  `${String(d.getHours()).padStart(2, "0")}:${String(
+                    d.getMinutes(),
+                  ).padStart(2, "0")}`,
+                );
+              } catch {
+                /* fall through */
+              }
+            }
+            if (request.requestType?.id)
+              params.set("requestTypeId", String(request.requestType.id));
+            if (request.timezone?.id)
+              params.set("timezoneId", String(request.timezone.id));
+            if (request.distributor?.id)
+              params.set("distributorId", String(request.distributor.id));
+            if (request.notes) params.set("notes", request.notes);
+            const productIds = (request.products ?? [])
+              .map((p) => (p ? String(p.id) : ""))
+              .filter(Boolean)
+              .join(",");
+            if (productIds) params.set("productIds", productIds);
+            navigate(`/requests/create?${params.toString()}`);
+          }}
+          className="px-4 py-2 rounded-xl text-sm font-semibold"
+          style={{
+            background: "transparent",
+            color: "var(--spark-sky)",
+            border: "1px solid rgba(95,184,239,0.4)",
+          }}
+          title="Pre-fill the create form with this request's setup — pick a new date."
+        >
+          ⎘ Duplicate
+        </button>
+        <button
+          onClick={() => navigate(`/request/edit/${request.uuid}`)}
+          className="px-4 py-2 rounded-xl text-sm"
+          style={{
+            background: "transparent",
+            color: "var(--spark-text)",
+            border: "1px solid var(--spark-border)",
+          }}
+        >
+          ✎ Edit
+        </button>
+      </div>
 
       {/* Details grid */}
       <div className="spark-card p-6">

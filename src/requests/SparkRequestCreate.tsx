@@ -157,25 +157,47 @@ const SparkRequestInner: React.FC = () => {
   const [fullName, setFullName] = useState(
     [user?.firstName, user?.lastName].filter(Boolean).join(" "),
   );
-  const [email, setEmail] = useState(user?.email ?? "");
-  const [date, setDate] = useState("");
-  const [startTime, setStartTime] = useState("12:00");
-  const [endTime, setEndTime] = useState("16:00");
   const [searchParams] = useSearchParams();
+  // Duplicate-from-existing flow: any of these query params pre-fill
+  // the form. Used by the "Duplicate" action on SparkRequestView so
+  // kyle can clone an approved activation to a new date without
+  // retyping everything.
+  const qpStart = searchParams.get("startTime") ?? "12:00";
+  const qpEnd = searchParams.get("endTime") ?? "16:00";
+  const qpNotes = searchParams.get("notes") ?? "";
+  const qpBaCount = parseInt(searchParams.get("baCount") ?? "1", 10);
+  const qpRequestTypeId = searchParams.get("requestTypeId") ?? "";
+  const qpDistributorId = searchParams.get("distributorId") ?? "";
+  const qpTimezoneId = searchParams.get("timezoneId") ?? "";
+  const qpProducts = (searchParams.get("productIds") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const [email, setEmail] = useState(user?.email ?? "");
+  // Date is intentionally NOT pre-filled on duplicate — that's the
+  // whole point of cloning (new date for same venue/setup).
+  const [date, setDate] = useState("");
+  const [startTime, setStartTime] = useState(qpStart);
+  const [endTime, setEndTime] = useState(qpEnd);
   const [venue, setVenue] = useState(searchParams.get("venue") ?? "");
   const [address, setAddress] = useState(searchParams.get("address") ?? "");
-  const [requestTypeId, setRequestTypeId] = useState("");
-  const [timezoneId, setTimezoneId] = useState("");
+  const [requestTypeId, setRequestTypeId] = useState(qpRequestTypeId);
+  const [timezoneId, setTimezoneId] = useState(qpTimezoneId);
   const [rmmId, setRmmId] = useState("");
-  const [notes, setNotes] = useState("");
-  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [notes, setNotes] = useState(qpNotes);
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
+    new Set(qpProducts),
+  );
   const [showDetail, setShowDetail] = useState(false);
   const [venueFocused, setVenueFocused] = useState(false);
   // Bulk mode — add multiple dates at the same venue in one shot.
   const [extraDates, setExtraDates] = useState<string[]>([]);
   // Events at a venue need a BA count; retail samplings usually 1-2.
-  const [baCount, setBaCount] = useState<number>(1);
-  const [distributorId, setDistributorId] = useState("");
+  const [baCount, setBaCount] = useState<number>(
+    Number.isFinite(qpBaCount) && qpBaCount > 0 ? qpBaCount : 1,
+  );
+  const [distributorId, setDistributorId] = useState(qpDistributorId);
 
   const venueMatches = useMemo(() => {
     const q = venue.toLowerCase().trim();
