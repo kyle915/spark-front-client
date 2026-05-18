@@ -2,6 +2,7 @@ import FormInputText from "@shared/FormInputText";
 import LoadingButton from "@/shared/LoadingButton";
 import SocialAuthButtons from "@auth/components/SocialAuthButtons";
 import type { Control, UseFormHandleSubmit } from "react-hook-form";
+import { Link } from "react-router";
 
 interface Props {
   control: Control<{ username: string; password: string }>;
@@ -73,13 +74,18 @@ export default function AuthForm({
           />
           <span>Remember me</span>
         </label>
-        <a
+        <Link
+          to="/forgot-password"
           className="hover:underline"
-          href="#"
-          style={{ color: "#D6F35F", fontFamily: "var(--font-mono, monospace)", fontSize: 11, letterSpacing: "0.12em" }}
+          style={{
+            color: "#D6F35F",
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: 11,
+            letterSpacing: "0.12em",
+          }}
         >
           Forgot password?
-        </a>
+        </Link>
       </div>
 
       <LoadingButton

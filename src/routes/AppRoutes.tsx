@@ -117,6 +117,8 @@ import CreateUser from "@/users/CreateUser";
 import SparkFormPage from "@/public/form/FormPage";
 import SparkPublicExpressForm from "@/public/form/SparkPublicExpressForm";
 import MagicLinkExchange from "@/auth/MagicLinkExchange";
+import ForgotPassword from "@/auth/ForgotPassword";
+import ResetPassword from "@/auth/ResetPassword";
 import PrivacyPolicyView from "@/utils/PrivacyPolicyView";
 import TermsOfServiceView from "@/utils/TermsOfServiceView";
 import IndependentContractorAgreementPage from "@/utils/IndependentContractorAgreement";
@@ -143,6 +145,16 @@ const PublicRoutes = {
     {
       path: "/magic/:token",
       component: <MagicLinkExchange />,
+      isPublic: true,
+    },
+    {
+      path: "/forgot-password",
+      component: <ForgotPassword />,
+      isPublic: true,
+    },
+    {
+      path: "/reset-password/:token",
+      component: <ResetPassword />,
       isPublic: true,
     },
     {
