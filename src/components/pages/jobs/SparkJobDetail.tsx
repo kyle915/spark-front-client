@@ -1,10 +1,55 @@
-import { Suspense } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { JobsQuery } from "@/api/queries/JobsQuery";
 import type { JobsQuery as JobsQueryType } from "@api/queries/__generated__/JobsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import useSparkRole from "@/hooks/useSparkRole";
+import {
+  loadModules,
+  KIND_COLOR,
+  KIND_LABEL,
+  type AcademyModule,
+} from "@/lib/academy";
+
+/**
+ * Job brief lives in localStorage keyed by job uuid until a backend
+ * model lands. Each brief: free-form "what to do / expect / bring"
+ * text + a list of required academy module ids that the BA must
+ * complete before clocking in.
+ */
+type JobBrief = {
+  whatToDo: string;
+  whatToExpect: string;
+  whatToBring: string;
+  talkingPoints: string;
+  requiredModules: string[];
+};
+
+const briefKey = (uuid: string) => `@spark.jobBrief/${uuid}`;
+const loadBrief = (uuid: string): JobBrief => {
+  try {
+    const raw = localStorage.getItem(briefKey(uuid));
+    if (raw) return JSON.parse(raw);
+  } catch {
+    /* ignore */
+  }
+  return {
+    whatToDo: "",
+    whatToExpect: "",
+    whatToBring: "",
+    talkingPoints: "",
+    requiredModules: [],
+  };
+};
+const saveBrief = (uuid: string, b: JobBrief) => {
+  try {
+    localStorage.setItem(briefKey(uuid), JSON.stringify(b));
+  } catch {
+    /* ignore */
+  }
+};
 
 /**
  * Spark v2 — Job Detail.
@@ -46,6 +91,35 @@ const TIER_CHIP: Record<string, string> = {
 const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
+  const { isAdmin } = useSparkRole();
+  const [brief, setBrief] = useState<JobBrief>(() => loadBrief(uuid));
+  const [briefOpen, setBriefOpen] = useState(false);
+  const [modules, setModules] = useState<AcademyModule[]>([]);
+
+  useEffect(() => {
+    setBrief(loadBrief(uuid));
+  }, [uuid]);
+  useEffect(() => {
+    if (tenantId) setModules(loadModules(tenantId));
+  }, [tenantId]);
+
+  const updateBrief = (patch: Partial<JobBrief>) => {
+    const next = { ...brief, ...patch };
+    setBrief(next);
+    saveBrief(uuid, next);
+  };
+
+  const linkedModules = useMemo(
+    () => modules.filter((m) => brief.requiredModules.includes(m.id)),
+    [modules, brief.requiredModules],
+  );
+  const unlinkedModules = useMemo(
+    () =>
+      modules.filter(
+        (m) => !brief.requiredModules.includes(m.id) && m.published,
+      ),
+    [modules, brief.requiredModules],
+  );
   const data = useLazyLoadQuery<JobsQueryType>(
     JobsQuery,
     { first: 100, filters: tenantId ? { tenantId } : null },
@@ -203,6 +277,250 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Job brief — what to do, expect, bring + linked academy modules */}
+      <div className="spark-card p-6 space-y-5">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-lime)",
+              }}
+            >
+              JOB BRIEF
+            </p>
+            <h3
+              className="display text-lg font-bold mt-1"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              What the BA needs to know
+            </h3>
+          </div>
+          {isAdmin && (
+            <button
+              onClick={() => setBriefOpen((v) => !v)}
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.14em",
+                color: briefOpen
+                  ? "var(--spark-orange)"
+                  : "var(--spark-lime)",
+              }}
+            >
+              {briefOpen ? "× CLOSE EDITOR" : "✎ EDIT BRIEF"}
+            </button>
+          )}
+        </div>
+
+        {briefOpen && isAdmin ? (
+          <div className="grid sm:grid-cols-2 gap-4">
+            {(
+              [
+                {
+                  key: "whatToDo" as const,
+                  label: "What to do",
+                  ph: "Pour 6oz samples. Greet every shopper. Log every wastage.",
+                },
+                {
+                  key: "whatToExpect" as const,
+                  label: "What to expect",
+                  ph: "Foot traffic peaks 5-7pm. Manager Joe is the contact. Cooler stock is in back-of-house.",
+                },
+                {
+                  key: "whatToBring" as const,
+                  label: "What to bring",
+                  ph: "Black tee + black pants. Reliable car. Pour cups (Ignite provides product + ice).",
+                },
+                {
+                  key: "talkingPoints" as const,
+                  label: "Talking points",
+                  ph: "Lead with humor. Cans are 100% aluminum + recyclable. Mango Chainsaw is the top-seller in TX.",
+                },
+              ]
+            ).map((row) => (
+              <div key={row.key}>
+                <label className="label-mini block mb-1.5">
+                  {row.label.toUpperCase()}
+                </label>
+                <textarea
+                  style={{
+                    background: "var(--spark-bg)",
+                    border: "1px solid var(--spark-border)",
+                    borderRadius: 12,
+                    padding: "0.65rem 0.85rem",
+                    color: "var(--spark-text)",
+                    fontSize: "0.875rem",
+                    outline: "none",
+                    width: "100%",
+                    resize: "vertical",
+                    minHeight: 110,
+                  }}
+                  rows={5}
+                  value={brief[row.key]}
+                  onChange={(e) => updateBrief({ [row.key]: e.target.value })}
+                  placeholder={row.ph}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 gap-5">
+            {(
+              [
+                ["What to do", brief.whatToDo, "var(--spark-lime)"],
+                ["What to expect", brief.whatToExpect, "var(--spark-sky)"],
+                ["What to bring", brief.whatToBring, "var(--spark-gold)"],
+                ["Talking points", brief.talkingPoints, "var(--spark-purple)"],
+              ] as const
+            ).map(([label, value, color]) => (
+              <div key={label}>
+                <p
+                  className="mono text-[10px] mb-2"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color,
+                  }}
+                >
+                  {label.toUpperCase()}
+                </p>
+                {value ? (
+                  <p
+                    className="text-sm leading-relaxed whitespace-pre-wrap"
+                    style={{ color: "rgba(255,255,255,0.85)" }}
+                  >
+                    {value}
+                  </p>
+                ) : (
+                  <p
+                    className="text-xs italic"
+                    style={{ color: "rgba(255,255,255,0.4)" }}
+                  >
+                    {isAdmin
+                      ? "Empty — click EDIT BRIEF to fill in."
+                      : "TBD"}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Required Academy modules */}
+      <div className="spark-card p-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="display font-bold">Required reading</h3>
+          {isAdmin && unlinkedModules.length > 0 && (
+            <select
+              onChange={(e) => {
+                const id = e.target.value;
+                if (!id) return;
+                updateBrief({
+                  requiredModules: [...brief.requiredModules, id],
+                });
+                e.target.value = "";
+              }}
+              defaultValue=""
+              className="rounded-xl text-xs"
+              style={{
+                padding: "0.45rem 0.9rem",
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+                maxWidth: 240,
+                outline: "none",
+              }}
+            >
+              <option value="">+ Link an Academy module</option>
+              {unlinkedModules.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {KIND_LABEL[m.kind]} · {m.title}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+        {linkedModules.length === 0 ? (
+          <p
+            className="text-xs"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            No academy modules linked yet.
+            {isAdmin
+              ? " Use the dropdown above to add brand/product/playbook training."
+              : ""}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {linkedModules.map((m) => {
+              const color = KIND_COLOR[m.kind];
+              return (
+                <div
+                  key={m.id}
+                  className="flex items-center gap-3 p-3 rounded-xl transition"
+                  style={{
+                    background: "rgba(255,255,255,0.025)",
+                    border: "1px solid var(--spark-border)",
+                  }}
+                >
+                  <span
+                    className="mono text-[10px] w-20"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color,
+                    }}
+                  >
+                    {KIND_LABEL[m.kind].split(" ")[0].toUpperCase()}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{m.title}</p>
+                    <p
+                      className="mono text-[10px] truncate"
+                      style={{
+                        letterSpacing: "0.14em",
+                        color: "rgba(255,255,255,0.45)",
+                      }}
+                    >
+                      {m.estMinutes} MIN · {m.attachments.length} ATTACHMENT
+                      {m.attachments.length === 1 ? "" : "S"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/academy/${m.id}`)}
+                    className="mono text-[10px]"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "var(--spark-lime)",
+                    }}
+                  >
+                    READ →
+                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() =>
+                        updateBrief({
+                          requiredModules: brief.requiredModules.filter(
+                            (id) => id !== m.id,
+                          ),
+                        })
+                      }
+                      className="mono text-[10px]"
+                      style={{
+                        letterSpacing: "0.14em",
+                        color: "var(--spark-orange)",
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Two-col: Role overview | Applicants */}

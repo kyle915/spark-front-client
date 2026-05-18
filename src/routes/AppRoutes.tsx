@@ -102,6 +102,8 @@ import SparkPeople from "@/components/pages/people/SparkPeople";
 import SparkFormBuilder from "@/components/pages/builder/SparkFormBuilder";
 import SparkNewClient from "@/components/pages/clients/SparkNewClient";
 import SparkBaPortal from "@/components/pages/ba/SparkBaPortal";
+import SparkAcademy from "@/components/pages/academy/SparkAcademy";
+import SparkAcademyViewer from "@/components/pages/academy/SparkAcademyViewer";
 import RecapCustomList from "@/recap/RecapCustomList";
 import RecapView from "@/recap/RecapView";
 // import EditRecap from "@/recap/EditRecap";
@@ -330,6 +332,16 @@ const RequestsLinks = {
       // Anyone signed in can hit this; the route owns its own layout.
       path: "/ba",
       component: <SparkBaPortal />,
+      isPublic: false,
+    },
+    {
+      path: "/academy",
+      component: <SparkAcademy />,
+      isPublic: false,
+    },
+    {
+      path: "/academy/:id",
+      component: <SparkAcademyViewer />,
       isPublic: false,
     },
   ],

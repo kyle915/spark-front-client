@@ -32,6 +32,7 @@ import {
   Inbox,
   Wrench,
   Plus,
+  GraduationCap,
 } from "lucide-react";
 
 /**
@@ -106,6 +107,7 @@ const SECTIONS: NavSection[] = [
       { label: "Jobs", Icon: Hammer, to: "/jobs" },
       { label: "Search Talent", Icon: Users, to: "/talent" },
       { label: "People", Icon: UsersRound, to: "/people" },
+      { label: "Spark Academy", Icon: GraduationCap, to: "/academy" },
     ],
   },
   {
