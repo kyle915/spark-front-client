@@ -6,6 +6,7 @@ import {
   usePublicProductTypes,
   usePublicRequestTypes,
   usePublicTimeZones,
+  usePublicDistributors,
 } from "./hooks";
 import { useCreateRequest } from "./hooks/useCreateRequest";
 import type { CreateRequestInput } from "./types/CreateRequestByUrl";
@@ -43,6 +44,7 @@ export default function SparkPublicExpressForm() {
   const { productTypes } = usePublicProductTypes(slug);
   const { requestTypes } = usePublicRequestTypes(slug);
   const { timeZones } = usePublicTimeZones();
+  const { distributors } = usePublicDistributors(slug);
   const { submit, loading: submitting } = useCreateRequest({ slug });
 
   // Form state
@@ -61,6 +63,20 @@ export default function SparkPublicExpressForm() {
   const [storeManagerName, setStoreManagerName] = useState("");
   const [storeManagerPhone, setStoreManagerPhone] = useState("");
   const [baCount, setBaCount] = useState(1);
+  const [distributorQ, setDistributorQ] = useState("");
+  const [distributorId, setDistributorId] = useState("");
+  const [distributorName, setDistributorName] = useState("");
+  // Filter the public distributor list by typed query (case-insensitive
+  // prefix match). Cap to 8 visible suggestions so the field doesn't
+  // dominate the form on a long list.
+  const distributorMatches = useMemo(() => {
+    const q = distributorQ.toLowerCase().trim();
+    if (!q || q.length < 2) return [];
+    return (distributors ?? [])
+      .filter((d): d is NonNullable<typeof d> => !!d?.name)
+      .filter((d) => d.name.toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [distributorQ, distributors]);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -127,7 +143,8 @@ export default function SparkPublicExpressForm() {
         requestorEmail,
         clientName: requestorName || requestorEmail,
         clientEmail: requestorEmail,
-        distributorName: "",
+        distributorId: distributorId || null,
+        distributorName: distributorName,
         distributorEmail: "",
         retailerName: venue,
         retailerAddress: address,
@@ -439,6 +456,66 @@ export default function SparkPublicExpressForm() {
               />
             </Field>
           </div>
+          <Field label="Distributor (optional)">
+            <div className="relative">
+              <input
+                value={distributorQ}
+                onChange={(e) => {
+                  setDistributorQ(e.target.value);
+                  // Treat any typed text as a free-form name so we still
+                  // capture independents — backend dedupes by id where
+                  // it matches.
+                  setDistributorName(e.target.value);
+                  setDistributorId("");
+                }}
+                className={inputCls}
+                placeholder="Start typing — RNDC, Southern Glazer's, Breakthru…"
+                autoComplete="off"
+              />
+              {distributorMatches.length > 0 && distributorQ && !distributorId && (
+                <div
+                  className="absolute left-0 right-0 z-30 mt-1 rounded-xl overflow-hidden"
+                  style={{
+                    background: "var(--spark-surface, #11140e)",
+                    border: "1px solid var(--spark-border, #1f2418)",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                  }}
+                >
+                  {distributorMatches.map((d) => (
+                    <button
+                      type="button"
+                      key={d.id}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setDistributorId(String(d.id));
+                        setDistributorName(d.name);
+                        setDistributorQ(d.name);
+                      }}
+                      className="block w-full text-left px-3 py-2.5"
+                      style={{ color: "var(--spark-text, #f2f3ee)", borderTop: "1px solid rgba(255,255,255,0.04)" }}
+                    >
+                      <div className="text-sm font-semibold">{d.name}</div>
+                      {d.location?.state?.name && (
+                        <div className="mono text-[10px] mt-0.5" style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.5)" }}>
+                          {d.location.state.name.toUpperCase()}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {distributorQ &&
+                distributorMatches.length === 0 &&
+                !distributorId && (
+                  <p
+                    className="mono text-[10px] mt-1"
+                    style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+                  >
+                    NO MATCH — we'll save "{distributorQ}" as typed.
+                  </p>
+                )}
+            </div>
+          </Field>
           <Field label="Notes">
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={inputCls} rows={3} placeholder="Anything our team should know?" />
           </Field>

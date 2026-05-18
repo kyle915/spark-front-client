@@ -266,13 +266,34 @@ export default function GooglePlacesInput({
           types: bias === "establishment" ? ["establishment"] : ["address"],
         },
         (preds) => {
-          setSuggestions(
-            (preds ?? []).map((p) => ({
-              place_id: p.place_id,
-              main: p.structured_formatting?.main_text ?? p.description,
-              sub: p.structured_formatting?.secondary_text ?? "",
-            })),
-          );
+          const mapped = (preds ?? []).map((p) => ({
+            place_id: p.place_id,
+            main: p.structured_formatting?.main_text ?? p.description,
+            sub: p.structured_formatting?.secondary_text ?? "",
+          }));
+          // When biased to establishments, collapse multiple branches
+          // of the same chain into ONE suggestion keyed by the
+          // canonical retailer brand. Kyle wants "national names"
+          // (Whole Foods Market, 7-Eleven, Target) — not "Whole Foods
+          // Market – South Virginia Street" repeated for every
+          // location in the city.
+          if (bias === "establishment") {
+            const seen = new Map<string, typeof mapped[number]>();
+            for (const s of mapped) {
+              const canon = canonicalRetailerName(s.main).toLowerCase();
+              if (!canon) continue;
+              if (!seen.has(canon)) {
+                seen.set(canon, {
+                  ...s,
+                  main: canonicalRetailerName(s.main),
+                  sub: "", // hide the street, keep the brand clean
+                });
+              }
+            }
+            setSuggestions(Array.from(seen.values()));
+          } else {
+            setSuggestions(mapped);
+          }
         },
       );
     }, 200);
@@ -411,6 +432,42 @@ export default function GooglePlacesInput({
               )}
             </button>
           ))}
+          {/* Free-form fallback: keep what the user typed. Useful when
+              the activation is at an independent that Google doesn't
+              list. Closes the dropdown without picking a Place. */}
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setOpen(false);
+              setSuggestions([]);
+            }}
+            className="block w-full text-left px-3 py-2.5"
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              borderTop: "1px solid rgba(255,255,255,0.06)",
+              color: "var(--spark-lime, #c5f546)",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "rgba(197,245,70,0.08)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "rgba(255,255,255,0.02)")
+            }
+          >
+            <div
+              className="mono text-[10px]"
+              style={{ letterSpacing: "0.18em" }}
+            >
+              ✎ USE “{value}” AS TYPED
+            </div>
+            <div
+              className="text-[11px] mt-0.5"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Don't see your account? We'll save it exactly as you wrote it.
+            </div>
+          </button>
         </div>
       )}
     </div>
