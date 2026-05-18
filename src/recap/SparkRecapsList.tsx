@@ -9,6 +9,7 @@ import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__gene
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { pickHeroImage } from "@/utils/recapFileUrl";
+import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 
 /**
  * Spark v2 — Recaps list.
@@ -520,7 +521,8 @@ export default function SparkRecapsList() {
                 : "Real field data, synced nightly from BA submissions."}
             </p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            <LinkedSheetChip />
             <button
               onClick={copyForSheets}
               disabled={
