@@ -790,10 +790,13 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                           src={url}
                           alt=""
                           loading="lazy"
+                          referrerPolicy="no-referrer"
                           className="w-full h-full object-cover"
                           onError={(e) => {
+                            // Make failures visible — don't hide. Show
+                            // the URL so we can diagnose in the wild.
                             const t = e.currentTarget as HTMLImageElement;
-                            t.style.display = "none";
+                            t.outerHTML = `<div style="font:9px/12px monospace;color:#ef5a2a;padding:6px;word-break:break-all;background:rgba(239,90,42,0.08)">IMG FAILED<br/>${url}</div>`;
                           }}
                         />
                       ) : kind === "heic" ? (
