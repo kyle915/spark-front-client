@@ -35,6 +35,8 @@ type Row = {
   type: string;
   source: "external" | "internal";
   statusNote: string;
+  /** Hours the request has been sitting in pending. */
+  pendingHours: number | null;
 };
 
 async function callApprovalMutation(
@@ -88,6 +90,38 @@ const ApprovalRow: React.FC<{
     ) : (
       <span className="chip chip-lime">INTERNAL · AUTO-APPROVED</span>
     );
+
+  // Age chip — friendly relative label, colored by SLA breach.
+  // <24h = subtle, 24–72h = gold, >72h = orange. None when we can't
+  // tell (no createdAt).
+  const ageChip = (() => {
+    const h = row.pendingHours;
+    if (h === null) return null;
+    let label: string;
+    if (h < 1) label = "JUST IN";
+    else if (h < 24) label = `${h}h OLD`;
+    else if (h < 72) label = `${Math.floor(h / 24)}d OLD`;
+    else label = `${Math.floor(h / 24)}d OLD · SLA BREACH`;
+    const tone =
+      h >= 72
+        ? { bg: "rgba(239,90,42,0.16)", border: "rgba(239,90,42,0.45)", fg: "var(--spark-orange)" }
+        : h >= 24
+          ? { bg: "rgba(214,196,95,0.14)", border: "rgba(214,196,95,0.4)", fg: "var(--spark-gold)" }
+          : { bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.12)", fg: "rgba(255,255,255,0.55)" };
+    return (
+      <span
+        className="mono text-[10px] px-2 py-0.5 rounded-md"
+        style={{
+          letterSpacing: "0.14em",
+          background: tone.bg,
+          border: `1px solid ${tone.border}`,
+          color: tone.fg,
+        }}
+      >
+        {label}
+      </span>
+    );
+  })();
   return (
     <div className="spark-card p-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -105,6 +139,7 @@ const ApprovalRow: React.FC<{
                 {row.reqId}
               </span>
               {sourceChip}
+              {ageChip}
             </div>
             <p className="font-bold text-base">{row.venue}</p>
             <p
@@ -249,6 +284,12 @@ const ApprovalsInner: React.FC = () => {
         n.retailer?.location?.name ?? n.location?.name ?? "—";
       const stateCode = n.retailer?.location?.state?.code ?? n.state?.code;
       const date = formatDate(n.date);
+      const createdMs = n.createdAt
+        ? new Date(n.createdAt).getTime()
+        : Number.NaN;
+      const pendingHours = Number.isFinite(createdMs)
+        ? Math.max(0, Math.round((Date.now() - createdMs) / 3_600_000))
+        : null;
       return {
         id: String(n.id),
         uuid: String(n.uuid),
@@ -259,6 +300,7 @@ const ApprovalsInner: React.FC = () => {
         type: n.requestType?.name ?? "Activation",
         source: "external" as const,
         statusNote: `Awaiting review · ${n.status?.name ?? "Pending"}`,
+        pendingHours,
       };
     };
 
