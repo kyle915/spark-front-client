@@ -181,7 +181,7 @@ const ApprovalsInner: React.FC = () => {
   const { tenantId } = useAuthStore();
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
-    { first: 50, filters: tenantId ? { tenantId } : null },
+    { first: 300, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
 
@@ -190,13 +190,14 @@ const ApprovalsInner: React.FC = () => {
       data?.requests?.edges
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
-        // Surface anything not already DONE. Real "approval status" routing
-        // ships when the backend exposes a dedicated approvals stream.
+        // Only "pending" requests need a decision. Approved and
+        // declined ones are terminal — they live on the requests list,
+        // not in the approval queue.
         ?.filter((n) => {
           const slug = (n.status?.slug ?? n.status?.name ?? "").toLowerCase();
-          return slug && slug !== "done" && slug !== "completed";
+          return slug === "pending";
         })
-        ?.slice(0, 12)
+        ?.slice(0, 200)
         ?.map((n) => {
           const market =
             n.retailer?.location?.name ?? n.location?.name ?? "—";
