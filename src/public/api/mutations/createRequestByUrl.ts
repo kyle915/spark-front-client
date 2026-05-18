@@ -11,6 +11,11 @@ export const CREATE_REQUEST_BY_URL = `
         uuid
         name
         address
+        rmmAsigned {
+          firstName
+          lastName
+          email
+        }
       }
     }
   }

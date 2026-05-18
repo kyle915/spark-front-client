@@ -79,7 +79,14 @@ export default function SparkPublicExpressForm() {
   }, [distributorQ, distributors]);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  // Modal-popup payload shown on successful submit (per Kyle's spec,
+  // external form only). Surfaces the RMM the request was routed to so
+  // the requestor knows who's approving.
+  const [confirmation, setConfirmation] = useState<{
+    count: number;
+    routedTo: string | null;
+    requestorName: string;
+  } | null>(null);
 
   const toggleProduct = (id: string) =>
     setProductIds((prev) =>
@@ -107,7 +114,6 @@ export default function SparkPublicExpressForm() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
     if (!canSubmit) {
       setError("Please fill in all required fields and pick at least one product.");
       return;
@@ -124,6 +130,7 @@ export default function SparkPublicExpressForm() {
       .join("\n");
 
     let successes = 0;
+    let lastRouted: string | null = null;
     const failures: string[] = [];
 
     for (const d of allDates) {
@@ -158,17 +165,30 @@ export default function SparkPublicExpressForm() {
         notes: notesPlus,
       };
       try {
-        await submit(input);
+        const result = await submit(input);
         successes += 1;
+        // Grab the RMM the *first* successful submission was routed
+        // to. With bulk dates the routing is identical for every row
+        // since it's keyed on tenant + product, so one is enough.
+        if (!lastRouted && result?.rmmAsigned) {
+          const first = (result.rmmAsigned.firstName || "").trim();
+          const last = (result.rmmAsigned.lastName || "").trim();
+          lastRouted =
+            [first, last].filter(Boolean).join(" ") ||
+            result.rmmAsigned.email ||
+            null;
+        }
       } catch (err) {
         failures.push(`${d}: ${(err as Error).message}`);
       }
     }
 
     if (failures.length === 0) {
-      setSuccess(
-        `Submitted ${successes} ${successes === 1 ? "request" : "requests"}. We'll be in touch shortly.`,
-      );
+      setConfirmation({
+        count: successes,
+        routedTo: lastRouted,
+        requestorName: requestorName || requestorEmail.split("@")[0],
+      });
       setVenue("");
       setAddress("");
       setDate("");
@@ -526,12 +546,6 @@ export default function SparkPublicExpressForm() {
             {error}
           </div>
         )}
-        {success && (
-          <div className="rounded-xl p-3 text-sm" style={{ background: "rgba(197,245,70,0.1)", border: "1px solid rgba(197,245,70,0.4)", color: "var(--spark-lime, #c5f546)" }}>
-            {success}
-          </div>
-        )}
-
         {/* Sticky submit */}
         <div
           className="sticky bottom-0 -mx-1 sm:mx-0 px-3 py-3 flex items-center justify-between gap-3 flex-wrap"
@@ -559,6 +573,145 @@ export default function SparkPublicExpressForm() {
           </button>
         </div>
       </form>
+
+      {/* Submission-success modal. Routed-to RMM name pulled from the
+          createRequestByUrl response. */}
+      {confirmation && (
+        <div
+          onClick={() => setConfirmation(null)}
+          className="fixed inset-0 z-[60] flex items-center justify-center px-4"
+          style={{
+            background: "rgba(10,11,13,0.7)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl overflow-hidden"
+            style={{
+              background: "#11140e",
+              border: "1px solid var(--spark-border, #1f2418)",
+              boxShadow:
+                "0 60px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(214,243,95,0.15), 0 0 80px rgba(214,243,95,0.10)",
+            }}
+          >
+            {/* Lime status band */}
+            <div
+              style={{
+                padding: "14px 22px",
+                background: "rgba(214,243,95,0.10)",
+                borderBottom: "1px solid rgba(214,243,95,0.25)",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 999,
+                  background: "#D6F35F",
+                  boxShadow: "0 0 12px #D6F35F",
+                  animation: "spk-pulse 1.6s infinite",
+                }}
+              />
+              <span
+                className="mono text-[10px]"
+                style={{
+                  letterSpacing: "0.24em",
+                  color: "#D6F35F",
+                }}
+              >
+                REQUEST RECEIVED · PENDING APPROVAL
+              </span>
+            </div>
+
+            <div className="p-6">
+              <h2
+                className="display text-2xl font-bold"
+                style={{ letterSpacing: "-0.02em", lineHeight: 1.1 }}
+              >
+                Thanks, {confirmation.requestorName}.
+              </h2>
+              <p
+                className="text-sm mt-3"
+                style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.55 }}
+              >
+                {confirmation.count === 1
+                  ? "Your request has been submitted."
+                  : `${confirmation.count} requests have been submitted.`}{" "}
+                {confirmation.routedTo ? (
+                  <>
+                    They've been routed to{" "}
+                    <strong style={{ color: "var(--spark-lime, #c5f546)" }}>
+                      {confirmation.routedTo}
+                    </strong>{" "}
+                    for review.
+                  </>
+                ) : (
+                  <>It's been routed to the {brandName} RMM for review.</>
+                )}
+              </p>
+
+              <div
+                className="mt-5 rounded-xl p-4 space-y-1.5"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                <p
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "rgba(255,255,255,0.55)",
+                  }}
+                >
+                  WHAT HAPPENS NEXT
+                </p>
+                <ol
+                  className="text-sm space-y-1.5 mt-2"
+                  style={{
+                    paddingLeft: 18,
+                    color: "rgba(255,255,255,0.8)",
+                    lineHeight: 1.55,
+                  }}
+                >
+                  <li>The brand reviews and approves or declines.</li>
+                  <li>You'll get an email the moment a decision is made.</li>
+                  <li>
+                    If approved, a calendar invite goes to you and the brand
+                    POC automatically.
+                  </li>
+                </ol>
+              </div>
+
+              <p
+                className="mono text-[10px] mt-4 text-center"
+                style={{
+                  letterSpacing: "0.18em",
+                  color: "rgba(255,255,255,0.45)",
+                }}
+              >
+                MOST APPROVALS COME THROUGH WITHIN 24–48 HOURS
+              </p>
+
+              <button
+                onClick={() => setConfirmation(null)}
+                className="mt-5 w-full px-5 py-3 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "var(--spark-lime, #c5f546)",
+                  color: "#0a0d09",
+                  boxShadow: "0 0 24px rgba(197,245,70,0.4)",
+                }}
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </SparkFormLayout>
   );
 }

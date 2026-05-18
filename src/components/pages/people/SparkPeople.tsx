@@ -4,6 +4,8 @@ import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { UsersQuery } from "@/api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
+import { TenantsQuery } from "@/api/queries/TenantsQuery";
+import type { TenantsQuery as TenantsQueryType } from "@api/queries/__generated__/TenantsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 
@@ -17,6 +19,7 @@ import { useAlertStore } from "@/store/alertStore";
  */
 
 type PersonRow = {
+  id: string;
   uuid: string;
   name: string;
   email: string;
@@ -68,6 +71,7 @@ const Inner: React.FC<{
           const role = n.role?.name ?? "Member";
           const slug = role.toString().toLowerCase().replace(/\s+/g, "-");
           return {
+            id: String(n.id),
             uuid: String(n.uuid),
             name: name || (n.email ?? "Unknown"),
             email: n.email ?? "",
@@ -243,19 +247,77 @@ const Inner: React.FC<{
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(p.email);
-                        // alertStore-less inline toast for now
-                      }}
-                      className="mono text-[10px]"
-                      style={{
-                        letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.55)",
-                      }}
-                    >
-                      COPY EMAIL
-                    </button>
+                    <div className="inline-flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(p.email);
+                        }}
+                        className="mono text-[10px]"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "rgba(255,255,255,0.55)",
+                        }}
+                      >
+                        COPY EMAIL
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (
+                            !window.confirm(
+                              `Remove ${p.name}?\n\nThey'll lose access immediately. Existing recaps, requests, and events stay attached for audit. You can re-invite them with the same email later.`,
+                            )
+                          )
+                            return;
+                          try {
+                            const res = await fetch(
+                              import.meta.env.VITE_GRAPHQL_ENDPOINT,
+                              {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json",
+                                  Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+                                },
+                                body: JSON.stringify({
+                                  query: `
+                                    mutation DeleteUser($input: DeleteUserInput!) {
+                                      deleteUser(input: $input) {
+                                        success
+                                        message
+                                      }
+                                    }
+                                  `,
+                                  variables: { input: { userId: p.id } },
+                                }),
+                              },
+                            );
+                            const json = await res.json();
+                            const r = json?.data?.deleteUser;
+                            if (json.errors?.length || !r?.success) {
+                              alert(
+                                `Couldn't remove: ${
+                                  r?.message ??
+                                  json.errors?.[0]?.message ??
+                                  "unknown error"
+                                }`,
+                              );
+                              return;
+                            }
+                            // Optimistic: just reload. Cheap on a small
+                            // user table.
+                            window.location.reload();
+                          } catch (e) {
+                            alert(`Remove failed: ${(e as Error).message}`);
+                          }
+                        }}
+                        className="mono text-[10px]"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "var(--spark-orange)",
+                        }}
+                      >
+                        REMOVE
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -311,6 +373,27 @@ const InviteModal: React.FC<{
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
+  // Client invites scope to a single tenant; admin invites are
+  // cross-tenant (backend ignores tenantId for admin). Ambassadors
+  // default to the inviter's current tenant.
+  const [pickedTenantId, setPickedTenantId] = useState<string>(
+    localStorage.getItem("@tenantId") ?? "",
+  );
+  // Pull every tenant the inviter can see for the picker. Only render
+  // the dropdown when role === 'client' since that's the only flow
+  // that actually needs scoping per Kyle's spec.
+  const tenantsData = useLazyLoadQuery<TenantsQueryType>(
+    TenantsQuery,
+    {},
+    { fetchPolicy: "store-or-network" },
+  );
+  const tenants = useMemo(
+    () =>
+      (tenantsData?.tenants?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => !!n),
+    [tenantsData],
+  );
 
   const inputStyle: React.CSSProperties = {
     background: "var(--spark-bg)",
@@ -379,6 +462,34 @@ const InviteModal: React.FC<{
               required
             />
           </div>
+          {role === "client" && (
+            <div>
+              <label className="label-mini block mb-1.5">
+                Assign to brand / tenant *
+              </label>
+              <select
+                style={inputStyle}
+                value={pickedTenantId}
+                onChange={(e) => setPickedTenantId(e.target.value)}
+              >
+                <option value="">— Select a brand —</option>
+                {tenants.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              <p
+                className="mono text-[10px] mt-1.5"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.45)",
+                }}
+              >
+                CLIENT WILL ONLY SEE THIS TENANT'S DASHBOARD + REQUESTS
+              </p>
+            </div>
+          )}
           <div>
             <label className="label-mini block mb-1.5">
               Personal note (optional)
@@ -413,6 +524,13 @@ const InviteModal: React.FC<{
                 showAlert("Email required.", "warning");
                 return;
               }
+              if (role === "client" && !pickedTenantId) {
+                showAlert(
+                  "Pick a brand to assign this client to.",
+                  "warning",
+                );
+                return;
+              }
               const [firstName, ...rest] = name.trim().split(/\s+/);
               const lastName = rest.join(" ");
               try {
@@ -440,7 +558,9 @@ const InviteModal: React.FC<{
                         tenantId:
                           role === "admin"
                             ? null
-                            : localStorage.getItem("@tenantId"),
+                            : role === "client"
+                              ? pickedTenantId
+                              : localStorage.getItem("@tenantId"),
                         note: note || null,
                       },
                     },

@@ -69,6 +69,7 @@ export default function ForgotPassword() {
         className="flex flex-col lg:flex-row w-full max-w-5xl rounded-3xl shadow-xl overflow-hidden"
         style={{
           background: "#0A0B0D",
+          minHeight: 680,
           boxShadow:
             "0 60px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(214,243,95,0.15), 0 0 80px rgba(214,243,95,0.10)",
         }}
