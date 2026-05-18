@@ -206,11 +206,20 @@ const Inner: React.FC = () => {
                 return (
                   <div
                     key={`${r.source}-${r.uuid}`}
-                    onClick={() =>
-                      r.source === "event"
-                        ? navigate(`/event/view/${r.uuid}`)
-                        : navigate(r.isPending ? "/approvals" : "/requests/list")
-                    }
+                    onClick={() => {
+                      // Event rows → event detail.
+                      // Request rows → Spark v2 request detail
+                      // (pending or approved). The detail page surfaces
+                      // approve/decline inline when needed, so we
+                      // don't have to fork the click target by status.
+                      if (r.source === "event") {
+                        navigate(`/event/view/${r.uuid}`);
+                      } else {
+                        navigate(`/request/view/${r.uuid}`, {
+                          state: { from: "/upcoming" },
+                        });
+                      }
+                    }}
                     className="spark-card hov p-4 cursor-pointer flex items-center gap-4"
                   >
                     <div
