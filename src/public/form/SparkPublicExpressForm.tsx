@@ -287,6 +287,65 @@ export default function SparkPublicExpressForm() {
         {/* Dates */}
         <Card title="DATES & TIMES">
           <Field label="Primary Date *">
+            {/* Quick-pick chips for common BA scheduling windows.
+                Saves clicks on mobile vs. spinning the calendar wheel.
+                Selected chip glows lime. */}
+            <div className="flex flex-wrap gap-2 mb-2">
+              {(() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const fmt = (d: Date) =>
+                  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                const addDays = (n: number) => {
+                  const d = new Date(today);
+                  d.setDate(d.getDate() + n);
+                  return d;
+                };
+                const nextDow = (target: number) => {
+                  // 0 = Sun ... 6 = Sat. Picks the *next* one, not today.
+                  const d = new Date(today);
+                  const diff = (target - d.getDay() + 7) % 7 || 7;
+                  d.setDate(d.getDate() + diff);
+                  return d;
+                };
+                const fmtChip = (d: Date) =>
+                  d.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  });
+                const presets = [
+                  { label: "TODAY", d: today },
+                  { label: "TOMORROW", d: addDays(1) },
+                  { label: `FRI · ${fmtChip(nextDow(5))}`, d: nextDow(5) },
+                  { label: `SAT · ${fmtChip(nextDow(6))}`, d: nextDow(6) },
+                  { label: `+7D · ${fmtChip(addDays(7))}`, d: addDays(7) },
+                ];
+                return presets.map((p) => {
+                  const iso = fmt(p.d);
+                  const selected = date === iso;
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => setDate(iso)}
+                      className="mono text-[10px] px-2.5 py-1.5 rounded-lg transition"
+                      style={{
+                        letterSpacing: "0.14em",
+                        background: selected
+                          ? "var(--spark-lime, #c5f546)"
+                          : "rgba(255,255,255,0.04)",
+                        color: selected ? "#0a0d09" : "rgba(255,255,255,0.7)",
+                        border: selected
+                          ? "1px solid var(--spark-lime, #c5f546)"
+                          : "1px solid rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                });
+              })()}
+            </div>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
           </Field>
           {extraDates.map((d, i) => (
