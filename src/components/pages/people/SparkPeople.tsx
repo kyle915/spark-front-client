@@ -408,32 +408,64 @@ const InviteModal: React.FC<{
             CANCEL
           </button>
           <button
-            onClick={() => {
+            onClick={async () => {
               if (!email.trim()) {
                 showAlert("Email required.", "warning");
                 return;
               }
-              // Persist the invite request locally until the backend
-              // CreateUserMutation + email template are wired.
+              const [firstName, ...rest] = name.trim().split(/\s+/);
+              const lastName = rest.join(" ");
               try {
-                const key = "@spark.invites";
-                const list = JSON.parse(localStorage.getItem(key) ?? "[]");
-                list.push({
-                  role,
-                  email,
-                  name,
-                  note,
-                  at: new Date().toISOString(),
+                const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+                  },
+                  body: JSON.stringify({
+                    query: `
+                      mutation InviteUser($input: InviteUserInput!) {
+                        inviteUser(input: $input) {
+                          success
+                          message
+                        }
+                      }
+                    `,
+                    variables: {
+                      input: {
+                        email: email.trim(),
+                        firstName: firstName || null,
+                        lastName: lastName || null,
+                        role,
+                        tenantId:
+                          role === "admin"
+                            ? null
+                            : localStorage.getItem("@tenantId"),
+                        note: note || null,
+                      },
+                    },
+                  }),
                 });
-                localStorage.setItem(key, JSON.stringify(list));
-              } catch {
-                /* ignore */
+                const json = await res.json();
+                if (json.errors?.length) {
+                  throw new Error(
+                    json.errors
+                      .map((e: { message: string }) => e.message)
+                      .join("; "),
+                  );
+                }
+                const r = json?.data?.inviteUser;
+                if (!r?.success) {
+                  throw new Error(r?.message ?? "Invite failed.");
+                }
+                showAlert(r.message, "success");
+                onClose();
+              } catch (e) {
+                showAlert(
+                  `Invite failed: ${(e as Error).message}`,
+                  "error",
+                );
               }
-              showAlert(
-                `Invite queued for ${email}. Wire the email template + CreateUserMutation to send.`,
-                "success",
-              );
-              onClose();
             }}
             className="px-5 py-2.5 rounded-xl text-sm font-semibold"
             style={{

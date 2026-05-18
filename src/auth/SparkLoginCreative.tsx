@@ -225,15 +225,16 @@ export default function SparkLoginCreative({
             marginTop: 20,
             fontFamily: "var(--font-display)",
             fontWeight: 800,
-            fontSize: 42,
-            lineHeight: 0.95,
+            fontSize: 36,
+            lineHeight: 1.05,
             letterSpacing: "-0.03em",
             color: "#F5F2EC",
           }}
         >
-          The command center
-          <br />
-          for field marketing.
+          <span style={{ display: "block", whiteSpace: "nowrap" }}>
+            The command center
+          </span>
+          <span style={{ display: "block" }}>for field marketing.</span>
         </h3>
         <p
           style={{
