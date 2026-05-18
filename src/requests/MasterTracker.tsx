@@ -639,6 +639,39 @@ export default function MasterTracker() {
   const { dashboard } = useEventDashboardData(tenantId || "", dashFilters, 0);
   const m = dashboard.metrics;
 
+  // Per-tenant linked Google Sheet — kyle's brief: "Link the master
+  // tracker to a living breathing google sheet file. Per-client."
+  // Stored in localStorage keyed by tenantId so each brand can point
+  // at its own sheet (e.g. the Liquid Death sheet kyle shared). Real
+  // bi-directional sync (sheets API + cron) lands when the backend
+  // catches up; this is the link + CSV-handoff flow until then.
+  const sheetKey = tenantId
+    ? `@spark.linkedSheet.url/${tenantId}`
+    : null;
+  const [linkedSheetUrl, setLinkedSheetUrl] = useState<string>(() => {
+    if (!sheetKey) return "";
+    try {
+      return localStorage.getItem(sheetKey) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [editingSheet, setEditingSheet] = useState(false);
+  const [sheetDraft, setSheetDraft] = useState(linkedSheetUrl);
+
+  const saveLinkedSheet = (raw: string) => {
+    const trimmed = raw.trim();
+    setLinkedSheetUrl(trimmed);
+    if (sheetKey) {
+      try {
+        if (trimmed) localStorage.setItem(sheetKey, trimmed);
+        else localStorage.removeItem(sheetKey);
+      } catch {
+        /* ignore quota */
+      }
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6 max-w-7xl">
@@ -670,6 +703,44 @@ export default function MasterTracker() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            {/* Linked Google Sheet — per-tenant deep-link. Set once
+                per brand and reuse across the team. When set, button
+                opens the Sheet in a new tab; otherwise opens the
+                config modal. */}
+            {linkedSheetUrl ? (
+              <a
+                href={linkedSheetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition inline-flex items-center gap-2"
+                style={{
+                  background: "rgba(95,184,239,0.10)",
+                  color: "var(--spark-sky)",
+                  border: "1px solid rgba(95,184,239,0.35)",
+                  textDecoration: "none",
+                }}
+                title="Open the brand's linked Google Sheet in a new tab"
+              >
+                📊 Linked sheet ↗
+              </a>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                setSheetDraft(linkedSheetUrl);
+                setEditingSheet(true);
+              }}
+              className="mono text-[10px] px-3 py-2 rounded-xl"
+              style={{
+                letterSpacing: "0.18em",
+                background: "transparent",
+                color: "rgba(255,255,255,0.55)",
+                border: "1px solid var(--spark-border)",
+              }}
+              title="Link this brand to a Google Sheet for tracking"
+            >
+              {linkedSheetUrl ? "EDIT SHEET LINK" : "+ LINK SHEET"}
+            </button>
             <button
               onClick={() => navigate("/requests/bulk-upload")}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
@@ -859,6 +930,122 @@ export default function MasterTracker() {
           />
         </Suspense>
       </div>
+
+      {/* Linked-sheet config modal. URL persists per-tenant in
+          localStorage. Backend round-trip lands when the sheets-
+          sync integration ships. */}
+      {editingSheet && (
+        <div
+          onClick={() => setEditingSheet(false)}
+          className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
+          style={{
+            background: "rgba(10,11,13,0.7)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-xl spark-card p-6"
+            style={{ borderRadius: 20 }}
+          >
+            <p
+              className="mono text-[10px] mb-1"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-sky)",
+              }}
+            >
+              LINKED GOOGLE SHEET
+            </p>
+            <h2
+              className="display text-2xl font-bold"
+              style={{ letterSpacing: "-0.03em" }}
+            >
+              Tie this brand to a Sheet.
+            </h2>
+            <p
+              className="text-sm mt-2"
+              style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.55 }}
+            >
+              Paste the full Google Sheets URL for this brand's
+              tracker. The whole team will see the deep-link in the
+              tracker header. To push fresh data to the sheet, use{" "}
+              <strong>Export CSV</strong> and File → Import in Sheets
+              (a real auto-sync lands when the Sheets backend ships).
+            </p>
+            <input
+              autoFocus
+              type="url"
+              value={sheetDraft}
+              onChange={(e) => setSheetDraft(e.target.value)}
+              placeholder="https://docs.google.com/spreadsheets/d/.../edit"
+              className="w-full mt-4 rounded-xl px-3 py-2 text-sm"
+              style={{
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+              }}
+            />
+            {sheetDraft && !sheetDraft.includes("docs.google.com") && (
+              <p
+                className="mono text-[10px] mt-2"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "var(--spark-orange)",
+                }}
+              >
+                THAT DOESN'T LOOK LIKE A GOOGLE SHEETS URL
+              </p>
+            )}
+            <div className="flex justify-between gap-2 mt-5 flex-wrap">
+              {linkedSheetUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    saveLinkedSheet("");
+                    setSheetDraft("");
+                    setEditingSheet(false);
+                  }}
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "var(--spark-orange)",
+                  }}
+                >
+                  × REMOVE LINK
+                </button>
+              )}
+              <div className="flex gap-2 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setEditingSheet(false)}
+                  className="mono text-[11px] px-3"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "rgba(255,255,255,0.55)",
+                  }}
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    saveLinkedSheet(sheetDraft);
+                    setEditingSheet(false);
+                  }}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+                  style={{
+                    background: "var(--spark-sky)",
+                    color: "#0a0d09",
+                  }}
+                >
+                  Save link
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
