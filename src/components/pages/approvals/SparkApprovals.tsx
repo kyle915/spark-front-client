@@ -1627,6 +1627,105 @@ const ApprovalsInner: React.FC = () => {
   );
 };
 
+/**
+ * Outer-header button that fetches the pending queue and copies a
+ * Slack-friendly text summary to the clipboard. Useful for pasting
+ * a status into a team channel without exporting CSV first.
+ *
+ * Lives outside the main Suspense so it can read the dataset itself
+ * (the parent header doesn't have access to ApprovalsInner's rows).
+ */
+const ApprovalsCopyQueueButtonInner: React.FC = () => {
+  const { tenantId } = useAuthStore();
+  const data = useLazyLoadQuery<RequestsQueryType>(
+    RequestsQuery,
+    { first: 300, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [copying, setCopying] = useState(false);
+
+  const onCopy = async () => {
+    if (copying) return;
+    setCopying(true);
+    const rows = (data?.requests?.edges ?? [])
+      .map((e) => e?.node)
+      .filter((n): n is NonNullable<typeof n> => Boolean(n))
+      .filter((n) => {
+        const slug = (n.status?.slug ?? n.status?.name ?? "").toLowerCase();
+        return slug === "pending";
+      });
+    if (rows.length === 0) {
+      showAlert("No pending requests to copy.", "info");
+      setCopying(false);
+      return;
+    }
+    const today = new Date().toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+    const lines = [
+      `*Pending approvals — ${today}* (${rows.length} open)`,
+      "",
+    ];
+    for (const n of rows.slice(0, 50)) {
+      const reqId = `REQ-${String(n.id).slice(-4).toUpperCase()}`;
+      const venue = n.retailer?.name ?? n.name ?? "—";
+      const market =
+        [n.retailer?.location?.name, n.retailer?.location?.state?.code]
+          .filter(Boolean)
+          .join(", ") || "";
+      const created = n.createdAt
+        ? new Date(n.createdAt).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          })
+        : "";
+      lines.push(
+        `• ${reqId} · ${venue}${market ? ` (${market})` : ""}${created ? ` · ${created}` : ""}`,
+      );
+    }
+    if (rows.length > 50) {
+      lines.push(`…and ${rows.length - 50} more`);
+    }
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"));
+      showAlert(
+        `Copied ${rows.length} pending request${rows.length === 1 ? "" : "s"} to clipboard.`,
+        "success",
+      );
+    } catch (e) {
+      showAlert(`Couldn't copy: ${(e as Error).message}`, "error");
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={onCopy}
+      disabled={copying}
+      className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+      style={{
+        background: "transparent",
+        color: "var(--spark-text)",
+        border: "1px solid var(--spark-border)",
+        opacity: copying ? 0.5 : 1,
+      }}
+      title="Copy the pending queue as a Slack-friendly text block"
+    >
+      {copying ? "Copying…" : "📋 Copy queue for Slack"}
+    </button>
+  );
+};
+
+const ApprovalsCopyQueueButton: React.FC = () => (
+  <Suspense fallback={null}>
+    <ApprovalsCopyQueueButtonInner />
+  </Suspense>
+);
+
 /* ─────────────────── page ─────────────────── */
 
 export default function SparkApprovals() {
@@ -1667,26 +1766,10 @@ export default function SparkApprovals() {
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            <button
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              ✉ Send admin digest
-            </button>
-            <button
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              ⚙ Auto-rules
-            </button>
+            {/* Quick Slack/email copy: dumps the current pending queue
+                as text so kyle can paste into a team channel. Uses
+                whatever's currently rendered (respects filters). */}
+            <ApprovalsCopyQueueButton />
           </div>
         </div>
 
