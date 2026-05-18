@@ -379,6 +379,11 @@ h1, h2, h3, h4, h5, h6, .display {
   --spark-surface-2: #161a12;
   --spark-border: #1f2418;
   --spark-text: #f2f3ee;
+  /* Type tokens matching the Spark Login Creative design file. */
+  --font-display: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+  --font-stencil: 'Bungee', 'Impact', sans-serif;
 }
 
 /* === Spark mesh — shared decorative backdrop ===
@@ -621,6 +626,15 @@ h1, h2, h3, h4, h5, h6, .display {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%      { opacity: 0.55; transform: scale(0.85); }
 }
+/* Login-right-panel keyframes — verbatim port of the Spark Login
+   Creative design file (Option C / word morph hero). Names prefixed
+   spk- so they don't collide with anything else. */
+@keyframes spk-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.7); } }
+@keyframes spk-grid-drift { from { background-position: 0 0, 0 0; } to { background-position: 56px 56px, 56px 56px; } }
+@keyframes spk-glow-a { 0%,100% { transform: translate(-8%,-4%) scale(1); opacity: 0.55; } 50% { transform: translate(6%,4%) scale(1.12); opacity: 0.85; } }
+@keyframes spk-glow-b { 0%,100% { transform: translate(4%,6%) scale(1.05); opacity: 0.35; } 50% { transform: translate(-6%,-4%) scale(0.95); opacity: 0.6; } }
+@keyframes spk-stencil-pan { 0% { transform: translateX(0); } 100% { transform: translateX(-3%); } }
+@keyframes spk-fade-up { 0% { opacity: 0; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } }
 /* Marquee + sweep + subtle-float + radar + tickin — lifted from the
    Ignite kyle915.github.io/ignite-webflow-assets/styles/global.css so
    the login hero shares the agency's motion language exactly. */
