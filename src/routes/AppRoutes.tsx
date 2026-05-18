@@ -29,6 +29,7 @@ import CompanySelector from "@/layout/CompanySelector";
 import RequestsList from "@/requests/RequestsList";
 import MasterTracker from "@/requests/MasterTracker";
 import RequestView from "@/requests/RequestView";
+import SparkRequestView from "@/requests/SparkRequestView";
 import EditRequest from "@/requests/EditRequest";
 import CreateRequest from "@/requests/CreateRequest";
 
@@ -251,6 +252,14 @@ const RequestsLinks = {
     },
     {
       path: "/request/view/:uuid",
+      component: <SparkRequestView />,
+      isPublic: false,
+    },
+    {
+      // Legacy old-chrome view, kept around for any deep links that
+      // depend on the older RequestCard layout. Linked nowhere in
+      // the v2 nav.
+      path: "/request/view-legacy/:uuid",
       component: <RequestView />,
       isPublic: false,
     },
