@@ -82,8 +82,10 @@ const ApprovalRow: React.FC<{
   onView: () => void;
   onApprove: () => void;
   onDecline: () => void;
+  onToggleSelect: () => void;
+  selected: boolean;
   busy: boolean;
-}> = ({ row, onView, onApprove, onDecline, busy }) => {
+}> = ({ row, onView, onApprove, onDecline, onToggleSelect, selected, busy }) => {
   const sourceChip =
     row.source === "external" ? (
       <span className="chip chip-sky">EXTERNAL · NEEDS CLIENT APPROVAL</span>
@@ -123,10 +125,25 @@ const ApprovalRow: React.FC<{
     );
   })();
   return (
-    <div className="spark-card p-5">
+    <div
+      className="spark-card p-5 transition"
+      style={{
+        outline: selected
+          ? "2px solid var(--spark-lime)"
+          : "1px solid transparent",
+        outlineOffset: selected ? -1 : 0,
+      }}
+    >
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-start gap-3">
-          <span className="spark-dot mt-2" />
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            onClick={(e) => e.stopPropagation()}
+            className="mt-1.5 w-4 h-4 cursor-pointer accent-[var(--spark-lime)]"
+            aria-label={`Select ${row.reqId}`}
+          />
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span
@@ -355,6 +372,89 @@ const ApprovalsInner: React.FC = () => {
   const [approving, setApproving] = useState<Row | null>(null);
   const [declining, setDeclining] = useState<Row | null>(null);
   const [declineReason, setDeclineReason] = useState("");
+
+  // Bulk-select state. Selected IDs are tracked separately from the
+  // displayed rows so a search-filtered list doesn't deselect.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // "Select all visible" only operates on the currently-filtered view —
+  // safer than blast-selecting hidden rows.
+  const toggleSelectAllVisible = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      const allSelected = rows.every((r) => next.has(r.id));
+      if (allSelected) {
+        for (const r of rows) next.delete(r.id);
+      } else {
+        for (const r of rows) next.add(r.id);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const confirmBulkApprove = async () => {
+    const targets = rows.filter((r) => selectedIds.has(r.id));
+    if (targets.length === 0) {
+      setBulkConfirm(false);
+      return;
+    }
+    setBulkBusy(true);
+    // Run sequentially to avoid hammering the backend and to give the
+    // user a clean success/fail count. 20-30 requests typical max.
+    let okCount = 0;
+    const failures: string[] = [];
+    for (const r of targets) {
+      try {
+        const result = await callApprovalMutation("approveRequest", {
+          input: { id: r.id },
+        });
+        if (result.success) {
+          okCount += 1;
+          setRemovedIds((prev) => {
+            const next = new Set(prev);
+            next.add(r.id);
+            return next;
+          });
+        } else {
+          failures.push(`${r.reqId}: ${result.message || "rejected"}`);
+        }
+      } catch (e) {
+        failures.push(`${r.reqId}: ${(e as Error).message}`);
+      }
+    }
+    setBulkBusy(false);
+    setBulkConfirm(false);
+    clearSelection();
+    if (failures.length === 0) {
+      showAlert(
+        `Approved ${okCount} request${okCount === 1 ? "" : "s"} — events queued for staffing.`,
+        "success",
+      );
+    } else if (okCount > 0) {
+      showAlert(
+        `Approved ${okCount}, failed ${failures.length}: ${failures.slice(0, 2).join("; ")}${failures.length > 2 ? "…" : ""}`,
+        "warning",
+      );
+    } else {
+      showAlert(
+        `All ${failures.length} approves failed. First: ${failures[0]}`,
+        "error",
+      );
+    }
+  };
 
   const confirmApprove = async () => {
     if (!approving) return;
@@ -602,16 +702,82 @@ const ApprovalsInner: React.FC = () => {
     );
   }
 
+  const selectedCount = rows.filter((r) => selectedIds.has(r.id)).length;
+  const allVisibleSelected =
+    rows.length > 0 && rows.every((r) => selectedIds.has(r.id));
+
+  const BulkBar = selectedCount === 0 ? null : (
+    <div
+      className="sticky top-2 z-30 spark-card px-4 py-3 flex flex-wrap items-center gap-3"
+      style={{
+        background: "rgba(17,20,14,0.92)",
+        backdropFilter: "blur(10px)",
+        border: "1px solid rgba(197,245,70,0.35)",
+        boxShadow: "0 0 24px rgba(197,245,70,0.18)",
+      }}
+    >
+      <span
+        className="mono text-[10px]"
+        style={{
+          letterSpacing: "0.18em",
+          color: "var(--spark-lime)",
+        }}
+      >
+        {selectedCount} SELECTED
+      </span>
+      <button
+        type="button"
+        onClick={toggleSelectAllVisible}
+        className="mono text-[10px]"
+        style={{
+          letterSpacing: "0.14em",
+          color: "rgba(255,255,255,0.6)",
+        }}
+      >
+        {allVisibleSelected ? "DESELECT ALL VISIBLE" : "SELECT ALL VISIBLE"}
+      </button>
+      <button
+        type="button"
+        onClick={clearSelection}
+        className="mono text-[10px]"
+        style={{
+          letterSpacing: "0.14em",
+          color: "rgba(255,255,255,0.55)",
+        }}
+      >
+        CLEAR
+      </button>
+      <span className="flex-1" />
+      <button
+        type="button"
+        onClick={() => setBulkConfirm(true)}
+        disabled={bulkBusy}
+        className="px-4 py-2 rounded-xl text-sm font-semibold"
+        style={{
+          background: "var(--spark-lime)",
+          color: "#0a0d09",
+          boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+          opacity: bulkBusy ? 0.5 : 1,
+        }}
+      >
+        ✓ Approve {selectedCount}
+      </button>
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       {StatsGrid}
       {pendingRows.length > 4 && SearchBar}
+      {BulkBar}
       <div className="space-y-3">
       {rows.map((r) => (
         <ApprovalRow
           key={r.uuid}
           row={r}
           busy={busyId === r.id}
+          selected={selectedIds.has(r.id)}
+          onToggleSelect={() => toggleSelected(r.id)}
           onApprove={() => setApproving(r)}
           onDecline={() => setDeclining(r)}
           onView={() => navigate(`/request/view/${r.uuid}`)}
@@ -621,6 +787,119 @@ const ApprovalsInner: React.FC = () => {
       </div>
 
       {RecentlyDecided}
+
+      {/* Bulk approve confirmation. Selected rows get approved sequentially
+          so backend errors don't blast all at once and the user gets a
+          clean success/fail count. */}
+      {bulkConfirm && (
+        <div
+          onClick={() => !bulkBusy && setBulkConfirm(false)}
+          className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
+          style={{
+            background: "rgba(10,11,13,0.7)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg spark-card p-6"
+            style={{ borderRadius: 20 }}
+          >
+            <p
+              className="mono text-[10px] mb-1"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-lime)",
+              }}
+            >
+              BULK APPROVE
+            </p>
+            <h2
+              className="display text-2xl font-bold"
+              style={{ letterSpacing: "-0.03em" }}
+            >
+              Approve {selectedCount} request{selectedCount === 1 ? "" : "s"}?
+            </h2>
+            <p
+              className="text-sm mt-2"
+              style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.55 }}
+            >
+              Each one creates an Event row and triggers the branded
+              approval email to its requestor. Failures (if any) get
+              surfaced in the toast — successes are removed from the
+              queue.
+            </p>
+            <div
+              className="mt-4 p-4 rounded-xl text-xs max-h-48 overflow-y-auto"
+              style={{
+                background: "rgba(197,245,70,0.06)",
+                border: "1px solid rgba(197,245,70,0.18)",
+                color: "rgba(255,255,255,0.75)",
+                lineHeight: 1.5,
+              }}
+            >
+              {rows
+                .filter((r) => selectedIds.has(r.id))
+                .slice(0, 20)
+                .map((r) => (
+                  <div key={r.id}>
+                    <span
+                      className="mono text-[10px]"
+                      style={{
+                        letterSpacing: "0.14em",
+                        color: "rgba(255,255,255,0.45)",
+                      }}
+                    >
+                      {r.reqId}
+                    </span>{" "}
+                    · {r.venue}
+                  </div>
+                ))}
+              {selectedCount > 20 && (
+                <div
+                  className="mono text-[10px] mt-1"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "rgba(255,255,255,0.45)",
+                  }}
+                >
+                  …and {selectedCount - 20} more
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                onClick={() => {
+                  if (bulkBusy) return;
+                  setBulkConfirm(false);
+                }}
+                className="mono text-[11px] px-3"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={confirmBulkApprove}
+                disabled={bulkBusy}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "#0a0d09",
+                  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+                  opacity: bulkBusy ? 0.5 : 1,
+                }}
+              >
+                {bulkBusy
+                  ? `Approving… (${selectedCount})`
+                  : `✓ Approve ${selectedCount} + notify`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Approve confirmation — in Spark chrome instead of browser-native
           confirm(). Surfaces what actually happens downstream so kyle
