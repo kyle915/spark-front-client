@@ -21,42 +21,25 @@ export default defineConfig({
     chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
+        // SAFER chunking — only split out leaf libraries that don't
+        // import React (avoiding the TDZ / module-identity crashes we
+        // hit when we tried to split react / react-relay / react-router
+        // into separate chunks). Maps + parsers + icons are
+        // self-contained or already lazy-loaded, so it's safe.
         manualChunks: (id) => {
           if (!id.includes("node_modules")) return undefined;
-          if (id.includes("/react-relay") || id.includes("/relay-runtime")) {
-            return "vendor-relay";
-          }
-          if (
-            id.includes("/react/") ||
-            id.includes("/react-dom/") ||
-            id.includes("/react-router") ||
-            id.includes("/scheduler/")
-          ) {
-            return "vendor-react";
-          }
           if (id.includes("/@vis.gl/") || id.includes("/leaflet/") || id.includes("/react-leaflet/")) {
             return "vendor-maps";
-          }
-          if (id.includes("/@heroicons/") || id.includes("/lucide-react/")) {
-            return "vendor-icons";
           }
           if (id.includes("/xlsx/") || id.includes("/papaparse/")) {
             return "vendor-parsers";
           }
-          if (id.includes("/zustand/") || id.includes("/react-hook-form/") || id.includes("/zod/")) {
-            return "vendor-forms";
+          if (id.includes("/@heroicons/") || id.includes("/lucide-react/")) {
+            return "vendor-icons";
           }
-          if (
-            id.includes("/heic2any") ||
-            id.includes("/jszip") ||
-            id.includes("/wasm-bundle") ||
-            id.includes("/libheif")
-          ) {
-            // These are already loaded via dynamic import (see
-            // HeicImage / SparkRecapView) — keep them out of vendor-react.
-            return undefined;
-          }
-          return "vendor-misc";
+          // heic2any + jszip are loaded via dynamic import in
+          // HeicImage / SparkRecapView — let Rollup handle them.
+          return undefined;
         },
       },
     },
