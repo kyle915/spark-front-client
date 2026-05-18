@@ -744,3 +744,69 @@ h1, h2, h3, h4, h5, h6, .display {
 
 /* Reduce default app body color noise so the dark surface is clean */
 body { background: var(--spark-bg); }
+
+/* ============================================================
+   Print stylesheet — clean brief sheet for BAs heading to the
+   venue. Strips chrome (sidebar, header, action buttons) and
+   inverts to light-on-white for ink economy. Used by the "Print
+   brief" button on SparkRequestView.
+   ============================================================ */
+@media print {
+  /* Page-level: standard letter with reasonable margins */
+  @page { size: letter; margin: 0.5in; }
+
+  body {
+    background: #ffffff !important;
+    color: #0a0d09 !important;
+  }
+
+  /* Hide chrome: sidebar, headers, anything tagged no-print */
+  .spark-sidebar,
+  nav.spark-sidebar,
+  header,
+  .no-print,
+  [data-no-print],
+  button {
+    display: none !important;
+  }
+
+  /* Cards lose their dark surfaces, glow, and borders */
+  .spark-card {
+    background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+
+  /* All text → near-black for legibility on paper */
+  body * {
+    color: #0a0d09 !important;
+    text-shadow: none !important;
+  }
+
+  /* Mono labels stay light grey for hierarchy */
+  .mono, [class*="label-mini"] {
+    color: #6b7280 !important;
+  }
+
+  /* Status pills: simplified outline so they don't burn ink */
+  .chip {
+    background: transparent !important;
+    border: 1px solid #6b7280 !important;
+    color: #0a0d09 !important;
+    box-shadow: none !important;
+  }
+
+  /* Hide the map preview — leaflet tiles don't print clean,
+     and the address is already on the page. */
+  .leaflet-container,
+  .leaflet-container * {
+    display: none !important;
+  }
+
+  /* Layout escapes: stop max-widths from wasting margins */
+  main, .max-w-4xl, .max-w-3xl {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+}

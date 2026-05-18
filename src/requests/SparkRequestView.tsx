@@ -413,6 +413,18 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         >
           ✎ Edit
         </button>
+        <button
+          onClick={() => window.print()}
+          className="px-4 py-2 rounded-xl text-sm"
+          style={{
+            background: "transparent",
+            color: "var(--spark-text)",
+            border: "1px solid var(--spark-border)",
+          }}
+          title="Print or save-as-PDF a clean brief sheet for the BA to take to the venue"
+        >
+          🖨 Print brief
+        </button>
       </div>
 
       {/* Details grid */}
