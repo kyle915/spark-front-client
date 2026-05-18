@@ -186,14 +186,16 @@ export const matchTimezoneOption = <T extends { id: string; name: string | null 
   const want = (isDst ? target[0] : target[1]).toUpperCase();
   // Match options whose name contains the abbreviation, e.g.
   // "Pacific-PDT (UTC-07:00)" or "PDT" — we match a few patterns.
-  const match = options.find(
-    (o) =>
-      !!o &&
-      (o.name ?? "").toUpperCase().includes(`-${want} `) ||
-      (o.name ?? "").toUpperCase().includes(`-${want}(`) ||
-      (o.name ?? "").toUpperCase().includes(` ${want} `) ||
-      (o.name ?? "").toUpperCase().endsWith(want),
-  );
+  const match = options.find((o) => {
+    if (!o) return false;
+    const upper = (o.name ?? "").toUpperCase();
+    return (
+      upper.includes(`-${want} `) ||
+      upper.includes(`-${want}(`) ||
+      upper.includes(` ${want} `) ||
+      upper.endsWith(want)
+    );
+  });
   return (match as T | undefined) ?? null;
 };
 
