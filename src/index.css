@@ -621,6 +621,43 @@ h1, h2, h3, h4, h5, h6, .display {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%      { opacity: 0.55; transform: scale(0.85); }
 }
+/* Marquee + sweep + subtle-float + radar + tickin — lifted from the
+   Ignite kyle915.github.io/ignite-webflow-assets/styles/global.css so
+   the login hero shares the agency's motion language exactly. */
+@keyframes spark-marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes spark-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+@keyframes spark-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+@keyframes spark-radar {
+  0%   { transform: scale(0.2); opacity: 0.85; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes spark-tickin {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes spark-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes spark-glow-drift {
+  0%, 100% { transform: translate(0, 0); }
+  33%      { transform: translate(8%, -6%); }
+  66%      { transform: translate(-6%, 5%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="spark-anim-"], [style*="animation:"] {
+    animation: none !important;
+  }
+}
 
 @keyframes spark-blink {
   0%, 100% { opacity: 1; }

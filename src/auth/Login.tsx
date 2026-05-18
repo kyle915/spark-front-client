@@ -201,15 +201,17 @@ const Login = () => {
             <ThemeToggle value={colorScheme} onChange={setColorScheme} />
           </div>
 
-          {/* Radial glow mesh (lime + orange + sky) — matches the
-              same .spark-mesh language used across the app. */}
+          {/* Drifting radial mesh — the same lime/orange/sky glow but
+              slowly translates so the panel feels alive. 18s loop, big
+              enough that the motion is felt, not seen. */}
           <div
-            className="absolute inset-0 pointer-events-none"
+            className="absolute -inset-[15%] pointer-events-none"
             style={{
               background:
-                "radial-gradient(circle at 18% 12%, rgba(214,243,95,0.18), transparent 45%)," +
-                "radial-gradient(circle at 88% 88%, rgba(255,90,31,0.12), transparent 50%)," +
-                "radial-gradient(circle at 80% 8%, rgba(90,184,255,0.08), transparent 55%)",
+                "radial-gradient(circle at 18% 12%, rgba(214,243,95,0.20), transparent 45%)," +
+                "radial-gradient(circle at 88% 88%, rgba(255,90,31,0.14), transparent 50%)," +
+                "radial-gradient(circle at 80% 8%, rgba(90,184,255,0.10), transparent 55%)",
+              animation: "spark-glow-drift 18s ease-in-out infinite",
             }}
           />
           {/* 28px dot grid — Ignite's signature ticker texture, masked
@@ -218,12 +220,54 @@ const Login = () => {
             className="absolute inset-0 pointer-events-none"
             style={{
               backgroundImage:
-                "radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)",
+                "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)",
               backgroundSize: "28px 28px",
               maskImage:
                 "linear-gradient(180deg, transparent, rgba(0,0,0,0.95) 25%, rgba(0,0,0,0.95) 75%, transparent)",
             }}
           />
+          {/* Radar pulse rings emanating from a fixed point — same
+              motif as the Ignite landing's "live presence" loop. Three
+              staggered rings on a 2.6s period. */}
+          <div
+            className="absolute pointer-events-none"
+            style={{ top: "32%", left: "12%", width: 0, height: 0 }}
+          >
+            {[0, 0.9, 1.8].map((delay) => (
+              <span
+                key={delay}
+                style={{
+                  position: "absolute",
+                  width: 90,
+                  height: 90,
+                  marginLeft: -45,
+                  marginTop: -45,
+                  borderRadius: "50%",
+                  border: "1px solid rgba(214,243,95,0.45)",
+                  animation: `spark-radar 2.6s ease-out ${delay}s infinite`,
+                }}
+              />
+            ))}
+          </div>
+          {/* Lime sweep — a thin diagonal flare that crosses the panel
+              every ~7s, like the radar arm on a tactical display. */}
+          <div
+            className="absolute inset-0 pointer-events-none overflow-hidden"
+            style={{ opacity: 0.5 }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                width: "30%",
+                background:
+                  "linear-gradient(90deg, transparent, rgba(214,243,95,0.10), transparent)",
+                transform: "skewX(-12deg)",
+                animation: "spark-sweep 7s ease-in-out infinite",
+              }}
+            />
+          </div>
           {/* LIVE pill — top-left, sets the field-ops mood. */}
           <div
             className="absolute top-6 left-6 z-10 flex items-center gap-2 px-3 py-1.5 rounded-full"
@@ -251,8 +295,12 @@ const Login = () => {
             LIVE
           </div>
 
-          {/* Hero block */}
-          <div className="relative z-10 text-center px-10 max-w-md">
+          {/* Hero block — every line is staggered tickin so it feels
+              like the dashboard is booting up behind the form. */}
+          <div
+            className="relative z-10 text-center px-10 max-w-md"
+            style={{ animation: "spark-tickin 0.5s ease-out both" }}
+          >
             <p
               style={{
                 fontFamily:
@@ -292,21 +340,20 @@ const Login = () => {
               clock-ins, auto-generated recaps.
             </p>
 
-            {/* Metric ticker — three faux signals so the panel feels
-                connected to something operational. */}
-            <div
-              className="grid grid-cols-3 gap-4 mt-10 text-left"
-              style={{
-                fontFamily:
-                  "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace",
-              }}
-            >
+            {/* KPI row — each card has a count-up entrance via tickin
+                with staggered delay and a subtle float in steady state. */}
+            <div className="grid grid-cols-3 gap-4 mt-10 text-left">
               {[
-                { v: "42K+", l: "AMBASSADORS" },
-                { v: "50", l: "STATES" },
-                { v: "100%", l: "REAL-TIME" },
+                { v: "42K+", l: "AMBASSADORS", d: 0.15 },
+                { v: "50", l: "STATES", d: 0.3 },
+                { v: "100%", l: "REAL-TIME", d: 0.45 },
               ].map((m) => (
-                <div key={m.l}>
+                <div
+                  key={m.l}
+                  style={{
+                    animation: `spark-tickin 0.5s ease-out ${m.d}s both, spark-float 6s ease-in-out ${m.d}s infinite`,
+                  }}
+                >
                   <div
                     style={{
                       fontSize: 26,
@@ -325,12 +372,64 @@ const Login = () => {
                       letterSpacing: "0.18em",
                       color: "#9499A3",
                       marginTop: 4,
+                      fontFamily:
+                        "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace",
                     }}
                   >
                     {m.l}
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Bottom marquee — infinite-scroll brand-name ticker. We
+              render the same list twice and translate -50% so it loops
+              seamlessly. Same trick the Ignite hero ticker uses. */}
+          <div
+            className="absolute left-0 right-0 z-10 overflow-hidden"
+            style={{
+              bottom: 56,
+              maskImage:
+                "linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                gap: 48,
+                whiteSpace: "nowrap",
+                width: "max-content",
+                animation: "spark-marquee 40s linear infinite",
+                fontFamily:
+                  "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace",
+                fontSize: 11,
+                letterSpacing: "0.22em",
+                color: "rgba(184,188,197,0.55)",
+                paddingBlock: 6,
+              }}
+            >
+              {Array.from({ length: 2 }).flatMap((_, dup) =>
+                [
+                  "LIQUID DEATH",
+                  "POP-TARTS",
+                  "WHITE CLAW",
+                  "CONSTELLATION",
+                  "MONSTER",
+                  "JEETER",
+                  "RED BULL",
+                  "GHOST",
+                  "CELSIUS",
+                  "ATHLETIC BREWING",
+                  "OLIPOP",
+                  "PEPSI",
+                ].map((b, i) => (
+                  <span key={`${dup}-${i}`} className="flex items-center gap-3">
+                    <span style={{ color: "#D6F35F" }}>◢</span>
+                    {b}
+                  </span>
+                )),
+              )}
             </div>
           </div>
 
