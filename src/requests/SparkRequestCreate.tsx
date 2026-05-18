@@ -199,6 +199,122 @@ const SparkRequestInner: React.FC = () => {
   );
   const [distributorId, setDistributorId] = useState(qpDistributorId);
 
+  // ─── Draft autosave ───────────────────────────────────────────
+  // Keep a per-user, per-tenant draft of the in-progress form in
+  // localStorage. Survives accidental refresh/close. We don't restore
+  // automatically when the URL has prefill params (the duplicate
+  // flow): the duplicated request takes priority over a stale draft.
+  const draftKey = `@spark.requestDraft.v1/${user?.uuid ?? "anon"}/${tenantId ?? "x"}`;
+  const cameFromDuplicate =
+    searchParams.has("venue") ||
+    searchParams.has("notes") ||
+    searchParams.has("requestTypeId") ||
+    searchParams.has("productIds");
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  // Restore once on mount when there's no URL prefill.
+  useEffect(() => {
+    if (cameFromDuplicate) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as Record<string, unknown>;
+      // Only restore drafts that have at least one meaningful field.
+      const meaningful =
+        (typeof draft.venue === "string" && draft.venue.trim().length > 0) ||
+        (typeof draft.notes === "string" && draft.notes.trim().length > 0) ||
+        (Array.isArray(draft.products) && draft.products.length > 0);
+      if (!meaningful) return;
+      if (typeof draft.venue === "string") setVenue(draft.venue);
+      if (typeof draft.address === "string") setAddress(draft.address);
+      if (typeof draft.date === "string") setDate(draft.date);
+      if (typeof draft.startTime === "string") setStartTime(draft.startTime);
+      if (typeof draft.endTime === "string") setEndTime(draft.endTime);
+      if (typeof draft.requestTypeId === "string")
+        setRequestTypeId(draft.requestTypeId);
+      if (typeof draft.timezoneId === "string")
+        setTimezoneId(draft.timezoneId);
+      if (typeof draft.rmmId === "string") setRmmId(draft.rmmId);
+      if (typeof draft.distributorId === "string")
+        setDistributorId(draft.distributorId);
+      if (typeof draft.notes === "string") setNotes(draft.notes);
+      if (typeof draft.baCount === "number") setBaCount(draft.baCount);
+      if (Array.isArray(draft.products)) {
+        setSelectedProducts(new Set(draft.products as string[]));
+      }
+      if (Array.isArray(draft.extraDates)) {
+        setExtraDates(draft.extraDates as string[]);
+      }
+      setDraftRestored(true);
+    } catch {
+      /* ignore — bad JSON, quota, etc. */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist on every meaningful change. 'draftDirty' set just so
+  // we don't write before the restore effect has had its chance.
+  useEffect(() => {
+    if (!tenantId) return;
+    try {
+      const draft = {
+        venue,
+        address,
+        date,
+        startTime,
+        endTime,
+        requestTypeId,
+        timezoneId,
+        rmmId,
+        distributorId,
+        notes,
+        baCount,
+        products: Array.from(selectedProducts),
+        extraDates,
+        updatedAt: new Date().toISOString(),
+      };
+      // Skip writing a draft that's still empty — saves 1 KB and keeps
+      // the storage clean if kyle bounces in & out without typing.
+      const empty =
+        !venue.trim() &&
+        !address.trim() &&
+        !notes.trim() &&
+        selectedProducts.size === 0 &&
+        extraDates.length === 0;
+      if (empty) {
+        localStorage.removeItem(draftKey);
+      } else {
+        localStorage.setItem(draftKey, JSON.stringify(draft));
+      }
+    } catch {
+      /* ignore quota */
+    }
+  }, [
+    venue,
+    address,
+    date,
+    startTime,
+    endTime,
+    requestTypeId,
+    timezoneId,
+    rmmId,
+    distributorId,
+    notes,
+    baCount,
+    selectedProducts,
+    extraDates,
+    tenantId,
+    draftKey,
+  ]);
+
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      /* ignore */
+    }
+  };
+
   const venueMatches = useMemo(() => {
     const q = venue.toLowerCase().trim();
     if (!q || q.length < 2) return [];
@@ -328,6 +444,8 @@ const SparkRequestInner: React.FC = () => {
     }
 
     if (failures.length === 0) {
+      // Whole batch landed cleanly — the draft is no longer useful.
+      clearDraft();
       showAlert(
         successes > 1
           ? `Submitted ${successes} requests · auto-routed to your RMM.`
@@ -336,6 +454,8 @@ const SparkRequestInner: React.FC = () => {
       );
       navigate("/requests/list");
     } else if (successes > 0) {
+      // Partial success — leave the draft alone so kyle can fix the
+      // bad rows without re-entering the good ones.
       showAlert(
         `Submitted ${successes} · ${failures.length} failed: ${failures.join(", ")}`,
         "warning",
@@ -375,6 +495,49 @@ const SparkRequestInner: React.FC = () => {
           staffing, and scheduling.
         </p>
       </div>
+
+      {/* Restored-draft banner. Auto-dismisses when the user starts
+          editing (they implicitly accept the restore by typing). */}
+      {draftRestored && (
+        <div
+          className="flex items-center justify-between gap-3 px-4 py-2 rounded-xl"
+          style={{
+            background: "rgba(95,184,239,0.08)",
+            border: "1px solid rgba(95,184,239,0.3)",
+          }}
+        >
+          <span
+            className="text-sm"
+            style={{ color: "rgba(255,255,255,0.8)" }}
+          >
+            ↻ Picked up your unfinished draft.
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setVenue("");
+              setAddress("");
+              setDate("");
+              setStartTime("12:00");
+              setEndTime("16:00");
+              setNotes("");
+              setSelectedProducts(new Set());
+              setExtraDates([]);
+              setBaCount(1);
+              setDistributorId("");
+              clearDraft();
+              setDraftRestored(false);
+            }}
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              color: "var(--spark-sky)",
+            }}
+          >
+            CLEAR + START FRESH
+          </button>
+        </div>
+      )}
 
       {/* Card */}
       <div className="spark-card p-6 lg:p-8 space-y-6" style={{ paddingBottom: "6rem" }}>
