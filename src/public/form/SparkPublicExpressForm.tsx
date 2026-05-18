@@ -198,7 +198,23 @@ export default function SparkPublicExpressForm() {
         {/* Venue + Address */}
         <Card title="VENUE">
           <Field label="Account / Venue Name *">
-            <input value={venue} onChange={(e) => setVenue(e.target.value)} className={inputCls} placeholder="e.g., Whole Foods - Brentwood" />
+            <GooglePlacesInput
+              value={venue}
+              onChange={setVenue}
+              bias="establishment"
+              onResolved={(p) => {
+                // When the BA picks a real store from the suggestions,
+                // auto-fill the address + timezone too — saves a step.
+                setVenue(p.formattedAddress.split(",")[0] || p.formattedAddress);
+                if (!address) setAddress(p.formattedAddress);
+                if (p.timezoneId) {
+                  const match = matchTimezoneOption(p.timezoneId, timeZones);
+                  if (match) setTimezoneId(String(match.id));
+                }
+              }}
+              placeholder="e.g., Whole Foods - Brentwood"
+              className={inputCls}
+            />
           </Field>
           <Field label="Full Address *">
             <GooglePlacesInput

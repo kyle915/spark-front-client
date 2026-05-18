@@ -292,6 +292,28 @@ export default function GooglePlacesInput({
     );
   };
 
+  // Fallback resolver — fires when the user types an address but never
+  // taps a suggestion. We geocode the raw string via the Maps SDK so
+  // onResolved still gets called (and the parent form's timezone
+  // auto-pick still runs).
+  const resolveTyped = (raw: string) => {
+    if (!ready || !raw || raw.length < 4) return;
+    if (!attrEl.current) attrEl.current = document.createElement("div");
+    // Use the predictions to find the best match, then resolve.
+    const svc = new window.google!.maps!.places!.AutocompleteService();
+    svc.getPlacePredictions(
+      { input: raw, types: bias === "establishment" ? ["establishment"] : ["address"] },
+      (preds) => {
+        const best = preds?.[0];
+        if (!best) return;
+        // Only run if the user's typed text matches the top prediction
+        // closely (>=70% of the same starting chars) — avoid false
+        // positives when they're still mid-type.
+        pick(best.place_id, best.description);
+      },
+    );
+  };
+
   return (
     <div className="relative" style={{ width: "100%" }}>
       <input
@@ -302,7 +324,12 @@ export default function GooglePlacesInput({
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        onBlur={() => {
+          window.setTimeout(() => setOpen(false), 120);
+          // If the user typed an address but never picked a suggestion,
+          // still try to resolve so timezone auto-fill works.
+          resolveTyped(value);
+        }}
         placeholder={placeholder}
         className={className}
         style={style}

@@ -359,15 +359,22 @@ export const SparkSidebar: React.FC = () => {
         backdropFilter: "blur(12px)",
       }}
     >
-      {/* Brand mark */}
+      {/* Brand mark — real Spark logo PNG, inverted to white for the
+          dark sidebar (the source logo is black on transparent). */}
       <div
         className="px-5 py-5"
         style={{ borderBottom: "1px solid var(--spark-border)" }}
       >
-        <div className="spark-mark text-2xl">
-          <span className="word">Spark</span>
-          <span className="tag">BY IGNITE</span>
-        </div>
+        <img
+          src="/legal/spark-logo.png"
+          alt="Spark by Ignite"
+          style={{
+            height: 28,
+            width: "auto",
+            display: "block",
+            filter: "invert(1) hue-rotate(180deg)",
+          }}
+        />
       </div>
 
       {/* Tenant picker */}
