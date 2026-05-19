@@ -303,8 +303,21 @@ const SidebarNav: React.FC<{
     ...s,
     items: s.items.map((it) => {
       let chip: NavItem["chip"];
-      if (it.to === "/requests/list" && counts.tracker > 0)
-        chip = { text: String(counts.tracker), tone: "lime" };
+      if (it.to === "/requests/list" && counts.tracker > 0) {
+        // Recap-due takes priority over the active-tracker count so
+        // ops sees "12 RECAPS DUE" (orange) before the calmer total.
+        // Falls back to the active count when no recaps are
+        // outstanding.
+        if (counts.recapsDue > 0) {
+          chip = {
+            text: `${counts.recapsDue} RECAP${counts.recapsDue === 1 ? "" : "S"} DUE`,
+            tone: "orange",
+            blink: counts.recapsDue > 5,
+          };
+        } else {
+          chip = { text: String(counts.tracker), tone: "lime" };
+        }
+      }
       if (it.to === "/approvals" && counts.approvals > 0)
         chip = {
           // Pulse orange when there's at least one SLA-breached pending
