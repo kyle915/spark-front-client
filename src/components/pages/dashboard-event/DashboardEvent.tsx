@@ -7,6 +7,8 @@ import useSidebarCounts from "@/hooks/useSidebarCounts";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { RecentLocationPingsQuery } from "@/api/queries/RecentLocationPingsQuery";
+import type { RecentLocationPingsQuery as RecentLocationPingsQueryType } from "@api/queries/__generated__/RecentLocationPingsQuery.graphql";
 import AttentionEngine from "./AttentionEngine";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useNavigate } from "react-router";
@@ -148,6 +150,154 @@ const TodaysSnapshot: React.FC = () => {
         })}
       </div>
     </div>
+  );
+};
+
+/**
+ * Compact "On the ground right now" strip. Renders one chip per BA
+ * currently pinging in (last 5 min) — color-coded by freshness like
+ * the /today map. Click the strip → /today for the full map.
+ *
+ * Hidden when zero BAs are live so the dashboard doesn't show an
+ * empty card on slow days.
+ */
+const OnTheGroundStrip: React.FC = () => {
+  const navigate = useNavigate();
+  const data = useLazyLoadQuery<RecentLocationPingsQueryType>(
+    RecentLocationPingsQuery,
+    { withinMinutes: 30 },
+    { fetchPolicy: "store-or-network" },
+  );
+  const pings = data?.recentLocationPings ?? [];
+  if (pings.length === 0) return null;
+
+  const minutesSince = (iso: string): number => {
+    try {
+      return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
+    } catch {
+      return 999;
+    }
+  };
+
+  const fresh = pings.filter((p) => minutesSince(p.recordedAt) <= 5).length;
+  const stale = pings.filter((p) => minutesSince(p.recordedAt) > 15).length;
+
+  return (
+    <button
+      onClick={() => navigate("/today")}
+      className="spark-card p-4 lg:p-5 w-full text-left transition"
+      style={{
+        background:
+          "linear-gradient(180deg, rgba(239,90,42,0.04), transparent 60%)",
+        borderTop: "2px solid var(--spark-orange)",
+        cursor: "pointer",
+      }}
+      title="Open the live Today map"
+    >
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <span
+            className="mono inline-flex items-center gap-2"
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.22em",
+              color: "var(--spark-orange)",
+            }}
+          >
+            <span
+              style={{
+                display: "inline-block",
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                background: "var(--spark-orange)",
+                boxShadow: "0 0 8px var(--spark-orange)",
+              }}
+            />
+            ON THE GROUND · LIVE
+          </span>
+          <span
+            className="display"
+            style={{ fontSize: 28, letterSpacing: "-0.02em" }}
+          >
+            {pings.length}
+            <span
+              style={{
+                fontSize: 14,
+                color: "rgba(255,255,255,0.55)",
+                marginLeft: 6,
+              }}
+            >
+              BA{pings.length === 1 ? "" : "s"} pinging
+            </span>
+          </span>
+        </div>
+        <div
+          className="flex items-center gap-3 mono text-xs"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+        >
+          <span style={{ color: "var(--spark-orange)" }}>
+            ● {fresh} fresh
+          </span>
+          {stale > 0 && (
+            <span style={{ color: "rgba(255,255,255,0.45)" }}>
+              ◌ {stale} stale
+            </span>
+          )}
+          <span style={{ color: "var(--spark-lime)" }}>
+            Open map →
+          </span>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2 mt-3">
+        {pings.slice(0, 10).map((p) => {
+          const m = minutesSince(p.recordedAt);
+          const tone =
+            m > 15
+              ? "rgba(139,142,132,0.18)"
+              : m <= 5
+                ? "rgba(239,90,42,0.18)"
+                : "rgba(95,184,239,0.18)";
+          const fg =
+            m > 15
+              ? "rgba(255,255,255,0.55)"
+              : m <= 5
+                ? "var(--spark-orange)"
+                : "var(--spark-sky)";
+          return (
+            <span
+              key={String(p.uuid)}
+              className="mono"
+              style={{
+                fontSize: 11,
+                letterSpacing: 0.6,
+                padding: "4px 10px",
+                borderRadius: 999,
+                background: tone,
+                color: fg,
+                border: `1px solid ${fg}55`,
+              }}
+              title={`${p.ambassadorName} · ${m}m ago · ${p.eventName}`}
+            >
+              {p.ambassadorName} · {m}m
+            </span>
+          );
+        })}
+        {pings.length > 10 && (
+          <span
+            className="mono"
+            style={{
+              fontSize: 11,
+              padding: "4px 10px",
+              borderRadius: 999,
+              color: "rgba(255,255,255,0.55)",
+            }}
+          >
+            + {pings.length - 10} more
+          </span>
+        )}
+      </div>
+    </button>
   );
 };
 
@@ -643,6 +793,14 @@ export default function DashboardIndex() {
             to block the hero metrics rendering. */}
         <Suspense fallback={null}>
           <TodaysSnapshot />
+        </Suspense>
+
+        {/* "On the ground right now" — compact live-BA strip.
+            Drives admins to /today without forcing the navigation
+            for the common "is anyone clocked in" check. Hidden
+            when zero pings are fresh (no noisy empty card). */}
+        <Suspense fallback={null}>
+          <OnTheGroundStrip />
         </Suspense>
 
         {/* Compact hero + dense CPG KPI grid.
