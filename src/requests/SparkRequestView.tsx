@@ -12,6 +12,7 @@ import { UsersQuery } from "@api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
 import InternalNotesPanel from "./InternalNotesPanel";
 import ShiftReplayPanel from "./ShiftReplayPanel";
+import InviteBAModal from "./InviteBAModal";
 import { pickHeroImage } from "@/utils/recapFileUrl";
 
 type Mentionable = { id: string; name: string; email: string };
@@ -212,6 +213,14 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
   const [decliningOpen, setDecliningOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
   const [approveOpen, setApproveOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  // Pick the relay id of the first event on this request to use as the
+  // invite target. Admins can only invite when there's a real event
+  // row to invite TO — pending requests with no event yet don't show
+  // the button.
+  const eventForInvite = ((request?.events ?? []).find(
+    (e): e is NonNullable<typeof e> => Boolean(e),
+  )?.id as string | undefined) ?? null;
 
   if (!request) {
     return (
@@ -506,7 +515,28 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         >
           🖨 Print brief
         </button>
+        {role.isAdmin && eventForInvite && (
+          <button
+            onClick={() => setInviteOpen(true)}
+            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              boxShadow: "0 0 16px rgba(197,245,70,0.35)",
+            }}
+            title="Invite a brand ambassador to this shift — they'll get a push on their phone"
+          >
+            ✦ Invite BA
+          </button>
+        )}
       </div>
+
+      {inviteOpen && eventForInvite && (
+        <InviteBAModal
+          eventId={eventForInvite}
+          onClose={() => setInviteOpen(false)}
+        />
+      )}
 
       {/* Details grid */}
       <div className="spark-card p-6">
