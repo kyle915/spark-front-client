@@ -91,6 +91,16 @@ export const RequestsQuery = graphql`
             uuid
             name
           }
+          # Just enough event/recap data to render the recap-status
+          # chip on each Master Tracker row. We deliberately don't
+          # ask for any recap fields beyond id so the row payload
+          # stays tiny (avg under 100 bytes overhead per request).
+          events {
+            id
+            recaps {
+              id
+            }
+          }
           tenantId
           createdAt
           updatedAt

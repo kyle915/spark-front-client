@@ -67,6 +67,8 @@ const STATUS_FILTERS: { key: string; label: string; chip: string }[] = [
 const fmtNum = (v: number | null | undefined) =>
   typeof v === "number" ? v.toLocaleString() : "0";
 
+type RecapStatus = "submitted" | "due" | "none";
+
 type Row = {
   uuid: string;
   date: string;
@@ -78,6 +80,12 @@ type Row = {
   address: string;
   type: string;
   eventUuid: string | null;
+  // Aggregate of the request's events + recaps for the chip:
+  //   "submitted" → at least one event has at least one recap
+  //   "due"       → events scheduled but no recaps yet
+  //   "none"      → no events scheduled yet (request still pending)
+  recapStatus: RecapStatus;
+  recapCount: number;
 };
 
 const fmtDateLabel = (raw: string | null | undefined) => {
@@ -213,6 +221,7 @@ const TrackerTable: React.FC<{
               <th className="px-4 py-3 text-right">CONSUMERS</th>
               <th className="px-4 py-3 text-right">1ST-TIME</th>
               <th className="px-4 py-3 text-right">$/SAMPLE</th>
+              <th className="px-4 py-3">RECAP</th>
               <th className="px-4 py-3">NOTES</th>
             </tr>
           </thead>
@@ -220,7 +229,7 @@ const TrackerTable: React.FC<{
             {rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={10}
+                  colSpan={11}
                   className="px-4 py-10 text-center text-sm"
                   style={{ color: "rgba(255,255,255,0.55)" }}
                 >
@@ -239,7 +248,7 @@ const TrackerTable: React.FC<{
               const headerEl = showGroupHeader ? (
                 <tr key={`hdr-${rowIdx}`}>
                   <td
-                    colSpan={10}
+                    colSpan={11}
                     className="px-4 py-3 mono"
                     style={{
                       letterSpacing: "0.16em",
@@ -355,6 +364,30 @@ const TrackerTable: React.FC<{
                   </td>
                   <td className="px-4 py-3 text-right tab-num">—</td>
                   <td className="px-4 py-3 whitespace-nowrap">
+                    {r.recapStatus === "submitted" ? (
+                      <span
+                        className="chip chip-lime"
+                        title={`${r.recapCount} recap${r.recapCount === 1 ? "" : "s"} submitted`}
+                      >
+                        ● {r.recapCount} RECAP{r.recapCount === 1 ? "" : "S"}
+                      </span>
+                    ) : r.recapStatus === "due" ? (
+                      <span className="chip chip-orange" title="Activation scheduled, no recap filed yet">
+                        ◌ DUE
+                      </span>
+                    ) : (
+                      <span
+                        className="mono text-[10px]"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "rgba(255,255,255,0.3)",
+                        }}
+                      >
+                        —
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     {isClient ? (
                       <span
                         className="mono text-[10px]"
@@ -384,7 +417,7 @@ const TrackerTable: React.FC<{
                 </tr>
                 {isExpanded && !isClient && (
                   <tr style={{ borderBottom: "1px solid var(--spark-border)" }}>
-                    <td colSpan={10} style={{ padding: "0.5rem 1rem 1rem" }}>
+                    <td colSpan={11} style={{ padding: "0.5rem 1rem 1rem" }}>
                       <InternalNotesPanel
                         requestUuid={r.uuid}
                         requestLabel={`${r.venue} · ${r.market}`}
@@ -448,6 +481,19 @@ const MasterTrackerInner: React.FC<{
           const stateCode = n.retailer?.location?.state?.code ?? n.state?.code;
           const cityish = n.retailer?.location?.name ?? n.location?.name ?? "";
           const market = [cityish, stateCode].filter(Boolean).join(", ");
+          const events = (n.events ?? []).filter(
+            (e): e is NonNullable<typeof e> => Boolean(e),
+          );
+          const recapCount = events.reduce(
+            (sum, e) => sum + (e.recaps?.length ?? 0),
+            0,
+          );
+          const recapStatus: RecapStatus =
+            events.length === 0
+              ? "none"
+              : recapCount > 0
+                ? "submitted"
+                : "due";
           return {
             uuid: String(n.uuid),
             date: n.date ?? "",
@@ -461,6 +507,8 @@ const MasterTrackerInner: React.FC<{
             address: n.address ?? "",
             type: n.requestType?.name ?? "—",
             eventUuid: n.event?.uuid ? String(n.event.uuid) : null,
+            recapStatus,
+            recapCount,
           };
         }) ?? []
     );
@@ -583,6 +631,8 @@ export default function MasterTracker() {
       "Address",
       "Type",
       "Time",
+      "Recap",
+      "Recap Count",
       "Event UUID",
       "Request UUID",
     ];
@@ -602,6 +652,8 @@ export default function MasterTracker() {
           r.address,
           r.type,
           r.timeLabel,
+          r.recapStatus,
+          String(r.recapCount),
           r.eventUuid ?? "",
           r.uuid,
         ]
@@ -658,6 +710,8 @@ export default function MasterTracker() {
           r.address,
           r.type,
           r.timeLabel,
+          r.recapStatus,
+          String(r.recapCount),
           r.eventUuid ?? "",
           r.uuid,
         ]
