@@ -4197,6 +4197,8 @@ type RequestBatchTemplateResponse {
   message: String!
   clientMutationId: ID
   fileUrl: String
+  fileBase64: String
+  fileName: String
 }
 
 type RequestCountableConnection {

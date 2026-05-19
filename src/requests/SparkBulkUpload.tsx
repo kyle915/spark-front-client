@@ -102,6 +102,8 @@ const Inner: React.FC = () => {
           success: boolean;
           message: string;
           fileUrl: string | null;
+          fileBase64: string | null;
+          fileName: string | null;
         };
       }>(
         `
@@ -110,23 +112,57 @@ const Inner: React.FC = () => {
               success
               message
               fileUrl
+              fileBase64
+              fileName
             }
           }
         `,
         { input: tenantId ? { tenantId } : {} },
       );
       const r = data.requestBatchTemplateDownloadUrl;
-      if (!r?.success || !r.fileUrl) {
+      if (!r?.success) {
         throw new Error(r?.message || "Couldn't generate template.");
       }
+
+      const filename = r.fileName || "spark-bulk-template.xlsx";
+
+      // Inline path (new, preferred). Avoids GCS entirely so an IAM
+      // gap on the service account doesn't break downloads. ~30 kB
+      // of base64 over the wire — trivial.
+      let downloadHref: string;
+      let blobUrlToRevoke: string | null = null;
+      if (r.fileBase64) {
+        const byteString = atob(r.fileBase64);
+        const bytes = new Uint8Array(byteString.length);
+        for (let i = 0; i < byteString.length; i++) {
+          bytes[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], {
+          type:
+            "application/vnd.openxmlformats-officedocument." +
+            "spreadsheetml.sheet",
+        });
+        downloadHref = URL.createObjectURL(blob);
+        blobUrlToRevoke = downloadHref;
+      } else if (r.fileUrl) {
+        downloadHref = r.fileUrl;
+      } else {
+        throw new Error("Template response was empty.");
+      }
+
       // Trigger a download in a hidden anchor so we don't navigate.
       const a = document.createElement("a");
-      a.href = r.fileUrl;
-      a.download = "spark-bulk-template.xlsx";
+      a.href = downloadHref;
+      a.download = filename;
       a.target = "_blank";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      if (blobUrlToRevoke) {
+        // Free the blob after the browser has had a chance to start
+        // the download. 30 s is plenty.
+        window.setTimeout(() => URL.revokeObjectURL(blobUrlToRevoke!), 30_000);
+      }
       showAlert("Template downloaded. Fill it in then drop it back here.", "success");
     } catch (e) {
       showAlert(`Couldn't download template: ${(e as Error).message}`, "error");
