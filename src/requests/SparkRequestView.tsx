@@ -11,7 +11,7 @@ import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__ge
 import { UsersQuery } from "@api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
 import InternalNotesPanel from "./InternalNotesPanel";
-import { pickHeroImage, recapFileUrl } from "@/utils/recapFileUrl";
+import { pickHeroImage } from "@/utils/recapFileUrl";
 
 type Mentionable = { id: string; name: string; email: string };
 
