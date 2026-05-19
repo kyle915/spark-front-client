@@ -1104,6 +1104,19 @@ input CreateAmbassadorGroupInput {
   ambassadorIds: [ID!] = null
 }
 
+input InviteAmbassadorToShiftInput {
+  clientMutationId: ID = null
+  ambassadorId: ID!
+  eventId: ID!
+}
+
+type InviteAmbassadorToShiftResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  ambassadorEventUuid: ID
+}
+
 input CreateAmbassadorInput {
   clientMutationId: ID = null
   userId: ID!
@@ -3264,6 +3277,7 @@ type Mutation {
   acceptAmbassadorInvitation(input: AcceptAmbassadorInvitationInput!): AcceptInvitationResponse!
   acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
+  inviteAmbassadorToShift(input: InviteAmbassadorToShiftInput!): InviteAmbassadorToShiftResponse!
   disableAmbassador(input: DisableAmbassadorInput!): DisableAmbassadorResponse!
   regenerateAmbassadorPasswords(input: RegenerateAmbassadorPasswordsInput!): RegenerateAmbassadorPasswordsResponse!
   createAmbassador(input: CreateAmbassadorInput!): CreateAmbassadorResponse!
