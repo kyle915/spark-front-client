@@ -3558,6 +3558,7 @@ type Query {
   ambassadorEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorEventsFiltersInput = null): AmbassadorEventTypeCountableConnection!
   sentInvitations(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorInvitationFiltersInput = null): AmbassadorInvitationTypeCountableConnection!
   availableAmbassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
+  pendingAmbassadors(first: Int = 50, after: String = null): AmbassadorCountableConnection!
   activeAmbassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: ActiveAmbassadorFiltersInput = null): AmbassadorCountableConnection!
   ambassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
   ambassador(id: ID = null, uuid: ID = null): Ambassador

@@ -400,6 +400,18 @@ const Inner: React.FC<{
       </div>
 
       <div className="flex flex-wrap gap-3">
+        <a
+          href="/people/pending"
+          className="px-4 py-3 rounded-2xl text-sm font-semibold inline-flex items-center gap-2"
+          style={{
+            background: "transparent",
+            color: "var(--spark-orange)",
+            border: "1px solid rgba(239,90,42,0.45)",
+          }}
+          title="Approve or reject brand ambassadors waiting on you"
+        >
+          ⏳ Pending approvals →
+        </a>
         <button
           onClick={() => onOpenInvite("admin")}
           className="px-4 py-3 rounded-2xl text-sm font-semibold"

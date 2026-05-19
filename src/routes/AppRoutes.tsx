@@ -103,6 +103,7 @@ import SparkToday from "@/components/pages/today/SparkToday";
 import SparkUpcomingEvents from "@/components/pages/upcoming/SparkUpcomingEvents";
 import SparkRecentSubmissions from "@/components/pages/recent/SparkRecentSubmissions";
 import SparkPeople from "@/components/pages/people/SparkPeople";
+import SparkPendingAmbassadors from "@/components/pages/people/SparkPendingAmbassadors";
 import SparkFormBuilder from "@/components/pages/builder/SparkFormBuilder";
 import SparkNewClient from "@/components/pages/clients/SparkNewClient";
 import SparkBaPortal from "@/components/pages/ba/SparkBaPortal";
@@ -353,6 +354,15 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkPeople />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/people/pending",
+      component: (
+        <AdminOnly>
+          <SparkPendingAmbassadors />
         </AdminOnly>
       ),
       isPublic: false,
