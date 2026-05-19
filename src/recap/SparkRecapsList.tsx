@@ -205,6 +205,8 @@ type Meta = {
 type SortKey = "date-desc" | "date-asc" | "eng-desc" | "sold-desc";
 type StatusKey = "all" | "approved" | "draft";
 
+const PAGE_SIZE = 60;
+
 const RecapsListInner: React.FC<{
   search: string;
   retailerFilter: string;
@@ -212,18 +214,23 @@ const RecapsListInner: React.FC<{
   rmmFilter: string;
   statusFilter: StatusKey;
   sortKey: SortKey;
+  pageSize: number;
   onMeta: (m: Meta) => void;
   onVisibleRecapsChange?: (recaps: Recap[]) => void;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, statusFilter, sortKey, onMeta, onVisibleRecapsChange }) => {
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, statusFilter, sortKey, pageSize, onMeta, onVisibleRecapsChange }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
-  // Page in chunks of 60 instead of 1,000 — fetches ~6× less data per
-  // request, lets the page paint immediately, and avoids the Cloud Run
-  // resolver timeout when each recap fans out N file rows.
+  // Initial page is PAGE_SIZE (60); "Load more" bumps pageSize in
+  // 60-row chunks. We grow `first` rather than walk endCursor because
+  // the existing query lacks @connection/@refetchable wiring and the
+  // dataset is bounded (~hundreds, not millions) so refetching the
+  // growing window is acceptable. Relay's response cache + the
+  // network's gzip mean the additional bytes per click are roughly
+  // 60-rows worth, not the full N-rows-cumulative.
   const data = useLazyLoadQuery<RecapsQueryType>(
     RecapsQuery,
     {
-      first: 60,
+      first: pageSize,
       filters: tenantId
         ? {
             tenantId,
@@ -424,6 +431,13 @@ export default function SparkRecapsList() {
   const [rmmFilter, setRmmFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusKey>("all");
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
+  // "Load more" bumps this by PAGE_SIZE (60). Reset when filters
+  // change so the user doesn't see "Load more (60 of 12)" when
+  // narrowing the dataset.
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  useEffect(() => {
+    setPageSize(PAGE_SIZE);
+  }, [retailerFilter, stateFilter, rmmFilter, statusFilter]);
   const [meta, setMeta] = useState<Meta>({
     retailers: [],
     states: [],
@@ -816,10 +830,36 @@ export default function SparkRecapsList() {
             rmmFilter={rmmFilter}
             statusFilter={statusFilter}
             sortKey={sortKey}
+            pageSize={pageSize}
             onMeta={onMeta}
             onVisibleRecapsChange={setVisibleRecaps}
           />
         </Suspense>
+
+        {meta.total > pageSize && (
+          <div className="flex flex-col items-center gap-2 py-4">
+            <button
+              onClick={() => setPageSize((p) => p + PAGE_SIZE)}
+              className="px-5 py-2.5 rounded-2xl text-sm font-semibold"
+              style={{
+                background: "var(--spark-lime)",
+                color: "#0a0d09",
+                boxShadow: "0 0 20px rgba(197,245,70,0.35)",
+              }}
+            >
+              Load {Math.min(PAGE_SIZE, meta.total - pageSize)} more →
+            </button>
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.16em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              {Math.min(pageSize, meta.total)} of {meta.total}
+            </p>
+          </div>
+        )}
       </div>
     </Layout>
   );

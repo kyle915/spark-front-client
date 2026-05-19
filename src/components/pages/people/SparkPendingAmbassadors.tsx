@@ -53,7 +53,7 @@ const fmtDate = (raw: string | null | undefined) => {
 
 const Inner: React.FC = () => {
   const navigate = useNavigate();
-  const showAlert = useAlertStore((s) => s.show);
+  const showAlert = useAlertStore((s) => s.showAlert);
   const [refreshKey, setRefreshKey] = useState(0);
   const data = useLazyLoadQuery<PendingAmbassadorsQueryType>(
     PendingAmbassadorsQuery,
@@ -82,21 +82,18 @@ const Inner: React.FC = () => {
         setPendingId(null);
         const r = resp.approveAmbassador;
         if (r?.success) {
-          showAlert?.({
-            kind: "success",
-            message: r.message || "Ambassador approved.",
-          });
+          showAlert(r.message || "Ambassador approved.", "success");
           refresh();
         } else {
-          showAlert?.({
-            kind: "error",
-            message: r?.message || "Could not approve ambassador.",
-          });
+          showAlert(
+            r?.message || "Could not approve ambassador.",
+            "error",
+          );
         }
       },
       onError: (err) => {
         setPendingId(null);
-        showAlert?.({ kind: "error", message: err.message });
+        showAlert(err.message, "error");
       },
     });
   };
@@ -113,21 +110,18 @@ const Inner: React.FC = () => {
         setPendingId(null);
         const r = resp.disableAmbassador;
         if (r?.success) {
-          showAlert?.({
-            kind: "success",
-            message: r.message || "Ambassador disabled.",
-          });
+          showAlert(r.message || "Ambassador disabled.", "success");
           refresh();
         } else {
-          showAlert?.({
-            kind: "error",
-            message: r?.message || "Could not disable ambassador.",
-          });
+          showAlert(
+            r?.message || "Could not disable ambassador.",
+            "error",
+          );
         }
       },
       onError: (err) => {
         setPendingId(null);
-        showAlert?.({ kind: "error", message: err.message });
+        showAlert(err.message, "error");
       },
     });
   };
