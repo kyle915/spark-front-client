@@ -1,0 +1,580 @@
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useLazyLoadQuery } from "react-relay/hooks";
+import { useNavigate } from "react-router";
+import {
+  APIProvider,
+  Map as GMap,
+  AdvancedMarker,
+  InfoWindow,
+} from "@vis.gl/react-google-maps";
+import Layout from "@/layout/Layout";
+import { RequestsQuery } from "@/api/queries/RequestsQuery";
+import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { useAuthStore } from "@/store/authStore";
+import {
+  loadUploadedAccounts,
+  type UploadedAccount,
+} from "@/lib/accounts";
+import AccountUploader from "./AccountUploader";
+
+/**
+ * Spark v2 — Account Map (Google Maps).
+ *
+ * Set VITE_GOOGLE_MAPS_API_KEY in your env to enable. Without a key the
+ * map area shows a clear setup card so users aren't staring at a blank
+ * grey rectangle.
+ */
+
+type Status = "recent" | "scheduled" | "unvisited";
+
+const STATUS_COLOR: Record<Status, string> = {
+  recent: "#c5f546",
+  scheduled: "#5fb8ef",
+  unvisited: "#ef5a2a",
+};
+
+type Account = {
+  key: string;
+  name: string;
+  market: string;
+  status: Status;
+  coords: { lat: number; lng: number };
+  lastDate: string | null;
+};
+
+// Google Maps "Aubergine" / dark-friendly style trimmed for Spark.
+// Typed loosely so we don't pull in the @types/google.maps namespace.
+type MapStyleRule = {
+  featureType?: string;
+  elementType?: string;
+  stylers: Array<Record<string, string | number>>;
+};
+
+const DARK_MAP_STYLE: MapStyleRule[] = [
+  { elementType: "geometry", stylers: [{ color: "#0a0d09" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0a0d09" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8b8e84" }] },
+  {
+    featureType: "administrative.locality",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#d0d2c8" }],
+  },
+  {
+    featureType: "poi",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#8b8e84" }],
+  },
+  {
+    featureType: "poi.park",
+    elementType: "geometry",
+    stylers: [{ color: "#11140e" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#1f2418" }],
+  },
+  {
+    featureType: "road",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#8b8e84" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry",
+    stylers: [{ color: "#2a3020" }],
+  },
+  {
+    featureType: "transit",
+    elementType: "geometry",
+    stylers: [{ color: "#11140e" }],
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#050605" }],
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#3b4030" }],
+  },
+];
+
+const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
+  const navigate = useNavigate();
+  const { tenantId } = useAuthStore();
+  const [filter, setFilter] = useState<"all" | Status>("all");
+  const [search, setSearch] = useState("");
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [uploaded, setUploaded] = useState<UploadedAccount[]>([]);
+
+  useEffect(() => {
+    if (tenantId) setUploaded(loadUploadedAccounts(tenantId));
+  }, [tenantId]);
+
+  const data = useLazyLoadQuery<RequestsQueryType>(
+    RequestsQuery,
+    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+
+  const accounts: Account[] = useMemo(() => {
+    const map = new Map<string, Account>();
+    const requests =
+      data?.requests?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+    for (const r of requests) {
+      const coords = r.coordinates;
+      if (!coords || coords.length < 2) continue;
+      const [lat, lng] = [coords[0], coords[1]];
+      if (lat === 0 && lng === 0) continue;
+      const retailerName = r.retailer?.name ?? r.name ?? "—";
+      const key = String(r.retailer?.uuid ?? `${retailerName}_${lat}_${lng}`);
+      const stateCode = r.retailer?.location?.state?.code ?? r.state?.code ?? "";
+      const cityish = r.retailer?.location?.name ?? r.location?.name ?? "";
+      const market = [cityish, stateCode].filter(Boolean).join(", ");
+      const statusSlug = (r.status?.slug ?? r.status?.name ?? "")
+        .toLowerCase();
+      const inferred: Status =
+        statusSlug === "done" || statusSlug === "completed"
+          ? "recent"
+          : statusSlug === "scheduled" || statusSlug === "approved"
+            ? "scheduled"
+            : "unvisited";
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, {
+          key,
+          name: retailerName,
+          market: market || "—",
+          status: inferred,
+          coords: { lat, lng },
+          lastDate: r.date ?? null,
+        });
+      } else {
+        if (inferred === "recent") existing.status = "recent";
+        else if (
+          inferred === "scheduled" &&
+          existing.status === "unvisited"
+        )
+          existing.status = "scheduled";
+        if (r.date && (!existing.lastDate || r.date > existing.lastDate)) {
+          existing.lastDate = r.date;
+        }
+      }
+    }
+    // Merge in client-uploaded accounts. Only include those with coords
+    // or addresses we can later geocode. They show as "unvisited" by
+    // default — admin/client schedules a demo to flip them to scheduled.
+    for (const u of uploaded) {
+      const lat = u.lat;
+      const lng = u.lng;
+      const key = `upload:${u.id}`;
+      const market = [u.city, u.state].filter(Boolean).join(", ");
+      if (lat && lng && lat !== 0 && lng !== 0) {
+        if (!map.has(key)) {
+          map.set(key, {
+            key,
+            name: u.name,
+            market: market || "—",
+            status: u.status,
+            coords: { lat, lng },
+            lastDate: null,
+          });
+        }
+      }
+    }
+
+    return Array.from(map.values());
+  }, [data, uploaded]);
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return accounts.filter((a) => {
+      if (filter !== "all" && a.status !== filter) return false;
+      if (q && !a.name.toLowerCase().includes(q) && !a.market.toLowerCase().includes(q))
+        return false;
+      return true;
+    });
+  }, [accounts, filter, search]);
+
+  const counts = useMemo(
+    () => ({
+      all: accounts.length,
+      recent: accounts.filter((a) => a.status === "recent").length,
+      scheduled: accounts.filter((a) => a.status === "scheduled").length,
+      unvisited: accounts.filter((a) => a.status === "unvisited").length,
+    }),
+    [accounts],
+  );
+
+  const center = useMemo(() => {
+    if (filtered.length === 0) return { lat: 39.5, lng: -98.35 };
+    const lats = filtered.map((a) => a.coords.lat).sort((a, b) => a - b);
+    const lngs = filtered.map((a) => a.coords.lng).sort((a, b) => a - b);
+    return {
+      lat: lats[Math.floor(lats.length / 2)],
+      lng: lngs[Math.floor(lngs.length / 2)],
+    };
+  }, [filtered]);
+
+  return (
+    <div className="space-y-5 max-w-7xl">
+      <div className="flex items-end justify-between flex-wrap gap-4">
+        <div>
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            ACCOUNT MAP · {counts.all} VENUES
+          </p>
+          <h1
+            className="display text-4xl font-bold mt-2"
+            style={{ letterSpacing: "-0.04em" }}
+          >
+            Plan from the map.
+          </h1>
+          <p
+            className="mt-2"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            Click any pin to see the account and schedule a demo.
+          </p>
+        </div>
+      </div>
+
+      {/* Uploader */}
+      <AccountUploader onImported={setUploaded} />
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="spark-card p-4">
+          <p className="label-mini">ACCOUNTS</p>
+          <p
+            className="tab-num text-3xl font-bold mt-1"
+            style={{ color: "var(--spark-lime)" }}
+          >
+            {counts.all || "—"}
+          </p>
+        </div>
+        <div className="spark-card p-4">
+          <p className="label-mini">VISITED</p>
+          <p
+            className="tab-num text-3xl font-bold mt-1"
+            style={{ color: "var(--spark-lime)" }}
+          >
+            {counts.recent || "—"}
+          </p>
+        </div>
+        <div className="spark-card p-4">
+          <p className="label-mini">SCHEDULED</p>
+          <p
+            className="tab-num text-3xl font-bold mt-1"
+            style={{ color: "var(--spark-sky)" }}
+          >
+            {counts.scheduled || "—"}
+          </p>
+        </div>
+        <div className="spark-card p-4">
+          <p className="label-mini">NEEDS VISIT</p>
+          <p
+            className="tab-num text-3xl font-bold mt-1"
+            style={{ color: "var(--spark-orange)" }}
+          >
+            {counts.unvisited || "—"}
+          </p>
+        </div>
+      </div>
+
+      {/* Filter row */}
+      <div className="spark-card p-4 flex flex-wrap items-center gap-2">
+        <span className="label-mini mr-2">STATUS</span>
+        {(
+          [
+            { key: "all" as const, label: "All", chip: "chip chip-muted", n: counts.all },
+            { key: "recent" as const, label: "Visited", chip: "chip chip-lime", n: counts.recent },
+            { key: "scheduled" as const, label: "Scheduled", chip: "chip chip-sky", n: counts.scheduled },
+            { key: "unvisited" as const, label: "Needs visit", chip: "chip chip-orange", n: counts.unvisited },
+          ]
+        ).map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={f.chip}
+            style={
+              filter === f.key
+                ? { outline: "1.5px solid currentColor" }
+                : undefined
+            }
+          >
+            {f.key !== "all" && "● "}
+            {f.label} · {f.n}
+          </button>
+        ))}
+        <span className="flex-1" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search…"
+          className="rounded-xl text-xs"
+          style={{
+            padding: "0.45rem 0.9rem",
+            background: "var(--spark-bg)",
+            border: "1px solid var(--spark-border)",
+            color: "var(--spark-text)",
+            maxWidth: 200,
+            outline: "none",
+          }}
+        />
+      </div>
+
+      {/* Map + rail */}
+      <div
+        className="grid gap-5"
+        style={{ gridTemplateColumns: "1fr 360px" }}
+      >
+        <div
+          className="spark-card overflow-hidden relative"
+          style={{ borderRadius: 20, height: 640 }}
+        >
+          {!apiKey ? (
+            <div
+              className="absolute inset-0 grid place-items-center px-6"
+              style={{
+                background:
+                  "linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2))",
+              }}
+            >
+              <div className="max-w-md text-center">
+                <p
+                  className="mono text-[10px] mb-2"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-orange)",
+                  }}
+                >
+                  GOOGLE MAPS NOT CONFIGURED
+                </p>
+                <h3
+                  className="display text-lg font-bold mb-2"
+                  style={{ letterSpacing: "-0.02em" }}
+                >
+                  Add your API key to enable the map.
+                </h3>
+                <p
+                  className="text-sm mb-4"
+                  style={{ color: "rgba(255,255,255,0.65)" }}
+                >
+                  Set{" "}
+                  <span
+                    className="mono"
+                    style={{ color: "var(--spark-lime)" }}
+                  >
+                    VITE_GOOGLE_MAPS_API_KEY
+                  </span>{" "}
+                  in <span className="mono">.env.local</span> and redeploy.
+                  Pin data + the rail on the right still work without
+                  the map.
+                </p>
+                <a
+                  href="https://console.cloud.google.com/google/maps-apis"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mono"
+                  style={{
+                    fontSize: 10,
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-lime)",
+                  }}
+                >
+                  GET A KEY →
+                </a>
+              </div>
+            </div>
+          ) : (
+            <APIProvider apiKey={apiKey}>
+              <GMap
+                defaultCenter={center}
+                defaultZoom={4}
+                mapId="spark-v2-map"
+                styles={DARK_MAP_STYLE as never}
+                disableDefaultUI={false}
+                gestureHandling="greedy"
+                style={{ width: "100%", height: "100%" }}
+              >
+                {filtered.map((a) => (
+                  <AdvancedMarker
+                    key={a.key}
+                    position={a.coords}
+                    onClick={() => setOpenKey(a.key)}
+                  >
+                    <div
+                      style={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: 7,
+                        background: STATUS_COLOR[a.status],
+                        border: "2px solid #0a0d09",
+                        boxShadow: `0 0 10px ${STATUS_COLOR[a.status]}`,
+                      }}
+                    />
+                  </AdvancedMarker>
+                ))}
+                {openKey &&
+                  (() => {
+                    const a = filtered.find((x) => x.key === openKey);
+                    if (!a) return null;
+                    return (
+                      <InfoWindow
+                        position={a.coords}
+                        onCloseClick={() => setOpenKey(null)}
+                      >
+                        <div
+                          style={{
+                            fontFamily: "Space Grotesk, sans-serif",
+                            color: "#0a0d09",
+                          }}
+                        >
+                          <p style={{ fontWeight: 700 }}>{a.name}</p>
+                          <p style={{ fontSize: 11, marginTop: 2 }}>
+                            {a.market}
+                          </p>
+                          {a.lastDate && (
+                            <p
+                              style={{
+                                fontSize: 10,
+                                fontFamily: "JetBrains Mono, monospace",
+                                letterSpacing: "0.14em",
+                                opacity: 0.7,
+                                marginTop: 4,
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              Last · {a.lastDate}
+                            </p>
+                          )}
+                        </div>
+                      </InfoWindow>
+                    );
+                  })()}
+              </GMap>
+            </APIProvider>
+          )}
+        </div>
+
+        {/* List */}
+        <div
+          className="spark-card overflow-hidden flex flex-col"
+          style={{ maxHeight: 640 }}
+        >
+          <div
+            className="p-4 flex items-center justify-between"
+            style={{ borderBottom: "1px solid var(--spark-border)" }}
+          >
+            <h3 className="font-bold">
+              Accounts{" "}
+              <span
+                className="mono text-xs ml-1"
+                style={{ color: "rgba(255,255,255,0.45)" }}
+              >
+                {filtered.length}
+              </span>
+            </h3>
+          </div>
+          <ul className="overflow-y-auto flex-1">
+            {filtered.length === 0 && (
+              <li
+                className="p-6 text-center text-sm"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
+                No accounts match.
+              </li>
+            )}
+            {filtered.slice(0, 200).map((a) => (
+              <li
+                key={a.key}
+                className="px-4 py-3 transition"
+                style={{
+                  borderBottom: "1px solid var(--spark-border)",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "rgba(255,255,255,0.02)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
+              >
+                <div className="flex items-start gap-2">
+                  <span
+                    className="spark-dot mt-1.5 shrink-0"
+                    style={{
+                      background: STATUS_COLOR[a.status],
+                      boxShadow: `0 0 6px ${STATUS_COLOR[a.status]}`,
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{a.name}</p>
+                    <p
+                      className="mono text-[10px] uppercase truncate"
+                      style={{
+                        letterSpacing: "0.14em",
+                        color: "rgba(255,255,255,0.45)",
+                      }}
+                    >
+                      {a.market}
+                    </p>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Prefill the request form with this account's venue
+                      // + address via query params.
+                      const params = new URLSearchParams({
+                        venue: a.name,
+                        address: a.market,
+                      });
+                      navigate(`/requests/create?${params.toString()}`);
+                    }}
+                    className="mono text-[10px] shrink-0"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "var(--spark-lime)",
+                    }}
+                  >
+                    SCHEDULE →
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function SparkAccountMap() {
+  const apiKey = (import.meta as { env?: Record<string, string> }).env
+    ?.VITE_GOOGLE_MAPS_API_KEY;
+  return (
+    <Layout>
+      <Suspense
+        fallback={
+          <div
+            className="spark-card p-8 text-center text-sm max-w-7xl"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            Loading account map…
+          </div>
+        }
+      >
+        <Inner apiKey={apiKey} />
+      </Suspense>
+    </Layout>
+  );
+}

@@ -3,7 +3,7 @@ import { Chart, registerables } from "chart.js";
 // Ensure all default controllers/elements/plugins are available in production bundles.
 Chart.register(...registerables);
 
-const DARK_THEME = "bijinesu";
+const DARK_THEME = "spark-v2";
 
 const updateChartTheme = () => {
   if (typeof window === "undefined") return;

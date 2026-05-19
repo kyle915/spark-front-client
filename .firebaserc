@@ -1,0 +1,16 @@
+{
+  "projects": {},
+  "targets": {
+    "spark-479222": {
+      "hosting": {
+        "admin": [
+          "spark-new-admin"
+        ],
+        "client": [
+          "spark-new-client"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

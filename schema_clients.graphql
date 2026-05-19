@@ -2268,6 +2268,7 @@ type Event implements Node {
   date: String
   startTime: String
   endTime: String
+  recaps: [Recap!]!
 }
 
 type EventCountableConnection {
@@ -4162,6 +4163,7 @@ type Request implements Node {
   storeManagers: [RequestStoreManager!]!
   products: [Product!]!
   event: Event
+  events: [Event!]!
 }
 
 type RequestBatchImportResponse {

@@ -2,6 +2,7 @@ import FormInputText from "@shared/FormInputText";
 import LoadingButton from "@/shared/LoadingButton";
 import SocialAuthButtons from "@auth/components/SocialAuthButtons";
 import type { Control, UseFormHandleSubmit } from "react-hook-form";
+import { Link } from "react-router";
 
 interface Props {
   control: Control<{ username: string; password: string }>;
@@ -17,59 +18,83 @@ export default function AuthForm({
   loading = false,
 }: Props) {
   return (
-    <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
+    <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
       <SocialAuthButtons />
 
-      <div className="flex items-center gap-3 text-base-content/60 text-sm">
-        <div className="flex-1 h-px bg-base-300"></div>
-        <span> "or Sign in with Email"</span>
-        <div className="flex-1 h-px bg-base-300"></div>
+      <div
+        className="flex items-center gap-3 text-sm"
+        style={{ color: "rgba(245,242,236,0.45)" }}
+      >
+        <div className="flex-1 h-px" style={{ background: "rgba(245,242,236,0.12)" }} />
+        <span
+          style={{
+            fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
+            fontSize: 10,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+          }}
+        >
+          OR SIGN IN WITH EMAIL
+        </span>
+        <div className="flex-1 h-px" style={{ background: "rgba(245,242,236,0.12)" }} />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-base-content">
-          Email
-        </label>
         <FormInputText
           name="username"
           control={control}
           label="Your Email"
-          placeholder="Enter your email"
+          placeholder="you@example.com"
           rules={{ required: "Email is required" }}
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-base-content">
-          Password
-        </label>
         <FormInputText
           name="password"
           type="password"
           control={control}
           label="Your Password"
-          placeholder="Enter your password"
+          placeholder="••••••••"
           rules={{ required: "Password is required" }}
         />
       </div>
-      <div className="flex justify-between text-sm mt-2">
-        <label className="flex items-center space-x-2 cursor-pointer">
-          <input type="checkbox" className="checkbox checkbox-primary" />
+      <div className="flex justify-between items-center text-sm">
+        <label
+          className="flex items-center gap-2 cursor-pointer"
+          style={{ color: "rgba(245,242,236,0.75)" }}
+        >
+          <input
+            type="checkbox"
+            className="checkbox checkbox-sm"
+            style={{
+              accentColor: "#D6F35F",
+              borderColor: "rgba(245,242,236,0.3)",
+            }}
+          />
           <span>Remember me</span>
         </label>
-        <a className="text-primary hover:underline" href="#">
+        <Link
+          to="/forgot-password"
+          className="hover:underline"
+          style={{
+            color: "#D6F35F",
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: 11,
+            letterSpacing: "0.12em",
+          }}
+        >
           Forgot password?
-        </a>
+        </Link>
       </div>
 
       <LoadingButton
         type="submit"
-        text="Login"
+        text="Sign in →"
         loading={loading}
         fullWidth={true}
         onClick={handleSubmit(onSubmit)}
       />
-
     </form>
   );
 }

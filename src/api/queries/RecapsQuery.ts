@@ -146,6 +146,18 @@ export const RecapsQuery = graphql`
           }
           approved
           createdAt
+          totalEngagements
+          productsSold
+          totalCansSold
+          recapFiles {
+            id
+            file
+            fileType {
+              id
+              name
+              extension
+            }
+          }
         }
       }
     }

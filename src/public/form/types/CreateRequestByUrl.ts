@@ -69,6 +69,11 @@ export interface CreateRequestResponse {
       startTime: string;
       endTime: string;
       address: string;
+      rmmAsigned?: {
+        firstName: string | null;
+        lastName: string | null;
+        email: string | null;
+      } | null;
     } | null;
   };
 }

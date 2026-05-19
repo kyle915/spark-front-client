@@ -27,8 +27,11 @@ import CompanySelector from "@/layout/CompanySelector";
 
 // Requests
 import RequestsList from "@/requests/RequestsList";
+import MasterTracker from "@/requests/MasterTracker";
 import RequestView from "@/requests/RequestView";
+import SparkRequestView from "@/requests/SparkRequestView";
 import EditRequest from "@/requests/EditRequest";
+import SparkRequestEdit from "@/requests/SparkRequestEdit";
 import CreateRequest from "@/requests/CreateRequest";
 
 // Events
@@ -79,6 +82,32 @@ import {
 // Recap
 // import CreateRecap from "@/recap/CreateRecap";
 import RecapList from "@/recap/RecapsList";
+import SparkRecapsList from "@/recap/SparkRecapsList";
+import SparkRecapView from "@/recap/SparkRecapView";
+import SparkRecapCreate from "@/recap/SparkRecapCreate";
+import SparkCalendar from "@/components/pages/calendar/SparkCalendar";
+import SparkApprovals from "@/components/pages/approvals/SparkApprovals";
+import SparkSettings from "@/components/pages/settings/SparkSettings";
+import SparkJobs from "@/components/pages/jobs/SparkJobs";
+import SparkRequestCreate from "@/requests/SparkRequestCreate";
+import SparkBulkUpload from "@/requests/SparkBulkUpload";
+import SparkReports from "@/components/pages/reports/SparkReports";
+import SparkInbox from "@/components/pages/inbox/SparkInbox";
+import SparkAlerts from "@/components/pages/alerts/SparkAlerts";
+import SparkTalent from "@/components/pages/talent/SparkTalent";
+import SparkJobDetail from "@/components/pages/jobs/SparkJobDetail";
+import SparkRecapTemplates from "@/recap/SparkRecapTemplates";
+import SparkAccountMap from "@/components/pages/map/SparkAccountMap";
+import AdminOnly from "@/layout/AdminOnly";
+import SparkToday from "@/components/pages/today/SparkToday";
+import SparkUpcomingEvents from "@/components/pages/upcoming/SparkUpcomingEvents";
+import SparkRecentSubmissions from "@/components/pages/recent/SparkRecentSubmissions";
+import SparkPeople from "@/components/pages/people/SparkPeople";
+import SparkFormBuilder from "@/components/pages/builder/SparkFormBuilder";
+import SparkNewClient from "@/components/pages/clients/SparkNewClient";
+import SparkBaPortal from "@/components/pages/ba/SparkBaPortal";
+import SparkAcademy from "@/components/pages/academy/SparkAcademy";
+import SparkAcademyViewer from "@/components/pages/academy/SparkAcademyViewer";
 import RecapCustomList from "@/recap/RecapCustomList";
 import RecapView from "@/recap/RecapView";
 // import EditRecap from "@/recap/EditRecap";
@@ -89,6 +118,10 @@ import CreateUser from "@/users/CreateUser";
 
 // Public
 import SparkFormPage from "@/public/form/FormPage";
+import SparkPublicExpressForm from "@/public/form/SparkPublicExpressForm";
+import MagicLinkExchange from "@/auth/MagicLinkExchange";
+import ForgotPassword from "@/auth/ForgotPassword";
+import ResetPassword from "@/auth/ResetPassword";
 import PrivacyPolicyView from "@/utils/PrivacyPolicyView";
 import TermsOfServiceView from "@/utils/TermsOfServiceView";
 import IndependentContractorAgreementPage from "@/utils/IndependentContractorAgreement";
@@ -109,6 +142,26 @@ const PublicRoutes = {
   routes: [
     {
       path: "/spark-form/:tenantSlug",
+      component: <SparkPublicExpressForm />,
+      isPublic: true,
+    },
+    {
+      path: "/magic/:token",
+      component: <MagicLinkExchange />,
+      isPublic: true,
+    },
+    {
+      path: "/forgot-password",
+      component: <ForgotPassword />,
+      isPublic: true,
+    },
+    {
+      path: "/reset-password/:token",
+      component: <ResetPassword />,
+      isPublic: true,
+    },
+    {
+      path: "/spark-form-legacy/:tenantSlug",
       component: <SparkFormPage />,
       isPublic: true,
     },
@@ -175,27 +228,168 @@ const RequestsLinks = {
   routes: [
     {
       path: "/requests/list",
+      component: <MasterTracker />,
+      isPublic: false,
+    },
+    {
+      path: "/requests/legacy",
       component: <RequestsList />,
       isPublic: false,
     },
     {
       path: "/requests/create",
+      component: <SparkRequestCreate />,
+      isPublic: false,
+    },
+    {
+      path: "/requests/bulk-upload",
+      component: <SparkBulkUpload />,
+      isPublic: false,
+    },
+    {
+      path: "/requests/create-detailed",
       component: <CreateRequest />,
       isPublic: false,
     },
     {
       path: "/request/view/:uuid",
+      component: <SparkRequestView />,
+      isPublic: false,
+    },
+    {
+      // Legacy old-chrome view, kept around for any deep links that
+      // depend on the older RequestCard layout. Linked nowhere in
+      // the v2 nav.
+      path: "/request/view-legacy/:uuid",
       component: <RequestView />,
       isPublic: false,
     },
     {
       path: "/request/edit/:uuid",
+      component: <SparkRequestEdit />,
+      isPublic: false,
+    },
+    {
+      // Legacy full edit form, reachable from the v2 edit page's
+      // 'Edit in full form' link when products/details need work.
+      path: "/request/edit-legacy/:uuid",
       component: <EditRequest />,
       isPublic: false,
     },
     {
       path: "/requests/edited",
       component: <RequestsList fixedFilters={{ edited: true }} />,
+      isPublic: false,
+    },
+    {
+      path: "/approvals",
+      component: (
+        <AdminOnly>
+          <SparkApprovals />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/jobs",
+      component: (
+        <AdminOnly>
+          <SparkJobs />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/reports",
+      component: <SparkReports />,
+      isPublic: false,
+    },
+    {
+      path: "/inbox",
+      component: <SparkInbox />,
+      isPublic: false,
+    },
+    {
+      path: "/alerts",
+      component: <SparkAlerts />,
+      isPublic: false,
+    },
+    {
+      path: "/talent",
+      component: (
+        <AdminOnly>
+          <SparkTalent />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/job/view/:uuid",
+      component: <SparkJobDetail />,
+      isPublic: false,
+    },
+    {
+      path: "/account-map",
+      component: (
+        <AdminOnly>
+          <SparkAccountMap />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    { path: "/today", component: <SparkToday />, isPublic: false },
+    { path: "/upcoming", component: <SparkUpcomingEvents />, isPublic: false },
+    {
+      path: "/recent",
+      component: (
+        <AdminOnly>
+          <SparkRecentSubmissions />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/people",
+      component: (
+        <AdminOnly>
+          <SparkPeople />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/forms/builder",
+      component: (
+        <AdminOnly>
+          <SparkFormBuilder />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/clients/new",
+      component: (
+        <AdminOnly>
+          <SparkNewClient />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      // BA portal — separate chrome (no admin sidebar, top tabs only).
+      // Anyone signed in can hit this; the route owns its own layout.
+      path: "/ba",
+      component: <SparkBaPortal />,
+      isPublic: false,
+    },
+    {
+      path: "/academy",
+      component: <SparkAcademy />,
+      isPublic: false,
+    },
+    {
+      path: "/academy/:id",
+      component: <SparkAcademyViewer />,
       isPublic: false,
     },
   ],
@@ -310,19 +504,23 @@ const ProductLinks = {
 const RecapLinks = {
   menu: [
     { path: "/recap/list", name: "List", Icon: Bars4Icon },
+    { path: "/recap/create", name: "New Recap", Icon: PlusCircleIcon },
     { path: "/recaps/custom-list", name: "Custom List", Icon: QueueListIcon },
-    // { path: "/recap/create", name: "Create", Icon: PlusCircleIcon },
   ],
 
   routes: [
-    // { path: "/recap/create", component: <CreateRecap />, isPublic: false },
-    { path: "/recap/list", component: <RecapList />, isPublic: false },
+    { path: "/recap/create", component: <SparkRecapCreate />, isPublic: false },
+    { path: "/recap/list", component: <SparkRecapsList />, isPublic: false },
+    { path: "/recaps/list", component: <SparkRecapsList />, isPublic: false },
+    { path: "/recaps/templates", component: <AdminOnly><SparkRecapTemplates /></AdminOnly>, isPublic: false },
+    { path: "/recap/legacy", component: <RecapList />, isPublic: false },
     {
       path: "/recaps/custom-list",
       component: <RecapCustomList />,
       isPublic: false,
     },
-    { path: "/recap/view/:uuid", component: <RecapView />, isPublic: false },
+    { path: "/recap/view/:uuid", component: <SparkRecapView />, isPublic: false },
+    { path: "/recap/view-legacy/:uuid", component: <RecapView />, isPublic: false },
     {
       path: "/recap/view-custom/:uuid",
       component: <RecapCustomView />,
@@ -596,14 +794,22 @@ const CalendarLinks = {
   menu: [
     {
       path: "/connect-calendar",
-      name: "Connect with Calendar",
-      component: <CalendarConnection />,
+      name: "Calendar",
+      component: <SparkCalendar />,
       Icon: CalendarIcon,
     },
   ],
   routes: [
+    // Spark v2: /connect-calendar shows the wireframe Shifts Board.
+    // The Google Calendar integration UI moves to /settings/calendar
+    // (sidebar Settings group).
     {
       path: "/connect-calendar",
+      component: <SparkCalendar />,
+      isPublic: false,
+    },
+    {
+      path: "/settings/calendar",
       component: <CalendarConnection />,
       isPublic: false,
     },
@@ -616,6 +822,12 @@ const CalendarLinks = {
 const SettingsLinks = {
   menu: [
     {
+      path: "/settings",
+      name: "Workspace",
+      component: <SparkSettings />,
+      Icon: Palette,
+    },
+    {
       path: "/customize-theme",
       name: "Customize Theme",
       component: <ThemePage />,
@@ -623,6 +835,15 @@ const SettingsLinks = {
     },
   ],
   routes: [
+    {
+      path: "/settings",
+      component: (
+        <AdminOnly>
+          <SparkSettings />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
     {
       path: "/customize-theme",
       component: <ThemePage />,
