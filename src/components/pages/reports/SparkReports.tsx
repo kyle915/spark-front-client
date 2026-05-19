@@ -6,6 +6,8 @@ import { Suspense, useMemo } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { RecapsQuery } from "@/api/queries/RecapsQuery";
+import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/RecapsQuery.graphql";
 import { Bar, Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -202,13 +204,201 @@ const ActivationMixChart: React.FC = () => {
   );
 };
 
+// ---------------------------------------------------------------------------
+// Recap-driven charts (wire real `totalEngagements` from RecapsQuery).
+// ---------------------------------------------------------------------------
+
+const ConsumersSampledChart: React.FC = () => {
+  const { tenantId } = useAuthStore();
+  const data = useLazyLoadQuery<RecapsQueryType>(
+    RecapsQuery,
+    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+  const { labels, values } = useMemo(() => {
+    const rows =
+      data?.recaps?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const cutoff = new Date(today);
+    cutoff.setDate(today.getDate() - 7 * 12);
+
+    const buckets: { key: string; count: number }[] = [];
+    const start = new Date(cutoff);
+    const dow = (start.getDay() + 6) % 7;
+    start.setDate(start.getDate() - dow);
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i * 7);
+      buckets.push({ key: isoWeekKey(d), count: 0 });
+    }
+    const idxByKey = new Map(buckets.map((b, i) => [b.key, i]));
+
+    for (const r of rows) {
+      const raw = r.event?.date ?? r.createdAt;
+      if (!raw) continue;
+      const d = new Date(raw);
+      if (d < cutoff || d > today) continue;
+      const idx = idxByKey.get(isoWeekKey(d));
+      if (idx === undefined) continue;
+      const eng =
+        typeof r.totalEngagements === "number" ? r.totalEngagements : 0;
+      buckets[idx].count += eng;
+    }
+    return {
+      labels: buckets.map((b) => b.key),
+      values: buckets.map((b) => b.count),
+    };
+  }, [data]);
+
+  const total = values.reduce((s, v) => s + v, 0);
+  if (total === 0) {
+    return (
+      <div
+        className="grid place-items-center h-full text-xs"
+        style={{ color: "rgba(255,255,255,0.45)" }}
+      >
+        No consumer engagements recorded yet.
+      </div>
+    );
+  }
+
+  const chartData: ChartData<"bar"> = {
+    labels,
+    datasets: [
+      {
+        label: "Consumers sampled",
+        data: values,
+        backgroundColor: "rgba(95,184,239,0.55)",
+        borderColor: "rgba(95,184,239,1)",
+        borderWidth: 1,
+        borderRadius: 6,
+      },
+    ],
+  };
+  const options: ChartOptions<"bar"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => `${(ctx.parsed.y ?? 0).toLocaleString()} consumers`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        ticks: { color: "rgba(255,255,255,0.55)", maxRotation: 0 },
+        grid: { display: false },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { color: "rgba(255,255,255,0.55)", precision: 0 },
+        grid: { color: "rgba(255,255,255,0.06)" },
+      },
+    },
+  };
+  return <Bar data={chartData} options={options} />;
+};
+
+const TopRetailersChart: React.FC = () => {
+  const { tenantId } = useAuthStore();
+  const data = useLazyLoadQuery<RecapsQueryType>(
+    RecapsQuery,
+    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+  const { labels, values } = useMemo(() => {
+    const rows =
+      data?.recaps?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+    const cutoff = Date.now() - 90 * 86_400_000;
+    const totals = new Map<string, number>();
+    for (const r of rows) {
+      const raw = r.event?.date ?? r.createdAt;
+      const t = raw ? new Date(raw).getTime() : NaN;
+      if (!Number.isFinite(t) || t < cutoff) continue;
+      const name =
+        r.event?.retailer?.name ??
+        r.event?.request?.retailer?.name ??
+        r.location?.name ??
+        "Unknown";
+      const eng =
+        typeof r.totalEngagements === "number" ? r.totalEngagements : 0;
+      totals.set(name, (totals.get(name) ?? 0) + eng);
+    }
+    const sorted = [...totals.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+    return {
+      labels: sorted.map(([k]) => k),
+      values: sorted.map(([, v]) => v),
+    };
+  }, [data]);
+
+  if (values.length === 0 || values.every((v) => v === 0)) {
+    return (
+      <div
+        className="grid place-items-center h-full text-xs"
+        style={{ color: "rgba(255,255,255,0.45)" }}
+      >
+        No retailer activity in the last 90 days.
+      </div>
+    );
+  }
+
+  const chartData: ChartData<"bar"> = {
+    labels,
+    datasets: [
+      {
+        label: "Consumers sampled",
+        data: values,
+        backgroundColor: "rgba(197,245,70,0.55)",
+        borderColor: "rgba(197,245,70,1)",
+        borderWidth: 1,
+        borderRadius: 6,
+      },
+    ],
+  };
+  const options: ChartOptions<"bar"> = {
+    indexAxis: "y",
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => `${(ctx.parsed.x ?? 0).toLocaleString()} consumers`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        ticks: { color: "rgba(255,255,255,0.55)", precision: 0 },
+        grid: { color: "rgba(255,255,255,0.06)" },
+      },
+      y: {
+        ticks: { color: "rgba(255,255,255,0.75)" },
+        grid: { display: false },
+      },
+    },
+  };
+  return <Bar data={chartData} options={options} />;
+};
+
 /**
  * Spark v2 — Reports.
  * Wireframe: spark-demo/index.html lines 2418-2484.
  *
- * KPI strip wired to dashboard metrics; chart placeholders + scheduled
- * report tiles are visual-only until we wire chart.js + a scheduled-exports
- * backend (tracked in REBUILD-PLAN.md).
+ * KPI strip wired to dashboard metrics. Four charts wired to live data
+ * (RequestsQuery + RecapsQuery). Scheduled-exports tiles remain visual-only
+ * until the exports backend ships (tracked in REBUILD-PLAN.md).
  */
 
 const fmtNum = (v: number | null | undefined) =>
@@ -255,57 +445,6 @@ const ChartCard: React.FC<{
       >
         {children}
       </Suspense>
-    </div>
-  </div>
-);
-
-const ChartPlaceholder: React.FC<{ title: string; subtitle: string; tall?: boolean }> = ({
-  title,
-  subtitle,
-  tall,
-}) => (
-  <div className="spark-card p-5">
-    <h3
-      className="display font-bold mb-2"
-      style={{ letterSpacing: "-0.02em" }}
-    >
-      {title}
-    </h3>
-    <p
-      className="text-xs mb-3"
-      style={{ color: "rgba(255,255,255,0.55)" }}
-    >
-      {subtitle}
-    </p>
-    <div
-      style={{
-        position: "relative",
-        height: tall ? 280 : 260,
-        background:
-          "linear-gradient(180deg, rgba(197,245,70,0.04), transparent), radial-gradient(circle at 50% 100%, rgba(197,245,70,0.06), transparent 60%)",
-        border: "1px dashed var(--spark-border)",
-        borderRadius: 16,
-        display: "grid",
-        placeItems: "center",
-      }}
-    >
-      <div className="text-center">
-        <p
-          className="mono text-[10px]"
-          style={{
-            letterSpacing: "0.18em",
-            color: "var(--spark-lime)",
-          }}
-        >
-          CHART
-        </p>
-        <p
-          className="mt-1 text-xs"
-          style={{ color: "rgba(255,255,255,0.45)" }}
-        >
-          chart.js wiring lands next
-        </p>
-      </div>
     </div>
   </div>
 );
@@ -434,16 +573,20 @@ export default function SparkReports() {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-5">
-          <ChartPlaceholder
-            title="Revenue per brand"
-            subtitle="Last 90 days."
+          <ChartCard
+            title="Consumers sampled · last 12 weeks"
+            subtitle="Sum of recap engagements per week."
             tall
-          />
-          <ChartPlaceholder
-            title="$ / sample by market"
-            subtitle="Higher is better — top 8 markets."
+          >
+            <ConsumersSampledChart />
+          </ChartCard>
+          <ChartCard
+            title="Top retailers · last 90 days"
+            subtitle="Consumers sampled — top 8 retailers."
             tall
-          />
+          >
+            <TopRetailersChart />
+          </ChartCard>
         </div>
 
         {/* Scheduled exports */}
