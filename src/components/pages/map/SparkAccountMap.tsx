@@ -37,9 +37,11 @@ type Account = {
   key: string;
   name: string;
   market: string;
+  state: string; // 2-letter code, "" if unknown
   status: Status;
   coords: { lat: number; lng: number };
   lastDate: string | null;
+  address: string;
 };
 
 // Google Maps "Aubergine" / dark-friendly style trimmed for Spark.
@@ -106,6 +108,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const { tenantId } = useAuthStore();
   const [filter, setFilter] = useState<"all" | Status>("all");
   const [search, setSearch] = useState("");
+  const [stateFilter, setStateFilter] = useState<string>("all");
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [uploaded, setUploaded] = useState<UploadedAccount[]>([]);
 
@@ -149,9 +152,11 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           key,
           name: retailerName,
           market: market || "—",
+          state: stateCode || "",
           status: inferred,
           coords: { lat, lng },
           lastDate: r.date ?? null,
+          address: r.address ?? "",
         });
       } else {
         if (inferred === "recent") existing.status = "recent";
@@ -179,9 +184,11 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             key,
             name: u.name,
             market: market || "—",
+            state: (u.state || "").toString().toUpperCase().slice(0, 2),
             status: u.status,
             coords: { lat, lng },
             lastDate: null,
+            address: u.address ?? "",
           });
         }
       }
@@ -190,15 +197,30 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     return Array.from(map.values());
   }, [data, uploaded]);
 
+  // Distinct list of states present in the dataset for the dropdown.
+  const states = useMemo(
+    () =>
+      Array.from(
+        new Set(accounts.map((a) => a.state).filter(Boolean)),
+      ).sort(),
+    [accounts],
+  );
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return accounts.filter((a) => {
       if (filter !== "all" && a.status !== filter) return false;
-      if (q && !a.name.toLowerCase().includes(q) && !a.market.toLowerCase().includes(q))
+      if (stateFilter !== "all" && a.state !== stateFilter) return false;
+      if (
+        q &&
+        !a.name.toLowerCase().includes(q) &&
+        !a.market.toLowerCase().includes(q) &&
+        !a.address.toLowerCase().includes(q)
+      )
         return false;
       return true;
     });
-  }, [accounts, filter, search]);
+  }, [accounts, filter, stateFilter, search]);
 
   const counts = useMemo(
     () => ({
@@ -317,17 +339,38 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           </button>
         ))}
         <span className="flex-1" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search…"
+        <select
+          value={stateFilter}
+          onChange={(e) => setStateFilter(e.target.value)}
           className="rounded-xl text-xs"
           style={{
             padding: "0.45rem 0.9rem",
             background: "var(--spark-bg)",
             border: "1px solid var(--spark-border)",
             color: "var(--spark-text)",
-            maxWidth: 200,
+            maxWidth: 140,
+            outline: "none",
+          }}
+          title="Filter by state"
+        >
+          <option value="all">All states</option>
+          {states.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search account or address…"
+          className="rounded-xl text-xs"
+          style={{
+            padding: "0.45rem 0.9rem",
+            background: "var(--spark-bg)",
+            border: "1px solid var(--spark-border)",
+            color: "var(--spark-text)",
+            maxWidth: 260,
             outline: "none",
           }}
         />
@@ -429,6 +472,27 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                   (() => {
                     const a = filtered.find((x) => x.key === openKey);
                     if (!a) return null;
+                    const statusLabel =
+                      a.status === "recent"
+                        ? "Recently visited"
+                        : a.status === "scheduled"
+                          ? "Scheduled"
+                          : "Needs visit";
+                    const fmtLast = (() => {
+                      if (!a.lastDate) return null;
+                      try {
+                        return new Date(a.lastDate).toLocaleDateString(
+                          "en-US",
+                          {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          },
+                        );
+                      } catch {
+                        return a.lastDate.slice(0, 10);
+                      }
+                    })();
                     return (
                       <InfoWindow
                         position={a.coords}
@@ -438,26 +502,137 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                           style={{
                             fontFamily: "Space Grotesk, sans-serif",
                             color: "#0a0d09",
+                            minWidth: 240,
+                            maxWidth: 280,
                           }}
                         >
-                          <p style={{ fontWeight: 700 }}>{a.name}</p>
-                          <p style={{ fontSize: 11, marginTop: 2 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              marginBottom: 4,
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: "inline-block",
+                                width: 8,
+                                height: 8,
+                                borderRadius: 4,
+                                background: STATUS_COLOR[a.status],
+                                boxShadow: `0 0 4px ${STATUS_COLOR[a.status]}`,
+                              }}
+                            />
+                            <span
+                              style={{
+                                fontFamily: "JetBrains Mono, monospace",
+                                fontSize: 9,
+                                letterSpacing: "0.18em",
+                                textTransform: "uppercase",
+                                color: "#3b4034",
+                              }}
+                            >
+                              {statusLabel}
+                              {a.state ? ` · ${a.state}` : ""}
+                            </span>
+                          </div>
+                          <p style={{ fontWeight: 700, fontSize: 15 }}>
+                            {a.name}
+                          </p>
+                          <p
+                            style={{
+                              fontSize: 12,
+                              marginTop: 2,
+                              color: "#3b4034",
+                            }}
+                          >
                             {a.market}
                           </p>
-                          {a.lastDate && (
+                          {a.address && (
+                            <p
+                              style={{
+                                fontSize: 11,
+                                marginTop: 2,
+                                color: "#5a6354",
+                                fontStyle: "italic",
+                              }}
+                            >
+                              {a.address}
+                            </p>
+                          )}
+                          {fmtLast && (
                             <p
                               style={{
                                 fontSize: 10,
-                                fontFamily: "JetBrains Mono, monospace",
+                                fontFamily:
+                                  "JetBrains Mono, monospace",
                                 letterSpacing: "0.14em",
                                 opacity: 0.7,
-                                marginTop: 4,
+                                marginTop: 6,
                                 textTransform: "uppercase",
                               }}
                             >
-                              Last · {a.lastDate}
+                              Last visit · {fmtLast}
                             </p>
                           )}
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: 6,
+                              marginTop: 10,
+                            }}
+                          >
+                            <button
+                              onClick={() => {
+                                const params = new URLSearchParams({
+                                  venue: a.name,
+                                  address: a.address || a.market,
+                                });
+                                navigate(
+                                  `/requests/create?${params.toString()}`,
+                                );
+                              }}
+                              style={{
+                                flex: 1,
+                                background: "#c5f546",
+                                color: "#0a0d09",
+                                border: "none",
+                                padding: "8px 12px",
+                                borderRadius: 8,
+                                fontFamily:
+                                  "Space Grotesk, sans-serif",
+                                fontWeight: 700,
+                                fontSize: 13,
+                                cursor: "pointer",
+                                boxShadow:
+                                  "0 0 12px rgba(197,245,70,0.45)",
+                              }}
+                            >
+                              Schedule →
+                            </button>
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${a.coords.lat},${a.coords.lng}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{
+                                background: "transparent",
+                                color: "#0a0d09",
+                                border: "1px solid rgba(10,13,9,0.2)",
+                                padding: "8px 10px",
+                                borderRadius: 8,
+                                fontFamily:
+                                  "JetBrains Mono, monospace",
+                                fontSize: 10,
+                                letterSpacing: "0.14em",
+                                textDecoration: "none",
+                                textTransform: "uppercase",
+                                lineHeight: "20px",
+                              }}
+                            >
+                              Open ↗
+                            </a>
+                          </div>
                         </div>
                       </InfoWindow>
                     );

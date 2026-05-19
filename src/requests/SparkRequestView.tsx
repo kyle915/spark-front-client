@@ -11,6 +11,7 @@ import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__ge
 import { UsersQuery } from "@api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
 import InternalNotesPanel from "./InternalNotesPanel";
+import ShiftReplayPanel from "./ShiftReplayPanel";
 import { pickHeroImage } from "@/utils/recapFileUrl";
 
 type Mentionable = { id: string; name: string; email: string };
@@ -725,6 +726,15 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           on this request. Surfaces the photos + headline metrics so
           you don't have to bounce to /recaps to see what happened. */}
       <FieldReportsPanel request={request} />
+
+      {/* Shift Replay — one panel per event with a GPS trail. Renders
+          nothing for events without any pings, so unmonitored shifts
+          don't pollute the page. */}
+      {(request.events ?? [])
+        .filter((e): e is NonNullable<typeof e> => Boolean(e))
+        .map((ev) => (
+          <ShiftReplayPanel key={String(ev.uuid)} eventUuid={String(ev.uuid)} />
+        ))}
 
       {/* Audit footer */}
       <div className="spark-card p-5">

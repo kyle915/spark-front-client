@@ -11,6 +11,7 @@ import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/Us
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 
 /**
@@ -705,32 +706,22 @@ export default function MasterTracker() {
   // tracker to a living breathing google sheet file. Per-client."
   // Stored in localStorage keyed by tenantId so each brand can point
   // at its own sheet (e.g. the Liquid Death sheet kyle shared). Real
-  // bi-directional sync (sheets API + cron) lands when the backend
-  // catches up; this is the link + CSV-handoff flow until then.
-  const sheetKey = tenantId
-    ? `@spark.linkedSheet.url/${tenantId}`
-    : null;
-  const [linkedSheetUrl, setLinkedSheetUrl] = useState<string>(() => {
-    if (!sheetKey) return "";
-    try {
-      return localStorage.getItem(sheetKey) ?? "";
-    } catch {
-      return "";
-    }
-  });
+  // Backend-backed via useLinkedSheetUrl — tenant.linkedSheetUrl
+  // replaces the per-device localStorage that lived here. The hook
+  // handles the one-time migration when a tenant has a localStorage
+  // value but no backend value yet.
+  const { url: linkedSheetUrl, setUrl: persistLinkedSheet } =
+    useLinkedSheetUrl();
   const [editingSheet, setEditingSheet] = useState(false);
   const [sheetDraft, setSheetDraft] = useState(linkedSheetUrl);
+  useEffect(() => {
+    setSheetDraft(linkedSheetUrl);
+  }, [linkedSheetUrl]);
 
-  const saveLinkedSheet = (raw: string) => {
-    const trimmed = raw.trim();
-    setLinkedSheetUrl(trimmed);
-    if (sheetKey) {
-      try {
-        if (trimmed) localStorage.setItem(sheetKey, trimmed);
-        else localStorage.removeItem(sheetKey);
-      } catch {
-        /* ignore quota */
-      }
+  const saveLinkedSheet = async (raw: string) => {
+    const res = await persistLinkedSheet(raw);
+    if (!res.ok && res.message) {
+      window.alert(res.message);
     }
   };
 
