@@ -2694,6 +2694,19 @@ scalar JSON @specifiedBy(url: "https://ecma-international.org/wp-content/uploads
 """
 Job(id, uuid, name, description, code, address, start_date, end_date, public, closed, national, ongoing, coordinates, job_title, other_title, event, tenant, rate, created_by, updated_by, created_at, updated_at)
 """
+type LocationPingType {
+  uuid: ID!
+  lat: Float!
+  lng: Float!
+  accuracyMeters: Float
+  recordedAt: String!
+  source: String!
+  ambassadorUuid: ID!
+  ambassadorName: String!
+  eventUuid: ID!
+  eventName: String!
+}
+
 type Job implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
@@ -3499,6 +3512,7 @@ type Query {
   event(id: ID = null, uuid: ID = null): Event
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   todayEventsCoordinates(coordinates: [Float!]!, range: Float!, unit: DistanceUnit! = KILOMETERS, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
+  recentLocationPings(withinMinutes: Int! = 30, tenantId: ID = null): [LocationPingType!]!
   eventTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventTypeFiltersInput = null): EventTypeCountableConnection!
   eventType(id: ID = null, uuid: ID = null): EventType
   eventStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: EventStatusFiltersInput = null): EventStatusCountableConnection!
