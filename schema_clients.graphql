@@ -3118,6 +3118,9 @@ type MonthlyPerformanceTrend {
 }
 
 type Mutation {
+  createAcademyModule(input: CreateAcademyModuleInput!): AcademyModuleResponse!
+  updateAcademyModule(input: UpdateAcademyModuleInput!): AcademyModuleResponse!
+  deleteAcademyModule(input: DeleteAcademyModuleInput!): AcademyModuleResponse!
   createEvent(input: CreateEventInput!): EventDetailResponse!
   createEventWithRequest(input: CreateEventWithRequestInput!): EventWithRequestDetailResponse!
   updateEventWithRequest(input: UpdateEventWithRequestInput!): EventWithRequestDetailResponse!
@@ -3508,7 +3511,57 @@ type QuarterOption {
   label: String!
 }
 
+type AcademyModule implements Node {
+  id: ID!
+  uuid: String!
+  title: String!
+  kind: String!
+  body: String!
+  order: Int!
+  published: Boolean!
+  createdAt: String!
+  updatedAt: String!
+  tenantId: ID!
+}
+
+type AcademyModuleResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  academyModule: AcademyModule
+}
+
+input AcademyModuleFiltersInput {
+  tenantId: ID = null
+  kind: String = null
+  published: Boolean = null
+}
+
+input CreateAcademyModuleInput {
+  title: String!
+  kind: String! = "training"
+  body: String! = ""
+  order: Int! = 0
+  published: Boolean! = false
+  tenantId: ID = null
+}
+
+input UpdateAcademyModuleInput {
+  uuid: ID!
+  title: String = null
+  kind: String = null
+  body: String = null
+  order: Int = null
+  published: Boolean = null
+}
+
+input DeleteAcademyModuleInput {
+  uuid: ID!
+}
+
 type Query {
+  academyModulesAdmin(filters: AcademyModuleFiltersInput = null): [AcademyModule!]!
+  academyModule(uuid: ID!): AcademyModule
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   event(id: ID = null, uuid: ID = null): Event
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
