@@ -27,6 +27,11 @@ type Recap = {
   fileCount: number;
   engagements: number | null;
   productsSold: number | null;
+  // Deep-link back to the parent request on the Master Tracker so
+  // ops can pivot from "what happened in the field" to "who asked
+  // for this activation" in one click.
+  requestUuid: string | null;
+  requestShortId: string | null;
 };
 
 const formatDate = (raw: string | null | undefined) => {
@@ -42,10 +47,11 @@ const formatDate = (raw: string | null | undefined) => {
   }
 };
 
-const RecapCard: React.FC<{ recap: Recap; onOpen: () => void }> = ({
-  recap,
-  onOpen,
-}) => (
+const RecapCard: React.FC<{
+  recap: Recap;
+  onOpen: () => void;
+  onOpenRequest: ((uuid: string) => void) | null;
+}> = ({ recap, onOpen, onOpenRequest }) => (
   <div
     onClick={onOpen}
     className="spark-card hov overflow-hidden cursor-pointer"
@@ -130,6 +136,25 @@ const RecapCard: React.FC<{ recap: Recap; onOpen: () => void }> = ({
         {recap.date ? ` · ${formatDate(recap.date)}` : ""}
       </p>
 
+      {recap.requestUuid && onOpenRequest && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenRequest(recap.requestUuid!);
+          }}
+          className="mono inline-flex items-center gap-1 mt-2 px-2 py-1 rounded-full text-[10px]"
+          style={{
+            letterSpacing: "0.14em",
+            background: "rgba(197,245,70,0.10)",
+            border: "1px solid rgba(197,245,70,0.30)",
+            color: "var(--spark-lime)",
+          }}
+          title="View the parent request on the Master Tracker"
+        >
+          ← {recap.requestShortId} REQUEST
+        </button>
+      )}
+
       <div
         className="mt-3 pt-3 grid grid-cols-3 gap-2 text-center"
         style={{ borderTop: "1px solid var(--spark-border)" }}
@@ -177,14 +202,19 @@ type Meta = {
   totalProducts: number;
 };
 
+type SortKey = "date-desc" | "date-asc" | "eng-desc" | "sold-desc";
+type StatusKey = "all" | "approved" | "draft";
+
 const RecapsListInner: React.FC<{
   search: string;
   retailerFilter: string;
   stateFilter: string;
   rmmFilter: string;
+  statusFilter: StatusKey;
+  sortKey: SortKey;
   onMeta: (m: Meta) => void;
   onVisibleRecapsChange?: (recaps: Recap[]) => void;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, onMeta, onVisibleRecapsChange }) => {
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, statusFilter, sortKey, onMeta, onVisibleRecapsChange }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Page in chunks of 60 instead of 1,000 — fetches ~6× less data per
@@ -225,6 +255,7 @@ const RecapsListInner: React.FC<{
           const fileCount = (n.recapFiles ?? []).filter(
             (f) => f && (f.file?.toString() || "").length > 0,
           ).length;
+          const requestUuid = n.event?.request?.uuid ?? null;
           return {
             uuid: String(n.uuid),
             name: n.name ?? n.event?.name ?? "Untitled recap",
@@ -236,6 +267,10 @@ const RecapsListInner: React.FC<{
             fileCount,
             engagements: n.totalEngagements ?? null,
             productsSold: n.productsSold ?? null,
+            requestUuid: requestUuid ? String(requestUuid) : null,
+            requestShortId: requestUuid
+              ? `R-${String(requestUuid).slice(-4).toUpperCase()}`
+              : null,
           };
         }) ?? []
     );
@@ -276,17 +311,36 @@ const RecapsListInner: React.FC<{
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return recaps.filter((r) => {
+    const matched = recaps.filter((r) => {
       const matchQ =
         !q ||
         r.name.toLowerCase().includes(q) ||
-        r.retailerName.toLowerCase().includes(q);
+        r.retailerName.toLowerCase().includes(q) ||
+        (r.requestShortId?.toLowerCase().includes(q) ?? false);
       const matchR =
         retailerFilter === "all" || r.retailerName === retailerFilter;
       const matchS = stateFilter === "all" || r.stateCode === stateFilter;
-      return matchQ && matchR && matchS;
+      const matchStatus =
+        statusFilter === "all" ||
+        (statusFilter === "approved" ? r.approved : !r.approved);
+      return matchQ && matchR && matchS && matchStatus;
     });
-  }, [recaps, search, retailerFilter, stateFilter]);
+
+    // Sort in-place on the copy.
+    return [...matched].sort((a, b) => {
+      switch (sortKey) {
+        case "date-asc":
+          return (a.date || "").localeCompare(b.date || "");
+        case "eng-desc":
+          return (b.engagements ?? 0) - (a.engagements ?? 0);
+        case "sold-desc":
+          return (b.productsSold ?? 0) - (a.productsSold ?? 0);
+        case "date-desc":
+        default:
+          return (b.date || "").localeCompare(a.date || "");
+      }
+    });
+  }, [recaps, search, retailerFilter, stateFilter, statusFilter, sortKey]);
 
   // Bubble the currently-visible recaps up so the outer page can
   // wire them to the CSV export button.
@@ -312,6 +366,11 @@ const RecapsListInner: React.FC<{
           key={r.uuid}
           recap={r}
           onOpen={() => navigate(`/recap/view/${r.uuid}`)}
+          onOpenRequest={(reqUuid) =>
+            navigate(`/request/view/${reqUuid}`, {
+              state: { from: "/recaps/list" },
+            })
+          }
         />
       ))}
     </div>
@@ -363,6 +422,8 @@ export default function SparkRecapsList() {
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
   const [rmmFilter, setRmmFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<StatusKey>("all");
+  const [sortKey, setSortKey] = useState<SortKey>("date-desc");
   const [meta, setMeta] = useState<Meta>({
     retailers: [],
     states: [],
@@ -637,7 +698,7 @@ export default function SparkRecapsList() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search venue, retailer…"
+            placeholder="Search venue, retailer, R-ID…"
             className="rounded-xl text-sm"
             style={{
               padding: "0.75rem 0.95rem",
@@ -699,6 +760,43 @@ export default function SparkRecapsList() {
               />
             </Suspense>
           )}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as StatusKey)}
+            className="rounded-xl text-sm"
+            style={{
+              padding: "0.75rem 0.95rem",
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+              maxWidth: 160,
+              outline: "none",
+            }}
+            title="Filter by approval status"
+          >
+            <option value="all">All status</option>
+            <option value="approved">Approved only</option>
+            <option value="draft">Draft only</option>
+          </select>
+          <select
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            className="rounded-xl text-sm"
+            style={{
+              padding: "0.75rem 0.95rem",
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+              maxWidth: 200,
+              outline: "none",
+            }}
+            title="Sort order"
+          >
+            <option value="date-desc">Newest first</option>
+            <option value="date-asc">Oldest first</option>
+            <option value="eng-desc">Most consumers</option>
+            <option value="sold-desc">Most products sold</option>
+          </select>
         </div>
 
         <Suspense
@@ -716,6 +814,8 @@ export default function SparkRecapsList() {
             retailerFilter={retailerFilter}
             stateFilter={stateFilter}
             rmmFilter={rmmFilter}
+            statusFilter={statusFilter}
+            sortKey={sortKey}
             onMeta={onMeta}
             onVisibleRecapsChange={setVisibleRecaps}
           />

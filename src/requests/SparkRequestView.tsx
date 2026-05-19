@@ -11,6 +11,7 @@ import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__ge
 import { UsersQuery } from "@api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
 import InternalNotesPanel from "./InternalNotesPanel";
+import { pickHeroImage, recapFileUrl } from "@/utils/recapFileUrl";
 
 type Mentionable = { id: string; name: string; email: string };
 
@@ -720,6 +721,11 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         />
       </Suspense>
 
+      {/* Field reports — every recap submitted against the events
+          on this request. Surfaces the photos + headline metrics so
+          you don't have to bounce to /recaps to see what happened. */}
+      <FieldReportsPanel request={request} />
+
       {/* Audit footer */}
       <div className="spark-card p-5">
         <div className="grid sm:grid-cols-3 gap-4 text-xs">
@@ -942,6 +948,292 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// Field Reports — every recap submitted against the events on this
+// request. We render one row per recap with a hero image, BA name,
+// engagement + sold counts, and a click-through to the recap detail.
+// Empty events get a soft "awaiting recap" placeholder so dispatchers
+// can see at a glance which shifts haven't reported in yet.
+type FieldReportsRequest = NonNullable<
+  RequestUuidQueryType["response"]["request"]
+>;
+
+const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
+  request,
+}) => {
+  const navigate = useNavigate();
+  const events = (request.events ?? []).filter(
+    (e): e is NonNullable<typeof e> => Boolean(e),
+  );
+  if (events.length === 0) return null;
+
+  // Flatten to a flat list of recap rows so the panel reads like a
+  // timeline. Each recap remembers its event so we can show which
+  // shift it came from when a request has multiple events.
+  type Row = {
+    eventName: string | null;
+    eventDate: string | null;
+    recap: NonNullable<NonNullable<typeof events>[number]["recaps"]>[number];
+  };
+  const rows: Row[] = [];
+  const awaiting: { uuid: string; name: string; date: string | null }[] = [];
+  for (const ev of events) {
+    const recaps = (ev.recaps ?? []).filter(
+      (r): r is NonNullable<typeof r> => Boolean(r),
+    );
+    if (recaps.length === 0) {
+      awaiting.push({
+        uuid: String(ev.uuid),
+        name: ev.name || "Untitled event",
+        date: ev.date ?? null,
+      });
+      continue;
+    }
+    for (const r of recaps) {
+      rows.push({
+        eventName: ev.name ?? null,
+        eventDate: ev.date ?? null,
+        recap: r,
+      });
+    }
+  }
+
+  // Headline: total recaps + total engagements aggregated across
+  // every event on this request.
+  const totalEngagements = rows.reduce(
+    (s, r) => s + (r.recap.totalEngagements ?? 0),
+    0,
+  );
+  const totalSold = rows.reduce(
+    (s, r) => s + (r.recap.productsSold ?? 0),
+    0,
+  );
+  const fmt = (d: string | null) => {
+    if (!d) return "";
+    try {
+      return new Date(d).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      return d;
+    }
+  };
+
+  return (
+    <div className="spark-card p-6">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            FIELD REPORTS
+          </p>
+          <h2
+            className="text-lg font-semibold mt-1"
+            style={{ color: "rgba(255,255,255,0.92)" }}
+          >
+            {rows.length === 0
+              ? "No recaps submitted yet"
+              : `${rows.length} recap${rows.length === 1 ? "" : "s"} submitted`}
+          </h2>
+        </div>
+        {rows.length > 0 && (
+          <div className="flex items-center gap-4 text-xs">
+            <div>
+              <p
+                className="tab-num font-bold text-base"
+                style={{ color: "var(--spark-lime)" }}
+              >
+                {totalEngagements.toLocaleString()}
+              </p>
+              <p className="label-mini">CONSUMERS</p>
+            </div>
+            <div>
+              <p className="tab-num font-bold text-base">
+                {totalSold.toLocaleString()}
+              </p>
+              <p className="label-mini">SOLD</p>
+            </div>
+            <div>
+              <p
+                className="tab-num font-bold text-base"
+                style={{ color: "var(--spark-lime)" }}
+              >
+                {totalEngagements > 0
+                  ? `${Math.round((totalSold / totalEngagements) * 100)}%`
+                  : "—"}
+              </p>
+              <p className="label-mini">CONV</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {rows.map(({ recap, eventName, eventDate }) => {
+          const hero = pickHeroImage(recap.recapFiles ?? []);
+          const baName =
+            [recap.ambassador?.user?.firstName, recap.ambassador?.user?.lastName]
+              .filter(Boolean)
+              .join(" ") || null;
+          const fileCount = (recap.recapFiles ?? []).filter(
+            (f) => f && (f.file?.toString() || "").length > 0,
+          ).length;
+          return (
+            <div
+              key={String(recap.uuid)}
+              onClick={() => navigate(`/recap/view/${recap.uuid}`)}
+              className="spark-card hov overflow-hidden cursor-pointer"
+            >
+              <div
+                className="h-32 relative overflow-hidden"
+                style={{
+                  background:
+                    "radial-gradient(circle at 50% 50%, rgba(197,245,70,0.10), transparent 70%)",
+                }}
+              >
+                {hero ? (
+                  <img
+                    src={hero}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display =
+                        "none";
+                    }}
+                  />
+                ) : (
+                  <div className="absolute inset-0 grid place-items-center">
+                    <span className="text-3xl" aria-hidden>
+                      ◈
+                    </span>
+                  </div>
+                )}
+                <span
+                  className={`absolute top-2 right-2 chip ${recap.approved ? "chip-lime" : "chip-orange"}`}
+                >
+                  ● {recap.approved ? "APPROVED" : "DRAFT"}
+                </span>
+                {fileCount > 0 && (
+                  <span
+                    className="absolute bottom-2 left-2 mono"
+                    style={{
+                      fontSize: 9,
+                      letterSpacing: "0.14em",
+                      padding: "2px 6px",
+                      borderRadius: 999,
+                      background: "rgba(197,245,70,0.15)",
+                      color: "var(--spark-lime)",
+                      border: "1px solid rgba(197,245,70,0.35)",
+                    }}
+                  >
+                    ◉ {fileCount} FILE{fileCount === 1 ? "" : "S"}
+                  </span>
+                )}
+              </div>
+              <div className="p-4">
+                <p
+                  className="font-bold text-sm truncate"
+                  title={recap.name ?? eventName ?? "Recap"}
+                >
+                  {recap.name ?? eventName ?? "Recap"}
+                </p>
+                <p
+                  className="mono text-[10px] uppercase mt-1 truncate"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "rgba(255,255,255,0.45)",
+                  }}
+                >
+                  {baName ? `BY ${baName} · ` : ""}
+                  {fmt(eventDate)}
+                </p>
+                <div
+                  className="mt-3 pt-3 grid grid-cols-2 gap-2 text-center"
+                  style={{ borderTop: "1px solid var(--spark-border)" }}
+                >
+                  <div>
+                    <p
+                      className="tab-num text-base font-bold"
+                      style={{ color: "var(--spark-lime)" }}
+                    >
+                      {recap.totalEngagements != null
+                        ? recap.totalEngagements.toLocaleString()
+                        : "—"}
+                    </p>
+                    <p className="label-mini">ENG</p>
+                  </div>
+                  <div>
+                    <p className="tab-num text-base font-bold">
+                      {recap.productsSold != null
+                        ? recap.productsSold.toLocaleString()
+                        : "—"}
+                    </p>
+                    <p className="label-mini">SOLD</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {awaiting.map((ev) => (
+          <div
+            key={ev.uuid}
+            className="spark-card overflow-hidden"
+            style={{
+              borderStyle: "dashed",
+              opacity: 0.7,
+            }}
+          >
+            <div
+              className="h-32 relative overflow-hidden grid place-items-center"
+              style={{
+                background: "rgba(255,255,255,0.02)",
+              }}
+            >
+              <div className="text-center">
+                <p
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-orange)",
+                  }}
+                >
+                  AWAITING RECAP
+                </p>
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "rgba(255,255,255,0.55)" }}
+                >
+                  {ev.name}
+                </p>
+              </div>
+            </div>
+            <div className="p-4">
+              <p
+                className="mono text-[10px] uppercase truncate"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.45)",
+                }}
+              >
+                {fmt(ev.date)}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
