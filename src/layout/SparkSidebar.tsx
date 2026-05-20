@@ -92,6 +92,14 @@ const SECTIONS: NavSection[] = [
         clientLabel: "My Recaps",
       },
       {
+        label: "Missing Recaps",
+        Icon: FileText,
+        to: "/recaps/missing",
+        // Client tenants don't typically nudge BAs — this is an
+        // ops/admin action. Hide on client surface.
+        adminOnly: true,
+      },
+      {
         label: "Bulk Upload",
         Icon: Upload,
         to: "/requests/bulk-upload",

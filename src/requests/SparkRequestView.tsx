@@ -219,9 +219,17 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
   // invite target. Admins can only invite when there's a real event
   // row to invite TO — pending requests with no event yet don't show
   // the button.
-  const eventForInvite = ((request?.events ?? []).find(
+  // Pick the first usable event on the request — its id, date, and
+  // address all flow into InviteBAModal so the modal can rank BAs by
+  // locality and flag "already on another shift that day" conflicts.
+  const firstEvent = (request?.events ?? []).find(
     (e): e is NonNullable<typeof e> => Boolean(e),
-  )?.id as string | undefined) ?? null;
+  );
+  const eventForInvite = (firstEvent?.id as string | undefined) ?? null;
+  const eventForInviteDate =
+    (firstEvent?.date as string | undefined | null) ?? null;
+  const eventForInviteAddress =
+    (firstEvent?.address as string | undefined | null) ?? null;
 
   if (!request) {
     return (
@@ -535,6 +543,8 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
       {inviteOpen && eventForInvite && (
         <InviteBAModal
           eventId={eventForInvite}
+          eventDate={eventForInviteDate}
+          eventAddress={eventForInviteAddress}
           onClose={() => setInviteOpen(false)}
         />
       )}

@@ -2564,6 +2564,48 @@ input GenerateCampaignReportPdfInput {
   subtitle: String = null
 }
 
+input NudgeAmbassadorForRecapInput {
+  clientMutationId: ID = null
+  ambassadorEventUuid: ID!
+  title: String = null
+  body: String = null
+}
+
+input ReassignRecapEventInput {
+  clientMutationId: ID = null
+  recapId: ID!
+  eventId: ID!
+}
+
+type MissingRecapAmbassadorInfo {
+  ambassadorEventUuid: ID!
+  ambassadorUuid: ID!
+  name: String!
+  email: String
+  isApproved: Boolean!
+}
+
+type MissingRecapEventType {
+  eventUuid: ID!
+  eventName: String!
+  venue: String
+  address: String
+  stateCode: String
+  date: String
+  startTime: String
+  endTime: String
+  hoursOverdue: Int
+  requestUuid: ID
+  assignedAmbassadors: [MissingRecapAmbassadorInfo!]!
+}
+
+type NudgeRecapResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  devicesNotified: Int
+}
+
 type Goal {
   id: ID!
   uuid: String!
@@ -3203,6 +3245,8 @@ type Mutation {
   declineCustomRecap(input: DeclineCustomRecapInput!): CustomRecapDetailResponse!
   generateRecapPdf(input: GenerateRecapPdfInput!): RecapFileDetailResponse!
   generateCampaignReportPdf(input: GenerateCampaignReportPdfInput!): RecapExportResponse!
+  nudgeAmbassadorForRecap(input: NudgeAmbassadorForRecapInput!): NudgeRecapResponse!
+  reassignRecapEvent(input: ReassignRecapEventInput!): RecapDetailResponse!
   generateCustomRecapPdf(input: GenerateCustomRecapPdfInput!): CustomRecapFileDetailResponse!
   exportRecapsXlsx(input: ExportRecapsXlsxInput!): RecapExportResponse!
   exportRecapXlsx(input: ExportRecapXlsxInput!): RecapExportResponse!
@@ -3662,6 +3706,8 @@ type Query {
   publicTimezones(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): TimeZoneCountableConnection!
   recaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RecapFiltersInput = null): RecapCountableConnection!
   recap(uuid: ID!): Recap
+  missingRecapEvents(tenantId: ID = null, lookbackDays: Int! = 30): [MissingRecapEventType!]!
+  ambassadorsBookedOnDate(onDate: String!, tenantId: ID = null): [ID!]!
   customRecaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: CustomRecapFiltersInput = null): CustomRecapCountableConnection!
   customRecap(id: ID = null, uuid: ID = null): CustomRecap
   typeOfGoods(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: TypeOfGoodFiltersInput = null): TypeOfGoodCountableConnection!

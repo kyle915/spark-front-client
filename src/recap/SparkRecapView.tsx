@@ -10,6 +10,7 @@ import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFil
 import { useAlertStore } from "@/store/alertStore";
 import HeicImage from "./HeicImage";
 import RecapUploader from "./RecapUploader";
+import ReassignRecapModal from "./ReassignRecapModal";
 
 /**
  * Spark v2 — Recap Detail.
@@ -79,6 +80,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     GenerateRecapPdfMutation,
   );
   const [isZipping, setIsZipping] = useState(false);
+  const [reassignOpen, setReassignOpen] = useState(false);
   const data = useLazyLoadQuery<RecapQueryType>(
     RecapQuery,
     { uuid },
@@ -296,6 +298,18 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               ↗ Share
             </button>
             <button
+              onClick={() => setReassignOpen(true)}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+              title="Move this recap to a different event (fixes wrong-event mis-links)"
+            >
+              ⇄ Move to event
+            </button>
+            <button
               onClick={() => navigate(`/recap/edit/${uuid}`)}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
@@ -309,6 +323,20 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           </div>
         </div>
       </div>
+
+      {reassignOpen && (
+        <ReassignRecapModal
+          recapId={recap.id}
+          currentEventName={event?.name ?? null}
+          currentEventId={(event?.id as string | undefined) ?? null}
+          onClose={() => setReassignOpen(false)}
+          onReassigned={() => {
+            // No imperative refetch — the Relay store updates from
+            // the mutation's selection set (recap.event), which
+            // bubbles back into the open view automatically.
+          }}
+        />
+      )}
 
       {/* 5 KPI tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">

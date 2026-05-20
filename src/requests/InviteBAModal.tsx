@@ -2,10 +2,13 @@ import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
+import { AmbassadorsBookedOnDateQuery } from "@/api/queries/AmbassadorsBookedOnDateQuery";
+import type { AmbassadorsBookedOnDateQuery as AmbassadorsBookedOnDateQueryType } from "@api/queries/__generated__/AmbassadorsBookedOnDateQuery.graphql";
 import { InviteAmbassadorToShiftMutation } from "@/api/mutations/InviteAmbassadorToShiftMutation";
 import type { InviteAmbassadorToShiftMutation as InviteAmbassadorToShiftMutationType } from "@api/mutations/__generated__/InviteAmbassadorToShiftMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import { loadFavorites } from "@/lib/favorites";
 
 /**
  * Admin modal that lists active BAs and lets the admin invite one
@@ -24,6 +27,14 @@ type Props = {
   /** Optional: ambassador ids (Relay base64) already invited so we
    *  can render them as "Invited" and disable the button. */
   alreadyInvitedAmbassadorIds?: string[];
+  /** Event date in ISO format — drives the "already on another shift
+   *  that day" conflict-detection chip. Optional; if absent the modal
+   *  skips the conflict query. */
+  eventDate?: string | null;
+  /** Event address — used as a coarse string-match signal when
+   *  ranking BAs ("BA whose address contains the event state goes
+   *  higher"). Optional. */
+  eventAddress?: string | null;
   onClose: () => void;
   /** Optional callback after a successful invite — parent can re-
    *  fetch its events/recaps prefetch chain to pick up the new row. */
@@ -37,17 +48,68 @@ type Row = {
   email: string;
   address: string;
   alreadyInvited: boolean;
+  // Computed signals for smart-ranking. The Inner component fills
+  // these on each render so they react to favorites / conflict-query
+  // changes without reshuffling the source list.
+  isFavorited: boolean;
+  hasConflict: boolean;
+  // Locality match score — higher is closer (cheap proxy until we
+  // have lat/lng on both sides). 2 = state code match, 1 = city
+  // substring match, 0 = neither.
+  localityScore: number;
 };
 
 const Inner: React.FC<{
   eventId: string;
   alreadyInvited: Set<string>;
+  eventDate: string | null;
+  eventAddress: string | null;
   onClose: () => void;
   onInvited?: (ambassadorEventUuid: string) => void;
-}> = ({ eventId, alreadyInvited, onClose, onInvited }) => {
+}> = ({ eventId, alreadyInvited, eventDate, eventAddress, onClose, onInvited }) => {
   const { tenantId } = useAuthStore();
   const showAlert = useAlertStore((s) => s.showAlert);
   const [search, setSearch] = useState("");
+  // Favorites set from localStorage (PR #226). Read once on render —
+  // localStorage is sync; rebuilding the Set per render is cheap and
+  // keeps the modal honest if kyle stars/unstars from another tab.
+  const favoritesSet = useMemo(
+    () => loadFavorites(tenantId ?? null),
+    [tenantId],
+  );
+
+  // Cross-reference: BAs already booked on the same date (any
+  // AmbassadorEvent, approved or pending). If we don't have a date
+  // we skip the query and treat conflict as "unknown" (no chip).
+  const bookedData = useLazyLoadQuery<AmbassadorsBookedOnDateQueryType>(
+    AmbassadorsBookedOnDateQuery,
+    eventDate
+      ? { onDate: eventDate, tenantId: tenantId ?? null }
+      : // Query is non-nullable but we still want to gate via a
+        // sentinel value so Suspense doesn't tear. Pass yesterday
+        // when there's no date — returns empty, costs nothing.
+        { onDate: new Date(0).toISOString(), tenantId: tenantId ?? null },
+    { fetchPolicy: "store-or-network" },
+  );
+  const conflictSet = useMemo(
+    () => new Set<string>((bookedData?.ambassadorsBookedOnDate ?? []).map(String)),
+    [bookedData],
+  );
+
+  // Pre-extract a state code / city token from the event address so
+  // the per-BA locality score can run in O(N) without re-parsing on
+  // every row.
+  const localityTokens = useMemo(() => {
+    const addr = (eventAddress ?? "").toLowerCase();
+    if (!addr) return { stateCode: "", city: "" };
+    // Crude US-state-code extractor: look for ", XX " or ", XX,"
+    // anywhere in the address. Falls back to empty.
+    const stateMatch = addr.match(/,\s*([a-z]{2})[\s,]/);
+    const stateCode = stateMatch ? stateMatch[1] : "";
+    // Crude city extractor: first chunk before the first comma.
+    const city = addr.split(",")[0]?.trim() ?? "";
+    return { stateCode, city };
+  }, [eventAddress]);
   // Track which BAs the admin has ticked. Click a row (or its
   // checkbox) to toggle. A sticky footer fires the invite mutation
   // for each selected BA in parallel — N invites = N round-trips
@@ -74,7 +136,7 @@ const Inner: React.FC<{
     );
 
   const rows: Row[] = useMemo(() => {
-    return (
+    const list =
       data?.ambassadors?.edges
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
@@ -83,19 +145,65 @@ const Inner: React.FC<{
             [n.user?.firstName, n.user?.lastName].filter(Boolean).join(" ") ||
             n.user?.email ||
             "(unnamed)";
+          const id = String(n.id);
+          const baAddress = (n.address ?? "").toLowerCase();
+          // Crude locality: 2 pts for state code match, 1 pt for
+          // city substring match. Good enough until we have lat/lng
+          // on both sides (BA.address is a free-text field today).
+          let localityScore = 0;
+          if (localityTokens.stateCode && baAddress.includes(
+            `, ${localityTokens.stateCode} `,
+          )) {
+            localityScore = 2;
+          } else if (
+            localityTokens.city &&
+            baAddress.includes(localityTokens.city)
+          ) {
+            localityScore = 1;
+          }
+          // Favorites are keyed by Ambassador.id (relay-encoded) per
+          // PR #226. Match against the same id we render in the row.
           return {
-            id: String(n.id),
+            id,
             uuid: String(n.uuid),
             name,
             email: n.user?.email ?? "",
             address: n.address ?? "",
             alreadyInvited:
-              alreadyInvited.has(String(n.id)) ||
-              optimisticDone.has(String(n.id)),
+              alreadyInvited.has(id) || optimisticDone.has(id),
+            isFavorited: favoritesSet.has(id),
+            hasConflict: conflictSet.has(id),
+            localityScore,
           };
-        }) ?? []
-    );
-  }, [data, alreadyInvited, optimisticDone]);
+        }) ?? [];
+
+    // Smart-rank order (highest priority first):
+    //   1. Favorites (lime-tier — kyle's go-to BAs)
+    //   2. Locality match (state > city > none)
+    //   3. Alphabetical (stable fallback)
+    // Already-invited BAs sink to the bottom so they don't clutter
+    // the top of the list. Conflicts DO NOT sink — we want them
+    // visible so the admin can decide; the red chip flags them.
+    return [...list].sort((a, b) => {
+      if (a.alreadyInvited !== b.alreadyInvited) {
+        return a.alreadyInvited ? 1 : -1;
+      }
+      if (a.isFavorited !== b.isFavorited) {
+        return a.isFavorited ? -1 : 1;
+      }
+      if (a.localityScore !== b.localityScore) {
+        return b.localityScore - a.localityScore;
+      }
+      return a.name.localeCompare(b.name);
+    });
+  }, [
+    data,
+    alreadyInvited,
+    optimisticDone,
+    favoritesSet,
+    conflictSet,
+    localityTokens,
+  ]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -300,16 +408,65 @@ const Inner: React.FC<{
                     .toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{row.name}</p>
-                  <p
-                    className="mono text-[10px] truncate"
-                    style={{
-                      letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.45)",
-                    }}
-                  >
-                    {row.email}
+                  <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                    {row.isFavorited && (
+                      <span
+                        style={{
+                          color: "var(--spark-lime)",
+                          fontSize: 12,
+                        }}
+                        title="Favorited BA"
+                        aria-label="Favorited"
+                      >
+                        ★
+                      </span>
+                    )}
+                    <span className="truncate">{row.name}</span>
                   </p>
+                  <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                    <span
+                      className="mono text-[10px] truncate"
+                      style={{
+                        letterSpacing: "0.14em",
+                        color: "rgba(255,255,255,0.45)",
+                        maxWidth: "100%",
+                      }}
+                    >
+                      {row.email}
+                    </span>
+                    {row.hasConflict && !row.alreadyInvited && (
+                      <span
+                        className="mono text-[9px] shrink-0"
+                        style={{
+                          letterSpacing: "0.16em",
+                          color: "var(--spark-orange)",
+                          background: "rgba(239,90,42,0.12)",
+                          border: "1px solid rgba(239,90,42,0.35)",
+                          padding: "1px 6px",
+                          borderRadius: 999,
+                        }}
+                        title="This BA is already on another shift that day."
+                      >
+                        ⚠ DOUBLE-BOOK
+                      </span>
+                    )}
+                    {row.localityScore === 2 && !row.hasConflict && (
+                      <span
+                        className="mono text-[9px] shrink-0"
+                        style={{
+                          letterSpacing: "0.16em",
+                          color: "var(--spark-lime)",
+                          background: "rgba(197,245,70,0.10)",
+                          border: "1px solid rgba(197,245,70,0.30)",
+                          padding: "1px 6px",
+                          borderRadius: 999,
+                        }}
+                        title="State match — likely closer to the event"
+                      >
+                        ✓ LOCAL
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {row.alreadyInvited && (
                   <span
@@ -402,6 +559,8 @@ const Inner: React.FC<{
 export default function InviteBAModal({
   eventId,
   alreadyInvitedAmbassadorIds = [],
+  eventDate = null,
+  eventAddress = null,
   onClose,
   onInvited,
 }: Props) {
@@ -432,6 +591,8 @@ export default function InviteBAModal({
       <Inner
         eventId={eventId}
         alreadyInvited={alreadyInvited}
+        eventDate={eventDate}
+        eventAddress={eventAddress}
         onClose={onClose}
         onInvited={onInvited}
       />
