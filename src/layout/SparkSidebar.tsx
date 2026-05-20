@@ -86,6 +86,12 @@ const SECTIONS: NavSection[] = [
         clientLabel: "My Requests",
       },
       {
+        label: "Recaps",
+        Icon: FileText,
+        to: "/recaps/list",
+        clientLabel: "My Recaps",
+      },
+      {
         label: "Bulk Upload",
         Icon: Upload,
         to: "/requests/bulk-upload",
@@ -112,6 +118,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Jobs", Icon: Hammer, to: "/jobs" },
       { label: "Search Talent", Icon: Users, to: "/talent" },
+      { label: "Favorites", Icon: Star, to: "/favorites" },
       { label: "People", Icon: UsersRound, to: "/people" },
       { label: "Spark Academy", Icon: GraduationCap, to: "/academy" },
     ],
@@ -119,12 +126,6 @@ const SECTIONS: NavSection[] = [
   {
     title: "Outputs",
     items: [
-      {
-        label: "Recaps",
-        Icon: FileText,
-        to: "/recaps/list",
-        clientLabel: "My Recaps",
-      },
       { label: "Reports", Icon: BarChart3, to: "/reports" },
     ],
   },
@@ -133,6 +134,14 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Inbox", Icon: Mail, to: "/inbox" },
       { label: "Alerts", Icon: Bell, to: "/alerts" },
+    ],
+  },
+  {
+    title: "Operations",
+    adminOnly: true,
+    items: [
+      { label: "Payroll · Hours", Icon: Clock, to: "/payroll" },
+      { label: "Payments · Wingspan", Icon: CreditCard, to: "/payments" },
     ],
   },
   {
@@ -152,15 +161,19 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Settings", Icon: Settings, to: "/settings" },
       { label: "Calendar Sync", Icon: CalendarClock, to: "/settings/calendar" },
+      { label: "Billing", Icon: DollarSign, to: "/billing" },
       { label: "Help", Icon: HelpCircle, to: "/help" },
     ],
   },
 ];
 
-// Imports referenced for future expansion of Operations group.
+// Icons referenced for future expansion / future Billing page — kept
+// imported so the linter doesn't strip them before we wire those entries.
+void DollarSign;
 void Clock;
 void CreditCard;
-void DollarSign;
+void Building2;
+void HelpCircle;
 
 const slugToName = (slug: string | null | undefined): string => {
   if (!slug) return "—";
@@ -304,8 +317,21 @@ const SidebarNav: React.FC<{
     ...s,
     items: s.items.map((it) => {
       let chip: NavItem["chip"];
-      if (it.to === "/requests/list" && counts.tracker > 0)
-        chip = { text: String(counts.tracker), tone: "lime" };
+      if (it.to === "/requests/list" && counts.tracker > 0) {
+        // Recap-due takes priority over the active-tracker count so
+        // ops sees "12 RECAPS DUE" (orange) before the calmer total.
+        // Falls back to the active count when no recaps are
+        // outstanding.
+        if (counts.recapsDue > 0) {
+          chip = {
+            text: `${counts.recapsDue} RECAP${counts.recapsDue === 1 ? "" : "S"} DUE`,
+            tone: "orange",
+            blink: counts.recapsDue > 5,
+          };
+        } else {
+          chip = { text: String(counts.tracker), tone: "lime" };
+        }
+      }
       if (it.to === "/approvals" && counts.approvals > 0)
         chip = {
           // Pulse orange when there's at least one SLA-breached pending

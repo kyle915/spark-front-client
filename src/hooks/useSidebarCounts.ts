@@ -18,6 +18,10 @@ export type SidebarCounts = {
   upcoming: number; // approved + scheduled in next 14d
   done30d: number; // done in last 30 days
   alertsUnread: number; // last-48h request activity minus localStorage-read keys
+  // Requests with at least one scheduled event but no recap filed yet.
+  // Surfaces the "this needs a recap" pile on the Tracker nav so ops
+  // can see it before drilling into the table.
+  recapsDue: number;
 };
 
 const ALERTS_READ_KEY = "@spark.alerts.readKeys.v1";
@@ -52,6 +56,7 @@ export function useSidebarCounts(): SidebarCounts {
     let upcoming = 0;
     let done30d = 0;
     let alertsUnread = 0;
+    let recapsDue = 0;
     const readKeys = loadReadKeys();
     const cutoff48 = Date.now() - 48 * 60 * 60 * 1000;
     const cutoff72 = Date.now() - 72 * 60 * 60 * 1000;
@@ -99,6 +104,17 @@ export function useSidebarCounts(): SidebarCounts {
         }
         if (isDone && t > now - days(30) && t < now) done30d += 1;
       }
+      // Recap due = events scheduled, no recaps filed across any of them.
+      // Mirrors the per-row chip logic on the Master Tracker.
+      const events = (r.events ?? []).filter(
+        (e): e is NonNullable<typeof e> => Boolean(e),
+      );
+      if (events.length > 0) {
+        const anyRecap = events.some(
+          (e) => (e.recaps?.length ?? 0) > 0,
+        );
+        if (!anyRecap) recapsDue += 1;
+      }
     }
     return {
       tracker,
@@ -107,6 +123,7 @@ export function useSidebarCounts(): SidebarCounts {
       upcoming,
       done30d,
       alertsUnread,
+      recapsDue,
     };
   }, [data]);
 }

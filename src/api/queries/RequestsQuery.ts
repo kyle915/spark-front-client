@@ -91,6 +91,15 @@ export const RequestsQuery = graphql`
             uuid
             name
           }
+          # Used by the sidebar recap-due badge + the Master Tracker
+          # RECAP chip. Just enough event/recap data — no fields
+          # beyond id — so the per-row payload stays tiny.
+          events {
+            id
+            recaps {
+              id
+            }
+          }
           tenantId
           createdAt
           updatedAt
