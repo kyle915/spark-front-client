@@ -210,9 +210,19 @@ const SparkRequestInner: React.FC = () => {
     .filter(Boolean);
 
   const email = user?.email ?? "";
-  // Date is intentionally NOT pre-filled on duplicate — that's the
-  // whole point of cloning (new date for same venue/setup).
-  const [date, setDate] = useState("");
+  // Date prefill:
+  //   - Duplicate flow (from SparkRequestView): intentionally NOT
+  //     prefilled — the whole point of cloning is to set a new date.
+  //   - Calendar "+ NEW" shortcut: ships ?date=YYYY-MM-DD so kyle
+  //     can click an empty day on the month grid and land on the
+  //     create form with the date already filled in. Validated as
+  //     strict YYYY-MM-DD before honoring to keep garbage out.
+  const qpDate = (() => {
+    const raw = searchParams.get("date");
+    if (!raw) return "";
+    return /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : "";
+  })();
+  const [date, setDate] = useState(qpDate);
   const [startTime, setStartTime] = useState(qpStart);
   const [endTime, setEndTime] = useState(qpEnd);
   const [venue, setVenue] = useState(searchParams.get("venue") ?? "");
