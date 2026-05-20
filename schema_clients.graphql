@@ -1117,6 +1117,18 @@ type InviteAmbassadorToShiftResponse {
   ambassadorEventUuid: ID
 }
 
+input CancelShiftInviteInput {
+  clientMutationId: ID = null
+  ambassadorEventUuid: ID!
+}
+
+type CancelShiftInviteResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  ambassadorEventUuid: ID
+}
+
 input CreateAmbassadorInput {
   clientMutationId: ID = null
   userId: ID!
@@ -3278,6 +3290,7 @@ type Mutation {
   acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
   inviteAmbassadorToShift(input: InviteAmbassadorToShiftInput!): InviteAmbassadorToShiftResponse!
+  cancelShiftInvite(input: CancelShiftInviteInput!): CancelShiftInviteResponse!
   disableAmbassador(input: DisableAmbassadorInput!): DisableAmbassadorResponse!
   regenerateAmbassadorPasswords(input: RegenerateAmbassadorPasswordsInput!): RegenerateAmbassadorPasswordsResponse!
   createAmbassador(input: CreateAmbassadorInput!): CreateAmbassadorResponse!
