@@ -86,6 +86,12 @@ const SECTIONS: NavSection[] = [
         clientLabel: "My Requests",
       },
       {
+        label: "Recaps",
+        Icon: FileText,
+        to: "/recaps/list",
+        clientLabel: "My Recaps",
+      },
+      {
         label: "Bulk Upload",
         Icon: Upload,
         to: "/requests/bulk-upload",
@@ -119,12 +125,6 @@ const SECTIONS: NavSection[] = [
   {
     title: "Outputs",
     items: [
-      {
-        label: "Recaps",
-        Icon: FileText,
-        to: "/recaps/list",
-        clientLabel: "My Recaps",
-      },
       { label: "Reports", Icon: BarChart3, to: "/reports" },
     ],
   },
@@ -158,14 +158,16 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Settings", Icon: Settings, to: "/settings" },
       { label: "Calendar Sync", Icon: CalendarClock, to: "/settings/calendar" },
+      { label: "Billing", Icon: DollarSign, to: "/billing" },
     ],
   },
 ];
 
-// DollarSign reserved for the future Billing page; the other former
-// "for-future" icons (Clock, CreditCard) are now used by the
-// Operations group above.
+// Icons referenced for future expansion / future Billing page — kept
+// imported so the linter doesn't strip them before we wire those entries.
 void DollarSign;
+void Clock;
+void CreditCard;
 void Building2;
 void HelpCircle;
 
@@ -311,8 +313,21 @@ const SidebarNav: React.FC<{
     ...s,
     items: s.items.map((it) => {
       let chip: NavItem["chip"];
-      if (it.to === "/requests/list" && counts.tracker > 0)
-        chip = { text: String(counts.tracker), tone: "lime" };
+      if (it.to === "/requests/list" && counts.tracker > 0) {
+        // Recap-due takes priority over the active-tracker count so
+        // ops sees "12 RECAPS DUE" (orange) before the calmer total.
+        // Falls back to the active count when no recaps are
+        // outstanding.
+        if (counts.recapsDue > 0) {
+          chip = {
+            text: `${counts.recapsDue} RECAP${counts.recapsDue === 1 ? "" : "S"} DUE`,
+            tone: "orange",
+            blink: counts.recapsDue > 5,
+          };
+        } else {
+          chip = { text: String(counts.tracker), tone: "lime" };
+        }
+      }
       if (it.to === "/approvals" && counts.approvals > 0)
         chip = {
           // Pulse orange when there's at least one SLA-breached pending
