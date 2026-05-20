@@ -1,15 +1,24 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/RecapsQuery.graphql";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
+import { GenerateCampaignReportPdfMutation } from "@/api/mutations/GenerateCampaignReportPdfMutation";
+import type { GenerateCampaignReportPdfMutation as GenerateCampaignReportPdfMutationType } from "@api/mutations/__generated__/GenerateCampaignReportPdfMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
+import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
+
+// Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
+// keeps the sticky action bar's button disabled with a friendly
+// message instead of letting the user fire a request that the
+// resolver will reject.
+const CAMPAIGN_REPORT_MAX = 50;
 
 /**
  * Spark v2 — Recaps list.
@@ -17,6 +26,11 @@ import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
  */
 
 type Recap = {
+  // Relay-encoded id — opaque base64 the backend resolves back to an
+  // int. Needed by the Campaign Report mutation, which takes a list
+  // of recap ids. Distinct from `uuid` which is the human-friendly
+  // short-code (last 4 chars are surfaced as R-XXXX).
+  id: string;
   uuid: string;
   name: string;
   date: string;
@@ -51,11 +65,59 @@ const RecapCard: React.FC<{
   recap: Recap;
   onOpen: () => void;
   onOpenRequest: ((uuid: string) => void) | null;
-}> = ({ recap, onOpen, onOpenRequest }) => (
+  // Multi-select for the campaign-report builder. When `selected` is
+  // non-null the card shows a checkbox in the top-left and toggling
+  // it calls `onToggleSelect` instead of opening the recap. The
+  // parent owns the selected-set state; the card is dumb.
+  selected: boolean;
+  onToggleSelect: () => void;
+}> = ({ recap, onOpen, onOpenRequest, selected, onToggleSelect }) => (
   <div
-    onClick={onOpen}
-    className="spark-card hov overflow-hidden cursor-pointer"
+    onClick={(e) => {
+      // Clicking the card's chrome (anywhere outside the explicit
+      // checkbox) opens the recap. Clicking the checkbox itself
+      // bubbles to its own handler and stops propagation before this
+      // fires — see the input below.
+      onOpen();
+      void e;
+    }}
+    className="spark-card hov overflow-hidden cursor-pointer relative"
+    style={
+      selected
+        ? {
+            outline: "2px solid var(--spark-lime)",
+            outlineOffset: 2,
+          }
+        : undefined
+    }
   >
+    {/* Checkbox sits above the hero so it's reachable without
+        depending on row-level hover; tapping it doesn't open the
+        recap. Lime when on so it pairs with the brand. */}
+    <label
+      onClick={(e) => e.stopPropagation()}
+      className="absolute top-2 right-2 z-10 cursor-pointer"
+      style={{
+        background: "rgba(0,0,0,0.55)",
+        border: "1px solid rgba(255,255,255,0.25)",
+        borderRadius: 6,
+        padding: "4px 6px",
+      }}
+      title={selected ? "Remove from campaign report" : "Add to campaign report"}
+    >
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={onToggleSelect}
+        className="cursor-pointer"
+        style={{
+          accentColor: "var(--spark-lime)",
+          width: 14,
+          height: 14,
+          display: "block",
+        }}
+      />
+    </label>
     <div
       className="h-32 relative overflow-hidden"
       style={{
@@ -217,7 +279,12 @@ const RecapsListInner: React.FC<{
   pageSize: number;
   onMeta: (m: Meta) => void;
   onVisibleRecapsChange?: (recaps: Recap[]) => void;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, statusFilter, sortKey, pageSize, onMeta, onVisibleRecapsChange }) => {
+  // Campaign Report multi-select. The Set lives in the parent so
+  // selections survive filter changes; the content view just renders
+  // checkboxes against it and reports toggles back up.
+  selectedIds: Set<string>;
+  onToggleSelected: (id: string) => void;
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, statusFilter, sortKey, pageSize, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Initial page is PAGE_SIZE (60); "Load more" bumps pageSize in
@@ -266,6 +333,7 @@ const RecapsListInner: React.FC<{
           const fileCount = n.recapFilesCount ?? 0;
           const requestUuid = n.event?.request?.uuid ?? null;
           return {
+            id: String(n.id),
             uuid: String(n.uuid),
             name: n.name ?? n.event?.name ?? "Untitled recap",
             date: n.event?.date ?? n.createdAt ?? "",
@@ -374,6 +442,8 @@ const RecapsListInner: React.FC<{
         <RecapCard
           key={r.uuid}
           recap={r}
+          selected={selectedIds.has(r.id)}
+          onToggleSelect={() => onToggleSelected(r.id)}
           onOpen={() => navigate(`/recap/view/${r.uuid}`)}
           onOpenRequest={(reqUuid) =>
             navigate(`/request/view/${reqUuid}`, {
@@ -451,6 +521,74 @@ export default function SparkRecapsList() {
   const onMeta = useMemo(() => (next: Meta) => setMeta(next), []);
 
   const [visibleRecaps, setVisibleRecaps] = useState<Recap[]>([]);
+
+  // ─── Campaign report multi-select ────────────────────────────
+  // Set of recap.id (relay id) the user has ticked. Survives filter
+  // changes — kyle can switch retailer, tick a few more, etc. The
+  // sticky action bar at the bottom of the page shows the count and
+  // fires the Campaign Report mutation.
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const toggleSelected = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const [commitReport, isGeneratingReport] =
+    useMutation<GenerateCampaignReportPdfMutationType>(
+      GenerateCampaignReportPdfMutation,
+    );
+
+  // The mutation expects ids ordered the way the user picked them on
+  // the page (which determines cover-page recap order). We don't
+  // store insertion order in the Set, so use the visible list order
+  // as a sensible default — that matches what the user just saw.
+  const orderedSelectedIds = useMemo(() => {
+    if (selectedIds.size === 0) return [] as string[];
+    return visibleRecaps
+      .filter((r) => selectedIds.has(r.id))
+      .map((r) => r.id);
+  }, [visibleRecaps, selectedIds]);
+
+  const generateReport = () => {
+    if (selectedIds.size === 0 || isGeneratingReport) return;
+    if (selectedIds.size > CAMPAIGN_REPORT_MAX) {
+      showAlert(
+        `Campaign report is limited to ${CAMPAIGN_REPORT_MAX} recaps per export. Trim your selection.`,
+        "warning",
+      );
+      return;
+    }
+    commitReport({
+      variables: {
+        input: {
+          recapIds: orderedSelectedIds,
+        },
+      },
+      onCompleted: (res) => {
+        const payload = res.generateCampaignReportPdf;
+        if (payload?.success && payload.fileUrl) {
+          window.open(payload.fileUrl, "_blank");
+          showAlert(
+            `Campaign report generated (${selectedIds.size} recap${selectedIds.size === 1 ? "" : "s"}).`,
+            "success",
+          );
+          clearSelection();
+        } else {
+          showAlert(
+            payload?.message ?? "Campaign report failed.",
+            "error",
+          );
+        }
+      },
+      onError: (err) =>
+        showAlert(`Campaign report failed: ${err.message}`, "error"),
+    });
+  };
 
   // CSV export of the currently-visible recaps (respects retailer /
   // state / RMM / search filters). Filename includes today's date.
@@ -835,6 +973,8 @@ export default function SparkRecapsList() {
             pageSize={pageSize}
             onMeta={onMeta}
             onVisibleRecapsChange={setVisibleRecaps}
+            selectedIds={selectedIds}
+            onToggleSelected={toggleSelected}
           />
         </Suspense>
 
@@ -863,6 +1003,75 @@ export default function SparkRecapsList() {
           </div>
         )}
       </div>
+
+      {/* Sticky action bar — only renders when something is selected.
+          Sits above the main content (z-50), inside the Layout so it
+          tracks the inner padding. Disabled while the mutation is in
+          flight; clicking ✕ clears the selection without firing. */}
+      {selectedIds.size > 0 && (
+        <div
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-2xl px-4 py-3"
+          style={{
+            background: "rgba(10, 13, 9, 0.95)",
+            border: "1px solid var(--spark-border)",
+            boxShadow: "0 14px 40px rgba(0,0,0,0.55)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <span
+            className="mono text-[11px]"
+            style={{
+              letterSpacing: "0.16em",
+              color: "var(--spark-lime)",
+            }}
+          >
+            {selectedIds.size} SELECTED
+          </span>
+          {selectedIds.size > CAMPAIGN_REPORT_MAX && (
+            <span
+              className="text-[11px]"
+              style={{ color: "var(--spark-orange)" }}
+            >
+              · Max {CAMPAIGN_REPORT_MAX} per export
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              color: "rgba(255,255,255,0.55)",
+            }}
+          >
+            ✕ CLEAR
+          </button>
+          <button
+            type="button"
+            onClick={generateReport}
+            disabled={
+              isGeneratingReport ||
+              selectedIds.size === 0 ||
+              selectedIds.size > CAMPAIGN_REPORT_MAX
+            }
+            className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              boxShadow: "0 0 18px rgba(197,245,70,0.4)",
+            }}
+            title={
+              selectedIds.size > CAMPAIGN_REPORT_MAX
+                ? `Limit is ${CAMPAIGN_REPORT_MAX} recaps per report`
+                : "Generate one combined PDF for the selected recaps"
+            }
+          >
+            {isGeneratingReport
+              ? `Generating ${selectedIds.size}…`
+              : `📄 Campaign Report (${selectedIds.size})`}
+          </button>
+        </div>
+      )}
     </Layout>
   );
 }

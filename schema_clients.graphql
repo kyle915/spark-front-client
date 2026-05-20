@@ -2557,6 +2557,13 @@ input GenerateRecapPdfInput {
   id: ID!
 }
 
+input GenerateCampaignReportPdfInput {
+  clientMutationId: ID = null
+  recapIds: [ID!]!
+  title: String = null
+  subtitle: String = null
+}
+
 type Goal {
   id: ID!
   uuid: String!
@@ -3195,6 +3202,7 @@ type Mutation {
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
   declineCustomRecap(input: DeclineCustomRecapInput!): CustomRecapDetailResponse!
   generateRecapPdf(input: GenerateRecapPdfInput!): RecapFileDetailResponse!
+  generateCampaignReportPdf(input: GenerateCampaignReportPdfInput!): RecapExportResponse!
   generateCustomRecapPdf(input: GenerateCustomRecapPdfInput!): CustomRecapFileDetailResponse!
   exportRecapsXlsx(input: ExportRecapsXlsxInput!): RecapExportResponse!
   exportRecapXlsx(input: ExportRecapXlsxInput!): RecapExportResponse!
