@@ -69,8 +69,6 @@ import AdminOnly from "@/layout/AdminOnly";
 const DashboardRetail = lazyDefault(
   () => import("@/components/pages/dashboard-retail/DashboardRetail"),
 );
-const CompanySelector = lazyDefault(() => import("@/layout/CompanySelector"));
-
 // Requests (legacy)
 const RequestsList = lazyDefault(() => import("@/requests/RequestsList"));
 const RequestView = lazyDefault(() => import("@/requests/RequestView"));
@@ -319,19 +317,6 @@ const PublicRoutes = {
       path: "/terms-of-service",
       component: <TermsOfServiceView />,
       isPublic: true,
-    },
-  ],
-};
-
-/*  -----------------------------------------------------------
- COMPANY SELECTION ROUTE
------------------------------------------------------------ */
-const CompanyRoutes = {
-  routes: [
-    {
-      path: "/select-company",
-      component: <CompanySelector />,
-      isPublic: false,
     },
   ],
 };
@@ -1108,7 +1093,6 @@ export const appRoutes = [
   ...CatalogsRoutes,
   //Calendar
   ...CalendarLinks.routes,
-  ...CompanyRoutes.routes,
   ...PublicRoutes.routes,
   ...SettingsLinks.routes,
   ...GoalsLinks.routes,
