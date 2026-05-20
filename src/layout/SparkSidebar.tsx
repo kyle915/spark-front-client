@@ -136,6 +136,14 @@ const SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: "Operations",
+    adminOnly: true,
+    items: [
+      { label: "Payroll · Hours", Icon: Clock, to: "/payroll" },
+      { label: "Payments · Wingspan", Icon: CreditCard, to: "/payments" },
+    ],
+  },
+  {
     title: "Build",
     adminOnly: true,
     items: [
@@ -155,7 +163,9 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-// Imports referenced for future expansion of Operations group.
+// Icons referenced for future expansion / future Billing page — kept
+// imported so the linter doesn't strip them before we wire those entries.
+void DollarSign;
 void Clock;
 void CreditCard;
 void Building2;
