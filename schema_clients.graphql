@@ -3209,7 +3209,32 @@ type MonthlyPerformanceTrend {
   dataPoints: [MonthlyDataPoint!]!
 }
 
+input BulkCloneRequestCopyInput {
+  clientMutationId: ID = null
+  dateIso: String!
+  retailerId: ID = null
+  storeNumber: String = null
+  address: String = null
+  startTimeIso: String = null
+  endTimeIso: String = null
+}
+
+input BulkCloneRequestInput {
+  clientMutationId: ID = null
+  sourceRequestId: ID!
+  copies: [BulkCloneRequestCopyInput!]!
+}
+
+type BulkCloneRequestResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  createdCount: Int!
+  createdUuids: [String!]!
+}
+
 type Mutation {
+  bulkCloneRequest(input: BulkCloneRequestInput!): BulkCloneRequestResponse!
   createAcademyModule(input: CreateAcademyModuleInput!): AcademyModuleResponse!
   updateAcademyModule(input: UpdateAcademyModuleInput!): AcademyModuleResponse!
   deleteAcademyModule(input: DeleteAcademyModuleInput!): AcademyModuleResponse!

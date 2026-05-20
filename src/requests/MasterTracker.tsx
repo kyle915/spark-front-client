@@ -155,6 +155,8 @@ const fmtTimeRange = (
 /* ─────────────────────────── TABLE ────────────────────────────── */
 
 import InternalNotesPanel from "./InternalNotesPanel";
+import BulkCloneModal from "./BulkCloneModal";
+import TrackerCalendar, { type CalendarRow } from "./TrackerCalendar";
 
 type Mentionable = { id: string; name: string; email: string };
 
@@ -219,7 +221,8 @@ const TrackerTable: React.FC<{
   rows: Row[];
   mentionables: Mentionable[];
   groupBy: "none" | "date";
-}> = ({ rows, mentionables, groupBy }) => {
+  onClone?: (row: Row) => void;
+}> = ({ rows, mentionables, groupBy, onClone }) => {
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -434,19 +437,37 @@ const TrackerTable: React.FC<{
                         —
                       </span>
                     ) : (
-                      <button
-                        onClick={toggleExpand}
-                        className="mono text-[10px] transition"
-                        style={{
-                          letterSpacing: "0.14em",
-                          color: isExpanded
-                            ? "var(--spark-lime)"
-                            : "rgba(255,255,255,0.55)",
-                        }}
-                        title="Internal notes & shipments"
-                      >
-                        {isExpanded ? "× CLOSE" : "✎ NOTES"}
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={toggleExpand}
+                          className="mono text-[10px] transition"
+                          style={{
+                            letterSpacing: "0.14em",
+                            color: isExpanded
+                              ? "var(--spark-lime)"
+                              : "rgba(255,255,255,0.55)",
+                          }}
+                          title="Internal notes & shipments"
+                        >
+                          {isExpanded ? "× CLOSE" : "✎ NOTES"}
+                        </button>
+                        {onClone && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onClone(r);
+                            }}
+                            className="mono text-[10px] transition"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: "rgba(255,255,255,0.55)",
+                            }}
+                            title="Clone this request to N new dates"
+                          >
+                            ⎘ CLONE
+                          </button>
+                        )}
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -485,6 +506,8 @@ const MasterTrackerInner: React.FC<{
   onCountsChange: (counts: Record<string, number>, total: number) => void;
   onVisibleRowsChange?: (rows: Row[]) => void;
   onMarketsChange?: (markets: string[]) => void;
+  onClone?: (row: Row) => void;
+  viewMode?: "list" | "calendar";
 }> = ({
   activeStatus,
   search,
@@ -497,6 +520,8 @@ const MasterTrackerInner: React.FC<{
   onCountsChange,
   onVisibleRowsChange,
   onMarketsChange,
+  onClone,
+  viewMode = "list",
 }) => {
   const { tenantId } = useAuthStore();
 
@@ -684,8 +709,32 @@ const MasterTrackerInner: React.FC<{
     if (onVisibleRowsChange) onVisibleRowsChange(rows);
   }, [rows, onVisibleRowsChange]);
 
+  // Project Row → CalendarRow for the calendar view. Same data, just
+  // the fields the calendar component reads.
+  const calendarRows: CalendarRow[] = useMemo(
+    () =>
+      rows.map((r) => ({
+        uuid: r.uuid,
+        date: r.date,
+        venue: r.venue,
+        statusSlug: r.statusSlug,
+        eventUuid: r.eventUuid,
+        recapStatus: r.recapStatus,
+        recapCount: r.recapCount,
+      })),
+    [rows],
+  );
+
+  if (viewMode === "calendar") {
+    return <TrackerCalendar rows={calendarRows} />;
+  }
   return (
-    <TrackerTable rows={rows} mentionables={mentionables} groupBy={groupBy} />
+    <TrackerTable
+      rows={rows}
+      mentionables={mentionables}
+      groupBy={groupBy}
+      onClone={onClone}
+    />
   );
 };
 
@@ -775,6 +824,31 @@ export default function MasterTracker() {
   // currently-loaded rows. "all" means no filter.
   const [marketFilter, setMarketFilter] = useState<string>("all");
   const [markets, setMarkets] = useState<string[]>([]);
+  // List vs. calendar view. Persists per-tenant so kyle's preferred
+  // view sticks across page refreshes.
+  const [viewMode, setViewMode] = useState<"list" | "calendar">(() => {
+    try {
+      const v = localStorage.getItem("spark.tracker.viewMode");
+      return v === "calendar" ? "calendar" : "list";
+    } catch {
+      return "list";
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("spark.tracker.viewMode", viewMode);
+    } catch {
+      /* no-op */
+    }
+  }, [viewMode]);
+  // Source row for the "⎘ Clone ×N" modal. null = closed.
+  const [cloneSource, setCloneSource] = useState<{
+    id: string;
+    label: string;
+  } | null>(null);
+  // Bump to force MasterTrackerInner to refetch after a successful
+  // clone so the new requests show up immediately.
+  const [refetchTick, setRefetchTick] = useState(0);
 
   // CSV export of the currently-visible tracker rows. Quotes any field
   // containing commas/quotes/newlines. Filename includes the status
@@ -1114,21 +1188,38 @@ export default function MasterTracker() {
             );
           })}
           <span className="flex-1" />
-          {/* Group-by toggle */}
-          <div className="pill-group">
+          {/* View-mode toggle: table vs. month calendar */}
+          <div className="pill-group" title="Switch between list and calendar">
             <button
-              onClick={() => setGroupBy("none")}
-              className={`pill-btn ${groupBy === "none" ? "on" : ""}`}
+              onClick={() => setViewMode("list")}
+              className={`pill-btn ${viewMode === "list" ? "on" : ""}`}
             >
-              Flat
+              ☰ List
             </button>
             <button
-              onClick={() => setGroupBy("date")}
-              className={`pill-btn ${groupBy === "date" ? "on" : ""}`}
+              onClick={() => setViewMode("calendar")}
+              className={`pill-btn ${viewMode === "calendar" ? "on" : ""}`}
             >
-              By date
+              ▦ Calendar
             </button>
           </div>
+          {/* Group-by toggle (list view only) */}
+          {viewMode === "list" && (
+            <div className="pill-group">
+              <button
+                onClick={() => setGroupBy("none")}
+                className={`pill-btn ${groupBy === "none" ? "on" : ""}`}
+              >
+                Flat
+              </button>
+              <button
+                onClick={() => setGroupBy("date")}
+                className={`pill-btn ${groupBy === "date" ? "on" : ""}`}
+              >
+                By date
+              </button>
+            </div>
+          )}
           {tenantId && (
             <Suspense fallback={null}>
               <RmmFilterInner
@@ -1282,6 +1373,7 @@ export default function MasterTracker() {
           }
         >
           <MasterTrackerInner
+            key={refetchTick}
             activeStatus={activeStatus}
             search={search}
             rmmFilter={rmmFilter}
@@ -1296,9 +1388,31 @@ export default function MasterTracker() {
             onCountsChange={handleCounts}
             onVisibleRowsChange={setVisibleRows}
             onMarketsChange={setMarkets}
+            viewMode={viewMode}
+            onClone={(row) =>
+              setCloneSource({
+                id: row.uuid,
+                label: `${row.venue || "Request"} · ${row.dateLabel}`,
+              })
+            }
           />
         </Suspense>
       </div>
+
+      {/* Bulk-clone modal — triggered by the ⎘ CLONE row action.
+          Reuses the source request's venue / BAs / RMM / type and
+          stamps N new requests with the dates the user enters. */}
+      {cloneSource && (
+        <BulkCloneModal
+          sourceRequestId={cloneSource.id}
+          sourceLabel={cloneSource.label}
+          onClose={() => setCloneSource(null)}
+          onCloned={() => {
+            setCloneSource(null);
+            setRefetchTick((t) => t + 1);
+          }}
+        />
+      )}
 
       {/* Linked-sheet config modal. URL persists per-tenant in
           localStorage. Backend round-trip lands when the sheets-
