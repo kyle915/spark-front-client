@@ -48,7 +48,15 @@ const Inner: React.FC<{
   const { tenantId } = useAuthStore();
   const showAlert = useAlertStore((s) => s.showAlert);
   const [search, setSearch] = useState("");
-  const [pendingId, setPendingId] = useState<string | null>(null);
+  // Track which BAs the admin has ticked. Click a row (or its
+  // checkbox) to toggle. A sticky footer fires the invite mutation
+  // for each selected BA in parallel — N invites = N round-trips
+  // but each one is fast (one INSERT + one push enqueue) and the
+  // typical batch is 2–5 BAs.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // Track which selected rows are still in-flight so the row label
+  // can show "Sending…" while the global "Invite N" button is busy.
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [optimisticDone, setOptimisticDone] = useState<Set<string>>(new Set());
 
   const data = useLazyLoadQuery<AmbassadorsListQueryType>(
@@ -100,36 +108,89 @@ const Inner: React.FC<{
     );
   }, [rows, search]);
 
-  const invite = (row: Row) => {
-    if (isInviting || row.alreadyInvited) return;
-    setPendingId(row.id);
-    commitInvite({
-      variables: { input: { ambassadorId: row.id, eventId } },
-      onCompleted: (resp) => {
-        setPendingId(null);
-        const r = resp.inviteAmbassadorToShift;
-        if (r?.success) {
-          showAlert(
-            r.message || `Invite sent to ${row.name}.`,
-            "success",
-          );
-          setOptimisticDone((prev) => {
-            const next = new Set(prev);
-            next.add(row.id);
-            return next;
-          });
-          if (r.ambassadorEventUuid) {
-            onInvited?.(String(r.ambassadorEventUuid));
-          }
-        } else {
-          showAlert(r?.message || "Couldn't invite this BA.", "error");
-        }
-      },
-      onError: (err) => {
-        setPendingId(null);
-        showAlert(err.message, "error");
-      },
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
+  };
+
+  // Fires one invite mutation per selected BA. Sequential rather than
+  // Promise.all so we get well-ordered toasts + can show "X of N"
+  // progress in the footer button. For a typical 2–5 BA batch the
+  // total wall-clock is well under a second.
+  const inviteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    const targets = filtered.filter(
+      (r) => selectedIds.has(r.id) && !r.alreadyInvited,
+    );
+    if (targets.length === 0) {
+      showAlert("Nothing new to invite — already on the shift.", "info");
+      return;
+    }
+    setPendingIds(new Set(targets.map((t) => t.id)));
+    let okCount = 0;
+    let failCount = 0;
+    for (const row of targets) {
+      // Each iteration awaits the mutation so the in-flight set
+      // shrinks one row at a time — gives the user real progress.
+      await new Promise<void>((resolve) => {
+        commitInvite({
+          variables: { input: { ambassadorId: row.id, eventId } },
+          onCompleted: (resp) => {
+            const r = resp.inviteAmbassadorToShift;
+            if (r?.success) {
+              okCount += 1;
+              setOptimisticDone((prev) => {
+                const next = new Set(prev);
+                next.add(row.id);
+                return next;
+              });
+              if (r.ambassadorEventUuid) {
+                onInvited?.(String(r.ambassadorEventUuid));
+              }
+            } else {
+              failCount += 1;
+              showAlert(
+                r?.message || `Couldn't invite ${row.name}.`,
+                "error",
+              );
+            }
+            setPendingIds((prev) => {
+              const next = new Set(prev);
+              next.delete(row.id);
+              return next;
+            });
+            resolve();
+          },
+          onError: (err) => {
+            failCount += 1;
+            showAlert(`${row.name}: ${err.message}`, "error");
+            setPendingIds((prev) => {
+              const next = new Set(prev);
+              next.delete(row.id);
+              return next;
+            });
+            resolve();
+          },
+        });
+      });
+    }
+    // Single rollup toast on completion so the user doesn't see N
+    // individual success toasts.
+    if (okCount > 0) {
+      showAlert(
+        failCount > 0
+          ? `Invited ${okCount} BA${okCount === 1 ? "" : "s"} (${failCount} failed).`
+          : `Invited ${okCount} BA${okCount === 1 ? "" : "s"}.`,
+        failCount > 0 ? "warning" : "success",
+      );
+    }
+    // Clear selection once the batch is done so the modal is ready
+    // for a follow-up round (rare but cheap).
+    setSelectedIds(new Set());
   };
 
   return (
@@ -186,13 +247,40 @@ const Inner: React.FC<{
             </p>
           )}
           {filtered.map((row) => {
-            const busy = pendingId === row.id;
+            const checked = selectedIds.has(row.id);
+            const busy = pendingIds.has(row.id);
+            // Tap anywhere on the row toggles selection — easier on
+            // mobile than aiming for the checkbox.
+            const onRowClick = () => {
+              if (row.alreadyInvited || busy) return;
+              toggleSelected(row.id);
+            };
             return (
               <div
                 key={row.id}
+                onClick={onRowClick}
                 className="flex items-center gap-3 px-5 py-3"
-                style={{ borderBottom: "1px solid var(--spark-border)" }}
+                style={{
+                  borderBottom: "1px solid var(--spark-border)",
+                  cursor: row.alreadyInvited || busy ? "default" : "pointer",
+                  background: checked
+                    ? "rgba(197,245,70,0.06)"
+                    : "transparent",
+                }}
               >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => toggleSelected(row.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  disabled={row.alreadyInvited || busy}
+                  className="shrink-0 cursor-pointer"
+                  style={{
+                    accentColor: "var(--spark-lime)",
+                    width: 16,
+                    height: 16,
+                  }}
+                />
                 <div
                   className="rounded-full grid place-items-center font-bold shrink-0"
                   style={{
@@ -223,7 +311,7 @@ const Inner: React.FC<{
                     {row.email}
                   </p>
                 </div>
-                {row.alreadyInvited ? (
+                {row.alreadyInvited && (
                   <span
                     className="mono text-[10px]"
                     style={{
@@ -234,19 +322,18 @@ const Inner: React.FC<{
                   >
                     ✓ INVITED
                   </span>
-                ) : (
-                  <button
-                    onClick={() => invite(row)}
-                    disabled={busy}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                )}
+                {busy && !row.alreadyInvited && (
+                  <span
+                    className="mono text-[10px]"
                     style={{
-                      background: "var(--spark-lime)",
-                      color: "#0a0d09",
-                      opacity: busy ? 0.5 : 1,
+                      letterSpacing: "0.18em",
+                      color: "rgba(255,255,255,0.55)",
+                      paddingRight: 4,
                     }}
                   >
-                    {busy ? "Sending…" : "Invite"}
-                  </button>
+                    Sending…
+                  </span>
                 )}
               </div>
             );
@@ -254,20 +341,58 @@ const Inner: React.FC<{
         </div>
 
         <div
-          className="p-4 flex justify-end"
+          className="p-4 flex items-center justify-between gap-3"
           style={{ borderTop: "1px solid var(--spark-border)" }}
         >
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm font-semibold"
+          {/* Left side: live count of what'll get sent. Hidden when
+              nothing's ticked so the empty modal doesn't shout at you. */}
+          <span
+            className="mono text-[10px]"
             style={{
-              background: "transparent",
-              color: "var(--spark-text)",
-              border: "1px solid var(--spark-border)",
+              letterSpacing: "0.18em",
+              color:
+                selectedIds.size > 0
+                  ? "var(--spark-lime)"
+                  : "rgba(255,255,255,0.35)",
             }}
           >
-            Done
-          </button>
+            {selectedIds.size === 0
+              ? "TAP ROWS TO SELECT"
+              : `${selectedIds.size} SELECTED`}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              disabled={isInviting}
+              className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              {isInviting ? "Wait…" : "Done"}
+            </button>
+            <button
+              onClick={inviteSelected}
+              disabled={isInviting || selectedIds.size === 0}
+              className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+              style={{
+                background: "var(--spark-lime)",
+                color: "#0a0d09",
+                boxShadow:
+                  selectedIds.size > 0
+                    ? "0 0 16px rgba(197,245,70,0.35)"
+                    : "none",
+              }}
+            >
+              {isInviting
+                ? `Inviting ${pendingIds.size}…`
+                : selectedIds.size === 1
+                  ? "Invite 1 BA"
+                  : `Invite ${selectedIds.size} BAs`}
+            </button>
+          </div>
         </div>
       </div>
     </div>
