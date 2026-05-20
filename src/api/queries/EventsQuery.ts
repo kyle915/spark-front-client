@@ -43,6 +43,7 @@ export const EventsQuery = graphql`
           startTime
           endTime
           address
+          coordinates
           isNational
           notes
           request {

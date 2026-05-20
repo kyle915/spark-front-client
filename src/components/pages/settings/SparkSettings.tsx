@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
 
 /**
  * Spark v2 — Settings (Workspace).
@@ -49,76 +50,125 @@ const readString = (key: string, fallback: string): string => {
 };
 
 /**
- * Read-only deep-link row for the per-tenant linked Google Sheet
- * (the value lives in localStorage @spark.linkedSheet.url/{tenantId}
- * and is edited from the Master Tracker header).
+ * Editable row for the per-tenant linked Google Sheet.
+ *
+ * Backed by tenant.linkedSheetUrl on the backend via useLinkedSheetUrl
+ * (replaces the per-device localStorage we used to ship). Admins can
+ * paste a new URL or clear the existing one without round-tripping
+ * the Master Tracker config modal.
  */
 const LinkedSheetRow: React.FC = () => {
-  const { tenantId } = useAuthStore();
-  const url = (() => {
-    if (!tenantId) return "";
-    try {
-      return localStorage.getItem(`@spark.linkedSheet.url/${tenantId}`) ?? "";
-    } catch {
-      return "";
+  const { url, setUrl, saving } = useLinkedSheetUrl();
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [draft, setDraft] = useState(url);
+  const [editing, setEditing] = useState(false);
+
+  // Resync when the backend value lands (or the user opens the page
+  // on a different device).
+  useEffect(() => {
+    setDraft(url);
+  }, [url]);
+
+  const save = async () => {
+    const res = await setUrl(draft);
+    if (res.ok) {
+      showAlert(
+        draft.trim() ? "Linked sheet saved." : "Linked sheet cleared.",
+        "success",
+      );
+      setEditing(false);
+    } else {
+      showAlert(res.message || "Couldn't save sheet link.", "error");
     }
-  })();
+  };
+
   return (
     <div
-      className="flex items-center gap-3 py-3 px-3 rounded-xl"
+      className="rounded-xl"
       style={{
         background: "rgba(255,255,255,0.025)",
         border: "1px solid var(--spark-border)",
       }}
     >
-      <span
-        className="mono w-8 h-8 rounded-lg flex items-center justify-center"
-        style={{
-          background: "rgba(95,184,239,0.10)",
-          border: "1px solid rgba(95,184,239,0.25)",
-          color: "var(--spark-sky)",
-        }}
-      >
-        📊
-      </span>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium">Linked Google Sheet</p>
-        <p
-          className="text-xs truncate"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          {url
-            ? "Brand-specific tracker mirror — opens in a new tab."
-            : "Not set. Add the URL from the Master Tracker header."}
-        </p>
-      </div>
-      {url ? (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+      <div className="flex items-center gap-3 py-3 px-3">
+        <span
+          className="mono w-8 h-8 rounded-lg flex items-center justify-center"
           style={{
-            background: "rgba(95,184,239,0.12)",
+            background: "rgba(95,184,239,0.10)",
+            border: "1px solid rgba(95,184,239,0.25)",
             color: "var(--spark-sky)",
-            border: "1px solid rgba(95,184,239,0.35)",
-            textDecoration: "none",
           }}
         >
-          Open ↗
-        </a>
-      ) : (
-        <Link
-          to="/requests/list"
-          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+          📊
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium">Linked Google Sheet</p>
+          <p
+            className="text-xs truncate"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            {url
+              ? "Brand-specific tracker mirror — visible to every teammate on every device."
+              : "Not set. Paste your team's Google Sheets URL below."}
+          </p>
+        </div>
+        {url && !editing && (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+            style={{
+              background: "rgba(95,184,239,0.12)",
+              color: "var(--spark-sky)",
+              border: "1px solid rgba(95,184,239,0.35)",
+              textDecoration: "none",
+            }}
+          >
+            Open ↗
+          </a>
+        )}
+        <button
+          onClick={() => setEditing((v) => !v)}
+          className="px-3 py-2 rounded-xl text-xs font-semibold"
           style={{
             background: "transparent",
             color: "var(--spark-text)",
             border: "1px solid var(--spark-border)",
           }}
         >
-          Set up →
-        </Link>
+          {editing ? "Cancel" : url ? "Edit" : "Set up"}
+        </button>
+      </div>
+      {editing && (
+        <div className="px-3 pb-3 flex gap-2">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="https://docs.google.com/spreadsheets/d/…"
+            className="flex-1 rounded-lg text-sm"
+            style={{
+              padding: "0.6rem 0.85rem",
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+              outline: "none",
+            }}
+            autoFocus
+          />
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-4 py-2 rounded-lg text-sm font-semibold"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              opacity: saving ? 0.5 : 1,
+            }}
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
       )}
     </div>
   );
