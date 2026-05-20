@@ -2564,6 +2564,30 @@ input GenerateCampaignReportPdfInput {
   subtitle: String = null
 }
 
+input BulkCloneRequestCopyInput {
+  clientMutationId: ID = null
+  dateIso: String!
+  retailerId: ID = null
+  storeNumber: String = null
+  address: String = null
+  startTimeIso: String = null
+  endTimeIso: String = null
+}
+
+input BulkCloneRequestInput {
+  clientMutationId: ID = null
+  sourceRequestId: ID!
+  copies: [BulkCloneRequestCopyInput!]!
+}
+
+type BulkCloneRequestResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  createdCount: Int!
+  createdUuids: [String!]!
+}
+
 input EmailCampaignReportInput {
   clientMutationId: ID = null
   recapIds: [ID!]!
@@ -3276,6 +3300,7 @@ type Mutation {
   generateRecapPdf(input: GenerateRecapPdfInput!): RecapFileDetailResponse!
   generateCampaignReportPdf(input: GenerateCampaignReportPdfInput!): RecapExportResponse!
   emailCampaignReport(input: EmailCampaignReportInput!): RecapExportResponse!
+  bulkCloneRequest(input: BulkCloneRequestInput!): BulkCloneRequestResponse!
   nudgeAmbassadorForRecap(input: NudgeAmbassadorForRecapInput!): NudgeRecapResponse!
   reassignRecapEvent(input: ReassignRecapEventInput!): RecapDetailResponse!
   generateCustomRecapPdf(input: GenerateCustomRecapPdfInput!): CustomRecapFileDetailResponse!

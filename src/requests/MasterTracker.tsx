@@ -155,6 +155,7 @@ const fmtTimeRange = (
 /* ─────────────────────────── TABLE ────────────────────────────── */
 
 import InternalNotesPanel from "./InternalNotesPanel";
+import BulkCloneModal from "./BulkCloneModal";
 
 type Mentionable = { id: string; name: string; email: string };
 
@@ -219,7 +220,8 @@ const TrackerTable: React.FC<{
   rows: Row[];
   mentionables: Mentionable[];
   groupBy: "none" | "date";
-}> = ({ rows, mentionables, groupBy }) => {
+  onClone?: (row: Row) => void;
+}> = ({ rows, mentionables, groupBy, onClone }) => {
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -434,19 +436,37 @@ const TrackerTable: React.FC<{
                         —
                       </span>
                     ) : (
-                      <button
-                        onClick={toggleExpand}
-                        className="mono text-[10px] transition"
-                        style={{
-                          letterSpacing: "0.14em",
-                          color: isExpanded
-                            ? "var(--spark-lime)"
-                            : "rgba(255,255,255,0.55)",
-                        }}
-                        title="Internal notes & shipments"
-                      >
-                        {isExpanded ? "× CLOSE" : "✎ NOTES"}
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={toggleExpand}
+                          className="mono text-[10px] transition"
+                          style={{
+                            letterSpacing: "0.14em",
+                            color: isExpanded
+                              ? "var(--spark-lime)"
+                              : "rgba(255,255,255,0.55)",
+                          }}
+                          title="Internal notes & shipments"
+                        >
+                          {isExpanded ? "× CLOSE" : "✎ NOTES"}
+                        </button>
+                        {onClone && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onClone(r);
+                            }}
+                            className="mono text-[10px] transition"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: "rgba(255,255,255,0.55)",
+                            }}
+                            title="Clone this request to N new dates"
+                          >
+                            ⎘ CLONE
+                          </button>
+                        )}
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -485,6 +505,7 @@ const MasterTrackerInner: React.FC<{
   onCountsChange: (counts: Record<string, number>, total: number) => void;
   onVisibleRowsChange?: (rows: Row[]) => void;
   onMarketsChange?: (markets: string[]) => void;
+  onClone?: (row: Row) => void;
 }> = ({
   activeStatus,
   search,
@@ -497,6 +518,7 @@ const MasterTrackerInner: React.FC<{
   onCountsChange,
   onVisibleRowsChange,
   onMarketsChange,
+  onClone,
 }) => {
   const { tenantId } = useAuthStore();
 
@@ -685,7 +707,12 @@ const MasterTrackerInner: React.FC<{
   }, [rows, onVisibleRowsChange]);
 
   return (
-    <TrackerTable rows={rows} mentionables={mentionables} groupBy={groupBy} />
+    <TrackerTable
+      rows={rows}
+      mentionables={mentionables}
+      groupBy={groupBy}
+      onClone={onClone}
+    />
   );
 };
 
@@ -775,6 +802,14 @@ export default function MasterTracker() {
   // currently-loaded rows. "all" means no filter.
   const [marketFilter, setMarketFilter] = useState<string>("all");
   const [markets, setMarkets] = useState<string[]>([]);
+  // Source row for the "⎘ Clone ×N" modal. null = closed.
+  const [cloneSource, setCloneSource] = useState<{
+    id: string;
+    label: string;
+  } | null>(null);
+  // Bump to force MasterTrackerInner to refetch after a successful
+  // clone so the new requests show up immediately.
+  const [refetchTick, setRefetchTick] = useState(0);
 
   // CSV export of the currently-visible tracker rows. Quotes any field
   // containing commas/quotes/newlines. Filename includes the status
@@ -1282,6 +1317,7 @@ export default function MasterTracker() {
           }
         >
           <MasterTrackerInner
+            key={refetchTick}
             activeStatus={activeStatus}
             search={search}
             rmmFilter={rmmFilter}
@@ -1296,9 +1332,30 @@ export default function MasterTracker() {
             onCountsChange={handleCounts}
             onVisibleRowsChange={setVisibleRows}
             onMarketsChange={setMarkets}
+            onClone={(row) =>
+              setCloneSource({
+                id: row.uuid,
+                label: `${row.venue || "Request"} · ${row.dateLabel}`,
+              })
+            }
           />
         </Suspense>
       </div>
+
+      {/* Bulk-clone modal — triggered by the ⎘ CLONE row action.
+          Reuses the source request's venue / BAs / RMM / type and
+          stamps N new requests with the dates the user enters. */}
+      {cloneSource && (
+        <BulkCloneModal
+          sourceRequestId={cloneSource.id}
+          sourceLabel={cloneSource.label}
+          onClose={() => setCloneSource(null)}
+          onCloned={() => {
+            setCloneSource(null);
+            setRefetchTick((t) => t + 1);
+          }}
+        />
+      )}
 
       {/* Linked-sheet config modal. URL persists per-tenant in
           localStorage. Backend round-trip lands when the sheets-
