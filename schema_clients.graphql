@@ -1104,6 +1104,19 @@ input CreateAmbassadorGroupInput {
   ambassadorIds: [ID!] = null
 }
 
+input InviteAmbassadorToShiftInput {
+  clientMutationId: ID = null
+  ambassadorId: ID!
+  eventId: ID!
+}
+
+type InviteAmbassadorToShiftResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  ambassadorEventUuid: ID
+}
+
 input CreateAmbassadorInput {
   clientMutationId: ID = null
   userId: ID!
@@ -3267,6 +3280,7 @@ type Mutation {
   acceptAmbassadorInvitation(input: AcceptAmbassadorInvitationInput!): AcceptInvitationResponse!
   acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
+  inviteAmbassadorToShift(input: InviteAmbassadorToShiftInput!): InviteAmbassadorToShiftResponse!
   disableAmbassador(input: DisableAmbassadorInput!): DisableAmbassadorResponse!
   regenerateAmbassadorPasswords(input: RegenerateAmbassadorPasswordsInput!): RegenerateAmbassadorPasswordsResponse!
   createAmbassador(input: CreateAmbassadorInput!): CreateAmbassadorResponse!
@@ -3559,9 +3573,39 @@ input DeleteAcademyModuleInput {
   uuid: ID!
 }
 
+type WingspanStatus {
+  connected: Boolean!
+  message: String!
+}
+
+type WingspanPayrollPeriod {
+  id: ID!
+  label: String!
+  startsAt: String
+  endsAt: String
+  payDate: String
+  status: String
+  totalAmount: Float
+  contractorCount: Int
+}
+
+type WingspanPayment {
+  id: ID!
+  contractorName: String
+  contractorEmail: String
+  amount: Float
+  status: String
+  payDate: String
+  periodId: String
+  memo: String
+}
+
 type Query {
   academyModulesAdmin(filters: AcademyModuleFiltersInput = null): [AcademyModule!]!
   academyModule(uuid: ID!): AcademyModule
+  wingspanStatus: WingspanStatus!
+  wingspanPayrollPeriods(limit: Int! = 12): [WingspanPayrollPeriod!]!
+  wingspanPayments(periodId: ID = null, limit: Int! = 50): [WingspanPayment!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   event(id: ID = null, uuid: ID = null): Event
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!

@@ -68,13 +68,7 @@ const AppRouter = () => (
                 props.component
               ) : (
                 <PrivateRoute
-                  component={
-                    props.path === "/select-company" ? (
-                      props.component
-                    ) : (
-                      <TenantRoute component={props.component} />
-                    )
-                  }
+                  component={<TenantRoute component={props.component} />}
                 />
               )
             }
