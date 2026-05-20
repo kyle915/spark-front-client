@@ -42,6 +42,19 @@ const TodaysSnapshot: React.FC = () => {
       hide: counts.approvals === 0 && counts.approvalsSlaBreach === 0,
     },
     {
+      // Wraps the same recapsDue signal the sidebar badge uses, but
+      // surfaces it on the dashboard so kyle sees it on first open
+      // instead of having to scan the sidebar. Drills into the new
+      // /recaps/missing page (PR #488) where he can nudge/file in
+      // one click per row.
+      label: "Recaps due",
+      value: counts.recapsDue,
+      sub: counts.recapsDue > 0 ? "Nudge or file" : undefined,
+      tone: counts.recapsDue > 0 ? "orange" : "gold",
+      to: "/recaps/missing",
+      hide: counts.recapsDue === 0,
+    },
+    {
       label: "Upcoming · 14d",
       value: counts.upcoming,
       tone: "sky",
