@@ -2,11 +2,17 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
-import GooglePlacesInput, { matchTimezoneOption } from "@/components/inputs/GooglePlacesInput";
+// GooglePlacesInput / matchTimezoneOption were used by the (now-removed)
+// inline Address field. Express Mode infers address from Venue + lets
+// the Edit Request page handle adjustments, so they no longer ship in
+// this bundle. Keep them out of the import list to stop the lazy chunk
+// from pulling Google Maps loader on every Create Request open.
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
 import type { RequestMutation } from "@api/mutations/__generated__/RequestMutation.graphql";
+import { CreateDistributorMutation } from "@/api/mutations/CreateDistributorMutation";
+import type { CreateDistributorMutation as CreateDistributorMutationType } from "@api/mutations/__generated__/CreateDistributorMutation.graphql";
 import { RequestTypesQuery } from "@/api/queries/RequestTypesQuery";
 import type { RequestTypesQuery as RequestTypesQueryType } from "@api/queries/__generated__/RequestTypesQuery.graphql";
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
@@ -19,7 +25,9 @@ import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { DistributorsQuery } from "@/api/queries/DistributorsQuery";
 import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__generated__/DistributorsQuery.graphql";
-import TimeSlotSelect from "@/components/inputs/TimeSlotSelect";
+// TimeSlotSelect was used by the (now-removed) inline start/end-time
+// fields. Defaults to 12:00 PM – 4:00 PM via useState init; edit on
+// the request view when needed.
 
 /**
  * Spark v2 — minimal "Express" request form.
@@ -53,6 +61,8 @@ const SparkRequestInner: React.FC = () => {
   const [commit, isCommitting] = useMutation<RequestMutation>(
     CreateRequestMutation,
   );
+  const [commitDistributor, isCreatingDistributor] =
+    useMutation<CreateDistributorMutationType>(CreateDistributorMutation);
 
   // Catalog queries — minimal set to satisfy the required mutation fields.
   const requestTypesData = useLazyLoadQuery<RequestTypesQueryType>(
@@ -213,11 +223,10 @@ const SparkRequestInner: React.FC = () => {
   const [requestTypeId, setRequestTypeId] = useState(qpRequestTypeId);
   const [timezoneId, setTimezoneId] = useState(qpTimezoneId);
   const [rmmId, setRmmId] = useState("");
-  // Whether the inline RMM picker is open — replaces the duplicate
-  // "Routes to RMM (auto-approval)" dropdown that used to live in
-  // the (now-removed) DETAIL section. Click CHANGE on the routing
-  // chip to toggle.
-  const [rmmPickerOpen, setRmmPickerOpen] = useState(false);
+  // RMM picker state used to drive the inline ROUTING chip that lived
+  // alongside the Address/Time block. That block is gone in Express
+  // Mode (handled by defaults + Edit Request); leaving rmmId here so
+  // the mutation input still includes it when set via URL param.
 
   // Detect "Retail Sampling" so we can require a Store Number on
   // those activations only. Falls back to false if the type list
@@ -239,6 +248,12 @@ const SparkRequestInner: React.FC = () => {
     Number.isFinite(qpBaCount) && qpBaCount > 0 ? qpBaCount : 1,
   );
   const [distributorId, setDistributorId] = useState(qpDistributorId);
+  // Distributor input is an autocomplete: type to filter the existing
+  // distributor list; if nothing matches, offer to create-on-the-fly.
+  // We keep the typed text + open state separate from distributorId so
+  // the user can preview options without committing.
+  const [distributorQuery, setDistributorQuery] = useState("");
+  const [distributorOpen, setDistributorOpen] = useState(false);
 
   // ─── Draft autosave ───────────────────────────────────────────
   // Keep a per-user, per-tenant draft of the in-progress form in
@@ -727,20 +742,173 @@ const SparkRequestInner: React.FC = () => {
                   ))}
               </select>
             </div>
-            <div>
+            <div className="relative">
               <label className="label-mini block mb-1.5">Distributor</label>
-              <select
-                style={inputStyle}
-                value={distributorId}
-                onChange={(e) => setDistributorId(e.target.value)}
-              >
-                <option value="">— Optional —</option>
-                {distributors.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
+              {/* Autocomplete: typing filters the dropdown; selecting
+                  a row sets distributorId. If the typed text doesn't
+                  match anything, the last row offers "+ Create new
+                  distributor: <text>" which fires CreateDistributor
+                  inline and sets distributorId on success. Clicking
+                  outside / blur closes the panel. */}
+              {(() => {
+                const picked = distributors.find(
+                  (d) => String(d.id) === distributorId,
+                );
+                const q = distributorQuery.trim();
+                const matches = distributors.filter((d) =>
+                  q ? d.name.toLowerCase().includes(q.toLowerCase()) : true,
+                );
+                const exactMatch =
+                  q &&
+                  distributors.some(
+                    (d) => d.name.toLowerCase() === q.toLowerCase(),
+                  );
+                const canCreate = q.length > 1 && !exactMatch;
+                return (
+                  <>
+                    <input
+                      type="text"
+                      style={inputStyle}
+                      value={
+                        distributorOpen
+                          ? distributorQuery
+                          : picked?.name ?? distributorQuery
+                      }
+                      placeholder={
+                        picked
+                          ? picked.name
+                          : "— Optional — type to search or add"
+                      }
+                      onFocus={() => {
+                        setDistributorOpen(true);
+                        if (picked) setDistributorQuery(picked.name);
+                      }}
+                      onBlur={() => {
+                        // Defer close so onMouseDown on the option list
+                        // gets to fire first.
+                        window.setTimeout(() => setDistributorOpen(false), 120);
+                      }}
+                      onChange={(e) => {
+                        setDistributorQuery(e.target.value);
+                        // If they're editing, treat the current
+                        // selection as stale until they pick again.
+                        if (distributorId) setDistributorId("");
+                        if (!distributorOpen) setDistributorOpen(true);
+                      }}
+                    />
+                    {distributorOpen &&
+                      (matches.length > 0 || canCreate) && (
+                        <div
+                          className="absolute left-0 right-0 mt-1 rounded-xl overflow-hidden z-20"
+                          style={{
+                            background: "var(--spark-bg)",
+                            border: "1px solid var(--spark-border)",
+                            boxShadow: "0 6px 24px rgba(0,0,0,0.35)",
+                            maxHeight: 240,
+                            overflowY: "auto",
+                          }}
+                        >
+                          {matches.map((d) => (
+                            <button
+                              type="button"
+                              key={d.id}
+                              onMouseDown={(e) => {
+                                // Use mousedown so it beats the blur.
+                                e.preventDefault();
+                                setDistributorId(String(d.id));
+                                setDistributorQuery(d.name);
+                                setDistributorOpen(false);
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm transition"
+                              style={{
+                                color: "rgba(255,255,255,0.85)",
+                              }}
+                              onMouseEnter={(e) => {
+                                (e.currentTarget as HTMLButtonElement).style.background =
+                                  "rgba(197,245,70,0.08)";
+                              }}
+                              onMouseLeave={(e) => {
+                                (e.currentTarget as HTMLButtonElement).style.background =
+                                  "transparent";
+                              }}
+                            >
+                              {d.name}
+                            </button>
+                          ))}
+                          {canCreate && (
+                            <button
+                              type="button"
+                              disabled={isCreatingDistributor}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                const name = q;
+                                if (!tenantId) {
+                                  showAlert(
+                                    "Pick a tenant before adding a distributor",
+                                    "error",
+                                  );
+                                  return;
+                                }
+                                commitDistributor({
+                                  variables: {
+                                    input: {
+                                      name,
+                                      tenantId: String(tenantId),
+                                      email: "",
+                                      locationId: "",
+                                    },
+                                  },
+                                  onCompleted: (resp) => {
+                                    const payload = resp.createDistributor;
+                                    const created =
+                                      payload?.distributor ?? null;
+                                    if (payload?.success && created?.id) {
+                                      setDistributorId(String(created.id));
+                                      setDistributorQuery(created.name);
+                                      setDistributorOpen(false);
+                                      showAlert(
+                                        `Added distributor "${created.name}"`,
+                                        "success",
+                                      );
+                                    } else {
+                                      showAlert(
+                                        payload?.message ??
+                                          "Couldn't add distributor",
+                                        "error",
+                                      );
+                                    }
+                                  },
+                                  onError: (err) =>
+                                    showAlert(err.message, "error"),
+                                });
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm transition disabled:opacity-50"
+                              style={{
+                                color: "var(--spark-lime)",
+                                borderTop:
+                                  matches.length > 0
+                                    ? "1px solid var(--spark-border)"
+                                    : undefined,
+                              }}
+                              onMouseEnter={(e) => {
+                                (e.currentTarget as HTMLButtonElement).style.background =
+                                  "rgba(197,245,70,0.08)";
+                              }}
+                              onMouseLeave={(e) => {
+                                (e.currentTarget as HTMLButtonElement).style.background =
+                                  "transparent";
+                              }}
+                            >
+                              {isCreatingDistributor
+                                ? `Adding "${q}"…`
+                                : `+ Add distributor: "${q}"`}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                  </>
+                );
+              })()}
             </div>
           </div>
 
@@ -879,171 +1047,25 @@ const SparkRequestInner: React.FC = () => {
             </div>
           </div>
 
-          {/* Address — moved up from the (removed) DETAIL section so
-              all WHERE fields sit together with Venue. */}
-          {!address ? (
-            <div>
-              <label className="label-mini block mb-1.5">Address *</label>
-              <GooglePlacesInput
-                value={address}
-                onChange={setAddress}
-                onResolved={(p) => {
-                  setAddress(p.formattedAddress);
-                  if (p.timezoneId) {
-                    const match = matchTimezoneOption(p.timezoneId, timezones);
-                    if (match) setTimezoneId(String(match.id));
-                  }
-                }}
-                placeholder="Start typing — Google suggestions appear"
-                className=""
-                style={inputStyle}
-              />
-            </div>
-          ) : (
-            <div
-              className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm"
-              style={{
-                background: "rgba(197,245,70,0.06)",
-                border: "1px solid rgba(197,245,70,0.25)",
-                color: "rgba(255,255,255,0.85)",
-              }}
-            >
-              <span className="truncate">
-                <span
-                  className="mono text-[10px] mr-2"
-                  style={{
-                    letterSpacing: "0.16em",
-                    color: "var(--spark-lime)",
-                  }}
-                >
-                  ADDRESS →
-                </span>
-                {address}
-              </span>
-              <button
-                type="button"
-                onClick={() => setAddress("")}
-                className="mono text-[10px] shrink-0"
-                style={{
-                  letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.55)",
-                }}
-              >
-                CHANGE
-              </button>
-            </div>
-          )}
+          {/* Address / start-end time / time zone / RMM routing used
+              to live here as their own visible section. Removed — those
+              fields are now sensibly defaulted and only surface on the
+              Edit Request page when a power user wants to tweak them.
 
-          {/* Start / End / Time zone — moved up from the (removed)
-              DETAIL section so all WHEN fields sit together with
-              Visit Date. */}
-          <div className="grid sm:grid-cols-3 gap-4">
-            <div>
-              <label className="label-mini block mb-1.5">Start time</label>
-              <TimeSlotSelect
-                style={inputStyle}
-                value={startTime}
-                onChange={setStartTime}
-              />
-            </div>
-            <div>
-              <label className="label-mini block mb-1.5">End time</label>
-              <TimeSlotSelect
-                style={inputStyle}
-                value={endTime}
-                onChange={setEndTime}
-              />
-            </div>
-            <div>
-              <label className="label-mini block mb-1.5">Time zone</label>
-              <select
-                style={inputStyle}
-                value={timezoneId}
-                onChange={(e) => setTimezoneId(e.target.value)}
-              >
-                <option value="">Select timezone</option>
-                {timezones.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+                - Address: auto-fills when Venue is picked from a
+                  Google Places suggestion (handled in the Venue input
+                  via onResolved). Empty otherwise — backend tolerates
+                  null.
+                - Start/end time: default 12:00 PM – 4:00 PM (set by
+                  qpStart / qpEnd useState init).
+                - Time zone: derived from the address geocode on the
+                  backend if not set.
+                - Routing: empty string means "first available RMM" —
+                  the Inbox shows which one accepted.
 
-          {/* Routing — single source of truth. The chip shows the
-              picked RMM; CHANGE toggles an inline picker right below
-              instead of bouncing the user to a duplicate dropdown at
-              the bottom of the form. */}
-          <div
-            className="rounded-xl"
-            style={{
-              background: "rgba(197,245,70,0.06)",
-              border: "1px solid rgba(197,245,70,0.25)",
-            }}
-          >
-            <div className="flex items-center justify-between gap-2 px-4 py-3">
-              <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className="mono text-[10px]"
-                  style={{
-                    letterSpacing: "0.16em",
-                    color: "var(--spark-lime)",
-                  }}
-                >
-                  ROUTING →
-                </span>
-                <p className="text-sm truncate">
-                  {(() => {
-                    const r = rmms.find((m) => String(m?.id) === rmmId);
-                    return r
-                      ? [r.firstName, r.lastName].filter(Boolean).join(" ") ||
-                          r.username
-                      : "First available RMM";
-                  })()}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRmmPickerOpen((v) => !v)}
-                className="mono text-[10px] transition shrink-0"
-                style={{
-                  letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.55)",
-                }}
-              >
-                {rmmPickerOpen ? "DONE" : "CHANGE"}
-              </button>
-            </div>
-            {rmmPickerOpen && (
-              <div
-                className="px-4 pb-3"
-                style={{ borderTop: "1px solid rgba(197,245,70,0.18)" }}
-              >
-                <label
-                  className="label-mini block mt-3 mb-1.5"
-                >
-                  Routes to RMM (auto-approval)
-                </label>
-                <select
-                  id="rmm-select"
-                  style={inputStyle}
-                  value={rmmId}
-                  onChange={(e) => setRmmId(e.target.value)}
-                >
-                  <option value="">First available RMM</option>
-                  {rmms.map((r) =>
-                    r ? (
-                      <option key={r.id} value={r.id}>
-                        {[r.firstName, r.lastName].filter(Boolean).join(" ") ||
-                          r.username}
-                      </option>
-                    ) : null,
-                  )}
-                </select>
-              </div>
-            )}
-          </div>
+              Keeps Express Mode at 5–6 fields. The values are still
+              wired into the mutation input (see distributorId / startTime
+              / endTime / timezoneId / rmmId in the submit handler). */}
         </div>
 
         {/* Products picker */}

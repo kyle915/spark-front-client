@@ -269,8 +269,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               }}
             >
               {isZipping
-                ? "Zipping…"
-                : `⬇ All photos (${allFiles.length})`}
+                ? `Zipping ${allFiles.length}…`
+                : `⬇ Download photos (${allFiles.length})`}
             </button>
             <button
               onClick={() => {
