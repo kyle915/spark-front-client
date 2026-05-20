@@ -241,6 +241,9 @@ const SparkAcademy = lazyDefault(
 const SparkAcademyViewer = lazyDefault(
   () => import("@/components/pages/academy/SparkAcademyViewer"),
 );
+const SparkFavorites = lazyDefault(
+  () => import("@/components/pages/favorites/SparkFavorites"),
+);
 const SparkPayroll = lazyDefault(
   () => import("@/components/pages/wingspan/SparkPayroll"),
 );
@@ -542,6 +545,11 @@ const RequestsLinks = {
     {
       path: "/academy/:id",
       component: <SparkAcademyViewer />,
+      isPublic: false,
+    },
+    {
+      path: "/favorites",
+      component: <SparkFavorites />,
       isPublic: false,
     },
     {
