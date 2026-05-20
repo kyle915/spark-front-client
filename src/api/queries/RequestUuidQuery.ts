@@ -133,6 +133,7 @@ export const RequestUuidQuery = graphql`
         id
         uuid
         name
+        address
         date
         startTime
         endTime

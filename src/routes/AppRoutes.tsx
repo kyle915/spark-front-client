@@ -168,6 +168,9 @@ const EditRetailer = lazyNamed(
 // Recap (heaviest — pulls HEIC decoder via dynamic import)
 const RecapList = lazyDefault(() => import("@/recap/RecapsList"));
 const SparkRecapsList = lazyDefault(() => import("@/recap/SparkRecapsList"));
+const SparkRecapsMissing = lazyDefault(
+  () => import("@/recap/SparkRecapsMissing"),
+);
 const SparkRecapView = lazyDefault(() => import("@/recap/SparkRecapView"));
 const SparkRecapCreate = lazyDefault(() => import("@/recap/SparkRecapCreate"));
 const SparkRecapTemplates = lazyDefault(
@@ -720,6 +723,7 @@ const RecapLinks = {
     { path: "/recap/create", component: <SparkRecapCreate />, isPublic: false },
     { path: "/recap/list", component: <SparkRecapsList />, isPublic: false },
     { path: "/recaps/list", component: <SparkRecapsList />, isPublic: false },
+    { path: "/recaps/missing", component: <SparkRecapsMissing />, isPublic: false },
     { path: "/recaps/templates", component: <AdminOnly><SparkRecapTemplates /></AdminOnly>, isPublic: false },
     { path: "/recap/legacy", component: <RecapList />, isPublic: false },
     {
