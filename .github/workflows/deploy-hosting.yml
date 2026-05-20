@@ -32,6 +32,15 @@ on:
 # Locally `firebase deploy --only hosting` works because kyle has the
 # targets pre-applied in his checkout — CI starts from scratch each run.
 
+# Project ID is visible in `.firebaserc` (not sensitive) and the
+# previous `FIREBASE_PROJECT_ID` secret was resolving to a different
+# project that didn't own the spark-new-admin/spark-new-client sites,
+# producing `could not find site "spark-new-admin" for project "***"`.
+# Hardcoding it as a workflow-level env so every step has a single
+# source of truth.
+env:
+  FIREBASE_PROJECT_ID: spark-479222
+
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
@@ -72,14 +81,14 @@ jobs:
       # CLI then has the mapping it needs.
       - name: Apply hosting targets
         run: |
-          firebase target:apply hosting admin spark-new-admin --project "${{ secrets.FIREBASE_PROJECT_ID }}" --non-interactive
-          firebase target:apply hosting client spark-new-client --project "${{ secrets.FIREBASE_PROJECT_ID }}" --non-interactive
+          firebase target:apply hosting admin spark-new-admin --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+          firebase target:apply hosting client spark-new-client --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
 
       - name: Deploy hosting:admin (spark-new-admin)
-        run: firebase deploy --only hosting:admin --project "${{ secrets.FIREBASE_PROJECT_ID }}" --non-interactive
+        run: firebase deploy --only hosting:admin --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
 
       - name: Deploy hosting:client (spark-new-client)
-        run: firebase deploy --only hosting:client --project "${{ secrets.FIREBASE_PROJECT_ID }}" --non-interactive
+        run: firebase deploy --only hosting:client --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
 
       - name: Clean up Firebase auth file
         if: always()
