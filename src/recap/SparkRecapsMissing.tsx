@@ -154,8 +154,110 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
     );
   }
 
+  // CSV export of the visible rows. Same format as the Master
+  // Tracker / Recaps page exports — one row per (event, assigned
+  // BA) pair so the spreadsheet can be sorted by BA without losing
+  // the event context. Events with no assignments still get one row
+  // (empty BA columns) so the count matches the on-screen list.
+  const exportCsv = () => {
+    if (rows.length === 0) {
+      window.alert("Nothing to export.");
+      return;
+    }
+    const esc = (raw: string | number | null | undefined) => {
+      const s = (raw ?? "").toString();
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const header = [
+      "Event UUID",
+      "Event Name",
+      "Venue",
+      "Address",
+      "State",
+      "Date",
+      "Hours Overdue",
+      "BA Name",
+      "BA Email",
+      "BA Invite Status",
+      "Ambassador Event UUID",
+      "Request UUID",
+    ];
+    const lines = [header.join(",")];
+    for (const row of rows) {
+      const bas = row.assignedAmbassadors.length > 0
+        ? row.assignedAmbassadors
+        : [
+            {
+              name: "",
+              email: "",
+              isApproved: false,
+              ambassadorEventUuid: "",
+            },
+          ];
+      for (const ba of bas) {
+        lines.push(
+          [
+            row.eventUuid,
+            row.eventName,
+            row.venue ?? "",
+            row.address ?? "",
+            row.stateCode ?? "",
+            row.date ?? row.endTime ?? "",
+            row.hoursOverdue ?? "",
+            ba.name,
+            ba.email ?? "",
+            ba.name ? (ba.isApproved ? "accepted" : "pending") : "",
+            ba.ambassadorEventUuid,
+            row.requestUuid ?? "",
+          ]
+            .map(esc)
+            .join(","),
+        );
+      }
+    }
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const today = new Date().toISOString().slice(0, 10);
+    a.download = `spark-recaps-missing-${today}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-3">
+      <div
+        className="flex items-center justify-between text-[10px]"
+        style={{ paddingBottom: 2 }}
+      >
+        <span
+          className="mono"
+          style={{
+            letterSpacing: "0.16em",
+            color: "rgba(255,255,255,0.45)",
+          }}
+        >
+          {rows.length} EVENT{rows.length === 1 ? "" : "S"} OWING A RECAP
+        </span>
+        <button
+          type="button"
+          onClick={exportCsv}
+          className="mono"
+          style={{
+            letterSpacing: "0.14em",
+            color: "var(--spark-lime)",
+          }}
+          title="Download the visible list as CSV — one row per (event, BA) pair"
+        >
+          ⇣ EXPORT CSV
+        </button>
+      </div>
       {rows.map((row) => {
         const chip = overdueChipStyle(row.hoursOverdue ?? null);
         const venueLabel = row.venue || row.eventName;
