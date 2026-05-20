@@ -82,6 +82,7 @@ const EventsList = lazyDefault(() => import("@/events/EventsList"));
 const CreateEvent = lazyDefault(() => import("@/events/CreateEvent"));
 const EditEvent = lazyDefault(() => import("@/events/EditEvent"));
 const EventView = lazyDefault(() => import("@/events/EventView"));
+const SparkEventView = lazyDefault(() => import("@/events/SparkEventView"));
 const TodayEvents = lazyDefault(() => import("@/events/TodayEvents"));
 const TodayEventsMap = lazyDefault(() => import("@/events/TodayEventsMap"));
 const CreateEventWithoutRequest = lazyDefault(
@@ -584,7 +585,8 @@ const EventsLinks = {
       component: <CreateEvent />,
       isPublic: false,
     },
-    { path: "/event/view/:uuid", component: <EventView />, isPublic: false },
+    { path: "/event/view/:uuid", component: <SparkEventView />, isPublic: false },
+    { path: "/event/view-legacy/:uuid", component: <EventView />, isPublic: false },
     { path: "/event/edit/:uuid", component: <EditEvent />, isPublic: false },
   ],
 };
