@@ -207,9 +207,25 @@ const SparkRequestInner: React.FC = () => {
   const [endTime, setEndTime] = useState(qpEnd);
   const [venue, setVenue] = useState(searchParams.get("venue") ?? "");
   const [address, setAddress] = useState(searchParams.get("address") ?? "");
+  const [storeNumber, setStoreNumber] = useState(
+    searchParams.get("storeNumber") ?? "",
+  );
   const [requestTypeId, setRequestTypeId] = useState(qpRequestTypeId);
   const [timezoneId, setTimezoneId] = useState(qpTimezoneId);
   const [rmmId, setRmmId] = useState("");
+  // Whether the inline RMM picker is open — replaces the duplicate
+  // "Routes to RMM (auto-approval)" dropdown that used to live in
+  // the (now-removed) DETAIL section. Click CHANGE on the routing
+  // chip to toggle.
+  const [rmmPickerOpen, setRmmPickerOpen] = useState(false);
+
+  // Detect "Retail Sampling" so we can require a Store Number on
+  // those activations only. Falls back to false if the type list
+  // hasn't loaded or the user hasn't picked yet.
+  const isRetailSampling = useMemo(() => {
+    const t = requestTypes.find((rt) => String(rt?.id) === requestTypeId);
+    return (t?.name ?? "").toLowerCase().includes("retail");
+  }, [requestTypes, requestTypeId]);
   const [notes, setNotes] = useState(qpNotes);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
     new Set(qpProducts),
@@ -260,6 +276,8 @@ const SparkRequestInner: React.FC = () => {
       if (typeof draft.timezoneId === "string")
         setTimezoneId(draft.timezoneId);
       if (typeof draft.rmmId === "string") setRmmId(draft.rmmId);
+      if (typeof draft.storeNumber === "string")
+        setStoreNumber(draft.storeNumber);
       if (typeof draft.distributorId === "string")
         setDistributorId(draft.distributorId);
       if (typeof draft.notes === "string") setNotes(draft.notes);
@@ -292,6 +310,7 @@ const SparkRequestInner: React.FC = () => {
         timezoneId,
         rmmId,
         distributorId,
+        storeNumber,
         notes,
         baCount,
         products: Array.from(selectedProducts),
@@ -324,6 +343,7 @@ const SparkRequestInner: React.FC = () => {
     timezoneId,
     rmmId,
     distributorId,
+    storeNumber,
     notes,
     baCount,
     selectedProducts,
@@ -406,12 +426,24 @@ const SparkRequestInner: React.FC = () => {
       showAlert("Fill in venue, date, time, and type.", "warning");
       return;
     }
+    if (isRetailSampling && !storeNumber.trim()) {
+      showAlert(
+        "Store number is required for Retail Sampling activations.",
+        "warning",
+      );
+      return;
+    }
     const allDates = [date, ...extraDates.filter(Boolean)];
     const geocoded = await geocode(address || venue);
     const coords: ReadonlyArray<number> = geocoded ?? [0, 0];
-    // Embed BA count + bulk size in notes so it's visible to the RMM
-    // until first-class fields are added to the mutation input.
+    // Embed BA count + bulk size + store number in notes so it's
+    // visible to the RMM until first-class fields are added to the
+    // mutation input. Store number is searchable from the Tracker
+    // even though it's not a typed column yet.
     const notesPlus = [
+      isRetailSampling && storeNumber.trim()
+        ? `Store #: ${storeNumber.trim()}`
+        : null,
       notes,
       `BA count: ${baCount}`,
       allDates.length > 1
@@ -558,6 +590,7 @@ const SparkRequestInner: React.FC = () => {
               setExtraDates([]);
               setBaCount(1);
               setDistributorId("");
+              setStoreNumber("");
               clearDraft();
               setDraftRestored(false);
             }}
@@ -711,6 +744,33 @@ const SparkRequestInner: React.FC = () => {
             </div>
           </div>
 
+          {/* Store Number — required when activation type is Retail
+              Sampling so the BA knows which specific store to walk
+              into. Submitted via notes (prepended) until a typed
+              column ships on the Request model. */}
+          {isRetailSampling && (
+            <div>
+              <label className="label-mini block mb-1.5">
+                Store number *
+              </label>
+              <input
+                style={inputStyle}
+                value={storeNumber}
+                onChange={(e) => setStoreNumber(e.target.value)}
+                placeholder="e.g. 1247"
+                required
+                inputMode="numeric"
+              />
+              <p
+                className="text-xs mt-1"
+                style={{ color: "rgba(255,255,255,0.45)" }}
+              >
+                The retailer's store number identifies which location
+                the BA reports to.
+              </p>
+            </div>
+          )}
+
           {/* Bulk dates — add more visits at the same venue */}
           {extraDates.length > 0 && (
             <div
@@ -819,175 +879,172 @@ const SparkRequestInner: React.FC = () => {
             </div>
           </div>
 
-          {/* Auto-routed RMM display + Change inline (no dropdown by default) */}
+          {/* Address — moved up from the (removed) DETAIL section so
+              all WHERE fields sit together with Venue. */}
+          {!address ? (
+            <div>
+              <label className="label-mini block mb-1.5">Address *</label>
+              <GooglePlacesInput
+                value={address}
+                onChange={setAddress}
+                onResolved={(p) => {
+                  setAddress(p.formattedAddress);
+                  if (p.timezoneId) {
+                    const match = matchTimezoneOption(p.timezoneId, timezones);
+                    if (match) setTimezoneId(String(match.id));
+                  }
+                }}
+                placeholder="Start typing — Google suggestions appear"
+                className=""
+                style={inputStyle}
+              />
+            </div>
+          ) : (
+            <div
+              className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm"
+              style={{
+                background: "rgba(197,245,70,0.06)",
+                border: "1px solid rgba(197,245,70,0.25)",
+                color: "rgba(255,255,255,0.85)",
+              }}
+            >
+              <span className="truncate">
+                <span
+                  className="mono text-[10px] mr-2"
+                  style={{
+                    letterSpacing: "0.16em",
+                    color: "var(--spark-lime)",
+                  }}
+                >
+                  ADDRESS →
+                </span>
+                {address}
+              </span>
+              <button
+                type="button"
+                onClick={() => setAddress("")}
+                className="mono text-[10px] shrink-0"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                CHANGE
+              </button>
+            </div>
+          )}
+
+          {/* Start / End / Time zone — moved up from the (removed)
+              DETAIL section so all WHEN fields sit together with
+              Visit Date. */}
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div>
+              <label className="label-mini block mb-1.5">Start time</label>
+              <TimeSlotSelect
+                style={inputStyle}
+                value={startTime}
+                onChange={setStartTime}
+              />
+            </div>
+            <div>
+              <label className="label-mini block mb-1.5">End time</label>
+              <TimeSlotSelect
+                style={inputStyle}
+                value={endTime}
+                onChange={setEndTime}
+              />
+            </div>
+            <div>
+              <label className="label-mini block mb-1.5">Time zone</label>
+              <select
+                style={inputStyle}
+                value={timezoneId}
+                onChange={(e) => setTimezoneId(e.target.value)}
+              >
+                <option value="">Select timezone</option>
+                {timezones.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Routing — single source of truth. The chip shows the
+              picked RMM; CHANGE toggles an inline picker right below
+              instead of bouncing the user to a duplicate dropdown at
+              the bottom of the form. */}
           <div
-            className="flex items-center justify-between gap-2 px-4 py-3 rounded-xl"
+            className="rounded-xl"
             style={{
               background: "rgba(197,245,70,0.06)",
               border: "1px solid rgba(197,245,70,0.25)",
             }}
           >
-            <div className="flex items-center gap-2 min-w-0">
-              <span
-                className="mono text-[10px]"
-                style={{
-                  letterSpacing: "0.16em",
-                  color: "var(--spark-lime)",
-                }}
-              >
-                ROUTING →
-              </span>
-              <p className="text-sm truncate">
-                {(() => {
-                  const r = rmms.find((m) => String(m?.id) === rmmId);
-                  return r
-                    ? [r.firstName, r.lastName].filter(Boolean).join(" ") ||
-                        r.username
-                    : "First available RMM";
-                })()}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                // Scroll the RMM dropdown into view so the user can
-                // pick a different recipient. Form is now always
-                // visible so no expander toggle needed.
-                document
-                  .getElementById("rmm-select")
-                  ?.scrollIntoView({ behavior: "smooth", block: "center" });
-                document.getElementById("rmm-select")?.focus();
-              }}
-              className="mono text-[10px] transition shrink-0"
-              style={{
-                letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.55)",
-              }}
-            >
-              CHANGE
-            </button>
-          </div>
-        </div>
-
-        {/* DETAIL — always visible for logged-in users. Name + Email
-            removed (we have them from auth); Address shows only if it
-            hasn't been auto-filled by the venue picker. Start/End time,
-            time zone, and RMM routing are surfaced by default because
-            they're required for every request. */}
-        <div
-          className="space-y-5 pt-5"
-          style={{ borderTop: "1px solid var(--spark-border)" }}
-        >
-            {!address && (
-              <div>
-                <label className="label-mini block mb-1.5">Address *</label>
-                <GooglePlacesInput
-                  value={address}
-                  onChange={setAddress}
-                  onResolved={(p) => {
-                    setAddress(p.formattedAddress);
-                    if (p.timezoneId) {
-                      const match = matchTimezoneOption(p.timezoneId, timezones);
-                      if (match) setTimezoneId(String(match.id));
-                    }
-                  }}
-                  placeholder="Start typing — Google suggestions appear"
-                  className=""
-                  style={inputStyle}
-                />
-              </div>
-            )}
-            {address && (
-              <div
-                className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm"
-                style={{
-                  background: "rgba(197,245,70,0.06)",
-                  border: "1px solid rgba(197,245,70,0.25)",
-                  color: "rgba(255,255,255,0.85)",
-                }}
-              >
-                <span className="truncate">
-                  <span
-                    className="mono text-[10px] mr-2"
-                    style={{
-                      letterSpacing: "0.16em",
-                      color: "var(--spark-lime)",
-                    }}
-                  >
-                    ADDRESS →
-                  </span>
-                  {address}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setAddress("")}
-                  className="mono text-[10px] shrink-0"
+            <div className="flex items-center justify-between gap-2 px-4 py-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="mono text-[10px]"
                   style={{
-                    letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.55)",
+                    letterSpacing: "0.16em",
+                    color: "var(--spark-lime)",
                   }}
                 >
-                  CHANGE
-                </button>
+                  ROUTING →
+                </span>
+                <p className="text-sm truncate">
+                  {(() => {
+                    const r = rmms.find((m) => String(m?.id) === rmmId);
+                    return r
+                      ? [r.firstName, r.lastName].filter(Boolean).join(" ") ||
+                          r.username
+                      : "First available RMM";
+                  })()}
+                </p>
               </div>
-            )}
-
-            <div className="grid sm:grid-cols-3 gap-4">
-              <div>
-                <label className="label-mini block mb-1.5">Start time</label>
-                <TimeSlotSelect
-                  style={inputStyle}
-                  value={startTime}
-                  onChange={setStartTime}
-                />
-              </div>
-              <div>
-                <label className="label-mini block mb-1.5">End time</label>
-                <TimeSlotSelect
-                  style={inputStyle}
-                  value={endTime}
-                  onChange={setEndTime}
-                />
-              </div>
-              <div>
-                <label className="label-mini block mb-1.5">Time zone</label>
-                <select
-                  style={inputStyle}
-                  value={timezoneId}
-                  onChange={(e) => setTimezoneId(e.target.value)}
+              <button
+                type="button"
+                onClick={() => setRmmPickerOpen((v) => !v)}
+                className="mono text-[10px] transition shrink-0"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                {rmmPickerOpen ? "DONE" : "CHANGE"}
+              </button>
+            </div>
+            {rmmPickerOpen && (
+              <div
+                className="px-4 pb-3"
+                style={{ borderTop: "1px solid rgba(197,245,70,0.18)" }}
+              >
+                <label
+                  className="label-mini block mt-3 mb-1.5"
                 >
-                  <option value="">Select timezone</option>
-                  {timezones.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
+                  Routes to RMM (auto-approval)
+                </label>
+                <select
+                  id="rmm-select"
+                  style={inputStyle}
+                  value={rmmId}
+                  onChange={(e) => setRmmId(e.target.value)}
+                >
+                  <option value="">First available RMM</option>
+                  {rmms.map((r) =>
+                    r ? (
+                      <option key={r.id} value={r.id}>
+                        {[r.firstName, r.lastName].filter(Boolean).join(" ") ||
+                          r.username}
+                      </option>
+                    ) : null,
+                  )}
                 </select>
               </div>
-            </div>
-
-            <div>
-              <label className="label-mini block mb-1.5">
-                Routes to RMM (auto-approval)
-              </label>
-              <select
-                id="rmm-select"
-                style={inputStyle}
-                value={rmmId}
-                onChange={(e) => setRmmId(e.target.value)}
-              >
-                <option value="">First available RMM</option>
-                {rmms.map((r) =>
-                  r ? (
-                    <option key={r.id} value={r.id}>
-                      {[r.firstName, r.lastName].filter(Boolean).join(" ") ||
-                        r.username}
-                    </option>
-                  ) : null,
-                )}
-              </select>
-            </div>
+            )}
           </div>
+        </div>
 
         {/* Products picker */}
         {products.length > 0 && (
