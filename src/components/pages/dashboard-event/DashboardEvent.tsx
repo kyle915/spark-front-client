@@ -8,6 +8,7 @@ import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import AttentionEngine from "./AttentionEngine";
+import PaceWidget from "./PaceWidget";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useNavigate } from "react-router";
 
@@ -657,6 +658,14 @@ export default function DashboardIndex() {
         <Suspense fallback={null}>
           <TodaysSnapshot />
         </Suspense>
+
+        {/* PACE widget — last 7 days at a glance, with delta chips.
+            Same data the weekly exec-summary email uses, but live so
+            kyle can refresh mid-week. Sits between the action-oriented
+            snapshot and the legacy KPI hero so the dashboard reads
+            as: "what do I need to do now" → "how's the week going"
+            → "deeper KPIs". Self-suspends; hides on empty weeks. */}
+        <PaceWidget />
 
         {/* Compact hero + dense CPG KPI grid.
             Tile design is Apple Stocks-style — small label up top,
