@@ -231,6 +231,9 @@ const SparkNewClient = lazyDefault(
 const SparkBaPortal = lazyDefault(
   () => import("@/components/pages/ba/SparkBaPortal"),
 );
+const SparkBaDetail = lazyDefault(
+  () => import("@/components/pages/ba/SparkBaDetail"),
+);
 const SparkAcademy = lazyDefault(
   () => import("@/components/pages/academy/SparkAcademy"),
 );
@@ -514,6 +517,14 @@ const RequestsLinks = {
       // Anyone signed in can hit this; the route owns its own layout.
       path: "/ba",
       component: <SparkBaPortal />,
+      isPublic: false,
+    },
+    {
+      // Admin view of a single Brand Ambassador — stats, reviews,
+      // notes, contact, favorite toggle. Distinct from /ba which is
+      // the BA's own portal.
+      path: "/ba/:uuid",
+      component: <SparkBaDetail />,
       isPublic: false,
     },
     {
