@@ -2564,6 +2564,15 @@ input GenerateCampaignReportPdfInput {
   subtitle: String = null
 }
 
+input EmailCampaignReportInput {
+  clientMutationId: ID = null
+  recapIds: [ID!]!
+  recipients: [String!]!
+  title: String = null
+  subtitle: String = null
+  message: String = null
+}
+
 input NudgeAmbassadorForRecapInput {
   clientMutationId: ID = null
   ambassadorEventUuid: ID!
@@ -3245,6 +3254,7 @@ type Mutation {
   declineCustomRecap(input: DeclineCustomRecapInput!): CustomRecapDetailResponse!
   generateRecapPdf(input: GenerateRecapPdfInput!): RecapFileDetailResponse!
   generateCampaignReportPdf(input: GenerateCampaignReportPdfInput!): RecapExportResponse!
+  emailCampaignReport(input: EmailCampaignReportInput!): RecapExportResponse!
   nudgeAmbassadorForRecap(input: NudgeAmbassadorForRecapInput!): NudgeRecapResponse!
   reassignRecapEvent(input: ReassignRecapEventInput!): RecapDetailResponse!
   generateCustomRecapPdf(input: GenerateCustomRecapPdfInput!): CustomRecapFileDetailResponse!
