@@ -239,6 +239,9 @@ const SparkAcademy = lazyDefault(
 const SparkAcademyViewer = lazyDefault(
   () => import("@/components/pages/academy/SparkAcademyViewer"),
 );
+const SparkBilling = lazyDefault(
+  () => import("@/components/pages/billing/SparkBilling"),
+);
 
 // User
 const UsersList = lazyDefault(() => import("@/users/UsersList"));
@@ -536,6 +539,11 @@ const RequestsLinks = {
     {
       path: "/academy/:id",
       component: <SparkAcademyViewer />,
+      isPublic: false,
+    },
+    {
+      path: "/billing",
+      component: <SparkBilling />,
       isPublic: false,
     },
   ],
