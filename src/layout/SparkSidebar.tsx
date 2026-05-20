@@ -141,6 +141,8 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Form Builder", Icon: Wrench, to: "/forms/builder" },
       { label: "Recap Templates", Icon: Star, to: "/recaps/templates" },
+      { label: "Clients", Icon: Building2, to: "/clients" },
+      { label: "Team", Icon: UsersRound, to: "/team" },
       { label: "New Client", Icon: Plus, to: "/clients/new" },
     ],
   },
@@ -150,6 +152,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Settings", Icon: Settings, to: "/settings" },
       { label: "Calendar Sync", Icon: CalendarClock, to: "/settings/calendar" },
+      { label: "Help", Icon: HelpCircle, to: "/help" },
     ],
   },
 ];
@@ -158,8 +161,6 @@ const SECTIONS: NavSection[] = [
 void Clock;
 void CreditCard;
 void DollarSign;
-void Building2;
-void HelpCircle;
 
 const slugToName = (slug: string | null | undefined): string => {
   if (!slug) return "—";
