@@ -69,8 +69,6 @@ import AdminOnly from "@/layout/AdminOnly";
 const DashboardRetail = lazyDefault(
   () => import("@/components/pages/dashboard-retail/DashboardRetail"),
 );
-const CompanySelector = lazyDefault(() => import("@/layout/CompanySelector"));
-
 // Requests (legacy)
 const RequestsList = lazyDefault(() => import("@/requests/RequestsList"));
 const RequestView = lazyDefault(() => import("@/requests/RequestView"));
@@ -239,6 +237,9 @@ const SparkAcademy = lazyDefault(
 const SparkAcademyViewer = lazyDefault(
   () => import("@/components/pages/academy/SparkAcademyViewer"),
 );
+const SparkBilling = lazyDefault(
+  () => import("@/components/pages/billing/SparkBilling"),
+);
 
 // User
 const UsersList = lazyDefault(() => import("@/users/UsersList"));
@@ -316,19 +317,6 @@ const PublicRoutes = {
       path: "/terms-of-service",
       component: <TermsOfServiceView />,
       isPublic: true,
-    },
-  ],
-};
-
-/*  -----------------------------------------------------------
- COMPANY SELECTION ROUTE
------------------------------------------------------------ */
-const CompanyRoutes = {
-  routes: [
-    {
-      path: "/select-company",
-      component: <CompanySelector />,
-      isPublic: false,
     },
   ],
 };
@@ -536,6 +524,11 @@ const RequestsLinks = {
     {
       path: "/academy/:id",
       component: <SparkAcademyViewer />,
+      isPublic: false,
+    },
+    {
+      path: "/billing",
+      component: <SparkBilling />,
       isPublic: false,
     },
   ],
@@ -1100,7 +1093,6 @@ export const appRoutes = [
   ...CatalogsRoutes,
   //Calendar
   ...CalendarLinks.routes,
-  ...CompanyRoutes.routes,
   ...PublicRoutes.routes,
   ...SettingsLinks.routes,
   ...GoalsLinks.routes,

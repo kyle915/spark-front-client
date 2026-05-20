@@ -150,6 +150,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Settings", Icon: Settings, to: "/settings" },
       { label: "Calendar Sync", Icon: CalendarClock, to: "/settings/calendar" },
+      { label: "Billing", Icon: DollarSign, to: "/billing" },
     ],
   },
 ];
@@ -157,7 +158,6 @@ const SECTIONS: NavSection[] = [
 // Imports referenced for future expansion of Operations group.
 void Clock;
 void CreditCard;
-void DollarSign;
 void Building2;
 void HelpCircle;
 
