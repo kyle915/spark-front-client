@@ -8,7 +8,7 @@ import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
-import { pickHeroImage } from "@/utils/recapFileUrl";
+import { recapFileUrl } from "@/utils/recapFileUrl";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 
 /**
@@ -256,12 +256,14 @@ const RecapsListInner: React.FC<{
             n.event?.retailer?.location?.state?.code ??
             n.state?.code ??
             null;
-          // Pick the first browser-renderable image, prepend GCS bucket
-          // URL via recapFileUrl(). HEIC/PDF aren't valid img sources.
-          const hero = pickHeroImage(n.recapFiles ?? []);
-          const fileCount = (n.recapFiles ?? []).filter(
-            (f) => f && (f.file?.toString() || "").length > 0,
-          ).length;
+          // Server-side resolvers do the work: heroFile is the first
+          // browser-renderable image (jpg/png/webp/gif), recapFilesCount
+          // is the COUNT(*) of all files. Client just prepends the
+          // GCS bucket via recapFileUrl().
+          const hero = n.heroFile?.file
+            ? recapFileUrl(n.heroFile.file)
+            : null;
+          const fileCount = n.recapFilesCount ?? 0;
           const requestUuid = n.event?.request?.uuid ?? null;
           return {
             uuid: String(n.uuid),

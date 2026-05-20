@@ -3957,6 +3957,8 @@ type Recap implements Node {
   recapFile: RecapFile
   recapFileId: ID
   recapFiles: [RecapFile!]!
+  recapFilesCount: Int!
+  heroFile: RecapFile
   ambassadors: [Ambassador!]! @deprecated(reason: "Use ambassador instead.")
   requestStoreManagers: [RequestStoreManager!]!
 }
