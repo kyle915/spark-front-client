@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 
 /**
@@ -164,6 +164,39 @@ const TrackerCalendar: React.FC<{ rows: CalendarRow[] }> = ({ rows }) => {
     setCursor({ y: d.getFullYear(), m: d.getMonth() });
   };
 
+  // Keyboard shortcuts. ← / → page months, T jumps to today. Skips
+  // when the user is typing in an input or contenteditable surface so
+  // we don't hijack search boxes or notes panes that share the page.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tgt = e.target as HTMLElement | null;
+      if (tgt) {
+        const tag = tgt.tagName;
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          tgt.isContentEditable
+        ) {
+          return;
+        }
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        prev();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        next();
+      } else if (e.key === "t" || e.key === "T") {
+        e.preventDefault();
+        jumpToday();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const clickRow = (r: CalendarRow) => {
     if (r.statusSlug === "done" && r.eventUuid) {
       navigate(`/event/view/${r.eventUuid}`);
@@ -226,15 +259,27 @@ const TrackerCalendar: React.FC<{ rows: CalendarRow[] }> = ({ rows }) => {
         <h3 className="display text-lg font-bold">
           {MONTH_NAMES[cursor.m]} {cursor.y}
         </h3>
-        <span
-          className="mono text-[10px]"
-          style={{
-            letterSpacing: "0.14em",
-            color: "rgba(255,255,255,0.45)",
-          }}
-        >
-          {rows.length} REQUEST{rows.length === 1 ? "" : "S"} IN VIEW
-        </span>
+        <div className="flex items-center gap-3">
+          <span
+            className="mono text-[10px] hidden md:inline"
+            style={{
+              letterSpacing: "0.14em",
+              color: "rgba(255,255,255,0.35)",
+            }}
+            title="Keyboard: ← prev month · → next month · T today"
+          >
+            ← → · T
+          </span>
+          <span
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            {rows.length} REQUEST{rows.length === 1 ? "" : "S"} IN VIEW
+          </span>
+        </div>
       </div>
 
       {/* Weekday strip */}
