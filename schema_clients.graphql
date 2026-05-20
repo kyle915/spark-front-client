@@ -4391,6 +4391,17 @@ type Request implements Node {
   products: [Product!]!
   event: Event
   events: [Event!]!
+  activityLog: [RequestActivityLogEntry!]!
+}
+
+type RequestActivityLogEntry {
+  uuid: String!
+  kind: String!
+  summary: String!
+  metadataJson: String!
+  actorEmail: String
+  actorName: String
+  createdAt: String!
 }
 
 type RequestBatchImportResponse {
