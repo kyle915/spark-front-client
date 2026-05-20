@@ -112,6 +112,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Jobs", Icon: Hammer, to: "/jobs" },
       { label: "Search Talent", Icon: Users, to: "/talent" },
+      { label: "Favorites", Icon: Star, to: "/favorites" },
       { label: "People", Icon: UsersRound, to: "/people" },
       { label: "Spark Academy", Icon: GraduationCap, to: "/academy" },
     ],

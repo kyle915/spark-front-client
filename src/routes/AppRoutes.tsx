@@ -239,6 +239,9 @@ const SparkAcademy = lazyDefault(
 const SparkAcademyViewer = lazyDefault(
   () => import("@/components/pages/academy/SparkAcademyViewer"),
 );
+const SparkFavorites = lazyDefault(
+  () => import("@/components/pages/favorites/SparkFavorites"),
+);
 
 // User
 const UsersList = lazyDefault(() => import("@/users/UsersList"));
@@ -536,6 +539,11 @@ const RequestsLinks = {
     {
       path: "/academy/:id",
       component: <SparkAcademyViewer />,
+      isPublic: false,
+    },
+    {
+      path: "/favorites",
+      component: <SparkFavorites />,
       isPublic: false,
     },
   ],
