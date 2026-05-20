@@ -109,6 +109,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const [filter, setFilter] = useState<"all" | Status>("all");
   const [search, setSearch] = useState("");
   const [stateFilter, setStateFilter] = useState<string>("all");
+  // Single-select retailer filter. "all" = no filter. Values are the
+  // exact retailer-name strings we display in the dropdown.
+  const [retailerFilter, setRetailerFilter] = useState<string>("all");
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [uploaded, setUploaded] = useState<UploadedAccount[]>([]);
 
@@ -206,11 +209,28 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     [accounts],
   );
 
+  // Distinct retailer names with their account counts. Sorted by
+  // count descending so the highest-coverage retailers come first
+  // in the dropdown — ops usually wants to filter to "show me only
+  // 7-Eleven" rather than picking from an alpha-sorted list.
+  const retailers = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const a of accounts) {
+      const name = (a.name ?? "").trim();
+      if (!name || name === "—") continue;
+      counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([name, n]) => ({ name, count: n }));
+  }, [accounts]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return accounts.filter((a) => {
       if (filter !== "all" && a.status !== filter) return false;
       if (stateFilter !== "all" && a.state !== stateFilter) return false;
+      if (retailerFilter !== "all" && a.name !== retailerFilter) return false;
       if (
         q &&
         !a.name.toLowerCase().includes(q) &&
@@ -220,7 +240,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         return false;
       return true;
     });
-  }, [accounts, filter, stateFilter, search]);
+  }, [accounts, filter, stateFilter, retailerFilter, search]);
 
   const counts = useMemo(
     () => ({
@@ -360,6 +380,27 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             </option>
           ))}
         </select>
+        <select
+          value={retailerFilter}
+          onChange={(e) => setRetailerFilter(e.target.value)}
+          className="rounded-xl text-xs"
+          style={{
+            padding: "0.45rem 0.9rem",
+            background: "var(--spark-bg)",
+            border: "1px solid var(--spark-border)",
+            color: "var(--spark-text)",
+            maxWidth: 220,
+            outline: "none",
+          }}
+          title="Filter by retailer name"
+        >
+          <option value="all">All retailers</option>
+          {retailers.map((r) => (
+            <option key={r.name} value={r.name}>
+              {r.name} · {r.count}
+            </option>
+          ))}
+        </select>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -374,6 +415,29 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             outline: "none",
           }}
         />
+        {(filter !== "all" ||
+          stateFilter !== "all" ||
+          retailerFilter !== "all" ||
+          search) && (
+          <button
+            onClick={() => {
+              setFilter("all");
+              setStateFilter("all");
+              setRetailerFilter("all");
+              setSearch("");
+            }}
+            className="mono text-[10px] px-3 py-1.5 rounded-xl"
+            style={{
+              letterSpacing: "0.16em",
+              color: "rgba(255,255,255,0.55)",
+              border: "1px solid var(--spark-border)",
+              background: "transparent",
+            }}
+            title="Clear all filters"
+          >
+            × CLEAR
+          </button>
+        )}
       </div>
 
       {/* Map + rail */}
@@ -579,59 +643,98 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                           <div
                             style={{
                               display: "flex",
+                              flexDirection: "column",
                               gap: 6,
-                              marginTop: 10,
+                              marginTop: 12,
                             }}
                           >
+                            {/* Primary CTA — biggest target on the
+                                popup. Prefills venue + address +
+                                state + retailer name into the
+                                Express form. */}
                             <button
                               onClick={() => {
                                 const params = new URLSearchParams({
                                   venue: a.name,
                                   address: a.address || a.market,
                                 });
+                                if (a.state) params.set("state", a.state);
                                 navigate(
                                   `/requests/create?${params.toString()}`,
                                 );
                               }}
                               style={{
-                                flex: 1,
                                 background: "#c5f546",
                                 color: "#0a0d09",
                                 border: "none",
-                                padding: "8px 12px",
-                                borderRadius: 8,
+                                padding: "10px 14px",
+                                borderRadius: 10,
                                 fontFamily:
                                   "Space Grotesk, sans-serif",
                                 fontWeight: 700,
-                                fontSize: 13,
+                                fontSize: 14,
                                 cursor: "pointer",
                                 boxShadow:
-                                  "0 0 12px rgba(197,245,70,0.45)",
+                                  "0 0 18px rgba(197,245,70,0.55)",
                               }}
                             >
-                              Schedule →
+                              ✦ Schedule a visit
                             </button>
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${a.coords.lat},${a.coords.lng}`}
-                              target="_blank"
-                              rel="noreferrer"
+                            <div
                               style={{
-                                background: "transparent",
-                                color: "#0a0d09",
-                                border: "1px solid rgba(10,13,9,0.2)",
-                                padding: "8px 10px",
-                                borderRadius: 8,
-                                fontFamily:
-                                  "JetBrains Mono, monospace",
-                                fontSize: 10,
-                                letterSpacing: "0.14em",
-                                textDecoration: "none",
-                                textTransform: "uppercase",
-                                lineHeight: "20px",
+                                display: "flex",
+                                gap: 6,
                               }}
                             >
-                              Open ↗
-                            </a>
+                              <button
+                                onClick={() => {
+                                  setRetailerFilter(a.name);
+                                  setOpenKey(null);
+                                }}
+                                style={{
+                                  flex: 1,
+                                  background: "transparent",
+                                  color: "#0a0d09",
+                                  border:
+                                    "1px solid rgba(10,13,9,0.2)",
+                                  padding: "6px 8px",
+                                  borderRadius: 8,
+                                  fontFamily:
+                                    "JetBrains Mono, monospace",
+                                  fontSize: 10,
+                                  letterSpacing: "0.14em",
+                                  cursor: "pointer",
+                                  textTransform: "uppercase",
+                                }}
+                                title="Filter the map + list to only this retailer"
+                              >
+                                Filter to {a.name.length > 14
+                                  ? a.name.slice(0, 14) + "…"
+                                  : a.name}
+                              </button>
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${a.coords.lat},${a.coords.lng}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  background: "transparent",
+                                  color: "#0a0d09",
+                                  border:
+                                    "1px solid rgba(10,13,9,0.2)",
+                                  padding: "6px 10px",
+                                  borderRadius: 8,
+                                  fontFamily:
+                                    "JetBrains Mono, monospace",
+                                  fontSize: 10,
+                                  letterSpacing: "0.14em",
+                                  textDecoration: "none",
+                                  textTransform: "uppercase",
+                                  lineHeight: "20px",
+                                }}
+                              >
+                                Open ↗
+                              </a>
+                            </div>
                           </div>
                         </div>
                       </InfoWindow>
@@ -707,21 +810,27 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Prefill the request form with this account's venue
-                      // + address via query params.
+                      // Prefill the request form with this account's
+                      // venue + address (+ state when known) via
+                      // query params. SparkRequestCreate picks
+                      // these up on mount via useSearchParams.
                       const params = new URLSearchParams({
                         venue: a.name,
-                        address: a.market,
+                        address: a.address || a.market,
                       });
+                      if (a.state) params.set("state", a.state);
                       navigate(`/requests/create?${params.toString()}`);
                     }}
-                    className="mono text-[10px] shrink-0"
+                    className="px-2.5 py-1 rounded-lg text-[10px] font-semibold shrink-0 transition"
                     style={{
+                      background: "var(--spark-lime)",
+                      color: "#0a0d09",
+                      border: "none",
                       letterSpacing: "0.14em",
-                      color: "var(--spark-lime)",
                     }}
+                    title="Schedule a visit at this account"
                   >
-                    SCHEDULE →
+                    ✦ SCHEDULE
                   </button>
                 </div>
               </li>
