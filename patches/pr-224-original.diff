@@ -1,0 +1,805 @@
+diff --git a/src/components/pages/clients/SparkClients.tsx b/src/components/pages/clients/SparkClients.tsx
+new file mode 100644
+index 0000000..cddb503
+--- /dev/null
++++ b/src/components/pages/clients/SparkClients.tsx
+@@ -0,0 +1,204 @@
++/**
++ * Spark v2 — Clients list page.
++ *
++ * Lists every Client (brand stakeholder organization) in the
++ * workspace. Wire is read-only for v1 — create lives at
++ * /clients/new, edit lives on each row's detail page (not yet built;
++ * routed to /clients/new for now as a placeholder).
++ */
++
++import React, { Suspense, useMemo, useState } from "react";
++import { useLazyLoadQuery } from "react-relay/hooks";
++import { useNavigate } from "react-router";
++import Layout from "@/layout/Layout";
++import { useAuthStore } from "@/store/authStore";
++import useSparkRole from "@/hooks/useSparkRole";
++import { ClientsQuery } from "@/api/queries/ClientsQuery";
++import type { ClientsQuery as ClientsQueryType } from "@api/queries/__generated__/ClientsQuery.graphql";
++
++type ClientNode = NonNullable<
++  NonNullable<
++    NonNullable<ClientsQueryType["response"]["clients"]>["edges"][number]
++  >["node"]
++>;
++
++const Inner: React.FC = () => {
++  const navigate = useNavigate();
++  const { tenantId } = useAuthStore();
++  const [search, setSearch] = useState("");
++
++  const data = useLazyLoadQuery<ClientsQueryType>(
++    ClientsQuery,
++    { filters: tenantId ? { tenantId } : {} },
++    { fetchPolicy: "store-or-network" },
++  );
++
++  const clients = useMemo<ClientNode[]>(() => {
++    return (data?.clients?.edges ?? [])
++      .map((e) => e?.node)
++      .filter((n): n is ClientNode => Boolean(n));
++  }, [data]);
++
++  const filtered = useMemo(() => {
++    const q = search.toLowerCase().trim();
++    if (!q) return clients;
++    return clients.filter(
++      (c) =>
++        (c.name ?? "").toLowerCase().includes(q) ||
++        (c.email ?? "").toLowerCase().includes(q),
++    );
++  }, [clients, search]);
++
++  return (
++    <div className="space-y-6 max-w-7xl">
++      <div className="flex items-end justify-between flex-wrap gap-3">
++        <div>
++          <p
++            className="mono text-[10px]"
++            style={{
++              letterSpacing: "0.18em",
++              color: "rgba(255,255,255,0.45)",
++            }}
++          >
++            CLIENTS · {clients.length}
++          </p>
++          <h1
++            className="display text-4xl font-bold mt-2"
++            style={{ letterSpacing: "-0.04em" }}
++          >
++            Brands you serve.
++          </h1>
++          <p
++            className="mt-2"
++            style={{ color: "rgba(255,255,255,0.55)" }}
++          >
++            Every client organization in this workspace. Tap a row to
++            see the brand's recent requests + recaps.
++          </p>
++        </div>
++        <button
++          onClick={() => navigate("/clients/new")}
++          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
++          style={{
++            background: "var(--spark-lime)",
++            color: "#0a0d09",
++            border: "none",
++          }}
++        >
++          + New client
++        </button>
++      </div>
++
++      <input
++        value={search}
++        onChange={(e) => setSearch(e.target.value)}
++        placeholder="Search by name or email…"
++        className="w-full max-w-md rounded-xl text-sm"
++        style={{
++          background: "var(--spark-bg)",
++          border: "1px solid var(--spark-border)",
++          color: "var(--spark-text)",
++          padding: "0.75rem 0.95rem",
++        }}
++      />
++
++      {filtered.length === 0 ? (
++        <div
++          className="spark-card p-8 text-center"
++          style={{ color: "rgba(255,255,255,0.55)" }}
++        >
++          {clients.length === 0
++            ? "No clients in this workspace yet. Use + New client to add one."
++            : "No matches."}
++        </div>
++      ) : (
++        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
++          {filtered.map((c) => (
++            <button
++              key={c.id}
++              onClick={() => navigate(`/requests/list?clientId=${c.id}`)}
++              className="spark-card hov p-5 text-left"
++              style={{
++                background: "var(--spark-card)",
++                cursor: "pointer",
++              }}
++            >
++              <div className="flex items-center gap-3 mb-2">
++                <div
++                  className="display font-bold"
++                  style={{
++                    width: 36,
++                    height: 36,
++                    borderRadius: 10,
++                    background: "rgba(197,245,70,0.10)",
++                    color: "var(--spark-lime)",
++                    display: "grid",
++                    placeItems: "center",
++                    fontSize: 13,
++                  }}
++                >
++                  {(c.name ?? "?").slice(0, 2).toUpperCase()}
++                </div>
++                <div className="flex-1 min-w-0">
++                  <p className="font-bold text-sm truncate">
++                    {c.name ?? "(unnamed)"}
++                  </p>
++                  <p
++                    className="text-xs truncate"
++                    style={{ color: "rgba(255,255,255,0.45)" }}
++                  >
++                    {c.email ?? "—"}
++                  </p>
++                </div>
++              </div>
++              <p
++                className="mono text-[10px]"
++                style={{
++                  letterSpacing: "0.16em",
++                  color: "var(--spark-lime)",
++                }}
++              >
++                VIEW REQUESTS →
++              </p>
++            </button>
++          ))}
++        </div>
++      )}
++    </div>
++  );
++};
++
++export default function SparkClients() {
++  const { isAdmin } = useSparkRole();
++  if (!isAdmin) {
++    return (
++      <Layout>
++        <div className="max-w-2xl">
++          <h1 className="display text-3xl font-bold">Admin only.</h1>
++          <p
++            className="mt-2"
++            style={{ color: "rgba(255,255,255,0.55)" }}
++          >
++            The Clients page is a Spark Admin surface.
++          </p>
++        </div>
++      </Layout>
++    );
++  }
++  return (
++    <Layout>
++      <Suspense
++        fallback={
++          <div
++            className="text-xs py-12"
++            style={{ color: "rgba(255,255,255,0.45)" }}
++          >
++            Loading clients…
++          </div>
++        }
++      >
++        <Inner />
++      </Suspense>
++    </Layout>
++  );
++}
+diff --git a/src/components/pages/help/SparkHelp.tsx b/src/components/pages/help/SparkHelp.tsx
+new file mode 100644
+index 0000000..52a6ae5
+--- /dev/null
++++ b/src/components/pages/help/SparkHelp.tsx
+@@ -0,0 +1,251 @@
++/**
++ * Spark v2 — Help & Support page.
++ *
++ * Static for v1 — no support backend yet. Surfaces the things admins
++ * actually ask about: getting BAs onto a shift, the recap workflow,
++ * payroll questions, and contact paths. When a real ticketing
++ * integration ships (Linear / Zendesk / etc.) swap the support card
++ * for a real form.
++ */
++
++import Layout from "@/layout/Layout";
++
++type FAQItem = {
++  q: string;
++  a: React.ReactNode;
++};
++
++const FAQS: FAQItem[] = [
++  {
++    q: "How do I invite a BA to a shift?",
++    a: (
++      <>
++        Open the request → click the lime <strong>✦ INVITE BA</strong>{" "}
++        button at the top. Pick a Brand Ambassador from the list and
++        Spark sends them a "New shift offered" push. They can{" "}
++        Accept or Decline from the mobile Shifts tab.
++      </>
++    ),
++  },
++  {
++    q: "How do I see who's confirmed for a shift?",
++    a: (
++      <>
++        On the request view, scroll to the{" "}
++        <strong>ROSTER · &lt;shift name&gt;</strong> panel. Lime{" "}
++        <strong>ACCEPTED</strong> chips are committed BAs; gold{" "}
++        <strong>PENDING</strong> chips are waiting on a response. You
++        can cancel or remove rows from the same panel.
++      </>
++    ),
++  },
++  {
++    q: "What is the Recap Due badge for?",
++    a: (
++      <>
++        Counts shifts whose end time has passed but no recap has been
++        filed. The sidebar lights up when ≥1 is due. The badge resets
++        once the BA submits a recap, or you can dismiss it on the
++        Master Tracker row.
++      </>
++    ),
++  },
++  {
++    q: "How does payroll work?",
++    a: (
++      <>
++        Spark doesn't run payroll directly — your BA payouts live in{" "}
++        <strong>Wingspan</strong> (1099 / contractor) and{" "}
++        <strong>Gusto</strong> (W-2 / employee). The mobile Earnings
++        tab surfaces a shift count and an hours estimate so BAs can
++        cross-check Wingspan / Gusto before the period closes.
++      </>
++    ),
++  },
++  {
++    q: "How do I get push notifications to a BA?",
++    a: (
++      <>
++        Push fires automatically on three moments: a new shift offer,
++        15 minutes before a shift starts (activation reminder), and 4
++        hours after a shift ends with no recap filed (recap nudge).
++        The BA needs to have signed in to the mobile app at least
++        once to register their device.
++      </>
++    ),
++  },
++  {
++    q: "Can I bulk-upload events from a spreadsheet?",
++    a: (
++      <>
++        Yes — head to <strong>Bulk Upload</strong>. Click "Get the
++        template", fill in the rows, and drop the file back. Spark
++        validates each row and creates a request + event per row.
++      </>
++    ),
++  },
++  {
++    q: "Where do my custom request forms go?",
++    a: (
++      <>
++        Form Builder (<code>/forms/builder</code>) lets you define
++        custom field sets per request type. v1 stores definitions
++        locally in your browser — backend persistence ships in a
++        follow-up.
++      </>
++    ),
++  },
++];
++
++const ResourceLink: React.FC<{
++  emoji: string;
++  title: string;
++  body: string;
++  href: string;
++}> = ({ emoji, title, body, href }) => (
++  <a
++    href={href}
++    target="_blank"
++    rel="noopener noreferrer"
++    className="spark-card hov p-5 block"
++    style={{ textDecoration: "none", color: "inherit" }}
++  >
++    <p className="text-2xl mb-2">{emoji}</p>
++    <p className="font-bold text-sm">{title}</p>
++    <p
++      className="text-xs mt-1"
++      style={{ color: "rgba(255,255,255,0.55)" }}
++    >
++      {body}
++    </p>
++  </a>
++);
++
++export default function SparkHelp() {
++  return (
++    <Layout>
++      <div className="space-y-6 max-w-4xl">
++        <div>
++          <p
++            className="mono text-[10px]"
++            style={{
++              letterSpacing: "0.18em",
++              color: "rgba(255,255,255,0.45)",
++            }}
++          >
++            HELP · SUPPORT
++          </p>
++          <h1
++            className="display text-4xl font-bold mt-2"
++            style={{ letterSpacing: "-0.04em" }}
++          >
++            How can we help?
++          </h1>
++          <p
++            className="mt-2"
++            style={{ color: "rgba(255,255,255,0.55)" }}
++          >
++            FAQs, runbooks, and direct lines to the Ignite team.
++          </p>
++        </div>
++
++        {/* Contact + resources */}
++        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
++          <ResourceLink
++            emoji="✉"
++            title="Email staffing"
++            body="staffing@igniteproductions.co — invites, scheduling, recaps"
++            href="mailto:staffing@igniteproductions.co"
++          />
++          <ResourceLink
++            emoji="💸"
++            title="Email finance"
++            body="finance@igniteproductions.co — payroll, billing, invoices"
++            href="mailto:finance@igniteproductions.co"
++          />
++          <ResourceLink
++            emoji="🚨"
++            title="Urgent / day-of issue"
++            body="Text Kyle at +1 (513) 614-3884 — only for active shifts"
++            href="sms:+15136143884"
++          />
++        </div>
++
++        {/* FAQ */}
++        <div>
++          <h2
++            className="display text-2xl font-bold mb-3"
++            style={{ letterSpacing: "-0.02em" }}
++          >
++            Frequently asked
++          </h2>
++          <div className="space-y-3">
++            {FAQS.map((f) => (
++              <details
++                key={f.q}
++                className="spark-card p-5"
++                style={{ cursor: "pointer" }}
++              >
++                <summary
++                  className="font-bold text-sm"
++                  style={{ listStyle: "none" }}
++                >
++                  {f.q}
++                </summary>
++                <div
++                  className="text-sm mt-3 leading-relaxed"
++                  style={{ color: "rgba(255,255,255,0.75)" }}
++                >
++                  {f.a}
++                </div>
++              </details>
++            ))}
++          </div>
++        </div>
++
++        {/* Status */}
++        <div
++          className="spark-card p-5"
++          style={{ borderColor: "rgba(95,184,239,0.25)" }}
++        >
++          <p
++            className="mono text-[10px] mb-2"
++            style={{
++              letterSpacing: "0.16em",
++              color: "var(--spark-sky)",
++            }}
++          >
++            ● SYSTEM STATUS
++          </p>
++          <p className="text-sm">
++            Live on production · Cloud Run (us-central1) ·{" "}
++            <a
++              href="/select-company"
++              className="underline"
++              style={{ color: "var(--spark-sky)" }}
++            >
++              switch workspace ↗
++            </a>
++          </p>
++          <p
++            className="mono text-[10px] mt-2"
++            style={{
++              letterSpacing: "0.14em",
++              color: "rgba(255,255,255,0.45)",
++            }}
++          >
++            Hit a bug? Email{" "}
++            <a
++              href="mailto:engineering@igniteproductions.co"
++              style={{ color: "var(--spark-text)" }}
++            >
++              engineering@igniteproductions.co
++            </a>{" "}
++            with the request URL and a screenshot — that's the
++            fastest path to a fix.
++          </p>
++        </div>
++      </div>
++    </Layout>
++  );
++}
+diff --git a/src/components/pages/team/SparkTeam.tsx b/src/components/pages/team/SparkTeam.tsx
+new file mode 100644
+index 0000000..945a11b
+--- /dev/null
++++ b/src/components/pages/team/SparkTeam.tsx
+@@ -0,0 +1,260 @@
++/**
++ * Spark v2 — Team page.
++ *
++ * Lists the admins + spark-admins in the workspace. Read-only for v1
++ * (create/edit users lives at /users/create). When user management
++ * mutations land here in v2, swap the "(view-only)" badge for an
++ * inline editor.
++ */
++
++import React, { Suspense, useMemo } from "react";
++import { useLazyLoadQuery } from "react-relay/hooks";
++import Layout from "@/layout/Layout";
++import { useAuthStore } from "@/store/authStore";
++import useSparkRole from "@/hooks/useSparkRole";
++import { UsersQuery } from "@/api/queries/UsersQuery";
++import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
++
++type UserNode = NonNullable<
++  NonNullable<
++    NonNullable<UsersQueryType["response"]["users"]>["edges"][number]
++  >["node"]
++>;
++
++const displayName = (u: UserNode) =>
++  [u.firstName, u.lastName].filter(Boolean).join(" ") ||
++  u.email ||
++  "(unnamed)";
++
++const ROLE_TONE: Record<string, string> = {
++  "spark admin": "var(--spark-lime)",
++  "spark-admin": "var(--spark-lime)",
++  admin: "var(--spark-sky)",
++  client: "var(--spark-purple)",
++  ambassador: "var(--spark-gold)",
++};
++
++const Inner: React.FC = () => {
++  const { tenantId } = useAuthStore();
++  const data = useLazyLoadQuery<UsersQueryType>(
++    UsersQuery,
++    { filters: tenantId ? { tenantId } : null, first: 500 },
++    { fetchPolicy: "store-or-network" },
++  );
++
++  const allUsers = useMemo(() => {
++    return (data?.users?.edges ?? [])
++      .map((e) => e?.node)
++      .filter((n): n is UserNode => Boolean(n));
++  }, [data]);
++
++  const adminUsers = useMemo(() => {
++    return allUsers.filter((u) => {
++      const role = (u.role?.name ?? "").toLowerCase();
++      return (
++        role === "admin" || role === "spark admin" || role === "spark-admin"
++      );
++    });
++  }, [allUsers]);
++
++  const clientUsers = useMemo(() => {
++    return allUsers.filter((u) => {
++      const role = (u.role?.name ?? "").toLowerCase();
++      return role === "client";
++    });
++  }, [allUsers]);
++
++  return (
++    <div className="space-y-6 max-w-7xl">
++      <div className="flex items-end justify-between flex-wrap gap-3">
++        <div>
++          <p
++            className="mono text-[10px]"
++            style={{
++              letterSpacing: "0.18em",
++              color: "rgba(255,255,255,0.45)",
++            }}
++          >
++            TEAM · {allUsers.length} TOTAL
++          </p>
++          <h1
++            className="display text-4xl font-bold mt-2"
++            style={{ letterSpacing: "-0.04em" }}
++          >
++            Who's on Spark.
++          </h1>
++          <p
++            className="mt-2"
++            style={{ color: "rgba(255,255,255,0.55)" }}
++          >
++            Admins, clients, and other users in this workspace.
++            Brand Ambassadors live on the People page.
++          </p>
++        </div>
++        <a
++          href="/users/create"
++          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
++          style={{
++            background: "var(--spark-lime)",
++            color: "#0a0d09",
++            border: "none",
++            textDecoration: "none",
++          }}
++        >
++          + Add user
++        </a>
++      </div>
++
++      {/* Admins */}
++      <Section
++        title="Admins"
++        subtitle="Full access to this workspace."
++        users={adminUsers}
++      />
++
++      {/* Clients */}
++      <Section
++        title="Client users"
++        subtitle="Brand stakeholders with limited access (their requests + recaps)."
++        users={clientUsers}
++      />
++    </div>
++  );
++};
++
++const Section: React.FC<{
++  title: string;
++  subtitle: string;
++  users: UserNode[];
++}> = ({ title, subtitle, users }) => {
++  return (
++    <div>
++      <div className="flex items-baseline gap-3 mb-3">
++        <h2
++          className="display text-xl font-bold"
++          style={{ letterSpacing: "-0.02em" }}
++        >
++          {title}
++        </h2>
++        <p
++          className="text-xs"
++          style={{ color: "rgba(255,255,255,0.55)" }}
++        >
++          {subtitle}
++        </p>
++      </div>
++      {users.length === 0 ? (
++        <div
++          className="spark-card p-6 text-center"
++          style={{ color: "rgba(255,255,255,0.55)" }}
++        >
++          No {title.toLowerCase()} in this workspace yet.
++        </div>
++      ) : (
++        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
++          {users.map((u) => {
++            const role = (u.role?.name ?? "—").toLowerCase();
++            const tone =
++              ROLE_TONE[role] ?? "rgba(255,255,255,0.6)";
++            return (
++              <div key={u.id} className="spark-card p-4">
++                <div className="flex items-center gap-3">
++                  {u.image ? (
++                    <img
++                      src={u.image}
++                      alt=""
++                      style={{
++                        width: 40,
++                        height: 40,
++                        borderRadius: "50%",
++                        objectFit: "cover",
++                      }}
++                    />
++                  ) : (
++                    <div
++                      className="display font-bold"
++                      style={{
++                        width: 40,
++                        height: 40,
++                        borderRadius: "50%",
++                        background: "rgba(255,255,255,0.08)",
++                        display: "grid",
++                        placeItems: "center",
++                        fontSize: 14,
++                      }}
++                    >
++                      {(
++                        (u.firstName?.[0] ?? "") +
++                        (u.lastName?.[0] ?? "")
++                      ).toUpperCase() || "?"}
++                    </div>
++                  )}
++                  <div className="flex-1 min-w-0">
++                    <p className="text-sm font-semibold truncate">
++                      {displayName(u)}
++                    </p>
++                    <p
++                      className="text-xs truncate"
++                      style={{ color: "rgba(255,255,255,0.45)" }}
++                    >
++                      {u.email ?? "—"}
++                    </p>
++                  </div>
++                </div>
++                <div className="mt-3">
++                  <span
++                    className="mono text-[10px]"
++                    style={{
++                      letterSpacing: "0.16em",
++                      color: tone,
++                      border: `1px solid ${tone}55`,
++                      padding: "2px 8px",
++                      borderRadius: 999,
++                    }}
++                  >
++                    {(u.role?.name ?? "—").toUpperCase()}
++                  </span>
++                </div>
++              </div>
++            );
++          })}
++        </div>
++      )}
++    </div>
++  );
++};
++
++export default function SparkTeam() {
++  const { isAdmin } = useSparkRole();
++  if (!isAdmin) {
++    return (
++      <Layout>
++        <div className="max-w-2xl">
++          <h1 className="display text-3xl font-bold">Admin only.</h1>
++          <p
++            className="mt-2"
++            style={{ color: "rgba(255,255,255,0.55)" }}
++          >
++            The Team page is a Spark Admin surface.
++          </p>
++        </div>
++      </Layout>
++    );
++  }
++  return (
++    <Layout>
++      <Suspense
++        fallback={
++          <div
++            className="text-xs py-12"
++            style={{ color: "rgba(255,255,255,0.45)" }}
++          >
++            Loading team…
++          </div>
++        }
++      >
++        <Inner />
++      </Suspense>
++    </Layout>
++  );
++}
+diff --git a/src/layout/SparkSidebar.tsx b/src/layout/SparkSidebar.tsx
+index 17ba68e..dc014cc 100644
+--- a/src/layout/SparkSidebar.tsx
++++ b/src/layout/SparkSidebar.tsx
+@@ -141,6 +141,8 @@ const SECTIONS: NavSection[] = [
+     items: [
+       { label: "Form Builder", Icon: Wrench, to: "/forms/builder" },
+       { label: "Recap Templates", Icon: Star, to: "/recaps/templates" },
++      { label: "Clients", Icon: Building2, to: "/clients" },
++      { label: "Team", Icon: UsersRound, to: "/team" },
+       { label: "New Client", Icon: Plus, to: "/clients/new" },
+     ],
+   },
+@@ -150,6 +152,7 @@ const SECTIONS: NavSection[] = [
+     items: [
+       { label: "Settings", Icon: Settings, to: "/settings" },
+       { label: "Calendar Sync", Icon: CalendarClock, to: "/settings/calendar" },
++      { label: "Help", Icon: HelpCircle, to: "/help" },
+     ],
+   },
+ ];
+@@ -158,8 +161,6 @@ const SECTIONS: NavSection[] = [
+ void Clock;
+ void CreditCard;
+ void DollarSign;
+-void Building2;
+-void HelpCircle;
+ 
+ const slugToName = (slug: string | null | undefined): string => {
+   if (!slug) return "—";
+diff --git a/src/routes/AppRoutes.tsx b/src/routes/AppRoutes.tsx
+index c751bde..969603f 100644
+--- a/src/routes/AppRoutes.tsx
++++ b/src/routes/AppRoutes.tsx
+@@ -239,6 +239,15 @@ const SparkAcademy = lazyDefault(
+ const SparkAcademyViewer = lazyDefault(
+   () => import("@/components/pages/academy/SparkAcademyViewer"),
+ );
++const SparkTeam = lazyDefault(
++  () => import("@/components/pages/team/SparkTeam"),
++);
++const SparkClients = lazyDefault(
++  () => import("@/components/pages/clients/SparkClients"),
++);
++const SparkHelp = lazyDefault(
++  () => import("@/components/pages/help/SparkHelp"),
++);
+ 
+ // User
+ const UsersList = lazyDefault(() => import("@/users/UsersList"));
+@@ -538,6 +547,21 @@ const RequestsLinks = {
+       component: <SparkAcademyViewer />,
+       isPublic: false,
+     },
++    {
++      path: "/team",
++      component: <SparkTeam />,
++      isPublic: false,
++    },
++    {
++      path: "/clients",
++      component: <SparkClients />,
++      isPublic: false,
++    },
++    {
++      path: "/help",
++      component: <SparkHelp />,
++      isPublic: false,
++    },
+   ],
+ };
+ 
