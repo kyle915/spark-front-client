@@ -910,6 +910,89 @@ export default function MasterTracker() {
     URL.revokeObjectURL(url);
   };
 
+  // Export the currently-visible rows as a single .ics file.
+  // Google Calendar / Outlook / Apple Calendar all accept this
+  // format — kyle can drop the whole tracker into his calendar
+  // view in one upload. Builds all-day VEVENTs (we'd need TZID
+  // wiring + start/end ISO timestamps to ship timed events; the
+  // tracker row doesn't carry timezone, so all-day is safer).
+  const exportIcs = () => {
+    if (visibleRows.length === 0) {
+      window.alert("Nothing to export.");
+      return;
+    }
+    // ICS escapes: backslash, semicolon, comma, newline.
+    const esc = (raw: string) =>
+      (raw ?? "")
+        .toString()
+        .replace(/\\/g, "\\\\")
+        .replace(/;/g, "\\;")
+        .replace(/,/g, "\\,")
+        .replace(/\r?\n/g, "\\n");
+    // YYYYMMDD with no separators is the ICS DATE form.
+    const ymd = (iso: string) => iso.slice(0, 10).replace(/-/g, "");
+    // ICS spec says lines longer than 75 octets must be folded; in
+    // practice modern parsers accept long lines, and our content is
+    // short. Skip folding for simplicity.
+    const now = new Date();
+    const stamp =
+      now.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    const lines: string[] = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Spark BA//Master Tracker//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      `X-WR-CALNAME:Spark Tracker · ${activeStatus.toUpperCase()}`,
+    ];
+    for (const r of visibleRows) {
+      const iso = r.date.slice(0, 10);
+      if (!iso) continue;
+      // DTEND on an all-day VEVENT is exclusive (next day).
+      const startYmd = ymd(iso);
+      const end = new Date(iso + "T00:00:00Z");
+      end.setUTCDate(end.getUTCDate() + 1);
+      const endYmd = end.toISOString().slice(0, 10).replace(/-/g, "");
+      const summary = `${r.venue || "Untitled"} · ${r.statusSlug.toUpperCase()}`;
+      const description = [
+        `Status: ${r.statusSlug}`,
+        r.type ? `Type: ${r.type}` : "",
+        r.timeLabel ? `Time: ${r.timeLabel}` : "",
+        r.market ? `Market: ${r.market}` : "",
+        r.recapStatus !== "none"
+          ? `Recap: ${r.recapStatus} (${r.recapCount})`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\\n");
+      lines.push(
+        "BEGIN:VEVENT",
+        `UID:${r.uuid}@spark.ignite`,
+        `DTSTAMP:${stamp}`,
+        `DTSTART;VALUE=DATE:${startYmd}`,
+        `DTEND;VALUE=DATE:${endYmd}`,
+        `SUMMARY:${esc(summary)}`,
+        `LOCATION:${esc(r.address || r.market || "")}`,
+        `DESCRIPTION:${description}`,
+        "END:VEVENT",
+      );
+    }
+    lines.push("END:VCALENDAR");
+    // CRLF per RFC 5545 — some strict parsers complain about LF-only.
+    const blob = new Blob([lines.join("\r\n")], {
+      type: "text/calendar;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const today = new Date().toISOString().slice(0, 10);
+    a.download = `spark-tracker-${activeStatus}-${today}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // Copy the currently-visible rows to clipboard as TSV (tab-
   // separated). Pasted directly into a Google Sheet cell, Sheets
   // parses the tabs as column boundaries and lays the rows out
@@ -1142,6 +1225,25 @@ export default function MasterTracker() {
               }
             >
               ↗ Export CSV {visibleRows.length > 0 ? `(${visibleRows.length})` : ""}
+            </button>
+            <button
+              onClick={exportIcs}
+              disabled={visibleRows.length === 0}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+                opacity: visibleRows.length === 0 ? 0.5 : 1,
+              }}
+              title={
+                visibleRows.length === 0
+                  ? "Nothing to export"
+                  : `Download ${visibleRows.length} rows as a calendar file (.ics) — drop into Google Cal, Outlook, or Apple Calendar`
+              }
+            >
+              📅 Export ICS{" "}
+              {visibleRows.length > 0 ? `(${visibleRows.length})` : ""}
             </button>
             <button
               onClick={() => navigate("/requests/create")}
