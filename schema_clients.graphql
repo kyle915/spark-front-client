@@ -2594,6 +2594,27 @@ type MissingRecapAmbassadorInfo {
   isApproved: Boolean!
 }
 
+type ExecutiveSummaryRow {
+  label: String!
+  primaryMetric: Int!
+  secondaryMetric: String
+}
+
+type ExecutiveSummaryType {
+  tenantId: ID!
+  tenantName: String!
+  periodLabel: String!
+  recapCount: Int!
+  consumerReach: Int!
+  samplesDistributed: Int!
+  topStores: [ExecutiveSummaryRow!]!
+  topBas: [ExecutiveSummaryRow!]!
+  recapCountDelta: Int
+  consumerReachDelta: Int
+  recapCountDeltaChip: String
+  consumerReachDeltaChip: String
+}
+
 type MissingRecapEventType {
   eventUuid: ID!
   eventName: String!
@@ -3717,6 +3738,7 @@ type Query {
   recaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RecapFiltersInput = null): RecapCountableConnection!
   recap(uuid: ID!): Recap
   missingRecapEvents(tenantId: ID = null, lookbackDays: Int! = 30): [MissingRecapEventType!]!
+  executiveSummary(tenantId: ID = null, windowDays: Int! = 7): ExecutiveSummaryType
   ambassadorsBookedOnDate(onDate: String!, tenantId: ID = null): [ID!]!
   customRecaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: CustomRecapFiltersInput = null): CustomRecapCountableConnection!
   customRecap(id: ID = null, uuid: ID = null): CustomRecap
