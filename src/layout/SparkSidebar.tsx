@@ -136,6 +136,14 @@ const SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: "Operations",
+    adminOnly: true,
+    items: [
+      { label: "Payroll · Hours", Icon: Clock, to: "/payroll" },
+      { label: "Payments · Wingspan", Icon: CreditCard, to: "/payments" },
+    ],
+  },
+  {
     title: "Build",
     adminOnly: true,
     items: [
@@ -154,9 +162,9 @@ const SECTIONS: NavSection[] = [
   },
 ];
 
-// Imports referenced for future expansion of Operations group.
-void Clock;
-void CreditCard;
+// DollarSign reserved for the future Billing page; the other former
+// "for-future" icons (Clock, CreditCard) are now used by the
+// Operations group above.
 void DollarSign;
 void Building2;
 void HelpCircle;

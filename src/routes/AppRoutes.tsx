@@ -239,6 +239,12 @@ const SparkAcademy = lazyDefault(
 const SparkAcademyViewer = lazyDefault(
   () => import("@/components/pages/academy/SparkAcademyViewer"),
 );
+const SparkPayroll = lazyDefault(
+  () => import("@/components/pages/wingspan/SparkPayroll"),
+);
+const SparkPayments = lazyDefault(
+  () => import("@/components/pages/wingspan/SparkPayments"),
+);
 
 // User
 const UsersList = lazyDefault(() => import("@/users/UsersList"));
@@ -536,6 +542,16 @@ const RequestsLinks = {
     {
       path: "/academy/:id",
       component: <SparkAcademyViewer />,
+      isPublic: false,
+    },
+    {
+      path: "/payroll",
+      component: <SparkPayroll />,
+      isPublic: false,
+    },
+    {
+      path: "/payments",
+      component: <SparkPayments />,
       isPublic: false,
     },
   ],
