@@ -14,6 +14,7 @@ import InternalNotesPanel from "./InternalNotesPanel";
 import ShiftReplayPanel from "./ShiftReplayPanel";
 import InviteBAModal from "./InviteBAModal";
 import EventRosterPanel from "./EventRosterPanel";
+import RequestActivityLogPanel from "./RequestActivityLogPanel";
 import { pickHeroImage } from "@/utils/recapFileUrl";
 
 type Mentionable = { id: string; name: string; email: string };
@@ -789,6 +790,11 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         .map((ev) => (
           <ShiftReplayPanel key={String(ev.uuid)} eventUuid={String(ev.uuid)} />
         ))}
+
+      {/* Audit trail — every meaningful change logged. Lazy-loaded
+          inside its own Suspense boundary so a slow log read can't
+          block the rest of the page. */}
+      <RequestActivityLogPanel requestUuid={String(request.uuid)} />
 
       {/* Audit footer */}
       <div className="spark-card p-5">
