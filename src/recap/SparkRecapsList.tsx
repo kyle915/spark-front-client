@@ -13,6 +13,7 @@ import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
+import EmailCampaignReportModal from "./EmailCampaignReportModal";
 
 // Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
 // keeps the sticky action bar's button disabled with a friendly
@@ -537,6 +538,10 @@ export default function SparkRecapsList() {
       return next;
     });
   const clearSelection = () => setSelectedIds(new Set());
+  // Whether the "Email Report" compose modal is open. Lives at the
+  // page level so the sticky bar can both open it and read the same
+  // orderedSelectedIds the download button uses.
+  const [emailReportOpen, setEmailReportOpen] = useState(false);
 
   const [commitReport, isGeneratingReport] =
     useMutation<GenerateCampaignReportPdfMutationType>(
@@ -1048,6 +1053,28 @@ export default function SparkRecapsList() {
           </button>
           <button
             type="button"
+            onClick={() => setEmailReportOpen(true)}
+            disabled={
+              isGeneratingReport ||
+              selectedIds.size === 0 ||
+              selectedIds.size > CAMPAIGN_REPORT_MAX
+            }
+            className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+            style={{
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
+            title={
+              selectedIds.size > CAMPAIGN_REPORT_MAX
+                ? `Limit is ${CAMPAIGN_REPORT_MAX} recaps per report`
+                : "Email the combined PDF straight to a client"
+            }
+          >
+            ✉ Email
+          </button>
+          <button
+            type="button"
             onClick={generateReport}
             disabled={
               isGeneratingReport ||
@@ -1068,9 +1095,17 @@ export default function SparkRecapsList() {
           >
             {isGeneratingReport
               ? `Generating ${selectedIds.size}…`
-              : `📄 Campaign Report (${selectedIds.size})`}
+              : `📄 Download (${selectedIds.size})`}
           </button>
         </div>
+      )}
+
+      {emailReportOpen && (
+        <EmailCampaignReportModal
+          recapIds={orderedSelectedIds}
+          onClose={() => setEmailReportOpen(false)}
+          onSent={clearSelection}
+        />
       )}
     </Layout>
   );
