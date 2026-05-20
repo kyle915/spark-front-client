@@ -1104,6 +1104,19 @@ input CreateAmbassadorGroupInput {
   ambassadorIds: [ID!] = null
 }
 
+input InviteAmbassadorToShiftInput {
+  clientMutationId: ID = null
+  ambassadorId: ID!
+  eventId: ID!
+}
+
+type InviteAmbassadorToShiftResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  ambassadorEventUuid: ID
+}
+
 input CreateAmbassadorInput {
   clientMutationId: ID = null
   userId: ID!
@@ -2694,6 +2707,19 @@ scalar JSON @specifiedBy(url: "https://ecma-international.org/wp-content/uploads
 """
 Job(id, uuid, name, description, code, address, start_date, end_date, public, closed, national, ongoing, coordinates, job_title, other_title, event, tenant, rate, created_by, updated_by, created_at, updated_at)
 """
+type LocationPingType {
+  uuid: ID!
+  lat: Float!
+  lng: Float!
+  accuracyMeters: Float
+  recordedAt: String!
+  source: String!
+  ambassadorUuid: ID!
+  ambassadorName: String!
+  eventUuid: ID!
+  eventName: String!
+}
+
 type Job implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
@@ -3105,6 +3131,9 @@ type MonthlyPerformanceTrend {
 }
 
 type Mutation {
+  createAcademyModule(input: CreateAcademyModuleInput!): AcademyModuleResponse!
+  updateAcademyModule(input: UpdateAcademyModuleInput!): AcademyModuleResponse!
+  deleteAcademyModule(input: DeleteAcademyModuleInput!): AcademyModuleResponse!
   createEvent(input: CreateEventInput!): EventDetailResponse!
   createEventWithRequest(input: CreateEventWithRequestInput!): EventWithRequestDetailResponse!
   updateEventWithRequest(input: UpdateEventWithRequestInput!): EventWithRequestDetailResponse!
@@ -3182,6 +3211,7 @@ type Mutation {
   googleCalendarCallback(input: GoogleCalendarCallbackInput!): GoogleCalendarCallbackResponse!
   disconnectGoogleCalendar(input: DisconnectGoogleCalendarInput!): DisconnectGoogleCalendarResponse!
   upsertTenantTheme(input: CreateOrUpdateTenantThemeInput!): TenantThemeResponse!
+  setLinkedSheet(input: SetLinkedSheetInput!): UpdateTenantResponse!
 
   "### Checks if a token is not expired and correct.\n\n*Note that this is not for refresh tokens.*\n"
   verifyToken(input: VerifyTokenInput!): VerifyTokenType!
@@ -3250,6 +3280,7 @@ type Mutation {
   acceptAmbassadorInvitation(input: AcceptAmbassadorInvitationInput!): AcceptInvitationResponse!
   acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
+  inviteAmbassadorToShift(input: InviteAmbassadorToShiftInput!): InviteAmbassadorToShiftResponse!
   disableAmbassador(input: DisableAmbassadorInput!): DisableAmbassadorResponse!
   regenerateAmbassadorPasswords(input: RegenerateAmbassadorPasswordsInput!): RegenerateAmbassadorPasswordsResponse!
   createAmbassador(input: CreateAmbassadorInput!): CreateAmbassadorResponse!
@@ -3494,11 +3525,93 @@ type QuarterOption {
   label: String!
 }
 
+type AcademyModule implements Node {
+  id: ID!
+  uuid: String!
+  title: String!
+  kind: String!
+  body: String!
+  order: Int!
+  published: Boolean!
+  createdAt: String!
+  updatedAt: String!
+  tenantId: ID!
+}
+
+type AcademyModuleResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  academyModule: AcademyModule
+}
+
+input AcademyModuleFiltersInput {
+  tenantId: ID = null
+  kind: String = null
+  published: Boolean = null
+}
+
+input CreateAcademyModuleInput {
+  title: String!
+  kind: String! = "training"
+  body: String! = ""
+  order: Int! = 0
+  published: Boolean! = false
+  tenantId: ID = null
+}
+
+input UpdateAcademyModuleInput {
+  uuid: ID!
+  title: String = null
+  kind: String = null
+  body: String = null
+  order: Int = null
+  published: Boolean = null
+}
+
+input DeleteAcademyModuleInput {
+  uuid: ID!
+}
+
+type WingspanStatus {
+  connected: Boolean!
+  message: String!
+}
+
+type WingspanPayrollPeriod {
+  id: ID!
+  label: String!
+  startsAt: String
+  endsAt: String
+  payDate: String
+  status: String
+  totalAmount: Float
+  contractorCount: Int
+}
+
+type WingspanPayment {
+  id: ID!
+  contractorName: String
+  contractorEmail: String
+  amount: Float
+  status: String
+  payDate: String
+  periodId: String
+  memo: String
+}
+
 type Query {
+  academyModulesAdmin(filters: AcademyModuleFiltersInput = null): [AcademyModule!]!
+  academyModule(uuid: ID!): AcademyModule
+  wingspanStatus: WingspanStatus!
+  wingspanPayrollPeriods(limit: Int! = 12): [WingspanPayrollPeriod!]!
+  wingspanPayments(periodId: ID = null, limit: Int! = 50): [WingspanPayment!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   event(id: ID = null, uuid: ID = null): Event
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   todayEventsCoordinates(coordinates: [Float!]!, range: Float!, unit: DistanceUnit! = KILOMETERS, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
+  recentLocationPings(withinMinutes: Int! = 30, tenantId: ID = null): [LocationPingType!]!
+  eventLocationTrail(eventUuid: ID!): [LocationPingType!]!
   eventTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventTypeFiltersInput = null): EventTypeCountableConnection!
   eventType(id: ID = null, uuid: ID = null): EventType
   eventStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: EventStatusFiltersInput = null): EventStatusCountableConnection!
@@ -4712,6 +4825,20 @@ type TenantType implements Node {
   slug: String
   requestUrlName: String
   image: String
+  linkedSheetUrl: String
+}
+
+input SetLinkedSheetInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  sheetUrl: String = null
+}
+
+type UpdateTenantResponse {
+  success: Boolean!
+  message: String!
+  tenant: TenantType
+  clientMutationId: ID
 }
 
 type TenantTypeCountableConnection {

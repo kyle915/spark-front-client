@@ -11,6 +11,7 @@ import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/Us
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 
 /**
@@ -67,6 +68,42 @@ const STATUS_FILTERS: { key: string; label: string; chip: string }[] = [
 const fmtNum = (v: number | null | undefined) =>
   typeof v === "number" ? v.toLocaleString() : "0";
 
+type RecapStatus = "submitted" | "due" | "none";
+
+/**
+ * Small chrome-matched label+select used by the tracker's REFINE
+ * row (date range, market, sort). Sits inline next to the status
+ * chips + search so all the filter controls feel like one bar.
+ */
+const FilterSelect: React.FC<{
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}> = ({ label, value, onChange, options }) => (
+  <label className="flex items-center gap-2">
+    <span className="label-mini">{label}</span>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="rounded-xl text-xs"
+      style={{
+        padding: "0.45rem 0.9rem",
+        background: "var(--spark-bg)",
+        border: "1px solid var(--spark-border)",
+        color: "var(--spark-text)",
+        outline: "none",
+      }}
+    >
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
+  </label>
+);
+
 type Row = {
   uuid: string;
   date: string;
@@ -78,6 +115,12 @@ type Row = {
   address: string;
   type: string;
   eventUuid: string | null;
+  // Aggregate of the request's events + recaps for the chip:
+  //   "submitted" → at least one event has at least one recap
+  //   "due"       → events scheduled but no recaps yet
+  //   "none"      → no events scheduled yet (request still pending)
+  recapStatus: RecapStatus;
+  recapCount: number;
 };
 
 const fmtDateLabel = (raw: string | null | undefined) => {
@@ -213,6 +256,7 @@ const TrackerTable: React.FC<{
               <th className="px-4 py-3 text-right">CONSUMERS</th>
               <th className="px-4 py-3 text-right">1ST-TIME</th>
               <th className="px-4 py-3 text-right">$/SAMPLE</th>
+              <th className="px-4 py-3">RECAP</th>
               <th className="px-4 py-3">NOTES</th>
             </tr>
           </thead>
@@ -220,7 +264,7 @@ const TrackerTable: React.FC<{
             {rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={10}
+                  colSpan={11}
                   className="px-4 py-10 text-center text-sm"
                   style={{ color: "rgba(255,255,255,0.55)" }}
                 >
@@ -239,7 +283,7 @@ const TrackerTable: React.FC<{
               const headerEl = showGroupHeader ? (
                 <tr key={`hdr-${rowIdx}`}>
                   <td
-                    colSpan={10}
+                    colSpan={11}
                     className="px-4 py-3 mono"
                     style={{
                       letterSpacing: "0.16em",
@@ -355,6 +399,30 @@ const TrackerTable: React.FC<{
                   </td>
                   <td className="px-4 py-3 text-right tab-num">—</td>
                   <td className="px-4 py-3 whitespace-nowrap">
+                    {r.recapStatus === "submitted" ? (
+                      <span
+                        className="chip chip-lime"
+                        title={`${r.recapCount} recap${r.recapCount === 1 ? "" : "s"} submitted`}
+                      >
+                        ● {r.recapCount} RECAP{r.recapCount === 1 ? "" : "S"}
+                      </span>
+                    ) : r.recapStatus === "due" ? (
+                      <span className="chip chip-orange" title="Activation scheduled, no recap filed yet">
+                        ◌ DUE
+                      </span>
+                    ) : (
+                      <span
+                        className="mono text-[10px]"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "rgba(255,255,255,0.3)",
+                        }}
+                      >
+                        —
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     {isClient ? (
                       <span
                         className="mono text-[10px]"
@@ -384,7 +452,7 @@ const TrackerTable: React.FC<{
                 </tr>
                 {isExpanded && !isClient && (
                   <tr style={{ borderBottom: "1px solid var(--spark-border)" }}>
-                    <td colSpan={10} style={{ padding: "0.5rem 1rem 1rem" }}>
+                    <td colSpan={11} style={{ padding: "0.5rem 1rem 1rem" }}>
                       <InternalNotesPanel
                         requestUuid={r.uuid}
                         requestLabel={`${r.venue} · ${r.market}`}
@@ -410,17 +478,25 @@ const MasterTrackerInner: React.FC<{
   search: string;
   rmmFilter: string;
   groupBy: "none" | "date";
+  dateRange: "all" | "next7" | "next30" | "past7" | "past30" | "month";
+  sortMode: "date-desc" | "date-asc" | "venue" | "status";
+  marketFilter: string;
   mentionables: Mentionable[];
   onCountsChange: (counts: Record<string, number>, total: number) => void;
   onVisibleRowsChange?: (rows: Row[]) => void;
+  onMarketsChange?: (markets: string[]) => void;
 }> = ({
   activeStatus,
   search,
   rmmFilter,
   groupBy,
+  dateRange,
+  sortMode,
+  marketFilter,
   mentionables,
   onCountsChange,
   onVisibleRowsChange,
+  onMarketsChange,
 }) => {
   const { tenantId } = useAuthStore();
 
@@ -448,6 +524,19 @@ const MasterTrackerInner: React.FC<{
           const stateCode = n.retailer?.location?.state?.code ?? n.state?.code;
           const cityish = n.retailer?.location?.name ?? n.location?.name ?? "";
           const market = [cityish, stateCode].filter(Boolean).join(", ");
+          const events = (n.events ?? []).filter(
+            (e): e is NonNullable<typeof e> => Boolean(e),
+          );
+          const recapCount = events.reduce(
+            (sum, e) => sum + (e.recaps?.length ?? 0),
+            0,
+          );
+          const recapStatus: RecapStatus =
+            events.length === 0
+              ? "none"
+              : recapCount > 0
+                ? "submitted"
+                : "due";
           return {
             uuid: String(n.uuid),
             date: n.date ?? "",
@@ -461,18 +550,122 @@ const MasterTrackerInner: React.FC<{
             address: n.address ?? "",
             type: n.requestType?.name ?? "—",
             eventUuid: n.event?.uuid ? String(n.event.uuid) : null,
+            recapStatus,
+            recapCount,
           };
         }) ?? []
     );
   }, [data, tenantId]);
 
   // Apply status filter client-side. "active" maps to anything not done.
-  const rows = useMemo(() => {
+  const statusFiltered = useMemo(() => {
     if (activeStatus === "all") return allRows;
     if (activeStatus === "active")
       return allRows.filter((r) => ACTIVE_STATUSES.has(r.statusSlug));
     return allRows.filter((r) => r.statusSlug === activeStatus);
   }, [allRows, activeStatus]);
+
+  // Date-range filter. All ranges are relative to "now" using the
+  // row's `date` field (ISO string).
+  const dateFiltered = useMemo(() => {
+    if (dateRange === "all") return statusFiltered;
+    const now = Date.now();
+    const day = 86_400_000;
+    return statusFiltered.filter((r) => {
+      if (!r.date) return false;
+      const t = new Date(r.date).getTime();
+      if (!Number.isFinite(t)) return false;
+      switch (dateRange) {
+        case "next7":
+          return t >= now && t <= now + 7 * day;
+        case "next30":
+          return t >= now && t <= now + 30 * day;
+        case "past7":
+          return t >= now - 7 * day && t <= now;
+        case "past30":
+          return t >= now - 30 * day && t <= now;
+        case "month": {
+          const d = new Date(t);
+          const cur = new Date();
+          return (
+            d.getFullYear() === cur.getFullYear() &&
+            d.getMonth() === cur.getMonth()
+          );
+        }
+        default:
+          return true;
+      }
+    });
+  }, [statusFiltered, dateRange]);
+
+  // Market filter — derived from the row's "market" string, which
+  // already includes the state code. We split on ", " to grab the
+  // trailing state code so admins can pick a single state cleanly.
+  const marketFiltered = useMemo(() => {
+    if (marketFilter === "all") return dateFiltered;
+    return dateFiltered.filter((r) => {
+      const parts = (r.market ?? "").split(",").map((s) => s.trim());
+      return parts[parts.length - 1] === marketFilter;
+    });
+  }, [dateFiltered, marketFilter]);
+
+  // Sort applied last so it operates on the post-filter set.
+  const rows = useMemo(() => {
+    const out = [...marketFiltered];
+    switch (sortMode) {
+      case "date-desc":
+        out.sort(
+          (a, b) =>
+            new Date(b.date || 0).getTime() -
+            new Date(a.date || 0).getTime(),
+        );
+        break;
+      case "date-asc":
+        out.sort(
+          (a, b) =>
+            new Date(a.date || 0).getTime() -
+            new Date(b.date || 0).getTime(),
+        );
+        break;
+      case "venue":
+        out.sort((a, b) =>
+          (a.venue ?? "").localeCompare(b.venue ?? ""),
+        );
+        break;
+      case "status": {
+        const rank: Record<string, number> = {
+          pending: 0,
+          queue: 1,
+          approved: 2,
+          scheduled: 3,
+          done: 4,
+          completed: 4,
+          declined: 5,
+          cancelled: 6,
+          canceled: 6,
+        };
+        out.sort(
+          (a, b) =>
+            (rank[a.statusSlug] ?? 99) - (rank[b.statusSlug] ?? 99),
+        );
+        break;
+      }
+    }
+    return out;
+  }, [marketFiltered, sortMode]);
+
+  // Bubble the unique market codes up so the page chrome can render
+  // a dropdown with just the markets actually present in the data.
+  useEffect(() => {
+    if (!onMarketsChange) return;
+    const set = new Set<string>();
+    for (const r of allRows) {
+      const parts = (r.market ?? "").split(",").map((s) => s.trim());
+      const code = parts[parts.length - 1];
+      if (code && code !== "—") set.add(code);
+    }
+    onMarketsChange([...set].sort());
+  }, [allRows, onMarketsChange]);
 
   // Tally counts off the unfiltered rows so chips show consistent totals
   // regardless of which status is currently active.
@@ -566,6 +759,22 @@ export default function MasterTracker() {
   const [rmmList, setRmmList] = useState<Mentionable[]>([]);
   const [adminList, setAdminList] = useState<Mentionable[]>([]);
   const [visibleRows, setVisibleRows] = useState<Row[]>([]);
+  // Date-range filter applied client-side to the already-loaded rows.
+  // "all" = no date constraint. "next7" / "next30" — future window.
+  // "past7" / "past30" — recent window. "month" — calendar-month.
+  const [dateRange, setDateRange] = useState<
+    "all" | "next7" | "next30" | "past7" | "past30" | "month"
+  >("all");
+  // Client-side sort. Default keeps the existing "newest first by
+  // date" behavior; the other options let kyle sort by venue
+  // alphabetically or by status urgency.
+  const [sortMode, setSortMode] = useState<
+    "date-desc" | "date-asc" | "venue" | "status"
+  >("date-desc");
+  // Market filter — derives from the unique state codes in the
+  // currently-loaded rows. "all" means no filter.
+  const [marketFilter, setMarketFilter] = useState<string>("all");
+  const [markets, setMarkets] = useState<string[]>([]);
 
   // CSV export of the currently-visible tracker rows. Quotes any field
   // containing commas/quotes/newlines. Filename includes the status
@@ -583,6 +792,8 @@ export default function MasterTracker() {
       "Address",
       "Type",
       "Time",
+      "Recap",
+      "Recap Count",
       "Event UUID",
       "Request UUID",
     ];
@@ -602,6 +813,8 @@ export default function MasterTracker() {
           r.address,
           r.type,
           r.timeLabel,
+          r.recapStatus,
+          String(r.recapCount),
           r.eventUuid ?? "",
           r.uuid,
         ]
@@ -658,6 +871,8 @@ export default function MasterTracker() {
           r.address,
           r.type,
           r.timeLabel,
+          r.recapStatus,
+          String(r.recapCount),
           r.eventUuid ?? "",
           r.uuid,
         ]
@@ -705,32 +920,22 @@ export default function MasterTracker() {
   // tracker to a living breathing google sheet file. Per-client."
   // Stored in localStorage keyed by tenantId so each brand can point
   // at its own sheet (e.g. the Liquid Death sheet kyle shared). Real
-  // bi-directional sync (sheets API + cron) lands when the backend
-  // catches up; this is the link + CSV-handoff flow until then.
-  const sheetKey = tenantId
-    ? `@spark.linkedSheet.url/${tenantId}`
-    : null;
-  const [linkedSheetUrl, setLinkedSheetUrl] = useState<string>(() => {
-    if (!sheetKey) return "";
-    try {
-      return localStorage.getItem(sheetKey) ?? "";
-    } catch {
-      return "";
-    }
-  });
+  // Backend-backed via useLinkedSheetUrl — tenant.linkedSheetUrl
+  // replaces the per-device localStorage that lived here. The hook
+  // handles the one-time migration when a tenant has a localStorage
+  // value but no backend value yet.
+  const { url: linkedSheetUrl, setUrl: persistLinkedSheet } =
+    useLinkedSheetUrl();
   const [editingSheet, setEditingSheet] = useState(false);
   const [sheetDraft, setSheetDraft] = useState(linkedSheetUrl);
+  useEffect(() => {
+    setSheetDraft(linkedSheetUrl);
+  }, [linkedSheetUrl]);
 
-  const saveLinkedSheet = (raw: string) => {
-    const trimmed = raw.trim();
-    setLinkedSheetUrl(trimmed);
-    if (sheetKey) {
-      try {
-        if (trimmed) localStorage.setItem(sheetKey, trimmed);
-        else localStorage.removeItem(sheetKey);
-      } catch {
-        /* ignore quota */
-      }
+  const saveLinkedSheet = async (raw: string) => {
+    const res = await persistLinkedSheet(raw);
+    if (!res.ok && res.message) {
+      window.alert(res.message);
     }
   };
 
@@ -950,6 +1155,72 @@ export default function MasterTracker() {
           />
         </div>
 
+        {/* Date range + Sort + Market filter row. Lives below the
+            status chips so the chips read first (most-used filter)
+            and these refine. */}
+        <div className="spark-card p-4 flex flex-wrap items-center gap-2">
+          <span className="label-mini mr-2">REFINE</span>
+          <FilterSelect
+            label="WHEN"
+            value={dateRange}
+            onChange={(v) =>
+              setDateRange(
+                v as "all" | "next7" | "next30" | "past7" | "past30" | "month",
+              )
+            }
+            options={[
+              { value: "all", label: "All dates" },
+              { value: "next7", label: "Next 7 days" },
+              { value: "next30", label: "Next 30 days" },
+              { value: "month", label: "This month" },
+              { value: "past7", label: "Past 7 days" },
+              { value: "past30", label: "Past 30 days" },
+            ]}
+          />
+          <FilterSelect
+            label="MARKET"
+            value={marketFilter}
+            onChange={setMarketFilter}
+            options={[
+              { value: "all", label: "All markets" },
+              ...markets.map((m) => ({ value: m, label: m })),
+            ]}
+          />
+          <FilterSelect
+            label="SORT"
+            value={sortMode}
+            onChange={(v) =>
+              setSortMode(v as "date-desc" | "date-asc" | "venue" | "status")
+            }
+            options={[
+              { value: "date-desc", label: "Date · newest" },
+              { value: "date-asc", label: "Date · oldest" },
+              { value: "venue", label: "Venue · A → Z" },
+              { value: "status", label: "Status · urgency" },
+            ]}
+          />
+          {(dateRange !== "all" ||
+            marketFilter !== "all" ||
+            sortMode !== "date-desc") && (
+            <button
+              onClick={() => {
+                setDateRange("all");
+                setMarketFilter("all");
+                setSortMode("date-desc");
+              }}
+              className="mono text-[10px] px-3 py-1.5 rounded-xl"
+              style={{
+                letterSpacing: "0.16em",
+                color: "rgba(255,255,255,0.55)",
+                border: "1px solid var(--spark-border)",
+                background: "transparent",
+              }}
+            >
+              × RESET REFINE
+            </button>
+          )}
+        </div>
+
         {/* Totals strip */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="spark-card p-4">
@@ -1015,12 +1286,16 @@ export default function MasterTracker() {
             search={search}
             rmmFilter={rmmFilter}
             groupBy={groupBy}
+            dateRange={dateRange}
+            sortMode={sortMode}
+            marketFilter={marketFilter}
             mentionables={[
               ...rmmList,
               ...(adminList.length > 0 ? adminList : ADMIN_ROSTER_FALLBACK),
             ]}
             onCountsChange={handleCounts}
             onVisibleRowsChange={setVisibleRows}
+            onMarketsChange={setMarkets}
           />
         </Suspense>
       </div>

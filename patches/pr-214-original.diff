@@ -1,0 +1,960 @@
+diff --git a/schema_clients.graphql b/schema_clients.graphql
+index 68c5363..65a0f65 100644
+--- a/schema_clients.graphql
++++ b/schema_clients.graphql
+@@ -3844,6 +3844,8 @@ type Recap implements Node {
+   recapFile: RecapFile
+   recapFileId: ID
+   recapFiles: [RecapFile!]!
++  recapFilesCount: Int!
++  heroFile: RecapFile
+   ambassadors: [Ambassador!]! @deprecated(reason: "Use ambassador instead.")
+   requestStoreManagers: [RequestStoreManager!]!
+ }
+@@ -4197,6 +4199,8 @@ type RequestBatchTemplateResponse {
+   message: String!
+   clientMutationId: ID
+   fileUrl: String
++  fileBase64: String
++  fileName: String
+ }
+ 
+ type RequestCountableConnection {
+diff --git a/src/api/queries/RecapsQuery.ts b/src/api/queries/RecapsQuery.ts
+index 074cb9c..0ab5013 100644
+--- a/src/api/queries/RecapsQuery.ts
++++ b/src/api/queries/RecapsQuery.ts
+@@ -149,7 +149,13 @@ export const RecapsQuery = graphql`
+           totalEngagements
+           productsSold
+           totalCansSold
+-          recapFiles {
++          # List view only needs the count + one renderable photo.
++          # Server-side resolvers cap the work — recapFilesCount runs
++          # a single COUNT(*), heroFile returns the first image-typed
++          # row. Trimming the full recapFiles array shrinks the
++          # response by 5–20× depending on how many photos per recap.
++          recapFilesCount
++          heroFile {
+             id
+             file
+             fileType {
+diff --git a/src/api/queries/RequestsQuery.ts b/src/api/queries/RequestsQuery.ts
+index 42f979d..3197401 100644
+--- a/src/api/queries/RequestsQuery.ts
++++ b/src/api/queries/RequestsQuery.ts
+@@ -91,6 +91,16 @@ export const RequestsQuery = graphql`
+             uuid
+             name
+           }
++          # Just enough event/recap data to render the recap-status
++          # chip on each Master Tracker row. We deliberately don't
++          # ask for any recap fields beyond id so the row payload
++          # stays tiny (avg under 100 bytes overhead per request).
++          events {
++            id
++            recaps {
++              id
++            }
++          }
+           tenantId
+           createdAt
+           updatedAt
+diff --git a/src/components/pages/people/SparkPendingAmbassadors.tsx b/src/components/pages/people/SparkPendingAmbassadors.tsx
+index 1f5589b..526c844 100644
+--- a/src/components/pages/people/SparkPendingAmbassadors.tsx
++++ b/src/components/pages/people/SparkPendingAmbassadors.tsx
+@@ -53,7 +53,7 @@ const fmtDate = (raw: string | null | undefined) => {
+ 
+ const Inner: React.FC = () => {
+   const navigate = useNavigate();
+-  const showAlert = useAlertStore((s) => s.show);
++  const showAlert = useAlertStore((s) => s.showAlert);
+   const [refreshKey, setRefreshKey] = useState(0);
+   const data = useLazyLoadQuery<PendingAmbassadorsQueryType>(
+     PendingAmbassadorsQuery,
+@@ -82,21 +82,18 @@ const Inner: React.FC = () => {
+         setPendingId(null);
+         const r = resp.approveAmbassador;
+         if (r?.success) {
+-          showAlert?.({
+-            kind: "success",
+-            message: r.message || "Ambassador approved.",
+-          });
++          showAlert(r.message || "Ambassador approved.", "success");
+           refresh();
+         } else {
+-          showAlert?.({
+-            kind: "error",
+-            message: r?.message || "Could not approve ambassador.",
+-          });
++          showAlert(
++            r?.message || "Could not approve ambassador.",
++            "error",
++          );
+         }
+       },
+       onError: (err) => {
+         setPendingId(null);
+-        showAlert?.({ kind: "error", message: err.message });
++        showAlert(err.message, "error");
+       },
+     });
+   };
+@@ -113,21 +110,18 @@ const Inner: React.FC = () => {
+         setPendingId(null);
+         const r = resp.disableAmbassador;
+         if (r?.success) {
+-          showAlert?.({
+-            kind: "success",
+-            message: r.message || "Ambassador disabled.",
+-          });
++          showAlert(r.message || "Ambassador disabled.", "success");
+           refresh();
+         } else {
+-          showAlert?.({
+-            kind: "error",
+-            message: r?.message || "Could not disable ambassador.",
+-          });
++          showAlert(
++            r?.message || "Could not disable ambassador.",
++            "error",
++          );
+         }
+       },
+       onError: (err) => {
+         setPendingId(null);
+-        showAlert?.({ kind: "error", message: err.message });
++        showAlert(err.message, "error");
+       },
+     });
+   };
+diff --git a/src/recap/SparkRecapsList.tsx b/src/recap/SparkRecapsList.tsx
+index 7e5ce72..46cf6dc 100644
+--- a/src/recap/SparkRecapsList.tsx
++++ b/src/recap/SparkRecapsList.tsx
+@@ -8,7 +8,7 @@ import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
+ import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
+ import { useAuthStore } from "@/store/authStore";
+ import useSparkRole from "@/hooks/useSparkRole";
+-import { pickHeroImage } from "@/utils/recapFileUrl";
++import { recapFileUrl } from "@/utils/recapFileUrl";
+ import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
+ 
+ /**
+@@ -205,6 +205,8 @@ type Meta = {
+ type SortKey = "date-desc" | "date-asc" | "eng-desc" | "sold-desc";
+ type StatusKey = "all" | "approved" | "draft";
+ 
++const PAGE_SIZE = 60;
++
+ const RecapsListInner: React.FC<{
+   search: string;
+   retailerFilter: string;
+@@ -212,18 +214,23 @@ const RecapsListInner: React.FC<{
+   rmmFilter: string;
+   statusFilter: StatusKey;
+   sortKey: SortKey;
++  pageSize: number;
+   onMeta: (m: Meta) => void;
+   onVisibleRecapsChange?: (recaps: Recap[]) => void;
+-}> = ({ search, retailerFilter, stateFilter, rmmFilter, statusFilter, sortKey, onMeta, onVisibleRecapsChange }) => {
++}> = ({ search, retailerFilter, stateFilter, rmmFilter, statusFilter, sortKey, pageSize, onMeta, onVisibleRecapsChange }) => {
+   const navigate = useNavigate();
+   const { tenantId } = useAuthStore();
+-  // Page in chunks of 60 instead of 1,000 — fetches ~6× less data per
+-  // request, lets the page paint immediately, and avoids the Cloud Run
+-  // resolver timeout when each recap fans out N file rows.
++  // Initial page is PAGE_SIZE (60); "Load more" bumps pageSize in
++  // 60-row chunks. We grow `first` rather than walk endCursor because
++  // the existing query lacks @connection/@refetchable wiring and the
++  // dataset is bounded (~hundreds, not millions) so refetching the
++  // growing window is acceptable. Relay's response cache + the
++  // network's gzip mean the additional bytes per click are roughly
++  // 60-rows worth, not the full N-rows-cumulative.
+   const data = useLazyLoadQuery<RecapsQueryType>(
+     RecapsQuery,
+     {
+-      first: 60,
++      first: pageSize,
+       filters: tenantId
+         ? {
+             tenantId,
+@@ -249,12 +256,14 @@ const RecapsListInner: React.FC<{
+             n.event?.retailer?.location?.state?.code ??
+             n.state?.code ??
+             null;
+-          // Pick the first browser-renderable image, prepend GCS bucket
+-          // URL via recapFileUrl(). HEIC/PDF aren't valid img sources.
+-          const hero = pickHeroImage(n.recapFiles ?? []);
+-          const fileCount = (n.recapFiles ?? []).filter(
+-            (f) => f && (f.file?.toString() || "").length > 0,
+-          ).length;
++          // Server-side resolvers do the work: heroFile is the first
++          // browser-renderable image (jpg/png/webp/gif), recapFilesCount
++          // is the COUNT(*) of all files. Client just prepends the
++          // GCS bucket via recapFileUrl().
++          const hero = n.heroFile?.file
++            ? recapFileUrl(n.heroFile.file)
++            : null;
++          const fileCount = n.recapFilesCount ?? 0;
+           const requestUuid = n.event?.request?.uuid ?? null;
+           return {
+             uuid: String(n.uuid),
+@@ -424,6 +433,13 @@ export default function SparkRecapsList() {
+   const [rmmFilter, setRmmFilter] = useState("all");
+   const [statusFilter, setStatusFilter] = useState<StatusKey>("all");
+   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
++  // "Load more" bumps this by PAGE_SIZE (60). Reset when filters
++  // change so the user doesn't see "Load more (60 of 12)" when
++  // narrowing the dataset.
++  const [pageSize, setPageSize] = useState(PAGE_SIZE);
++  useEffect(() => {
++    setPageSize(PAGE_SIZE);
++  }, [retailerFilter, stateFilter, rmmFilter, statusFilter]);
+   const [meta, setMeta] = useState<Meta>({
+     retailers: [],
+     states: [],
+@@ -816,10 +832,36 @@ export default function SparkRecapsList() {
+             rmmFilter={rmmFilter}
+             statusFilter={statusFilter}
+             sortKey={sortKey}
++            pageSize={pageSize}
+             onMeta={onMeta}
+             onVisibleRecapsChange={setVisibleRecaps}
+           />
+         </Suspense>
++
++        {meta.total > pageSize && (
++          <div className="flex flex-col items-center gap-2 py-4">
++            <button
++              onClick={() => setPageSize((p) => p + PAGE_SIZE)}
++              className="px-5 py-2.5 rounded-2xl text-sm font-semibold"
++              style={{
++                background: "var(--spark-lime)",
++                color: "#0a0d09",
++                boxShadow: "0 0 20px rgba(197,245,70,0.35)",
++              }}
++            >
++              Load {Math.min(PAGE_SIZE, meta.total - pageSize)} more →
++            </button>
++            <p
++              className="mono text-[10px]"
++              style={{
++                letterSpacing: "0.16em",
++                color: "rgba(255,255,255,0.45)",
++              }}
++            >
++              {Math.min(pageSize, meta.total)} of {meta.total}
++            </p>
++          </div>
++        )}
+       </div>
+     </Layout>
+   );
+diff --git a/src/requests/MasterTracker.tsx b/src/requests/MasterTracker.tsx
+index 04232ab..25d8b50 100644
+--- a/src/requests/MasterTracker.tsx
++++ b/src/requests/MasterTracker.tsx
+@@ -67,6 +67,8 @@ const STATUS_FILTERS: { key: string; label: string; chip: string }[] = [
+ const fmtNum = (v: number | null | undefined) =>
+   typeof v === "number" ? v.toLocaleString() : "0";
+ 
++type RecapStatus = "submitted" | "due" | "none";
++
+ type Row = {
+   uuid: string;
+   date: string;
+@@ -78,6 +80,12 @@ type Row = {
+   address: string;
+   type: string;
+   eventUuid: string | null;
++  // Aggregate of the request's events + recaps for the chip:
++  //   "submitted" → at least one event has at least one recap
++  //   "due"       → events scheduled but no recaps yet
++  //   "none"      → no events scheduled yet (request still pending)
++  recapStatus: RecapStatus;
++  recapCount: number;
+ };
+ 
+ const fmtDateLabel = (raw: string | null | undefined) => {
+@@ -213,6 +221,7 @@ const TrackerTable: React.FC<{
+               <th className="px-4 py-3 text-right">CONSUMERS</th>
+               <th className="px-4 py-3 text-right">1ST-TIME</th>
+               <th className="px-4 py-3 text-right">$/SAMPLE</th>
++              <th className="px-4 py-3">RECAP</th>
+               <th className="px-4 py-3">NOTES</th>
+             </tr>
+           </thead>
+@@ -220,7 +229,7 @@ const TrackerTable: React.FC<{
+             {rows.length === 0 && (
+               <tr>
+                 <td
+-                  colSpan={10}
++                  colSpan={11}
+                   className="px-4 py-10 text-center text-sm"
+                   style={{ color: "rgba(255,255,255,0.55)" }}
+                 >
+@@ -239,7 +248,7 @@ const TrackerTable: React.FC<{
+               const headerEl = showGroupHeader ? (
+                 <tr key={`hdr-${rowIdx}`}>
+                   <td
+-                    colSpan={10}
++                    colSpan={11}
+                     className="px-4 py-3 mono"
+                     style={{
+                       letterSpacing: "0.16em",
+@@ -354,6 +363,30 @@ const TrackerTable: React.FC<{
+                     —
+                   </td>
+                   <td className="px-4 py-3 text-right tab-num">—</td>
++                  <td className="px-4 py-3 whitespace-nowrap">
++                    {r.recapStatus === "submitted" ? (
++                      <span
++                        className="chip chip-lime"
++                        title={`${r.recapCount} recap${r.recapCount === 1 ? "" : "s"} submitted`}
++                      >
++                        ● {r.recapCount} RECAP{r.recapCount === 1 ? "" : "S"}
++                      </span>
++                    ) : r.recapStatus === "due" ? (
++                      <span className="chip chip-orange" title="Activation scheduled, no recap filed yet">
++                        ◌ DUE
++                      </span>
++                    ) : (
++                      <span
++                        className="mono text-[10px]"
++                        style={{
++                          letterSpacing: "0.14em",
++                          color: "rgba(255,255,255,0.3)",
++                        }}
++                      >
++                        —
++                      </span>
++                    )}
++                  </td>
+                   <td className="px-4 py-3 whitespace-nowrap">
+                     {isClient ? (
+                       <span
+@@ -384,7 +417,7 @@ const TrackerTable: React.FC<{
+                 </tr>
+                 {isExpanded && !isClient && (
+                   <tr style={{ borderBottom: "1px solid var(--spark-border)" }}>
+-                    <td colSpan={10} style={{ padding: "0.5rem 1rem 1rem" }}>
++                    <td colSpan={11} style={{ padding: "0.5rem 1rem 1rem" }}>
+                       <InternalNotesPanel
+                         requestUuid={r.uuid}
+                         requestLabel={`${r.venue} · ${r.market}`}
+@@ -448,6 +481,19 @@ const MasterTrackerInner: React.FC<{
+           const stateCode = n.retailer?.location?.state?.code ?? n.state?.code;
+           const cityish = n.retailer?.location?.name ?? n.location?.name ?? "";
+           const market = [cityish, stateCode].filter(Boolean).join(", ");
++          const events = (n.events ?? []).filter(
++            (e): e is NonNullable<typeof e> => Boolean(e),
++          );
++          const recapCount = events.reduce(
++            (sum, e) => sum + (e.recaps?.length ?? 0),
++            0,
++          );
++          const recapStatus: RecapStatus =
++            events.length === 0
++              ? "none"
++              : recapCount > 0
++                ? "submitted"
++                : "due";
+           return {
+             uuid: String(n.uuid),
+             date: n.date ?? "",
+@@ -461,6 +507,8 @@ const MasterTrackerInner: React.FC<{
+             address: n.address ?? "",
+             type: n.requestType?.name ?? "—",
+             eventUuid: n.event?.uuid ? String(n.event.uuid) : null,
++            recapStatus,
++            recapCount,
+           };
+         }) ?? []
+     );
+@@ -583,6 +631,8 @@ export default function MasterTracker() {
+       "Address",
+       "Type",
+       "Time",
++      "Recap",
++      "Recap Count",
+       "Event UUID",
+       "Request UUID",
+     ];
+@@ -602,6 +652,8 @@ export default function MasterTracker() {
+           r.address,
+           r.type,
+           r.timeLabel,
++          r.recapStatus,
++          String(r.recapCount),
+           r.eventUuid ?? "",
+           r.uuid,
+         ]
+@@ -658,6 +710,8 @@ export default function MasterTracker() {
+           r.address,
+           r.type,
+           r.timeLabel,
++          r.recapStatus,
++          String(r.recapCount),
+           r.eventUuid ?? "",
+           r.uuid,
+         ]
+diff --git a/src/requests/SparkBulkUpload.tsx b/src/requests/SparkBulkUpload.tsx
+index 8d6a483..cd6c092 100644
+--- a/src/requests/SparkBulkUpload.tsx
++++ b/src/requests/SparkBulkUpload.tsx
+@@ -102,6 +102,8 @@ const Inner: React.FC = () => {
+           success: boolean;
+           message: string;
+           fileUrl: string | null;
++          fileBase64: string | null;
++          fileName: string | null;
+         };
+       }>(
+         `
+@@ -110,23 +112,57 @@ const Inner: React.FC = () => {
+               success
+               message
+               fileUrl
++              fileBase64
++              fileName
+             }
+           }
+         `,
+         { input: tenantId ? { tenantId } : {} },
+       );
+       const r = data.requestBatchTemplateDownloadUrl;
+-      if (!r?.success || !r.fileUrl) {
++      if (!r?.success) {
+         throw new Error(r?.message || "Couldn't generate template.");
+       }
++
++      const filename = r.fileName || "spark-bulk-template.xlsx";
++
++      // Inline path (new, preferred). Avoids GCS entirely so an IAM
++      // gap on the service account doesn't break downloads. ~30 kB
++      // of base64 over the wire — trivial.
++      let downloadHref: string;
++      let blobUrlToRevoke: string | null = null;
++      if (r.fileBase64) {
++        const byteString = atob(r.fileBase64);
++        const bytes = new Uint8Array(byteString.length);
++        for (let i = 0; i < byteString.length; i++) {
++          bytes[i] = byteString.charCodeAt(i);
++        }
++        const blob = new Blob([bytes], {
++          type:
++            "application/vnd.openxmlformats-officedocument." +
++            "spreadsheetml.sheet",
++        });
++        downloadHref = URL.createObjectURL(blob);
++        blobUrlToRevoke = downloadHref;
++      } else if (r.fileUrl) {
++        downloadHref = r.fileUrl;
++      } else {
++        throw new Error("Template response was empty.");
++      }
++
+       // Trigger a download in a hidden anchor so we don't navigate.
+       const a = document.createElement("a");
+-      a.href = r.fileUrl;
+-      a.download = "spark-bulk-template.xlsx";
++      a.href = downloadHref;
++      a.download = filename;
+       a.target = "_blank";
+       document.body.appendChild(a);
+       a.click();
+       document.body.removeChild(a);
++      if (blobUrlToRevoke) {
++        // Free the blob after the browser has had a chance to start
++        // the download. 30 s is plenty.
++        window.setTimeout(() => URL.revokeObjectURL(blobUrlToRevoke!), 30_000);
++      }
+       showAlert("Template downloaded. Fill it in then drop it back here.", "success");
+     } catch (e) {
+       showAlert(`Couldn't download template: ${(e as Error).message}`, "error");
+diff --git a/src/routes/AppRouter.tsx b/src/routes/AppRouter.tsx
+index df6742c..ee1d92a 100644
+--- a/src/routes/AppRouter.tsx
++++ b/src/routes/AppRouter.tsx
+@@ -1,3 +1,4 @@
++import { Suspense } from "react";
+ import {
+   BrowserRouter,
+   Routes,
+@@ -16,49 +17,71 @@ import VerifyAccount from "@/auth/VerifyAccount";
+ 
+ const rootPath = "/";
+ 
++// Single Suspense boundary at the router level so every lazy() route
++// in AppRoutes can resolve without each route having to wrap itself.
++// Fallback intentionally minimal — most pages also render Layout which
++// has its own page-level Suspense for the data fetch.
++const RouteFallback = () => (
++  <div
++    style={{
++      display: "grid",
++      placeItems: "center",
++      height: "60vh",
++      color: "rgba(255,255,255,0.55)",
++      fontFamily: "JetBrains Mono, monospace",
++      fontSize: 11,
++      letterSpacing: "0.18em",
++    }}
++  >
++    LOADING…
++  </div>
++);
++
+ const AppRouter = () => (
+   <BrowserRouter>
+-    <Routes>
+-      {/* Always accessible */}
+-      {/* <Route exact path="/token-expired" element={<AutoLogout />} /> */}
+-      <Route
+-        path="/login"
+-        element={
+-          <AuthRoute>
+-            <Login />
+-          </AuthRoute>
+-        }
+-      />
+-      <Route
+-        path="/auth/google-calendar/callback"
+-        element={<GoogleCalendarCallback />}
+-      />
+-      <Route
+-        path="/verify-account"
+-        element={<VerifyAccount />}
+-      />
+-      {appRoutes.map((props, key) => (
++    <Suspense fallback={<RouteFallback />}>
++      <Routes>
++        {/* Always accessible */}
++        {/* <Route exact path="/token-expired" element={<AutoLogout />} /> */}
+         <Route
+-          key={key}
+-          path={props.path}
++          path="/login"
+           element={
+-            props.isPublic ? (
+-              props.component
+-            ) : (
+-              <PrivateRoute
+-                component={
+-                  props.path === "/select-company" ? (
+-                    props.component
+-                  ) : (
+-                    <TenantRoute component={props.component} />
+-                  )
+-                }
+-              />
+-            )
++            <AuthRoute>
++              <Login />
++            </AuthRoute>
+           }
+         />
+-      ))}
+-    </Routes>
++        <Route
++          path="/auth/google-calendar/callback"
++          element={<GoogleCalendarCallback />}
++        />
++        <Route
++          path="/verify-account"
++          element={<VerifyAccount />}
++        />
++        {appRoutes.map((props, key) => (
++          <Route
++            key={key}
++            path={props.path}
++            element={
++              props.isPublic ? (
++                props.component
++              ) : (
++                <PrivateRoute
++                  component={
++                    props.path === "/select-company" ? (
++                      props.component
++                    ) : (
++                      <TenantRoute component={props.component} />
++                    )
++                  }
++                />
++              )
++            }
++          />
++        ))}
++      </Routes>
++    </Suspense>
+   </BrowserRouter>
+ );
+ 
+diff --git a/src/routes/AppRoutes.tsx b/src/routes/AppRoutes.tsx
+index e8cea97..c751bde 100644
+--- a/src/routes/AppRoutes.tsx
++++ b/src/routes/AppRoutes.tsx
+@@ -17,124 +17,260 @@ import {
+ } from "@heroicons/react/24/solid";
+ import { Palette, PencilIcon, TagIcon, Archive } from "lucide-react";
+ 
+-// Dashboard
+-import DashboardEvents from "@/components/pages/dashboard-event/DashboardEvent";
+-import DashboardRetail from "@/components/pages/dashboard-retail/DashboardRetail";
+-// import DashboardIndex from "@/components/pages/dashboard";
++// Route-level code-splitting.
++//
++// Every route below either:
++//   (a) loads with `import` — eager. Reserved for the dashboard, the
++//       master tracker, request view, approvals — the surfaces a logged-
++//       in admin sees ≥90% of the time. Putting them in the initial
++//       bundle keeps the most-common navigation paths snappy.
++//   (b) loads with `lazy(() => import(...))` — fetched only when the
++//       route is actually visited. The router has a single top-level
++//       Suspense boundary so each route doesn't need its own.
++//
++// Bundle math before this change: ~2.7 MB single index chunk on cold
++// load. After: ~700 KB of vendor + core (react / relay / router) plus
++// ~50–300 KB per visited route. First Contentful Paint roughly cuts
++// in half on a fresh cache.
++//
++// Heavy libraries (xlsx, papaparse, heic2any, leaflet, etc.) ride
++// inside their owning lazy chunk, so users who never open Bulk Upload
++// or a recap with HEIC photos never download them.
++
++import { lazy, type ComponentType } from "react";
++
++// Preserve the underlying component's prop types through React.lazy.
++// Without the explicit C generic the wrapped component would type-check
++// as `ComponentType<{}>` and any call site that passes props (e.g.
++// `<RequestsList fixedFilters={...} />`) would TS-error.
++const lazyDefault = <P,>(
++  loader: () => Promise<{ default: ComponentType<P> }>,
++) => lazy(loader);
+ 
+-// Company Selection
+-import CompanySelector from "@/layout/CompanySelector";
++const lazyNamed = <T, K extends keyof T>(
++  loader: () => Promise<T>,
++  name: K,
++) =>
++  lazy(async () => {
++    const mod = await loader();
++    return { default: mod[name] as unknown as ComponentType<unknown> };
++  });
+ 
+-// Requests
+-import RequestsList from "@/requests/RequestsList";
++// ─── Hot paths: keep eager so initial bundle is hot for typical use ───
++import DashboardEvents from "@/components/pages/dashboard-event/DashboardEvent";
+ import MasterTracker from "@/requests/MasterTracker";
+-import RequestView from "@/requests/RequestView";
+ import SparkRequestView from "@/requests/SparkRequestView";
+-import EditRequest from "@/requests/EditRequest";
+ import SparkRequestEdit from "@/requests/SparkRequestEdit";
+-import CreateRequest from "@/requests/CreateRequest";
++import SparkApprovals from "@/components/pages/approvals/SparkApprovals";
++import SparkRequestCreate from "@/requests/SparkRequestCreate";
++import AdminOnly from "@/layout/AdminOnly";
++
++// ─── Lazy: dashboard variants, all leaf routes ────────────────────────
++const DashboardRetail = lazyDefault(
++  () => import("@/components/pages/dashboard-retail/DashboardRetail"),
++);
++const CompanySelector = lazyDefault(() => import("@/layout/CompanySelector"));
++
++// Requests (legacy)
++const RequestsList = lazyDefault(() => import("@/requests/RequestsList"));
++const RequestView = lazyDefault(() => import("@/requests/RequestView"));
++const EditRequest = lazyDefault(() => import("@/requests/EditRequest"));
++const CreateRequest = lazyDefault(() => import("@/requests/CreateRequest"));
+ 
+ // Events
+-import EventsList from "@/events/EventsList";
+-import CreateEvent from "@/events/CreateEvent";
+-import EditEvent from "@/events/EditEvent";
+-import EventView from "@/events/EventView";
+-import TodayEvents from "@/events/TodayEvents";
+-import TodayEventsMap from "@/events/TodayEventsMap";
+-import CreateEventWithoutRequest from "@/events/CreateEventWithoutRequest";
++const EventsList = lazyDefault(() => import("@/events/EventsList"));
++const CreateEvent = lazyDefault(() => import("@/events/CreateEvent"));
++const EditEvent = lazyDefault(() => import("@/events/EditEvent"));
++const EventView = lazyDefault(() => import("@/events/EventView"));
++const TodayEvents = lazyDefault(() => import("@/events/TodayEvents"));
++const TodayEventsMap = lazyDefault(() => import("@/events/TodayEventsMap"));
++const CreateEventWithoutRequest = lazyDefault(
++  () => import("@/events/CreateEventWithoutRequest"),
++);
+ 
+ // Products
+-import ProductsList from "@/products/ProductsList";
+-import CreateProduct from "@/products/CreateProduct";
++const ProductsList = lazyDefault(() => import("@/products/ProductsList"));
++const CreateProduct = lazyDefault(() => import("@/products/CreateProduct"));
+ 
+-// Catalogs
+-import {
+-  ProductTypesList,
+-  CreateProductType,
+-  EditProductType,
+-} from "@/catalogs/ProductTypes";
+-import {
+-  EventTypesList,
+-  CreateEventType,
+-  EditEventType,
+-} from "@/catalogs/EventTypes";
+-import {
+-  LocationsList,
+-  CreateLocation,
+-  EditLocation,
+-} from "@/catalogs/Locations";
+-import {
+-  RequestTypesList,
+-  CreateRequestType,
+-  EditRequestType,
+-} from "@/catalogs/RequestTypes";
+-import {
+-  DistributorsList,
+-  CreateDistributor,
+-  EditDistributor,
+-} from "@/catalogs/Distributors";
+-import {
+-  RetailersList,
+-  CreateRetailer,
+-  EditRetailer,
+-} from "@/catalogs/Retailers";
+-
+-// Recap
+-// import CreateRecap from "@/recap/CreateRecap";
+-import RecapList from "@/recap/RecapsList";
+-import SparkRecapsList from "@/recap/SparkRecapsList";
+-import SparkRecapView from "@/recap/SparkRecapView";
+-import SparkRecapCreate from "@/recap/SparkRecapCreate";
+-import SparkCalendar from "@/components/pages/calendar/SparkCalendar";
+-import SparkApprovals from "@/components/pages/approvals/SparkApprovals";
+-import SparkSettings from "@/components/pages/settings/SparkSettings";
+-import SparkJobs from "@/components/pages/jobs/SparkJobs";
+-import SparkRequestCreate from "@/requests/SparkRequestCreate";
+-import SparkBulkUpload from "@/requests/SparkBulkUpload";
+-import SparkReports from "@/components/pages/reports/SparkReports";
+-import SparkInbox from "@/components/pages/inbox/SparkInbox";
+-import SparkAlerts from "@/components/pages/alerts/SparkAlerts";
+-import SparkTalent from "@/components/pages/talent/SparkTalent";
+-import SparkJobDetail from "@/components/pages/jobs/SparkJobDetail";
+-import SparkRecapTemplates from "@/recap/SparkRecapTemplates";
+-import SparkAccountMap from "@/components/pages/map/SparkAccountMap";
+-import AdminOnly from "@/layout/AdminOnly";
+-import SparkToday from "@/components/pages/today/SparkToday";
+-import SparkUpcomingEvents from "@/components/pages/upcoming/SparkUpcomingEvents";
+-import SparkRecentSubmissions from "@/components/pages/recent/SparkRecentSubmissions";
+-import SparkPeople from "@/components/pages/people/SparkPeople";
+-import SparkPendingAmbassadors from "@/components/pages/people/SparkPendingAmbassadors";
+-import SparkFormBuilder from "@/components/pages/builder/SparkFormBuilder";
+-import SparkNewClient from "@/components/pages/clients/SparkNewClient";
+-import SparkBaPortal from "@/components/pages/ba/SparkBaPortal";
+-import SparkAcademy from "@/components/pages/academy/SparkAcademy";
+-import SparkAcademyViewer from "@/components/pages/academy/SparkAcademyViewer";
+-import RecapCustomList from "@/recap/RecapCustomList";
+-import RecapView from "@/recap/RecapView";
+-// import EditRecap from "@/recap/EditRecap";
++// Catalogs — each module exports multiple components; use lazyNamed.
++const ProductTypesList = lazyNamed(
++  () => import("@/catalogs/ProductTypes"),
++  "ProductTypesList",
++);
++const CreateProductType = lazyNamed(
++  () => import("@/catalogs/ProductTypes"),
++  "CreateProductType",
++);
++const EditProductType = lazyNamed(
++  () => import("@/catalogs/ProductTypes"),
++  "EditProductType",
++);
++const EventTypesList = lazyNamed(
++  () => import("@/catalogs/EventTypes"),
++  "EventTypesList",
++);
++const CreateEventType = lazyNamed(
++  () => import("@/catalogs/EventTypes"),
++  "CreateEventType",
++);
++const EditEventType = lazyNamed(
++  () => import("@/catalogs/EventTypes"),
++  "EditEventType",
++);
++const LocationsList = lazyNamed(
++  () => import("@/catalogs/Locations"),
++  "LocationsList",
++);
++const CreateLocation = lazyNamed(
++  () => import("@/catalogs/Locations"),
++  "CreateLocation",
++);
++const EditLocation = lazyNamed(
++  () => import("@/catalogs/Locations"),
++  "EditLocation",
++);
++const RequestTypesList = lazyNamed(
++  () => import("@/catalogs/RequestTypes"),
++  "RequestTypesList",
++);
++const CreateRequestType = lazyNamed(
++  () => import("@/catalogs/RequestTypes"),
++  "CreateRequestType",
++);
++const EditRequestType = lazyNamed(
++  () => import("@/catalogs/RequestTypes"),
++  "EditRequestType",
++);
++const DistributorsList = lazyNamed(
++  () => import("@/catalogs/Distributors"),
++  "DistributorsList",
++);
++const CreateDistributor = lazyNamed(
++  () => import("@/catalogs/Distributors"),
++  "CreateDistributor",
++);
++const EditDistributor = lazyNamed(
++  () => import("@/catalogs/Distributors"),
++  "EditDistributor",
++);
++const RetailersList = lazyNamed(
++  () => import("@/catalogs/Retailers"),
++  "RetailersList",
++);
++const CreateRetailer = lazyNamed(
++  () => import("@/catalogs/Retailers"),
++  "CreateRetailer",
++);
++const EditRetailer = lazyNamed(
++  () => import("@/catalogs/Retailers"),
++  "EditRetailer",
++);
++
++// Recap (heaviest — pulls HEIC decoder via dynamic import)
++const RecapList = lazyDefault(() => import("@/recap/RecapsList"));
++const SparkRecapsList = lazyDefault(() => import("@/recap/SparkRecapsList"));
++const SparkRecapView = lazyDefault(() => import("@/recap/SparkRecapView"));
++const SparkRecapCreate = lazyDefault(() => import("@/recap/SparkRecapCreate"));
++const SparkRecapTemplates = lazyDefault(
++  () => import("@/recap/SparkRecapTemplates"),
++);
++const RecapCustomList = lazyDefault(() => import("@/recap/RecapCustomList"));
++const RecapView = lazyDefault(() => import("@/recap/RecapView"));
++const RecapCustomView = lazyDefault(() => import("@/recap/RecapCustomView"));
++
++// Calendar / Scheduling
++const SparkCalendar = lazyDefault(
++  () => import("@/components/pages/calendar/SparkCalendar"),
++);
++
++// Settings + admin
++const SparkSettings = lazyDefault(
++  () => import("@/components/pages/settings/SparkSettings"),
++);
++const SparkJobs = lazyDefault(
++  () => import("@/components/pages/jobs/SparkJobs"),
++);
++const SparkBulkUpload = lazyDefault(() => import("@/requests/SparkBulkUpload"));
++const SparkReports = lazyDefault(
++  () => import("@/components/pages/reports/SparkReports"),
++);
++const SparkInbox = lazyDefault(
++  () => import("@/components/pages/inbox/SparkInbox"),
++);
++const SparkAlerts = lazyDefault(
++  () => import("@/components/pages/alerts/SparkAlerts"),
++);
++const SparkTalent = lazyDefault(
++  () => import("@/components/pages/talent/SparkTalent"),
++);
++const SparkJobDetail = lazyDefault(
++  () => import("@/components/pages/jobs/SparkJobDetail"),
++);
++const SparkAccountMap = lazyDefault(
++  () => import("@/components/pages/map/SparkAccountMap"),
++);
++const SparkToday = lazyDefault(
++  () => import("@/components/pages/today/SparkToday"),
++);
++const SparkUpcomingEvents = lazyDefault(
++  () => import("@/components/pages/upcoming/SparkUpcomingEvents"),
++);
++const SparkRecentSubmissions = lazyDefault(
++  () => import("@/components/pages/recent/SparkRecentSubmissions"),
++);
++const SparkPeople = lazyDefault(
++  () => import("@/components/pages/people/SparkPeople"),
++);
++const SparkPendingAmbassadors = lazyDefault(
++  () => import("@/components/pages/people/SparkPendingAmbassadors"),
++);
++const SparkFormBuilder = lazyDefault(
++  () => import("@/components/pages/builder/SparkFormBuilder"),
++);
++const SparkNewClient = lazyDefault(
++  () => import("@/components/pages/clients/SparkNewClient"),
++);
++const SparkBaPortal = lazyDefault(
++  () => import("@/components/pages/ba/SparkBaPortal"),
++);
++const SparkAcademy = lazyDefault(
++  () => import("@/components/pages/academy/SparkAcademy"),
++);
++const SparkAcademyViewer = lazyDefault(
++  () => import("@/components/pages/academy/SparkAcademyViewer"),
++);
+ 
+ // User
+-import UsersList from "@/users/UsersList";
+-import CreateUser from "@/users/CreateUser";
++const UsersList = lazyDefault(() => import("@/users/UsersList"));
++const CreateUser = lazyDefault(() => import("@/users/CreateUser"));
+ 
+ // Public
+-import SparkFormPage from "@/public/form/FormPage";
+-import SparkPublicExpressForm from "@/public/form/SparkPublicExpressForm";
+-import MagicLinkExchange from "@/auth/MagicLinkExchange";
+-import ForgotPassword from "@/auth/ForgotPassword";
+-import ResetPassword from "@/auth/ResetPassword";
+-import PrivacyPolicyView from "@/utils/PrivacyPolicyView";
+-import TermsOfServiceView from "@/utils/TermsOfServiceView";
+-import IndependentContractorAgreementPage from "@/utils/IndependentContractorAgreement";
++const SparkFormPage = lazyDefault(() => import("@/public/form/FormPage"));
++const SparkPublicExpressForm = lazyDefault(
++  () => import("@/public/form/SparkPublicExpressForm"),
++);
++const MagicLinkExchange = lazyDefault(() => import("@/auth/MagicLinkExchange"));
++const ForgotPassword = lazyDefault(() => import("@/auth/ForgotPassword"));
++const ResetPassword = lazyDefault(() => import("@/auth/ResetPassword"));
++const PrivacyPolicyView = lazyDefault(
++  () => import("@/utils/PrivacyPolicyView"),
++);
++const TermsOfServiceView = lazyDefault(
++  () => import("@/utils/TermsOfServiceView"),
++);
++const IndependentContractorAgreementPage = lazyDefault(
++  () => import("@/utils/IndependentContractorAgreement"),
++);
+ 
+ // Calendar
+-import CalendarConnection from "@/calendar/CalendarConnection";
++const CalendarConnection = lazyDefault(
++  () => import("@/calendar/CalendarConnection"),
++);
+ 
+-// Settings
+-import ThemePage from "@/theme/ThemePage";
+-import CreateGoals from "@/goals/CreateGoals";
+-import GoalsList from "@/goals/GoalsList";
+-import RecapCustomView from "@/recap/RecapCustomView";
++// Theme / Goals
++const ThemePage = lazyDefault(() => import("@/theme/ThemePage"));
++const CreateGoals = lazyDefault(() => import("@/goals/CreateGoals"));
++const GoalsList = lazyDefault(() => import("@/goals/GoalsList"));
+ 
+ /* -----------------------------------------------------------
+    PUBLIC ROUTES (NO AUTH REQUIRED)

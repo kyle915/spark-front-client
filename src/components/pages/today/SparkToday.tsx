@@ -10,6 +10,8 @@ import {
 import Layout from "@/layout/Layout";
 import { EventsQuery } from "@/api/queries/EventsQuery";
 import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
+import { RecentLocationPingsQuery } from "@/api/queries/RecentLocationPingsQuery";
+import type { RecentLocationPingsQuery as RecentLocationPingsQueryType } from "@api/queries/__generated__/RecentLocationPingsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 
@@ -40,6 +42,27 @@ type Shift = {
   address: string;
   coords: { lat: number; lng: number } | null;
   status: string;
+};
+
+type Ping = {
+  uuid: string;
+  lat: number;
+  lng: number;
+  baName: string;
+  baUuid: string;
+  eventName: string;
+  eventUuid: string;
+  recordedAt: string;
+  freshnessMin: number;
+};
+
+const minutesSince = (iso: string): number => {
+  try {
+    const t = new Date(iso).getTime();
+    return Math.max(0, Math.round((Date.now() - t) / 60_000));
+  } catch {
+    return 999;
+  }
 };
 
 const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
@@ -85,9 +108,12 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           return d.toDateString() === today.toDateString();
         })
         ?.map((n) => {
-          // Coordinates aren't on the EventsQuery node yet — would need
-          // a query extension. Map pins fall back to empty for now and
-          // populate when we add `coordinates` to the events GraphQL type.
+          // Coordinates are stored as [lat, lng] (ArrayField of floats).
+          const c = n.coordinates ?? null;
+          const coords =
+            c && c.length >= 2
+              ? { lat: c[0] as number, lng: c[1] as number }
+              : null;
           return {
             uuid: String(n.uuid),
             name: n.name ?? "Untitled",
@@ -96,12 +122,39 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             retailer: n.request?.retailer?.name ?? "—",
             state: "",
             address: n.address ?? "",
-            coords: null,
+            coords,
             status: n.status?.name ?? "Scheduled",
           };
         }) ?? []
     );
   }, [data, today]);
+
+  // GPS pings — re-fetches every 60 seconds so the map stays live.
+  const [pingTick, setPingTick] = useState(0);
+  useMemo(() => {
+    const id = window.setInterval(() => setPingTick((t) => t + 1), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  const pingData = useLazyLoadQuery<RecentLocationPingsQueryType>(
+    RecentLocationPingsQuery,
+    { withinMinutes: 30 },
+    { fetchPolicy: "network-only", fetchKey: pingTick },
+  );
+  const pings: Ping[] = useMemo(() => {
+    const rows = pingData?.recentLocationPings ?? [];
+    return rows.map((p) => ({
+      uuid: String(p.uuid),
+      lat: p.lat,
+      lng: p.lng,
+      baName: p.ambassadorName,
+      baUuid: String(p.ambassadorUuid),
+      eventName: p.eventName,
+      eventUuid: String(p.eventUuid),
+      recordedAt: p.recordedAt,
+      freshnessMin: minutesSince(p.recordedAt),
+    }));
+  }, [pingData]);
+  const [openPing, setOpenPing] = useState<string | null>(null);
 
   const mappable = shifts.filter((s) => s.coords !== null);
   const center = useMemo(() => {
@@ -173,6 +226,89 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                   />
                 </AdvancedMarker>
               ))}
+
+              {/* Live BA GPS pins — orange / sky based on freshness. */}
+              {pings.map((p) => {
+                const fresh = p.freshnessMin <= 5;
+                const stale = p.freshnessMin > 15;
+                const color = stale
+                  ? "#8b8e84"
+                  : fresh
+                    ? "var(--spark-orange)"
+                    : "var(--spark-sky)";
+                return (
+                  <AdvancedMarker
+                    key={`ping-${p.uuid}`}
+                    position={{ lat: p.lat, lng: p.lng }}
+                    onClick={() => setOpenPing(p.uuid)}
+                  >
+                    <div
+                      style={{
+                        width: 14,
+                        height: 14,
+                        borderRadius: 7,
+                        background: color,
+                        border: "2px solid #0a0d09",
+                        boxShadow: stale ? "none" : `0 0 10px ${color}`,
+                        position: "relative",
+                      }}
+                      title={`${p.baName} · ${p.freshnessMin}m ago`}
+                    >
+                      {fresh && (
+                        <span
+                          style={{
+                            position: "absolute",
+                            inset: -6,
+                            borderRadius: 14,
+                            border: "2px solid var(--spark-orange)",
+                            opacity: 0.45,
+                            animation: "spark-pulse 1.4s ease-out infinite",
+                          }}
+                        />
+                      )}
+                    </div>
+                  </AdvancedMarker>
+                );
+              })}
+
+              {openPing &&
+                (() => {
+                  const p = pings.find((x) => x.uuid === openPing);
+                  if (!p) return null;
+                  return (
+                    <InfoWindow
+                      position={{ lat: p.lat, lng: p.lng }}
+                      onCloseClick={() => setOpenPing(null)}
+                    >
+                      <div
+                        style={{
+                          fontFamily: "Space Grotesk, sans-serif",
+                          color: "#0a0d09",
+                          minWidth: 180,
+                        }}
+                      >
+                        <p style={{ fontWeight: 700 }}>{p.baName}</p>
+                        <p style={{ fontSize: 11, marginTop: 2 }}>
+                          {p.eventName}
+                        </p>
+                        <p
+                          style={{
+                            fontSize: 10,
+                            fontFamily: "JetBrains Mono, monospace",
+                            letterSpacing: "0.14em",
+                            opacity: 0.7,
+                            marginTop: 4,
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {p.freshnessMin === 0
+                            ? "JUST NOW"
+                            : `${p.freshnessMin} MIN AGO`}
+                        </p>
+                      </div>
+                    </InfoWindow>
+                  );
+                })()}
               {openKey &&
                 (() => {
                   const s = mappable.find((x) => x.uuid === openKey);
@@ -227,17 +363,21 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "var(--spark-lime)",
+              color:
+                pings.length > 0 ? "var(--spark-orange)" : "var(--spark-lime)",
             }}
           >
-            CLOCK-IN/OUT
+            {pings.length > 0
+              ? `${pings.length} BA${pings.length === 1 ? "" : "S"} LIVE`
+              : "ON THE GROUND"}
           </p>
           <p
             className="text-xs mt-1"
             style={{ color: "rgba(255,255,255,0.65)" }}
           >
-            BA GPS pings from the mobile app land here in real time once
-            the BA app is wired. Tracked in the rebuild plan.
+            {pings.length > 0
+              ? "Orange = pinged in the last 5 min, blue = within 15, gray = stale. Tap a dot for the BA."
+              : "No live BAs right now. Pings show automatically once a BA clocks in from the mobile app."}
           </p>
         </div>
       </div>

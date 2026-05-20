@@ -69,8 +69,6 @@ import AdminOnly from "@/layout/AdminOnly";
 const DashboardRetail = lazyDefault(
   () => import("@/components/pages/dashboard-retail/DashboardRetail"),
 );
-const CompanySelector = lazyDefault(() => import("@/layout/CompanySelector"));
-
 // Requests (legacy)
 const RequestsList = lazyDefault(() => import("@/requests/RequestsList"));
 const RequestView = lazyDefault(() => import("@/requests/RequestView"));
@@ -82,6 +80,7 @@ const EventsList = lazyDefault(() => import("@/events/EventsList"));
 const CreateEvent = lazyDefault(() => import("@/events/CreateEvent"));
 const EditEvent = lazyDefault(() => import("@/events/EditEvent"));
 const EventView = lazyDefault(() => import("@/events/EventView"));
+const SparkEventView = lazyDefault(() => import("@/events/SparkEventView"));
 const TodayEvents = lazyDefault(() => import("@/events/TodayEvents"));
 const TodayEventsMap = lazyDefault(() => import("@/events/TodayEventsMap"));
 const CreateEventWithoutRequest = lazyDefault(
@@ -233,11 +232,38 @@ const SparkNewClient = lazyDefault(
 const SparkBaPortal = lazyDefault(
   () => import("@/components/pages/ba/SparkBaPortal"),
 );
+const SparkBaDetail = lazyDefault(
+  () => import("@/components/pages/ba/SparkBaDetail"),
+);
 const SparkAcademy = lazyDefault(
   () => import("@/components/pages/academy/SparkAcademy"),
 );
 const SparkAcademyViewer = lazyDefault(
   () => import("@/components/pages/academy/SparkAcademyViewer"),
+);
+const SparkAcademyManage = lazyDefault(
+  () => import("@/components/pages/academy/SparkAcademyManage"),
+);
+const SparkTeam = lazyDefault(
+  () => import("@/components/pages/team/SparkTeam"),
+);
+const SparkClients = lazyDefault(
+  () => import("@/components/pages/clients/SparkClients"),
+);
+const SparkHelp = lazyDefault(
+  () => import("@/components/pages/help/SparkHelp"),
+);
+const SparkFavorites = lazyDefault(
+  () => import("@/components/pages/favorites/SparkFavorites"),
+);
+const SparkPayroll = lazyDefault(
+  () => import("@/components/pages/wingspan/SparkPayroll"),
+);
+const SparkPayments = lazyDefault(
+  () => import("@/components/pages/wingspan/SparkPayments"),
+);
+const SparkBilling = lazyDefault(
+  () => import("@/components/pages/billing/SparkBilling"),
 );
 
 // User
@@ -316,19 +342,6 @@ const PublicRoutes = {
       path: "/terms-of-service",
       component: <TermsOfServiceView />,
       isPublic: true,
-    },
-  ],
-};
-
-/*  -----------------------------------------------------------
- COMPANY SELECTION ROUTE
------------------------------------------------------------ */
-const CompanyRoutes = {
-  routes: [
-    {
-      path: "/select-company",
-      component: <CompanySelector />,
-      isPublic: false,
     },
   ],
 };
@@ -529,13 +542,61 @@ const RequestsLinks = {
       isPublic: false,
     },
     {
+      // Admin view of a single Brand Ambassador — stats, reviews,
+      // notes, contact, favorite toggle. Distinct from /ba which is
+      // the BA's own portal.
+      path: "/ba/:uuid",
+      component: <SparkBaDetail />,
+      isPublic: false,
+    },
+    {
       path: "/academy",
       component: <SparkAcademy />,
       isPublic: false,
     },
     {
+      path: "/academy/manage",
+      component: <SparkAcademyManage />,
+      isPublic: false,
+    },
+    {
       path: "/academy/:id",
       component: <SparkAcademyViewer />,
+      isPublic: false,
+    },
+    {
+      path: "/team",
+      component: <SparkTeam />,
+      isPublic: false,
+    },
+    {
+      path: "/clients",
+      component: <SparkClients />,
+      isPublic: false,
+    },
+    {
+      path: "/help",
+      component: <SparkHelp />,
+      isPublic: false,
+    },
+    {
+      path: "/favorites",
+      component: <SparkFavorites />,
+      isPublic: false,
+    },
+    {
+      path: "/payroll",
+      component: <SparkPayroll />,
+      isPublic: false,
+    },
+    {
+      path: "/payments",
+      component: <SparkPayments />,
+      isPublic: false,
+    },
+    {
+      path: "/billing",
+      component: <SparkBilling />,
       isPublic: false,
     },
   ],
@@ -584,7 +645,8 @@ const EventsLinks = {
       component: <CreateEvent />,
       isPublic: false,
     },
-    { path: "/event/view/:uuid", component: <EventView />, isPublic: false },
+    { path: "/event/view/:uuid", component: <SparkEventView />, isPublic: false },
+    { path: "/event/view-legacy/:uuid", component: <EventView />, isPublic: false },
     { path: "/event/edit/:uuid", component: <EditEvent />, isPublic: false },
   ],
 };
@@ -1100,7 +1162,6 @@ export const appRoutes = [
   ...CatalogsRoutes,
   //Calendar
   ...CalendarLinks.routes,
-  ...CompanyRoutes.routes,
   ...PublicRoutes.routes,
   ...SettingsLinks.routes,
   ...GoalsLinks.routes,

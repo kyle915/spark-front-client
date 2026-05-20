@@ -3,9 +3,55 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
+import { useAlertStore } from "@/store/alertStore";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
+
+/**
+ * Fire an approve or decline mutation against the request and return
+ * a simple {success, message}. Same posture as the helper inside
+ * SparkRequestView — we duplicate it here instead of exporting because
+ * the Inbox + Request View have subtly different optimistic-UI needs.
+ */
+async function callApprovalMutation(
+  mutation: "approveRequest" | "declineRequest",
+  variables: Record<string, unknown>,
+): Promise<{ success: boolean; message: string }> {
+  const inputType =
+    mutation === "approveRequest"
+      ? "ApproveRequestInput"
+      : "DeclineRequestInput";
+  const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+    },
+    body: JSON.stringify({
+      query: `
+        mutation Run($input: ${inputType}!) {
+          ${mutation}(input: $input) {
+            success
+            message
+          }
+        }
+      `,
+      variables,
+    }),
+  });
+  const json = await res.json();
+  if (json.errors?.length) {
+    return {
+      success: false,
+      message: json.errors
+        .map((e: { message: string }) => e.message)
+        .join("; "),
+    };
+  }
+  const r = json?.data?.[mutation];
+  return { success: Boolean(r?.success), message: r?.message ?? "" };
+}
 
 /**
  * Spark v2 — Workflow Inbox.
@@ -74,11 +120,26 @@ const KIND_META: Record<
 const Inner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
+  const showAlert = useAlertStore((s) => s.showAlert);
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
     { first: 500, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
+
+  // Inline action state — UUID currently approving / declining, so
+  // we can disable the buttons + show a spinner-y label. Decided
+  // rows go straight into `optimisticallyResolved` so the row hides
+  // until the next refresh.
+  const [actingOn, setActingOn] = useState<{
+    uuid: string;
+    verb: "approve" | "decline";
+  } | null>(null);
+  const [declineFor, setDeclineFor] = useState<string | null>(null);
+  const [declineReason, setDeclineReason] = useState("");
+  const [optimisticallyResolved, setOptimisticallyResolved] = useState<
+    Set<string>
+  >(new Set());
 
   // Track which items kyle has dismissed (per-user localStorage).
   // Lets him clear the inbox progressively without a backend.
@@ -164,7 +225,11 @@ const Inner: React.FC = () => {
       declined: 2,
     };
     return out
-      .filter((i) => !dismissed.has(i.uuid))
+      .filter(
+        (i) =>
+          !dismissed.has(i.uuid) &&
+          !optimisticallyResolved.has(i.uuid),
+      )
       .sort((a, b) => {
         if (rank[a.kind] !== rank[b.kind]) return rank[a.kind] - rank[b.kind];
         // Within sla/pending: oldest first (most urgent).
@@ -176,7 +241,68 @@ const Inner: React.FC = () => {
         // Within declined: most recent first.
         return new Date(b.whenIso).getTime() - new Date(a.whenIso).getTime();
       });
-  }, [data, dismissed]);
+  }, [data, dismissed, optimisticallyResolved]);
+
+  // Approve a request directly from the row. Optimistic — hides the
+  // row immediately, then surfaces a success/error toast based on
+  // the mutation response. If the mutation fails the row reappears
+  // on next data refresh.
+  const handleApprove = async (uuid: string) => {
+    if (actingOn) return;
+    setActingOn({ uuid, verb: "approve" });
+    setOptimisticallyResolved((prev) => {
+      const next = new Set(prev);
+      next.add(uuid);
+      return next;
+    });
+    try {
+      const result = await callApprovalMutation("approveRequest", {
+        input: { uuid },
+      });
+      if (result.success) {
+        showAlert(result.message || "Request approved.", "success");
+      } else {
+        // Roll back optimistic hide on failure.
+        setOptimisticallyResolved((prev) => {
+          const next = new Set(prev);
+          next.delete(uuid);
+          return next;
+        });
+        showAlert(result.message || "Couldn't approve.", "error");
+      }
+    } finally {
+      setActingOn(null);
+    }
+  };
+
+  const handleDecline = async (uuid: string, reason: string) => {
+    if (actingOn) return;
+    setActingOn({ uuid, verb: "decline" });
+    setOptimisticallyResolved((prev) => {
+      const next = new Set(prev);
+      next.add(uuid);
+      return next;
+    });
+    try {
+      const result = await callApprovalMutation("declineRequest", {
+        input: { uuid, reason: reason.trim() || undefined },
+      });
+      if (result.success) {
+        showAlert(result.message || "Request declined.", "success");
+        setDeclineFor(null);
+        setDeclineReason("");
+      } else {
+        setOptimisticallyResolved((prev) => {
+          const next = new Set(prev);
+          next.delete(uuid);
+          return next;
+        });
+        showAlert(result.message || "Couldn't decline.", "error");
+      }
+    } finally {
+      setActingOn(null);
+    }
+  };
 
   const counts = useMemo(
     () => ({
@@ -408,16 +534,82 @@ const Inner: React.FC = () => {
                       </p>
                     </div>
                     <div className="flex flex-col gap-1 shrink-0 items-end">
-                      <button
-                        onClick={() => navigate(target, navOpts)}
-                        className="mono text-[10px]"
-                        style={{
-                          letterSpacing: "0.14em",
-                          color: meta.tone,
-                        }}
-                      >
-                        {meta.cta.toUpperCase()}
-                      </button>
+                      {/* Inline approve / decline for SLA + pending
+                          rows so kyle doesn't have to leave the
+                          inbox. Declined rows stay click-through
+                          to the detail view (no action surfaced). */}
+                      {(it.kind === "sla" || it.kind === "pending") ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            disabled={actingOn?.uuid === it.uuid}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApprove(it.uuid);
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition"
+                            style={{
+                              background: "var(--spark-lime)",
+                              color: "#0a0d09",
+                              opacity:
+                                actingOn?.uuid === it.uuid ? 0.5 : 1,
+                            }}
+                            title="Approve this request now"
+                          >
+                            {actingOn?.uuid === it.uuid &&
+                            actingOn?.verb === "approve"
+                              ? "…"
+                              : "✓ Approve"}
+                          </button>
+                          <button
+                            disabled={actingOn?.uuid === it.uuid}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeclineFor(
+                                declineFor === it.uuid ? null : it.uuid,
+                              );
+                              setDeclineReason("");
+                            }}
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition"
+                            style={{
+                              background: "transparent",
+                              color: "rgba(255,90,42,0.85)",
+                              border: "1px solid rgba(255,90,42,0.4)",
+                              opacity:
+                                actingOn?.uuid === it.uuid ? 0.5 : 1,
+                            }}
+                          >
+                            {actingOn?.uuid === it.uuid &&
+                            actingOn?.verb === "decline"
+                              ? "…"
+                              : "✕ Decline"}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(target, navOpts);
+                            }}
+                            className="mono text-[10px]"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: "rgba(255,255,255,0.55)",
+                            }}
+                            title="Open the full request view"
+                          >
+                            OPEN
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => navigate(target, navOpts)}
+                          className="mono text-[10px]"
+                          style={{
+                            letterSpacing: "0.14em",
+                            color: meta.tone,
+                          }}
+                        >
+                          {meta.cta.toUpperCase()}
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -434,6 +626,59 @@ const Inner: React.FC = () => {
                       </button>
                     </div>
                   </div>
+                  {/* Decline reason — inline, optional. Submitting
+                      with an empty reason still fires the decline so
+                      kyle can move fast when there's no context to
+                      pass back. */}
+                  {declineFor === it.uuid && (
+                    <div
+                      className="mt-3 ml-4 flex items-center gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        autoFocus
+                        value={declineReason}
+                        onChange={(e) => setDeclineReason(e.target.value)}
+                        placeholder="Reason (optional) — sent to the requester"
+                        className="flex-1 rounded-lg text-sm"
+                        style={{
+                          background: "var(--spark-bg)",
+                          border: "1px solid var(--spark-border)",
+                          color: "var(--spark-text)",
+                          padding: "0.5rem 0.75rem",
+                        }}
+                      />
+                      <button
+                        disabled={actingOn?.uuid === it.uuid}
+                        onClick={() =>
+                          handleDecline(it.uuid, declineReason)
+                        }
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                        style={{
+                          background: "rgba(255,90,42,0.95)",
+                          color: "#fff",
+                          border: "none",
+                          opacity:
+                            actingOn?.uuid === it.uuid ? 0.5 : 1,
+                        }}
+                      >
+                        Confirm decline
+                      </button>
+                      <button
+                        onClick={() => {
+                          setDeclineFor(null);
+                          setDeclineReason("");
+                        }}
+                        className="mono text-[10px]"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "rgba(255,255,255,0.55)",
+                        }}
+                      >
+                        CANCEL
+                      </button>
+                    </div>
+                  )}
                 </li>
               );
             })}
