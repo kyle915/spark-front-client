@@ -63,6 +63,10 @@ jobs:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_GRAPHQL_ENDPOINT: ${{ secrets.VITE_GRAPHQL_ENDPOINT }}
           VITE_MOBILE_LOGIN_URL: ${{ secrets.VITE_MOBILE_LOGIN_URL }}
+          # Google Maps key powers the Today / Account Map / Shift
+          # Replay surfaces. Without it, those views render a "Map
+          # disabled" placeholder. Lives in repo secrets, not committed.
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools@latest
