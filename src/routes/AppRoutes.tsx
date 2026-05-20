@@ -241,6 +241,15 @@ const SparkAcademy = lazyDefault(
 const SparkAcademyViewer = lazyDefault(
   () => import("@/components/pages/academy/SparkAcademyViewer"),
 );
+const SparkTeam = lazyDefault(
+  () => import("@/components/pages/team/SparkTeam"),
+);
+const SparkClients = lazyDefault(
+  () => import("@/components/pages/clients/SparkClients"),
+);
+const SparkHelp = lazyDefault(
+  () => import("@/components/pages/help/SparkHelp"),
+);
 const SparkFavorites = lazyDefault(
   () => import("@/components/pages/favorites/SparkFavorites"),
 );
@@ -545,6 +554,21 @@ const RequestsLinks = {
     {
       path: "/academy/:id",
       component: <SparkAcademyViewer />,
+      isPublic: false,
+    },
+    {
+      path: "/team",
+      component: <SparkTeam />,
+      isPublic: false,
+    },
+    {
+      path: "/clients",
+      component: <SparkClients />,
+      isPublic: false,
+    },
+    {
+      path: "/help",
+      component: <SparkHelp />,
       isPublic: false,
     },
     {
