@@ -3522,7 +3522,37 @@ type QuarterOption {
   label: String!
 }
 
+type WingspanStatus {
+  connected: Boolean!
+  message: String!
+}
+
+type WingspanPayrollPeriod {
+  id: ID!
+  label: String!
+  startsAt: String
+  endsAt: String
+  payDate: String
+  status: String
+  totalAmount: Float
+  contractorCount: Int
+}
+
+type WingspanPayment {
+  id: ID!
+  contractorName: String
+  contractorEmail: String
+  amount: Float
+  status: String
+  payDate: String
+  periodId: String
+  memo: String
+}
+
 type Query {
+  wingspanStatus: WingspanStatus!
+  wingspanPayrollPeriods(limit: Int! = 12): [WingspanPayrollPeriod!]!
+  wingspanPayments(periodId: ID = null, limit: Int! = 50): [WingspanPayment!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   event(id: ID = null, uuid: ID = null): Event
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!

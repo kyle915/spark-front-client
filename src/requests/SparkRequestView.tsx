@@ -13,6 +13,7 @@ import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/Us
 import InternalNotesPanel from "./InternalNotesPanel";
 import ShiftReplayPanel from "./ShiftReplayPanel";
 import InviteBAModal from "./InviteBAModal";
+import EventRosterPanel from "./EventRosterPanel";
 import { pickHeroImage } from "@/utils/recapFileUrl";
 
 type Mentionable = { id: string; name: string; email: string };
@@ -751,6 +752,19 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           requestLabel={reqId}
         />
       </Suspense>
+
+      {/* Roster — who's invited / accepted for each event. Admin-
+          only, since BAs don't need to see each other's invite state. */}
+      {role.isAdmin &&
+        (request.events ?? [])
+          .filter((e): e is NonNullable<typeof e> => Boolean(e))
+          .map((ev) => (
+            <EventRosterPanel
+              key={`roster-${String(ev.uuid)}`}
+              eventId={String(ev.id)}
+              eventLabel={String(ev.name ?? ev.uuid ?? "shift")}
+            />
+          ))}
 
       {/* Field reports — every recap submitted against the events
           on this request. Surfaces the photos + headline metrics so

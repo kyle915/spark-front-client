@@ -3,8 +3,8 @@
  *
  * Tracks the set of Ambassador IDs the admin has starred. v1 persists
  * to localStorage per-tenant. When the backend lands an
- * `Ambassador.is_favorited` field + toggle mutation, swap the helpers
- * here for GraphQL calls — the consumer shape stays the same.
+ * `Ambassador.is_favorited` field + toggle mutation, swap these helpers
+ * for GraphQL calls — the consumer shape stays the same.
  */
 
 const KEY = (tenantId: string) => `@spark.favorites/${tenantId}`;
