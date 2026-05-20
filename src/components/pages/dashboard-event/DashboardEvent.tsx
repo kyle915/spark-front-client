@@ -9,6 +9,7 @@ import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import AttentionEngine from "./AttentionEngine";
 import PaceWidget from "./PaceWidget";
+import TodaysLineup from "./TodaysLineup";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useNavigate } from "react-router";
 
@@ -658,6 +659,13 @@ export default function DashboardIndex() {
         <Suspense fallback={null}>
           <TodaysSnapshot />
         </Suspense>
+
+        {/* Today's lineup — every event scheduled for today, sorted
+            by start time, with assigned BAs + recap status. Hides
+            itself when nothing is scheduled so the dashboard reads
+            clean on quiet days. Sits right after the priority snapshot
+            because day-of awareness beats week-of trends. */}
+        <TodaysLineup />
 
         {/* PACE widget — last 7 days at a glance, with delta chips.
             Same data the weekly exec-summary email uses, but live so
