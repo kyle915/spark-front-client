@@ -49,6 +49,34 @@ type Recap = {
   requestShortId: string | null;
 };
 
+// Compute a 0-3 completeness score from the signals already in the
+// list query so the card can flag thin recaps without an extra
+// round-trip. Skips approval as a signal (admins approve regardless
+// of completeness; that's a separate workflow).
+//
+// Score buckets:
+//   3 → all three present (engagements, products sold, photos)
+//   2 → "thin" but useful (some data + photos OR strong numbers)
+//   ≤1 → "sparse" — needs review before going to a client
+//
+// We only render the chip when score < 3 — full recaps don't need a
+// gold star, they just need to not get flagged.
+type QualityTier = "sparse" | "thin" | null;
+
+const recapQualityTier = (recap: {
+  engagements: number | null;
+  productsSold: number | null;
+  fileCount: number;
+}): QualityTier => {
+  let score = 0;
+  if ((recap.engagements ?? 0) > 0) score += 1;
+  if ((recap.productsSold ?? 0) > 0) score += 1;
+  if (recap.fileCount > 0) score += 1;
+  if (score >= 3) return null;
+  if (score <= 1) return "sparse";
+  return "thin";
+};
+
 const formatDate = (raw: string | null | undefined) => {
   if (!raw) return "";
   try {
@@ -161,6 +189,45 @@ const RecapCard: React.FC<{
       >
         ● {recap.approved ? "APPROVED" : "DRAFT"}
       </span>
+      {(() => {
+        const tier = recapQualityTier(recap);
+        if (!tier) return null;
+        const cfg =
+          tier === "sparse"
+            ? {
+                bg: "rgba(239,90,42,0.18)",
+                fg: "var(--spark-orange)",
+                br: "rgba(239,90,42,0.5)",
+                label: "⚠ SPARSE",
+                title: "Missing 2+ key fields. Needs review before client export.",
+              }
+            : {
+                bg: "rgba(255,200,60,0.14)",
+                fg: "#f5c042",
+                br: "rgba(255,200,60,0.4)",
+                label: "◐ THIN",
+                title: "Missing one key field (numbers, samples, or photos).",
+              };
+        return (
+          <span
+            className="absolute mono"
+            style={{
+              top: 38, // sits just under the APPROVED/DRAFT chip
+              right: 8,
+              fontSize: 9,
+              letterSpacing: "0.16em",
+              padding: "2px 7px",
+              borderRadius: 999,
+              background: cfg.bg,
+              color: cfg.fg,
+              border: `1px solid ${cfg.br}`,
+            }}
+            title={cfg.title}
+          >
+            {cfg.label}
+          </span>
+        );
+      })()}
       <span
         className="absolute bottom-2 left-2 mono"
         style={{
