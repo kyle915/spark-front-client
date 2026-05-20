@@ -86,6 +86,12 @@ const SECTIONS: NavSection[] = [
         clientLabel: "My Requests",
       },
       {
+        label: "Recaps",
+        Icon: FileText,
+        to: "/recaps/list",
+        clientLabel: "My Recaps",
+      },
+      {
         label: "Bulk Upload",
         Icon: Upload,
         to: "/requests/bulk-upload",
@@ -119,12 +125,6 @@ const SECTIONS: NavSection[] = [
   {
     title: "Outputs",
     items: [
-      {
-        label: "Recaps",
-        Icon: FileText,
-        to: "/recaps/list",
-        clientLabel: "My Recaps",
-      },
       { label: "Reports", Icon: BarChart3, to: "/reports" },
     ],
   },
