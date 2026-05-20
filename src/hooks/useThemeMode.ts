@@ -1,7 +1,7 @@
 import { useLayoutEffect, useState } from "react";
 
 const LIGHT = "fantajia";
-const DARK = "bijinesu";
+const DARK = "spark-v2";
 
 const getIsDark = () => {
   if (typeof window === "undefined") return false;

@@ -6,6 +6,41 @@ on:
       - develop
   workflow_dispatch:
 
+# Background — why this workflow is shaped the way it is:
+#
+# `firebase.json` defines two hosting blocks (target "admin" →
+# spark-new-admin.web.app, target "client" → spark-new-client.web.app).
+# The resource → target mapping lives in `.firebaserc` keyed by
+# project ID. The first CI fix attempt (just naming the targets in
+# `--only hosting:admin / hosting:client`) still failed with:
+#
+#   Error: Deploy target admin not configured for project ***
+#
+# Two reasons that target lookup misses in CI:
+#   1. The `.firebaserc` mapping is keyed by project ALIAS, and
+#      `FIREBASE_PROJECT_ID` secret may resolve to a different
+#      identifier (number vs alias) — `.firebaserc[targets][<alias>]`
+#      isn't found.
+#   2. Service-account auth bypasses the per-project mapping the CLI
+#      builds from your local login state.
+#
+# Robust fix: explicitly `firebase target:apply hosting <target>
+# <resource>` BEFORE deploying. That writes the mapping into the
+# project context CI is using, regardless of what `FIREBASE_PROJECT_ID`
+# resolves to. Then `firebase deploy --only hosting:admin` finds it.
+#
+# Locally `firebase deploy --only hosting` works because kyle has the
+# targets pre-applied in his checkout — CI starts from scratch each run.
+
+# Project ID is visible in `.firebaserc` (not sensitive) and the
+# previous `FIREBASE_PROJECT_ID` secret was resolving to a different
+# project that didn't own the spark-new-admin/spark-new-client sites,
+# producing `could not find site "spark-new-admin" for project "***"`.
+# Hardcoding it as a workflow-level env so every step has a single
+# source of truth.
+env:
+  FIREBASE_PROJECT_ID: spark-479222
+
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
@@ -29,10 +64,32 @@ jobs:
           VITE_GRAPHQL_ENDPOINT: ${{ secrets.VITE_GRAPHQL_ENDPOINT }}
           VITE_MOBILE_LOGIN_URL: ${{ secrets.VITE_MOBILE_LOGIN_URL }}
 
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DENO }}
-          channelId: live
-          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@latest
+
+      # Service-account JSON → file on disk → ADC pickup. Same secret
+      # the FirebaseExtended action used; no new env required.
+      - name: Set up Firebase auth
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DENO }}' > "$HOME/firebase-key.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/firebase-key.json" >> "$GITHUB_ENV"
+
+      # Explicitly register the target → resource mapping in CI's
+      # project context so `--only hosting:admin / hosting:client`
+      # resolves regardless of what FIREBASE_PROJECT_ID resolves to.
+      # This rewrites the checked-out `.firebaserc` in-place; the
+      # CLI then has the mapping it needs.
+      - name: Apply hosting targets
+        run: |
+          firebase target:apply hosting admin spark-new-admin --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+          firebase target:apply hosting client spark-new-client --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+
+      - name: Deploy hosting:admin (spark-new-admin)
+        run: firebase deploy --only hosting:admin --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+
+      - name: Deploy hosting:client (spark-new-client)
+        run: firebase deploy --only hosting:client --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+
+      - name: Clean up Firebase auth file
+        if: always()
+        run: rm -f "$HOME/firebase-key.json"

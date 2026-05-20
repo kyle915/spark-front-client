@@ -1,0 +1,465 @@
+diff --git a/src/components/pages/favorites/SparkFavorites.tsx b/src/components/pages/favorites/SparkFavorites.tsx
+new file mode 100644
+index 0000000..e57b0b0
+--- /dev/null
++++ b/src/components/pages/favorites/SparkFavorites.tsx
+@@ -0,0 +1,369 @@
++/**
++ * Spark v2 — Favorites page.
++ *
++ * The admin's shortlist of BAs to push first on every job. Useful
++ * for ops who keep a roster of trusted "captains" they want first
++ * dibs on shifts.
++ *
++ * v1 persistence is localStorage (per-tenant); when an
++ * `Ambassador.is_favorited` backend field ships, swap the toggle
++ * helper in src/lib/favorites.ts for a GraphQL mutation. The
++ * page's data flow stays the same.
++ */
++
++import React, { Suspense, useMemo, useState, useEffect } from "react";
++import { useLazyLoadQuery } from "react-relay/hooks";
++import { useNavigate } from "react-router";
++import Layout from "@/layout/Layout";
++import { useAuthStore } from "@/store/authStore";
++import useSparkRole from "@/hooks/useSparkRole";
++import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
++import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
++import { loadFavorites, toggleFavorite } from "@/lib/favorites";
++
++type Row = NonNullable<
++  NonNullable<
++    NonNullable<
++      AmbassadorsListQueryType["response"]["ambassadors"]
++    >["edges"][number]
++  >["node"]
++>;
++
++const displayName = (n: Row) =>
++  [n.user?.firstName, n.user?.lastName].filter(Boolean).join(" ") ||
++  n.user?.email ||
++  "(unnamed)";
++
++const initials = (n: Row) => {
++  const a = (n.user?.firstName ?? "")[0] ?? "";
++  const b = (n.user?.lastName ?? "")[0] ?? "";
++  return (a + b).toUpperCase() || "?";
++};
++
++const Inner: React.FC = () => {
++  const navigate = useNavigate();
++  const { tenantId } = useAuthStore();
++  const [favIds, setFavIds] = useState<Set<string>>(() =>
++    loadFavorites(tenantId),
++  );
++  const [search, setSearch] = useState("");
++
++  useEffect(() => {
++    setFavIds(loadFavorites(tenantId));
++  }, [tenantId]);
++
++  const data = useLazyLoadQuery<AmbassadorsListQueryType>(
++    AmbassadorsListQuery,
++    {
++      filters: tenantId
++        ? { tenantId, isActive: true }
++        : { isActive: true },
++      first: 500,
++    },
++    { fetchPolicy: "store-or-network" },
++  );
++
++  const all = useMemo<Row[]>(() => {
++    return (data?.ambassadors?.edges ?? [])
++      .map((e) => e?.node)
++      .filter((n): n is Row => Boolean(n));
++  }, [data]);
++
++  const favs = useMemo(
++    () => all.filter((n) => favIds.has(String(n.id))),
++    [all, favIds],
++  );
++
++  const others = useMemo(() => {
++    const q = search.toLowerCase().trim();
++    const candidates = all.filter((n) => !favIds.has(String(n.id)));
++    if (!q) return candidates;
++    return candidates.filter(
++      (n) =>
++        displayName(n).toLowerCase().includes(q) ||
++        (n.user?.email ?? "").toLowerCase().includes(q) ||
++        (n.address ?? "").toLowerCase().includes(q),
++    );
++  }, [all, favIds, search]);
++
++  const onToggle = (id: string) => {
++    const next = toggleFavorite(tenantId, id);
++    setFavIds(next);
++  };
++
++  const avgRating = useMemo(() => {
++    const ratings = favs
++      .map((n) => Number(n.rating))
++      .filter((r) => Number.isFinite(r) && r > 0);
++    if (ratings.length === 0) return null;
++    return ratings.reduce((s, v) => s + v, 0) / ratings.length;
++  }, [favs]);
++
++  return (
++    <div className="space-y-6 max-w-7xl">
++      <div>
++        <p
++          className="mono text-[10px]"
++          style={{
++            letterSpacing: "0.18em",
++            color: "rgba(255,255,255,0.45)",
++          }}
++        >
++          FAVORITES · {favs.length} BAs
++        </p>
++        <h1
++          className="display text-4xl font-bold mt-2"
++          style={{ letterSpacing: "-0.04em" }}
++        >
++          First in line.
++        </h1>
++        <p
++          className="mt-2"
++          style={{ color: "rgba(255,255,255,0.55)" }}
++        >
++          BAs you've starred — Spark surfaces them first on every
++          applicant pool. Stored locally for now; moves to your
++          tenant when the backend favorites field ships.
++        </p>
++      </div>
++
++      {/* KPI tiles */}
++      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
++        <Kpi label="FAVORITED" value={favs.length} highlight />
++        <Kpi label="ACTIVE POOL" value={all.length} />
++        <Kpi
++          label="AVG RATING"
++          value={avgRating != null ? avgRating.toFixed(2) : "—"}
++          highlight
++        />
++        <Kpi label="UNFILED" value={others.length} />
++      </div>
++
++      {/* Favorites grid */}
++      <div>
++        <h2
++          className="display text-xl font-bold mb-3"
++          style={{ letterSpacing: "-0.02em" }}
++        >
++          Your favorites
++        </h2>
++        {favs.length === 0 ? (
++          <div
++            className="spark-card p-8 text-center"
++            style={{ color: "rgba(255,255,255,0.55)" }}
++          >
++            No favorites yet. Star a BA below to add them.
++          </div>
++        ) : (
++          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
++            {favs.map((n) => (
++              <BaCard
++                key={n.id}
++                row={n}
++                isFav
++                onToggle={() => onToggle(String(n.id))}
++                onClick={() => navigate(`/talent`)}
++              />
++            ))}
++          </div>
++        )}
++      </div>
++
++      {/* Search + browse */}
++      <div>
++        <div className="flex items-baseline justify-between flex-wrap gap-2 mb-3">
++          <h2
++            className="display text-xl font-bold"
++            style={{ letterSpacing: "-0.02em" }}
++          >
++            Browse all BAs
++          </h2>
++          <input
++            value={search}
++            onChange={(e) => setSearch(e.target.value)}
++            placeholder="Search by name, email, or market…"
++            className="rounded-xl text-sm w-full max-w-sm"
++            style={{
++              background: "var(--spark-bg)",
++              border: "1px solid var(--spark-border)",
++              color: "var(--spark-text)",
++              padding: "0.6rem 0.95rem",
++            }}
++          />
++        </div>
++        {others.length === 0 ? (
++          <div
++            className="spark-card p-6 text-center"
++            style={{ color: "rgba(255,255,255,0.55)" }}
++          >
++            {all.length === 0
++              ? "No active BAs in this workspace yet."
++              : "No matches."}
++          </div>
++        ) : (
++          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
++            {others.map((n) => (
++              <BaCard
++                key={n.id}
++                row={n}
++                isFav={false}
++                onToggle={() => onToggle(String(n.id))}
++                onClick={() => navigate(`/talent`)}
++              />
++            ))}
++          </div>
++        )}
++      </div>
++    </div>
++  );
++};
++
++const Kpi: React.FC<{
++  label: string;
++  value: React.ReactNode;
++  highlight?: boolean;
++}> = ({ label, value, highlight }) => (
++  <div className="spark-card p-4">
++    <p
++      className="mono text-[10px]"
++      style={{
++        letterSpacing: "0.18em",
++        color: "rgba(255,255,255,0.45)",
++      }}
++    >
++      {label}
++    </p>
++    <p
++      className="tab-num text-3xl font-bold mt-1"
++      style={{ color: highlight ? "var(--spark-lime)" : undefined }}
++    >
++      {value}
++    </p>
++  </div>
++);
++
++const BaCard: React.FC<{
++  row: Row;
++  isFav: boolean;
++  onToggle: () => void;
++  onClick: () => void;
++}> = ({ row, isFav, onToggle, onClick }) => {
++  const rating = Number(row.rating);
++  const ratingText = Number.isFinite(rating) && rating > 0
++    ? rating.toFixed(1)
++    : "—";
++  return (
++    <div className="spark-card p-5">
++      <div className="flex items-start gap-3">
++        <div
++          className="display font-bold"
++          style={{
++            width: 44,
++            height: 44,
++            borderRadius: 12,
++            background: "rgba(197,245,70,0.10)",
++            color: "var(--spark-lime)",
++            display: "grid",
++            placeItems: "center",
++            fontSize: 14,
++          }}
++        >
++          {initials(row)}
++        </div>
++        <button
++          onClick={onClick}
++          className="flex-1 min-w-0 text-left"
++          style={{
++            background: "transparent",
++            border: "none",
++            padding: 0,
++            cursor: "pointer",
++            color: "inherit",
++          }}
++        >
++          <p className="text-sm font-semibold truncate">
++            {displayName(row)}
++          </p>
++          <p
++            className="text-xs truncate"
++            style={{ color: "rgba(255,255,255,0.45)" }}
++          >
++            {row.address ?? row.user?.email ?? "—"}
++          </p>
++        </button>
++        <button
++          onClick={onToggle}
++          aria-label={isFav ? "Unstar" : "Star"}
++          className="mono text-lg transition"
++          style={{
++            background: "transparent",
++            border: "none",
++            color: isFav ? "var(--spark-lime)" : "rgba(255,255,255,0.30)",
++            cursor: "pointer",
++          }}
++          title={isFav ? "Remove from favorites" : "Add to favorites"}
++        >
++          ★
++        </button>
++      </div>
++      <div
++        className="flex items-center justify-between mt-3"
++        style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
++      >
++        <span
++          className="mono text-[10px] mt-2"
++          style={{
++            letterSpacing: "0.16em",
++            color: "var(--spark-lime)",
++          }}
++        >
++          ★ {ratingText}
++        </span>
++        <span
++          className="mono text-[10px] mt-2"
++          style={{
++            letterSpacing: "0.14em",
++            color: "rgba(255,255,255,0.45)",
++          }}
++        >
++          {row.isActive ? "ACTIVE" : "INACTIVE"}
++        </span>
++      </div>
++    </div>
++  );
++};
++
++export default function SparkFavorites() {
++  const { isAdmin } = useSparkRole();
++  if (!isAdmin) {
++    return (
++      <Layout>
++        <div className="max-w-2xl">
++          <h1 className="display text-3xl font-bold">Admin only.</h1>
++          <p
++            className="mt-2"
++            style={{ color: "rgba(255,255,255,0.55)" }}
++          >
++            Favorites is a Spark Admin surface.
++          </p>
++        </div>
++      </Layout>
++    );
++  }
++  return (
++    <Layout>
++      <Suspense
++        fallback={
++          <div
++            className="text-xs py-12"
++            style={{ color: "rgba(255,255,255,0.45)" }}
++          >
++            Loading favorites…
++          </div>
++        }
++      >
++        <Inner />
++      </Suspense>
++    </Layout>
++  );
++}
+diff --git a/src/layout/SparkSidebar.tsx b/src/layout/SparkSidebar.tsx
+index 17ba68e..f07d8b6 100644
+--- a/src/layout/SparkSidebar.tsx
++++ b/src/layout/SparkSidebar.tsx
+@@ -112,6 +112,7 @@ const SECTIONS: NavSection[] = [
+     items: [
+       { label: "Jobs", Icon: Hammer, to: "/jobs" },
+       { label: "Search Talent", Icon: Users, to: "/talent" },
++      { label: "Favorites", Icon: Star, to: "/favorites" },
+       { label: "People", Icon: UsersRound, to: "/people" },
+       { label: "Spark Academy", Icon: GraduationCap, to: "/academy" },
+     ],
+diff --git a/src/lib/favorites.ts b/src/lib/favorites.ts
+new file mode 100644
+index 0000000..8a98f47
+--- /dev/null
++++ b/src/lib/favorites.ts
+@@ -0,0 +1,46 @@
++/**
++ * Favorites — localStorage v1.
++ *
++ * Tracks the set of Ambassador IDs the admin has starred. v1 persists
++ * to localStorage per-tenant. When the backend lands an
++ * `Ambassador.is_favorited` field + toggle mutation, swap the helpers
++ * here for GraphQL calls — the consumer shape stays the same.
++ */
++
++const KEY = (tenantId: string) => `@spark.favorites/${tenantId}`;
++
++export const loadFavorites = (tenantId: string | null): Set<string> => {
++  if (!tenantId) return new Set();
++  try {
++    const raw = localStorage.getItem(KEY(tenantId));
++    if (!raw) return new Set();
++    const arr = JSON.parse(raw);
++    if (!Array.isArray(arr)) return new Set();
++    return new Set(arr.map(String));
++  } catch {
++    return new Set();
++  }
++};
++
++export const saveFavorites = (
++  tenantId: string | null,
++  ids: Set<string>,
++): void => {
++  if (!tenantId) return;
++  try {
++    localStorage.setItem(KEY(tenantId), JSON.stringify([...ids]));
++  } catch {
++    /* quota / private mode — ignore */
++  }
++};
++
++export const toggleFavorite = (
++  tenantId: string | null,
++  id: string,
++): Set<string> => {
++  const next = new Set(loadFavorites(tenantId));
++  if (next.has(id)) next.delete(id);
++  else next.add(id);
++  saveFavorites(tenantId, next);
++  return next;
++};
+diff --git a/src/routes/AppRoutes.tsx b/src/routes/AppRoutes.tsx
+index c751bde..6f6ca66 100644
+--- a/src/routes/AppRoutes.tsx
++++ b/src/routes/AppRoutes.tsx
+@@ -239,6 +239,9 @@ const SparkAcademy = lazyDefault(
+ const SparkAcademyViewer = lazyDefault(
+   () => import("@/components/pages/academy/SparkAcademyViewer"),
+ );
++const SparkFavorites = lazyDefault(
++  () => import("@/components/pages/favorites/SparkFavorites"),
++);
+ 
+ // User
+ const UsersList = lazyDefault(() => import("@/users/UsersList"));
+@@ -538,6 +541,11 @@ const RequestsLinks = {
+       component: <SparkAcademyViewer />,
+       isPublic: false,
+     },
++    {
++      path: "/favorites",
++      component: <SparkFavorites />,
++      isPublic: false,
++    },
+   ],
+ };
+ 

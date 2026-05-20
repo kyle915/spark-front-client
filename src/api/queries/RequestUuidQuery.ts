@@ -129,6 +129,48 @@ export const RequestUuidQuery = graphql`
         id
         slug
       }
+      events {
+        id
+        uuid
+        name
+        address
+        date
+        startTime
+        endTime
+        status {
+          id
+          name
+          slug
+        }
+        recaps {
+          id
+          uuid
+          name
+          approved
+          totalEngagements
+          productsSold
+          totalCansSold
+          createdAt
+          ambassador {
+            id
+            uuid
+            user {
+              id
+              firstName
+              lastName
+            }
+          }
+          recapFiles {
+            id
+            file
+            fileType {
+              id
+              name
+              extension
+            }
+          }
+        }
+      }
       createdAt
       updatedAt
     }

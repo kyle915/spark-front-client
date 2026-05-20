@@ -9,6 +9,7 @@ interface UseLocationsByStateProps<TItem, TQuery extends OperationType> {
   queryDocument: GraphQLTaggedNode;
   extractNodes: (data: TQuery["response"]) => TItem[];
   debounceMs?: number;
+  initialItems?: TItem[];
 }
 
 export function useLocationsByState<
@@ -19,9 +20,10 @@ export function useLocationsByState<
   queryDocument,
   extractNodes,
   debounceMs = 300,
+  initialItems,
 }: UseLocationsByStateProps<TItem, TQuery>) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [items, setItems] = useState<TItem[]>([]);
+  const [items, setItems] = useState<TItem[]>(initialItems || []);
   const [isLoading, setIsLoading] = useState(false);
 
   const activeRequestIdRef = useRef(0);

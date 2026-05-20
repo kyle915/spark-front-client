@@ -41,6 +41,7 @@ export function Step1Basic({
   const latitude = useWatch({ control, name: "latitude" });
   const longitude = useWatch({ control, name: "longitude" });
   const timezoneId = useWatch({ control, name: "timeZoneId" });
+  const date = useWatch({ control, name: "date" });
 
   const selectedCoordinates =
     typeof latitude === "number" && typeof longitude === "number"
@@ -54,6 +55,7 @@ export function Step1Basic({
     setValue,
     timezoneFieldName: "timeZoneId",
     initialFromBackend: false,
+    date,
   });
 
   return (

@@ -5,6 +5,7 @@ import type {
   PathValue,
   UseFormSetValue,
 } from "react-hook-form";
+import { resolveTimezoneIdByDate } from "@/utils";
 
 interface TimezoneItem {
   id: string;
@@ -23,6 +24,7 @@ interface Params<
   setValue: UseFormSetValue<TFormValues>;
   timezoneFieldName: TFieldName;
   initialFromBackend?: boolean;
+  date?: string | null;
 }
 
 export function useAutoTimezoneFromCoordinates<
@@ -35,6 +37,7 @@ export function useAutoTimezoneFromCoordinates<
   setValue,
   timezoneFieldName,
   initialFromBackend,
+  date,
 }: Params<TFormValues, TFieldName>) {
   const lastCoordinatesLookupRef = useRef<string | null>(null);
   const lastAutoTimezoneIdRef = useRef<string | null>(null);
@@ -53,7 +56,25 @@ export function useAutoTimezoneFromCoordinates<
     }
   }, [timezoneId, initialFromBackend]);
 
-  /* ---------------- auto-detect timezone ---------------- */
+  /* ---------------- handle date changes for DST ---------------- */
+  useEffect(() => {
+    if (!date || !timezoneId || !timezones.length || manualTimezoneOverrideRef.current) return;
+
+    const adjustedId = resolveTimezoneIdByDate(timezones, date, timezoneId);
+    if (adjustedId && adjustedId !== timezoneId) {
+      lastAutoTimezoneIdRef.current = adjustedId;
+      setValue(
+        timezoneFieldName,
+        adjustedId as PathValue<TFormValues, TFieldName>,
+        {
+          shouldDirty: true,
+          shouldValidate: true,
+        }
+      );
+    }
+  }, [date, timezones, timezoneId, setValue, timezoneFieldName]);
+
+  /* ---------------- auto-detect timezone from coordinates ---------------- */
   useEffect(() => {
     if (!coordinates || coordinates.length < 2) return;
     if (!timezones.length) return;
@@ -142,17 +163,23 @@ export function useAutoTimezoneFromCoordinates<
         if (!resolvedTimezone) return;
         if (manualTimezoneOverrideRef.current) return;
 
-        if (timezoneId === resolvedTimezone.id) {
-          lastAutoTimezoneIdRef.current = resolvedTimezone.id;
+        let finalTimezoneId = resolvedTimezone.id;
+        if (date) {
+          const adjustedId = resolveTimezoneIdByDate(timezones, date, finalTimezoneId);
+          if (adjustedId) finalTimezoneId = adjustedId;
+        }
+
+        if (timezoneId === finalTimezoneId) {
+          lastAutoTimezoneIdRef.current = finalTimezoneId;
           return;
         }
 
         isApplyingTimezoneRef.current = true;
-        lastAutoTimezoneIdRef.current = resolvedTimezone.id;
+        lastAutoTimezoneIdRef.current = finalTimezoneId;
 
         setValue(
           timezoneFieldName,
-          resolvedTimezone.id as PathValue<TFormValues, TFieldName>,
+          finalTimezoneId as PathValue<TFormValues, TFieldName>,
           {
             shouldDirty: true,
             shouldValidate: true,
@@ -167,5 +194,6 @@ export function useAutoTimezoneFromCoordinates<
       clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [coordinates, timezoneId, timezones, setValue, timezoneFieldName]);
+  }, [coordinates, timezoneId, timezones, setValue, timezoneFieldName, date]);
 }
+

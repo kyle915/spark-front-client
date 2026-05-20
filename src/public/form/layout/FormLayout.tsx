@@ -1,8 +1,18 @@
-import ThemeToggle from "@/shared/ThemeToggle";
 import useTenantPublic from "../hooks/useTenantPublic";
 import useTenantThemePublic from "../hooks/useTenantThemePublic";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
 import { useEffect, useState } from "react";
+import { Link } from "react-router";
+
+/**
+ * Spark v2 — public form layout.
+ *
+ * Wraps the request form in the Spark brand chrome: italic "Spark BY IGNITE"
+ * mark on the left, lime status pill in the middle, tenant logo + brand
+ * tag on the right. Background is the spark-v2 near-black. The tenant
+ * theme hook still runs for public pages — clients want their brand color
+ * on their public request form, unlike the admin shell.
+ */
 
 export default function SparkFormLayout({
   children,
@@ -11,7 +21,7 @@ export default function SparkFormLayout({
   children: React.ReactNode;
   slug: string;
 }) {
-  const [colorScheme, setColorScheme] = useState<TenantColorScheme>(
+  const [colorScheme] = useState<TenantColorScheme>(
     (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark",
   );
 
@@ -19,9 +29,7 @@ export default function SparkFormLayout({
     tenant,
     hasImage,
     loading: loadingTenant,
-  } = useTenantPublic({
-    slug,
-  });
+  } = useTenantPublic({ slug });
 
   const { loading: loadingTheme } = useTenantThemePublic({
     slug,
@@ -32,83 +40,156 @@ export default function SparkFormLayout({
   const invalidLink = !loading && (!slug || !tenant);
 
   useEffect(() => {
-    const saved = localStorage.getItem(
-      "@color-scheme",
-    ) as TenantColorScheme | null;
-
-    if (saved) setColorScheme(saved);
-  }, []);
-
-  useEffect(() => {
     localStorage.setItem("@color-scheme", colorScheme);
   }, [colorScheme]);
 
   return (
-    <div className="min-h-screen bg-base-200 flex flex-col">
+    <div
+      className="min-h-screen flex flex-col spark-mesh"
+      style={{ background: "var(--spark-bg, #0a0d09)" }}
+    >
       {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-base-200/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <span className="loading loading-spinner loading-lg" />
         </div>
       )}
 
-      <div className="navbar bg-base-100 shadow-sm sticky top-0 z-20">
-        <div className="grid grid-cols-1 sm:grid-cols-3 items-center w-full px-4">
-          {/* LEFT: Logo */}
-          <div className="flex items-center gap-3 justify-center sm:justify-start">
+      {/* Brand header */}
+      <header
+        className="sticky top-0 z-20 px-6 py-4 flex items-center justify-between gap-3 flex-wrap"
+        style={{
+          background: "rgba(10,13,9,0.85)",
+          borderBottom: "1px solid var(--spark-border, #1f2418)",
+          backdropFilter: "blur(12px)",
+        }}
+      >
+        {/* Left: real Spark logo, inverted to white for the dark band */}
+        <a href="/" style={{ display: "flex", alignItems: "center" }}>
+          <img
+            src="/legal/spark-logo.png"
+            alt="Spark by Ignite"
+            style={{
+              height: 28,
+              width: "auto",
+              filter: "invert(1) hue-rotate(180deg)",
+            }}
+          />
+          <span
+            className="hidden sm:inline mono text-[10px] ml-3"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.4)",
+            }}
+          >
+            /
+          </span>
+          <span
+            className="hidden sm:inline mono text-[10px] ml-2"
+            style={{
+              letterSpacing: "0.18em",
+              color: "var(--spark-lime, #c5f546)",
+            }}
+          >
+            REQUEST FORM
+          </span>
+        </a>
+
+        {/* Right: tenant logo, force-rendered white so it reads on the
+            dark Spark v2 chrome regardless of source colour. */}
+        <div className="flex items-center gap-3">
+          {hasImage && tenant?.image ? (
             <img
-              src={hasImage ? tenant!.image! : "/logo.svg"}
-              alt="Tenant logo"
-              className={`h-8 w-auto object-contain app-logo-public ${hasImage ? "" : "app-logo-public-default"}`}
+              src={tenant.image}
+              alt=""
+              className="h-8 w-auto object-contain"
+              style={{
+                filter: "brightness(0) invert(1)",
+              }}
               onError={(e) => {
-                const img = e.currentTarget;
-                if (!img.src.endsWith("/logo.svg")) {
-                  img.src = "/logo.svg";
-                }
+                e.currentTarget.style.display = "none";
               }}
             />
-          </div>
-
-          {/* CENTER: Title */}
-          <div className="hidden sm:flex justify-center">
-            <h1 className="font-semibold text-lg tracking-tight">
-              Spark Request Form
-            </h1>
-          </div>
-
-          {/* RIGHT: Actions */}
-          <div className="hidden sm:flex justify-end">
-            <ThemeToggle value={colorScheme} onChange={setColorScheme} />
-          </div>
+          ) : (
+            <span className="chip chip-lime">
+              ● {(tenant?.requestUrlName ?? "PUBLIC").toUpperCase()}
+            </span>
+          )}
         </div>
-      </div>
+      </header>
 
-      <div className="p-6 flex flex-col items-center flex-1 w-full">
+      {/* Body */}
+      <div className="px-4 py-8 flex flex-col items-center flex-1 w-full">
         {invalidLink ? (
-          <div className="w-full max-w-xl rounded-2xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
-            <h2 className="text-2xl font-semibold">Invalid link</h2>
-            <p className="mt-3 text-base-content/70">
-              The link provided in the URL is not valid.
+          <div
+            className="w-full max-w-xl rounded-2xl p-8 text-center"
+            style={{
+              background:
+                "linear-gradient(180deg, var(--spark-surface, #11140e), var(--spark-surface-2, #161a12))",
+              border: "1px solid var(--spark-border, #1f2418)",
+            }}
+          >
+            <p
+              className="mono text-[10px] mb-2"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-orange, #ef5a2a)",
+              }}
+            >
+              INVALID LINK
+            </p>
+            <h2
+              className="display text-2xl font-bold"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              This request form isn't active.
+            </h2>
+            <p
+              className="mt-3"
+              style={{ color: "rgba(255,255,255,0.65)" }}
+            >
+              The tenant slug in the URL doesn't match an active brand.
+              Double-check the link or reach out to your Spark contact.
             </p>
           </div>
         ) : (
-          children
+          <div className="w-full">{children}</div>
         )}
       </div>
-      {/*
-      <footer className="footer footer-center p-4 bg-base-100 text-base-content/70">
-        <aside className="flex items-center gap-2 text-sm">
-          <span>© {currentYear} Spark</span>
-          <span aria-hidden="true">•</span>
-          <Link to="/privacy-policy" className="link link-primary">
-            Privacy Policy
-          </Link>
-          <span aria-hidden="true">•</span>
-          <Link to="/terms-of-service" className="link link-primary">
-            Terms of Service
-          </Link>
-        </aside>
+
+      {/* Footer */}
+      <footer
+        className="px-6 py-5 mt-auto"
+        style={{
+          borderTop: "1px solid var(--spark-border, #1f2418)",
+          background: "rgba(10,13,9,0.6)",
+        }}
+      >
+        <div className="max-w-6xl mx-auto flex items-center justify-between flex-wrap gap-2 text-xs">
+          <span
+            className="mono"
+            style={{
+              letterSpacing: "0.16em",
+              color: "rgba(255,255,255,0.4)",
+            }}
+          >
+            © {new Date().getFullYear()} IGNITE PRODUCTIONS
+          </span>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/privacy-policy"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Privacy
+            </Link>
+            <Link
+              to="/terms-of-service"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Terms
+            </Link>
+          </div>
+        </div>
       </footer>
-      */}
     </div>
   );
 }

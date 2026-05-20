@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -16,49 +17,65 @@ import VerifyAccount from "@/auth/VerifyAccount";
 
 const rootPath = "/";
 
+// Single Suspense boundary at the router level so every lazy() route
+// in AppRoutes can resolve without each route having to wrap itself.
+// Fallback intentionally minimal — most pages also render Layout which
+// has its own page-level Suspense for the data fetch.
+const RouteFallback = () => (
+  <div
+    style={{
+      display: "grid",
+      placeItems: "center",
+      height: "60vh",
+      color: "rgba(255,255,255,0.55)",
+      fontFamily: "JetBrains Mono, monospace",
+      fontSize: 11,
+      letterSpacing: "0.18em",
+    }}
+  >
+    LOADING…
+  </div>
+);
+
 const AppRouter = () => (
   <BrowserRouter>
-    <Routes>
-      {/* Always accessible */}
-      {/* <Route exact path="/token-expired" element={<AutoLogout />} /> */}
-      <Route
-        path="/login"
-        element={
-          <AuthRoute>
-            <Login />
-          </AuthRoute>
-        }
-      />
-      <Route
-        path="/auth/google-calendar/callback"
-        element={<GoogleCalendarCallback />}
-      />
-      <Route
-        path="/verify-account"
-        element={<VerifyAccount />}
-      />
-      {appRoutes.map((props, key) => (
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        {/* Always accessible */}
+        {/* <Route exact path="/token-expired" element={<AutoLogout />} /> */}
         <Route
-          key={key}
-          path={props.path}
+          path="/login"
           element={
-            props.isPublic ? (
-              props.component
-            ) : (
-              <PrivateRoute
-                component={
-                  props.path === "/select-company" ? (
-                    props.component
-                  ) : (
-                    <TenantRoute component={props.component} />
-                  )
-                }
-              />
-            )
+            <AuthRoute>
+              <Login />
+            </AuthRoute>
           }
         />
-      ))}
-    </Routes>
+        <Route
+          path="/auth/google-calendar/callback"
+          element={<GoogleCalendarCallback />}
+        />
+        <Route
+          path="/verify-account"
+          element={<VerifyAccount />}
+        />
+        {appRoutes.map((props, key) => (
+          <Route
+            key={key}
+            path={props.path}
+            element={
+              props.isPublic ? (
+                props.component
+              ) : (
+                <PrivateRoute
+                  component={<TenantRoute component={props.component} />}
+                />
+              )
+            }
+          />
+        ))}
+      </Routes>
+    </Suspense>
   </BrowserRouter>
 );
 

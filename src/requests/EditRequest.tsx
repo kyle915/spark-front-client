@@ -119,7 +119,7 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
         input: {
           id: request.id,
           name: formData.name,
-          
+
           date: buildDateTimeWithOffset(dateValue, "00:00", offsetMinutes),
           startTime: formData.startTime
             ? buildDateTimeWithOffset(
@@ -193,35 +193,37 @@ const EditRequestContent = ({ uuid }: EditRequestContentProps) => {
       request.distributor?.id ?? request?.distributor?.id ?? undefined,
     retailerId: request.retailer?.id ?? request?.retailer?.id ?? undefined,
     billingEntityId: isCarblissTenant
-      ? (
+      ? ((
           request as RequestUuidQueryType["response"]["request"] & {
             billingEntity?: { id?: string | null } | null;
           }
-        )?.billingEntity?.id ?? undefined
+        )?.billingEntity?.id ?? undefined)
       : undefined,
     stateId: isJeeterTenant
       ? californiaState?.id
       : (request.retailer?.location?.state?.id ??
         request.distributor?.location?.state?.id ??
-        request?.retailer?.location?.state?.id ??
-        request?.distributor?.location?.state?.id ??
         undefined),
     entitiesLocationId:
       request.retailer?.location?.id ??
       request.distributor?.location?.id ??
-      request?.retailer?.location?.id ??
-      request?.distributor?.location?.id ??
       undefined,
-
-    distributorLocationId:
-      request.distributor?.location?.id ??
-      request?.distributor?.location?.id ??
-      undefined,
-
-    retailerLocationId:
-      request.retailer?.location?.id ??
-      request?.retailer?.location?.id ??
-      undefined,
+    entitiesLocationName:
+      request.retailer?.location?.name ??
+      request.distributor?.location?.name ??
+      "",
+    isNationalRetailer: request.retailer?.isNational ?? true,
+    distributorLocationId: request.distributor?.location?.id ?? undefined,
+    retailerLocationId: request.retailer?.location?.id ?? undefined,
+    distributorName: request.distributor?.name ?? request.distributorName ?? "",
+    distributorEmail:
+      request.distributor?.email ?? request.distributorEmail ?? "",
+    retailerName: request.retailer?.name ?? request.retailerName ?? "",
+    retailerAddress: request.retailer?.address ?? request.retailerAddress ?? "",
+    retailerStoreContact:
+      request.retailer?.storeContact ?? request.retailerStoreContact ?? "",
+    storeManagerName: request.storeManagerName ?? "",
+    storeManagerPhone: request.storeManagerPhone ?? "",
     requestTypeId: request.requestType?.id ?? null,
     isTableNeeded: isJeeterTenant ? false : undefined,
     tableSize: isJeeterTenant ? "" : undefined,

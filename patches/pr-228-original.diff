@@ -1,0 +1,824 @@
+diff --git a/schema_clients.graphql b/schema_clients.graphql
+index 5d27b8a..398fb28 100644
+--- a/schema_clients.graphql
++++ b/schema_clients.graphql
+@@ -3522,7 +3522,37 @@ type QuarterOption {
+   label: String!
+ }
+ 
++type WingspanStatus {
++  connected: Boolean!
++  message: String!
++}
++
++type WingspanPayrollPeriod {
++  id: ID!
++  label: String!
++  startsAt: String
++  endsAt: String
++  payDate: String
++  status: String
++  totalAmount: Float
++  contractorCount: Int
++}
++
++type WingspanPayment {
++  id: ID!
++  contractorName: String
++  contractorEmail: String
++  amount: Float
++  status: String
++  payDate: String
++  periodId: String
++  memo: String
++}
++
+ type Query {
++  wingspanStatus: WingspanStatus!
++  wingspanPayrollPeriods(limit: Int! = 12): [WingspanPayrollPeriod!]!
++  wingspanPayments(periodId: ID = null, limit: Int! = 50): [WingspanPayment!]!
+   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
+   event(id: ID = null, uuid: ID = null): Event
+   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
+diff --git a/src/api/queries/WingspanPaymentsQuery.ts b/src/api/queries/WingspanPaymentsQuery.ts
+new file mode 100644
+index 0000000..d84a233
+--- /dev/null
++++ b/src/api/queries/WingspanPaymentsQuery.ts
+@@ -0,0 +1,20 @@
++import { graphql } from "react-relay";
++
++export const WingspanPaymentsQuery = graphql`
++  query WingspanPaymentsQuery($limit: Int!, $periodId: ID) {
++    wingspanStatus {
++      connected
++      message
++    }
++    wingspanPayments(limit: $limit, periodId: $periodId) {
++      id
++      contractorName
++      contractorEmail
++      amount
++      status
++      payDate
++      periodId
++      memo
++    }
++  }
++`;
+diff --git a/src/api/queries/WingspanPayrollPeriodsQuery.ts b/src/api/queries/WingspanPayrollPeriodsQuery.ts
+new file mode 100644
+index 0000000..c0b7688
+--- /dev/null
++++ b/src/api/queries/WingspanPayrollPeriodsQuery.ts
+@@ -0,0 +1,20 @@
++import { graphql } from "react-relay";
++
++export const WingspanPayrollPeriodsQuery = graphql`
++  query WingspanPayrollPeriodsQuery($limit: Int!) {
++    wingspanStatus {
++      connected
++      message
++    }
++    wingspanPayrollPeriods(limit: $limit) {
++      id
++      label
++      startsAt
++      endsAt
++      payDate
++      status
++      totalAmount
++      contractorCount
++    }
++  }
++`;
+diff --git a/src/components/pages/wingspan/NotConnected.tsx b/src/components/pages/wingspan/NotConnected.tsx
+new file mode 100644
+index 0000000..6de8482
+--- /dev/null
++++ b/src/components/pages/wingspan/NotConnected.tsx
+@@ -0,0 +1,70 @@
++import React from "react";
++
++export const WingspanNotConnected: React.FC<{ message: string }> = ({
++  message,
++}) => (
++  <div
++    className="spark-card p-8"
++    style={{
++      borderColor: "rgba(255,196,0,0.35)",
++      background: "rgba(255,196,0,0.04)",
++    }}
++  >
++    <div className="flex items-start gap-4 flex-wrap">
++      <div
++        style={{
++          width: 44,
++          height: 44,
++          borderRadius: 12,
++          background: "rgba(255,196,0,0.10)",
++          color: "var(--spark-gold)",
++          display: "grid",
++          placeItems: "center",
++          fontSize: 22,
++        }}
++      >
++        🪶
++      </div>
++      <div className="flex-1 min-w-0">
++        <p
++          className="mono text-[10px]"
++          style={{
++            letterSpacing: "0.18em",
++            color: "var(--spark-gold)",
++          }}
++        >
++          WINGSPAN · NOT CONNECTED
++        </p>
++        <h2
++          className="display text-2xl font-bold mt-1"
++          style={{ letterSpacing: "-0.02em" }}
++        >
++          Connect Wingspan to see live data.
++        </h2>
++        <p
++          className="mt-2 text-sm leading-relaxed"
++          style={{ color: "rgba(255,255,255,0.75)" }}
++        >
++          {message}
++        </p>
++        <p
++          className="mt-3 text-xs leading-relaxed"
++          style={{ color: "rgba(255,255,255,0.55)" }}
++        >
++          On Cloud Run, set the{" "}
++          <code
++            style={{
++              background: "rgba(255,255,255,0.06)",
++              padding: "1px 6px",
++              borderRadius: 4,
++            }}
++          >
++            WINGSPAN_API_KEY
++          </code>{" "}
++          environment variable. The app picks it up on the next deploy
++          — no UI changes needed.
++        </p>
++      </div>
++    </div>
++  </div>
++);
+diff --git a/src/components/pages/wingspan/SparkPayments.tsx b/src/components/pages/wingspan/SparkPayments.tsx
+new file mode 100644
+index 0000000..075443d
+--- /dev/null
++++ b/src/components/pages/wingspan/SparkPayments.tsx
+@@ -0,0 +1,291 @@
++/**
++ * Spark v2 — Payments · Wingspan page.
++ *
++ * List of individual disbursements (BA payouts) pulled from
++ * Wingspan. Optional ?periodId=... query string filters to a single
++ * payroll period (the Payroll page passes this when you click a
++ * period row).
++ */
++
++import React, { Suspense, useMemo, useState } from "react";
++import { useLazyLoadQuery } from "react-relay/hooks";
++import { useSearchParams } from "react-router";
++import Layout from "@/layout/Layout";
++import useSparkRole from "@/hooks/useSparkRole";
++import { WingspanPaymentsQuery } from "@/api/queries/WingspanPaymentsQuery";
++import type { WingspanPaymentsQuery as WingspanPaymentsQueryType } from "@api/queries/__generated__/WingspanPaymentsQuery.graphql";
++import { WingspanNotConnected } from "./NotConnected";
++
++type Payment = NonNullable<
++  WingspanPaymentsQueryType["response"]["wingspanPayments"][number]
++>;
++
++const fmtUsd = (n: number | null | undefined) =>
++  typeof n === "number"
++    ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
++    : "—";
++
++const fmtDate = (raw: string | null | undefined) => {
++  if (!raw) return "—";
++  try {
++    return new Date(raw).toLocaleDateString("en-US", {
++      month: "short",
++      day: "numeric",
++      year: "numeric",
++    });
++  } catch {
++    return raw;
++  }
++};
++
++const STATUS_CHIP: Record<string, string> = {
++  pending: "chip chip-orange",
++  processing: "chip chip-sky",
++  sent: "chip chip-lime",
++  paid: "chip chip-lime",
++  failed: "chip chip-muted",
++};
++
++const Inner: React.FC<{ periodId: string | null }> = ({ periodId }) => {
++  const [search, setSearch] = useState("");
++  const data = useLazyLoadQuery<WingspanPaymentsQueryType>(
++    WingspanPaymentsQuery,
++    { limit: 100, periodId: periodId ?? undefined },
++    { fetchPolicy: "store-and-network" },
++  );
++  const status = data.wingspanStatus;
++  const allPayments = useMemo<Payment[]>(
++    () =>
++      (data.wingspanPayments ?? []).filter(
++        (p): p is Payment => Boolean(p),
++      ),
++    [data],
++  );
++
++  const filtered = useMemo(() => {
++    const q = search.toLowerCase().trim();
++    if (!q) return allPayments;
++    return allPayments.filter(
++      (p) =>
++        (p.contractorName ?? "").toLowerCase().includes(q) ||
++        (p.contractorEmail ?? "").toLowerCase().includes(q) ||
++        (p.memo ?? "").toLowerCase().includes(q),
++    );
++  }, [allPayments, search]);
++
++  const total = useMemo(
++    () => filtered.reduce((s, p) => s + (p.amount ?? 0), 0),
++    [filtered],
++  );
++
++  const headline = periodId
++    ? `Payments in period ${periodId}`
++    : "Recent payments.";
++
++  return (
++    <div className="space-y-6 max-w-6xl">
++      <div className="flex items-end justify-between flex-wrap gap-3">
++        <div>
++          <p
++            className="mono text-[10px]"
++            style={{
++              letterSpacing: "0.18em",
++              color: "rgba(255,255,255,0.45)",
++            }}
++          >
++            PAYMENTS · WINGSPAN
++          </p>
++          <h1
++            className="display text-4xl font-bold mt-2"
++            style={{ letterSpacing: "-0.04em" }}
++          >
++            {headline}
++          </h1>
++          <p
++            className="mt-2"
++            style={{ color: "rgba(255,255,255,0.55)" }}
++          >
++            Every disbursement we've pulled from Wingspan. To run a
++            payout, head to the Wingspan dashboard.
++          </p>
++        </div>
++        <a
++          href="https://app.wingspan.app"
++          target="_blank"
++          rel="noopener noreferrer"
++          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
++          style={{
++            background: "transparent",
++            color: "var(--spark-text)",
++            border: "1px solid var(--spark-border)",
++            textDecoration: "none",
++          }}
++        >
++          Open Wingspan ↗
++        </a>
++      </div>
++
++      {!status?.connected ? (
++        <WingspanNotConnected
++          message={
++            status?.message ??
++            "Wingspan API key is not set. Once configured, this page populates with real payouts."
++          }
++        />
++      ) : (
++        <>
++          {/* KPI strip */}
++          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
++            <Kpi label="ROWS" value={filtered.length} />
++            <Kpi label="TOTAL" value={fmtUsd(total)} highlight />
++            <Kpi
++              label="FILTER"
++              value={periodId ? `Period ${periodId}` : "All recent"}
++            />
++          </div>
++
++          <input
++            value={search}
++            onChange={(e) => setSearch(e.target.value)}
++            placeholder="Search by name, email, or memo…"
++            className="rounded-xl text-sm w-full max-w-md"
++            style={{
++              background: "var(--spark-bg)",
++              border: "1px solid var(--spark-border)",
++              color: "var(--spark-text)",
++              padding: "0.6rem 0.95rem",
++            }}
++          />
++
++          <div className="spark-card p-0 overflow-hidden">
++            <div
++              className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr] gap-3 px-4 py-3 mono text-[10px]"
++              style={{
++                letterSpacing: "0.16em",
++                color: "rgba(255,255,255,0.45)",
++                borderBottom: "1px solid var(--spark-border)",
++              }}
++            >
++              <span>BA</span>
++              <span>EMAIL</span>
++              <span>PAY DATE</span>
++              <span>STATUS</span>
++              <span className="text-right">AMOUNT</span>
++            </div>
++            {filtered.length === 0 ? (
++              <div
++                className="p-8 text-center text-sm"
++                style={{ color: "rgba(255,255,255,0.55)" }}
++              >
++                {allPayments.length === 0
++                  ? "No payments returned from Wingspan yet."
++                  : "No matches."}
++              </div>
++            ) : (
++              filtered.map((p) => {
++                const cls =
++                  STATUS_CHIP[(p.status ?? "").toLowerCase()] ??
++                  "chip chip-muted";
++                return (
++                  <div
++                    key={p.id}
++                    className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr] gap-3 px-4 py-3 text-sm"
++                    style={{
++                      borderTop: "1px solid rgba(255,255,255,0.04)",
++                    }}
++                    title={p.memo ?? undefined}
++                  >
++                    <span className="font-semibold truncate">
++                      {p.contractorName ?? "—"}
++                    </span>
++                    <span
++                      className="truncate text-xs"
++                      style={{ color: "rgba(255,255,255,0.55)" }}
++                    >
++                      {p.contractorEmail ?? "—"}
++                    </span>
++                    <span style={{ color: "rgba(255,255,255,0.75)" }}>
++                      {fmtDate(p.payDate)}
++                    </span>
++                    <span>
++                      <span className={cls}>
++                        ● {(p.status ?? "—").toUpperCase()}
++                      </span>
++                    </span>
++                    <span
++                      className="tab-num text-right font-semibold"
++                      style={{ color: "var(--spark-lime)" }}
++                    >
++                      {fmtUsd(p.amount)}
++                    </span>
++                  </div>
++                );
++              })
++            )}
++          </div>
++        </>
++      )}
++    </div>
++  );
++};
++
++const Kpi: React.FC<{
++  label: string;
++  value: React.ReactNode;
++  highlight?: boolean;
++}> = ({ label, value, highlight }) => (
++  <div className="spark-card p-4">
++    <p
++      className="mono text-[10px]"
++      style={{
++        letterSpacing: "0.18em",
++        color: "rgba(255,255,255,0.45)",
++      }}
++    >
++      {label}
++    </p>
++    <p
++      className="tab-num text-2xl font-bold mt-1"
++      style={{ color: highlight ? "var(--spark-lime)" : undefined }}
++    >
++      {value}
++    </p>
++  </div>
++);
++
++export default function SparkPayments() {
++  const [params] = useSearchParams();
++  const periodId = params.get("periodId");
++  const { isAdmin } = useSparkRole();
++  if (!isAdmin) {
++    return (
++      <Layout>
++        <div className="max-w-2xl">
++          <h1 className="display text-3xl font-bold">Admin only.</h1>
++          <p
++            className="mt-2"
++            style={{ color: "rgba(255,255,255,0.55)" }}
++          >
++            Payments is a Spark Admin surface.
++          </p>
++        </div>
++      </Layout>
++    );
++  }
++  return (
++    <Layout>
++      <Suspense
++        fallback={
++          <div
++            className="text-xs py-12"
++            style={{ color: "rgba(255,255,255,0.45)" }}
++          >
++            Loading payments…
++          </div>
++        }
++      >
++        <Inner periodId={periodId} />
++      </Suspense>
++    </Layout>
++  );
++}
+diff --git a/src/components/pages/wingspan/SparkPayroll.tsx b/src/components/pages/wingspan/SparkPayroll.tsx
+new file mode 100644
+index 0000000..4766ec8
+--- /dev/null
++++ b/src/components/pages/wingspan/SparkPayroll.tsx
+@@ -0,0 +1,285 @@
++/**
++ * Spark v2 — Payroll · Hours page.
++ *
++ * Surfaces Wingspan payroll periods (pay cycles) and a small KPI
++ * strip. Read-only — Spark doesn't run payroll, just reflects what
++ * Wingspan reports.
++ */
++
++import React, { Suspense, useMemo } from "react";
++import { useLazyLoadQuery } from "react-relay/hooks";
++import { useNavigate } from "react-router";
++import Layout from "@/layout/Layout";
++import useSparkRole from "@/hooks/useSparkRole";
++import { WingspanPayrollPeriodsQuery } from "@/api/queries/WingspanPayrollPeriodsQuery";
++import type { WingspanPayrollPeriodsQuery as WingspanPayrollPeriodsQueryType } from "@api/queries/__generated__/WingspanPayrollPeriodsQuery.graphql";
++import { WingspanNotConnected } from "./NotConnected";
++
++type Period = NonNullable<
++  WingspanPayrollPeriodsQueryType["response"]["wingspanPayrollPeriods"][number]
++>;
++
++const fmtUsd = (n: number | null | undefined) =>
++  typeof n === "number"
++    ? `$${n.toLocaleString("en-US", {
++        minimumFractionDigits: 0,
++        maximumFractionDigits: 0,
++      })}`
++    : "—";
++
++const fmtDate = (raw: string | null | undefined) => {
++  if (!raw) return "—";
++  try {
++    return new Date(raw).toLocaleDateString("en-US", {
++      month: "short",
++      day: "numeric",
++      year: "numeric",
++    });
++  } catch {
++    return raw;
++  }
++};
++
++const STATUS_CHIP: Record<string, string> = {
++  open: "chip chip-orange",
++  processing: "chip chip-sky",
++  paid: "chip chip-lime",
++  failed: "chip chip-muted",
++};
++
++const Inner: React.FC = () => {
++  const navigate = useNavigate();
++  const data = useLazyLoadQuery<WingspanPayrollPeriodsQueryType>(
++    WingspanPayrollPeriodsQuery,
++    { limit: 12 },
++    { fetchPolicy: "store-and-network" },
++  );
++  const status = data.wingspanStatus;
++  const periods = useMemo<Period[]>(
++    () =>
++      (data.wingspanPayrollPeriods ?? []).filter(
++        (p): p is Period => Boolean(p),
++      ),
++    [data],
++  );
++
++  // KPIs from connected data
++  const openPeriod = periods.find(
++    (p) => (p.status ?? "").toLowerCase() === "open",
++  );
++  const totalLastPaid = periods
++    .filter((p) => (p.status ?? "").toLowerCase() === "paid")
++    .slice(0, 1)
++    .reduce((s, p) => s + (p.totalAmount ?? 0), 0);
++
++  return (
++    <div className="space-y-6 max-w-6xl">
++      <div className="flex items-end justify-between flex-wrap gap-3">
++        <div>
++          <p
++            className="mono text-[10px]"
++            style={{
++              letterSpacing: "0.18em",
++              color: "rgba(255,255,255,0.45)",
++            }}
++          >
++            PAYROLL · HOURS
++          </p>
++          <h1
++            className="display text-4xl font-bold mt-2"
++            style={{ letterSpacing: "-0.04em" }}
++          >
++            Auto from Wingspan.
++          </h1>
++          <p
++            className="mt-2"
++            style={{ color: "rgba(255,255,255,0.55)" }}
++          >
++            BA payouts run through Wingspan. Spark reflects the most
++            recent pay cycles — drill into Payments to see individual
++            disbursements.
++          </p>
++        </div>
++        <a
++          href="https://app.wingspan.app"
++          target="_blank"
++          rel="noopener noreferrer"
++          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
++          style={{
++            background: "transparent",
++            color: "var(--spark-text)",
++            border: "1px solid var(--spark-border)",
++            textDecoration: "none",
++          }}
++        >
++          Open Wingspan ↗
++        </a>
++      </div>
++
++      {!status?.connected ? (
++        <WingspanNotConnected
++          message={
++            status?.message ??
++            "Wingspan API key is not set. Once configured, this page populates with real pay cycles."
++          }
++        />
++      ) : (
++        <>
++          {/* KPI strip */}
++          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
++            <Kpi
++              label="OPEN PERIOD"
++              value={openPeriod?.label ?? "—"}
++            />
++            <Kpi
++              label="OPEN TOTAL"
++              value={fmtUsd(openPeriod?.totalAmount)}
++              highlight
++            />
++            <Kpi
++              label="CONTRACTORS"
++              value={openPeriod?.contractorCount ?? "—"}
++            />
++            <Kpi
++              label="LAST PAID"
++              value={fmtUsd(totalLastPaid)}
++              highlight
++            />
++          </div>
++
++          {/* Periods table */}
++          <div className="spark-card p-0 overflow-hidden">
++            <div
++              className="grid grid-cols-[1.5fr_1fr_1fr_0.8fr_1fr] gap-3 px-4 py-3 mono text-[10px]"
++              style={{
++                letterSpacing: "0.16em",
++                color: "rgba(255,255,255,0.45)",
++                borderBottom: "1px solid var(--spark-border)",
++              }}
++            >
++              <span>PERIOD</span>
++              <span>PAY DATE</span>
++              <span>STATUS</span>
++              <span>BAs</span>
++              <span className="text-right">TOTAL</span>
++            </div>
++            {periods.length === 0 ? (
++              <div
++                className="p-8 text-center text-sm"
++                style={{ color: "rgba(255,255,255,0.55)" }}
++              >
++                No pay cycles returned from Wingspan yet.
++              </div>
++            ) : (
++              periods.map((p) => {
++                const cls =
++                  STATUS_CHIP[(p.status ?? "").toLowerCase()] ??
++                  "chip chip-muted";
++                return (
++                  <button
++                    key={p.id}
++                    onClick={() =>
++                      navigate(`/payments?periodId=${encodeURIComponent(p.id)}`)
++                    }
++                    className="grid grid-cols-[1.5fr_1fr_1fr_0.8fr_1fr] gap-3 px-4 py-3 text-sm w-full text-left transition"
++                    style={{
++                      background: "transparent",
++                      borderTop: "1px solid rgba(255,255,255,0.04)",
++                      color: "inherit",
++                      cursor: "pointer",
++                    }}
++                  >
++                    <span className="font-semibold truncate">
++                      {p.label}
++                    </span>
++                    <span
++                      style={{ color: "rgba(255,255,255,0.75)" }}
++                    >
++                      {fmtDate(p.payDate)}
++                    </span>
++                    <span>
++                      <span className={cls}>
++                        ● {(p.status ?? "—").toUpperCase()}
++                      </span>
++                    </span>
++                    <span
++                      className="tab-num"
++                      style={{ color: "rgba(255,255,255,0.75)" }}
++                    >
++                      {p.contractorCount ?? "—"}
++                    </span>
++                    <span
++                      className="tab-num text-right font-semibold"
++                      style={{ color: "var(--spark-lime)" }}
++                    >
++                      {fmtUsd(p.totalAmount)}
++                    </span>
++                  </button>
++                );
++              })
++            )}
++          </div>
++        </>
++      )}
++    </div>
++  );
++};
++
++const Kpi: React.FC<{
++  label: string;
++  value: React.ReactNode;
++  highlight?: boolean;
++}> = ({ label, value, highlight }) => (
++  <div className="spark-card p-4">
++    <p
++      className="mono text-[10px]"
++      style={{
++        letterSpacing: "0.18em",
++        color: "rgba(255,255,255,0.45)",
++      }}
++    >
++      {label}
++    </p>
++    <p
++      className="tab-num text-2xl font-bold mt-1"
++      style={{ color: highlight ? "var(--spark-lime)" : undefined }}
++    >
++      {value}
++    </p>
++  </div>
++);
++
++export default function SparkPayroll() {
++  const { isAdmin } = useSparkRole();
++  if (!isAdmin) {
++    return (
++      <Layout>
++        <div className="max-w-2xl">
++          <h1 className="display text-3xl font-bold">Admin only.</h1>
++          <p
++            className="mt-2"
++            style={{ color: "rgba(255,255,255,0.55)" }}
++          >
++            Payroll is a Spark Admin surface.
++          </p>
++        </div>
++      </Layout>
++    );
++  }
++  return (
++    <Layout>
++      <Suspense
++        fallback={
++          <div
++            className="text-xs py-12"
++            style={{ color: "rgba(255,255,255,0.45)" }}
++          >
++            Loading payroll…
++          </div>
++        }
++      >
++        <Inner />
++      </Suspense>
++    </Layout>
++  );
++}
+diff --git a/src/layout/SparkSidebar.tsx b/src/layout/SparkSidebar.tsx
+index 17ba68e..f2c13e5 100644
+--- a/src/layout/SparkSidebar.tsx
++++ b/src/layout/SparkSidebar.tsx
+@@ -135,6 +135,14 @@ const SECTIONS: NavSection[] = [
+       { label: "Alerts", Icon: Bell, to: "/alerts" },
+     ],
+   },
++  {
++    title: "Operations",
++    adminOnly: true,
++    items: [
++      { label: "Payroll · Hours", Icon: Clock, to: "/payroll" },
++      { label: "Payments · Wingspan", Icon: CreditCard, to: "/payments" },
++    ],
++  },
+   {
+     title: "Build",
+     adminOnly: true,
+@@ -154,9 +162,9 @@ const SECTIONS: NavSection[] = [
+   },
+ ];
+ 
+-// Imports referenced for future expansion of Operations group.
+-void Clock;
+-void CreditCard;
++// DollarSign reserved for the future Billing page; the other former
++// "for-future" icons (Clock, CreditCard) are now used by the
++// Operations group above.
+ void DollarSign;
+ void Building2;
+ void HelpCircle;
+diff --git a/src/routes/AppRoutes.tsx b/src/routes/AppRoutes.tsx
+index c751bde..606e57c 100644
+--- a/src/routes/AppRoutes.tsx
++++ b/src/routes/AppRoutes.tsx
+@@ -239,6 +239,12 @@ const SparkAcademy = lazyDefault(
+ const SparkAcademyViewer = lazyDefault(
+   () => import("@/components/pages/academy/SparkAcademyViewer"),
+ );
++const SparkPayroll = lazyDefault(
++  () => import("@/components/pages/wingspan/SparkPayroll"),
++);
++const SparkPayments = lazyDefault(
++  () => import("@/components/pages/wingspan/SparkPayments"),
++);
+ 
+ // User
+ const UsersList = lazyDefault(() => import("@/users/UsersList"));
+@@ -538,6 +544,16 @@ const RequestsLinks = {
+       component: <SparkAcademyViewer />,
+       isPublic: false,
+     },
++    {
++      path: "/payroll",
++      component: <SparkPayroll />,
++      isPublic: false,
++    },
++    {
++      path: "/payments",
++      component: <SparkPayments />,
++      isPublic: false,
++    },
+   ],
+ };
+ 
