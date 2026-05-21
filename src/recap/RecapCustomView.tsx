@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import CustomRecapApprovalPanel from "./CustomRecapApprovalPanel";
+import CustomRecapDownloads from "./CustomRecapDownloads";
+import { recapFileUrl } from "@/utils/recapFileUrl";
 
 type HeifDecodedImage = {
   get_width: () => number;
@@ -218,7 +220,9 @@ const RecapCustomView = () => {
       const heicFiles = flatImages.filter(isHeicFile);
       if (heicFiles.length === 0) {
         setImageSources(
-          Object.fromEntries(flatImages.map((f) => [f.id, f.url ?? ""])),
+          Object.fromEntries(
+            flatImages.map((f) => [f.id, recapFileUrl(f.url ?? "")]),
+          ),
         );
         return;
       }
@@ -227,7 +231,7 @@ const RecapCustomView = () => {
 
       const nextSources = await Promise.all(
         flatImages.map(async (file) => {
-          const fallbackSrc = file.url ?? "";
+          const fallbackSrc = recapFileUrl(file.url ?? "");
           if (!fallbackSrc || !isHeicFile(file)) {
             return [file.id, fallbackSrc] as const;
           }
@@ -415,7 +419,9 @@ const RecapCustomView = () => {
   const currentPreview =
     flatImages && previewIndex !== null ? flatImages[previewIndex] : null;
   const currentPreviewSrc = currentPreview
-    ? (imageSources[currentPreview.id] ?? currentPreview.url ?? "")
+    ? (imageSources[currentPreview.id] ??
+      recapFileUrl(currentPreview.url ?? "") ??
+      "")
     : "";
 
   if (!recap) {
@@ -448,6 +454,19 @@ const RecapCustomView = () => {
           <CustomRecapApprovalPanel
             recapId={String(recap.id)}
             approved={Boolean(recap.approved)}
+          />
+
+          {/* Downloads bar — PDF + photos zip + all files zip + copy link */}
+          <CustomRecapDownloads
+            recapUuid={String(recap.uuid)}
+            files={recapFiles.map((f) => ({
+              id: String(f.id),
+              name: f.name ?? null,
+              url: f.url ?? null,
+              fileType: f.fileType
+                ? { name: f.fileType.name ?? null }
+                : null,
+            }))}
           />
 
           {/* ======================================================
@@ -776,7 +795,7 @@ const RecapCustomView = () => {
                                       <img
                                         src={
                                           imageSources[file.id] ||
-                                          file.url ||
+                                          recapFileUrl(file.url) ||
                                           ""
                                         }
                                         alt={file.name || "Evidence"}

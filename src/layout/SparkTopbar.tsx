@@ -128,7 +128,7 @@ export const SparkTopbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-30 bg-base-100/80 backdrop-blur-xl border-b border-base-300 px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
-      {/* Left: breadcrumb + (optional) public form chip */}
+      {/* Left: breadcrumb + (optional) external request link chip */}
       <div className="flex items-center gap-3 min-w-0">
         <span className="mono text-[11px] tracking-[0.18em] text-base-content/40">
           spark.app /
@@ -139,7 +139,7 @@ export const SparkTopbar: React.FC = () => {
 
         {publicFormUrl && (
           <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-base-300/40 border border-base-300 text-xs ml-2">
-            <span className="text-base-content/55">Public form</span>
+            <span className="text-base-content/55">External Request Link</span>
             <span className="font-medium text-primary truncate max-w-[140px]">
               {tenantMeta?.requestUrlName}
             </span>
