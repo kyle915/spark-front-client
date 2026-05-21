@@ -102,11 +102,15 @@ export const RequestsQuery = graphql`
             name
           }
           # Used by the sidebar recap-due badge + the Master Tracker
-          # RECAP chip. Just enough event/recap data — no fields
-          # beyond id — so the per-row payload stays tiny.
+          # RECAP chip. Includes both standard recaps and tenant-custom
+          # recaps (Borjomi, etc.) so the chip reflects either path.
+          # Just IDs — no fields beyond id — to keep payload tiny.
           events {
             id
             recaps {
+              id
+            }
+            customRecaps {
               id
             }
           }

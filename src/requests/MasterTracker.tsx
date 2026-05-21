@@ -552,8 +552,14 @@ const MasterTrackerInner: React.FC<{
           const events = (n.events ?? []).filter(
             (e): e is NonNullable<typeof e> => Boolean(e),
           );
+          // Count both standard `recaps` and tenant-custom `customRecaps`
+          // — Borjomi-style tenants file recaps via the custom schema and
+          // would otherwise show as "due" forever.
           const recapCount = events.reduce(
-            (sum, e) => sum + (e.recaps?.length ?? 0),
+            (sum, e) =>
+              sum +
+              (e.recaps?.length ?? 0) +
+              (e.customRecaps?.length ?? 0),
             0,
           );
           const recapStatus: RecapStatus =

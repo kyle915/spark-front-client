@@ -2294,6 +2294,7 @@ type Event implements Node {
   startTime: String
   endTime: String
   recaps: [Recap!]!
+  customRecaps: [CustomRecap!]!
 }
 
 type EventCountableConnection {
