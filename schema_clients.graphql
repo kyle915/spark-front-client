@@ -2063,6 +2063,18 @@ input DeclineRequestInput {
   declineReason: String = null
 }
 
+input DeleteRequestInput {
+  clientMutationId: ID = null
+  id: ID!
+}
+
+type DeleteRequestResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  deletedRequestUuid: String
+}
+
 type DeclineRequestResponse {
   success: Boolean!
   message: String!
@@ -3276,6 +3288,7 @@ type Mutation {
   updateRequest(input: UpdateRequestInput!): RequestDetailResponse!
   approveRequest(input: ApproveRequestInput!): ApproveRequestResponse!
   declineRequest(input: DeclineRequestInput!): DeclineRequestResponse!
+  deleteRequest(input: DeleteRequestInput!): DeleteRequestResponse!
   upsertRequestReviewed(input: UpsertRequestReviewedInput!): RequestDetailResponse!
   createRequestStoreManager(input: CreateRequestStoreManagerInput!): RequestStoreManagerDetailResponse!
   updateRequestStoreManager(input: UpdateRequestStoreManagerInput!): RequestStoreManagerDetailResponse!
