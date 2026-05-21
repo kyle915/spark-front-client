@@ -2851,6 +2851,20 @@ type Job implements Node {
   ambassadorJobs: [AmbassadorJob!]!
   applied: Boolean!
   briefing: JobBriefingPayload!
+  applicationsCount: Int!
+  appliedCount: Int!
+}
+
+type TenantFavoriteAmbassador {
+  uuid: String!
+  tenantId: ID!
+  ambassadorId: ID!
+  ambassadorUuid: String!
+  firstName: String!
+  lastName: String!
+  email: String!
+  note: String!
+  createdAt: String!
 }
 
 type JobApplication {
@@ -2884,6 +2898,25 @@ input AssignAmbassadorToJobInput {
   clientMutationId: ID = null
   jobId: ID!
   ambassadorId: ID!
+}
+
+input AddFavoriteAmbassadorInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  ambassadorId: ID!
+  note: String = null
+}
+
+input RemoveFavoriteAmbassadorInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  ambassadorId: ID!
+}
+
+type FavoriteAmbassadorResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
 }
 
 type JobLifecycleResponse {
@@ -3401,6 +3434,8 @@ type Mutation {
   postJob(input: PostJobInput!): JobLifecycleResponse!
   openJobToAll(input: OpenJobToAllInput!): JobLifecycleResponse!
   assignAmbassadorToJob(input: AssignAmbassadorToJobInput!): JobLifecycleResponse!
+  addFavoriteAmbassador(input: AddFavoriteAmbassadorInput!): FavoriteAmbassadorResponse!
+  removeFavoriteAmbassador(input: RemoveFavoriteAmbassadorInput!): FavoriteAmbassadorResponse!
   createBriefingTemplate(input: CreateBriefingTemplateInput!): BriefingTemplateResponse!
   updateBriefingTemplate(input: UpdateBriefingTemplateInput!): BriefingTemplateResponse!
   archiveBriefingTemplate(input: ArchiveBriefingTemplateInput!): BriefingTemplateResponse!
@@ -3883,6 +3918,7 @@ type WingspanPayment {
 
 type Query {
   jobApplications(jobId: ID!): [JobApplication!]!
+  favoriteAmbassadors(tenantId: ID = null): [TenantFavoriteAmbassador!]!
   briefingTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [BriefingTemplate!]!
   jobBriefing(jobId: ID!): JobBriefingPayload
   academyModulesAdmin(filters: AcademyModuleFiltersInput = null): [AcademyModule!]!

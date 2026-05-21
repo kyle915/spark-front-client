@@ -43,6 +43,8 @@ export const JobsQuery = graphql`
           favoritesOnly
           postedAt
           maxApplications
+          applicationsCount
+          appliedCount
           tenantId
           jobTitle {
             __typename

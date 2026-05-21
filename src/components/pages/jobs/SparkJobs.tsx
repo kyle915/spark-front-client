@@ -23,6 +23,10 @@ import { JobsQuery } from "@/api/queries/JobsQuery";
 import type { JobsQuery as JobsQueryType } from "@api/queries/__generated__/JobsQuery.graphql";
 import { PostJobMutation } from "@/api/mutations/JobLifecycleMutations";
 import type { JobLifecycleMutations_PostJobMutation } from "@api/mutations/__generated__/JobLifecycleMutations_PostJobMutation.graphql";
+import { ApplyBriefingTemplateMutation } from "@/api/mutations/BriefingTemplateMutations";
+import type { BriefingTemplateMutations_ApplyMutation } from "@api/mutations/__generated__/BriefingTemplateMutations_ApplyMutation.graphql";
+import { BriefingTemplatesQuery } from "@/api/queries/BriefingTemplatesQuery";
+import type { BriefingTemplatesQuery as BriefingTemplatesQueryType } from "@api/queries/__generated__/BriefingTemplatesQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import BriefingTemplatesPanel from "./BriefingTemplatesPanel";
@@ -46,6 +50,8 @@ type JobRow = {
   totalHours: number | null;
   hourlyRate: number | null;
   favoritesOnly: boolean;
+  applicationsCount: number;
+  appliedCount: number;
 };
 
 const fmtDate = (raw: string | null | undefined) => {
@@ -123,6 +129,8 @@ const JobsInner: React.FC<{
             totalHours: n.totalHours ?? null,
             hourlyRate: n.hourlyRate ?? null,
             favoritesOnly: Boolean(n.favoritesOnly),
+            applicationsCount: n.applicationsCount ?? 0,
+            appliedCount: n.appliedCount ?? 0,
           };
         }) ?? []
     );
@@ -269,6 +277,28 @@ const JobsInner: React.FC<{
                           {j.hourlyRate ? `$${j.hourlyRate}/hr` : "—"}
                         </p>
                       </div>
+                      <div className="text-right">
+                        <p className="label-mini">APPLICANTS</p>
+                        <p
+                          className="font-semibold text-sm tab-num"
+                          style={{
+                            color:
+                              j.appliedCount > 0
+                                ? "var(--spark-gold)"
+                                : j.applicationsCount > 0
+                                  ? "var(--spark-lime)"
+                                  : "rgba(255,255,255,0.55)",
+                          }}
+                          title={
+                            j.appliedCount > 0
+                              ? `${j.appliedCount} pending`
+                              : `${j.applicationsCount} total`
+                          }
+                        >
+                          {j.applicationsCount}
+                          {j.appliedCount > 0 ? ` · ${j.appliedCount}↑` : ""}
+                        </p>
+                      </div>
                       {stage === "pending" ? (
                         <button
                           onClick={(e) => {
@@ -318,6 +348,7 @@ const PostJobModal: React.FC<{
   job: JobRow;
   onClose: () => void;
 }> = ({ job, onClose }) => {
+  const { tenantId } = useAuthStore();
   const showAlert = useAlertStore((s) => s.showAlert);
   const [totalHours, setTotalHours] = useState<string>(
     job.totalHours ? String(job.totalHours) : "",
@@ -328,9 +359,24 @@ const PostJobModal: React.FC<{
   const [uniformNotes, setUniformNotes] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(true);
   const [maxApplications, setMaxApplications] = useState<string>("");
+  const [briefingTemplateId, setBriefingTemplateId] = useState<string>("");
+
+  // Briefing templates picker — optional. After postJob succeeds, if
+  // the admin picked one, we also fire applyBriefingTemplate so the
+  // BA sees the briefing on the shift-offer screen.
+  const templates = useLazyLoadQuery<BriefingTemplatesQueryType>(
+    BriefingTemplatesQuery,
+    { tenantId: tenantId ?? null, includeArchived: false },
+    { fetchPolicy: "store-or-network" },
+  );
 
   const [commit, posting] =
     useMutation<JobLifecycleMutations_PostJobMutation>(PostJobMutation);
+  const [commitApplyBriefing, applyingBriefing] =
+    useMutation<BriefingTemplateMutations_ApplyMutation>(
+      ApplyBriefingTemplateMutation,
+    );
+  const inflight = posting || applyingBriefing;
 
   const submit = () => {
     const hoursNum = totalHours ? Number(totalHours) : null;
@@ -356,11 +402,31 @@ const PostJobModal: React.FC<{
         },
       },
       onCompleted: (resp) => {
-        if (resp.postJob?.success) {
+        if (!resp.postJob?.success) {
+          showAlert(resp.postJob?.message ?? "Post failed.", "warning");
+          return;
+        }
+        // Chain: apply briefing template if one was picked.
+        if (briefingTemplateId) {
+          commitApplyBriefing({
+            variables: {
+              input: { jobId: job.id, templateId: briefingTemplateId },
+            },
+            onCompleted: () => {
+              showAlert("Job posted with briefing applied.", "success");
+              window.location.reload();
+            },
+            onError: () => {
+              showAlert(
+                "Job posted, but briefing apply failed — set it from the job page.",
+                "warning",
+              );
+              window.location.reload();
+            },
+          });
+        } else {
           showAlert("Job posted to the board.", "success");
           window.location.reload();
-        } else {
-          showAlert(resp.postJob?.message ?? "Post failed.", "warning");
         }
       },
       onError: (err) => showAlert(err.message, "error"),
@@ -442,6 +508,23 @@ const PostJobModal: React.FC<{
               inputMode="numeric"
             />
           </Field>
+          <Field
+            label="BA briefing template"
+            hint="Optional. Pick a saved briefing the BA will see on the shift-offer screen."
+          >
+            <select
+              value={briefingTemplateId}
+              onChange={(e) => setBriefingTemplateId(e.target.value)}
+              style={inputStyle}
+            >
+              <option value="">No briefing — add later from job detail</option>
+              {(templates.briefingTemplates ?? []).map((t) => (
+                <option key={t.uuid} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </Field>
           <label
             className="flex items-center gap-2 cursor-pointer"
             style={{
@@ -472,19 +555,19 @@ const PostJobModal: React.FC<{
         <div className="flex gap-2 mt-5">
           <button
             onClick={submit}
-            disabled={posting}
+            disabled={inflight}
             className="px-4 py-2 rounded-xl text-sm font-semibold"
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              opacity: posting ? 0.5 : 1,
+              opacity: inflight ? 0.5 : 1,
             }}
           >
-            {posting ? "Posting…" : "Post job"}
+            {inflight ? "Posting…" : "Post job"}
           </button>
           <button
             onClick={onClose}
-            disabled={posting}
+            disabled={inflight}
             className="px-4 py-2 rounded-xl text-sm"
             style={{
               background: "transparent",
@@ -595,10 +678,12 @@ export default function SparkJobs() {
         onClose={() => setTemplatesOpen(false)}
       />
       {postingJob && (
-        <PostJobModal
-          job={postingJob}
-          onClose={() => setPostingJob(null)}
-        />
+        <Suspense fallback={null}>
+          <PostJobModal
+            job={postingJob}
+            onClose={() => setPostingJob(null)}
+          />
+        </Suspense>
       )}
     </Layout>
   );
