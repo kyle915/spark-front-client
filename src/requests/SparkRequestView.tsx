@@ -1270,11 +1270,23 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
           const fileCount = (recap.recapFiles ?? []).filter(
             (f) => f && (f.file?.toString() || "").length > 0,
           ).length;
+          const recapHref = `/recap/view/${recap.uuid}`;
           return (
-            <div
+            // Real <a href> so right-click → "Open in new tab" + middle
+            // click + cmd-click all work. Plain left-click still
+            // intercepts for SPA nav so we don't bounce through a
+            // full-page reload.
+            <a
               key={String(recap.uuid)}
-              onClick={() => navigate(`/recap/view/${recap.uuid}`)}
-              className="spark-card hov overflow-hidden cursor-pointer"
+              href={recapHref}
+              onClick={(e) => {
+                if (e.button !== 0) return;
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                e.preventDefault();
+                navigate(recapHref);
+              }}
+              className="spark-card hov overflow-hidden cursor-pointer block"
+              style={{ textDecoration: "none", color: "inherit" }}
             >
               <div
                 className="h-32 relative overflow-hidden"
@@ -1365,7 +1377,7 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
                   </div>
                 </div>
               </div>
-            </div>
+            </a>
           );
         })}
 

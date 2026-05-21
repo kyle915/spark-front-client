@@ -99,24 +99,32 @@ const CustomRecapsTableContent = ({
       onPageLoaded={onPageLoaded}
       customActions={{
         headerLabel: "Actions",
-        render: (row) => (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="btn btn-xs btn-outline"
-              onClick={() => {
-                const params = new URLSearchParams();
-                params.set("fromPage", String(returnPage));
-                if (returnAfter) params.set("fromAfter", returnAfter);
-
-                navigate(`/recap/view-custom/${row.uuid}?${params.toString()}`);
-              }}
-            >
-              <EyeIcon className="w-5 h-5" />
-              View
-            </button>
-          </div>
-        ),
+        render: (row) => {
+          // Real <a> so right-click / cmd-click / middle-click hit the
+          // browser's native "open in new tab" path. Plain left-click
+          // still SPA-navigates so we keep the return-page state.
+          const params = new URLSearchParams();
+          params.set("fromPage", String(returnPage));
+          if (returnAfter) params.set("fromAfter", returnAfter);
+          const href = `/recap/view-custom/${row.uuid}?${params.toString()}`;
+          return (
+            <div className="flex gap-2">
+              <a
+                href={href}
+                className="btn btn-xs btn-outline"
+                onClick={(e) => {
+                  if (e.button !== 0) return;
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                  e.preventDefault();
+                  navigate(href);
+                }}
+              >
+                <EyeIcon className="w-5 h-5" />
+                View
+              </a>
+            </div>
+          );
+        },
       }}
       emptyState={
         <div className="alert alert-info">

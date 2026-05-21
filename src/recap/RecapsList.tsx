@@ -128,22 +128,26 @@ RecapsTableContentProps) => {
       onPageLoaded={onPageLoaded}
       customActions={{
         headerLabel: "Actions",
-        render: (row) => (
+        render: (row) => {
+          const params = new URLSearchParams();
+          params.set("fromPage", String(returnPage));
+          if (returnAfter) params.set("fromAfter", returnAfter);
+          const viewHref = `/recap/view/${row.uuid}?${params.toString()}`;
+          return (
           <div className="flex gap-2">
-            <button
-              type="button"
+            <a
+              href={viewHref}
               className="btn btn-xs btn-outline"
-              onClick={() => {
-                const params = new URLSearchParams();
-                params.set("fromPage", String(returnPage));
-                if (returnAfter) params.set("fromAfter", returnAfter);
-
-                navigate(`/recap/view/${row.uuid}?${params.toString()}`);
+              onClick={(e) => {
+                if (e.button !== 0) return;
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                e.preventDefault();
+                navigate(viewHref);
               }}
             >
               <EyeIcon className="w-5 h-5" />
               View
-            </button>
+            </a>
 
             <button
               type="button"
@@ -202,7 +206,8 @@ RecapsTableContentProps) => {
               )}
             </button> */}
           </div>
-        ),
+          );
+        },
       }}
       emptyState={
         <div className="alert alert-info">

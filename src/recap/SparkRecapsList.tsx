@@ -98,33 +98,45 @@ const formatDate = (raw: string | null | undefined) => {
 
 const RecapCard: React.FC<{
   recap: Recap;
-  onOpen: () => void;
-  onOpenRequest: ((uuid: string) => void) | null;
+  href: string;
+  onOpen: (e: React.MouseEvent) => void;
+  onOpenRequest: ((uuid: string, e: React.MouseEvent) => void) | null;
+  requestHref: string | null;
   // Multi-select for the campaign-report builder. When `selected` is
   // non-null the card shows a checkbox in the top-left and toggling
   // it calls `onToggleSelect` instead of opening the recap. The
   // parent owns the selected-set state; the card is dumb.
   selected: boolean;
   onToggleSelect: () => void;
-}> = ({ recap, onOpen, onOpenRequest, selected, onToggleSelect }) => (
-  <div
+}> = ({ recap, href, onOpen, onOpenRequest, requestHref, selected, onToggleSelect }) => (
+  // Real <a href> so:
+  //  • left click  → onClick runs the SPA navigate (preserves state)
+  //  • cmd/ctrl    → browser opens in new tab (we intentionally don't
+  //                  preventDefault on modified clicks)
+  //  • middle/right→ browser-native "open in new tab" works
+  //  • copy link   → URL is meaningful
+  <a
+    href={href}
     onClick={(e) => {
-      // Clicking the card's chrome (anywhere outside the explicit
-      // checkbox) opens the recap. Clicking the checkbox itself
-      // bubbles to its own handler and stops propagation before this
-      // fires — see the input below.
-      onOpen();
-      void e;
+      // Let the browser handle modifier + middle-click navigation.
+      // Only intercept the plain left-click.
+      if (e.defaultPrevented) return;
+      if (e.button !== 0) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      onOpen(e);
     }}
-    className="spark-card hov overflow-hidden cursor-pointer relative"
-    style={
-      selected
+    className="spark-card hov overflow-hidden cursor-pointer relative block"
+    style={{
+      textDecoration: "none",
+      color: "inherit",
+      ...(selected
         ? {
             outline: "2px solid var(--spark-lime)",
             outlineOffset: 2,
           }
-        : undefined
-    }
+        : null),
+    }}
   >
     {/* Checkbox sits above the hero so it's reachable without
         depending on row-level hover; tapping it doesn't open the
@@ -272,11 +284,22 @@ const RecapCard: React.FC<{
         {recap.date ? ` · ${formatDate(recap.date)}` : ""}
       </p>
 
-      {recap.requestUuid && onOpenRequest && (
-        <button
+      {recap.requestUuid && onOpenRequest && requestHref && (
+        // Nested anchor — both wrapping <a> and this one are clickable.
+        // We rely on onClick stopPropagation so the outer anchor's
+        // SPA-nav doesn't fire when the chip is clicked. Modifier
+        // clicks let the browser open whichever anchor is hit-tested
+        // (inner takes priority) so right-click on the chip opens the
+        // request in a new tab, right-click on the card opens the
+        // recap in a new tab.
+        <a
+          href={requestHref}
           onClick={(e) => {
             e.stopPropagation();
-            onOpenRequest(recap.requestUuid!);
+            if (e.button !== 0) return;
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            onOpenRequest(recap.requestUuid!, e);
           }}
           className="mono inline-flex items-center gap-1 mt-2 px-2 py-1 rounded-full text-[10px]"
           style={{
@@ -284,11 +307,12 @@ const RecapCard: React.FC<{
             background: "rgba(197,245,70,0.10)",
             border: "1px solid rgba(197,245,70,0.30)",
             color: "var(--spark-lime)",
+            textDecoration: "none",
           }}
           title="View the parent request on the Master Tracker"
         >
           ← {recap.requestShortId} REQUEST
-        </button>
+        </a>
       )}
 
       <div
@@ -327,7 +351,7 @@ const RecapCard: React.FC<{
         </div>
       </div>
     </div>
-  </div>
+  </a>
 );
 
 type Meta = {
@@ -571,26 +595,30 @@ const RecapsListInner: React.FC<{
 
   return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {filtered.map((r) => (
-        <RecapCard
-          key={r.uuid}
-          recap={r}
-          selected={selectedIds.has(r.id)}
-          onToggleSelect={() => onToggleSelected(r.id)}
-          onOpen={() =>
-            navigate(
-              r.isCustom
-                ? `/recap/view-custom/${r.uuid}`
-                : `/recap/view/${r.uuid}`,
-            )
-          }
-          onOpenRequest={(reqUuid) =>
-            navigate(`/request/view/${reqUuid}`, {
-              state: { from: "/recaps/list" },
-            })
-          }
-        />
-      ))}
+      {filtered.map((r) => {
+        const href = r.isCustom
+          ? `/recap/view-custom/${r.uuid}`
+          : `/recap/view/${r.uuid}`;
+        const requestHref = r.requestUuid
+          ? `/request/view/${r.requestUuid}`
+          : null;
+        return (
+          <RecapCard
+            key={r.uuid}
+            recap={r}
+            href={href}
+            requestHref={requestHref}
+            selected={selectedIds.has(r.id)}
+            onToggleSelect={() => onToggleSelected(r.id)}
+            onOpen={() => navigate(href)}
+            onOpenRequest={(reqUuid) =>
+              navigate(`/request/view/${reqUuid}`, {
+                state: { from: "/recaps/list" },
+              })
+            }
+          />
+        );
+      })}
     </div>
   );
 };
