@@ -2336,6 +2336,10 @@ input EventDashboardFiltersInput {
   rmmAsignedId: ID = null
   distributorId: ID = null
   distributorIds: [ID!] = null
+  stateId: ID = null
+  stateIds: [ID!] = null
+  retailerId: ID = null
+  retailerIds: [ID!] = null
   year: Int = null
 }
 

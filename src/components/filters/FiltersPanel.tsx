@@ -24,6 +24,11 @@ export type DashboardFilters = {
   quarter: string | null;
   startDate: string | null;
   endDate: string | null;
+  // State + retailer narrow the dashboard to a single market or chain.
+  // Optional, single-value on the dashboard bar (the heavy FiltersPanel
+  // can stay multi-select if we expand it later).
+  stateId?: string | null;
+  retailerId?: string | null;
 };
 
 type FiltersFormValues = {

@@ -11,6 +11,7 @@ import AttentionEngine from "./AttentionEngine";
 import PaceWidget from "./PaceWidget";
 import TodaysLineup from "./TodaysLineup";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
+import DashboardFilterBar from "./DashboardFilterBar";
 import { useNavigate } from "react-router";
 
 /**
@@ -545,28 +546,41 @@ export default function DashboardIndex() {
       })()
     : "";
 
-  // Map the date-range pill into a real DashboardFilters startDate.
+  // The range pill (7d/30d/90d/YTD) populates a default date window.
+  // The DashboardFilterBar can override any field — when start/end are
+  // explicitly set we trust them over the pill.
+  const [extraFilters, setExtraFilters] = useState<DashboardFilters>({
+    distributorIds: [],
+    rmmAsignedId: null,
+    quarter: null,
+    startDate: null,
+    endDate: null,
+    stateId: null,
+    retailerId: null,
+  });
+
   const filters: DashboardFilters = useMemo(() => {
     const today = new Date();
     const start = new Date(today);
     if (range === "ytd") {
-      // Jan 1 of the current year — captures the full calendar year.
       start.setMonth(0, 1);
       start.setHours(0, 0, 0, 0);
     } else {
-      const daysBack =
-        range === "7d" ? 7 : range === "30d" ? 30 : 90;
+      const daysBack = range === "7d" ? 7 : range === "30d" ? 30 : 90;
       start.setDate(today.getDate() - daysBack);
     }
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
     return {
-      distributorIds: [],
-      rmmAsignedId: null,
-      quarter: null,
-      startDate: fmt(start),
-      endDate: fmt(today),
+      distributorIds: extraFilters.distributorIds ?? [],
+      rmmAsignedId: extraFilters.rmmAsignedId ?? null,
+      quarter: extraFilters.quarter ?? null,
+      // Manual overrides win over the pill default.
+      startDate: extraFilters.startDate ?? fmt(start),
+      endDate: extraFilters.endDate ?? fmt(today),
+      stateId: extraFilters.stateId ?? null,
+      retailerId: extraFilters.retailerId ?? null,
     };
-  }, [range]);
+  }, [range, extraFilters]);
 
   const { dashboard } = useEventDashboardData(tenantId || "", filters, 0);
   const m = dashboard.metrics;
@@ -648,6 +662,13 @@ export default function DashboardIndex() {
             </div>
           </div>
         </div>
+
+        {/* Filter bar — user (mapped RMM), state, retailer, date range.
+            All optional; explicit values override the 7d/30d pill. */}
+        <DashboardFilterBar
+          value={extraFilters}
+          onChange={setExtraFilters}
+        />
 
         {/* Today's snapshot — one-glance priority card. Pulls counts
             from useSidebarCounts so it shares the same RequestsQuery
