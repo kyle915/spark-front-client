@@ -74,9 +74,22 @@ export const SparkTopbar: React.FC = () => {
   const [platform, setPlatform] = useState<Platform>(
     (localStorage.getItem("@spark.platform") as Platform) || "desktop",
   );
-  const [role, setRole] = useState<Role>(
-    (localStorage.getItem("@spark.role") as Role) || "admin",
-  );
+  // Client-role users get forced to "client" view regardless of what's in
+  // localStorage. Spark admins default to "admin" but can preview "client"
+  // via the toggle below.
+  const realRoleName = (user?.role?.name ?? "").toLowerCase();
+  const isClientUser = realRoleName === "client";
+  const [role, setRole] = useState<Role>(() => {
+    if (isClientUser) return "client";
+    return (localStorage.getItem("@spark.role") as Role) || "admin";
+  });
+  useEffect(() => {
+    if (isClientUser && role !== "client") {
+      setRole("client");
+      localStorage.setItem("@spark.role", "client");
+      window.dispatchEvent(new Event("spark:role-changed"));
+    }
+  }, [isClientUser, role]);
   useEffect(
     () => localStorage.setItem("@spark.platform", platform),
     [platform],
@@ -192,14 +205,26 @@ export const SparkTopbar: React.FC = () => {
           ]}
         />
 
-        <PillGroup
-          value={role}
-          onChange={(v) => setRole(v as Role)}
-          options={[
-            { value: "admin", label: "Admin", icon: "⚒" },
-            { value: "client", label: "Client", icon: "◐" },
-          ]}
-        />
+        {/* Admin/Client preview toggle is for Ignite team members only —
+            client-role users shouldn't see (or be tempted by) an
+            "Admin" tab. Backend already gates capabilities by real
+            role; this just keeps the UI honest. */}
+        {(() => {
+          const roleName = (user?.role?.name ?? "").toLowerCase();
+          const isSparkAdmin =
+            roleName.includes("spark-admin") || roleName === "admin";
+          if (!isSparkAdmin) return null;
+          return (
+            <PillGroup
+              value={role}
+              onChange={(v) => setRole(v as Role)}
+              options={[
+                { value: "admin", label: "Admin", icon: "⚒" },
+                { value: "client", label: "Client", icon: "◐" },
+              ]}
+            />
+          );
+        })()}
 
         <div className="w-8 h-8 rounded-full bg-primary text-primary-content text-xs font-bold flex items-center justify-center">
           {initial}
