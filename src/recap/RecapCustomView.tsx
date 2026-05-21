@@ -19,6 +19,7 @@ import {
   FileText,
 } from "lucide-react";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
+import CustomRecapApprovalPanel from "./CustomRecapApprovalPanel";
 
 type HeifDecodedImage = {
   get_width: () => number;
@@ -440,6 +441,14 @@ const RecapCustomView = () => {
               Back to list
             </Link>
           </div>
+
+          {/* Approve / Decline / Rebuild PDF — fires the approval
+              email (RMM + clients + requestor) with the latest PDF
+              attached when the admin clicks Approve. */}
+          <CustomRecapApprovalPanel
+            recapId={String(recap.id)}
+            approved={Boolean(recap.approved)}
+          />
 
           {/* ======================================================
           HEADER
