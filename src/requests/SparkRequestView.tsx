@@ -140,11 +140,15 @@ const STATUS_CHIP: Record<string, string> = {
 type Request = NonNullable<RequestUuidQueryType["response"]["request"]>;
 
 async function callApprovalMutation(
-  mutation: "approveRequest" | "declineRequest",
+  mutation: "approveRequest" | "declineRequest" | "deleteRequest",
   variables: Record<string, unknown>,
 ): Promise<{ success: boolean; message: string }> {
   const inputType =
-    mutation === "approveRequest" ? "ApproveRequestInput" : "DeclineRequestInput";
+    mutation === "approveRequest"
+      ? "ApproveRequestInput"
+      : mutation === "declineRequest"
+        ? "DeclineRequestInput"
+        : "DeleteRequestInput";
   const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
     method: "POST",
     headers: {
@@ -216,6 +220,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
   const [declineReason, setDeclineReason] = useState("");
   const [approveOpen, setApproveOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   // Pick the relay id of the first event on this request to use as the
   // invite target. Admins can only invite when there's a real event
   // row to invite TO — pending requests with no event yet don't show
@@ -309,6 +314,23 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
     } catch (e) {
       showAlert(`Couldn't decline: ${(e as Error).message}`, "error");
     } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    setBusy(true);
+    try {
+      const result = await callApprovalMutation("deleteRequest", {
+        input: { id: request.id },
+      });
+      if (!result.success) throw new Error(result.message || "Delete failed.");
+      showAlert(`Deleted ${reqId}. Returning to tracker…`, "success");
+      // Soft-delete — list views filter the row out automatically. Bounce
+      // back to wherever the user came from (usually /requests/list).
+      setTimeout(() => navigate(from || "/requests/list"), 400);
+    } catch (e) {
+      showAlert(`Couldn't delete: ${(e as Error).message}`, "error");
       setBusy(false);
     }
   };
@@ -539,6 +561,24 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             ✦ Invite BA
           </button>
         )}
+        {/* Destructive action — pushed far right + dim styling so it
+            doesn't compete with the green/blue primary buttons. Opens
+            a confirm modal; no inline-click deletes. */}
+        <span className="flex-1" />
+        <button
+          onClick={() => setDeleteOpen(true)}
+          disabled={busy}
+          className="px-4 py-2 rounded-xl text-sm"
+          style={{
+            background: "transparent",
+            color: "rgba(239,90,42,0.85)",
+            border: "1px solid rgba(239,90,42,0.35)",
+            opacity: busy ? 0.5 : 1,
+          }}
+          title="Soft-delete this request. Hidden from lists; activity log preserved."
+        >
+          🗑 Delete request
+        </button>
       </div>
 
       {inviteOpen && eventForInvite && (
@@ -1018,6 +1058,78 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           </div>
         </div>
       )}
+
+      {/* Delete confirm modal — hard-stop the user from one-click
+          deleting. Soft-delete only (backend sets deleted_at), but
+          the UI still treats this like a destructive action. */}
+      {deleteOpen && (
+        <div
+          onClick={() => !busy && setDeleteOpen(false)}
+          className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[15vh]"
+          style={{
+            background: "rgba(10,11,13,0.7)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md spark-card p-6"
+            style={{ borderRadius: 20 }}
+          >
+            <p
+              className="mono text-[10px] mb-1"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-orange)",
+              }}
+            >
+              DELETE REQUEST
+            </p>
+            <h2
+              className="display text-2xl font-bold"
+              style={{ letterSpacing: "-0.03em" }}
+            >
+              Delete {reqId}?
+            </h2>
+            <p
+              className="text-sm mt-2"
+              style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.55 }}
+            >
+              {venue} on {fmtDate(request.date)} will disappear from
+              tracker, calendar, and exports. The activity-log entries
+              and any linked events / recaps stay in the DB — an admin
+              can restore by clearing <code>deleted_at</code>.
+            </p>
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(false)}
+                disabled={busy}
+                className="mono text-[11px] px-3"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={busy}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "var(--spark-orange)",
+                  color: "#0a0d09",
+                  opacity: busy ? 0.5 : 1,
+                }}
+              >
+                {busy ? "Deleting…" : "Delete request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1307,6 +1419,8 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
     </div>
   );
 };
+
+
 
 export default function SparkRequestView() {
   const { uuid } = useParams<{ uuid: string }>();
