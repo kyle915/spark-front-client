@@ -21,6 +21,7 @@ import {
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import CustomRecapApprovalPanel from "./CustomRecapApprovalPanel";
 import CustomRecapDownloads from "./CustomRecapDownloads";
+import CustomRecapEditPanel from "./CustomRecapEditPanel";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 
 type HeifDecodedImage = {
@@ -113,6 +114,7 @@ const RecapCustomView = () => {
   const { uuid } = useParams();
   const [searchParams] = useSearchParams();
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const data = useLazyLoadQuery<CustomRecapsQueryDetailsQueryType>(
     GetCustomRecapQuery,
@@ -455,6 +457,21 @@ const RecapCustomView = () => {
             recapId={String(recap.id)}
             approved={Boolean(recap.approved)}
           />
+
+          {/* Quick-edit button — opens the field-level editor */}
+          <div className="flex justify-end">
+            <button
+              onClick={() => setEditOpen(true)}
+              className="px-3 py-2 rounded-xl text-xs font-semibold"
+              style={{
+                background: "transparent",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+              }}
+            >
+              ✎ Edit recap fields
+            </button>
+          </div>
 
           {/* Downloads bar — PDF + photos zip + all files zip + copy link */}
           <CustomRecapDownloads
@@ -886,6 +903,51 @@ const RecapCustomView = () => {
           onClose={closePreview}
           onNext={goNext}
           onPrev={goPrev}
+        />
+      )}
+
+      {recap && (
+        <CustomRecapEditPanel
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          recap={{
+            id: String(recap.id),
+            name: recap.name,
+            totalEngagements: recap.totalEngagements ?? null,
+            late: recap.late,
+            incomplete: recap.incomplete,
+            usedCorpoCard: recap.usedCorpoCard,
+            approved: recap.approved,
+            event: recap.event ? { id: String(recap.event.id) } : null,
+            customRecapTemplate: recap.customRecapTemplate
+              ? { id: String(recap.customRecapTemplate.id) }
+              : null,
+            customField: (recap.customField ?? []).map((f) => ({
+              id: String(f.id),
+              name: f.name ?? "",
+              value: f.value ?? "",
+              recapSection: f.recapSection
+                ? {
+                    id: String(f.recapSection.id),
+                    name: f.recapSection.name ?? "",
+                  }
+                : null,
+            })),
+            customRecapFiles: (recap.customRecapFiles ?? []).map((f) => ({
+              id: String(f.id),
+              name: f.name,
+              url: f.url,
+              fileType: f.fileType
+                ? { id: String(f.fileType.id), name: f.fileType.name }
+                : null,
+              fileRecapCategory: f.fileRecapCategory
+                ? {
+                    id: String(f.fileRecapCategory.id),
+                    name: f.fileRecapCategory.name,
+                  }
+                : null,
+            })),
+          }}
         />
       )}
     </Layout>
