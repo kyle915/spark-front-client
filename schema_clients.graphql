@@ -2831,6 +2831,13 @@ type Job implements Node {
   national: Boolean!
   ongoing: Boolean!
   coordinates: [Float!]
+  lifecycleStatus: String!
+  totalHours: Float
+  hourlyRate: Float
+  uniformNotes: String
+  favoritesOnly: Boolean!
+  postedAt: String
+  maxApplications: Int
   jobTitle: JobTitle!
   otherTitle: JobTitle
   event: Event!
@@ -2844,6 +2851,47 @@ type Job implements Node {
   ambassadorJobs: [AmbassadorJob!]!
   applied: Boolean!
   briefing: JobBriefingPayload!
+}
+
+type JobApplication {
+  uuid: String!
+  status: String!
+  note: String!
+  appliedAt: String!
+  decidedAt: String
+  ambassadorUuid: String!
+  ambassadorFirstName: String!
+  ambassadorLastName: String!
+  ambassadorEmail: String!
+}
+
+input PostJobInput {
+  clientMutationId: ID = null
+  jobId: ID!
+  totalHours: Float = null
+  hourlyRate: Float = null
+  uniformNotes: String = null
+  favoritesOnly: Boolean = null
+  maxApplications: Int = null
+}
+
+input OpenJobToAllInput {
+  clientMutationId: ID = null
+  jobId: ID!
+}
+
+input AssignAmbassadorToJobInput {
+  clientMutationId: ID = null
+  jobId: ID!
+  ambassadorId: ID!
+}
+
+type JobLifecycleResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  jobUuid: String
+  lifecycleStatus: String
 }
 
 type JobBriefingPayload {
@@ -3350,6 +3398,9 @@ type BulkCloneRequestResponse {
 }
 
 type Mutation {
+  postJob(input: PostJobInput!): JobLifecycleResponse!
+  openJobToAll(input: OpenJobToAllInput!): JobLifecycleResponse!
+  assignAmbassadorToJob(input: AssignAmbassadorToJobInput!): JobLifecycleResponse!
   createBriefingTemplate(input: CreateBriefingTemplateInput!): BriefingTemplateResponse!
   updateBriefingTemplate(input: UpdateBriefingTemplateInput!): BriefingTemplateResponse!
   archiveBriefingTemplate(input: ArchiveBriefingTemplateInput!): BriefingTemplateResponse!
@@ -3831,6 +3882,7 @@ type WingspanPayment {
 }
 
 type Query {
+  jobApplications(jobId: ID!): [JobApplication!]!
   briefingTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [BriefingTemplate!]!
   jobBriefing(jobId: ID!): JobBriefingPayload
   academyModulesAdmin(filters: AcademyModuleFiltersInput = null): [AcademyModule!]!

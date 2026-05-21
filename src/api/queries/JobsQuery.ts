@@ -36,6 +36,13 @@ export const JobsQuery = graphql`
           closed
           ongoing
           national
+          lifecycleStatus
+          totalHours
+          hourlyRate
+          uniformNotes
+          favoritesOnly
+          postedAt
+          maxApplications
           tenantId
           jobTitle {
             __typename

@@ -2,6 +2,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
+import PageErrorBoundary from "@/layout/PageErrorBoundary";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { MissingRecapEventsQuery } from "@/api/queries/MissingRecapEventsQuery";
@@ -492,18 +493,20 @@ export default function SparkRecapsMissing() {
           </div>
         </div>
 
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-8 text-center"
-              style={{ color: "rgba(255,255,255,0.45)" }}
-            >
-              Loading missing recaps…
-            </div>
-          }
-        >
-          <Inner tenantId={tenantId ?? null} lookbackDays={lookbackDays} />
-        </Suspense>
+        <PageErrorBoundary label="missing recaps">
+          <Suspense
+            fallback={
+              <div
+                className="spark-card p-8 text-center"
+                style={{ color: "rgba(255,255,255,0.45)" }}
+              >
+                Loading missing recaps…
+              </div>
+            }
+          >
+            <Inner tenantId={tenantId ?? null} lookbackDays={lookbackDays} />
+          </Suspense>
+        </PageErrorBoundary>
       </div>
     </Layout>
   );

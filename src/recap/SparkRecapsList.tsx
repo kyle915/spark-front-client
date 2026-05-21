@@ -4,6 +4,8 @@ import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/RecapsQuery.graphql";
+import { GetCustomRecapsQuery } from "@/api/queries/CustomRecapsQuery";
+import type { CustomRecapsQuery as CustomRecapsQueryType } from "@api/queries/__generated__/CustomRecapsQuery.graphql";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { GenerateCampaignReportPdfMutation } from "@/api/mutations/GenerateCampaignReportPdfMutation";
@@ -47,6 +49,10 @@ type Recap = {
   // for this activation" in one click.
   requestUuid: string | null;
   requestShortId: string | null;
+  // Distinguishes a standard recap row from a customRecap row so the
+  // open-card click can route to /recap/view-custom/:uuid instead of
+  // /recap/view/:uuid.
+  isCustom: boolean;
 };
 
 // Compute a 0-3 completeness score from the signals already in the
@@ -376,8 +382,20 @@ const RecapsListInner: React.FC<{
     { fetchPolicy: "store-or-network" },
   );
 
+  // Borjomi (and other custom-template tenants) file via customRecaps
+  // instead of the standard recaps table. Query both in parallel and
+  // merge — tenants that don't use customRecaps just get an empty list.
+  const customData = useLazyLoadQuery<CustomRecapsQueryType>(
+    GetCustomRecapsQuery,
+    {
+      first: pageSize,
+      filters: tenantId ? { tenantId } : null,
+    },
+    { fetchPolicy: "store-or-network" },
+  );
+
   const recaps: Recap[] = useMemo(() => {
-    return (
+    const std =
       data?.recaps?.edges
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
@@ -416,10 +434,45 @@ const RecapsListInner: React.FC<{
             requestShortId: requestUuid
               ? `R-${String(requestUuid).slice(-4).toUpperCase()}`
               : null,
+            isCustom: false,
           };
-        }) ?? []
-    );
-  }, [data]);
+        }) ?? [];
+
+    const custom =
+      customData?.customRecaps?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
+        ?.map((n) => {
+          // Pick the first image-typed file as the hero. URL is stored
+          // directly on customRecapFiles (already includes bucket prefix
+          // OR is a relative key — both work in <img src>).
+          const heroFile = (n.customRecapFiles ?? []).find((f) => {
+            const ext = (f?.fileType?.name ?? "").toLowerCase();
+            return ["jpg", "jpeg", "png", "webp", "gif"].includes(ext);
+          });
+          const hero = heroFile?.url ? recapFileUrl(heroFile.url) : null;
+          const retailerName = n.retailer?.name ?? "—";
+          const stateCode = (n.state as { code?: string } | null)?.code ?? null;
+          return {
+            id: String(n.id),
+            uuid: String(n.uuid),
+            name: n.name ?? n.event?.name ?? "Untitled recap",
+            date: n.event?.date ?? n.createdAt ?? "",
+            retailerName,
+            stateCode,
+            approved: Boolean(n.approved),
+            heroImage: hero,
+            fileCount: (n.customRecapFiles ?? []).length,
+            engagements: n.totalEngagements ?? null,
+            productsSold: null,
+            requestUuid: null,
+            requestShortId: null,
+            isCustom: true,
+          };
+        }) ?? [];
+
+    return [...std, ...custom];
+  }, [data, customData]);
 
   const retailers = useMemo(
     () =>
@@ -448,11 +501,23 @@ const RecapsListInner: React.FC<{
     onMeta({
       retailers,
       states,
-      total: data?.recaps?.totalCount ?? recaps.length,
+      // Sum both totals so Borjomi-style tenants see their customRecap
+      // count in the header strip instead of "0 PUBLISHED".
+      total:
+        (data?.recaps?.totalCount ?? 0) +
+        (customData?.customRecaps?.totalCount ?? 0) ||
+        recaps.length,
       totalConsumers,
       totalProducts,
     });
-  }, [retailers, states, data?.recaps?.totalCount, recaps, onMeta]);
+  }, [
+    retailers,
+    states,
+    data?.recaps?.totalCount,
+    customData?.customRecaps?.totalCount,
+    recaps,
+    onMeta,
+  ]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -512,7 +577,13 @@ const RecapsListInner: React.FC<{
           recap={r}
           selected={selectedIds.has(r.id)}
           onToggleSelect={() => onToggleSelected(r.id)}
-          onOpen={() => navigate(`/recap/view/${r.uuid}`)}
+          onOpen={() =>
+            navigate(
+              r.isCustom
+                ? `/recap/view-custom/${r.uuid}`
+                : `/recap/view/${r.uuid}`,
+            )
+          }
           onOpenRequest={(reqUuid) =>
             navigate(`/request/view/${reqUuid}`, {
               state: { from: "/recaps/list" },
