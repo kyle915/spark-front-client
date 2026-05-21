@@ -85,6 +85,16 @@ export const RequestsQuery = graphql`
             name
             slug
           }
+          # Mapped reviewer — set after state-based RMM routing for
+          # Liquid Death. Powers the Approvals page user filter so
+          # admins can slice "show me requests assigned to <user>".
+          rmmAsigned {
+            id
+            uuid
+            firstName
+            lastName
+            email
+          }
           event {
             __typename
             id

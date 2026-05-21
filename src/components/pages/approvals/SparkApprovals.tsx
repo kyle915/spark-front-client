@@ -37,6 +37,11 @@ type Row = {
   statusNote: string;
   /** Hours the request has been sitting in pending. */
   pendingHours: number | null;
+  /** Two-letter US state code, used for the state filter. */
+  stateCode: string;
+  /** Mapped reviewer (rmmAsigned) — id + display name. */
+  mappedUserId: string;
+  mappedUserName: string;
 };
 
 async function callApprovalMutation(
@@ -325,6 +330,17 @@ const ApprovalsInner: React.FC = () => {
       const pendingHours = Number.isFinite(createdMs)
         ? Math.max(0, Math.round((Date.now() - createdMs) / 3_600_000))
         : null;
+      // Mapped reviewer is what powers the "User" filter — for the
+      // Liquid Death routing path, this is the territory RMM. Falls
+      // back to the requester (client / distributor) if no RMM is
+      // assigned yet.
+      const rmm = n.rmmAsigned;
+      const mappedUserId = rmm?.id ? String(rmm.id) : "";
+      const mappedUserName = rmm
+        ? [rmm.firstName, rmm.lastName].filter(Boolean).join(" ").trim() ||
+          rmm.email ||
+          "—"
+        : "—";
       return {
         id: String(n.id),
         uuid: String(n.uuid),
@@ -336,6 +352,9 @@ const ApprovalsInner: React.FC = () => {
         source: "external" as const,
         statusNote: `Awaiting review · ${n.status?.name ?? "Pending"}`,
         pendingHours,
+        stateCode: stateCode ?? "",
+        mappedUserId,
+        mappedUserName,
       };
     };
 
@@ -365,6 +384,12 @@ const ApprovalsInner: React.FC = () => {
   // SLA-only filter — when ON, show only requests pending >72h.
   // Defaults OFF so the queue isn't hidden when there are no breaches.
   const [slaOnly, setSlaOnly] = useState(false);
+  // User filter — show only requests mapped to this specific reviewer
+  // (rmmAsigned). "" = all users. Populated from the union of all
+  // mapped users across the visible queue.
+  const [userFilter, setUserFilter] = useState<string>("");
+  // State filter — two-letter state code or "" for all.
+  const [stateFilter, setStateFilter] = useState<string>("");
   const searchRef = useRef<HTMLInputElement | null>(null);
   // Index of the keyboard-focused row (j/k navigation). -1 = no focus.
   const [focusedIdx, setFocusedIdx] = useState<number>(-1);
@@ -391,9 +416,33 @@ const ApprovalsInner: React.FC = () => {
         .filter((r) => {
           if (!slaOnly) return true;
           return typeof r.pendingHours === "number" && r.pendingHours >= 72;
-        }),
-    [pendingRows, removedIds, search, slaOnly],
+        })
+        .filter((r) => !userFilter || r.mappedUserId === userFilter)
+        .filter((r) => !stateFilter || r.stateCode === stateFilter),
+    [pendingRows, removedIds, search, slaOnly, userFilter, stateFilter],
   );
+
+  // Derived option lists for the dropdowns — built off the FULL pending
+  // set (not the filtered rows) so picking one filter doesn't empty the
+  // other's options.
+  const userOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of pendingRows) {
+      if (r.mappedUserId && !map.has(r.mappedUserId)) {
+        map.set(r.mappedUserId, r.mappedUserName);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [pendingRows]);
+  const stateOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of pendingRows) {
+      if (r.stateCode) set.add(r.stateCode);
+    }
+    return Array.from(set).sort();
+  }, [pendingRows]);
 
   const showAlert = useAlertStore((s) => s.showAlert);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -792,9 +841,61 @@ const ApprovalsInner: React.FC = () => {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search pending queue — venue, requester, REQ-id…  ( / to focus )"
-        className="flex-1 bg-transparent text-sm focus:outline-none"
+        className="flex-1 bg-transparent text-sm focus:outline-none min-w-[180px]"
         style={{ color: "var(--spark-text)" }}
       />
+      {/* User filter — narrow the queue to a specific mapped reviewer.
+          Only renders when there's more than one user across the
+          pending set, since a single-user filter is just noise. */}
+      {userOptions.length > 1 && (
+        <select
+          value={userFilter}
+          onChange={(e) => setUserFilter(e.target.value)}
+          className="mono text-[10px] px-2.5 py-1.5 rounded-md bg-transparent"
+          style={{
+            letterSpacing: "0.14em",
+            color: userFilter
+              ? "var(--spark-lime)"
+              : "rgba(255,255,255,0.65)",
+            border: `1px solid ${
+              userFilter ? "rgba(197,245,70,0.4)" : "var(--spark-border)"
+            }`,
+          }}
+          title="Filter pending queue by mapped reviewer"
+        >
+          <option value="">ALL USERS</option>
+          {userOptions.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name.toUpperCase()}
+            </option>
+          ))}
+        </select>
+      )}
+      {/* State filter — same pattern. */}
+      {stateOptions.length > 1 && (
+        <select
+          value={stateFilter}
+          onChange={(e) => setStateFilter(e.target.value)}
+          className="mono text-[10px] px-2.5 py-1.5 rounded-md bg-transparent"
+          style={{
+            letterSpacing: "0.14em",
+            color: stateFilter
+              ? "var(--spark-lime)"
+              : "rgba(255,255,255,0.65)",
+            border: `1px solid ${
+              stateFilter ? "rgba(197,245,70,0.4)" : "var(--spark-border)"
+            }`,
+          }}
+          title="Filter pending queue by US state"
+        >
+          <option value="">ALL STATES</option>
+          {stateOptions.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+      )}
       {/* SLA-breach quick-filter — only renders when there's actually
           something to filter. Toggles between "show only >72h pending"
           and the full queue. */}
