@@ -1,10 +1,11 @@
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { JobsQuery } from "@/api/queries/JobsQuery";
 import type { JobsQuery as JobsQueryType } from "@api/queries/__generated__/JobsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import BriefingTemplatesPanel from "./BriefingTemplatesPanel";
 
 /**
  * Spark v2 — Jobs board.
@@ -175,6 +176,7 @@ const JobsInner: React.FC = () => {
 
 export default function SparkJobs() {
   const navigate = useNavigate();
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   return (
     <Layout>
       <div className="space-y-6 max-w-7xl">
@@ -199,14 +201,16 @@ export default function SparkJobs() {
           </div>
           <div className="flex gap-2 flex-wrap">
             <button
+              onClick={() => setTemplatesOpen(true)}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "transparent",
                 color: "var(--spark-text)",
                 border: "1px solid var(--spark-border)",
               }}
+              title="Manage BA briefing templates"
             >
-              📋 Templates
+              📋 Briefing templates
             </button>
             <button
               onClick={() => navigate("/requests/create")}
@@ -274,6 +278,11 @@ export default function SparkJobs() {
           <JobsInner />
         </Suspense>
       </div>
+
+      <BriefingTemplatesPanel
+        open={templatesOpen}
+        onClose={() => setTemplatesOpen(false)}
+      />
     </Layout>
   );
 }

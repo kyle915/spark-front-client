@@ -2843,6 +2843,105 @@ type Job implements Node {
   attendances: [Attendance!]!
   ambassadorJobs: [AmbassadorJob!]!
   applied: Boolean!
+  briefing: JobBriefingPayload!
+}
+
+type JobBriefingPayload {
+  title: String!
+  body: String!
+  templateUuid: String
+  attachments: [JobBriefingAttachment!]!
+}
+
+type JobBriefingAttachment {
+  uuid: String!
+  name: String!
+  url: String!
+  contentType: String!
+  size: Int
+  createdAt: String!
+}
+
+type BriefingTemplate implements Node {
+  id: ID!
+  uuid: String!
+  name: String!
+  title: String!
+  body: String!
+  isArchived: Boolean!
+  tenantId: ID!
+  createdAt: String!
+  updatedAt: String!
+  attachments: [BriefingTemplateAttachment!]!
+}
+
+type BriefingTemplateAttachment {
+  uuid: String!
+  name: String!
+  url: String!
+  contentType: String!
+  size: Int
+  createdAt: String!
+}
+
+input BriefingTemplateAttachmentInput {
+  clientMutationId: ID = null
+  name: String!
+  url: String!
+  contentType: String = null
+  size: Int = null
+}
+
+input CreateBriefingTemplateInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  title: String = null
+  body: String = null
+  attachments: [BriefingTemplateAttachmentInput!] = null
+}
+
+input UpdateBriefingTemplateInput {
+  clientMutationId: ID = null
+  templateId: ID!
+  name: String = null
+  title: String = null
+  body: String = null
+  attachments: [BriefingTemplateAttachmentInput!] = null
+}
+
+input ArchiveBriefingTemplateInput {
+  clientMutationId: ID = null
+  templateId: ID!
+}
+
+input SetJobBriefingInput {
+  clientMutationId: ID = null
+  jobId: ID!
+  title: String = null
+  body: String = null
+  attachments: [BriefingTemplateAttachmentInput!] = null
+}
+
+input ApplyBriefingTemplateInput {
+  clientMutationId: ID = null
+  jobId: ID!
+  templateId: ID!
+}
+
+type BriefingTemplateResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  briefingTemplate: BriefingTemplate
+}
+
+type JobBriefingResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  jobUuid: String
+  title: String
 }
 
 type JobCountableConnection {
@@ -3251,6 +3350,11 @@ type BulkCloneRequestResponse {
 }
 
 type Mutation {
+  createBriefingTemplate(input: CreateBriefingTemplateInput!): BriefingTemplateResponse!
+  updateBriefingTemplate(input: UpdateBriefingTemplateInput!): BriefingTemplateResponse!
+  archiveBriefingTemplate(input: ArchiveBriefingTemplateInput!): BriefingTemplateResponse!
+  setJobBriefing(input: SetJobBriefingInput!): JobBriefingResponse!
+  applyBriefingTemplate(input: ApplyBriefingTemplateInput!): JobBriefingResponse!
   bulkCloneRequest(input: BulkCloneRequestInput!): BulkCloneRequestResponse!
   createAcademyModule(input: CreateAcademyModuleInput!): AcademyModuleResponse!
   updateAcademyModule(input: UpdateAcademyModuleInput!): AcademyModuleResponse!
@@ -3727,6 +3831,8 @@ type WingspanPayment {
 }
 
 type Query {
+  briefingTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [BriefingTemplate!]!
+  jobBriefing(jobId: ID!): JobBriefingPayload
   academyModulesAdmin(filters: AcademyModuleFiltersInput = null): [AcademyModule!]!
   academyModule(uuid: ID!): AcademyModule
   wingspanStatus: WingspanStatus!

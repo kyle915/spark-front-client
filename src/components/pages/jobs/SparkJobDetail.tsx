@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
+import JobBriefingPanel from "./JobBriefingPanel";
 import { JobsQuery } from "@/api/queries/JobsQuery";
 import type { JobsQuery as JobsQueryType } from "@api/queries/__generated__/JobsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -278,6 +279,10 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           </div>
         </div>
       </div>
+
+      {/* BA Briefing — admin-authored, shown in BA mobile app. Real
+          data via jobBriefing(jobId); manage templates from /jobs. */}
+      <JobBriefingPanel jobId={node.id} />
 
       {/* Job brief — what to do, expect, bring + linked academy modules */}
       <div className="spark-card p-6 space-y-5">
