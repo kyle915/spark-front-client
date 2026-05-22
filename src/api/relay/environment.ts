@@ -27,16 +27,47 @@ async function fetchGraphQL(
 
   const result = await response.json();
 
-  // Check for token expiration error
+  // Check for token expiration error.
+  //
+  // Two distinct cases we have to tease apart:
+  //   1. The caller had a token that's now stale → real "session
+  //      expired" — refresh or kick to login.
+  //   2. There was NEVER a token (e.g. user just landed on /magic/
+  //      <token> and the first Relay query fired before the magic
+  //      link exchange completed) — this is "not logged in yet", not
+  //      "session expired." Show the alert and that user sees a
+  //      misleading bounce off the magic link flow.
+  //
+  // We also stop treating "introspection is disabled" as expiration
+  // — that's the backend's response to ANY unauthenticated request
+  // and only happens when there was no/invalid token to begin with.
+  // For that case we fall into the silent path below (no auth token
+  // → don't alert).
   if (result.errors) {
     const isTokenExpired = result.errors.some((error: { message: string }) => {
       const msg = error.message.toLowerCase();
       return (
         msg.includes("signature has expired") ||
-        msg.includes("introspection is disabled") ||
         msg.includes("error decoding signature")
       );
     });
+    const isUnauthenticated = result.errors.some(
+      (error: { message: string }) =>
+        error.message.toLowerCase().includes("introspection is disabled"),
+    );
+    // No token ever set + no refresh token → user is plain not signed
+    // in. Don't show "Session expired" — let the route guard handle
+    // the redirect (or in the magic-link case, let the exchange
+    // finish without flashing an error toast).
+    const onMagicRoute = window.location.pathname.startsWith("/magic/");
+    if (isUnauthenticated && !token && !onMagicRoute) {
+      return result;
+    }
+    if (isUnauthenticated && onMagicRoute) {
+      // Magic-link page handles its own auth — silently swallow this
+      // pre-exchange unauthenticated response.
+      return result;
+    }
 
     if (isTokenExpired) {
       const { refreshToken, logout } = useAuthStore.getState();
