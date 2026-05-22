@@ -9,6 +9,7 @@ import Layout from "@/layout/Layout";
 // from pulling Google Maps loader on every Create Request open.
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import useSparkRole from "@/hooks/useSparkRole";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
 import type { RequestMutation } from "@api/mutations/__generated__/RequestMutation.graphql";
 import { CreateDistributorMutation } from "@/api/mutations/CreateDistributorMutation";
@@ -55,6 +56,12 @@ const inputStyle: React.CSSProperties = {
 
 const SparkRequestInner: React.FC = () => {
   const { user, tenantId } = useAuthStore();
+  const role = useSparkRole();
+  // Admins use this same form via "+ Log event" — they shouldn't see
+  // the "route to RMM for approval" copy or the routing chip, and
+  // the submission should land as approved/scheduled directly
+  // instead of in the pending RMM queue.
+  const isAdminLog = !role.isClient;
   const showAlert = useAlertStore((s) => s.showAlert);
   const navigate = useNavigate();
 
@@ -538,8 +545,12 @@ const SparkRequestInner: React.FC = () => {
       clearDraft();
       showAlert(
         successes > 1
-          ? `Submitted ${successes} requests · auto-routed to your RMM.`
-          : "Request submitted · auto-routed to your RMM.",
+          ? isAdminLog
+            ? `Logged ${successes} events — on the Master Tracker.`
+            : `Submitted ${successes} requests · auto-routed to your RMM.`
+          : isAdminLog
+            ? "Event logged — on the Master Tracker."
+            : "Request submitted · auto-routed to your RMM.",
         "success",
       );
       navigate("/requests/list");
@@ -569,20 +580,21 @@ const SparkRequestInner: React.FC = () => {
             color: "rgba(255,255,255,0.45)",
           }}
         >
-          NEW REQUEST · EXPRESS MODE
+          {isAdminLog ? "LOG EVENT · ADMIN" : "NEW REQUEST · EXPRESS MODE"}
         </p>
         <h1
           className="display text-4xl font-bold mt-2"
           style={{ letterSpacing: "-0.04em" }}
         >
-          Tell us about the visit.
+          {isAdminLog ? "Log an event." : "Tell us about the visit."}
         </h1>
         <p
           className="mt-2"
           style={{ color: "rgba(255,255,255,0.55)" }}
         >
-          Six fields. We auto-route to your Ignite RMM for approval,
-          staffing, and scheduling.
+          {isAdminLog
+            ? "Six fields. Lands straight on the Master Tracker — no RMM approval cycle, no client-side notifications."
+            : "Six fields. We auto-route to your Ignite RMM for approval, staffing, and scheduling."}
         </p>
       </div>
 
@@ -1210,8 +1222,9 @@ const SparkRequestInner: React.FC = () => {
           className="mt-2 text-sm"
           style={{ color: "rgba(255,255,255,0.75)" }}
         >
-          Submission lands in the RMM's queue. Once approved, Spark auto-posts
-          a job and emails confirmation to your team.
+          {isAdminLog
+            ? "Submission lands on the Master Tracker as confirmed and a Pending Job spins up — no RMM approval needed."
+            : "Submission lands in the RMM's queue. Once approved, Spark auto-posts a job and emails confirmation to your team."}
         </p>
       </div>
 
@@ -1251,7 +1264,11 @@ const SparkRequestInner: React.FC = () => {
               opacity: isCommitting || !venue || !date ? 0.5 : 1,
             }}
           >
-            {isCommitting ? "Submitting…" : "Submit & route to RMM →"}
+            {isCommitting
+              ? "Submitting…"
+              : isAdminLog
+                ? "Log event →"
+                : "Submit & route to RMM →"}
           </button>
         </div>
       </div>
