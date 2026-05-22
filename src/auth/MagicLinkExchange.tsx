@@ -15,7 +15,6 @@ export default function MagicLinkExchange() {
   const [search] = useSearchParams();
   const navigate = useNavigate();
   const socialLogin = useAuthStore((s) => s.socialLogin);
-  const logout = useAuthStore((s) => s.logout);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -23,20 +22,12 @@ export default function MagicLinkExchange() {
       setError("Missing sign-in token.");
       return;
     }
-    // Clear any stale session BEFORE the exchange. Otherwise the
-    // global Relay env can fire a query with an expired JWT, show
-    // "Session expired", and bounce the user out of the magic-link
-    // page before our exchange completes.
-    try {
-      logout();
-    } catch {
-      // logout is best-effort; if there's nothing to clear, fine.
-    }
     (async () => {
       try {
-        // No Authorization header — the magic mutation is anonymous,
-        // and sending an old JWT can confuse the backend session
-        // (gqlauth re-issues tokens fresh on this path).
+        // Anonymous mutation — no Authorization header. The Relay
+        // env's "Session expired" alert is suppressed for /magic/*
+        // routes (see src/api/relay/environment.ts) so any auth-
+        // shell queries firing in parallel don't bounce the user.
         const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

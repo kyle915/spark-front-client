@@ -77,10 +77,67 @@ export default function TenantRoute({ component }: TenantRouteProps) {
         });
         setResolving(false);
       })
-      .catch(() => {
+      .catch((err) => {
         if (cancelled) return;
-        // Same posture as the legacy CompanySelector — API failure
-        // means the session probably isn't valid anymore.
+        // Only kick to login if the failure looks like a real auth
+        // problem. Transient/network errors (e.g. JWT not yet
+        // recognized server-side a few hundred ms after magic-link
+        // exchange) trigger a single retry — bouncing the user back
+        // to /login mid-sign-in is the most common loop we've seen.
+        const msg = String((err as Error)?.message || "").toLowerCase();
+        const looksLikeAuth =
+          msg.includes("signature") ||
+          msg.includes("expired") ||
+          msg.includes("not authorized") ||
+          msg.includes("permission");
+        if (!looksLikeAuth) {
+          // Soft retry once, then give up and surface the no-tenants
+          // state instead of an aggressive logout.
+          setTimeout(() => {
+            if (cancelled) return;
+            fetchQuery<TenantQueryType>(environment, TenantQuery, variables)
+              .toPromise()
+              .then((data) => {
+                if (cancelled) return;
+                const tenants = (data?.tenants?.edges ?? []).map((edge) => {
+                  const t = edge.node;
+                  return {
+                    id: t.id,
+                    uuid: String(t.uuid),
+                    logo: t.image,
+                    requestUrlName: t.requestUrlName,
+                    tenantSlug: t.tenantSlug,
+                  };
+                });
+                if (tenants.length === 0) {
+                  setNoTenants(true);
+                  setResolving(false);
+                  return;
+                }
+                const lastUuid = localStorage.getItem("@tenantUuid");
+                const preferred =
+                  (lastUuid && tenants.find((t) => t.uuid === lastUuid)) ||
+                  tenants[0];
+                selectTenant({
+                  tenantUuid: preferred.uuid,
+                  tenantId: preferred.id,
+                  logo: preferred.logo,
+                  requestUrlName: preferred.requestUrlName,
+                  tenantSlug: preferred.tenantSlug,
+                });
+                setResolving(false);
+              })
+              .catch(() => {
+                if (cancelled) return;
+                // Retry also failed → show no-tenants state, let user
+                // logout manually if they want.
+                setNoTenants(true);
+                setResolving(false);
+              });
+          }, 600);
+          return;
+        }
+        // Real auth failure — log out as before.
         logout();
         navigate("/login", { replace: true });
       });

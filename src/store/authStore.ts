@@ -89,22 +89,53 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (refreshToken) {
         localStorage.setItem("@refreshToken", refreshToken);
       }
-      localStorage.removeItem("@tenantUuid");
-      localStorage.removeItem("@tenantSlug");
-      const me = await fetchMe();
-
+      // Set token + isAuthenticated FIRST so any concurrent route guard
+      // re-render (PrivateRoute reads @token, TenantGuard reads
+      // store.user) sees the new session before fetchMe lands.
+      // Otherwise a slow `me` query can leave the store in a half-state
+      // where the token is in localStorage but the auth flag is false,
+      // bouncing the user back to /login mid-flow.
       set({
-        user: me,
         token,
         refreshToken,
-        tenantUuid: null,
-        tenantSlug: null,
         isAuthenticated: true,
+      });
+      let me: MeUser | null = null;
+      try {
+        me = await fetchMe();
+      } catch (meErr) {
+        // Profile fetch failed (most likely transient network or a
+        // backend hiccup). The session is still valid — keep the token,
+        // let the user proceed; TenantGuard will retry the tenant
+        // bootstrap on the next render. Surface the message but don't
+        // wipe the auth flag.
+        const msg =
+          (meErr as Error).message || "Could not load your profile.";
+        // eslint-disable-next-line no-console
+        console.warn("[auth] fetchMe failed after socialLogin:", msg);
+      }
+      set({
+        user: me,
+        // Don't blow away the last-used tenant on a fresh sign-in —
+        // TenantGuard will re-validate against the user's tenant list
+        // and either keep it (admin who switched tenants in the past)
+        // or pick the first available.
         loading: false,
       });
     } catch (err) {
       const error = err as Error;
+      // Hard failure (e.g. localStorage write blocked). Clear the
+      // partial state so we don't loop back into a broken session.
+      try {
+        localStorage.removeItem("@token");
+        localStorage.removeItem("@refreshToken");
+      } catch {
+        /* ignore */
+      }
       set({
+        token: null,
+        refreshToken: null,
+        isAuthenticated: false,
         error: error.message || "Error logging in",
         loading: false,
       });
