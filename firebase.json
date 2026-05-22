@@ -5,22 +5,23 @@
       "public": "dist",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [{ "source": "**", "destination": "/index.html" }],
+      "_headers_note": "Order matters: Firebase applies the LAST matching headers rule. We declare the catch-all no-cache first so it covers every SPA route (/, /login, /magic/*, /recap/*, etc.), then immutable on hashed assets — that rule wins for JS/CSS/fonts/images. Pinning no-cache only to /index.html was a bug: when a browser requests /, Firebase serves index.html but doesn't apply rules keyed to the literal /index.html path, so HTML got cached for an hour and clients stayed on stale bundles for up to that long.",
       "headers": [
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
         {
           "source": "**/*.@(js|css|woff|woff2|ttf|otf|png|jpg|jpeg|gif|webp|svg|ico)",
           "headers": [
             {
               "key": "Cache-Control",
               "value": "public, max-age=31536000, immutable"
-            }
-          ]
-        },
-        {
-          "source": "/index.html",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-cache, no-store, must-revalidate"
             }
           ]
         }
@@ -33,20 +34,20 @@
       "rewrites": [{ "source": "**", "destination": "/index.html" }],
       "headers": [
         {
+          "source": "**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
           "source": "**/*.@(js|css|woff|woff2|ttf|otf|png|jpg|jpeg|gif|webp|svg|ico)",
           "headers": [
             {
               "key": "Cache-Control",
               "value": "public, max-age=31536000, immutable"
-            }
-          ]
-        },
-        {
-          "source": "/index.html",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-cache, no-store, must-revalidate"
             }
           ]
         }
