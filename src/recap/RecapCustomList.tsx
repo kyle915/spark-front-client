@@ -31,7 +31,8 @@ import { EyeIcon } from "@heroicons/react/24/outline";
 
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "@/store/authStore";
-import { FilterIcon, FunnelXIcon } from "lucide-react";
+import { FilterIcon, FunnelXIcon, FileUpIcon } from "lucide-react";
+import ImportConnecteamPdfModal from "@/recap/ImportConnecteamPdfModal";
 import { useForm } from "react-hook-form";
 import FormInputText from "@/shared/FormInputText";
 import FormAutocomplete from "@/shared/FormAutocomplete";
@@ -228,6 +229,7 @@ type FilterOption = {
 const RecapCustomList = () => {
   const { tenantId } = useAuthStore();
   const refreshRef = useRef<(() => void) | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   const [eventAddress, setEventAddress] = useState<string>("");
   const [eventSearchInput, setEventSearchInput] = useState<string>("");
@@ -424,6 +426,14 @@ const RecapCustomList = () => {
             </div>
             
             <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => setImportOpen(true)}
+              >
+                <FileUpIcon className="w-4 h-4" />
+                Import Connecteam PDF
+              </button>
                <button
                 type="button"
                 className="btn btn-outline btn-sm"
@@ -518,6 +528,16 @@ const RecapCustomList = () => {
           )}
         </div>
       </div>
+
+      {importOpen && (
+        <ImportConnecteamPdfModal
+          onClose={() => setImportOpen(false)}
+          onImported={() => {
+            // Refresh the table so the freshly-drafted recap appears.
+            refreshRef.current?.();
+          }}
+        />
+      )}
     </Layout>
   );
 };

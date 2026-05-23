@@ -1361,25 +1361,6 @@ input ImportConnecteamRecapPdfInput {
   name: String = null
 }
 
-type ImportConnecteamRecapPdfStat {
-  pdfLabel: String!
-  pdfValue: String!
-  fieldName: String
-  fieldId: ID
-  score: Float
-  skippedReason: String
-}
-
-type ImportConnecteamRecapPdfResponse {
-  success: Boolean!
-  message: String!
-  clientMutationId: ID
-  customRecap: CustomRecap
-  matchedCount: Int!
-  unmatchedCount: Int!
-  stats: [ImportConnecteamRecapPdfStat!]!
-}
-
 input CreateDistributorInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -1872,6 +1853,25 @@ type CustomRecapDetailResponse {
   message: String!
   clientMutationId: ID
   customRecap: CustomRecap
+}
+
+type ImportConnecteamRecapPdfStat {
+  pdfLabel: String!
+  pdfValue: String!
+  fieldName: String
+  fieldId: ID
+  score: Float
+  skippedReason: String
+}
+
+type ImportConnecteamRecapPdfResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  customRecap: CustomRecap
+  matchedCount: Int!
+  unmatchedCount: Int!
+  stats: [ImportConnecteamRecapPdfStat!]!
 }
 
 """
