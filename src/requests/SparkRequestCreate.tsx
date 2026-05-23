@@ -523,9 +523,14 @@ const SparkRequestInner: React.FC = () => {
                 distributors.find((d) => String(d.id) === distributorId)?.name ?? undefined,
               notes: notesPlus || undefined,
               details: [],
+              // CreateRequestProductInput on the backend takes only
+              // productId — there's no quantity field on the Request
+              // mutation. (Sample-count is a recap-time concept, not
+              // a request-time one.) Sending `quantity` here was a
+              // GraphQL validation error: "Field 'quantity' is not
+              // defined by type 'CreateRequestProductInput'".
               products: Array.from(selectedProducts).map((productId) => ({
                 productId,
-                quantity: 1,
               })),
             },
           },
