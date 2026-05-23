@@ -179,6 +179,9 @@ const SparkRecapTemplates = lazyDefault(
 const RecapCustomList = lazyDefault(() => import("@/recap/RecapCustomList"));
 const RecapView = lazyDefault(() => import("@/recap/RecapView"));
 const RecapCustomView = lazyDefault(() => import("@/recap/RecapCustomView"));
+const RecapImportConnecteam = lazyDefault(
+  () => import("@/recap/RecapImportConnecteam"),
+);
 
 // Calendar / Scheduling
 const SparkCalendar = lazyDefault(
@@ -717,6 +720,7 @@ const RecapLinks = {
     { path: "/recap/list", name: "List", Icon: Bars4Icon },
     { path: "/recap/create", name: "New Recap", Icon: PlusCircleIcon },
     { path: "/recaps/custom-list", name: "Custom List", Icon: QueueListIcon },
+    { path: "/recap/import-connecteam", name: "Import PDF", Icon: PlusCircleIcon },
   ],
 
   routes: [
@@ -729,6 +733,11 @@ const RecapLinks = {
     {
       path: "/recaps/custom-list",
       component: <RecapCustomList />,
+      isPublic: false,
+    },
+    {
+      path: "/recap/import-connecteam",
+      component: <AdminOnly><RecapImportConnecteam /></AdminOnly>,
       isPublic: false,
     },
     { path: "/recap/view/:uuid", component: <SparkRecapView />, isPublic: false },
