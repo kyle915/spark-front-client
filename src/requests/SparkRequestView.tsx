@@ -238,13 +238,52 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
     (firstEvent?.address as string | undefined | null) ?? null;
 
   if (!request) {
+    // Most common reason this fires for a non-staff user: the request
+    // exists but belongs to a different tenant from the one they're
+    // currently switched to. Staff/superusers get a tenant bypass on
+    // the resolver (spark-api PR #540) so for them this state means
+    // the request really doesn't exist (deleted or bad URL).
     return (
-      <div
-        className="spark-card p-10 text-center max-w-3xl"
-        style={{ color: "rgba(255,255,255,0.55)" }}
-      >
-        Request not found.
-      </div>
+      <Layout>
+        <div
+          className="spark-card p-10 text-center max-w-3xl mx-auto space-y-3"
+          style={{ color: "rgba(255,255,255,0.7)" }}
+        >
+          <h2 className="text-xl font-semibold" style={{ color: "#fff" }}>
+            Request not found.
+          </h2>
+          <p style={{ color: "rgba(255,255,255,0.55)" }}>
+            This request may belong to a different tenant. Use the
+            sidebar's tenant picker to switch tenants, or head back to
+            the Master Tracker.
+          </p>
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-lg text-sm"
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.18)",
+                color: "rgba(255,255,255,0.8)",
+              }}
+              onClick={() => navigate(from)}
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 rounded-lg text-sm font-semibold"
+              style={{
+                background: "var(--spark-lime, #c5f546)",
+                color: "#0a0d09",
+              }}
+              onClick={() => navigate("/requests/list")}
+            >
+              Master Tracker
+            </button>
+          </div>
+        </div>
+      </Layout>
     );
   }
 
