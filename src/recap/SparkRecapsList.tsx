@@ -16,6 +16,8 @@ import useSparkRole from "@/hooks/useSparkRole";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import EmailCampaignReportModal from "./EmailCampaignReportModal";
+import ImportConnecteamPdfModal from "./ImportConnecteamPdfModal";
+import { FileUpIcon } from "lucide-react";
 
 // Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
 // keeps the sticky action bar's button disabled with a friendly
@@ -664,6 +666,7 @@ const RmmFilterDropdown: React.FC<{
 export default function SparkRecapsList() {
   const { tenantId } = useAuthStore();
   const { isClient } = useSparkRole();
+  const [importOpen, setImportOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
@@ -909,6 +912,20 @@ export default function SparkRecapsList() {
           </div>
           <div className="flex gap-2 flex-wrap items-center">
             <LinkedSheetChip />
+            {!isClient && (
+              <button
+                onClick={() => setImportOpen(true)}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2"
+                style={{
+                  background: "var(--spark-lime, #c5f546)",
+                  color: "#0a0d09",
+                }}
+                title="Drop a Connecteam-exported recap PDF — text + photos auto-populate a draft recap."
+              >
+                <FileUpIcon className="w-4 h-4" />
+                Import Connecteam PDF
+              </button>
+            )}
             <button
               onClick={copyForSheets}
               disabled={
@@ -1271,6 +1288,11 @@ export default function SparkRecapsList() {
           recapIds={orderedSelectedIds}
           onClose={() => setEmailReportOpen(false)}
           onSent={clearSelection}
+        />
+      )}
+      {importOpen && (
+        <ImportConnecteamPdfModal
+          onClose={() => setImportOpen(false)}
         />
       )}
     </Layout>
