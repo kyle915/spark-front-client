@@ -31,9 +31,12 @@ import { useAlertStore } from "@/store/alertStore";
 type Stat = {
   pdfLabel: string;
   pdfValue: string;
-  fieldName: string | null;
-  score: number | null;
-  skippedReason: string | null;
+  // Relay codegen returns nullable fields as `string | null | undefined`,
+  // not `string | null` — match that here so the .map() below compiles
+  // without coercing every field with `?? null`.
+  fieldName: string | null | undefined;
+  score: number | null | undefined;
+  skippedReason: string | null | undefined;
 };
 
 type Props = {
