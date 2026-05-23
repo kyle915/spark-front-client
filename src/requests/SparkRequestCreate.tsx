@@ -245,13 +245,12 @@ const SparkRequestInner: React.FC = () => {
   // Mode (handled by defaults + Edit Request); leaving rmmId here so
   // the mutation input still includes it when set via URL param.
 
-  // Detect "Retail Sampling" so we can require a Store Number on
-  // those activations only. Falls back to false if the type list
-  // hasn't loaded or the user hasn't picked yet.
-  const isRetailSampling = useMemo(() => {
-    const t = requestTypes.find((rt) => String(rt?.id) === requestTypeId);
-    return (t?.name ?? "").toLowerCase().includes("retail");
-  }, [requestTypes, requestTypeId]);
+  // Store Number used to be required when activation type matched
+  // "Retail Sampling" — see git history for the gate. Borjomi flagged
+  // that some retailers (boutique stores, hotels, indie spots) don't
+  // use numeric store IDs at all, so the gate gets in the way. The
+  // useMemo is intentionally gone; Store Number is now always
+  // optional regardless of activation type.
   const [notes, setNotes] = useState(qpNotes);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
     new Set(qpProducts),
@@ -458,13 +457,9 @@ const SparkRequestInner: React.FC = () => {
       showAlert("Fill in venue, date, time, and type.", "warning");
       return;
     }
-    if (isRetailSampling && !storeNumber.trim()) {
-      showAlert(
-        "Store number is required for Retail Sampling activations.",
-        "warning",
-      );
-      return;
-    }
+    // Store number is optional — some retailers (Borjomi-distributed
+    // boutique stores, hotels, etc.) don't use numeric store IDs at
+    // all. Surface it as a "useful if you have it" field, not a gate.
     const allDates = [date, ...extraDates.filter(Boolean)];
     const geocoded = await geocode(address || venue);
     const coords: ReadonlyArray<number> = geocoded ?? [0, 0];
@@ -472,10 +467,12 @@ const SparkRequestInner: React.FC = () => {
     // visible to the RMM until first-class fields are added to the
     // mutation input. Store number is searchable from the Tracker
     // even though it's not a typed column yet.
+    // Embed store number in notes when present — works for any
+    // activation type, not just Retail Sampling, because the BA
+    // still finds it useful at on-premise venues with multi-tap IDs
+    // or event activations on a numbered floor/booth.
     const notesPlus = [
-      isRetailSampling && storeNumber.trim()
-        ? `Store #: ${storeNumber.trim()}`
-        : null,
+      storeNumber.trim() ? `Store #: ${storeNumber.trim()}` : null,
       notes,
       `BA count: ${baCount}`,
       allDates.length > 1
@@ -487,6 +484,11 @@ const SparkRequestInner: React.FC = () => {
 
     let successes = 0;
     const failures: string[] = [];
+    // Keep the actual backend message for the alert. The backend returns
+    // structured errors (`createRequest.success === false` + `message`)
+    // for validation problems — opaque "Try again" hides exactly the
+    // information Kyle's team needs to fix the submission.
+    const failureMessages: string[] = [];
 
     for (const d of allDates) {
       const composedName =
@@ -528,12 +530,23 @@ const SparkRequestInner: React.FC = () => {
             },
           },
           onCompleted: (res) => {
-            if (res.createRequest?.success) successes += 1;
-            else failures.push(d);
+            if (res.createRequest?.success) {
+              successes += 1;
+            } else {
+              failures.push(d);
+              const msg = res.createRequest?.message;
+              if (msg && !failureMessages.includes(msg)) {
+                failureMessages.push(msg);
+              }
+            }
             resolve();
           },
-          onError: () => {
+          onError: (err) => {
             failures.push(d);
+            const msg = (err as Error)?.message;
+            if (msg && !failureMessages.includes(msg)) {
+              failureMessages.push(msg);
+            }
             resolve();
           },
         });
@@ -557,12 +570,21 @@ const SparkRequestInner: React.FC = () => {
     } else if (successes > 0) {
       // Partial success — leave the draft alone so kyle can fix the
       // bad rows without re-entering the good ones.
+      const detail = failureMessages.length
+        ? ` — ${failureMessages.join("; ")}`
+        : "";
       showAlert(
-        `Submitted ${successes} · ${failures.length} failed: ${failures.join(", ")}`,
+        `Submitted ${successes} · ${failures.length} failed: ${failures.join(", ")}${detail}`,
         "warning",
       );
     } else {
-      showAlert(`All submissions failed. Try again.`, "error");
+      // Whole batch failed — surface the actual backend reason so
+      // the user can act on it. "Try again" without context is the
+      // worst kind of error UX.
+      const detail = failureMessages.length
+        ? failureMessages.join("; ")
+        : "Try again or contact support.";
+      showAlert(`Couldn't log event: ${detail}`, "error");
     }
   };
 
@@ -934,32 +956,72 @@ const SparkRequestInner: React.FC = () => {
             </div>
           </div>
 
-          {/* Store Number — required when activation type is Retail
-              Sampling so the BA knows which specific store to walk
-              into. Submitted via notes (prepended) until a typed
-              column ships on the Request model. */}
-          {isRetailSampling && (
-            <div>
+          {/* Details: Address, Start/End time, Store Number.
+              These used to be Express-Mode-hidden with defaults —
+              fine for Retail Sampling where the venue lookup +
+              12-4 PM is usually right, but breaks for tenants like
+              Borjomi (boutique stores, custom hours, no numeric
+              store IDs). Now always visible, all optional. */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="md:col-span-2">
               <label className="label-mini block mb-1.5">
-                Store number *
+                Store address
               </label>
               <input
                 style={inputStyle}
-                value={storeNumber}
-                onChange={(e) => setStoreNumber(e.target.value)}
-                placeholder="e.g. 1247"
-                required
-                inputMode="numeric"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="123 Main St, City, ST 12345"
               />
               <p
                 className="text-xs mt-1"
                 style={{ color: "rgba(255,255,255,0.45)" }}
               >
-                The retailer's store number identifies which location
-                the BA reports to.
+                Auto-fills when you pick a venue from suggestions.
+                Override here if needed.
               </p>
             </div>
-          )}
+            <div>
+              <label className="label-mini block mb-1.5">
+                Start time
+              </label>
+              <input
+                style={inputStyle}
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label-mini block mb-1.5">
+                End time
+              </label>
+              <input
+                style={inputStyle}
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="label-mini block mb-1.5">
+                Store number
+              </label>
+              <input
+                style={inputStyle}
+                value={storeNumber}
+                onChange={(e) => setStoreNumber(e.target.value)}
+                placeholder="Optional — e.g. 1247"
+              />
+              <p
+                className="text-xs mt-1"
+                style={{ color: "rgba(255,255,255,0.45)" }}
+              >
+                Optional. Some retailers (boutiques, hotels, indie
+                stores) don't use numeric store IDs — leave blank.
+              </p>
+            </div>
+          </div>
 
           {/* Bulk dates — add more visits at the same venue */}
           {extraDates.length > 0 && (
@@ -1069,25 +1131,13 @@ const SparkRequestInner: React.FC = () => {
             </div>
           </div>
 
-          {/* Address / start-end time / time zone / RMM routing used
-              to live here as their own visible section. Removed — those
-              fields are now sensibly defaulted and only surface on the
-              Edit Request page when a power user wants to tweak them.
-
-                - Address: auto-fills when Venue is picked from a
-                  Google Places suggestion (handled in the Venue input
-                  via onResolved). Empty otherwise — backend tolerates
-                  null.
-                - Start/end time: default 12:00 PM – 4:00 PM (set by
-                  qpStart / qpEnd useState init).
-                - Time zone: derived from the address geocode on the
-                  backend if not set.
-                - Routing: empty string means "first available RMM" —
-                  the Inbox shows which one accepted.
-
-              Keeps Express Mode at 5–6 fields. The values are still
-              wired into the mutation input (see distributorId / startTime
-              / endTime / timezoneId / rmmId in the submit handler). */}
+          {/* Address + start/end time are now in the Details block
+              above (kept always-visible after the Borjomi log-event
+              regression where users had no way to set them).
+              Timezone is still derived from the geocode and isn't
+              user-facing. RMM routing is empty string = first
+              available; that's still hidden — the Inbox shows which
+              RMM accepted. */}
         </div>
 
         {/* Products picker */}
