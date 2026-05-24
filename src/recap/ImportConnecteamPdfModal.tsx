@@ -209,72 +209,99 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
         <div className="p-4 space-y-4 overflow-y-auto">
           {!result && (
             <>
-              {/* Event picker */}
+              {/* Event picker. Once an event is selected the input
+                  reads back the picked name and the suggestions list
+                  collapses (re-opens the moment the user starts to
+                  edit the search again). Nevena's report: clicking
+                  a row marked it selected but the input stayed at
+                  her partial search "A" — felt like the click did
+                  nothing. */}
               <div>
                 <label className="label-mini block mb-1.5">
                   Event · search by name
                 </label>
-                <input
-                  className="w-full"
-                  placeholder="Albertsons Laguna Niguel · 05/22…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  style={{
-                    padding: "8px 10px",
-                    borderRadius: 8,
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    color: "#fff",
-                  }}
-                />
-                <div
-                  className="mt-2 rounded-lg overflow-y-auto"
-                  style={{
-                    maxHeight: 220,
-                    border: "1px solid rgba(255,255,255,0.08)",
-                  }}
-                >
-                  {events.length === 0 ? (
-                    <div
-                      className="text-xs px-3 py-2"
-                      style={{ color: "rgba(255,255,255,0.5)" }}
+                <div className="flex gap-2 items-center">
+                  <input
+                    className="flex-1"
+                    placeholder="Albertsons Laguna Niguel · 05/22…"
+                    value={eventId ? eventLabel : search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      // Editing the field means the user is changing
+                      // their mind — clear the previous selection.
+                      if (eventId) {
+                        setEventId(null);
+                        setEventLabel("");
+                      }
+                    }}
+                    style={{
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      color: "#fff",
+                    }}
+                  />
+                  {eventId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEventId(null);
+                        setEventLabel("");
+                        setSearch("");
+                      }}
+                      className="text-xs px-2 py-1 rounded"
+                      style={{
+                        background: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.18)",
+                        color: "rgba(255,255,255,0.8)",
+                      }}
                     >
-                      No matching events. Try a different search.
-                    </div>
-                  ) : (
-                    events.map((ev) => {
-                      const id = String(ev.id);
-                      const picked = id === eventId;
-                      return (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => {
-                            setEventId(id);
-                            setEventLabel(ev.name ?? "Untitled event");
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm flex items-center justify-between transition"
-                          style={{
-                            background: picked
-                              ? "rgba(197,245,70,0.12)"
-                              : "transparent",
-                            borderBottom: "1px solid rgba(255,255,255,0.04)",
-                          }}
-                        >
-                          <span>{ev.name ?? "Untitled event"}</span>
-                          {picked && (
-                            <span
-                              className="text-xs"
-                              style={{ color: "var(--spark-lime)" }}
-                            >
-                              selected
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })
+                      Change
+                    </button>
                   )}
                 </div>
+                {!eventId && (
+                  <div
+                    className="mt-2 rounded-lg overflow-y-auto"
+                    style={{
+                      maxHeight: 220,
+                      border: "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    {events.length === 0 ? (
+                      <div
+                        className="text-xs px-3 py-2"
+                        style={{ color: "rgba(255,255,255,0.5)" }}
+                      >
+                        No matching events. Try a different search.
+                      </div>
+                    ) : (
+                      events.map((ev) => {
+                        const id = String(ev.id);
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => {
+                              const label = ev.name ?? "Untitled event";
+                              setEventId(id);
+                              setEventLabel(label);
+                              setSearch(label);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm flex items-center justify-between transition hover:bg-white/5"
+                            style={{
+                              background: "transparent",
+                              borderBottom: "1px solid rgba(255,255,255,0.04)",
+                            }}
+                          >
+                            <span>{ev.name ?? "Untitled event"}</span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Template */}
