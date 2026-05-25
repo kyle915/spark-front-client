@@ -3,6 +3,7 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
+import InviteNewBAModal from "./InviteNewBAModal";
 
 /**
  * Spark v2 — Talent search.
@@ -102,6 +103,7 @@ const TalentInner: React.FC = () => {
   const [radius, setRadius] = useState("any");
   const [minRating, setMinRating] = useState("any");
   const [activeOnly, setActiveOnly] = useState(true);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const all: BA[] = useMemo(() => {
     return (data?.ambassadors?.edges ?? [])
@@ -176,7 +178,21 @@ const TalentInner: React.FC = () => {
             ambassador-events aggregation backend ships.
           </p>
         </div>
+        <button
+          onClick={() => setInviteOpen(true)}
+          className="px-4 py-2.5 rounded-xl text-sm font-semibold"
+          style={{
+            background: "var(--spark-lime)",
+            color: "#0a0d09",
+            boxShadow: "0 0 16px rgba(197,245,70,0.30)",
+          }}
+        >
+          + Invite BA
+        </button>
       </div>
+      {inviteOpen && (
+        <InviteNewBAModal onClose={() => setInviteOpen(false)} />
+      )}
 
       {/* Filter row */}
       <div className="spark-card p-4 grid lg:grid-cols-4 gap-3">
