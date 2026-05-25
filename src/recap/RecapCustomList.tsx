@@ -31,6 +31,7 @@ import { EyeIcon } from "@heroicons/react/24/outline";
 
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "@/store/authStore";
+import useSparkRole from "@/hooks/useSparkRole";
 import { FilterIcon, FunnelXIcon, FileUpIcon } from "lucide-react";
 import ImportConnecteamPdfModal from "@/recap/ImportConnecteamPdfModal";
 import { useForm } from "react-hook-form";
@@ -228,6 +229,7 @@ type FilterOption = {
 // ======================================================
 const RecapCustomList = () => {
   const { tenantId } = useAuthStore();
+  const { isClient } = useSparkRole();
   const refreshRef = useRef<(() => void) | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
@@ -426,14 +428,18 @@ const RecapCustomList = () => {
             </div>
             
             <div className="flex gap-2">
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => setImportOpen(true)}
-              >
-                <FileUpIcon className="w-4 h-4" />
-                Import Connecteam PDF
-              </button>
+              {/* Admin-only: clients shouldn't see the Connecteam
+                  import surface — that's an Ignite ops workflow. */}
+              {!isClient && (
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setImportOpen(true)}
+                >
+                  <FileUpIcon className="w-4 h-4" />
+                  Import Connecteam PDF
+                </button>
+              )}
                <button
                 type="button"
                 className="btn btn-outline btn-sm"

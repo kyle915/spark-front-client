@@ -732,7 +732,12 @@ const RecapLinks = {
     { path: "/recap/legacy", component: <RecapList />, isPublic: false },
     {
       path: "/recaps/custom-list",
-      component: <RecapCustomList />,
+      // Admin-only — clients shouldn't see the Connecteam-import
+      // surface that lives on this page. (The button itself is
+      // already isClient-guarded inside RecapCustomList, but the
+      // route wrap is the belt-and-suspenders version that also
+      // hides the page entirely from URL-guessing.)
+      component: <AdminOnly><RecapCustomList /></AdminOnly>,
       isPublic: false,
     },
     {
