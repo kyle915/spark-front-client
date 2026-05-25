@@ -79,6 +79,14 @@ export default function SparkRecapCreate() {
   // Files
   const [photoBlobs, setPhotoBlobs] = useState<string[]>([]);
   const [receiptBlobs, setReceiptBlobs] = useState<string[]>([]);
+  // Flips to true the first time the user tries to submit with
+  // missing required fields. Drives the red border/label around
+  // the PHOTOS + RECEIPTS card so BAs can SEE what's missing
+  // instead of just reading "At least one file is required" in
+  // a toast that doesn't point at anything (Nevena's feedback).
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const noFiles = photoBlobs.length === 0 && receiptBlobs.length === 0;
+  const filesMissing = submitAttempted && noFiles;
 
   // Admin-only ambassador override (uuid). BA flow leaves blank → backend
   // pulls ambassador from auth.user.
@@ -95,8 +103,22 @@ export default function SparkRecapCreate() {
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitAttempted(true);
     if (!selectedEvent) {
       showAlert("Pick the event this recap is for.", "warning");
+      return;
+    }
+    if (noFiles) {
+      // Client-side gate matches the backend's "At least one file
+      // is required" — gives the BA a red border to see + a focused
+      // scroll target instead of a vague toast.
+      showAlert(
+        "Upload at least one photo or receipt before submitting.",
+        "warning",
+      );
+      document
+        .getElementById("recap-files-card")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     const files = [
@@ -307,28 +329,49 @@ export default function SparkRecapCreate() {
       </Card>
 
       {/* Photos + receipts */}
-      <Card title="PHOTOS + RECEIPTS">
-        <div className="flex flex-wrap gap-3">
-          <RecapUploader
-            recapUuid={stubUuid}
-            category="photo"
-            onUploaded={(blob) => setPhotoBlobs((p) => [...p, blob])}
-          />
-          <RecapUploader
-            recapUuid={stubUuid}
-            category="receipt"
-            onUploaded={(blob) => setReceiptBlobs((p) => [...p, blob])}
-          />
-        </div>
-        <p className="mono text-[10px] mt-3" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.55)" }}>
-          {photoBlobs.length} PHOTO{photoBlobs.length === 1 ? "" : "S"} · {receiptBlobs.length} RECEIPT{receiptBlobs.length === 1 ? "" : "S"} READY
-        </p>
-        {(photoBlobs.length > 0 || receiptBlobs.length > 0) && (
-          <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>
-            Files upload to GCS as you pick them — they only get attached to the recap when you submit.
+      <div
+        id="recap-files-card"
+        style={{
+          // Red ring + glow when the user tried to submit with no
+          // files attached. Inherits the Card's normal styling
+          // otherwise — this wrapper just adds an outline.
+          borderRadius: 16,
+          padding: 1,
+          background: filesMissing ? "var(--spark-orange, #ef5a2a)" : "transparent",
+          boxShadow: filesMissing ? "0 0 24px rgba(239,90,42,0.35)" : "none",
+        }}
+      >
+        <Card title="PHOTOS + RECEIPTS *">
+          <div className="flex flex-wrap gap-3">
+            <RecapUploader
+              recapUuid={stubUuid}
+              category="photo"
+              onUploaded={(blob) => setPhotoBlobs((p) => [...p, blob])}
+            />
+            <RecapUploader
+              recapUuid={stubUuid}
+              category="receipt"
+              onUploaded={(blob) => setReceiptBlobs((p) => [...p, blob])}
+            />
+          </div>
+          <p className="mono text-[10px] mt-3" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.55)" }}>
+            {photoBlobs.length} PHOTO{photoBlobs.length === 1 ? "" : "S"} · {receiptBlobs.length} RECEIPT{receiptBlobs.length === 1 ? "" : "S"} READY
           </p>
-        )}
-      </Card>
+          {filesMissing && (
+            <p
+              className="text-xs mt-2 font-semibold"
+              style={{ color: "var(--spark-orange, #ef5a2a)" }}
+            >
+              At least one photo or receipt is required before submitting.
+            </p>
+          )}
+          {(photoBlobs.length > 0 || receiptBlobs.length > 0) && (
+            <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>
+              Files upload to GCS as you pick them — they only get attached to the recap when you submit.
+            </p>
+          )}
+        </Card>
+      </div>
 
       {/* Sticky submit */}
       <div
