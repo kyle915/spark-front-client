@@ -3990,6 +3990,7 @@ type Query {
   requestStatus(id: ID = null, uuid: ID = null): RequestStatus
   requests(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestFiltersInput = null): RequestCountableConnection!
   request(id: ID = null, uuid: ID = null): Request
+  activityLogs(first: Int = 50, kind: String = null): [RequestActivityLogEntry!]!
   requestStoreManagers(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestStoreManagerFiltersInput = null): RequestStoreManagerCountableConnection!
   requestStoreManager(id: ID = null, uuid: ID = null): RequestStoreManager
   publicLocations(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): LocationCountableConnection!
