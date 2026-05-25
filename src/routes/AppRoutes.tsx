@@ -180,6 +180,12 @@ const SparkClientDashboard = lazyDefault(
   () =>
     import("@/components/pages/client-dashboard/SparkClientDashboard"),
 );
+const SparkRecapTemplateCreate = lazyDefault(
+  () =>
+    import(
+      "@/components/pages/recap-templates/SparkRecapTemplateCreate"
+    ),
+);
 const RecapCustomList = lazyDefault(() => import("@/recap/RecapCustomList"));
 const RecapView = lazyDefault(() => import("@/recap/RecapView"));
 const RecapCustomView = lazyDefault(() => import("@/recap/RecapCustomView"));
@@ -729,6 +735,24 @@ const RecapLinks = {
     { path: "/recaps/list", component: <SparkRecapsList />, isPublic: false },
     { path: "/recaps/missing", component: <SparkRecapsMissing />, isPublic: false },
     { path: "/recaps/templates", component: <AdminOnly><SparkRecapTemplates /></AdminOnly>, isPublic: false },
+    {
+      path: "/recaps/templates/new",
+      component: (
+        <AdminOnly>
+          <SparkRecapTemplateCreate />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/recap-templates/new",
+      component: (
+        <AdminOnly>
+          <SparkRecapTemplateCreate />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
     {
       path: "/client-dashboard",
       component: <SparkClientDashboard />,
