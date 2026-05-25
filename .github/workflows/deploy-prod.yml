@@ -1,10 +1,33 @@
-name: Deploy to Firebase Hosting
+name: Deploy main to Firebase Hosting
+
+# Fires on every push to main. Builds the app and pushes it to both
+# hosting sites (spark-new-admin → admin.igniteproductions.co,
+# spark-new-client → client.igniteproductions.co).
+#
+# Architecture mirrors deploy-hosting.yml (which runs on develop):
+# both flows deploy to the SAME Firebase project + sites because
+# we currently have one prod environment. Develop and main both
+# push to live. The split exists so the long-running develop branch
+# can keep flowing while main is reserved for release-tag commits.
+#
+# Why the explicit `firebase target:apply` step? — see the verbose
+# comment in deploy-hosting.yml. Short version: service-account auth
+# in CI doesn't inherit the local .firebaserc target mapping, so we
+# have to register the mapping in-place each run.
+#
+# This file replaces the older FirebaseExtended/action-hosting-deploy
+# config that didn't know about the admin/client target split and
+# failed every main push with:
+#   "Deploy target admin not configured for project ***"
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
+
+env:
+  FIREBASE_PROJECT_ID: spark-479222
 
 jobs:
   build_and_deploy:
@@ -25,14 +48,29 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID_PROD }}
-          VITE_GRAPHQL_ENDPOINT: ${{ secrets.VITE_GRAPHQL_ENDPOINT_PROD }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_GRAPHQL_ENDPOINT: ${{ secrets.VITE_GRAPHQL_ENDPOINT }}
           VITE_MOBILE_LOGIN_URL: ${{ secrets.VITE_MOBILE_LOGIN_URL }}
 
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
-          channelId: live
-          projectId: ${{ secrets.FIREBASE_PROJECT_ID_PROD }}
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@latest
+
+      - name: Set up Firebase auth
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DENO }}' > "$HOME/firebase-key.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/firebase-key.json" >> "$GITHUB_ENV"
+
+      - name: Apply hosting targets
+        run: |
+          firebase target:apply hosting admin spark-new-admin --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+          firebase target:apply hosting client spark-new-client --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+
+      - name: Deploy hosting:admin (spark-new-admin)
+        run: firebase deploy --only hosting:admin --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+
+      - name: Deploy hosting:client (spark-new-client)
+        run: firebase deploy --only hosting:client --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+
+      - name: Clean up Firebase auth file
+        if: always()
+        run: rm -f "$HOME/firebase-key.json"
