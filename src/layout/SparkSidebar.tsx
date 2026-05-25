@@ -51,6 +51,10 @@ type NavItem = {
   adminOnly?: boolean;
   // Optional alternate label for the client view.
   clientLabel?: string;
+  // Optional alternate route for the client view — used so the
+  // Dashboard item points at /client-dashboard for client users
+  // while admins continue to land on the full /dashboard.
+  clientTo?: string;
 };
 
 type NavSection = {
@@ -70,7 +74,12 @@ const SECTIONS: NavSection[] = [
   {
     title: "Workspace",
     items: [
-      { label: "Dashboard", Icon: LayoutDashboard, to: "/" },
+      {
+        label: "Dashboard",
+        Icon: LayoutDashboard,
+        to: "/",
+        clientTo: "/client-dashboard",
+      },
       { label: "Today", Icon: Radio, to: "/today" },
       { label: "Upcoming", Icon: CalendarRange, to: "/upcoming" },
       {
@@ -261,7 +270,9 @@ const NavRow: React.FC<{
   onStub: (label: string) => void;
   isClient?: boolean;
 }> = ({ item, pathname, onStub, isClient }) => {
-  const active = isActive(item.to, pathname);
+  const effectiveTo =
+    isClient && item.clientTo ? item.clientTo : item.to;
+  const active = isActive(effectiveTo, pathname);
   const cls = `nav-item ${active ? "active" : ""}`;
   const Icon = item.Icon;
   const label = isClient && item.clientLabel ? item.clientLabel : item.label;
@@ -284,7 +295,7 @@ const NavRow: React.FC<{
       )}
     </>
   );
-  if (item.stub || !item.to) {
+  if (item.stub || !effectiveTo) {
     return (
       <button onClick={() => onStub(item.label)} className={cls}>
         {content}
@@ -292,7 +303,7 @@ const NavRow: React.FC<{
     );
   }
   return (
-    <Link to={item.to} className={cls}>
+    <Link to={effectiveTo} className={cls}>
       {content}
     </Link>
   );
