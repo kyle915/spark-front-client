@@ -62,6 +62,7 @@ import MasterTracker from "@/requests/MasterTracker";
 import SparkRequestView from "@/requests/SparkRequestView";
 import SparkRequestEdit from "@/requests/SparkRequestEdit";
 import SparkApprovals from "@/components/pages/approvals/SparkApprovals";
+const AuditPage = lazyDefault(() => import("@/audit/AuditPage"));
 import SparkRequestCreate from "@/requests/SparkRequestCreate";
 import AdminOnly from "@/layout/AdminOnly";
 
@@ -442,6 +443,17 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkApprovals />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/audit",
+      // Admin-only: this is a tenant-wide who-did-what feed for
+      // support / compliance debugging. Clients should never see it.
+      component: (
+        <AdminOnly>
+          <AuditPage />
         </AdminOnly>
       ),
       isPublic: false,
