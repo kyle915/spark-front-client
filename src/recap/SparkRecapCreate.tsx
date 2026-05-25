@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { EventsQuery } from "@/api/queries/EventsQuery";
@@ -90,6 +90,28 @@ export default function SparkRecapCreate() {
   // Backend has had total_packs_sold on the Recap model since v2 —
   // just wasn't surfaced in the create UI until Nevena flagged it.
   const [totalPacksSold, setTotalPacksSold] = useState("");
+
+  // Kyle's definition of sales:
+  //   Products Sold = single cans + multi-packs
+  //   (each multi-pack counts as ONE unit, not the cans inside)
+  //
+  // So auto-derive products from cans + packs whenever either
+  // input is non-empty. The user can still type a value into
+  // Products Sold directly — but any subsequent change to cans
+  // or packs will re-overwrite it (typical for an auto-sum).
+  useEffect(() => {
+    const cans = totalCansSold ? Number(totalCansSold) : NaN;
+    const packs = totalPacksSold ? Number(totalPacksSold) : NaN;
+    const cansN = Number.isFinite(cans) ? cans : 0;
+    const packsN = Number.isFinite(packs) ? packs : 0;
+    if (totalCansSold === "" && totalPacksSold === "") {
+      // Both blank → leave the field alone so the user can
+      // type a value directly without us nuking it.
+      return;
+    }
+    setProductsSold(String(cansN + packsN));
+  }, [totalCansSold, totalPacksSold]);
+
   const [accountSpend, setAccountSpend] = useState("");
   const [trafficDescription, setTrafficDescription] = useState("");
   const [competitivePresence, setCompetitivePresence] = useState("");
@@ -329,14 +351,31 @@ export default function SparkRecapCreate() {
           <Field label="Not Willing">
             <input value={notWilling} onChange={(e) => setNotWilling(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
           </Field>
-          <Field label="Products Sold">
-            <input value={productsSold} onChange={(e) => setProductsSold(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
-          </Field>
           <Field label="Cans Sold">
             <input value={totalCansSold} onChange={(e) => setTotalCansSold(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
           </Field>
           <Field label="Packs Sold">
             <input value={totalPacksSold} onChange={(e) => setTotalPacksSold(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
+          </Field>
+          <Field label="Products Sold *">
+            <input
+              value={productsSold}
+              onChange={(e) => setProductsSold(e.target.value)}
+              className={inputCls}
+              inputMode="numeric"
+              placeholder="0"
+              title="Auto-calculated from Cans Sold + Packs Sold. Editing here will be overwritten the next time you change cans or packs."
+              style={{
+                background: "rgba(197,245,70,0.04)",
+                borderColor: "rgba(197,245,70,0.25)",
+              }}
+            />
+            <p
+              className="text-[10px] mt-1"
+              style={{ color: "rgba(255,255,255,0.45)" }}
+            >
+              * Sales = single cans + multi-packs (each multi-pack = 1 unit).
+            </p>
           </Field>
           <Field label="Account Spend ($)">
             <input value={accountSpend} onChange={(e) => setAccountSpend(e.target.value)} className={inputCls} inputMode="decimal" placeholder="0.00" />
