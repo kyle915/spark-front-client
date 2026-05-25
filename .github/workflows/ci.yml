@@ -1,0 +1,57 @@
+name: CI
+
+# Gate every PR + push-to-main on a passing build. Catches the kind of
+# regressions we've actually been seeing: broken Relay codegen,
+# TypeScript breaks after merging back-to-back PRs, ESLint violations,
+# and broken pure helpers (favorites / recap URL / theme).
+#
+# Deploy-hosting still runs on its own — this workflow is the gate
+# *before* you decide to merge, not the gate at deploy time.
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  # One run per branch — newer pushes cancel older ones to save Actions
+  # minutes when a contributor pushes in quick succession.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      # tsc runs as part of `npm run build`. We split unit tests out
+      # because they're fast and fail loudly when they break, which is
+      # nice signal-vs-noise on a PR.
+      - name: Unit tests
+        run: npm run test
+
+      # Lint is informational for now — the repo has ~33 pre-existing
+      # `no-explicit-any` errors that we'll clean up incrementally.
+      # Once they're gone, flip `continue-on-error` to false so lint
+      # becomes a hard gate.
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      # `build` is the heavy step: relay-compiler → tsc -b → vite build.
+      # Any of those three failing here means the PR can't merge.
+      - name: Build
+        run: npm run build
