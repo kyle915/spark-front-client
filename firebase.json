@@ -3,9 +3,22 @@
     {
       "target": "admin",
       "public": "dist",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "ignore": [
+        "firebase.json",
+        "**/node_modules/**",
+        "**/.DS_Store",
+        "**/.gitignore",
+        "**/.eslintrc*"
+      ],
       "rewrites": [{ "source": "**", "destination": "/index.html" }],
       "headers": [
+        {
+          "source": "/.well-known/apple-app-site-association",
+          "headers": [
+            { "key": "Content-Type", "value": "application/json" },
+            { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+          ]
+        },
         {
           "source": "**/*.@(js|css|woff|woff2|ttf|otf|png|jpg|jpeg|gif|webp|svg|ico)",
           "headers": [
@@ -29,9 +42,22 @@
     {
       "target": "client",
       "public": "dist",
-      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "ignore": [
+        "firebase.json",
+        "**/node_modules/**",
+        "**/.DS_Store",
+        "**/.gitignore",
+        "**/.eslintrc*"
+      ],
       "rewrites": [{ "source": "**", "destination": "/index.html" }],
       "headers": [
+        {
+          "source": "/.well-known/apple-app-site-association",
+          "headers": [
+            { "key": "Content-Type", "value": "application/json" },
+            { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+          ]
+        },
         {
           "source": "**/*.@(js|css|woff|woff2|ttf|otf|png|jpg|jpeg|gif|webp|svg|ico)",
           "headers": [
