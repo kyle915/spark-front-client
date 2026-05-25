@@ -2,12 +2,15 @@ import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { EventsQuery } from "@/api/queries/EventsQuery";
+import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import { CreateRecapMutation } from "@/api/mutations/CreateRecapMutation";
 import type { EventsQuery as EventsQueryType } from "@/api/queries/__generated__/EventsQuery.graphql";
+import type { ProductsQuery as ProductsQueryType } from "@/api/queries/__generated__/ProductsQuery.graphql";
 import type { CreateRecapMutation as CreateRecapMutationType } from "@/api/mutations/__generated__/CreateRecapMutation.graphql";
 import RecapUploader from "./RecapUploader";
 import { useAlertStore } from "@/store/alertStore";
 import { useSparkRole } from "@/hooks/useSparkRole";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Spark v2 — manual recap submission flow.
@@ -46,6 +49,29 @@ export default function SparkRecapCreate() {
     [eventsData],
   );
 
+  // Tenant products → drive the Sampled Products picker below.
+  // Recapping always happens in the BA/RMM's currently-active
+  // tenant, so we filter by tenantId from the auth store rather
+  // than the selected event's tenant. (Cross-tenant recap filing
+  // is blocked at the backend layer anyway.)
+  const { tenantId } = useAuthStore();
+  const productsData = useLazyLoadQuery<ProductsQueryType>(
+    ProductsQuery,
+    {
+      first: 100,
+      filters: tenantId ? { tenantId } : null,
+      q: null,
+    },
+    { fetchPolicy: "store-or-network" },
+  );
+  const products = useMemo(
+    () =>
+      (productsData.products?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => !!n),
+    [productsData],
+  );
+
   // Auto-select if the URL gave us an event uuid
   const initialEvent = presetEventUuid
     ? events.find((e) => e.uuid === presetEventUuid) ?? null
@@ -79,6 +105,13 @@ export default function SparkRecapCreate() {
   const [doDifferently, setDoDifferently] = useState("");
   const [accountNotes, setAccountNotes] = useState("");
   const [corpoCardUsed, setCorpoCardUsed] = useState(false);
+
+  // Sampled products — keyed by product.id, value is the optional
+  // qty string the BA typed. Sending product.id alone (without qty)
+  // is fine — the backend takes both fields as Optional.
+  const [sampledProductQty, setSampledProductQty] = useState<
+    Record<string, string>
+  >({});
 
   // Files
   const [photoBlobs, setPhotoBlobs] = useState<string[]>([]);
@@ -129,6 +162,19 @@ export default function SparkRecapCreate() {
       ...photoBlobs.map((blob) => ({ file: blob, fileTypeId: "1", fileRecapCategoryId: "1" })),
       ...receiptBlobs.map((blob) => ({ file: blob, fileTypeId: "1", fileRecapCategoryId: "2" })),
     ];
+
+    // ProductSampleInput accepts product_id + optional quantity.
+    // Empty qty string → omit the quantity entirely (still counts
+    // the product as sampled). Non-numeric strings → omit too.
+    const productSamples = Object.entries(sampledProductQty)
+      .filter(([_, qty]) => qty !== undefined)
+      .map(([productId, qty]) => {
+        const parsed = qty ? Number(qty) : null;
+        return {
+          productId,
+          quantity: parsed != null && Number.isFinite(parsed) ? parsed : null,
+        };
+      });
     commit({
       variables: {
         input: {
@@ -139,6 +185,7 @@ export default function SparkRecapCreate() {
           totalCansSold: num(totalCansSold),
           totalPacksSold: num(totalPacksSold),
           productsSold: num(productsSold),
+          productSamples: productSamples.length ? productSamples : null,
           accountSpendAmount: num(accountSpend),
           trafficDescription: trafficDescription || null,
           competitivePresence: competitivePresence || null,
@@ -335,6 +382,105 @@ export default function SparkRecapCreate() {
           <span className="text-sm">Corporate card was used for this event spend.</span>
         </label>
       </Card>
+
+      {/* Sampled products — per-tenant product picker. Tick a
+          product to count it sampled; optional qty per product.
+          Hidden when the tenant has no products in the catalog
+          (legacy tenants, brand-new tenants pre-onboarding). */}
+      {products.length > 0 && (
+        <Card title="SAMPLED PRODUCTS">
+          <p
+            className="text-xs mb-3"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            Tick products you handed out. Quantity is optional — leave
+            blank if you didn't count.
+          </p>
+          <div
+            className="grid gap-2"
+            style={{
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+            }}
+          >
+            {products.map((p) => {
+              const id = String(p.id);
+              const picked = id in sampledProductQty;
+              const qty = sampledProductQty[id] ?? "";
+              return (
+                <div
+                  key={id}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5"
+                  style={{
+                    background: picked
+                      ? "rgba(197,245,70,0.08)"
+                      : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${
+                      picked
+                        ? "rgba(197,245,70,0.35)"
+                        : "rgba(255,255,255,0.08)"
+                    }`,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={picked}
+                    onChange={(e) => {
+                      setSampledProductQty((prev) => {
+                        const next = { ...prev };
+                        if (e.target.checked) {
+                          next[id] = "";
+                        } else {
+                          delete next[id];
+                        }
+                        return next;
+                      });
+                    }}
+                  />
+                  <span
+                    className="text-sm flex-1 truncate"
+                    title={p.name}
+                  >
+                    {p.name}
+                  </span>
+                  {picked && (
+                    <input
+                      type="text"
+                      value={qty}
+                      placeholder="qty"
+                      inputMode="numeric"
+                      onChange={(e) =>
+                        setSampledProductQty((prev) => ({
+                          ...prev,
+                          [id]: e.target.value,
+                        }))
+                      }
+                      className="text-sm"
+                      style={{
+                        width: 56,
+                        padding: "4px 6px",
+                        borderRadius: 6,
+                        background: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.18)",
+                        color: "#fff",
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p
+            className="mono text-[10px] mt-3"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.55)",
+            }}
+          >
+            {Object.keys(sampledProductQty).length} PRODUCT
+            {Object.keys(sampledProductQty).length === 1 ? "" : "S"} SAMPLED
+          </p>
+        </Card>
+      )}
 
       {/* Photos + receipts */}
       <div
