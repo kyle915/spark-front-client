@@ -60,6 +60,10 @@ export default function SparkRecapCreate() {
   const [notWilling, setNotWilling] = useState("");
   const [productsSold, setProductsSold] = useState("");
   const [totalCansSold, setTotalCansSold] = useState("");
+  // Girl Beer + Borjomi recap by-the-pack, not just by-the-can.
+  // Backend has had total_packs_sold on the Recap model since v2 —
+  // just wasn't surfaced in the create UI until Nevena flagged it.
+  const [totalPacksSold, setTotalPacksSold] = useState("");
   const [accountSpend, setAccountSpend] = useState("");
   const [trafficDescription, setTrafficDescription] = useState("");
   const [competitivePresence, setCompetitivePresence] = useState("");
@@ -133,6 +137,7 @@ export default function SparkRecapCreate() {
           ambassadorId: isAdmin && fillingForOther ? ambassadorOverride || null : null,
           fillingForAmbassador: isAdmin && fillingForOther,
           totalCansSold: num(totalCansSold),
+          totalPacksSold: num(totalPacksSold),
           productsSold: num(productsSold),
           accountSpendAmount: num(accountSpend),
           trafficDescription: trafficDescription || null,
@@ -282,6 +287,9 @@ export default function SparkRecapCreate() {
           </Field>
           <Field label="Cans Sold">
             <input value={totalCansSold} onChange={(e) => setTotalCansSold(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
+          </Field>
+          <Field label="Packs Sold">
+            <input value={totalPacksSold} onChange={(e) => setTotalPacksSold(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
           </Field>
           <Field label="Account Spend ($)">
             <input value={accountSpend} onChange={(e) => setAccountSpend(e.target.value)} className={inputCls} inputMode="decimal" placeholder="0.00" />
