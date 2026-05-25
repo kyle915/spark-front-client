@@ -3,9 +3,11 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { EventsQuery } from "@/api/queries/EventsQuery";
 import { ProductsQuery } from "@/api/queries/ProductsQuery";
+import { CustomRecapTemplatesQuery } from "@/api/queries/CustomRecapTemplatesQuery";
 import { CreateRecapMutation } from "@/api/mutations/CreateRecapMutation";
 import type { EventsQuery as EventsQueryType } from "@/api/queries/__generated__/EventsQuery.graphql";
 import type { ProductsQuery as ProductsQueryType } from "@/api/queries/__generated__/ProductsQuery.graphql";
+import type { CustomRecapTemplatesQuery as CustomRecapTemplatesQueryType } from "@/api/queries/__generated__/CustomRecapTemplatesQuery.graphql";
 import type { CreateRecapMutation as CreateRecapMutationType } from "@/api/mutations/__generated__/CreateRecapMutation.graphql";
 import RecapUploader from "./RecapUploader";
 import { useAlertStore } from "@/store/alertStore";
@@ -71,6 +73,18 @@ export default function SparkRecapCreate() {
         .filter((n): n is NonNullable<typeof n> => !!n),
     [productsData],
   );
+
+  // If the active tenant has any CustomRecapTemplates, the BA
+  // should be filing on the custom flow (mobile app or the
+  // import-Connecteam path), NOT this legacy form. Nevena saw one
+  // BA submit on the wrong form for Girl Beer. Detect + block.
+  const customTemplatesData = useLazyLoadQuery<CustomRecapTemplatesQueryType>(
+    CustomRecapTemplatesQuery,
+    { first: 1, filters: null },
+    { fetchPolicy: "store-or-network" },
+  );
+  const hasCustomTemplate =
+    (customTemplatesData.customRecapTemplates?.edges?.length ?? 0) > 0;
 
   // Auto-select if the URL gave us an event uuid
   const initialEvent = presetEventUuid
@@ -249,6 +263,79 @@ export default function SparkRecapCreate() {
   // by event. Once createRecap returns the real recap uuid we re-key
   // file rows server-side via AddRecapFile.
   const stubUuid = selectedEvent?.uuid ?? "new";
+
+  // Tenant uses Custom Recaps → block the legacy form entirely.
+  // Surface a dedicated panel explaining where to file instead.
+  // Kyle's call: BAs were submitting Girl Beer recaps via this
+  // legacy form, missing all the tenant-specific fields.
+  if (hasCustomTemplate) {
+    return (
+      <div className="max-w-2xl mx-auto px-1 sm:px-0">
+        <div className="spark-card p-8 text-center space-y-4">
+          <p
+            className="mono text-[10px]"
+            style={{ letterSpacing: "0.18em", color: "var(--spark-orange, #ef5a2a)" }}
+          >
+            WRONG RECAP FORM
+          </p>
+          <h1
+            className="display text-2xl font-bold"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            This client uses a Custom Recap form.
+          </h1>
+          <p style={{ color: "rgba(255,255,255,0.7)" }}>
+            The legacy quick-recap form is closed for this tenant
+            because it doesn't capture the fields the client needs.
+            Use one of these instead:
+          </p>
+          <div className="space-y-3 text-left mt-2">
+            <div
+              className="rounded-xl px-4 py-3"
+              style={{
+                background: "rgba(197,245,70,0.06)",
+                border: "1px solid rgba(197,245,70,0.25)",
+              }}
+            >
+              <p className="text-sm font-semibold">📱 Mobile app (BA path)</p>
+              <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
+                BAs file recaps from the Recap tab in the Spark mobile
+                app — the form pulls the tenant's custom fields
+                automatically.
+              </p>
+            </div>
+            <div
+              className="rounded-xl px-4 py-3"
+              style={{
+                background: "rgba(95,184,239,0.06)",
+                border: "1px solid rgba(95,184,239,0.25)",
+              }}
+            >
+              <p className="text-sm font-semibold">📄 Import Connecteam PDF (ops path)</p>
+              <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
+                If the BA already filed in Connecteam, drop the export
+                PDF on the Recaps page — text + photos auto-populate
+                a draft.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => navigate("/recaps/list")}
+              className="px-4 py-2 rounded-lg text-sm font-semibold"
+              style={{
+                background: "var(--spark-lime, #c5f546)",
+                color: "#0a0d09",
+              }}
+            >
+              Go to Recaps →
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={onSubmit} className="max-w-4xl mx-auto px-1 sm:px-0 space-y-5">
