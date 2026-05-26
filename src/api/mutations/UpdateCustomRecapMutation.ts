@@ -1,0 +1,39 @@
+import { graphql } from "react-relay";
+
+/**
+ * Update an existing custom recap. Currently used by the
+ * RecapCustomView inline-edit flow to let admins correct submitted
+ * field values without having to re-do the whole recap.
+ *
+ * Backend resolver replaces the entire customFieldValues set when
+ * provided — any CustomFieldValue row not present in the input gets
+ * deleted. The mobile callers (and now the inline editor) need to
+ * send the full list of values, not just the changed ones.
+ *
+ * Product samples + sales performance are NOT included here so the
+ * resolver leaves them untouched (only acts when those keys are
+ * explicitly passed).
+ */
+export const UpdateCustomRecapMutation = graphql`
+  mutation UpdateCustomRecapMutation($input: UpdateCustomRecapInput!) {
+    updateCustomRecap(input: $input) {
+      success
+      message
+      customRecap {
+        id
+        uuid
+        name
+        customField {
+          id
+          name
+          value
+          customFieldValueId
+          recapSection {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+`;
