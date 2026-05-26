@@ -51,6 +51,12 @@ jobs:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_GRAPHQL_ENDPOINT: ${{ secrets.VITE_GRAPHQL_ENDPOINT }}
           VITE_MOBILE_LOGIN_URL: ${{ secrets.VITE_MOBILE_LOGIN_URL }}
+          # Browser-side Google Maps key. Public by design (it ships
+          # in the bundle), restricted to admin/client.igniteproductions.co
+          # via HTTP referrer rules in GCP Console. Without this var,
+          # every map widget on the site falls back to the "Google Maps
+          # not configured" empty state — Kyle hit this on /account-map.
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools@latest

@@ -28,6 +28,9 @@ jobs:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID_STG }}
           VITE_GRAPHQL_ENDPOINT: ${{ secrets.VITE_GRAPHQL_ENDPOINT_STG }}
           VITE_MOBILE_LOGIN_URL: ${{ secrets.VITE_MOBILE_LOGIN_URL }}
+          # Reuses the prod maps key — referrer-restricted in GCP so
+          # exposing the same value across envs is safe.
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
