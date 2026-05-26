@@ -46,25 +46,27 @@ async function gqlPost<T>(
   return json.data as T;
 }
 
-const toLocalTime = (raw: string | null | undefined): string => {
-  if (!raw) return "12:00";
-  try {
-    const d = new Date(raw);
-    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-  } catch {
-    return "12:00";
-  }
-};
-
-const toLocalDate = (raw: string | null | undefined): string => {
-  if (!raw) return "";
-  try {
-    const d = new Date(raw);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  } catch {
-    return "";
-  }
-};
+// NOTE: the backend (`events/types.py::_serialize_dt_for_tz`) returns
+// `start_time`, `end_time`, and `date` as **naive ISO strings in the
+// venue's local timezone** post the May 26 DST fix. We read them
+// literally rather than feeding them to `new Date()`, which would
+// re-parse them as browser-local and produce the +/-1h skew that broke
+// REQ-MJY (Kyle edited a Central event to 12pm, view rendered 2pm
+// because PDT-CDT = 2 hours). See utils/venueTimezone.ts for full
+// context.
+import {
+  fmtVenueTime,
+  ianaForVenueTz,
+  pickHourMinute,
+  pickYmd,
+  venueLocalToUtcIso,
+} from "@/utils/venueTimezone";
+// Re-export so the rest of this file's call sites keep their familiar
+// names while internally delegating to the venue-tz-aware helpers.
+const toLocalTime = pickHourMinute;
+const toLocalDate = pickYmd;
+// `fmtVenueTime` is consumed in the venue-tz banner below.
+void fmtVenueTime;
 
 const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const navigate = useNavigate();
@@ -152,9 +154,18 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
       // Backend UpdateRequestInput requires every field. We assemble
       // it from the loaded request + the user's edits so unchanged
       // fields stay unchanged.
-      const startIso = new Date(`${date}T${startTime}:00`).toISOString();
-      const endIso = new Date(`${date}T${endTime}:00`).toISOString();
-      const dateIso = new Date(`${date}T00:00:00`).toISOString();
+      //
+      // CRITICAL: interpret the time inputs as **venue-local**, not
+      // browser-local. The form labels show "12:00 PM" meaning 12pm
+      // at the venue's address, not 12pm wherever the admin happens
+      // to be sitting. Without this, a Pacific-based admin editing a
+      // Central-timezone event saved +2h off (REQ-MJY).
+      const ianaTz = ianaForVenueTz(request.timezone);
+      const startIso = venueLocalToUtcIso(date, startTime, ianaTz);
+      const endIso = venueLocalToUtcIso(date, endTime, ianaTz);
+      // Date row stays anchored to midnight in the venue's tz for
+      // consistency with how the public form's date input is stored.
+      const dateIso = venueLocalToUtcIso(date, "00:00", ianaTz);
       const productInputs = (request.products ?? [])
         .filter((p): p is NonNullable<typeof p> => Boolean(p))
         .map((p) => ({ productId: String(p.id) }));
@@ -327,6 +338,27 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
             />
           </div>
         </div>
+        {/* Timezone hint. The save path now interprets these inputs
+            as local time in the venue's timezone (not the admin's
+            browser), so an admin in Pacific can edit a Central event
+            without doing the arithmetic in their head. Showing the
+            label removes the ambiguity. */}
+        {request.timezone?.name && (
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              color: "rgba(255,255,255,0.55)",
+            }}
+          >
+            ⏱ TIMES ARE IN{" "}
+            <span style={{ color: "var(--spark-lime)" }}>
+              {(request.timezone.name || "").toUpperCase()}
+              {request.timezone.code ? ` (${request.timezone.code})` : ""}
+            </span>{" "}
+            — VENUE LOCAL TIME, NOT YOUR BROWSER
+          </p>
+        )}
       </div>
 
       {/* Venue + RMM */}
