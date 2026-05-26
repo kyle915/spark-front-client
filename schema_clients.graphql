@@ -2135,6 +2135,14 @@ input DeleteProductInput {
   id: ID!
 }
 
+input AddRecapFileInput {
+  clientMutationId: ID = null
+  recapId: ID!
+  file: String!
+  fileTypeId: ID = null
+  fileRecapCategoryId: ID = null
+}
+
 input DeleteRecapFileInput {
   clientMutationId: ID = null
   id: ID!
@@ -3294,6 +3302,7 @@ type Mutation {
   createRecapSection(input: CreateRecapSectionInput!): RecapSectionDetailResponse!
   updateRecapSection(input: UpdateRecapSectionInput!): RecapSectionDetailResponse!
   deleteRecap(input: DeleteRecapInput!): RecapDetailResponse!
+  addRecapFile(input: AddRecapFileInput!): RecapDetailResponse!
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
