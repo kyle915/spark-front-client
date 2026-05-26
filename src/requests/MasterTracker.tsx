@@ -140,12 +140,23 @@ const fmtTimeRange = (
   start: string | null | undefined,
   end: string | null | undefined,
 ) => {
+  // Backend returns a full naive ISO ("2026-05-30T14:30:00") in the
+  // venue's local timezone. The previous version of this helper did
+  // `raw.split(":")` expecting bare "14:30", which on a full ISO put
+  // the whole "2026-05-30T14" into the hours slot — parseInt happily
+  // returned 2026, and every row in the tracker ended up rendering as
+  // "10:30p" (10 = (2026+11)%12+1). Extract HH:MM by regex instead so
+  // the same call works whether the backend sends time-only or a full
+  // datetime.
   const tone = (raw: string) => {
-    const [h, m] = raw.split(":");
-    const hh = parseInt(h ?? "0", 10);
+    const m = raw.match(/(?:^|T)(\d{2}):(\d{2})/);
+    if (!m) return raw;
+    const hh = parseInt(m[1], 10);
+    const mm = m[2];
+    if (!Number.isFinite(hh)) return raw;
     const ampm = hh >= 12 ? "p" : "a";
     const h12 = ((hh + 11) % 12) + 1;
-    return m && m !== "00" ? `${h12}:${m}${ampm}` : `${h12}${ampm}`;
+    return mm && mm !== "00" ? `${h12}:${mm}${ampm}` : `${h12}${ampm}`;
   };
   if (!start && !end) return "";
   if (start && end) return `${tone(start)}–${tone(end)}`;
