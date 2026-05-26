@@ -6,6 +6,8 @@ import { RecapQuery } from "@/api/queries/RecapQuery";
 import type { RecapQuery as RecapQueryType } from "@api/queries/__generated__/RecapQuery.graphql";
 import { GenerateRecapPdfMutation } from "@/api/mutations/GenerateRecapPdfMutation";
 import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateRecapPdfMutation.graphql";
+import { AddRecapFileMutation } from "@/api/mutations/AddRecapFileMutation";
+import type { AddRecapFileMutation as AddRecapFileMutationType } from "@/api/mutations/__generated__/AddRecapFileMutation.graphql";
 import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
 import { useAlertStore } from "@/store/alertStore";
 import HeicImage from "./HeicImage";
@@ -79,12 +81,18 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const [commitPdf, isPdfRunning] = useMutation<GenerateRecapPdfMutationType>(
     GenerateRecapPdfMutation,
   );
+  const [commitAddFile] = useMutation<AddRecapFileMutationType>(
+    AddRecapFileMutation,
+  );
   const [isZipping, setIsZipping] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
+  // Bumped after a file is attached so the query refetches and the new
+  // photo/receipt shows up in the grid without a full page reload.
+  const [refreshKey, setRefreshKey] = useState(0);
   const data = useLazyLoadQuery<RecapQueryType>(
     RecapQuery,
     { uuid },
-    { fetchPolicy: "store-or-network" },
+    { fetchPolicy: "store-or-network", fetchKey: refreshKey },
   );
 
   const recap = data?.recap;
@@ -665,23 +673,64 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               recapUuid={uuid}
               category="photo"
               onUploaded={(blobName) => {
-                // Backend AddRecapFile mutation is the next step. For now
-                // we surface the uploaded blob name so an admin can verify
-                // the file landed in GCS.
-                showAlert(
-                  `Photo uploaded: ${blobName}. (Linking to recap requires the AddRecapFile backend mutation.)`,
-                  "success",
-                );
+                // Attach the just-uploaded blob to this recap via the
+                // dedicated addRecapFile mutation, then bump refreshKey
+                // so the Files grid re-queries and shows it. fileTypeId
+                // "1" / fileRecapCategoryId "1" mirror the recap-create
+                // form's photo defaults.
+                commitAddFile({
+                  variables: {
+                    input: {
+                      recapId: recap.id,
+                      file: blobName,
+                      fileTypeId: "1",
+                      fileRecapCategoryId: "1",
+                    },
+                  },
+                  onCompleted: (res) => {
+                    if (res.addRecapFile?.success) {
+                      showAlert("Photo attached to recap.", "success");
+                      setRefreshKey((k) => k + 1);
+                    } else {
+                      showAlert(
+                        res.addRecapFile?.message ?? "Couldn't attach photo.",
+                        "error",
+                      );
+                    }
+                  },
+                  onError: (err) =>
+                    showAlert(`Attach failed: ${err.message}`, "error"),
+                });
               }}
             />
             <RecapUploader
               recapUuid={uuid}
               category="receipt"
               onUploaded={(blobName) => {
-                showAlert(
-                  `Receipt uploaded: ${blobName}. Visible in the Files grid once linked server-side.`,
-                  "success",
-                );
+                commitAddFile({
+                  variables: {
+                    input: {
+                      recapId: recap.id,
+                      file: blobName,
+                      fileTypeId: "1",
+                      // Category "2" = receipt (matches recap-create form).
+                      fileRecapCategoryId: "2",
+                    },
+                  },
+                  onCompleted: (res) => {
+                    if (res.addRecapFile?.success) {
+                      showAlert("Receipt attached to recap.", "success");
+                      setRefreshKey((k) => k + 1);
+                    } else {
+                      showAlert(
+                        res.addRecapFile?.message ?? "Couldn't attach receipt.",
+                        "error",
+                      );
+                    }
+                  },
+                  onError: (err) =>
+                    showAlert(`Attach failed: ${err.message}`, "error"),
+                });
               }}
             />
           </div>
@@ -690,10 +739,9 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           className="text-xs"
           style={{ color: "rgba(255,255,255,0.55)" }}
         >
-          Photos and receipts upload directly to GCS via signed URL.
-          Server-side linking via{" "}
-          <span className="mono">AddRecapFile</span> mutation is the last
-          backend step before they appear in the file grid automatically.
+          Photos and receipts upload directly to GCS via signed URL, then
+          attach to this recap automatically — they appear in the Files
+          grid above as soon as the upload completes.
         </p>
       </div>
 
