@@ -21,7 +21,7 @@
  * isAdmin.
  */
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
@@ -29,6 +29,22 @@ import { useAuthStore } from "@/store/authStore";
 import { useSidebarCounts } from "@/hooks/useSidebarCounts";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+// Embedded as tabs on this dashboard — the named exports are the
+// Layout-less bodies so we don't double-render the admin shell.
+import { ApprovalsBody } from "@/components/pages/approvals/SparkApprovals";
+import { AccountMapBody } from "@/components/pages/map/SparkAccountMap";
+
+type TabKey = "overview" | "approvals" | "map";
+
+// Read the active tab from the URL hash so deep-links (e.g.
+// /client-dashboard#approvals) land on the right tab and the back
+// button works between tabs. Defaults to overview for empty/unknown.
+const readTabFromHash = (): TabKey => {
+  if (typeof window === "undefined") return "overview";
+  const h = (window.location.hash || "").replace(/^#/, "").toLowerCase();
+  if (h === "approvals" || h === "map") return h;
+  return "overview";
+};
 
 type DayBucket = {
   key: string; // YYYY-MM-DD
@@ -123,6 +139,26 @@ const ClientInner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   const counts = useSidebarCounts();
+
+  // Active tab — Overview / Approvals / Account Map. Persists in the
+  // URL hash so deep-links land on the right view and the browser
+  // back button traverses between tabs without unmounting the
+  // dashboard chrome.
+  const [activeTab, setActiveTab] = useState<TabKey>(readTabFromHash);
+  useEffect(() => {
+    const onHashChange = () => setActiveTab(readTabFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+  const switchTab = (next: TabKey) => {
+    setActiveTab(next);
+    // Use replaceState — no extra back-stack entry per tab click; the
+    // hashchange listener above keeps state in sync if someone
+    // navigates via the URL bar.
+    const url = new URL(window.location.href);
+    url.hash = next === "overview" ? "" : next;
+    window.history.replaceState(null, "", url.toString());
+  };
 
   // Pull the same RequestsQuery the sidebar uses so we can roll up
   // per-day buckets without paying another network round-trip.
@@ -251,6 +287,83 @@ const ClientInner: React.FC = () => {
           Live from the field. Tap any tile to drill in.
         </p>
       </div>
+
+      {/* Tab bar — Overview / Approvals / Account Map. The latter two
+          tabs reuse the existing /approvals and /account-map pages by
+          embedding their Layout-less bodies. Active tab is reflected
+          in the URL hash so /client-dashboard#approvals deep-links
+          straight to that view. */}
+      <div
+        role="tablist"
+        aria-label="Dashboard views"
+        className="flex items-center gap-1 border-b"
+        style={{ borderColor: "var(--spark-border)" }}
+      >
+        {(
+          [
+            { key: "overview", label: "Overview" },
+            {
+              key: "approvals",
+              label: `Approvals${counts.approvals > 0 ? ` · ${counts.approvals}` : ""}`,
+            },
+            { key: "map", label: "Account map" },
+          ] as { key: TabKey; label: string }[]
+        ).map((t) => {
+          const active = activeTab === t.key;
+          return (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={active}
+              onClick={() => switchTab(t.key)}
+              className="px-4 py-2.5 text-sm font-semibold transition relative -mb-px"
+              style={{
+                color: active
+                  ? "var(--spark-text)"
+                  : "rgba(255,255,255,0.55)",
+                borderBottom: active
+                  ? "2px solid var(--spark-lime)"
+                  : "2px solid transparent",
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === "approvals" && (
+        <Suspense
+          fallback={
+            <div
+              className="spark-card p-8 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Loading approvals…
+            </div>
+          }
+        >
+          <ApprovalsBody />
+        </Suspense>
+      )}
+
+      {activeTab === "map" && (
+        <Suspense
+          fallback={
+            <div
+              className="spark-card p-8 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Loading account map…
+            </div>
+          }
+        >
+          <AccountMapBody />
+        </Suspense>
+      )}
+
+      {activeTab === "overview" && (<>
 
       {/* Top tiles */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -458,6 +571,8 @@ const ClientInner: React.FC = () => {
           </div>
         </div>
       </div>
+
+      </>)}
     </div>
   );
 };
