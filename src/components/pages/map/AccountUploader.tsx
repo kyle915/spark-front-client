@@ -45,6 +45,37 @@ export const AccountUploader: React.FC<{
     );
   };
 
+  // Hand the client a ready-to-fill CSV whose headers exactly match
+  // what parseRowsToAccounts auto-detects (Name/Address/City/State/Zip/
+  // Chain — see HEADER_ALIASES in lib/accounts.ts). Two example rows
+  // show the expected shape (split address into city/state/zip rather
+  // than one blob) so the upload geocodes + state-routes cleanly. Built
+  // as a client-side Blob download — no backend round-trip.
+  const downloadTemplate = () => {
+    const rows = [
+      ["Name", "Address", "City", "State", "Zip", "Chain"],
+      ["Albertsons 524", "12013 Central Ave", "Chino", "CA", "91710", "Albertsons"],
+      ["7-Eleven #3201", "1608 Broadway St", "New York", "NY", "10019", "7-Eleven"],
+    ];
+    // Quote every cell + escape embedded quotes so commas in addresses
+    // (very common) don't break the columns.
+    const csv = rows
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\r\n");
+    // Prepend a UTF-8 BOM so Excel opens it with correct encoding.
+    const blob = new Blob(["﻿" + csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "spark-account-list-template.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const onFile = async (file: File) => {
     setBusy(true);
     try {
@@ -134,19 +165,34 @@ export const AccountUploader: React.FC<{
             </span>
           </p>
         </div>
-        <button
-          onClick={() => inputRef.current?.click()}
-          disabled={busy}
-          className="px-4 py-2.5 rounded-xl text-sm font-semibold"
-          style={{
-            background: "var(--spark-lime)",
-            color: "#0a0d09",
-            boxShadow: "0 0 18px rgba(197,245,70,0.35)",
-            opacity: busy ? 0.5 : 1,
-          }}
-        >
-          {busy ? "Parsing…" : "Choose file"}
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={downloadTemplate}
+            type="button"
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold transition"
+            style={{
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
+            title="Download a CSV with the right column headers to fill in"
+          >
+            ⬇ Download template
+          </button>
+          <button
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+              opacity: busy ? 0.5 : 1,
+            }}
+          >
+            {busy ? "Parsing…" : "Choose file"}
+          </button>
+        </div>
       </div>
     </div>
   );
