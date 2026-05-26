@@ -10,6 +10,8 @@ import { AddRecapFileMutation } from "@/api/mutations/AddRecapFileMutation";
 import type { AddRecapFileMutation as AddRecapFileMutationType } from "@/api/mutations/__generated__/AddRecapFileMutation.graphql";
 import { UpdateRecapMutation } from "@/api/mutations/UpdateRecapMutation";
 import type { UpdateRecapMutation as UpdateRecapMutationType } from "@/api/mutations/__generated__/UpdateRecapMutation.graphql";
+import { ApproveRecapMutation } from "@/api/mutations/ApproveRecapMutation";
+import type { ApproveRecapMutation as ApproveRecapMutationType } from "@/api/mutations/__generated__/ApproveRecapMutation.graphql";
 import useSparkRole from "@/hooks/useSparkRole";
 import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
 import { useAlertStore } from "@/store/alertStore";
@@ -89,6 +91,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   );
   const [commitUpdate, isUpdating] =
     useMutation<UpdateRecapMutationType>(UpdateRecapMutation);
+  const [commitApprove, isApproving] =
+    useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
   const { isAdmin } = useSparkRole();
   const [isZipping, setIsZipping] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
@@ -222,6 +226,30 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         }
       },
       onError: (err) => showAlert(`Save failed: ${err.message}`, "error"),
+    });
+  };
+
+  // Approve / decline the recap itself (distinct from request approval).
+  // Uses the existing approveRecap mutation; the response returns
+  // `approved` so the status chip updates in-place.
+  const setApproved = (approved: boolean) => {
+    if (isApproving) return;
+    commitApprove({
+      variables: { input: { id: recap.id, approved } },
+      onCompleted: (res) => {
+        if (res.approveRecap?.success) {
+          showAlert(
+            approved ? "Recap approved." : "Recap marked not approved.",
+            "success",
+          );
+        } else {
+          showAlert(
+            res.approveRecap?.message ?? "Couldn't update approval.",
+            "error",
+          );
+        }
+      },
+      onError: (err) => showAlert(`Approval failed: ${err.message}`, "error"),
     });
   };
 
@@ -410,6 +438,43 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             >
               ⇄ Move to event
             </button>
+            {/* Admin-only recap approval. Nevena: "I don't see where to
+                approve recap." Distinct from request approval — this
+                marks the RECAP itself approved. Shows the current state
+                and flips it. */}
+            {isAdmin &&
+              (recap.approved ? (
+                <button
+                  onClick={() => setApproved(false)}
+                  disabled={isApproving}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  style={{
+                    background: "transparent",
+                    color: "var(--spark-orange)",
+                    border: "1px solid rgba(239,90,42,0.4)",
+                    opacity: isApproving ? 0.5 : 1,
+                  }}
+                  title="This recap is approved — click to un-approve"
+                >
+                  ✓ Approved · undo
+                </button>
+              ) : (
+                <button
+                  onClick={() => setApproved(true)}
+                  disabled={isApproving}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  style={{
+                    background: "var(--spark-lime)",
+                    color: "#0a0d09",
+                    boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                    opacity: isApproving ? 0.5 : 1,
+                  }}
+                  title="Approve this recap"
+                >
+                  {isApproving ? "Approving…" : "✓ Approve recap"}
+                </button>
+              ))}
+
             {/* Admin-only number editor. Replaced the old dead-route
                 placeholder (which black-screened, then showed a "ping
                 your RMM" toast). Now opens an inline editor for the
