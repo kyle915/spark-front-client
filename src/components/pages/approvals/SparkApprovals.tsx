@@ -1772,13 +1772,18 @@ const LinkedSheetChip: React.FC = () => {
 
 /* ─────────────────── page ─────────────────── */
 
-export default function SparkApprovals() {
-  // Approvals are admin-only; route is also wrapped in AdminOnly. Keep the
-  // hook usage in case it's referenced elsewhere; auth gate at route level.
+/**
+ * Layout-less body of the Approvals page. Lets the client dashboard
+ * embed the queue as a tab without nesting `<Layout>` twice (which
+ * would render the sidebar/topbar in the dashboard content area).
+ *
+ * The default export below wraps this in `<Layout>` for the
+ * standalone `/approvals` route.
+ */
+export const ApprovalsBody: React.FC = () => {
   void useSparkRole;
   return (
-    <Layout>
-      <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-5xl">
         {/* Header */}
         <div className="flex items-end justify-between flex-wrap gap-4">
           <div>
@@ -1899,7 +1904,18 @@ export default function SparkApprovals() {
             <ApprovalsInner />
           </Suspense>
         </ApprovalsErrorBoundary>
-      </div>
+    </div>
+  );
+};
+
+// Standalone `/approvals` route — wraps the body in the admin shell.
+// `AdminOnly` already gates this route in AppRoutes.tsx; the body
+// itself is reusable from the client dashboard's Approvals tab where
+// the outer Layout already exists.
+export default function SparkApprovals() {
+  return (
+    <Layout>
+      <ApprovalsBody />
     </Layout>
   );
 }

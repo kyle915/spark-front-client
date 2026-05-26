@@ -842,23 +842,37 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   );
 };
 
-export default function SparkAccountMap() {
+/**
+ * Layout-less body of the Account Map. Used by the client dashboard's
+ * "Account Map" tab so we don't render the admin shell (sidebar +
+ * topbar) inside the dashboard's existing Layout content area.
+ *
+ * The default export below wraps this in `<Layout>` for the
+ * standalone `/account-map` route.
+ */
+export const AccountMapBody: React.FC = () => {
   const apiKey = (import.meta as { env?: Record<string, string> }).env
     ?.VITE_GOOGLE_MAPS_API_KEY;
   return (
+    <Suspense
+      fallback={
+        <div
+          className="spark-card p-8 text-center text-sm max-w-7xl"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+        >
+          Loading account map…
+        </div>
+      }
+    >
+      <Inner apiKey={apiKey} />
+    </Suspense>
+  );
+};
+
+export default function SparkAccountMap() {
+  return (
     <Layout>
-      <Suspense
-        fallback={
-          <div
-            className="spark-card p-8 text-center text-sm max-w-7xl"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            Loading account map…
-          </div>
-        }
-      >
-        <Inner apiKey={apiKey} />
-      </Suspense>
+      <AccountMapBody />
     </Layout>
   );
 }
