@@ -18,6 +18,30 @@ export const AddRecapFileMutation = graphql`
       recap {
         id
         uuid
+        # Return the FULL file list so Relay merges it into the store
+        # by recap id — the Files grid re-renders with the new photo
+        # immediately, no page reload. (Nevena: "no new picture visible
+        # until I reload the page.") Field selection mirrors RecapQuery's
+        # recapFiles so the merge is complete, not partial.
+        recapFiles {
+          id
+          uuid
+          name
+          approved
+          file
+          fileTypeId
+          fileType {
+            id
+            name
+            extension
+          }
+          fileRecapCategoryId
+          fileRecapCategory {
+            id
+            name
+          }
+          createdAt
+        }
       }
     }
   }
