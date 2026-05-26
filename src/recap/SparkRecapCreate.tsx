@@ -60,6 +60,12 @@ export default function SparkRecapCreate() {
   const [notWilling, setNotWilling] = useState("");
   const [productsSold, setProductsSold] = useState("");
   const [totalCansSold, setTotalCansSold] = useState("");
+  const [totalPacksSold, setTotalPacksSold] = useState("");
+  // Tracks whether productsSold was set by the auto-calc (Cans + Packs)
+  // or typed manually. We only auto-write when the user hasn't touched
+  // it themselves — once they edit Products Sold by hand we stop
+  // clobbering their value.
+  const [productsSoldManual, setProductsSoldManual] = useState(false);
   const [accountSpend, setAccountSpend] = useState("");
   const [trafficDescription, setTrafficDescription] = useState("");
   const [competitivePresence, setCompetitivePresence] = useState("");
@@ -111,6 +117,7 @@ export default function SparkRecapCreate() {
           ambassadorId: isAdmin && fillingForOther ? ambassadorOverride || null : null,
           fillingForAmbassador: isAdmin && fillingForOther,
           totalCansSold: num(totalCansSold),
+          totalPacksSold: num(totalPacksSold),
           productsSold: num(productsSold),
           accountSpendAmount: num(accountSpend),
           trafficDescription: trafficDescription || null,
@@ -255,16 +262,71 @@ export default function SparkRecapCreate() {
           <Field label="Not Willing">
             <input value={notWilling} onChange={(e) => setNotWilling(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
           </Field>
-          <Field label="Products Sold">
-            <input value={productsSold} onChange={(e) => setProductsSold(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
+          <Field label="Products Sold *">
+            <input
+              value={productsSold}
+              onChange={(e) => {
+                // User-typed change — stop auto-populating from
+                // Cans + Packs from this point on so we don't clobber
+                // their intentional override.
+                setProductsSold(e.target.value);
+                setProductsSoldManual(true);
+              }}
+              className={inputCls}
+              inputMode="numeric"
+              placeholder="0"
+              title="Auto-fills from Cans + Packs until you edit it"
+            />
           </Field>
           <Field label="Cans Sold">
-            <input value={totalCansSold} onChange={(e) => setTotalCansSold(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
+            <input
+              value={totalCansSold}
+              onChange={(e) => {
+                const next = e.target.value;
+                setTotalCansSold(next);
+                // Auto-update Products Sold from Cans + Packs unless
+                // the user has manually edited Products Sold.
+                if (!productsSoldManual) {
+                  const cans = Number(next) || 0;
+                  const packs = Number(totalPacksSold) || 0;
+                  const sum = cans + packs;
+                  setProductsSold(sum > 0 ? String(sum) : "");
+                }
+              }}
+              className={inputCls}
+              inputMode="numeric"
+              placeholder="0"
+            />
+          </Field>
+          <Field label="Packs Sold">
+            <input
+              value={totalPacksSold}
+              onChange={(e) => {
+                const next = e.target.value;
+                setTotalPacksSold(next);
+                if (!productsSoldManual) {
+                  const cans = Number(totalCansSold) || 0;
+                  const packs = Number(next) || 0;
+                  const sum = cans + packs;
+                  setProductsSold(sum > 0 ? String(sum) : "");
+                }
+              }}
+              className={inputCls}
+              inputMode="numeric"
+              placeholder="0"
+            />
           </Field>
           <Field label="Account Spend ($)">
             <input value={accountSpend} onChange={(e) => setAccountSpend(e.target.value)} className={inputCls} inputMode="decimal" placeholder="0.00" />
           </Field>
         </div>
+        <p
+          className="text-[11px] opacity-60 mt-2"
+          style={{ fontFamily: "var(--mono-stack)" }}
+        >
+          * Products Sold auto-fills from Cans + Packs. Type a value to
+          override.
+        </p>
         <Field label="Traffic Description">
           <textarea value={trafficDescription} onChange={(e) => setTrafficDescription(e.target.value)} className={inputCls} rows={2} placeholder="Foot traffic, busy hours, slow patches…" />
         </Field>
