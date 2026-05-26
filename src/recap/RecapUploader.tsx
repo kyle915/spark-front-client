@@ -48,7 +48,14 @@ export const RecapUploader: React.FC<Props> = ({
       .replace(/_+/g, "_")
       .slice(0, 80);
 
-  const upload = async (files: FileList) => {
+  // Takes a plain File[] (NOT a live FileList). The caller snapshots
+  // the FileList into an array before clearing the <input>, because
+  // an <input type=file> FileList is LIVE — setting input.value=""
+  // empties it. Since this loop awaits between files, a live FileList
+  // would shrink to length 0 the moment the input was cleared, so
+  // only file[0] uploaded and the final count read "0 files". That
+  // was the "select several → only one uploads → 0 files" bug.
+  const upload = async (files: File[]) => {
     setBusy(true);
     setProgress({ done: 0, total: files.length });
     for (let i = 0; i < files.length; i++) {
@@ -105,8 +112,15 @@ export const RecapUploader: React.FC<Props> = ({
         style={{ display: "none" }}
         onChange={(e) => {
           if (e.target.files && e.target.files.length > 0) {
-            upload(e.target.files);
+            // Snapshot to a stable array BEFORE clearing the input.
+            // input.value="" empties the live FileList, and `upload`
+            // awaits between files — without the snapshot the list
+            // collapses to length 0 mid-loop and only the first photo
+            // uploaded. Clearing the input after is still needed so
+            // re-picking the same file fires onChange again.
+            const picked = Array.from(e.target.files);
             e.target.value = "";
+            upload(picked);
           }
         }}
       />
