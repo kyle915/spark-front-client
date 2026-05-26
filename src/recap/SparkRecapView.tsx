@@ -310,13 +310,29 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               ⇄ Move to event
             </button>
             <button
-              onClick={() => navigate(`/recap/edit/${uuid}`)}
+              // The /recap/edit/:uuid route is currently disabled —
+              // the EditRecap component is fully commented out in
+              // src/recap/EditRecap.tsx and the route is commented
+              // out in src/routes/AppRoutes.tsx. Clicking Edit used
+              // to navigate to a non-existent route which rendered
+              // a blank/black page (Nevena's bug report). Until the
+              // edit UI is rebuilt, the button surfaces a clear
+              // message and points the user at the workarounds that
+              // DO work (re-link to a different event, or talk to
+              // their RMM).
+              onClick={() =>
+                showAlert(
+                  "Direct recap editing is being rebuilt. To re-link this recap to a different event, use ↑ Move to event. For value corrections, ping your RMM.",
+                  "info",
+                )
+              }
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "transparent",
                 color: "var(--spark-text)",
                 border: "1px solid var(--spark-border)",
               }}
+              title="Editing rebuild in progress — see message"
             >
               ✎ Edit
             </button>
