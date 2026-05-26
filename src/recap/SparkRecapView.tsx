@@ -14,6 +14,8 @@ import { ApproveRecapMutation } from "@/api/mutations/ApproveRecapMutation";
 import type { ApproveRecapMutation as ApproveRecapMutationType } from "@/api/mutations/__generated__/ApproveRecapMutation.graphql";
 import { RemoveRecapFileMutation } from "@/api/mutations/RemoveRecapFileMutation";
 import type { RemoveRecapFileMutation as RemoveRecapFileMutationType } from "@/api/mutations/__generated__/RemoveRecapFileMutation.graphql";
+import { AmbassadorSearchQuery } from "@/api/queries/AmbassadorSearchQuery";
+import type { AmbassadorSearchQuery as AmbassadorSearchQueryType } from "@/api/queries/__generated__/AmbassadorSearchQuery.graphql";
 import useSparkRole from "@/hooks/useSparkRole";
 import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
 import { useAlertStore } from "@/store/alertStore";
@@ -82,6 +84,84 @@ const KpiTile: React.FC<{
 
 /* ─────────────────── inner ─────────────────── */
 
+/**
+ * Type-ahead BA picker for the recap editor. Searches activeAmbassadors
+ * (tenant-scoped) and calls onPick with the BA's Relay id (which
+ * updateRecap's ambassador_id runs through resolve_id_to_int). Mirrors
+ * the picker on the recap-create form. Suspends on the search query, so
+ * the caller wraps it in <Suspense>.
+ */
+const BaSearch: React.FC<{
+  onPick: (id: string, name: string) => void;
+}> = ({ onPick }) => {
+  const [q, setQ] = useState("");
+  const data = useLazyLoadQuery<AmbassadorSearchQueryType>(
+    AmbassadorSearchQuery,
+    { q, first: 8 },
+    { fetchPolicy: "store-or-network" },
+  );
+  const matches = (data?.activeAmbassadors?.edges ?? [])
+    .map((e) => e?.node)
+    .filter((n): n is NonNullable<typeof n> => Boolean(n));
+  return (
+    <div>
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Type a BA's name or email…"
+        className="w-full rounded-lg px-3 py-2 text-[15px]"
+        style={{
+          background: "var(--spark-bg)",
+          border: "1px solid var(--spark-border)",
+          color: "var(--spark-text)",
+        }}
+      />
+      {q && (
+        <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
+          {matches.length === 0 ? (
+            <p
+              className="mono text-[10px] py-1"
+              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+            >
+              NO MATCHES
+            </p>
+          ) : (
+            matches.map((amb) => {
+              const full = [amb.user?.firstName, amb.user?.lastName]
+                .filter(Boolean)
+                .join(" ")
+                .trim();
+              const display = full || amb.user?.email || "(unnamed BA)";
+              return (
+                <button
+                  key={String(amb.id)}
+                  type="button"
+                  onClick={() => onPick(String(amb.id), display)}
+                  className="w-full text-left rounded-lg px-3 py-2 text-sm"
+                  style={{
+                    background: "var(--spark-surface-2, rgba(255,255,255,0.04))",
+                    border: "1px solid var(--spark-border)",
+                  }}
+                >
+                  {display}
+                  {full && amb.user?.email && (
+                    <span
+                      className="mono text-[10px] ml-2"
+                      style={{ color: "rgba(255,255,255,0.5)" }}
+                    >
+                      {amb.user.email}
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const navigate = useNavigate();
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -104,13 +184,25 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   // `draft` holds the in-progress string values keyed by field.
   const [editingNumbers, setEditingNumbers] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
+  // BA the admin newly picked in the editor. Null = leave the recap's
+  // current ambassador unchanged (updateRecap's ambassador_id is guarded
+  // server-side, so a null is a no-op, not a clear).
+  const [pickedBa, setPickedBa] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   // Bumped after a file is attached so the query refetches and the new
   // photo/receipt shows up in the grid without a full page reload.
   const [refreshKey, setRefreshKey] = useState(0);
   const data = useLazyLoadQuery<RecapQueryType>(
     RecapQuery,
     { uuid },
-    { fetchPolicy: "store-or-network", fetchKey: refreshKey },
+    // store-and-network (not store-or-network) so bumping refreshKey
+    // after a mutation that doesn't return every field (updateRecap
+    // returns only id/name/eventId — not the numbers or ambassadors)
+    // actually re-fetches from the network. With store-or-network the
+    // bump served the stale store and edits/BA didn't show until a
+    // manual reload — the same "silly workflow" Nevena hit on photos.
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
 
   const recap = data?.recap;
@@ -163,6 +255,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       accountSpendAmount: recap.accountSpendAmount?.toString() ?? "",
       totalConsumer: engagement?.totalConsumer?.toString() ?? "",
     });
+    setPickedBa(null);
     setEditingNumbers(true);
   };
 
@@ -195,6 +288,10 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           name: recap.name ?? "Recap",
           eventId: event?.id ?? "",
           files,
+          // BA assignment — only sent when the admin picked one. The
+          // backend guards ambassador_id (only updates when present),
+          // so a null here leaves the current BA untouched.
+          ambassadorId: pickedBa?.id ?? null,
           // Edited numbers (null clears a value intentionally).
           productsSold: numOrNull(draft.productsSold),
           totalCansSold: numOrNull(draft.totalCansSold),
@@ -526,7 +623,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 }}
                 title="Edit the recap's numbers (products sold, cans, packs, engagements, spend)"
               >
-                {editingNumbers ? "✕ Close editor" : "✎ Edit numbers"}
+                {editingNumbers ? "✕ Close editor" : "✎ Edit recap"}
               </button>
             )}
           </div>
@@ -543,10 +640,10 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             className="mono text-[10px]"
             style={{ letterSpacing: "0.18em", color: "var(--spark-lime)" }}
           >
-            EDIT NUMBERS · ADMIN
+            EDIT RECAP · ADMIN
           </p>
           <h3 className="display font-bold mt-1" style={{ letterSpacing: "-0.02em" }}>
-            Correct the recap's numbers
+            Correct recap numbers + BA
           </h3>
           <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
             Photos, feedback, and all other fields are preserved — only the
@@ -586,6 +683,58 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               </div>
             ))}
           </div>
+
+          {/* BA assignment. Nevena: "I cant add BA for that recap
+              anywhere." Shows the current BA and lets the admin search +
+              reassign. Saved together with the numbers on Save changes. */}
+          <div className="mt-5">
+            <label
+              className="mono text-[10px] block mb-1"
+              style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+            >
+              ASSIGNED BA
+            </label>
+            <p className="text-sm mb-2" style={{ color: "rgba(255,255,255,0.75)" }}>
+              {pickedBa ? (
+                <>
+                  <span style={{ color: "var(--spark-lime)" }}>
+                    {pickedBa.name}
+                  </span>{" "}
+                  <button
+                    type="button"
+                    onClick={() => setPickedBa(null)}
+                    className="mono text-[10px] ml-1"
+                    style={{ color: "var(--spark-orange)" }}
+                  >
+                    (undo)
+                  </button>
+                </>
+              ) : ambassadors.length > 0 ? (
+                [ambassadors[0]?.user?.firstName, ambassadors[0]?.user?.lastName]
+                  .filter(Boolean)
+                  .join(" ") || "Current BA"
+              ) : (
+                <span style={{ color: "rgba(255,255,255,0.45)" }}>
+                  No BA assigned yet
+                </span>
+              )}
+            </p>
+            <Suspense
+              fallback={
+                <div
+                  className="mono text-[10px] py-2"
+                  style={{ color: "rgba(255,255,255,0.45)" }}
+                >
+                  Loading BA search…
+                </div>
+              }
+            >
+              <BaSearch
+                onPick={(id, name) => setPickedBa({ id, name })}
+              />
+            </Suspense>
+          </div>
+
           <div className="flex gap-2 mt-5">
             <button
               onClick={saveNumbers}
