@@ -47,6 +47,11 @@ type Recap = {
   // for this activation" in one click.
   requestUuid: string | null;
   requestShortId: string | null;
+  // Event Activation / Retail Sampling / etc. — sourced from the
+  // parent Request's request_type. Null when the recap isn't linked
+  // to a request or the request type hasn't been set. Surfaced in
+  // the CSV export so client reports can group by activation type.
+  requestType: string | null;
 };
 
 // Compute a 0-3 completeness score from the signals already in the
@@ -343,6 +348,12 @@ const RecapsListInner: React.FC<{
   stateFilter: string;
   rmmFilter: string;
   statusFilter: StatusKey;
+  // Inclusive ISO yyyy-mm-dd bounds; empty string = no bound on that
+  // side. Filter strips at the day level — recap dates are stored as
+  // yyyy-mm-dd or yyyy-mm-ddTHH:MM:SS so a lexicographic compare on
+  // the first 10 chars is correct here.
+  dateFrom: string;
+  dateTo: string;
   sortKey: SortKey;
   pageSize: number;
   onMeta: (m: Meta) => void;
@@ -352,7 +363,7 @@ const RecapsListInner: React.FC<{
   // checkboxes against it and reports toggles back up.
   selectedIds: Set<string>;
   onToggleSelected: (id: string) => void;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, statusFilter, sortKey, pageSize, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected }) => {
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, statusFilter, dateFrom, dateTo, sortKey, pageSize, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Initial page is PAGE_SIZE (60); "Load more" bumps pageSize in
@@ -400,6 +411,12 @@ const RecapsListInner: React.FC<{
             : null;
           const fileCount = n.recapFilesCount ?? 0;
           const requestUuid = n.event?.request?.uuid ?? null;
+          // request.requestType is a NamedEntity; pull the human
+          // label ("Event Activation", "Retail Sampling", …). Null
+          // when the recap isn't linked to a request or the request
+          // hasn't been categorised yet.
+          const requestType =
+            n.event?.request?.requestType?.name ?? null;
           return {
             id: String(n.id),
             uuid: String(n.uuid),
@@ -416,6 +433,7 @@ const RecapsListInner: React.FC<{
             requestShortId: requestUuid
               ? `R-${String(requestUuid).slice(-4).toUpperCase()}`
               : null,
+            requestType,
           };
         }) ?? []
     );
@@ -468,7 +486,20 @@ const RecapsListInner: React.FC<{
       const matchStatus =
         statusFilter === "all" ||
         (statusFilter === "approved" ? r.approved : !r.approved);
-      return matchQ && matchR && matchS && matchStatus;
+      // Date range: compare on the yyyy-mm-dd prefix. Each bound is
+      // inclusive — `dateFrom` = "2026-05-01" passes recaps from May 1
+      // onwards, `dateTo` = "2026-05-31" passes recaps up to and
+      // including May 31. Empty string on either bound = no limit
+      // on that side. Recaps with no date pass when both bounds are
+      // empty and fail otherwise (so a narrowed range doesn't show
+      // undated rows that would distort budget reconciliation totals).
+      const recapDay = (r.date || "").slice(0, 10);
+      const matchDate =
+        (!dateFrom && !dateTo) ||
+        (recapDay !== "" &&
+          (!dateFrom || recapDay >= dateFrom) &&
+          (!dateTo || recapDay <= dateTo));
+      return matchQ && matchR && matchS && matchStatus && matchDate;
     });
 
     // Sort in-place on the copy.
@@ -485,7 +516,7 @@ const RecapsListInner: React.FC<{
           return (b.date || "").localeCompare(a.date || "");
       }
     });
-  }, [recaps, search, retailerFilter, stateFilter, statusFilter, sortKey]);
+  }, [recaps, search, retailerFilter, stateFilter, statusFilter, dateFrom, dateTo, sortKey]);
 
   // Bubble the currently-visible recaps up so the outer page can
   // wire them to the CSV export button.
@@ -570,6 +601,13 @@ export default function SparkRecapsList() {
   const [stateFilter, setStateFilter] = useState("all");
   const [rmmFilter, setRmmFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusKey>("all");
+  // Inclusive date range for the budget-reconciliation filter
+  // Myriant asked for. Empty string = unbounded on that side, so the
+  // default ("","") is the same as "all dates". Stored as ISO yyyy-
+  // mm-dd to match the native <input type="date"> value shape and
+  // r.date which is already date-prefixed.
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
   // "Load more" bumps this by PAGE_SIZE (60). Reset when filters
   // change so the user doesn't see "Load more (60 of 12)" when
@@ -577,7 +615,7 @@ export default function SparkRecapsList() {
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   useEffect(() => {
     setPageSize(PAGE_SIZE);
-  }, [retailerFilter, stateFilter, rmmFilter, statusFilter]);
+  }, [retailerFilter, stateFilter, rmmFilter, statusFilter, dateFrom, dateTo]);
   const [meta, setMeta] = useState<Meta>({
     retailers: [],
     states: [],
@@ -680,6 +718,10 @@ export default function SparkRecapsList() {
       "Retailer",
       "State",
       "Date",
+      // Request type — Event Activation / Retail Sampling / etc.
+      // Nevena needs this so client reports can group by activation
+      // type. Empty when the recap isn't linked to a request.
+      "Request Type",
       "Status",
       "Engagements",
       "Products Sold",
@@ -700,6 +742,7 @@ export default function SparkRecapsList() {
           r.retailerName,
           r.stateCode ?? "",
           r.date,
+          r.requestType ?? "",
           r.approved ? "approved" : "draft",
           r.engagements ?? "",
           r.productsSold ?? "",
@@ -739,6 +782,7 @@ export default function SparkRecapsList() {
       "Retailer",
       "State",
       "Date",
+      "Request Type",
       "Status",
       "Engagements",
       "Products Sold",
@@ -761,6 +805,7 @@ export default function SparkRecapsList() {
           r.retailerName,
           r.stateCode ?? "",
           r.date,
+          r.requestType ?? "",
           r.approved ? "approved" : "draft",
           r.engagements ?? "",
           r.productsSold ?? "",
@@ -1004,6 +1049,66 @@ export default function SparkRecapsList() {
             <option value="approved">Approved only</option>
             <option value="draft">Draft only</option>
           </select>
+
+          {/* Date range — Myriant asked for this so she can pull
+              recaps for a specific budget reconciliation period. Both
+              bounds inclusive; clearing both = "all dates" (same as
+              before this filter existed). */}
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="rounded-xl text-sm"
+            style={{
+              padding: "0.75rem 0.95rem",
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+              maxWidth: 160,
+              outline: "none",
+              colorScheme: "dark",
+            }}
+            title="From date (inclusive)"
+            placeholder="From"
+          />
+          <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>
+            →
+          </span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="rounded-xl text-sm"
+            style={{
+              padding: "0.75rem 0.95rem",
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+              maxWidth: 160,
+              outline: "none",
+              colorScheme: "dark",
+            }}
+            title="To date (inclusive)"
+            placeholder="To"
+          />
+          {(dateFrom || dateTo) && (
+            <button
+              type="button"
+              onClick={() => {
+                setDateFrom("");
+                setDateTo("");
+              }}
+              className="rounded-xl text-xs px-3 py-2"
+              style={{
+                background: "transparent",
+                color: "rgba(255,255,255,0.55)",
+                border: "1px solid var(--spark-border)",
+              }}
+              title="Clear date range"
+            >
+              Clear dates
+            </button>
+          )}
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value as SortKey)}
@@ -1041,6 +1146,8 @@ export default function SparkRecapsList() {
             stateFilter={stateFilter}
             rmmFilter={rmmFilter}
             statusFilter={statusFilter}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
             sortKey={sortKey}
             pageSize={pageSize}
             onMeta={onMeta}

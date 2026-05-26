@@ -99,6 +99,14 @@ export const RecapsQuery = graphql`
             request {
               id
               uuid
+              # Event Activation / Retail Sampling / etc. Nevena needs
+              # this on the recap list + CSV export so client reports
+              # can group recaps by request type.
+              requestType {
+                id
+                uuid
+                name
+              }
               location {
                 id
                 uuid
