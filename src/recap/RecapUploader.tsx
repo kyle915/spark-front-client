@@ -20,8 +20,13 @@ type Props = {
   onUploaded: (blobName: string, kind: "photo" | "receipt") => void;
 };
 
+// NOTE: keep photo accept as the broad `image/*`. iOS Safari falls back
+// to the Files-app picker (no multi-select) when accept lists specific
+// MIME types like image/heic; image/* keeps the native camera-roll
+// picker, which supports multi-select. Server-side conversion handles
+// any weird format that sneaks through (HEIC → JPG runs at upload time).
 const ACCEPT: Record<NonNullable<Props["category"]>, string> = {
-  photo: "image/jpeg,image/png,image/webp,image/heic,image/heif",
+  photo: "image/*",
   receipt: "image/*,application/pdf",
 };
 
@@ -80,7 +85,11 @@ export const RecapUploader: React.FC<Props> = ({
     }
     setBusy(false);
     setProgress(null);
-    showAlert(`Uploaded ${files.length} file${files.length === 1 ? "" : "s"}.`, "success");
+    showAlert(
+      `Added ${files.length} file${files.length === 1 ? "" : "s"}. ` +
+        `Tap the button again to add more before submitting.`,
+      "success",
+    );
   };
 
   const label =

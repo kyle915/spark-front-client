@@ -88,9 +88,11 @@ export default function SparkRecapCreate() {
   const [photoBlobs, setPhotoBlobs] = useState<string[]>([]);
   const [receiptBlobs, setReceiptBlobs] = useState<string[]>([]);
 
-  // Admin-only ambassador override (uuid). BA flow leaves blank → backend
-  // pulls ambassador from auth.user. The display name is stored alongside
-  // so we can render a "selected BA" chip without re-querying.
+  // Admin-only ambassador override (Relay-encoded global id, not uuid —
+  // the createRecap mutation runs ambassadorId through resolve_id_to_int
+  // which only accepts globalIds or pure digit strings). BA flow leaves
+  // blank → backend pulls ambassador from auth.user. Display name is
+  // stored alongside so we render a "selected BA" chip without re-querying.
   const [ambassadorOverride, setAmbassadorOverride] = useState("");
   const [ambassadorDisplayName, setAmbassadorDisplayName] = useState("");
   const [fillingForOther, setFillingForOther] = useState(false);
@@ -257,10 +259,10 @@ export default function SparkRecapCreate() {
               }
             >
               <AmbassadorPicker
-                selectedUuid={ambassadorOverride}
+                selectedId={ambassadorOverride}
                 selectedName={ambassadorDisplayName}
-                onSelect={(uuid, name) => {
-                  setAmbassadorOverride(uuid);
+                onSelect={(id, name) => {
+                  setAmbassadorOverride(id);
                   setAmbassadorDisplayName(name);
                 }}
                 onClear={() => {
@@ -397,7 +399,11 @@ export default function SparkRecapCreate() {
         </label>
       </Card>
 
-      {/* Photos + receipts */}
+      {/* Photos + receipts. We show a per-file chip list with a Remove
+          button so the admin can see exactly which photos are queued
+          before submit — earlier UI only showed an "N PHOTOS READY"
+          counter which made it impossible to tell whether a multi-file
+          pick actually landed or only the last one stuck. */}
       <Card title="PHOTOS + RECEIPTS">
         <div className="flex flex-wrap gap-3">
           <RecapUploader
@@ -414,9 +420,71 @@ export default function SparkRecapCreate() {
         <p className="mono text-[10px] mt-3" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.55)" }}>
           {photoBlobs.length} PHOTO{photoBlobs.length === 1 ? "" : "S"} · {receiptBlobs.length} RECEIPT{receiptBlobs.length === 1 ? "" : "S"} READY
         </p>
+        {photoBlobs.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            {photoBlobs.map((blob, i) => (
+              <div
+                key={`${blob}-${i}`}
+                className="flex items-center justify-between gap-3 rounded-lg px-3 py-2"
+                style={{
+                  background: "var(--spark-surface-2)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                <span className="mono text-[11px] truncate" style={{ color: "rgba(255,255,255,0.75)" }}>
+                  📷 {blob.split("/").pop()}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPhotoBlobs((p) => p.filter((_, idx) => idx !== i))}
+                  className="mono text-[10px] px-2 py-1 rounded-full shrink-0"
+                  style={{
+                    letterSpacing: "0.14em",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    color: "rgba(255,255,255,0.65)",
+                  }}
+                >
+                  REMOVE
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {receiptBlobs.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            {receiptBlobs.map((blob, i) => (
+              <div
+                key={`${blob}-${i}`}
+                className="flex items-center justify-between gap-3 rounded-lg px-3 py-2"
+                style={{
+                  background: "var(--spark-surface-2)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                <span className="mono text-[11px] truncate" style={{ color: "rgba(255,255,255,0.75)" }}>
+                  📎 {blob.split("/").pop()}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setReceiptBlobs((p) => p.filter((_, idx) => idx !== i))}
+                  className="mono text-[10px] px-2 py-1 rounded-full shrink-0"
+                  style={{
+                    letterSpacing: "0.14em",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    color: "rgba(255,255,255,0.65)",
+                  }}
+                >
+                  REMOVE
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         {(photoBlobs.length > 0 || receiptBlobs.length > 0) && (
-          <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>
-            Files upload to GCS as you pick them — they only get attached to the recap when you submit.
+          <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.45)" }}>
+            Files upload to GCS as you pick them — they only get attached to the recap when you submit. Tap the Upload button again to add more.
           </p>
         )}
       </Card>
@@ -480,11 +548,11 @@ const Card: React.FC<{ title: string; children: React.ReactNode }> = ({ title, c
 // the top N active BAs so the admin sees something useful even
 // before they start typing.
 const AmbassadorPicker: React.FC<{
-  selectedUuid: string;
+  selectedId: string;
   selectedName: string;
-  onSelect: (uuid: string, name: string) => void;
+  onSelect: (id: string, name: string) => void;
   onClear: () => void;
-}> = ({ selectedUuid, selectedName, onSelect, onClear }) => {
+}> = ({ selectedId, selectedName, onSelect, onClear }) => {
   const [q, setQ] = useState("");
 
   const data = useLazyLoadQuery<AmbassadorSearchQueryType>(
@@ -501,7 +569,7 @@ const AmbassadorPicker: React.FC<{
     [data],
   );
 
-  if (selectedUuid && selectedName) {
+  if (selectedId && selectedName) {
     return (
       <div
         className="rounded-xl p-3 flex items-center justify-between gap-3"
@@ -519,7 +587,7 @@ const AmbassadorPicker: React.FC<{
               letterSpacing: "0.12em",
             }}
           >
-            BA · uuid {selectedUuid.slice(-6).toUpperCase()}
+            BA SELECTED
           </p>
         </div>
         <button
@@ -564,12 +632,16 @@ const AmbassadorPicker: React.FC<{
               .join(" ")
               .trim();
             const display = fullName || amb.user?.email || "(unnamed BA)";
-            const uuid = String(amb.uuid);
+            // Pass the Relay-encoded global id — backend's resolve_id_to_int
+            // accepts globalIds or pure digit strings but NOT raw uuids.
+            // (Earlier version of this picker passed amb.uuid and every
+            // submit failed with "Ambassador not found".)
+            const id = String(amb.id);
             return (
               <button
                 type="button"
-                key={uuid}
-                onClick={() => onSelect(uuid, display)}
+                key={id}
+                onClick={() => onSelect(id, display)}
                 className="w-full text-left rounded-xl p-3"
                 style={{
                   background: "var(--spark-surface-2)",
