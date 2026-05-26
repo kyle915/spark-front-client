@@ -4,6 +4,13 @@ import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/RecapsQuery.graphql";
+// Pulled in so the unified /recaps view can list CustomRecap rows
+// alongside the legacy Recap rows. Without this, custom-template
+// tenants (Liquid Death, Borjomi, Girl Beer, …) had their recaps
+// invisible on /recaps and only surfaced under /recaps/custom-list
+// — Kyle reported Dumbo Market and Austin Psych Fest missing.
+import { GetCustomRecapsQuery } from "@/api/queries/CustomRecapsQuery";
+import type { CustomRecapsQuery as CustomRecapsQueryType } from "@api/queries/__generated__/CustomRecapsQuery.graphql";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { GenerateCampaignReportPdfMutation } from "@/api/mutations/GenerateCampaignReportPdfMutation";
@@ -27,6 +34,13 @@ const CAMPAIGN_REPORT_MAX = 50;
  */
 
 type Recap = {
+  // Discriminator. "legacy" rows come from the Recap model + the
+  // `recaps` GraphQL resolver. "custom" rows come from the CustomRecap
+  // model + the `customRecaps` resolver — used by tenants on a Custom
+  // Recap Template (Liquid Death, Borjomi, Girl Beer, …). Both render
+  // through the same card; click handler picks the right route based
+  // on this field.
+  kind: "legacy" | "custom";
   // Relay-encoded id — opaque base64 the backend resolves back to an
   // int. Needed by the Campaign Report mutation, which takes a list
   // of recap ids. Distinct from `uuid` which is the human-friendly
@@ -387,8 +401,25 @@ const RecapsListInner: React.FC<{
     { fetchPolicy: "store-or-network" },
   );
 
+  // Parallel query for tenants on a Custom Recap Template. We don't
+  // paginate this independently of the legacy list — for now we just
+  // grab the same pageSize and merge on the client. That's fine
+  // because typical tenants have either-or (legacy XOR custom), and
+  // the combined dataset is bounded by the same hundreds-not-millions
+  // assumption the parent comment already calls out. If we hit a
+  // tenant with both flows AND >1k rows we'll need a unified server
+  // resolver; until then, two fetches + merge is the cheapest fix.
+  const customData = useLazyLoadQuery<CustomRecapsQueryType>(
+    GetCustomRecapsQuery,
+    {
+      first: pageSize,
+      filters: tenantId ? { tenantId } : null,
+    },
+    { fetchPolicy: "store-or-network" },
+  );
+
   const recaps: Recap[] = useMemo(() => {
-    return (
+    const legacy: Recap[] =
       data?.recaps?.edges
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
@@ -418,6 +449,7 @@ const RecapsListInner: React.FC<{
           const requestType =
             n.event?.request?.requestType?.name ?? null;
           return {
+            kind: "legacy" as const,
             id: String(n.id),
             uuid: String(n.uuid),
             name: n.name ?? n.event?.name ?? "Untitled recap",
@@ -435,9 +467,65 @@ const RecapsListInner: React.FC<{
               : null,
             requestType,
           };
-        }) ?? []
-    );
-  }, [data]);
+        }) ?? [];
+
+    // Custom recaps go through a different model (CustomRecap, not
+    // Recap) so the available fields differ slightly. We map to the
+    // same Recap shape so the rest of the page (filters, CSV export,
+    // card rendering) doesn't need to branch. Fields that don't
+    // exist on CustomRecap are set to safe defaults:
+    //   - heroImage: pulled from customRecapFiles, first image-typed
+    //     URL we find; null if none
+    //   - fileCount: customRecapFiles.length
+    //   - productsSold: null (CustomRecap doesn't carry a totalised
+    //     products-sold scalar; the per-product breakdown lives in
+    //     customRecapSalePerformance which is too detailed for the
+    //     list card)
+    //   - requestUuid/requestShortId: null because CustomRecap
+    //     doesn't link to a Request row (it's tied to a JobAssignment
+    //     instead; opening the recap shows the BA + event)
+    const isImage = (name: string | null | undefined) =>
+      Boolean(
+        name && /\.(jpe?g|png|webp|gif)(\?|$)/i.test(name),
+      );
+    const custom: Recap[] =
+      customData?.customRecaps?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
+        ?.map((n) => {
+          const files = (n.customRecapFiles ?? []).filter(
+            (f): f is NonNullable<typeof f> => Boolean(f),
+          );
+          const heroFile = files.find((f) => isImage(f.url));
+          return {
+            kind: "custom" as const,
+            id: String(n.id),
+            uuid: String(n.uuid),
+            name:
+              n.name ?? n.event?.name ?? n.customRecapTemplate?.name ?? "Custom recap",
+            date: n.event?.date ?? n.createdAt ?? "",
+            retailerName: n.retailer?.name ?? "—",
+            stateCode: null,
+            approved: Boolean(n.approved),
+            heroImage: heroFile?.url ?? null,
+            fileCount: files.length,
+            engagements: n.totalEngagements ?? null,
+            productsSold: null,
+            requestUuid: null,
+            requestShortId: null,
+            requestType: n.customRecapTemplate?.name ?? null,
+          };
+        }) ?? [];
+
+    // Newest first. Mixed sort means custom and legacy recaps from
+    // the same day land next to each other on the page instead of
+    // siloed into two clumps.
+    return [...legacy, ...custom].sort((a, b) => {
+      const aT = a.date ? new Date(a.date).getTime() : 0;
+      const bT = b.date ? new Date(b.date).getTime() : 0;
+      return bT - aT;
+    });
+  }, [data, customData]);
 
   const retailers = useMemo(
     () =>
@@ -543,7 +631,13 @@ const RecapsListInner: React.FC<{
           recap={r}
           selected={selectedIds.has(r.id)}
           onToggleSelect={() => onToggleSelected(r.id)}
-          onOpen={() => navigate(`/recap/view/${r.uuid}`)}
+          onOpen={() =>
+            navigate(
+              r.kind === "custom"
+                ? `/recap/view-custom/${r.uuid}`
+                : `/recap/view/${r.uuid}`,
+            )
+          }
           onOpenRequest={(reqUuid) =>
             navigate(`/request/view/${reqUuid}`, {
               state: { from: "/recaps/list" },
