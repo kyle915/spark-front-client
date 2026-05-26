@@ -17,6 +17,7 @@ import type { RemoveRecapFileMutation as RemoveRecapFileMutationType } from "@/a
 import { AmbassadorSearchQuery } from "@/api/queries/AmbassadorSearchQuery";
 import type { AmbassadorSearchQuery as AmbassadorSearchQueryType } from "@/api/queries/__generated__/AmbassadorSearchQuery.graphql";
 import useSparkRole from "@/hooks/useSparkRole";
+import RateBaControl from "@/components/RateBaControl";
 import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
 import { useAlertStore } from "@/store/alertStore";
 import HeicImage from "./HeicImage";
@@ -193,6 +194,12 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   // Bumped after a file is attached so the query refetches and the new
   // photo/receipt shows up in the grid without a full page reload.
   const [refreshKey, setRefreshKey] = useState(0);
+  // Per-BA optimistic rating average, keyed by ambassador global id, so
+  // the Team card's "★ avg" updates the instant a rating is saved
+  // (rateAmbassador returns the recomputed caller-visible average).
+  const [ratingOverrides, setRatingOverrides] = useState<
+    Record<string, number>
+  >({});
   const data = useLazyLoadQuery<RecapQueryType>(
     RecapQuery,
     { uuid },
@@ -1431,30 +1438,61 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             ) : (
               ambassadors.map((a) => {
                 const fullName = `${a?.user?.firstName ?? ""} ${a?.user?.lastName ?? ""}`.trim();
+                const baId = a?.id ?? "";
+                const overridden = baId ? ratingOverrides[baId] : undefined;
+                const shownRating =
+                  overridden != null
+                    ? overridden
+                    : typeof a?.rating === "number"
+                      ? a.rating
+                      : null;
                 return (
-                  <div
-                    key={a?.uuid}
-                    className="flex items-center gap-3 mb-3 last:mb-0"
-                  >
-                    <span
-                      className="spark-avatar"
-                      style={{ width: 32, height: 32, fontSize: "0.75rem" }}
-                    >
-                      {initials(fullName || "BA")}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">
-                        {fullName || "Ambassador"}
-                      </p>
-                      <p
-                        className="mono text-[10px]"
-                        style={{ color: "rgba(255,255,255,0.45)" }}
+                  <div key={a?.uuid} className="mb-4 last:mb-0">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="spark-avatar"
+                        style={{ width: 32, height: 32, fontSize: "0.75rem" }}
                       >
-                        {typeof a?.rating === "number"
-                          ? `★ ${a.rating.toFixed(1)}`
-                          : "BA"}
-                      </p>
+                        {initials(fullName || "BA")}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">
+                          {fullName || "Ambassador"}
+                        </p>
+                        <p
+                          className="mono text-[10px]"
+                          style={{ color: "rgba(255,255,255,0.45)" }}
+                        >
+                          {shownRating != null && shownRating > 0
+                            ? `★ ${shownRating.toFixed(1)} avg`
+                            : "Not yet rated"}
+                        </p>
+                      </div>
                     </div>
+                    {baId && (
+                      <div className="mt-2">
+                        <p
+                          className="mono text-[10px] mb-1"
+                          style={{
+                            letterSpacing: "0.12em",
+                            color: "rgba(255,255,255,0.4)",
+                          }}
+                        >
+                          RATE THIS BA
+                        </p>
+                        <RateBaControl
+                          ambassadorId={baId}
+                          eventId={event?.id ?? null}
+                          ambassadorName={fullName || "this BA"}
+                          onRated={(avg) =>
+                            setRatingOverrides((prev) => ({
+                              ...prev,
+                              [baId]: avg,
+                            }))
+                          }
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })

@@ -423,6 +423,38 @@ type AmbassadorReviewType implements Node {
   updatedAt: String!
 }
 
+type AmbassadorRatingType implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  score: Int!
+  comment: String
+  byClient: Boolean!
+  ambassadorId: ID!
+  eventId: ID
+  tenantId: ID
+  createdAt: String!
+  updatedAt: String!
+  raterName: String!
+}
+
+input RateAmbassadorInput {
+  clientMutationId: ID = null
+  ambassadorId: ID!
+  eventId: ID = null
+  score: Int!
+  comment: String = null
+}
+
+type RateAmbassadorResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  ambassadorRating: AmbassadorRatingType
+  ambassadorAverage: Float!
+  ambassadorRatingCount: Int!
+}
+
 type AmbassadorReviewTypeCountableConnection {
   pageInfo: PageInfo!
   edges: [AmbassadorReviewTypeCountableEdge!]!
@@ -3309,6 +3341,7 @@ type Mutation {
   deleteRecap(input: DeleteRecapInput!): RecapDetailResponse!
   addRecapFile(input: AddRecapFileInput!): RecapDetailResponse!
   removeRecapFile(input: RemoveRecapFileInput!): RecapDetailResponse!
+  rateAmbassador(input: RateAmbassadorInput!): RateAmbassadorResponse!
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
@@ -3805,6 +3838,7 @@ type Query {
   ambassadorProfile(id: ID = null, uuid: ID = null, userId: ID = null): AmbassadorProfile
   ambassadorReviews(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorReviewFiltersInput = null): AmbassadorReviewTypeCountableConnection!
   ambassadorReview(reviewId: ID!): AmbassadorReviewType
+  ambassadorRatings(ambassadorId: ID!): [AmbassadorRatingType!]!
   ambassadorNotes(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorNoteFiltersInput = null): AmbassadorNoteTypeCountableConnection!
   ambassadorNote(noteId: ID!): AmbassadorNoteType
   skills(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: SkillFiltersInput = null): SkillTypeCountableConnection!

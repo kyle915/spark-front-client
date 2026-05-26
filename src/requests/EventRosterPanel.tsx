@@ -18,6 +18,7 @@ import React, { Suspense } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { AmbassadorEventsForEventQuery } from "@/api/queries/AmbassadorEventsForEventQuery";
 import type { AmbassadorEventsForEventQuery as AmbassadorEventsForEventQueryType } from "@api/queries/__generated__/AmbassadorEventsForEventQuery.graphql";
+import RateBaControl from "@/components/RateBaControl";
 
 type AmbassadorEventNode = NonNullable<
   NonNullable<
@@ -88,37 +89,62 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
   }> = ({ row, tone }) => {
     const color =
       tone === "lime" ? "var(--spark-lime)" : "var(--spark-gold)";
+    const baId = row.ambassador?.id ?? "";
     return (
       <div
         key={row.uuid}
-        className="flex items-center justify-between py-2"
+        className="py-2"
         style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
       >
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate">
-            {displayName(row.ambassador)}
-          </p>
-          {row.ambassador?.address ? (
-            <p
-              className="text-xs truncate"
-              style={{ color: "rgba(255,255,255,0.45)" }}
-            >
-              {row.ambassador.address}
+        <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold truncate">
+              {displayName(row.ambassador)}
             </p>
-          ) : null}
+            {row.ambassador?.address ? (
+              <p
+                className="text-xs truncate"
+                style={{ color: "rgba(255,255,255,0.45)" }}
+              >
+                {row.ambassador.address}
+              </p>
+            ) : null}
+          </div>
+          <span
+            className="mono text-[10px] ml-2"
+            style={{
+              letterSpacing: "0.16em",
+              color,
+              border: `1px solid ${color}55`,
+              padding: "2px 8px",
+              borderRadius: 999,
+            }}
+          >
+            {tone === "lime" ? "ACCEPTED" : "PENDING"}
+          </span>
         </div>
-        <span
-          className="mono text-[10px] ml-2"
-          style={{
-            letterSpacing: "0.16em",
-            color,
-            border: `1px solid ${color}55`,
-            padding: "2px 8px",
-            borderRadius: 999,
-          }}
-        >
-          {tone === "lime" ? "ACCEPTED" : "PENDING"}
-        </span>
+        {/* Rate accepted BAs inline — click a star to save. The dense
+            roster keeps it comment-free; the recap view + BA page offer
+            the full control with an optional note. */}
+        {tone === "lime" && baId && (
+          <div className="mt-2 flex items-center gap-2">
+            <span
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.14em",
+                color: "rgba(255,255,255,0.4)",
+              }}
+            >
+              RATE
+            </span>
+            <RateBaControl
+              ambassadorId={baId}
+              eventId={eventId}
+              ambassadorName={displayName(row.ambassador)}
+              compact
+            />
+          </div>
+        )}
       </div>
     );
   };
