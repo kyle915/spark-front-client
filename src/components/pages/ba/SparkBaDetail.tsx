@@ -20,6 +20,9 @@ import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { AmbassadorProfileQuery } from "@/api/queries/AmbassadorProfileQuery";
 import type { AmbassadorProfileQuery as AmbassadorProfileQueryType } from "@api/queries/__generated__/AmbassadorProfileQuery.graphql";
+import { AmbassadorRatingsQuery } from "@/api/queries/AmbassadorRatingsQuery";
+import type { AmbassadorRatingsQuery as AmbassadorRatingsQueryType } from "@api/queries/__generated__/AmbassadorRatingsQuery.graphql";
+import RateBaControl, { StarMeter } from "@/components/RateBaControl";
 import { loadFavorites, toggleFavorite } from "@/lib/favorites";
 
 type Profile = NonNullable<
@@ -387,6 +390,13 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
         )}
       </div>
 
+      {/* Gig ratings — the new 1-5 star ratings (admin + client), distinct
+          from legacy AmbassadorReviews above. Loads in its own boundary. */}
+      <RatingsCard
+        ambassadorId={String(ba.id)}
+        ambassadorName={displayName(profile)}
+      />
+
       {/* Internal notes */}
       <div className="spark-card p-6">
         <p
@@ -494,6 +504,143 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
     </div>
   );
 };
+
+/**
+ * Gig ratings card. Loads `ambassadorRatings` (server enforces who can
+ * see which rows), shows the average + a list, and lets the admin leave
+ * a general profile rating with an optional note. Re-fetches after each
+ * save via a fetchKey bump so the new row + recomputed average appear
+ * without a reload.
+ */
+const RatingsInner: React.FC<{
+  ambassadorId: string;
+  ambassadorName: string;
+}> = ({ ambassadorId, ambassadorName }) => {
+  const [bump, setBump] = useState(0);
+  const data = useLazyLoadQuery<AmbassadorRatingsQueryType>(
+    AmbassadorRatingsQuery,
+    { ambassadorId },
+    { fetchPolicy: "store-and-network", fetchKey: bump },
+  );
+  const ratings = (data.ambassadorRatings ?? []).filter(Boolean);
+  const scores = ratings
+    .map((r) => Number(r?.score))
+    .filter((s) => Number.isFinite(s) && s > 0);
+  const avg = scores.length
+    ? scores.reduce((s, v) => s + v, 0) / scores.length
+    : 0;
+
+  return (
+    <div className="spark-card p-6">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <p
+          className="mono text-[10px]"
+          style={{ letterSpacing: "0.18em", color: "var(--spark-lime)" }}
+        >
+          GIG RATINGS · {ratings.length}
+        </p>
+        <StarMeter value={avg} count={ratings.length} size={18} />
+      </div>
+
+      <div
+        className="mb-5"
+        style={{
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          paddingBottom: "1rem",
+        }}
+      >
+        <p
+          className="mono text-[10px] mb-2"
+          style={{
+            letterSpacing: "0.14em",
+            color: "rgba(255,255,255,0.45)",
+          }}
+        >
+          RATE THIS BA
+        </p>
+        <RateBaControl
+          ambassadorId={ambassadorId}
+          ambassadorName={ambassadorName}
+          onRated={() => setBump((b) => b + 1)}
+        />
+      </div>
+
+      {ratings.length === 0 ? (
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          No ratings yet.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {ratings.map((r) =>
+            r ? (
+              <div
+                key={r.id}
+                className="flex items-start gap-3"
+                style={{
+                  borderTop: "1px solid rgba(255,255,255,0.05)",
+                  paddingTop: "0.75rem",
+                }}
+              >
+                <span
+                  className="mono text-[12px]"
+                  style={{ color: "var(--spark-lime)", minWidth: 36 }}
+                >
+                  ★ {r.score}
+                </span>
+                <div className="flex-1">
+                  <p
+                    className="text-sm leading-relaxed"
+                    style={{ color: "rgba(255,255,255,0.85)" }}
+                  >
+                    {r.comment || (
+                      <span
+                        style={{
+                          color: "rgba(255,255,255,0.45)",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        (no comment)
+                      </span>
+                    )}
+                  </p>
+                  <p
+                    className="mono text-[10px] mt-1"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "rgba(255,255,255,0.45)",
+                    }}
+                  >
+                    {r.raterName || "—"}
+                    {r.byClient ? " · CLIENT" : " · IGNITE"} ·{" "}
+                    {fmtDate(r.createdAt)}
+                  </p>
+                </div>
+              </div>
+            ) : null,
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const RatingsCard: React.FC<{
+  ambassadorId: string;
+  ambassadorName: string;
+}> = (props) => (
+  <Suspense
+    fallback={
+      <div
+        className="spark-card p-6 text-xs"
+        style={{ color: "rgba(255,255,255,0.45)" }}
+      >
+        Loading ratings…
+      </div>
+    }
+  >
+    <RatingsInner {...props} />
+  </Suspense>
+);
 
 const Field: React.FC<{
   label: string;
