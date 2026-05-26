@@ -441,6 +441,17 @@ const SparkRequestInner: React.FC = () => {
       showAlert("Fill in venue, date, time, and type.", "warning");
       return;
     }
+    if (!address.trim()) {
+      // Catch the case where HTML required got bypassed (autofill,
+      // browser extension, etc.). Backend routing relies on this
+      // string to pull a state code, so an empty address would silently
+      // produce an unroutable request.
+      showAlert(
+        "Address is required — include the street, city, state, and zip.",
+        "warning",
+      );
+      return;
+    }
     if (isRetailSampling && !storeNumber.trim()) {
       showAlert(
         "Store number is required for Retail Sampling activations.",
@@ -449,7 +460,7 @@ const SparkRequestInner: React.FC = () => {
       return;
     }
     const allDates = [date, ...extraDates.filter(Boolean)];
-    const geocoded = await geocode(address || venue);
+    const geocoded = await geocode(address);
     const coords: ReadonlyArray<number> = geocoded ?? [0, 0];
     // Embed BA count + bulk size + store number in notes so it's
     // visible to the RMM until first-class fields are added to the
@@ -484,7 +495,14 @@ const SparkRequestInner: React.FC = () => {
           variables: {
             input: {
               name: composedName,
-              address: address || venue,
+              // No `address || venue` fallback — the field is required
+              // in the UI now. Substituting the venue name (e.g.
+              // "Walmart Supercenter 389") here silently corrupted
+              // request.address, which is the same string the backend
+              // routing path runs through extract_state_code, which
+              // is what triggered REQ-925 hitting Lauren instead of
+              // the right NY/CA/etc. RMM.
+              address,
               coordinates: coords,
               // Backend Request.date / start_time / end_time are all
               // DateTimeField — every one needs an ISO string, not
@@ -571,7 +589,7 @@ const SparkRequestInner: React.FC = () => {
           className="mt-2"
           style={{ color: "rgba(255,255,255,0.55)" }}
         >
-          Six fields. We auto-route to your Ignite RMM for approval,
+          A few fields. We auto-route to your Ignite RMM for approval,
           staffing, and scheduling.
         </p>
       </div>
@@ -701,6 +719,36 @@ const SparkRequestInner: React.FC = () => {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Address — required so backend RMM routing can pull a state
+              code out of it (events/routing.py::extract_state_code).
+              Pre-fills from the venue autocomplete when the user picks
+              a repeat venue; editable in all cases.
+
+              We made this required (not optional) after REQ-925, where
+              an address of just "1608 Broadway St" — no city/state/zip
+              — caused the routing fallback chain to give up on a
+              state, route the request to Ignite-only, and skip the
+              client RMM. Forcing a full address at submit time is the
+              cheapest way to keep the new routing path warm. */}
+          <div>
+            <label className="label-mini block mb-1.5">Address *</label>
+            <input
+              style={inputStyle}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="123 Main St, City, ST 12345"
+              required
+              autoComplete="off"
+            />
+            <p
+              className="text-xs mt-1.5"
+              style={{ color: "rgba(255,255,255,0.45)" }}
+            >
+              Full street, city, state, zip — used to route to the
+              right Liquid Death territory manager.
+            </p>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
