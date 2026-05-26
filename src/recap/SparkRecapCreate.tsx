@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { EventsQuery } from "@/api/queries/EventsQuery";
+import { AmbassadorSearchQuery } from "@/api/queries/AmbassadorSearchQuery";
+import type { AmbassadorSearchQuery as AmbassadorSearchQueryType } from "@/api/queries/__generated__/AmbassadorSearchQuery.graphql";
 import { CreateRecapMutation } from "@/api/mutations/CreateRecapMutation";
 import type { EventsQuery as EventsQueryType } from "@/api/queries/__generated__/EventsQuery.graphql";
 import type { CreateRecapMutation as CreateRecapMutationType } from "@/api/mutations/__generated__/CreateRecapMutation.graphql";
@@ -87,8 +89,10 @@ export default function SparkRecapCreate() {
   const [receiptBlobs, setReceiptBlobs] = useState<string[]>([]);
 
   // Admin-only ambassador override (uuid). BA flow leaves blank → backend
-  // pulls ambassador from auth.user.
+  // pulls ambassador from auth.user. The display name is stored alongside
+  // so we can render a "selected BA" chip without re-querying.
   const [ambassadorOverride, setAmbassadorOverride] = useState("");
+  const [ambassadorDisplayName, setAmbassadorDisplayName] = useState("");
   const [fillingForOther, setFillingForOther] = useState(false);
 
   const [commit, inFlight] = useMutation<CreateRecapMutationType>(CreateRecapMutation);
@@ -230,16 +234,41 @@ export default function SparkRecapCreate() {
       {isAdmin && (
         <Card title="FILLING FOR A BA?">
           <label className="flex items-center gap-2">
-            <input type="checkbox" checked={fillingForOther} onChange={(e) => setFillingForOther(e.target.checked)} />
+            <input type="checkbox" checked={fillingForOther} onChange={(e) => {
+              setFillingForOther(e.target.checked);
+              if (!e.target.checked) {
+                // Toggling off clears any half-picked selection so the
+                // mutation doesn't carry a stale uuid when the admin
+                // changes their mind.
+                setAmbassadorOverride("");
+                setAmbassadorDisplayName("");
+              }
+            }} />
             <span className="text-sm">Yes, I'm submitting this on behalf of an ambassador.</span>
           </label>
           {fillingForOther && (
-            <input
-              value={ambassadorOverride}
-              onChange={(e) => setAmbassadorOverride(e.target.value)}
-              placeholder="Ambassador uuid (leave blank to leave unassigned)"
-              className={inputCls}
-            />
+            <Suspense
+              fallback={
+                <input
+                  disabled
+                  placeholder="Loading ambassadors…"
+                  className={inputCls}
+                />
+              }
+            >
+              <AmbassadorPicker
+                selectedUuid={ambassadorOverride}
+                selectedName={ambassadorDisplayName}
+                onSelect={(uuid, name) => {
+                  setAmbassadorOverride(uuid);
+                  setAmbassadorDisplayName(name);
+                }}
+                onClear={() => {
+                  setAmbassadorOverride("");
+                  setAmbassadorDisplayName("");
+                }}
+              />
+            </Suspense>
           )}
         </Card>
       )}
@@ -442,3 +471,128 @@ const Card: React.FC<{ title: string; children: React.ReactNode }> = ({ title, c
     {children}
   </div>
 );
+
+// Type-ahead picker for the "filling for a BA" toggle. Searches
+// the current tenant's active ambassadors as the admin types
+// (backend `activeAmbassadors` resolver is tenant-scoped). On pick,
+// hands the uuid back up + caches the display name so the chip can
+// render without an extra round-trip. Empty query string returns
+// the top N active BAs so the admin sees something useful even
+// before they start typing.
+const AmbassadorPicker: React.FC<{
+  selectedUuid: string;
+  selectedName: string;
+  onSelect: (uuid: string, name: string) => void;
+  onClear: () => void;
+}> = ({ selectedUuid, selectedName, onSelect, onClear }) => {
+  const [q, setQ] = useState("");
+
+  const data = useLazyLoadQuery<AmbassadorSearchQueryType>(
+    AmbassadorSearchQuery,
+    { q, first: 8 },
+    { fetchPolicy: "store-or-network" },
+  );
+
+  const matches = useMemo(
+    () =>
+      (data?.activeAmbassadors?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n)),
+    [data],
+  );
+
+  if (selectedUuid && selectedName) {
+    return (
+      <div
+        className="rounded-xl p-3 flex items-center justify-between gap-3"
+        style={{
+          background: "var(--spark-surface-2)",
+          border: "1px solid var(--spark-border)",
+        }}
+      >
+        <div>
+          <p className="display font-bold text-sm">{selectedName}</p>
+          <p
+            className="mono text-[10px] mt-0.5"
+            style={{
+              color: "rgba(255,255,255,0.5)",
+              letterSpacing: "0.12em",
+            }}
+          >
+            BA · uuid {selectedUuid.slice(-6).toUpperCase()}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClear}
+          className="mono text-[10px] px-3 py-1.5 rounded-full"
+          style={{
+            letterSpacing: "0.18em",
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.1)",
+          }}
+        >
+          CHANGE
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Type a BA's name or email…"
+        className={inputCls}
+      />
+      <div className="mt-3 max-h-72 overflow-y-auto space-y-1.5">
+        {matches.length === 0 ? (
+          <p
+            className="mono text-[10px] py-2"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            {q ? "NO MATCHES" : "START TYPING TO SEARCH"}
+          </p>
+        ) : (
+          matches.map((amb) => {
+            const fullName = [amb.user?.firstName, amb.user?.lastName]
+              .filter(Boolean)
+              .join(" ")
+              .trim();
+            const display = fullName || amb.user?.email || "(unnamed BA)";
+            const uuid = String(amb.uuid);
+            return (
+              <button
+                type="button"
+                key={uuid}
+                onClick={() => onSelect(uuid, display)}
+                className="w-full text-left rounded-xl p-3"
+                style={{
+                  background: "var(--spark-surface-2)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                <p className="text-sm font-semibold">{display}</p>
+                {fullName && amb.user?.email && (
+                  <p
+                    className="mono text-[10px] mt-0.5"
+                    style={{
+                      color: "rgba(255,255,255,0.5)",
+                      letterSpacing: "0.12em",
+                    }}
+                  >
+                    {amb.user.email}
+                  </p>
+                )}
+              </button>
+            );
+          })
+        )}
+      </div>
+    </>
+  );
+};
