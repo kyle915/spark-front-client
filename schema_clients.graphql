@@ -3288,6 +3288,7 @@ type Mutation {
   updateCustomField(input: UpdateCustomFieldInput!): CustomFieldDetailResponse!
   createCustomRecapTemplate(input: CreateCustomRecapTemplateInput!): CustomRecapTemplateDetailResponse!
   updateCustomRecapTemplate(input: UpdateCustomRecapTemplateInput!): CustomRecapTemplateDetailResponse!
+  removeCustomField(input: RemoveCustomFieldInput!): CustomFieldDetailResponse!
   createCustomRecapFieldType(input: CreateCustomRecapFieldTypeInput!): CustomRecapFieldTypeDetailResponse!
   updateCustomRecapFieldType(input: UpdateCustomRecapFieldTypeInput!): CustomRecapFieldTypeDetailResponse!
   createRecapSection(input: CreateRecapSectionInput!): RecapSectionDetailResponse!
@@ -5274,6 +5275,12 @@ input UpdateCustomRecapInput {
   ambassadorId: ID = null
   customFieldValues: [CustomFieldValueInput!] = null
   id: ID!
+}
+
+input RemoveCustomFieldInput {
+  clientMutationId: ID = null
+  id: ID!
+  deleteValues: Boolean! = false
 }
 
 input UpdateCustomRecapTemplateInput {
