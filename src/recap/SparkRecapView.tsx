@@ -12,6 +12,8 @@ import { UpdateRecapMutation } from "@/api/mutations/UpdateRecapMutation";
 import type { UpdateRecapMutation as UpdateRecapMutationType } from "@/api/mutations/__generated__/UpdateRecapMutation.graphql";
 import { ApproveRecapMutation } from "@/api/mutations/ApproveRecapMutation";
 import type { ApproveRecapMutation as ApproveRecapMutationType } from "@/api/mutations/__generated__/ApproveRecapMutation.graphql";
+import { RemoveRecapFileMutation } from "@/api/mutations/RemoveRecapFileMutation";
+import type { RemoveRecapFileMutation as RemoveRecapFileMutationType } from "@/api/mutations/__generated__/RemoveRecapFileMutation.graphql";
 import useSparkRole from "@/hooks/useSparkRole";
 import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
 import { useAlertStore } from "@/store/alertStore";
@@ -93,6 +95,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     useMutation<UpdateRecapMutationType>(UpdateRecapMutation);
   const [commitApprove, isApproving] =
     useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
+  const [commitRemoveFile] =
+    useMutation<RemoveRecapFileMutationType>(RemoveRecapFileMutation);
   const { isAdmin } = useSparkRole();
   const [isZipping, setIsZipping] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
@@ -250,6 +254,33 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         }
       },
       onError: (err) => showAlert(`Approval failed: ${err.message}`, "error"),
+    });
+  };
+
+  // Remove a photo/receipt from the recap. Destructive (deletes the
+  // blob) so we gate behind a confirm. The mutation returns the
+  // refreshed recapFiles so the grid updates from the Relay store.
+  const removeFile = (fileId: string, label: string) => {
+    if (
+      !window.confirm(
+        `Remove ${label || "this file"} from the recap? This deletes it permanently.`,
+      )
+    ) {
+      return;
+    }
+    commitRemoveFile({
+      variables: { input: { id: fileId } },
+      onCompleted: (res) => {
+        if (res.removeRecapFile?.success) {
+          showAlert("File removed.", "success");
+        } else {
+          showAlert(
+            res.removeRecapFile?.message ?? "Couldn't remove file.",
+            "error",
+          );
+        }
+      },
+      onError: (err) => showAlert(`Remove failed: ${err.message}`, "error"),
     });
   };
 
@@ -1101,18 +1132,42 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                     video: "VIDEO",
                     other: "FILE",
                   };
+                  const fileId = p?.id ? String(p.id) : null;
+                  const fileLabel =
+                    (p?.file ?? "").split("/").pop() || "this file";
                   return (
                     <a
                       key={p?.uuid ?? i}
                       href={url}
                       target="_blank"
                       rel="noreferrer"
-                      className="block aspect-square rounded-lg overflow-hidden relative"
+                      className="block aspect-square rounded-lg overflow-hidden relative group"
                       style={{
                         background: "rgba(255,255,255,0.04)",
                         border: "1px solid var(--spark-border)",
                       }}
                     >
+                      {/* Admin-only remove button. Stops the parent <a>
+                          from navigating; confirms before deleting. */}
+                      {isAdmin && fileId && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            removeFile(fileId, fileLabel);
+                          }}
+                          title="Remove this file from the recap"
+                          className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full grid place-items-center text-xs font-bold transition opacity-0 group-hover:opacity-100"
+                          style={{
+                            background: "rgba(10,13,9,0.85)",
+                            color: "var(--spark-orange)",
+                            border: "1px solid rgba(239,90,42,0.5)",
+                          }}
+                        >
+                          ✕
+                        </button>
+                      )}
                       {kind === "image" ? (
                         <img
                           src={url}
