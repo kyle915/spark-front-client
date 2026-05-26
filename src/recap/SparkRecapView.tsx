@@ -8,6 +8,9 @@ import { GenerateRecapPdfMutation } from "@/api/mutations/GenerateRecapPdfMutati
 import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateRecapPdfMutation.graphql";
 import { AddRecapFileMutation } from "@/api/mutations/AddRecapFileMutation";
 import type { AddRecapFileMutation as AddRecapFileMutationType } from "@/api/mutations/__generated__/AddRecapFileMutation.graphql";
+import { UpdateRecapMutation } from "@/api/mutations/UpdateRecapMutation";
+import type { UpdateRecapMutation as UpdateRecapMutationType } from "@/api/mutations/__generated__/UpdateRecapMutation.graphql";
+import useSparkRole from "@/hooks/useSparkRole";
 import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
 import { useAlertStore } from "@/store/alertStore";
 import HeicImage from "./HeicImage";
@@ -84,8 +87,15 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const [commitAddFile] = useMutation<AddRecapFileMutationType>(
     AddRecapFileMutation,
   );
+  const [commitUpdate, isUpdating] =
+    useMutation<UpdateRecapMutationType>(UpdateRecapMutation);
+  const { isAdmin } = useSparkRole();
   const [isZipping, setIsZipping] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
+  // Admin-only inline number editor. `editingNumbers` toggles the panel;
+  // `draft` holds the in-progress string values keyed by field.
+  const [editingNumbers, setEditingNumbers] = useState(false);
+  const [draft, setDraft] = useState<Record<string, string>>({});
   // Bumped after a file is attached so the query refetches and the new
   // photo/receipt shows up in the grid without a full page reload.
   const [refreshKey, setRefreshKey] = useState(0);
@@ -131,6 +141,89 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     event?.startTime && event?.endTime
       ? `${fmtTime(event.startTime)} – ${fmtTime(event.endTime)}`
       : "";
+
+  // ── Admin-only number editing ──────────────────────────────────────
+  // updateRecap reconciles the full file set AND overwrites scalar
+  // fields unconditionally, so we MUST round-trip every existing file +
+  // every current scalar value, applying only the user's edits on top.
+  // Dropping any of them would delete photos or null out numbers.
+  const startEditNumbers = () => {
+    setDraft({
+      productsSold: recap.productsSold?.toString() ?? "",
+      totalCansSold: recap.totalCansSold?.toString() ?? "",
+      totalPacksSold: recap.totalPacksSold?.toString() ?? "",
+      accountSpendAmount: recap.accountSpendAmount?.toString() ?? "",
+      totalConsumer: engagement?.totalConsumer?.toString() ?? "",
+    });
+    setEditingNumbers(true);
+  };
+
+  const numOrNull = (s: string): number | null => {
+    const t = (s ?? "").trim();
+    if (t === "") return null;
+    const n = Number(t);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const saveNumbers = () => {
+    if (isUpdating) return;
+    // Faithfully reconstruct the full file list so the reconcile keeps
+    // every attached photo/receipt. Skip files with no blob (defensive).
+    const files = allFiles
+      .map((f) => ({
+        file: String(f?.file ?? ""),
+        fileTypeId: f?.fileTypeId != null ? String(f.fileTypeId) : null,
+        fileRecapCategoryId:
+          f?.fileRecapCategoryId != null
+            ? String(f.fileRecapCategoryId)
+            : null,
+      }))
+      .filter((f) => f.file.length > 0);
+
+    commitUpdate({
+      variables: {
+        input: {
+          id: recap.id,
+          name: recap.name ?? "Recap",
+          eventId: event?.id ?? "",
+          files,
+          // Edited numbers (null clears a value intentionally).
+          productsSold: numOrNull(draft.productsSold),
+          totalCansSold: numOrNull(draft.totalCansSold),
+          totalPacksSold: numOrNull(draft.totalPacksSold),
+          accountSpendAmount: numOrNull(draft.accountSpendAmount),
+          // Preserve the rest of the recap's current scalars so the
+          // unconditional overwrite on the backend doesn't blank them.
+          totalEarnings: recap.totalEarnings ?? null,
+          trafficDescription: recap.trafficDescription ?? null,
+          competitivePresence: recap.competitivePresence ?? null,
+          // Engagements: keep the existing breakdown, only update the
+          // headline total_consumer the editor exposes.
+          consumerEngagements: {
+            totalConsumer: numOrNull(draft.totalConsumer),
+            firstTimeConsumers: engagement?.firstTimeConsumers ?? null,
+            brandAwareConsumers: engagement?.brandAwareConsumers ?? null,
+            willingToPurchaseConsumers:
+              engagement?.willingToPurchaseConsumers ?? null,
+            notWillingConsumers: engagement?.notWillingConsumers ?? null,
+          },
+        },
+      },
+      onCompleted: (res) => {
+        if (res.updateRecap?.success) {
+          showAlert("Recap numbers updated.", "success");
+          setEditingNumbers(false);
+          setRefreshKey((k) => k + 1);
+        } else {
+          showAlert(
+            res.updateRecap?.message ?? "Couldn't save changes.",
+            "error",
+          );
+        }
+      },
+      onError: (err) => showAlert(`Save failed: ${err.message}`, "error"),
+    });
+  };
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -317,36 +410,114 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             >
               ⇄ Move to event
             </button>
+            {/* Admin-only number editor. Replaced the old dead-route
+                placeholder (which black-screened, then showed a "ping
+                your RMM" toast). Now opens an inline editor for the
+                quantitative fields. Clients stay read-only — they see
+                no Edit affordance. */}
+            {isAdmin && (
+              <button
+                onClick={() =>
+                  editingNumbers ? setEditingNumbers(false) : startEditNumbers()
+                }
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: editingNumbers
+                    ? "var(--spark-lime)"
+                    : "transparent",
+                  color: editingNumbers ? "#0a0d09" : "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
+                title="Edit the recap's numbers (products sold, cans, packs, engagements, spend)"
+              >
+                {editingNumbers ? "✕ Close editor" : "✎ Edit numbers"}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Admin number editor panel */}
+      {isAdmin && editingNumbers && (
+        <div
+          className="spark-card p-6"
+          style={{ borderColor: "rgba(197,245,70,0.3)" }}
+        >
+          <p
+            className="mono text-[10px]"
+            style={{ letterSpacing: "0.18em", color: "var(--spark-lime)" }}
+          >
+            EDIT NUMBERS · ADMIN
+          </p>
+          <h3 className="display font-bold mt-1" style={{ letterSpacing: "-0.02em" }}>
+            Correct the recap's numbers
+          </h3>
+          <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+            Photos, feedback, and all other fields are preserved — only the
+            numbers below change. Leave a field blank to clear it.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+            {(
+              [
+                { key: "productsSold", label: "Products sold" },
+                { key: "totalCansSold", label: "Cans sold" },
+                { key: "totalPacksSold", label: "Packs sold" },
+                { key: "totalConsumer", label: "Total engagements" },
+                { key: "accountSpendAmount", label: "Account spend ($)" },
+              ] as { key: string; label: string }[]
+            ).map((f) => (
+              <div key={f.key}>
+                <label
+                  className="mono text-[10px] block mb-1"
+                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                >
+                  {f.label.toUpperCase()}
+                </label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={draft[f.key] ?? ""}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, [f.key]: e.target.value }))
+                  }
+                  className="w-full rounded-lg px-3 py-2 text-[15px]"
+                  style={{
+                    background: "var(--spark-bg)",
+                    border: "1px solid var(--spark-border)",
+                    color: "var(--spark-text)",
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-5">
             <button
-              // The /recap/edit/:uuid route is currently disabled —
-              // the EditRecap component is fully commented out in
-              // src/recap/EditRecap.tsx and the route is commented
-              // out in src/routes/AppRoutes.tsx. Clicking Edit used
-              // to navigate to a non-existent route which rendered
-              // a blank/black page (Nevena's bug report). Until the
-              // edit UI is rebuilt, the button surfaces a clear
-              // message and points the user at the workarounds that
-              // DO work (re-link to a different event, or talk to
-              // their RMM).
-              onClick={() =>
-                showAlert(
-                  "Direct recap editing is being rebuilt. To re-link this recap to a different event, use ↑ Move to event. For value corrections, ping your RMM.",
-                  "info",
-                )
-              }
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              onClick={saveNumbers}
+              disabled={isUpdating}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+              style={{
+                background: "var(--spark-lime)",
+                color: "#0a0d09",
+                opacity: isUpdating ? 0.5 : 1,
+              }}
+            >
+              {isUpdating ? "Saving…" : "Save changes"}
+            </button>
+            <button
+              onClick={() => setEditingNumbers(false)}
+              disabled={isUpdating}
+              className="px-4 py-2.5 rounded-xl text-sm"
               style={{
                 background: "transparent",
                 color: "var(--spark-text)",
                 border: "1px solid var(--spark-border)",
               }}
-              title="Editing rebuild in progress — see message"
             >
-              ✎ Edit
+              Cancel
             </button>
           </div>
         </div>
-      </div>
+      )}
 
       {reassignOpen && (
         <ReassignRecapModal
