@@ -205,6 +205,11 @@ export const GetCustomRecapQuery = graphql`
         id
         name
         value
+        # ID of the CustomFieldValue row tying this template field to
+        # the recap's submitted value. Needed by the inline-edit save
+        # path on RecapCustomView so we can target the right row
+        # without having to look it up by (recapId, fieldId).
+        customFieldValueId
         recapSection {
           id
           name

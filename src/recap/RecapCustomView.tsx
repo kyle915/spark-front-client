@@ -1,7 +1,9 @@
 import Layout from "@/layout/Layout";
 import { GetCustomRecapQuery } from "@/api/queries/CustomRecapsQuery";
 import type { CustomRecapsQueryDetailsQuery as CustomRecapsQueryDetailsQueryType } from "@/api/queries/__generated__/CustomRecapsQueryDetailsQuery.graphql";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { UpdateCustomRecapMutation } from "@/api/mutations/UpdateCustomRecapMutation";
+import type { UpdateCustomRecapMutation as UpdateCustomRecapMutationType } from "@/api/mutations/__generated__/UpdateCustomRecapMutation.graphql";
+import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, Link, useSearchParams } from "react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDate } from "@/utils";
@@ -17,8 +19,11 @@ import {
   Image as ImageIcon,
   FolderOpen,
   FileText,
+  Pencil,
+  X as XIcon,
 } from "lucide-react";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
+import { useAlertStore } from "@/store/alertStore";
 
 type HeifDecodedImage = {
   get_width: () => number;
@@ -119,6 +124,97 @@ const RecapCustomView = () => {
 
   const recap = data?.customRecap;
   const recapFiles = useMemo(() => recap?.customRecapFiles ?? [], [recap]);
+
+  // ----- Field-level inline edit (admin) -----
+  // Lets an admin click "Edit values" to turn every custom-field
+  // value into an input, fix one or more, then save. The backend
+  // updateCustomRecap mutation replaces the entire customFieldValues
+  // set when provided — so we always send the FULL list (changed +
+  // unchanged) to keep the others intact. Product samples and sales
+  // performance are omitted from the input so the resolver leaves
+  // them untouched.
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [isEditingValues, setIsEditingValues] = useState(false);
+  // Working copy of customField values keyed by customField.id. Seeded
+  // from the recap on enter-edit so the user starts with what's
+  // already there.
+  const [editedValues, setEditedValues] = useState<Record<string, string>>({});
+  const [commitUpdateCustomRecap, isSavingValues] =
+    useMutation<UpdateCustomRecapMutationType>(UpdateCustomRecapMutation);
+
+  const enterEditMode = useCallback(() => {
+    const seed: Record<string, string> = {};
+    (recap?.customField ?? []).forEach((field) => {
+      if (!field) return;
+      // customField.id is the template field id (stable). value may
+      // be null if the BA didn't fill the field at submit time.
+      seed[String(field.id)] = field.value ?? "";
+    });
+    setEditedValues(seed);
+    setIsEditingValues(true);
+  }, [recap?.customField]);
+
+  const exitEditMode = useCallback(() => {
+    setIsEditingValues(false);
+    setEditedValues({});
+  }, []);
+
+  const saveValues = useCallback(() => {
+    if (!recap?.id) return;
+    const eventId = recap.event?.id;
+    const templateId = recap.customRecapTemplate?.id;
+    if (!eventId || !templateId) {
+      showAlert(
+        "Can't save: this recap is missing event or template links. Use Move to event first, or ping engineering.",
+        "error",
+      );
+      return;
+    }
+    // Build the full customFieldValues list — every existing field
+    // re-sent so the backend doesn't wipe any while replacing the
+    // set. Using customFieldValueId targets the existing row (no
+    // extra round-trip / lookup on the backend).
+    const customFieldValues = (recap.customField ?? [])
+      .filter((f): f is NonNullable<typeof f> => Boolean(f))
+      .map((field) => ({
+        customFieldId: field.id as string,
+        customFieldValueId: (field.customFieldValueId as string | null) ?? null,
+        value: editedValues[String(field.id)] ?? field.value ?? "",
+      }));
+
+    commitUpdateCustomRecap({
+      variables: {
+        input: {
+          id: recap.id as string,
+          name: recap.name ?? "",
+          eventId: eventId as string,
+          customRecapTemplateId: templateId as string,
+          customFieldValues,
+        },
+      },
+      onCompleted: (res) => {
+        const payload = res.updateCustomRecap;
+        if (payload?.success) {
+          showAlert("Recap values saved.", "success");
+          exitEditMode();
+        } else {
+          showAlert(payload?.message ?? "Save failed.", "error");
+        }
+      },
+      onError: (err) =>
+        showAlert(`Save failed: ${err.message}`, "error"),
+    });
+  }, [
+    recap?.id,
+    recap?.name,
+    recap?.event?.id,
+    recap?.customRecapTemplate?.id,
+    recap?.customField,
+    editedValues,
+    commitUpdateCustomRecap,
+    showAlert,
+    exitEditMode,
+  ]);
 
   const backToListUrl = useMemo(() => {
     const pageRaw = Number(searchParams.get("fromPage") ?? "1");
@@ -431,7 +527,7 @@ const RecapCustomView = () => {
     <Layout>
       <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm overflow-hidden">
         <div className="p-4 md:p-10 space-y-8">
-          <div>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <Link
               to={backToListUrl}
               className="inline-flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition"
@@ -439,6 +535,39 @@ const RecapCustomView = () => {
               <ArrowLeftIcon className="w-4 h-4" />
               Back to list
             </Link>
+            {/* Edit-values toolbar. Toggles every custom-field value
+                in the sections below into an editable input, with
+                Save / Cancel pair here at the top. Re-renders the
+                view in read mode after a successful save (relay store
+                updated from the mutation's selection set). */}
+            {!isEditingValues ? (
+              <button
+                onClick={enterEditMode}
+                className="btn btn-sm btn-outline gap-2"
+                title="Edit submitted field values"
+              >
+                <Pencil className="w-4 h-4" />
+                Edit values
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={exitEditMode}
+                  disabled={isSavingValues}
+                  className="btn btn-sm btn-ghost gap-2"
+                >
+                  <XIcon className="w-4 h-4" />
+                  Cancel
+                </button>
+                <button
+                  onClick={saveValues}
+                  disabled={isSavingValues}
+                  className="btn btn-sm btn-primary"
+                >
+                  {isSavingValues ? "Saving…" : "Save changes"}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* ======================================================
@@ -645,7 +774,17 @@ const RecapCustomView = () => {
               >
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                   {section.fields.map((field) => {
-                    const isLongText = field.value && field.value.length > 50;
+                    const fieldId = String(field.id);
+                    const displayValue = isEditingValues
+                      ? (editedValues[fieldId] ?? field.value ?? "")
+                      : (field.value ?? "");
+                    const isLongText =
+                      displayValue && displayValue.length > 50;
+                    // Render a multiline textarea for long values
+                    // (notes / observations) and a single-line input
+                    // for short ones (numbers / labels). Both bound
+                    // to the same edited-values map.
+                    const useTextarea = isLongText || displayValue.length > 50;
                     return (
                       <div
                         key={field.id}
@@ -654,9 +793,40 @@ const RecapCustomView = () => {
                         <p className="text-[11px] uppercase font-bold text-base-content/50 tracking-wider">
                           {field.name}
                         </p>
-                        <p className="text-sm md:text-base leading-relaxed font-medium text-base-content/90 whitespace-pre-wrap">
-                          {field.value || "—"}
-                        </p>
+                        {isEditingValues ? (
+                          useTextarea ? (
+                            <textarea
+                              value={editedValues[fieldId] ?? ""}
+                              onChange={(e) =>
+                                setEditedValues((prev) => ({
+                                  ...prev,
+                                  [fieldId]: e.target.value,
+                                }))
+                              }
+                              rows={Math.min(
+                                10,
+                                Math.max(2, Math.ceil(displayValue.length / 60)),
+                              )}
+                              className="textarea textarea-bordered w-full text-sm md:text-base"
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              value={editedValues[fieldId] ?? ""}
+                              onChange={(e) =>
+                                setEditedValues((prev) => ({
+                                  ...prev,
+                                  [fieldId]: e.target.value,
+                                }))
+                              }
+                              className="input input-bordered w-full text-sm md:text-base"
+                            />
+                          )
+                        ) : (
+                          <p className="text-sm md:text-base leading-relaxed font-medium text-base-content/90 whitespace-pre-wrap">
+                            {field.value || "—"}
+                          </p>
+                        )}
                       </div>
                     );
                   })}
