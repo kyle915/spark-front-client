@@ -1,4 +1,5 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Component, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import type { ErrorInfo, ReactNode } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
@@ -1877,20 +1878,94 @@ export default function SparkApprovals() {
           </div>
         </div>
 
-        {/* Queue (stats live inside ApprovalsInner so they share the data fetch) */}
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading approvals…
-            </div>
-          }
-        >
-          <ApprovalsInner />
-        </Suspense>
+        {/* Queue (stats live inside ApprovalsInner so they share the data fetch).
+            ApprovalsErrorBoundary catches the case where ApprovalsInner's
+            RequestsQuery throws — historically (until the public /approve/<token>
+            flow shipped) clients clicking the email link landed here without
+            admin tenant access, the query 403'd, and the whole page
+            blank-screened. The boundary now renders a useful message
+            instead and points them to the email reply path. */}
+        <ApprovalsErrorBoundary>
+          <Suspense
+            fallback={
+              <div
+                className="spark-card p-8 text-center text-sm"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
+                Loading approvals…
+              </div>
+            }
+          >
+            <ApprovalsInner />
+          </Suspense>
+        </ApprovalsErrorBoundary>
       </div>
     </Layout>
   );
+}
+
+/**
+ * Last-line-of-defense boundary around ApprovalsInner. Relay's
+ * `useLazyLoadQuery` throws on permission errors (e.g. a client user
+ * landing here from an old `/approvals?request=...` email link without
+ * admin tenant access). Without a boundary, that throw escapes Suspense
+ * and the parent unmounts → blank screen. With it, the user sees a
+ * friendly message instead and we log the underlying error to the
+ * console for debugging.
+ */
+class ApprovalsErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    // eslint-disable-next-line no-console
+    console.error("[SparkApprovals] query threw:", error, info.componentStack);
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div
+        className="spark-card p-8"
+        style={{ borderColor: "rgba(255,138,76,0.3)" }}
+      >
+        <p
+          className="mono text-[10px]"
+          style={{ letterSpacing: "0.18em", color: "var(--spark-orange)" }}
+        >
+          COULDN'T LOAD APPROVALS
+        </p>
+        <h2 className="display text-xl font-bold mt-2">
+          We hit a snag opening this page.
+        </h2>
+        <p
+          className="mt-2 text-sm"
+          style={{ color: "rgba(255,255,255,0.65)" }}
+        >
+          If you got here from an approval email, try clicking the button
+          again — links sent after this fix lands open a no-login approval
+          page directly. Otherwise, reach out to{" "}
+          <a
+            href="mailto:staffing@igniteproductions.co"
+            style={{ color: "var(--spark-lime)" }}
+          >
+            staffing@igniteproductions.co
+          </a>
+          .
+        </p>
+        <p
+          className="mono text-[10px] mt-4"
+          style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.4)" }}
+        >
+          {this.state.error.message?.slice(0, 200)}
+        </p>
+      </div>
+    );
+  }
 }
