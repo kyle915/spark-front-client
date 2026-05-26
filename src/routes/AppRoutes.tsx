@@ -288,6 +288,7 @@ const SparkFormPage = lazyDefault(() => import("@/public/form/FormPage"));
 const SparkPublicExpressForm = lazyDefault(
   () => import("@/public/form/SparkPublicExpressForm"),
 );
+const PublicApprove = lazyDefault(() => import("@/public/approve/PublicApprove"));
 const MagicLinkExchange = lazyDefault(() => import("@/auth/MagicLinkExchange"));
 const ForgotPassword = lazyDefault(() => import("@/auth/ForgotPassword"));
 const ResetPassword = lazyDefault(() => import("@/auth/ResetPassword"));
@@ -324,6 +325,14 @@ const PublicRoutes = {
     {
       path: "/magic/:token",
       component: <MagicLinkExchange />,
+      isPublic: true,
+    },
+    // Public, token-authenticated approval page. Linked from the
+    // `Review & approve` button in `rmm_assigned_request` emails — no
+    // login required, the signed token in the URL is the auth.
+    {
+      path: "/approve/:token",
+      component: <PublicApprove />,
       isPublic: true,
     },
     {
