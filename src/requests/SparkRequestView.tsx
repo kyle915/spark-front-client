@@ -115,16 +115,21 @@ const fmtDate = (raw: string | null | undefined) => {
   }
 };
 
+// NOTE: backend returns naive ISO strings in the venue's local timezone
+// (see events/types.py::_serialize_dt_for_tz). We render literally so
+// what the form saved is what the view shows, regardless of which tz
+// the admin's browser is in. Going through `new Date()` re-parses as
+// browser-local and was the source of the +/-1h skew on REQ-MJY (12pm
+// Central edit rendered as 2pm because PDT-CDT = +2h).
 const fmtTime = (raw: string | null | undefined) => {
   if (!raw) return "";
-  try {
-    return new Date(raw).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  } catch {
-    return raw;
-  }
+  const m = raw.match(/T(\d{2}):(\d{2})/);
+  if (!m) return raw;
+  const h = parseInt(m[1], 10);
+  if (!Number.isFinite(h)) return raw;
+  const meridiem = h >= 12 ? "PM" : "AM";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${m[2]} ${meridiem}`;
 };
 
 const STATUS_CHIP: Record<string, string> = {
