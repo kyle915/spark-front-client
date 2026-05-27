@@ -36,6 +36,7 @@ type RowResult = {
   message: string | null;
   requestId: string | null;
   requestUuid: string | null;
+  skipped: boolean | null;
 };
 
 type ImportResponse = {
@@ -47,6 +48,7 @@ type ImportResponse = {
   rolledBack: boolean | null;
   errors: string[] | null;
   rows: RowResult[] | null;
+  skippedCount: number | null;
 };
 
 async function postGql<T>(
@@ -224,6 +226,7 @@ const Inner: React.FC = () => {
               totalRows
               successCount
               failedCount
+              skippedCount
               rolledBack
               errors
               rows {
@@ -232,6 +235,7 @@ const Inner: React.FC = () => {
                 message
                 requestId
                 requestUuid
+                skipped
               }
             }
           }
@@ -267,6 +271,7 @@ const Inner: React.FC = () => {
               totalRows
               successCount
               failedCount
+              skippedCount
               rolledBack
               errors
               rows {
@@ -275,6 +280,7 @@ const Inner: React.FC = () => {
                 message
                 requestId
                 requestUuid
+                skipped
               }
             }
           }
@@ -367,6 +373,8 @@ const Inner: React.FC = () => {
   const successCount =
     commitResult?.successCount ?? dryResult?.successCount ?? 0;
   const failedCount = commitResult?.failedCount ?? dryResult?.failedCount ?? 0;
+  const skippedCount =
+    commitResult?.skippedCount ?? dryResult?.skippedCount ?? 0;
   const allRows = useMemo(
     () => commitResult?.rows ?? dryResult?.rows ?? [],
     [commitResult, dryResult],
@@ -835,6 +843,15 @@ const Inner: React.FC = () => {
                 <span style={{ color: "var(--spark-orange)" }}>
                   {failedCount} error{failedCount === 1 ? "" : "s"}
                 </span>
+                {skippedCount > 0 && (
+                  <>
+                    {" "}·{" "}
+                    <span style={{ color: "var(--spark-sky, #6ab7ff)" }}>
+                      {skippedCount} duplicate
+                      {skippedCount === 1 ? "" : "s"} skipped
+                    </span>
+                  </>
+                )}
               </p>
               <p
                 className="text-sm mt-1"
