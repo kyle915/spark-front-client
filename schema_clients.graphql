@@ -1654,6 +1654,7 @@ input CreateRequestInput {
   storeNumber: String = null
   clientName: String = null
   clientEmail: String = null
+  notifyRequestor: Boolean = null
   distributorName: String = null
   distributorEmail: String = null
   retailerName: String = null
