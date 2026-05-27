@@ -10,6 +10,7 @@ import type { CreateRecapMutation as CreateRecapMutationType } from "@/api/mutat
 import RecapUploader from "./RecapUploader";
 import { useAlertStore } from "@/store/alertStore";
 import { useSparkRole } from "@/hooks/useSparkRole";
+import { parseLocaleNumber } from "@/utils";
 
 /**
  * Spark v2 — manual recap submission flow.
@@ -104,11 +105,8 @@ export default function SparkRecapCreate() {
 
   const [commit, inFlight] = useMutation<CreateRecapMutationType>(CreateRecapMutation);
 
-  const num = (s: string): number | null => {
-    if (!s) return null;
-    const n = Number(s);
-    return Number.isFinite(n) ? n : null;
-  };
+  // Locale-tolerant parse so "96,63" (comma decimal) doesn't become NaN.
+  const num = (s: string): number | null => parseLocaleNumber(s);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -323,8 +321,8 @@ export default function SparkRecapCreate() {
                 // Auto-update Products Sold from Cans + Packs unless
                 // the user has manually edited Products Sold.
                 if (!productsSoldManual) {
-                  const cans = Number(next) || 0;
-                  const packs = Number(totalPacksSold) || 0;
+                  const cans = parseLocaleNumber(next) ?? 0;
+                  const packs = parseLocaleNumber(totalPacksSold) ?? 0;
                   const sum = cans + packs;
                   setProductsSold(sum > 0 ? String(sum) : "");
                 }
@@ -341,8 +339,8 @@ export default function SparkRecapCreate() {
                 const next = e.target.value;
                 setTotalPacksSold(next);
                 if (!productsSoldManual) {
-                  const cans = Number(totalCansSold) || 0;
-                  const packs = Number(next) || 0;
+                  const cans = parseLocaleNumber(totalCansSold) ?? 0;
+                  const packs = parseLocaleNumber(next) ?? 0;
                   const sum = cans + packs;
                   setProductsSold(sum > 0 ? String(sum) : "");
                 }

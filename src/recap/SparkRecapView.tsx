@@ -19,6 +19,7 @@ import type { AmbassadorSearchQuery as AmbassadorSearchQueryType } from "@/api/q
 import useSparkRole from "@/hooks/useSparkRole";
 import RateBaControl from "@/components/RateBaControl";
 import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
+import { parseLocaleNumber } from "@/utils";
 import { useAlertStore } from "@/store/alertStore";
 import HeicImage from "./HeicImage";
 import RecapUploader from "./RecapUploader";
@@ -297,8 +298,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         (key === "totalCansSold" || key === "totalPacksSold") &&
         !productsSoldManual
       ) {
-        const cans = Number(nextDraft.totalCansSold) || 0;
-        const packs = Number(nextDraft.totalPacksSold) || 0;
+        const cans = parseLocaleNumber(nextDraft.totalCansSold) ?? 0;
+        const packs = parseLocaleNumber(nextDraft.totalPacksSold) ?? 0;
         const sum = cans + packs;
         nextDraft.productsSold = sum > 0 ? String(sum) : "";
       }
@@ -307,12 +308,9 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     if (key === "productsSold") setProductsSoldManual(true);
   };
 
-  const numOrNull = (s: string): number | null => {
-    const t = (s ?? "").trim();
-    if (t === "") return null;
-    const n = Number(t);
-    return Number.isFinite(n) ? n : null;
-  };
+  // Locale-tolerant: "96,63" → 96.63 instead of NaN→null (which would
+  // silently clear Account Spend on save).
+  const numOrNull = (s: string): number | null => parseLocaleNumber(s);
 
   const saveNumbers = () => {
     if (isUpdating) return;
