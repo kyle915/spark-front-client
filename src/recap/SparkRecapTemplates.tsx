@@ -8,6 +8,8 @@ import { CustomRecapTemplateBuilderQuery } from "@/api/queries/CustomRecapTempla
 import type { CustomRecapTemplateBuilderQuery as CustomRecapTemplateBuilderQueryType } from "@api/queries/__generated__/CustomRecapTemplateBuilderQuery.graphql";
 import { RemoveCustomFieldMutation } from "@/api/mutations/RemoveCustomFieldMutation";
 import type { RemoveCustomFieldMutation as RemoveCustomFieldMutationType } from "@api/mutations/__generated__/RemoveCustomFieldMutation.graphql";
+import { CreateCustomFieldMutation } from "@/api/mutations/CreateCustomFieldMutation";
+import type { CreateCustomFieldMutation as CreateCustomFieldMutationType } from "@api/mutations/__generated__/CreateCustomFieldMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 
@@ -41,6 +43,20 @@ const fmtDate = (raw: string | null | undefined) => {
   }
 };
 
+// Shared input/select styling for the "Add a field" form — mirrors the
+// inputStyle used by the create-template builder so the two surfaces feel
+// like the same product.
+const fieldInputStyle: React.CSSProperties = {
+  background: "var(--spark-card-bg, rgba(255,255,255,0.02))",
+  border: "1px solid var(--spark-border)",
+  borderRadius: 10,
+  padding: "0.5rem 0.65rem",
+  color: "var(--spark-text)",
+  fontSize: "0.8rem",
+  outline: "none",
+  width: "100%",
+};
+
 const Inner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
@@ -50,6 +66,11 @@ const Inner: React.FC = () => {
   const [managingTemplateId, setManagingTemplateId] = useState<string | null>(
     null,
   );
+  // Bumped after a field is added/removed in the modal to force the
+  // builder query to re-fetch so the field list (and the card's FIELDS
+  // count) update in place — same pattern as the ratings card on the
+  // BA detail page (fetchKey bump on save).
+  const [fieldsFetchKey, setFieldsFetchKey] = useState(0);
 
   const data = useLazyLoadQuery<CustomRecapsQueryType>(
     GetCustomRecapsQuery,
@@ -63,7 +84,29 @@ const Inner: React.FC = () => {
   const templateData = useLazyLoadQuery<CustomRecapTemplateBuilderQueryType>(
     CustomRecapTemplateBuilderQuery,
     { tenantId: tenantId ?? "" },
-    { fetchPolicy: "store-and-network" },
+    { fetchPolicy: "store-and-network", fetchKey: fieldsFetchKey },
+  );
+
+  // Field types (text / number / photo / …) come bundled in the same
+  // builder query the create-template page uses, so the modal can reuse
+  // them for the "Add a field" type dropdown without a second request.
+  const fieldTypes = useMemo(
+    () =>
+      (templateData?.customRecapFieldTypes?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n))
+        .map((n) => ({ id: String(n.id), name: n.name })),
+    [templateData],
+  );
+  // All tenant sections — used as a fallback when a template has no
+  // fields yet (so we can't derive its sections from existing rows).
+  const allSections = useMemo(
+    () =>
+      (templateData?.recapSections?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n))
+        .map((n) => ({ id: String(n.id), name: n.name })),
+    [templateData],
   );
   const templatesWithFields = useMemo(
     () =>
@@ -272,6 +315,10 @@ const Inner: React.FC = () => {
 
       {managingTemplate && (
         <ManageFieldsModal
+          // Remount per template so the "Add a field" form state (incl.
+          // the auto-defaulted single section) resets when switching.
+          key={String(managingTemplate.id)}
+          templateId={String(managingTemplate.id)}
           templateName={managingTemplate.name ?? "Template"}
           fields={(managingTemplate.customField ?? [])
             .filter((f): f is NonNullable<typeof f> => Boolean(f))
@@ -279,7 +326,22 @@ const Inner: React.FC = () => {
               id: String(f.id),
               name: f.name ?? "(unnamed)",
               required: Boolean(f.required),
+              typeName: f.customFieldType?.name ?? null,
             }))}
+          // Sections this template already uses, derived from its fields.
+          // De-duped by id, preserving first-seen order. Falls back to all
+          // tenant sections when the template has no fields to derive from.
+          sections={(() => {
+            const seen = new Map<string, { id: string; name: string }>();
+            for (const f of managingTemplate.customField ?? []) {
+              const s = f?.recapSection;
+              if (s && !seen.has(String(s.id)))
+                seen.set(String(s.id), { id: String(s.id), name: s.name });
+            }
+            return seen.size > 0 ? Array.from(seen.values()) : allSections;
+          })()}
+          fieldTypes={fieldTypes}
+          onChanged={() => setFieldsFetchKey((k) => k + 1)}
           onClose={() => setManagingTemplateId(null)}
         />
       )}
@@ -288,17 +350,86 @@ const Inner: React.FC = () => {
 };
 
 const ManageFieldsModal: React.FC<{
+  templateId: string;
   templateName: string;
-  fields: { id: string; name: string; required: boolean }[];
+  fields: {
+    id: string;
+    name: string;
+    required: boolean;
+    typeName: string | null;
+  }[];
+  sections: { id: string; name: string }[];
+  fieldTypes: { id: string; name: string }[];
+  onChanged: () => void;
   onClose: () => void;
-}> = ({ templateName, fields, onClose }) => {
+}> = ({
+  templateId,
+  templateName,
+  fields,
+  sections,
+  fieldTypes,
+  onChanged,
+  onClose,
+}) => {
   const showAlert = useAlertStore((s) => s.showAlert);
   const [commitRemove, isRemoving] =
     useMutation<RemoveCustomFieldMutationType>(RemoveCustomFieldMutation);
+  const [commitCreate, isCreating] =
+    useMutation<CreateCustomFieldMutationType>(CreateCustomFieldMutation);
   // Tracks the field id mid-confirm so we can show inline "are you
   // sure" UX without a system dialog (system dialogs eat focus on
   // mobile and feel disconnected from the page state).
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+
+  // ---- "Add a field" form state ---------------------------------------
+  // If the template only uses a single section we default to it and hide
+  // the dropdown — there's nothing to choose.
+  const soleSectionId = sections.length === 1 ? sections[0].id : "";
+  const [newName, setNewName] = useState("");
+  const [newSectionId, setNewSectionId] = useState(soleSectionId);
+  const [newTypeId, setNewTypeId] = useState("");
+  // New fields default to Required ON, matching how existing template
+  // fields are typically created.
+  const [newRequired, setNewRequired] = useState(true);
+
+  const addDisabled =
+    isCreating ||
+    !newName.trim() ||
+    !newSectionId ||
+    !newTypeId;
+
+  const addField = () => {
+    if (addDisabled) return;
+    const label = newName.trim();
+    commitCreate({
+      variables: {
+        input: {
+          name: label,
+          customRecapTemplateId: templateId,
+          recapSectionId: newSectionId,
+          customFieldTypeId: newTypeId,
+          required: newRequired,
+        },
+      },
+      onCompleted: (res) => {
+        const payload = res.createCustomField;
+        if (payload?.success) {
+          showAlert(`Added "${label}" to "${templateName}".`, "success");
+          // Reset the form, but keep the section selection sticky so an
+          // admin adding several fields to the same section doesn't have
+          // to re-pick it each time.
+          setNewName("");
+          setNewTypeId("");
+          setNewRequired(true);
+          // Pull the fresh field list so the new row shows immediately.
+          onChanged();
+        } else {
+          showAlert(payload?.message ?? "Couldn't add field.", "error");
+        }
+      },
+      onError: (err) => showAlert(`Add failed: ${err.message}`, "error"),
+    });
+  };
 
   const remove = (fieldId: string, fieldName: string) => {
     commitRemove({
@@ -319,6 +450,8 @@ const ManageFieldsModal: React.FC<{
             "success",
           );
           setConfirmingId(null);
+          // Refresh the list so the removed row disappears in place.
+          onChanged();
         } else {
           showAlert(payload?.message ?? "Remove failed.", "error");
         }
@@ -397,7 +530,9 @@ const ManageFieldsModal: React.FC<{
                       color: "rgba(255,255,255,0.4)",
                     }}
                   >
-                    {f.required ? "Required · " : ""}id {f.id.slice(-6)}
+                    {f.required ? "Required · " : ""}
+                    {f.typeName ? `${f.typeName} · ` : ""}id{" "}
+                    {f.id.slice(-6)}
                   </p>
                 </div>
                 {confirmingId === f.id ? (
@@ -441,6 +576,104 @@ const ManageFieldsModal: React.FC<{
                 )}
               </div>
             ))
+          )}
+        </div>
+
+        {/* Add a field */}
+        <div
+          className="rounded-xl p-3 space-y-2.5"
+          style={{
+            background: "var(--spark-bg)",
+            border: "1px solid var(--spark-border)",
+          }}
+        >
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "var(--spark-lime)",
+            }}
+          >
+            ADD A FIELD
+          </p>
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") addField();
+            }}
+            placeholder="Field label (e.g. Products Sampled)"
+            style={fieldInputStyle}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            {/* Hide the section picker when the template has exactly one
+                section — it's auto-selected, nothing to choose. */}
+            {sections.length > 1 && (
+              <select
+                value={newSectionId}
+                onChange={(e) => setNewSectionId(e.target.value)}
+                style={fieldInputStyle}
+              >
+                <option value="">Section…</option>
+                {sections.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <select
+              value={newTypeId}
+              onChange={(e) => setNewTypeId(e.target.value)}
+              style={fieldInputStyle}
+            >
+              <option value="">Field type…</option>
+              {fieldTypes.map((ft) => (
+                <option key={ft.id} value={ft.id}>
+                  {ft.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <label
+              className="flex items-center gap-1.5 text-[11px] cursor-pointer"
+              style={{ color: "rgba(255,255,255,0.7)" }}
+              title="Required: BAs can't submit a recap if this is blank."
+            >
+              <input
+                type="checkbox"
+                checked={newRequired}
+                onChange={(e) => setNewRequired(e.target.checked)}
+                className="accent-[var(--spark-lime)]"
+              />
+              Required
+            </label>
+            <button
+              onClick={addField}
+              disabled={addDisabled}
+              className="px-4 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
+              style={{
+                background: "var(--spark-lime)",
+                color: "#0a0d09",
+                boxShadow: addDisabled
+                  ? "none"
+                  : "0 0 16px rgba(197,245,70,0.30)",
+              }}
+            >
+              {isCreating ? "Adding…" : "+ Add field"}
+            </button>
+          </div>
+          {sections.length === 1 && (
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.12em",
+                color: "rgba(255,255,255,0.4)",
+              }}
+            >
+              SECTION · {sections[0].name.toUpperCase()}
+            </p>
           )}
         </div>
       </div>
