@@ -1,0 +1,102 @@
+import { Component, type ErrorInfo, type ReactNode } from "react";
+
+interface Props {
+  children: ReactNode;
+}
+
+interface State {
+  error: Error | null;
+}
+
+/**
+ * App-wide error boundary for the page content area.
+ *
+ * Without this, a single failed query (e.g. a permission error on a
+ * sub-query like UsersQuery) throws during render and — with no boundary
+ * above it — React unmounts the whole tree, so the screen goes black.
+ *
+ * This catches the throw, keeps the Spark chrome (sidebar + topbar) up,
+ * and shows a readable panel with Try-again / Reload. Layout remounts it
+ * per route via `key={pathname}`, so navigating to a working page clears
+ * a stuck error automatically.
+ */
+class ErrorBoundary extends Component<Props, State> {
+  state: State = { error: null };
+
+  static getDerivedStateFromError(error: Error): State {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    // The page no longer black-screens, so the console is the only signal
+    // we'd otherwise keep. Log it for debugging.
+    console.error("[ErrorBoundary] caught render error:", error, info);
+  }
+
+  private handleRetry = () => this.setState({ error: null });
+
+  render() {
+    const { error } = this.state;
+    if (!error) return this.props.children;
+
+    const message = error.message || "Unknown error";
+    const isPermission = /permission/i.test(message);
+
+    return (
+      <div
+        className="spark-card p-10 max-w-2xl mx-auto text-center"
+        style={{ marginTop: "4vh" }}
+      >
+        <p
+          className="mono text-[10px]"
+          style={{ letterSpacing: "0.18em", color: "var(--spark-orange)" }}
+        >
+          SOMETHING WENT WRONG
+        </p>
+        <h1
+          className="display text-3xl font-bold mt-3"
+          style={{ letterSpacing: "-0.03em" }}
+        >
+          {isPermission
+            ? "You don't have access to this section."
+            : "This section couldn't load."}
+        </h1>
+        <p className="mt-3 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+          {isPermission
+            ? "If you think this is a mistake, ping the Ignite team — the rest of the app still works."
+            : "The rest of the app is still up. Try again, or reload the page."}
+        </p>
+        <p
+          className="mono text-[11px] mt-4 break-words"
+          style={{ color: "rgba(255,255,255,0.4)" }}
+        >
+          {message.slice(0, 300)}
+        </p>
+        <div className="flex items-center justify-center gap-2 mt-6">
+          <button
+            type="button"
+            onClick={this.handleRetry}
+            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+          >
+            Try again
+          </button>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-xl text-sm"
+            style={{
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            Reload page
+          </button>
+        </div>
+      </div>
+    );
+  }
+}
+
+export default ErrorBoundary;
