@@ -5,6 +5,9 @@ import { UpdateCustomRecapMutation } from "@/api/mutations/UpdateCustomRecapMuta
 import type { UpdateCustomRecapMutation as UpdateCustomRecapMutationType } from "@/api/mutations/__generated__/UpdateCustomRecapMutation.graphql";
 import { ApproveCustomRecapMutation } from "@/api/mutations/ApproveCustomRecapMutation";
 import type { ApproveCustomRecapMutation as ApproveCustomRecapMutationType } from "@/api/mutations/__generated__/ApproveCustomRecapMutation.graphql";
+import { AddCustomRecapFileMutation } from "@/api/mutations/AddCustomRecapFileMutation";
+import type { AddCustomRecapFileMutation as AddCustomRecapFileMutationType } from "@/api/mutations/__generated__/AddCustomRecapFileMutation.graphql";
+import { RecapUploader } from "./RecapUploader";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, Link, useSearchParams } from "react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -148,6 +151,9 @@ const RecapCustomView = () => {
     useMutation<UpdateCustomRecapMutationType>(UpdateCustomRecapMutation);
   const [commitApprove, isApproving] =
     useMutation<ApproveCustomRecapMutationType>(ApproveCustomRecapMutation);
+  const [commitAddFile] = useMutation<AddCustomRecapFileMutationType>(
+    AddCustomRecapFileMutation,
+  );
 
   const enterEditMode = useCallback(() => {
     const seed: Record<string, string> = {};
@@ -247,6 +253,31 @@ const RecapCustomView = () => {
       onError: (err) => showAlert(`Approve failed: ${err.message}`, "error"),
     });
   }, [recap?.id, commitApprove, showAlert]);
+
+  // Attach an uploaded blob to this custom recap. RecapUploader fires
+  // this once per selected file; addCustomRecapFile returns the FULL
+  // customRecapFiles list, so Relay merges it into the store by recap id
+  // and the Evidence grid re-renders with the new photo immediately — no
+  // page reload (mirrors the legacy addRecapFile photo flow).
+  const handlePhotoUploaded = useCallback(
+    (blobName: string) => {
+      if (!recap?.id) return;
+      commitAddFile({
+        variables: {
+          input: { customRecapId: recap.id as string, file: blobName },
+        },
+        onCompleted: (res) => {
+          const payload = res.addCustomRecapFile;
+          if (!payload?.success) {
+            showAlert(payload?.message ?? "Couldn't attach photo.", "error");
+          }
+        },
+        onError: (err) =>
+          showAlert(`Couldn't attach photo: ${err.message}`, "error"),
+      });
+    },
+    [recap?.id, commitAddFile, showAlert],
+  );
 
   const backToListUrl = useMemo(() => {
     const pageRaw = Number(searchParams.get("fromPage") ?? "1");
@@ -895,21 +926,31 @@ const RecapCustomView = () => {
 
           {/* Evidence & Attachments Section */}
           <div className="mt-8 border-t border-base-200 pt-8">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <ImageIcon className="h-6 w-6 text-primary" />
+            <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <ImageIcon className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">
+                    Evidences &amp; Attachments
+                  </h2>
+                  <p className="text-xs text-base-content/50 mt-0.5">
+                    {recapFiles?.filter(
+                      (f) => f?.fileRecapCategory?.name != null,
+                    ).length ?? 0}{" "}
+                    file(s) across {categories.length} categor
+                    {categories.length === 1 ? "y" : "ies"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold">
-                  Evidences &amp; Attachments
-                </h2>
-                <p className="text-xs text-base-content/50 mt-0.5">
-                  {recapFiles?.filter((f) => f?.fileRecapCategory?.name != null)
-                    .length ?? 0}{" "}
-                  file(s) across {categories.length} categor
-                  {categories.length === 1 ? "y" : "ies"}
-                </p>
-              </div>
+              {recap.uuid && (
+                <RecapUploader
+                  recapUuid={recap.uuid}
+                  category="photo"
+                  onUploaded={handlePhotoUploaded}
+                />
+              )}
             </div>
 
             {categories.length > 0 ? (
