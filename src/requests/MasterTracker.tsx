@@ -132,6 +132,11 @@ type Row = {
   recapCount: number;
   // Two-value metadata: "already_scheduled" | "needs_scheduling" | "".
   schedulingStatus: string;
+  // BA staffing on the linked event: assigned = invited + confirmed,
+  // confirmed = the subset that accepted. Drives the per-row "BA
+  // assigned" chip in the status column.
+  assignedBa: number;
+  confirmedBa: number;
 };
 
 const fmtDateLabel = (raw: string | null | undefined) => {
@@ -394,7 +399,23 @@ const TrackerTable: React.FC<{
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={chipClass}>{label}</span>
+                    <div className="flex flex-col items-start gap-1">
+                      <span className={chipClass}>{label}</span>
+                      {r.assignedBa > 0 ? (
+                        <span
+                          className={
+                            r.confirmedBa > 0
+                              ? "chip chip-lime"
+                              : "chip chip-muted"
+                          }
+                          style={{ display: "inline-flex" }}
+                          title={`${r.confirmedBa} confirmed of ${r.assignedBa} assigned`}
+                        >
+                          👤 {r.assignedBa}
+                          {r.confirmedBa >= r.assignedBa ? " ✓" : ""}
+                        </span>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="px-4 py-3">{r.market}</td>
                   <td className="px-4 py-3 font-medium">
@@ -664,6 +685,8 @@ const MasterTrackerInner: React.FC<{
             recapStatus,
             recapCount,
             schedulingStatus: n.schedulingStatus ?? "",
+            assignedBa: n.event?.assignedAmbassadorsCount ?? 0,
+            confirmedBa: n.event?.confirmedAmbassadorsCount ?? 0,
           };
         }) ?? []
     );
