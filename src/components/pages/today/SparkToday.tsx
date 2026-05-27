@@ -24,9 +24,12 @@ import useSparkRole from "@/hooks/useSparkRole";
 
 const fmtTime12 = (raw: string | null | undefined): string => {
   if (!raw) return "";
-  const [h, m] = raw.split(":");
-  const hh = parseInt(h ?? "0", 10);
-  const mm = m ?? "00";
+  // raw may be a full venue-local datetime ("2026-05-29T07:00:00") or "HH:MM".
+  // Grab the time-of-day so split(":") doesn't read the date as the hour.
+  const match = String(raw).match(/(?:T|\s|^)(\d{1,2}):(\d{2})/);
+  if (!match) return "";
+  const hh = parseInt(match[1], 10);
+  const mm = match[2];
   const ampm = hh >= 12 ? "PM" : "AM";
   const h12 = ((hh + 11) % 12) + 1;
   return mm === "00" ? `${h12} ${ampm}` : `${h12}:${mm} ${ampm}`;
