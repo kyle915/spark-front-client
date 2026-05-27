@@ -1338,7 +1338,10 @@ export default function MasterTracker() {
               className="tab-num text-3xl font-bold mt-1"
               style={{ color: "var(--spark-lime)" }}
             >
-              {fmtNum(m.totalEvents)}
+              {/* Match the status chips (all-time, this tenant). m.totalEvents
+                  comes from the analytics dashboard which silently scopes to the
+                  current quarter, so it under-counted events dated outside it. */}
+              {fmtNum(total)}
             </p>
           </div>
           <div className="spark-card p-4">

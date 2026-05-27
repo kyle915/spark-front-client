@@ -67,9 +67,14 @@ const isSameDay = (a: Date, b: Date) =>
 
 const parseHour = (raw: string | null | undefined): number | null => {
   if (!raw) return null;
-  const [h, m] = raw.split(":");
-  const hh = parseInt(h ?? "0", 10);
-  const mm = parseInt(m ?? "0", 10);
+  // startTime/endTime arrive as a full venue-local datetime (e.g.
+  // "2026-05-29T07:00:00") or a bare "HH:MM". Grab the time-of-day portion —
+  // a plain split(":") turned "2026-05-29T07:00:00" into parseInt("…T07")=2026,
+  // which clamped every event to the bottom of the grid (~10:45p).
+  const match = String(raw).match(/(?:T|\s|^)(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const hh = parseInt(match[1], 10);
+  const mm = parseInt(match[2], 10);
   if (Number.isNaN(hh)) return null;
   return hh + mm / 60;
 };
@@ -411,7 +416,14 @@ const SparkCalendarInner: React.FC<{ anchor: Date }> = ({ anchor }) => {
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
         ?.map((n) => {
           if (!n.date) return null;
-          const d = new Date(n.date);
+          // Parse the date portion as a LOCAL date. `new Date("2026-05-29")`
+          // parses as UTC midnight, which in US timezones lands on the prior
+          // day and mis-buckets events at week edges. Build it from parts.
+          const [dy, dmo, dd] = String(n.date)
+            .slice(0, 10)
+            .split("-")
+            .map((p) => parseInt(p, 10));
+          const d = new Date(dy, (dmo || 1) - 1, dd || 1);
           if (Number.isNaN(d.getTime())) return null;
           if (d < start || d > end) return null;
           const dayIndex = Math.max(
