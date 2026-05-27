@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useDeferredValue, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { EventsQuery } from "@/api/queries/EventsQuery";
@@ -35,9 +35,14 @@ export default function SparkRecapCreate() {
   const presetEventUuid = params.get("event");
 
   const [eventQ, setEventQ] = useState("");
+  // Defer the value that drives the query so the <input> updates on every
+  // keystroke while the (suspending) events refetch runs as a transition.
+  // Without this, each keystroke changed the query var → useLazyLoadQuery
+  // suspended → the input unmounted → focus was lost after one letter.
+  const deferredEventQ = useDeferredValue(eventQ);
   const eventsData = useLazyLoadQuery<EventsQueryType>(
     EventsQuery,
-    { first: 30, q: eventQ || null, filters: null },
+    { first: 30, q: deferredEventQ || null, filters: null },
     { fetchPolicy: "store-or-network" },
   );
   const events = useMemo(
@@ -554,10 +559,14 @@ const AmbassadorPicker: React.FC<{
   onClear: () => void;
 }> = ({ selectedId, selectedName, onSelect, onClear }) => {
   const [q, setQ] = useState("");
+  // Defer the query var so typing keeps focus — same fix as the event
+  // search: the input tracks `q` immediately, the suspending refetch runs
+  // off `deferredQ` as a transition (no unmount → no focus loss).
+  const deferredQ = useDeferredValue(q);
 
   const data = useLazyLoadQuery<AmbassadorSearchQueryType>(
     AmbassadorSearchQuery,
-    { q, first: 8 },
+    { q: deferredQ, first: 8 },
     { fetchPolicy: "store-or-network" },
   );
 
