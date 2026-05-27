@@ -3,6 +3,68 @@ export const themes: Record<"light" | "dark", string> = {
   dark: "spark-v2",       // Spark v2 dark theme — lime on near-black
 };
 
+/**
+ * Parse a user-entered number tolerant of both US and European
+ * decimal/grouping conventions, returning a JS number or null.
+ *
+ * BAs and clients enter values with whatever separators their keyboard
+ * defaults to — a plain Number("96,63") yields NaN, which then saved as
+ * null and silently wiped Account Spend. This normalizes first:
+ *   "96,63"      → 96.63    (comma decimal — the reported LD case)
+ *   "1.234,56"   → 1234.56  (European: dot grouping, comma decimal)
+ *   "1,234.56"   → 1234.56  (US: comma grouping, dot decimal)
+ *   "1,234"      → 1234     (lone comma + 3-digit tail → US thousands)
+ *   "1,234,567"  → 1234567  (multiple commas → grouping)
+ *   "12,5" / "96.63" / "1234" → 12.5 / 96.63 / 1234 (unchanged intent)
+ *
+ * Strips currency symbols and spaces. Returns null for blank/unparseable
+ * input so a deliberately cleared field stays cleared (not NaN→null
+ * masquerading as an edit).
+ */
+export const parseLocaleNumber = (
+  raw: string | null | undefined,
+): number | null => {
+  if (raw == null) return null;
+  // Keep only digits, the two separators, and a leading sign.
+  let s = String(raw).trim().replace(/[^0-9.,-]/g, "");
+  if (s === "" || s === "-") return null;
+
+  const hasDot = s.includes(".");
+  const hasComma = s.includes(",");
+
+  if (hasDot && hasComma) {
+    // Whichever separator appears LAST is the decimal point; the other
+    // is a thousands separator and gets stripped.
+    const decimalSep = s.lastIndexOf(",") > s.lastIndexOf(".") ? "," : ".";
+    const groupSep = decimalSep === "," ? "." : ",";
+    s = s.split(groupSep).join("").replace(decimalSep, ".");
+  } else if (hasComma) {
+    const parts = s.split(",");
+    if (parts.length > 2) {
+      // 1,234,567 → grouping only.
+      s = parts.join("");
+    } else {
+      const [intPart, fracPart] = parts;
+      // A lone comma with a 3-digit tail on a short integer reads as US
+      // thousands (1,234 → 1234). Anything else is a decimal comma
+      // (96,63 → 96.63 ; 12,5 → 12.5).
+      if (
+        fracPart.length === 3 &&
+        intPart.replace("-", "").length >= 1 &&
+        intPart.replace("-", "").length <= 3
+      ) {
+        s = intPart + fracPart;
+      } else {
+        s = `${intPart}.${fracPart}`;
+      }
+    }
+  }
+  // Dot-only or no separator: leave as-is (native US decimal/integer).
+
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+};
+
 export const formatDate = (value: string | null) => {
   if (!value) return "-";
   const datePart = extractDatePart(value);
