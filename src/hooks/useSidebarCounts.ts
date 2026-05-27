@@ -3,6 +3,7 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import { isRecapDue } from "@/lib/recapDue";
 
 /**
  * Computes the live counts shown as chip badges in the sidebar so
@@ -113,7 +114,9 @@ export function useSidebarCounts(): SidebarCounts {
         const anyRecap = events.some(
           (e) => (e.recaps?.length ?? 0) > 0,
         );
-        if (!anyRecap) recapsDue += 1;
+        // Only due once the event has passed (the day after) — mirrors the
+        // tracker chip so future bookings don't inflate the badge.
+        if (!anyRecap && isRecapDue(r.date)) recapsDue += 1;
       }
     }
     return {

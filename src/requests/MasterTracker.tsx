@@ -180,6 +180,7 @@ import InternalNotesPanel from "./InternalNotesPanel";
 import BulkCloneModal from "./BulkCloneModal";
 import InviteBAModal from "./InviteBAModal";
 import PostToBoardModal from "./PostToBoardModal";
+import { isRecapDue } from "../lib/recapDue";
 
 type Mentionable = { id: string; name: string; email: string };
 
@@ -641,7 +642,9 @@ const MasterTrackerInner: React.FC<{
               ? "none"
               : recapCount > 0
                 ? "submitted"
-                : "due";
+                : isRecapDue(n.date)
+                  ? "due"
+                  : "none";
           return {
             uuid: String(n.uuid),
             date: n.date ?? "",
