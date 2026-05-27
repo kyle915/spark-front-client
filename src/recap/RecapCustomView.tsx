@@ -3,6 +3,8 @@ import { GetCustomRecapQuery } from "@/api/queries/CustomRecapsQuery";
 import type { CustomRecapsQueryDetailsQuery as CustomRecapsQueryDetailsQueryType } from "@/api/queries/__generated__/CustomRecapsQueryDetailsQuery.graphql";
 import { UpdateCustomRecapMutation } from "@/api/mutations/UpdateCustomRecapMutation";
 import type { UpdateCustomRecapMutation as UpdateCustomRecapMutationType } from "@/api/mutations/__generated__/UpdateCustomRecapMutation.graphql";
+import { ApproveCustomRecapMutation } from "@/api/mutations/ApproveCustomRecapMutation";
+import type { ApproveCustomRecapMutation as ApproveCustomRecapMutationType } from "@/api/mutations/__generated__/ApproveCustomRecapMutation.graphql";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, Link, useSearchParams } from "react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -139,8 +141,13 @@ const RecapCustomView = () => {
   // from the recap on enter-edit so the user starts with what's
   // already there.
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
+  // "Corporate Card Used" is a typed boolean on CustomRecap (not a custom
+  // field), so it needs its own working-copy state to be editable.
+  const [editedUsedCorpoCard, setEditedUsedCorpoCard] = useState(false);
   const [commitUpdateCustomRecap, isSavingValues] =
     useMutation<UpdateCustomRecapMutationType>(UpdateCustomRecapMutation);
+  const [commitApprove, isApproving] =
+    useMutation<ApproveCustomRecapMutationType>(ApproveCustomRecapMutation);
 
   const enterEditMode = useCallback(() => {
     const seed: Record<string, string> = {};
@@ -151,8 +158,9 @@ const RecapCustomView = () => {
       seed[String(field.id)] = field.value ?? "";
     });
     setEditedValues(seed);
+    setEditedUsedCorpoCard(!!recap?.usedCorpoCard);
     setIsEditingValues(true);
-  }, [recap?.customField]);
+  }, [recap?.customField, recap?.usedCorpoCard]);
 
   const exitEditMode = useCallback(() => {
     setIsEditingValues(false);
@@ -190,6 +198,8 @@ const RecapCustomView = () => {
           eventId: eventId as string,
           customRecapTemplateId: templateId as string,
           customFieldValues,
+          // Typed boolean on CustomRecap — now editable from the view.
+          usedCorpoCard: editedUsedCorpoCard,
         },
       },
       onCompleted: (res) => {
@@ -211,10 +221,32 @@ const RecapCustomView = () => {
     recap?.customRecapTemplate?.id,
     recap?.customField,
     editedValues,
+    editedUsedCorpoCard,
     commitUpdateCustomRecap,
     showAlert,
     exitEditMode,
   ]);
+
+  // Approve the custom recap → backend emails the requestor + mapped RMM
+  // (with the PDF). Returns `approved` so the view flips in-place.
+  const handleApprove = useCallback(() => {
+    if (!recap?.id) return;
+    commitApprove({
+      variables: { input: { id: recap.id as string, approved: true } },
+      onCompleted: (res) => {
+        const payload = res.approveCustomRecap;
+        if (payload?.success) {
+          showAlert(
+            "Recap approved — the requestor and mapped RMM have been emailed.",
+            "success",
+          );
+        } else {
+          showAlert(payload?.message ?? "Approve failed.", "error");
+        }
+      },
+      onError: (err) => showAlert(`Approve failed: ${err.message}`, "error"),
+    });
+  }, [recap?.id, commitApprove, showAlert]);
 
   const backToListUrl = useMemo(() => {
     const pageRaw = Number(searchParams.get("fromPage") ?? "1");
@@ -541,14 +573,30 @@ const RecapCustomView = () => {
                 view in read mode after a successful save (relay store
                 updated from the mutation's selection set). */}
             {!isEditingValues ? (
-              <button
-                onClick={enterEditMode}
-                className="btn btn-sm btn-outline gap-2"
-                title="Edit submitted field values"
-              >
-                <Pencil className="w-4 h-4" />
-                Edit values
-              </button>
+              <div className="flex items-center gap-2">
+                {recap.approved ? (
+                  <span className="badge badge-success gap-1 py-3">
+                    ✓ Approved
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleApprove}
+                    disabled={isApproving}
+                    className="btn btn-sm btn-success gap-2"
+                    title="Approve recap and email the requestor + mapped RMM"
+                  >
+                    {isApproving ? "Approving…" : "✓ Approve recap"}
+                  </button>
+                )}
+                <button
+                  onClick={enterEditMode}
+                  className="btn btn-sm btn-outline gap-2"
+                  title="Edit submitted field values"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Edit values
+                </button>
+              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <button
@@ -667,11 +715,21 @@ const RecapCustomView = () => {
                 </div>
                 <div className="flex justify-between items-center p-3 border border-base-100/30 rounded-lg">
                   <span className="text-sm">Corporate Card Used</span>
-                  <span
-                    className={`badge badge-soft ${recap.usedCorpoCard ? "badge-success" : "badge-ghost text-base-content/40"}`}
-                  >
-                    {recap.usedCorpoCard ? "Yes" : "No"}
-                  </span>
+                  {isEditingValues ? (
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-success"
+                      checked={editedUsedCorpoCard}
+                      onChange={(e) => setEditedUsedCorpoCard(e.target.checked)}
+                      aria-label="Corporate card used"
+                    />
+                  ) : (
+                    <span
+                      className={`badge badge-soft ${recap.usedCorpoCard ? "badge-success" : "badge-ghost text-base-content/40"}`}
+                    >
+                      {recap.usedCorpoCard ? "Yes" : "No"}
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center p-3 border border-base-100/30 rounded-lg">
                   <span className="text-sm">Filling for Ambassador</span>
