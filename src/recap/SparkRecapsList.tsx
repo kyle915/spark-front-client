@@ -488,6 +488,30 @@ const RecapsListInner: React.FC<{
       Boolean(
         name && /\.(jpe?g|png|webp|gif)(\?|$)/i.test(name),
       );
+    // CustomRecap has no totalised products-sold scalar; for templates that
+    // track units (Borjomi / Girl Beer: "single cans" + "packs" number
+    // fields) derive SOLD = cans + packs from the custom field values, same
+    // as the legacy form's "Products Sold = Cans + Packs". Match field names
+    // containing the whole word "can(s)" or "pack(s)" so "willing to
+    // purchase"-style fields are excluded. Returns null (→ "—") when a
+    // template has no such fields, so non-unit templates don't show a
+    // misleading 0.
+    const SOLD_FIELD_RE = /\b(cans?|packs?)\b/i;
+    const customSoldUnits = (
+      fields: ReadonlyArray<{ name?: string | null; value?: string | null } | null> | null | undefined,
+    ): number | null => {
+      let total = 0;
+      let matched = false;
+      for (const f of fields ?? []) {
+        if (!f?.name || !SOLD_FIELD_RE.test(f.name)) continue;
+        const n = parseInt(String(f.value ?? "").replace(/[^\d-]/g, ""), 10);
+        if (Number.isFinite(n)) {
+          total += n;
+          matched = true;
+        }
+      }
+      return matched ? total : null;
+    };
     const custom: Recap[] =
       customData?.customRecaps?.edges
         ?.map((e) => e?.node)
@@ -510,7 +534,7 @@ const RecapsListInner: React.FC<{
             heroImage: heroFile?.url ?? null,
             fileCount: files.length,
             engagements: n.totalEngagements ?? null,
-            productsSold: null,
+            productsSold: customSoldUnits(n.customField),
             requestUuid: null,
             requestShortId: null,
             requestType: n.customRecapTemplate?.name ?? null,
