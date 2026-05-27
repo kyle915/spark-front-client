@@ -65,6 +65,13 @@ const fmtTime = (raw: string | null | undefined) => {
   }
 };
 
+const initials = (label: string) => {
+  const parts = label.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 const Field: React.FC<{
   label: string;
   children: React.ReactNode;
@@ -148,6 +155,8 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
   const eventTypeName = event.eventType?.name ?? "—";
   const scope = event.isNational ? "National" : "Local";
   const hasNotes = Boolean(event.notes?.trim());
+  const ambassadors = event.ambassadors ?? [];
+  const confirmedCount = ambassadors.filter((a) => a.isApproved).length;
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -384,6 +393,114 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
           </div>
         </div>
       )}
+
+      {/* Roster — invited + confirmed BAs staffed on this event */}
+      <div className="spark-card p-6">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "var(--spark-lime)",
+            }}
+          >
+            ROSTER · {ambassadors.length}
+          </p>
+          {ambassadors.length > 0 && (
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.14em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              {confirmedCount} CONFIRMED · {ambassadors.length - confirmedCount}{" "}
+              INVITED
+            </p>
+          )}
+        </div>
+        {ambassadors.length === 0 ? (
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p
+              className="text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              No brand ambassadors assigned yet.
+            </p>
+            {role.isAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowAssign(true)}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold transition"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "#0a0d09",
+                  border: "1px solid var(--spark-lime)",
+                }}
+              >
+                ✚ Assign BA
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {ambassadors.map((a) => (
+              <div
+                key={a.uuid}
+                className="flex items-center gap-3"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid var(--spark-border)",
+                  borderRadius: 12,
+                  padding: "0.75rem",
+                }}
+              >
+                <div
+                  aria-hidden
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    background: a.isApproved
+                      ? "rgba(197,245,70,0.14)"
+                      : "rgba(255,255,255,0.06)",
+                    color: a.isApproved
+                      ? "var(--spark-lime)"
+                      : "rgba(255,255,255,0.55)",
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}
+                >
+                  {initials(a.name || a.email)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">
+                    {a.name || a.email || "Unnamed BA"}
+                  </p>
+                  {role.isAdmin && a.email && (
+                    <p
+                      className="text-xs truncate"
+                      style={{ color: "rgba(255,255,255,0.45)" }}
+                    >
+                      {a.email}
+                    </p>
+                  )}
+                </div>
+                <span
+                  className={
+                    a.isApproved ? "chip chip-lime" : "chip chip-muted"
+                  }
+                >
+                  {a.isApproved ? "✓ Confirmed" : "◷ Invited"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* GPS trail */}
       <ShiftReplayPanel eventUuid={String(event.uuid)} />
