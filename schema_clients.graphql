@@ -1650,6 +1650,7 @@ input CreateRequestInput {
   rmmAsignedId: ID = null
   requestorEmail: String = null
   reviewed: Boolean = null
+  schedulingStatus: String = null
   storeNumber: String = null
   clientName: String = null
   clientEmail: String = null
@@ -1709,6 +1710,7 @@ input CreateRequestWithDependenciesInput {
   locationId: ID = null
   stateId: ID = null
   requestorEmail: String = null
+  schedulingStatus: String = null
   storeNumber: String = null
   clientName: String!
   clientEmail: String!
@@ -4403,6 +4405,7 @@ type Request implements Node {
   address: String!
   declineReason: String
   reviewed: Boolean!
+  schedulingStatus: String
   storeNumber: String
   notes: String
   coordinates: [Float!]!

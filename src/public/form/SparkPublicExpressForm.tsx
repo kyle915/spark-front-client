@@ -79,6 +79,10 @@ export default function SparkPublicExpressForm() {
       .slice(0, 8);
   }, [distributorQ, distributors]);
   const [notes, setNotes] = useState("");
+  // Required scheduling choice — whether the visit is already on the
+  // account's books or Ignite still needs to book it. Plain metadata,
+  // no approval-flow impact. "" until the requestor picks one.
+  const [schedulingStatus, setSchedulingStatus] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   // Modal-popup payload shown on successful submit (per Kyle's spec,
   // external form only). Surfaces the RMM the request was routed to so
@@ -110,6 +114,7 @@ export default function SparkPublicExpressForm() {
     productIds.length > 0 &&
     !!requestorName.trim() &&
     !!requestorEmail.trim() &&
+    !!schedulingStatus &&
     !submitting;
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -161,6 +166,7 @@ export default function SparkPublicExpressForm() {
         storeManagerPhone,
         requestTypeId,
         timezoneId,
+        schedulingStatus,
         products: productIds.map((productId) => ({ productId })),
         details: [{ isTableNeeded: false, tableSize: null }],
         notes: notesPlus,
@@ -196,6 +202,7 @@ export default function SparkPublicExpressForm() {
       setExtraDates([]);
       setProductIds([]);
       setNotes("");
+      setSchedulingStatus("");
     } else {
       setError(
         `Submitted ${successes} of ${allDates.length}. Failed: ${failures.join("; ")}`,
@@ -395,6 +402,66 @@ export default function SparkPublicExpressForm() {
                 <option key={tz.id} value={tz.id}>{tz.name}</option>
               ))}
             </select>
+          </Field>
+        </Card>
+
+        {/* Scheduling — required choice. Tells the Ignite team whether
+            this visit is already on the account's calendar or still
+            needs to be booked. Pure metadata; doesn't change approval. */}
+        <Card title="SCHEDULING *">
+          <Field label="Is this already scheduled with the account? *">
+            <div className="grid grid-cols-1 gap-2">
+              {[
+                {
+                  value: "already_scheduled",
+                  label: "Already scheduled with the account",
+                },
+                {
+                  value: "needs_scheduling",
+                  label: "We need to schedule it for them",
+                },
+              ].map((opt) => {
+                const selected = schedulingStatus === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setSchedulingStatus(opt.value)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition"
+                    style={{
+                      background: selected
+                        ? "rgba(197,245,70,0.1)"
+                        : "var(--spark-surface-2, #161a12)",
+                      border: selected
+                        ? "2px solid var(--spark-lime, #c5f546)"
+                        : "1px solid var(--spark-border, #1f2418)",
+                    }}
+                  >
+                    <span
+                      className="shrink-0 rounded-full"
+                      style={{
+                        width: 16,
+                        height: 16,
+                        border: selected
+                          ? "5px solid var(--spark-lime, #c5f546)"
+                          : "2px solid rgba(255,255,255,0.3)",
+                        background: selected ? "#0a0d09" : "transparent",
+                      }}
+                    />
+                    <span
+                      className="text-sm font-medium"
+                      style={{
+                        color: selected
+                          ? "var(--spark-text, #f2f3ee)"
+                          : "rgba(255,255,255,0.75)",
+                      }}
+                    >
+                      {opt.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </Field>
         </Card>
 
@@ -797,6 +864,7 @@ export default function SparkPublicExpressForm() {
                     setSelectedProductTypeId(null);
                     setBaCount(1);
                     setNotes("");
+                    setSchedulingStatus("");
                     setConfirmation(null);
                   }}
                   className="px-4 py-3 rounded-xl text-sm font-semibold"

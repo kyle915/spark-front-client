@@ -13,6 +13,7 @@ export const RequestUuidQuery = graphql`
       endTime
       address
       coordinates
+      schedulingStatus
       clientName
       clientEmail
       distributorName

@@ -41,6 +41,9 @@ export interface CreateRequestInput {
   storeManagerName: string;
   storeManagerPhone: string;
 
+  // SCHEDULING — required choice: "already_scheduled" | "needs_scheduling"
+  schedulingStatus?: string | null;
+
   // REQUEST TYPE
   requestTypeId: string;
 

@@ -36,6 +36,7 @@ export const RequestsQuery = graphql`
           endTime
           address
           coordinates
+          schedulingStatus
           location {
             id
             name
