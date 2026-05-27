@@ -23,6 +23,13 @@ export const TenantsQuery = graphql`
           uuid
           name
           requestUrlName
+          defaultExternalRmm {
+            id
+            uuid
+            email
+            firstName
+            lastName
+          }
         }
       }
       pageInfo {

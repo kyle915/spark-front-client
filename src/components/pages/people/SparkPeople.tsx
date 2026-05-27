@@ -1,11 +1,13 @@
-import { Suspense, useMemo, useState } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { UsersQuery } from "@/api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
 import { TenantsQuery } from "@/api/queries/TenantsQuery";
 import type { TenantsQuery as TenantsQueryType } from "@api/queries/__generated__/TenantsQuery.graphql";
+import { SetDefaultExternalRmmMutation } from "@/api/mutations/SetDefaultExternalRmmMutation";
+import type { SetDefaultExternalRmmMutation as SetDefaultExternalRmmMutationType } from "@api/mutations/__generated__/SetDefaultExternalRmmMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 
@@ -115,6 +117,64 @@ const Inner: React.FC<{
     () => filtered.filter((r) => !removedIds.has(r.id)),
     [filtered, removedIds],
   );
+
+  // Default-external-RMM routing — pick one person who catches ALL
+  // public-form requests for this tenant, instead of falling through
+  // to the territory rules. Reads the active tenant out of the same
+  // tenant list the InviteModal already pulls so we don't add a second
+  // round-trip, then matches on the active tenantId from authStore.
+  const tenantsData = useLazyLoadQuery<TenantsQueryType>(
+    TenantsQuery,
+    {},
+    { fetchPolicy: "store-or-network" },
+  );
+  const activeTenant = useMemo(() => {
+    const nodes = (tenantsData?.tenants?.edges ?? [])
+      .map((e) => e?.node)
+      .filter((n): n is NonNullable<typeof n> => !!n);
+    return nodes.find((t) => String(t.id) === String(tenantId)) ?? nodes[0] ?? null;
+  }, [tenantsData, tenantId]);
+
+  const currentDefaultRmmId = activeTenant?.defaultExternalRmm?.id ?? "";
+  const [defaultRmmId, setDefaultRmmId] = useState<string>(currentDefaultRmmId);
+  // Keep the select in sync once the tenant payload resolves (or the
+  // active tenant changes) — server is the source of truth.
+  useEffect(() => {
+    setDefaultRmmId(currentDefaultRmmId);
+  }, [currentDefaultRmmId]);
+
+  const [commitDefaultRmm, defaultRmmInFlight] =
+    useMutation<SetDefaultExternalRmmMutationType>(SetDefaultExternalRmmMutation);
+
+  const handleDefaultRmmChange = (nextId: string) => {
+    if (defaultRmmInFlight) return;
+    const prevId = defaultRmmId;
+    setDefaultRmmId(nextId); // optimistic
+    commitDefaultRmm({
+      variables: { input: { userId: nextId || null } },
+      onCompleted: (res) => {
+        const r = res.setDefaultExternalRmm;
+        if (r?.success) {
+          const resolvedId = r.tenant?.defaultExternalRmm?.id ?? "";
+          setDefaultRmmId(resolvedId);
+          const person = rows.find((p) => p.id === resolvedId);
+          showAlert(
+            resolvedId
+              ? `External requests now route to ${person?.name ?? "the selected person"}.`
+              : "External requests now use territory routing.",
+            "success",
+          );
+        } else {
+          setDefaultRmmId(prevId); // roll back
+          showAlert(r?.message || "Could not update default recipient.", "error");
+        }
+      },
+      onError: (err) => {
+        setDefaultRmmId(prevId); // roll back
+        showAlert(`Update failed: ${err.message}`, "error");
+      },
+    });
+  };
 
   const confirmRemove = async () => {
     if (!removing) return;
@@ -238,6 +298,56 @@ const Inner: React.FC<{
             outline: "none",
           }}
         />
+      </div>
+
+      {/* Default recipient for external (public-form) requests. Picking
+          a person overrides territory routing — every public request
+          for this tenant lands on them. "None" restores territory rules. */}
+      <div className="spark-card p-4">
+        <p className="label-mini">DEFAULT RECIPIENT FOR EXTERNAL REQUESTS</p>
+        <p
+          className="text-xs mt-1 mb-3"
+          style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+        >
+          Who should all external (public-form) requests route to? Choose a
+          person to override territory routing, or pick “None” to use it.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={defaultRmmId}
+            disabled={defaultRmmInFlight}
+            onChange={(e) => handleDefaultRmmChange(e.target.value)}
+            className="rounded-xl text-sm"
+            style={{
+              padding: "0.55rem 0.9rem",
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+              outline: "none",
+              minWidth: 280,
+              opacity: defaultRmmInFlight ? 0.6 : 1,
+            }}
+          >
+            <option value="">— None (territory routing) —</option>
+            {rows.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+                {p.email ? ` · ${p.email}` : ""}
+              </option>
+            ))}
+          </select>
+          {defaultRmmInFlight && (
+            <span
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.14em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              SAVING…
+            </span>
+          )}
+        </div>
       </div>
 
       <div
