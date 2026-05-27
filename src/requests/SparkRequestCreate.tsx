@@ -498,6 +498,9 @@ const SparkRequestInner: React.FC = () => {
 
     let successes = 0;
     const failures: string[] = [];
+    // Keep the actual backend reason(s) so a fully-failed batch shows *why*
+    // instead of a generic "try again". First distinct message is enough.
+    const failureReasons: string[] = [];
 
     for (const d of allDates) {
       const composedName =
@@ -540,19 +543,28 @@ const SparkRequestInner: React.FC = () => {
                 distributors.find((d) => String(d.id) === distributorId)?.name ?? undefined,
               notes: notesPlus || undefined,
               details: [],
+              // CreateRequestProductInput only accepts `productId` — sending
+              // any extra field (we used to send `quantity: 1`) makes GraphQL
+              // reject the whole operation at variable coercion, so every date
+              // fell into onError and surfaced as "All submissions failed."
               products: Array.from(selectedProducts).map((productId) => ({
                 productId,
-                quantity: 1,
               })),
             },
           },
           onCompleted: (res) => {
             if (res.createRequest?.success) successes += 1;
-            else failures.push(d);
+            else {
+              failures.push(d);
+              const msg = res.createRequest?.message;
+              if (msg && !failureReasons.includes(msg)) failureReasons.push(msg);
+            }
             resolve();
           },
-          onError: () => {
+          onError: (err) => {
             failures.push(d);
+            const msg = err?.message;
+            if (msg && !failureReasons.includes(msg)) failureReasons.push(msg);
             resolve();
           },
         });
@@ -572,12 +584,16 @@ const SparkRequestInner: React.FC = () => {
     } else if (successes > 0) {
       // Partial success — leave the draft alone so kyle can fix the
       // bad rows without re-entering the good ones.
+      const why = failureReasons.length ? ` (${failureReasons[0]})` : "";
       showAlert(
-        `Submitted ${successes} · ${failures.length} failed: ${failures.join(", ")}`,
+        `Submitted ${successes} · ${failures.length} failed: ${failures.join(", ")}${why}`,
         "warning",
       );
     } else {
-      showAlert(`All submissions failed. Try again.`, "error");
+      const why = failureReasons.length
+        ? failureReasons.join(" · ")
+        : "Try again.";
+      showAlert(`All submissions failed — ${why}`, "error");
     }
   };
 
