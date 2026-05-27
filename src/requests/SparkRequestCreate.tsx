@@ -471,13 +471,8 @@ const SparkRequestInner: React.FC = () => {
       );
       return;
     }
-    if (isRetailSampling && !storeNumber.trim()) {
-      showAlert(
-        "Store number is required for Retail Sampling activations.",
-        "warning",
-      );
-      return;
-    }
+    // Store number is optional — it's helpful metadata (prepended to notes)
+    // but never blocks submit. Tenants like Borjomi don't track it.
     if (!schedulingStatus) {
       showAlert(
         "Pick a scheduling status — already scheduled, or needs scheduling.",
@@ -1083,22 +1078,21 @@ const SparkRequestInner: React.FC = () => {
           {isRetailSampling && (
             <div>
               <label className="label-mini block mb-1.5">
-                Store number *
+                Store number
               </label>
               <input
                 style={inputStyle}
                 value={storeNumber}
                 onChange={(e) => setStoreNumber(e.target.value)}
                 placeholder="e.g. 1247"
-                required
                 inputMode="numeric"
               />
               <p
                 className="text-xs mt-1"
                 style={{ color: "rgba(255,255,255,0.45)" }}
               >
-                The retailer's store number identifies which location
-                the BA reports to.
+                Optional — the retailer's store number helps the BA find
+                the right location.
               </p>
             </div>
           )}
