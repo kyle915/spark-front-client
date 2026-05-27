@@ -8,6 +8,8 @@ import { RequestUuidQuery } from "@api/queries/RequestUuidQuery";
 import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__generated__/RequestUuidQuery.graphql";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
+import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
+import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 
 /**
@@ -83,6 +85,18 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
     { tenantId: tenantId ?? "" },
     { fetchPolicy: "store-or-network" },
   );
+  const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
+    TimezonesQuery,
+    {},
+    { fetchPolicy: "store-or-network" },
+  );
+  const timezones = useMemo(
+    () =>
+      timezonesData?.timezones?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [],
+    [timezonesData],
+  );
 
   const request = data.request;
 
@@ -96,6 +110,9 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const [rmmId, setRmmId] = useState(() =>
     request?.rmmAsigned?.id ? String(request.rmmAsigned.id) : "",
   );
+  const [timezoneId, setTimezoneId] = useState(() =>
+    request?.timezone?.id ? String(request.timezone.id) : "",
+  );
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -107,6 +124,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
     setAddress(request?.address ?? "");
     setNotes(request?.notes ?? "");
     setRmmId(request?.rmmAsigned?.id ? String(request.rmmAsigned.id) : "");
+    setTimezoneId(request?.timezone?.id ? String(request.timezone.id) : "");
   }, [
     request?.date,
     request?.startTime,
@@ -114,6 +132,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
     request?.address,
     request?.notes,
     request?.rmmAsigned?.id,
+    request?.timezone?.id,
   ]);
 
   const rmmOptions = useMemo(
@@ -160,7 +179,15 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
       // at the venue's address, not 12pm wherever the admin happens
       // to be sitting. Without this, a Pacific-based admin editing a
       // Central-timezone event saved +2h off (REQ-MJY).
-      const ianaTz = ianaForVenueTz(request.timezone);
+      // Use the *selected* timezone, not the stored one — the admin may
+      // be correcting a mis-set zone (e.g. Alaska → Pacific). The typed
+      // wall-clock times are interpreted as local in whichever zone is
+      // chosen, and that zone is what we persist. Falls back to the
+      // request's stored tz if the selection somehow isn't in the list.
+      const selectedTz =
+        timezones.find((t) => String(t.id) === String(timezoneId)) ??
+        request.timezone;
+      const ianaTz = ianaForVenueTz(selectedTz);
       const startIso = venueLocalToUtcIso(date, startTime, ianaTz);
       const endIso = venueLocalToUtcIso(date, endTime, ianaTz);
       // Date row stays anchored to midnight in the venue's tz for
@@ -180,7 +207,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
         coordinates: Array.isArray(request.coordinates)
           ? [...request.coordinates]
           : [0, 0],
-        timezoneId: request.timezone?.id,
+        timezoneId: timezoneId || request.timezone?.id,
         requestTypeId: request.requestType?.id,
         distributorId: request.distributor?.id ?? null,
         retailerId: request.retailer?.id ?? null,
@@ -338,27 +365,48 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
             />
           </div>
         </div>
-        {/* Timezone hint. The save path now interprets these inputs
-            as local time in the venue's timezone (not the admin's
-            browser), so an admin in Pacific can edit a Central event
-            without doing the arithmetic in their head. Showing the
-            label removes the ambiguity. */}
-        {request.timezone?.name && (
+        {/* Timezone — now editable. The save path interprets the time
+            inputs as local time in the *selected* venue timezone (not the
+            admin's browser), so changing this dropdown both fixes a
+            mis-set zone and re-anchors the typed wall-clock times to it. */}
+        <div>
+          <label
+            className="mono text-[10px] block mb-1"
+            style={{
+              letterSpacing: "0.16em",
+              color: "rgba(255,255,255,0.5)",
+            }}
+          >
+            TIME ZONE *
+          </label>
+          <select
+            value={timezoneId}
+            onChange={(e) => setTimezoneId(e.target.value)}
+            className="w-full rounded-lg px-3 py-2 text-[15px] spark-input"
+            style={{
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+            }}
+          >
+            <option value="">— Select —</option>
+            {timezones.map((tz) => (
+              <option key={tz.id} value={tz.id}>
+                {tz.name}
+              </option>
+            ))}
+          </select>
           <p
-            className="mono text-[10px]"
+            className="mono text-[10px] mt-1.5"
             style={{
               letterSpacing: "0.14em",
               color: "rgba(255,255,255,0.55)",
             }}
           >
-            ⏱ TIMES ARE IN{" "}
-            <span style={{ color: "var(--spark-lime)" }}>
-              {(request.timezone.name || "").toUpperCase()}
-              {request.timezone.code ? ` (${request.timezone.code})` : ""}
-            </span>{" "}
-            — VENUE LOCAL TIME, NOT YOUR BROWSER
+            ⏱ VENUE LOCAL TIME, NOT YOUR BROWSER — CHANGE TO FIX A MIS-SET
+            ZONE
           </p>
-        )}
+        </div>
       </div>
 
       {/* Venue + RMM */}
