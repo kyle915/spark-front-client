@@ -91,6 +91,8 @@ export const RequestsQuery = graphql`
             id
             uuid
             name
+            assignedAmbassadorsCount
+            confirmedAmbassadorsCount
           }
           # Used by the sidebar recap-due badge + the Master Tracker
           # RECAP chip. Just enough event/recap data — no fields
