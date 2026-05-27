@@ -548,13 +548,24 @@ export default function SparkPublicExpressForm() {
                     boxShadow: selected ? "0 0 18px rgba(197,245,70,0.25)" : "none",
                   }}
                 >
-                  {p.image ? (
-                    <img src={p.image} alt={p.name} className="w-full aspect-square object-cover" />
-                  ) : (
-                    <div className="w-full aspect-square flex items-center justify-center" style={{ background: "rgba(255,255,255,0.04)" }}>
+                  {/* Placeholder sits behind the image; if the image is
+                      missing OR fails to load (dangling ref → 404), onError
+                      hides the <img> and the "NO IMAGE" tile shows through. */}
+                  <div className="relative w-full aspect-square" style={{ background: "rgba(255,255,255,0.04)" }}>
+                    <div className="absolute inset-0 flex items-center justify-center">
                       <span className="mono text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>NO IMAGE</span>
                     </div>
-                  )}
+                    {p.image ? (
+                      <img
+                        src={p.image}
+                        alt={p.name}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    ) : null}
+                  </div>
                   <div className="p-2.5">
                     <p className="text-xs font-semibold leading-tight">{p.name}</p>
                     <p className="mono text-[9px] mt-1" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.4)" }}>
