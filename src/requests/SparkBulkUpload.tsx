@@ -388,8 +388,26 @@ const Inner: React.FC = () => {
     [allRows],
   );
 
-  const allClean = dryResult !== null && (dryResult.failedCount ?? 0) === 0;
   const committed = commitResult !== null;
+  // "Clean" means the backend actually validated rows AND none failed — not
+  // merely failedCount===0, which is ALSO true for a pre-flight failure that
+  // produced zero rows (e.g. tenant misconfig). Requiring success===true and
+  // totalRows>0 stops a 0-row error from masquerading as "ready to import".
+  const allClean =
+    dryResult !== null &&
+    dryResult.success === true &&
+    (dryResult.totalRows ?? 0) > 0 &&
+    (dryResult.failedCount ?? 0) === 0;
+  // The dry-run came back unsuccessful but produced no per-row results — a
+  // pre-flight failure (unreadable file, no matching tab, tenant not set up,
+  // etc.). The real reason lives in message/errors; surface it rather than
+  // pretend the file passed.
+  const preflightError =
+    !committed &&
+    dryResult !== null &&
+    !allClean &&
+    failedRows.length === 0;
+  const backendMessage = (commitResult ?? dryResult)?.message ?? null;
 
   // Lets users debug rejected rows offline. We export the row numbers
   // + error messages so kyle can paste them next to his original sheet
@@ -832,7 +850,9 @@ const Inner: React.FC = () => {
                   ? "IMPORT COMPLETE"
                   : allClean
                     ? "READY TO IMPORT"
-                    : "FIX THESE ROWS"}
+                    : preflightError
+                      ? "COULDN'T VALIDATE"
+                      : "FIX THESE ROWS"}
               </p>
               <p className="font-bold">
                 {totalRows} row{totalRows === 1 ? "" : "s"} parsed ·{" "}
@@ -861,7 +881,10 @@ const Inner: React.FC = () => {
                   ? "Successful rows are now real requests in the queue. Failed rows weren't written."
                   : allClean
                     ? "Every row passed validation. Click 'Import all' to commit."
-                    : "Fix the rows below in your spreadsheet, then drop the corrected file back in step 2."}
+                    : preflightError
+                      ? backendMessage ||
+                        "The file couldn't be validated. Check the file and try again."
+                      : "Fix the rows below in your spreadsheet, then drop the corrected file back in step 2."}
               </p>
             </div>
             {!committed && (
