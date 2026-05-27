@@ -3371,6 +3371,7 @@ type Mutation {
   disconnectGoogleCalendar(input: DisconnectGoogleCalendarInput!): DisconnectGoogleCalendarResponse!
   upsertTenantTheme(input: CreateOrUpdateTenantThemeInput!): TenantThemeResponse!
   setLinkedSheet(input: SetLinkedSheetInput!): UpdateTenantResponse!
+  setDefaultExternalRmm(input: SetDefaultExternalRmmInput!): UpdateTenantResponse!
 
   "### Checks if a token is not expired and correct.\n\n*Note that this is not for refresh tokens.*\n"
   verifyToken(input: VerifyTokenInput!): VerifyTokenType!
@@ -4990,12 +4991,19 @@ type TenantType implements Node {
   requestUrlName: String
   image: String
   linkedSheetUrl: String
+  defaultExternalRmm: SparkUserType
 }
 
 input SetLinkedSheetInput {
   clientMutationId: ID = null
   tenantId: ID = null
   sheetUrl: String = null
+}
+
+input SetDefaultExternalRmmInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  userId: ID = null
 }
 
 type UpdateTenantResponse {
