@@ -121,6 +121,9 @@ type Row = {
   address: string;
   type: string;
   eventUuid: string | null;
+  eventId: string | null;
+  eventDate: string | null;
+  eventAddress: string | null;
   // Aggregate of the request's events + recaps for the chip:
   //   "submitted" → at least one event has at least one recap
   //   "due"       → events scheduled but no recaps yet
@@ -175,6 +178,7 @@ const fmtTimeRange = (
 
 import InternalNotesPanel from "./InternalNotesPanel";
 import BulkCloneModal from "./BulkCloneModal";
+import InviteBAModal from "./InviteBAModal";
 
 type Mentionable = { id: string; name: string; email: string };
 
@@ -240,7 +244,8 @@ const TrackerTable: React.FC<{
   mentionables: Mentionable[];
   groupBy: "none" | "date";
   onClone?: (row: Row) => void;
-}> = ({ rows, mentionables, groupBy, onClone }) => {
+  onAssignBa?: (row: Row) => void;
+}> = ({ rows, mentionables, groupBy, onClone, onAssignBa }) => {
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -504,6 +509,22 @@ const TrackerTable: React.FC<{
                             ⎘ CLONE
                           </button>
                         )}
+                        {onAssignBa && r.eventId && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAssignBa(r);
+                            }}
+                            className="mono text-[10px] transition"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: "rgba(255,255,255,0.55)",
+                            }}
+                            title="Assign a BA to this event — sends a shift offer"
+                          >
+                            ✚ ASSIGN BA
+                          </button>
+                        )}
                       </div>
                     )}
                   </td>
@@ -545,6 +566,7 @@ const MasterTrackerInner: React.FC<{
   onVisibleRowsChange?: (rows: Row[]) => void;
   onMarketsChange?: (markets: string[]) => void;
   onClone?: (row: Row) => void;
+  onAssignBa?: (row: Row) => void;
 }> = ({
   activeStatus,
   search,
@@ -559,6 +581,7 @@ const MasterTrackerInner: React.FC<{
   onVisibleRowsChange,
   onMarketsChange,
   onClone,
+  onAssignBa,
 }) => {
   const { tenantId } = useAuthStore();
 
@@ -612,6 +635,9 @@ const MasterTrackerInner: React.FC<{
             address: n.address ?? "",
             type: n.requestType?.name ?? "—",
             eventUuid: n.event?.uuid ? String(n.event.uuid) : null,
+            eventId: n.event?.id ? String(n.event.id) : null,
+            eventDate: (n.startTime ?? n.date) ? String(n.startTime ?? n.date) : null,
+            eventAddress: n.address ? String(n.address) : null,
             recapStatus,
             recapCount,
             schedulingStatus: n.schedulingStatus ?? "",
@@ -761,6 +787,7 @@ const MasterTrackerInner: React.FC<{
       mentionables={mentionables}
       groupBy={groupBy}
       onClone={onClone}
+      onAssignBa={onAssignBa}
     />
   );
 };
@@ -858,6 +885,12 @@ export default function MasterTracker() {
   const [cloneSource, setCloneSource] = useState<{
     id: string;
     label: string;
+  } | null>(null);
+  // Source event for the "✚ Assign BA" modal (InviteBAModal). null = closed.
+  const [assignBaSource, setAssignBaSource] = useState<{
+    eventId: string;
+    eventDate: string | null;
+    eventAddress: string | null;
   } | null>(null);
   // Bump to force MasterTrackerInner to refetch after a successful
   // clone so the new requests show up immediately.
@@ -1416,6 +1449,14 @@ export default function MasterTracker() {
                 label: `${row.venue || "Request"} · ${row.dateLabel}`,
               })
             }
+            onAssignBa={(row) => {
+              if (row.eventId)
+                setAssignBaSource({
+                  eventId: row.eventId,
+                  eventDate: row.eventDate,
+                  eventAddress: row.eventAddress,
+                });
+            }}
           />
         </Suspense>
       </div>
@@ -1432,6 +1473,19 @@ export default function MasterTracker() {
             setCloneSource(null);
             setRefetchTick((t) => t + 1);
           }}
+        />
+      )}
+
+      {/* Assign-BA modal — triggered by the ✚ ASSIGN BA row action.
+          Reuses the shared InviteBAModal so the admin can pick a BA
+          and fire a shift offer for this row's event. */}
+      {assignBaSource && (
+        <InviteBAModal
+          eventId={assignBaSource.eventId}
+          eventDate={assignBaSource.eventDate}
+          eventAddress={assignBaSource.eventAddress}
+          onClose={() => setAssignBaSource(null)}
+          onInvited={() => setAssignBaSource(null)}
         />
       )}
 
