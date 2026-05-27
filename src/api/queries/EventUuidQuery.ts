@@ -163,6 +163,12 @@ export const EventUuidQuery = graphql`
         uuid
         name
       }
+      ambassadors {
+        uuid
+        name
+        email
+        isApproved
+      }
     }
   }
 `;

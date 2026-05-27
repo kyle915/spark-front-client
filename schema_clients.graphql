@@ -2332,6 +2332,14 @@ type Event implements Node {
   recaps: [Recap!]!
   assignedAmbassadorsCount: Int!
   confirmedAmbassadorsCount: Int!
+  ambassadors: [EventAmbassador!]!
+}
+
+type EventAmbassador {
+  uuid: ID!
+  name: String!
+  email: String!
+  isApproved: Boolean!
 }
 
 type EventCountableConnection {
