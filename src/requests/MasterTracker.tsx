@@ -1260,7 +1260,7 @@ export default function MasterTracker() {
                 boxShadow: "0 0 24px rgba(197,245,70,0.35)",
               }}
             >
-              {isClient ? "+ Submit request" : "+ Log event"}
+              {isClient ? "+ Submit request" : "+ Create Request"}
             </button>
           </div>
         </div>
