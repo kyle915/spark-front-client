@@ -15,7 +15,7 @@
  *   - Back link respects history state, falls back to /events/list
  */
 
-import React, { Suspense } from "react";
+import React, { Suspense, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { Link, useLocation, useParams } from "react-router";
 import Layout from "@/layout/Layout";
@@ -24,6 +24,7 @@ import useSparkRole from "@/hooks/useSparkRole";
 import { EventUuidQuery } from "@/api/queries/EventUuidQuery";
 import type { EventUuidQuery as EventUuidQueryType } from "@api/queries/__generated__/EventUuidQuery.graphql";
 import ShiftReplayPanel from "@/requests/ShiftReplayPanel";
+import InviteBAModal from "@/requests/InviteBAModal";
 
 type Event = NonNullable<EventUuidQueryType["response"]["event"]>;
 
@@ -119,6 +120,10 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
     { fetchPolicy: "store-and-network" },
   );
   const event = data.event as Event | null;
+  // Admin "Assign BA" modal (same InviteBAModal the Master Tracker row
+  // action uses). The event detail view previously had no way to staff,
+  // even though the tracker row offered it — this closes that gap.
+  const [showAssign, setShowAssign] = useState(false);
 
   if (!event) {
     return (
@@ -194,18 +199,32 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
             {scope === "National" ? "◉ NATIONAL" : "⌖ LOCAL"}
           </span>
           {role.isAdmin && (
-            <Link
-              to={`/event/edit/${event.uuid}`}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold transition"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-                textDecoration: "none",
-              }}
-            >
-              ✎ Edit
-            </Link>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowAssign(true)}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold transition"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "#0a0d09",
+                  border: "1px solid var(--spark-lime)",
+                }}
+              >
+                ✚ Assign BA
+              </button>
+              <Link
+                to={`/event/edit/${event.uuid}`}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold transition"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                  textDecoration: "none",
+                }}
+              >
+                ✎ Edit
+              </Link>
+            </>
           )}
         </div>
       </div>
@@ -417,6 +436,20 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
           )}
         </div>
       </div>
+
+      {/* Assign-BA modal — same component the Master Tracker row uses.
+          InviteBAModal suspends (loads the BA list), so wrap in Suspense. */}
+      {showAssign && (
+        <Suspense fallback={null}>
+          <InviteBAModal
+            eventId={String(event.id)}
+            eventDate={event.date ?? event.startTime ?? null}
+            eventAddress={event.address ?? null}
+            onClose={() => setShowAssign(false)}
+            onInvited={() => setShowAssign(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };
