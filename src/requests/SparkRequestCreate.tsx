@@ -9,6 +9,7 @@ import Layout from "@/layout/Layout";
 // from pulling Google Maps loader on every Create Request open.
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import useSparkRole from "@/hooks/useSparkRole";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
 import type { RequestMutation } from "@api/mutations/__generated__/RequestMutation.graphql";
 import { CreateDistributorMutation } from "@/api/mutations/CreateDistributorMutation";
@@ -57,6 +58,12 @@ const SparkRequestInner: React.FC = () => {
   const { user, tenantId } = useAuthStore();
   const showAlert = useAlertStore((s) => s.showAlert);
   const navigate = useNavigate();
+  const { isClient } = useSparkRole();
+  // Admin-only: when creating a request on a client's behalf, optionally
+  // email them the auto-approved confirmation. Default off — an internal
+  // event request is silent unless the admin opts in. Clients never see
+  // this (their own submissions always notify them via the backend).
+  const [notifyRequestor, setNotifyRequestor] = useState(false);
 
   const [commit, isCommitting] = useMutation<RequestMutation>(
     CreateRequestMutation,
@@ -542,6 +549,10 @@ const SparkRequestInner: React.FC = () => {
               distributorName:
                 distributors.find((d) => String(d.id) === distributorId)?.name ?? undefined,
               notes: notesPlus || undefined,
+              // Admin opt-in only. notifyRequestor is a defined field on
+              // CreateRequestInput (unlike the old `quantity`), so sending it
+              // is safe. Omit when off / for clients to keep the payload clean.
+              notifyRequestor: !isClient && notifyRequestor ? true : undefined,
               details: [],
               // CreateRequestProductInput only accepts `productId` — sending
               // any extra field (we used to send `quantity: 1`) makes GraphQL
@@ -1304,9 +1315,30 @@ const SparkRequestInner: React.FC = () => {
           className="mt-2 text-sm"
           style={{ color: "rgba(255,255,255,0.75)" }}
         >
-          Submission lands in the RMM's queue. Once approved, Spark auto-posts
-          a job and emails confirmation to your team.
+          {isClient
+            ? "Submission lands in the RMM's queue. Once approved, Spark auto-posts a job and emails confirmation to your team."
+            : "Internal request — lands on the tracker auto-approved (no RMM routing). The client is only emailed if you tick the box below."}
         </p>
+        {!isClient && (
+          <label
+            className="mt-3 flex items-center gap-2.5 cursor-pointer select-none"
+            style={{ color: "rgba(255,255,255,0.8)" }}
+          >
+            <input
+              type="checkbox"
+              checked={notifyRequestor}
+              onChange={(e) => setNotifyRequestor(e.target.checked)}
+              style={{
+                accentColor: "var(--spark-lime)",
+                width: 16,
+                height: 16,
+              }}
+            />
+            <span className="text-sm">
+              Email the client a confirmation
+            </span>
+          </label>
+        )}
       </div>
 
       {/* Sticky submit bar — always in view */}
@@ -1346,7 +1378,11 @@ const SparkRequestInner: React.FC = () => {
                 isCommitting || !venue || !date || !schedulingStatus ? 0.5 : 1,
             }}
           >
-            {isCommitting ? "Submitting…" : "Submit & route to RMM →"}
+            {isCommitting
+              ? "Submitting…"
+              : isClient
+                ? "Submit & route to RMM →"
+                : "Create internal request →"}
           </button>
         </div>
       </div>
