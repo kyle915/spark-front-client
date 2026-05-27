@@ -512,6 +512,21 @@ const RecapsListInner: React.FC<{
       }
       return matched ? total : null;
     };
+    // Borjomi's "engagements" is the "Total number of consumers sampled"
+    // custom field, not the typed total_engagements column — so a recap that
+    // filled the field but not the column shows ENG "—". Use the field as a
+    // fallback. Only fills blanks (used with ?? below) so a populated
+    // totalEngagements is never overridden.
+    const customConsumersSampled = (
+      fields: ReadonlyArray<{ name?: string | null; value?: string | null } | null> | null | undefined,
+    ): number | null => {
+      for (const f of fields ?? []) {
+        if (!f?.name || !/consumers?\s+sampled/i.test(f.name)) continue;
+        const n = parseInt(String(f.value ?? "").replace(/[^\d-]/g, ""), 10);
+        if (Number.isFinite(n)) return n;
+      }
+      return null;
+    };
     const custom: Recap[] =
       customData?.customRecaps?.edges
         ?.map((e) => e?.node)
@@ -533,7 +548,8 @@ const RecapsListInner: React.FC<{
             approved: Boolean(n.approved),
             heroImage: heroFile?.url ?? null,
             fileCount: files.length,
-            engagements: n.totalEngagements ?? null,
+            engagements:
+              n.totalEngagements ?? customConsumersSampled(n.customField),
             productsSold: customSoldUnits(n.customField),
             requestUuid: null,
             requestShortId: null,
