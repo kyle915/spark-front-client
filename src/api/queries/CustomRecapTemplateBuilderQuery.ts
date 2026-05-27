@@ -56,6 +56,15 @@ export const CustomRecapTemplateBuilderQuery = graphql`
             id
             name
             required
+            recapSectionId
+            recapSection {
+              id
+              name
+            }
+            customFieldType {
+              id
+              name
+            }
           }
         }
       }
