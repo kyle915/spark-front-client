@@ -179,6 +179,7 @@ const fmtTimeRange = (
 import InternalNotesPanel from "./InternalNotesPanel";
 import BulkCloneModal from "./BulkCloneModal";
 import InviteBAModal from "./InviteBAModal";
+import PostToBoardModal from "./PostToBoardModal";
 
 type Mentionable = { id: string; name: string; email: string };
 
@@ -245,7 +246,8 @@ const TrackerTable: React.FC<{
   groupBy: "none" | "date";
   onClone?: (row: Row) => void;
   onAssignBa?: (row: Row) => void;
-}> = ({ rows, mentionables, groupBy, onClone, onAssignBa }) => {
+  onPostBoard?: (row: Row) => void;
+}> = ({ rows, mentionables, groupBy, onClone, onAssignBa, onPostBoard }) => {
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -525,6 +527,22 @@ const TrackerTable: React.FC<{
                             ✚ ASSIGN BA
                           </button>
                         )}
+                        {onPostBoard && r.eventId && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onPostBoard(r);
+                            }}
+                            className="mono text-[10px] transition"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: "rgba(255,255,255,0.55)",
+                            }}
+                            title="Post this event's job to the public BA board — open to all eligible BAs"
+                          >
+                            📣 POST TO BOARD
+                          </button>
+                        )}
                       </div>
                     )}
                   </td>
@@ -567,6 +585,7 @@ const MasterTrackerInner: React.FC<{
   onMarketsChange?: (markets: string[]) => void;
   onClone?: (row: Row) => void;
   onAssignBa?: (row: Row) => void;
+  onPostBoard?: (row: Row) => void;
 }> = ({
   activeStatus,
   search,
@@ -582,6 +601,7 @@ const MasterTrackerInner: React.FC<{
   onMarketsChange,
   onClone,
   onAssignBa,
+  onPostBoard,
 }) => {
   const { tenantId } = useAuthStore();
 
@@ -788,6 +808,7 @@ const MasterTrackerInner: React.FC<{
       groupBy={groupBy}
       onClone={onClone}
       onAssignBa={onAssignBa}
+      onPostBoard={onPostBoard}
     />
   );
 };
@@ -891,6 +912,11 @@ export default function MasterTracker() {
     eventId: string;
     eventDate: string | null;
     eventAddress: string | null;
+  } | null>(null);
+  // Source event for the "📣 Post to board" modal (PostToBoardModal). null = closed.
+  const [postBoardSource, setPostBoardSource] = useState<{
+    eventId: string;
+    eventName: string | null;
   } | null>(null);
   // Bump to force MasterTrackerInner to refetch after a successful
   // clone so the new requests show up immediately.
@@ -1457,6 +1483,13 @@ export default function MasterTracker() {
                   eventAddress: row.eventAddress,
                 });
             }}
+            onPostBoard={(row) => {
+              if (row.eventId)
+                setPostBoardSource({
+                  eventId: row.eventId,
+                  eventName: row.venue ?? null,
+                });
+            }}
           />
         </Suspense>
       </div>
@@ -1486,6 +1519,18 @@ export default function MasterTracker() {
           eventAddress={assignBaSource.eventAddress}
           onClose={() => setAssignBaSource(null)}
           onInvited={() => setAssignBaSource(null)}
+        />
+      )}
+
+      {/* Post-to-board modal — triggered by the 📣 POST TO BOARD row
+          action. Posts this row's event job to the public BA board via
+          the postEventToBoard mutation so any eligible BA can apply. */}
+      {postBoardSource && (
+        <PostToBoardModal
+          eventId={postBoardSource.eventId}
+          eventName={postBoardSource.eventName}
+          onClose={() => setPostBoardSource(null)}
+          onPosted={() => setPostBoardSource(null)}
         />
       )}
 
