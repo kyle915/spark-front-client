@@ -1,9 +1,11 @@
 import React, { type ReactNode } from "react";
+import { useLocation } from "react-router";
 import { PageTransition } from "./PageTransition";
 import SparkSidebar from "./SparkSidebar";
 import SparkTopbar from "./SparkTopbar";
 import CommandPalette from "./CommandPalette";
 import UpdateBanner from "@/components/UpdateBanner";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 /**
  * Spark v2 layout shell. SparkSidebar + SparkTopbar render the wireframe
@@ -20,6 +22,9 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  // Key the boundary by route so navigating to a working page clears a
+  // stuck error automatically (a remount resets its caught-error state).
+  const location = useLocation();
   return (
     <div className="flex h-screen bg-base-200 text-base-content spark-mesh">
       <UpdateBanner />
@@ -32,9 +37,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <main className="flex-1 bg-base-200 overflow-y-auto">
           <PageTransition>
             <div className="p-6 lg:p-10 min-h-full">
-              {children || (
-                <h1 className="text-lg font-semibold">Dashboard</h1>
-              )}
+              <ErrorBoundary key={location.pathname}>
+                {children || (
+                  <h1 className="text-lg font-semibold">Dashboard</h1>
+                )}
+              </ErrorBoundary>
             </div>
           </PageTransition>
         </main>
