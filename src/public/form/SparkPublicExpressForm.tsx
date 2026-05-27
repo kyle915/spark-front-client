@@ -418,7 +418,7 @@ export default function SparkPublicExpressForm() {
                 },
                 {
                   value: "needs_scheduling",
-                  label: "We need to schedule it for them",
+                  label: "Schedule it for me",
                 },
               ].map((opt) => {
                 const selected = schedulingStatus === opt.value;
