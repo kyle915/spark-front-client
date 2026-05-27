@@ -350,6 +350,9 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             approved ? "Recap approved." : "Recap marked not approved.",
             "success",
           );
+          // Refetch so the approval status updates immediately — the
+          // mutation response alone doesn't refresh the rendered query.
+          setRefreshKey((k) => k + 1);
         } else {
           showAlert(
             res.approveRecap?.message ?? "Couldn't update approval.",
@@ -377,6 +380,9 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       onCompleted: (res) => {
         if (res.removeRecapFile?.success) {
           showAlert("File removed.", "success");
+          // Refetch so the removed photo disappears immediately instead of
+          // lingering until a manual page reload.
+          setRefreshKey((k) => k + 1);
         } else {
           showAlert(
             res.removeRecapFile?.message ?? "Couldn't remove file.",
