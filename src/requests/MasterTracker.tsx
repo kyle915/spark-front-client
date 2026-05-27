@@ -47,6 +47,12 @@ const STATUS_LABEL: Record<string, string> = {
   pending: "PENDING",
 };
 
+// Friendly export labels for the two-value schedulingStatus metadata.
+const SCHEDULING_LABEL: Record<string, string> = {
+  already_scheduled: "Already scheduled with the account",
+  needs_scheduling: "Needs scheduling by Ignite",
+};
+
 // "Active" = anything not yet completed. Default landing for admins.
 const ACTIVE_STATUSES = new Set([
   "pending",
@@ -121,6 +127,8 @@ type Row = {
   //   "none"      → no events scheduled yet (request still pending)
   recapStatus: RecapStatus;
   recapCount: number;
+  // Two-value metadata: "already_scheduled" | "needs_scheduling" | "".
+  schedulingStatus: string;
 };
 
 const fmtDateLabel = (raw: string | null | undefined) => {
@@ -381,7 +389,26 @@ const TrackerTable: React.FC<{
                     <span className={chipClass}>{label}</span>
                   </td>
                   <td className="px-4 py-3">{r.market}</td>
-                  <td className="px-4 py-3 font-medium">{r.venue}</td>
+                  <td className="px-4 py-3 font-medium">
+                    <span>{r.venue}</span>
+                    {r.schedulingStatus === "needs_scheduling" ? (
+                      <span
+                        className="chip chip-gold mt-1"
+                        style={{ display: "inline-flex" }}
+                        title="Ignite still needs to schedule this with the account"
+                      >
+                        ◷ NEEDS SCHEDULING
+                      </span>
+                    ) : r.schedulingStatus === "already_scheduled" ? (
+                      <span
+                        className="chip chip-muted mt-1"
+                        style={{ display: "inline-flex" }}
+                        title="Already scheduled with the account"
+                      >
+                        ✓ SCHEDULED
+                      </span>
+                    ) : null}
+                  </td>
                   <td
                     className="px-4 py-3 text-xs max-w-[280px]"
                     style={{ color: "rgba(255,255,255,0.7)" }}
@@ -512,6 +539,7 @@ const MasterTrackerInner: React.FC<{
   dateRange: "all" | "next7" | "next30" | "past7" | "past30" | "month";
   sortMode: "date-desc" | "date-asc" | "venue" | "status";
   marketFilter: string;
+  schedulingFilter: string;
   mentionables: Mentionable[];
   onCountsChange: (counts: Record<string, number>, total: number) => void;
   onVisibleRowsChange?: (rows: Row[]) => void;
@@ -525,6 +553,7 @@ const MasterTrackerInner: React.FC<{
   dateRange,
   sortMode,
   marketFilter,
+  schedulingFilter,
   mentionables,
   onCountsChange,
   onVisibleRowsChange,
@@ -585,6 +614,7 @@ const MasterTrackerInner: React.FC<{
             eventUuid: n.event?.uuid ? String(n.event.uuid) : null,
             recapStatus,
             recapCount,
+            schedulingStatus: n.schedulingStatus ?? "",
           };
         }) ?? []
     );
@@ -642,9 +672,17 @@ const MasterTrackerInner: React.FC<{
     });
   }, [dateFiltered, marketFilter]);
 
+  // Scheduling-status filter — client-side, on the two-value metadata.
+  const schedulingFiltered = useMemo(() => {
+    if (schedulingFilter === "all") return marketFiltered;
+    return marketFiltered.filter(
+      (r) => r.schedulingStatus === schedulingFilter,
+    );
+  }, [marketFiltered, schedulingFilter]);
+
   // Sort applied last so it operates on the post-filter set.
   const rows = useMemo(() => {
-    const out = [...marketFiltered];
+    const out = [...schedulingFiltered];
     switch (sortMode) {
       case "date-desc":
         out.sort(
@@ -685,7 +723,7 @@ const MasterTrackerInner: React.FC<{
       }
     }
     return out;
-  }, [marketFiltered, sortMode]);
+  }, [schedulingFiltered, sortMode]);
 
   // Bubble the unique market codes up so the page chrome can render
   // a dropdown with just the markets actually present in the data.
@@ -813,6 +851,9 @@ export default function MasterTracker() {
   // currently-loaded rows. "all" means no filter.
   const [marketFilter, setMarketFilter] = useState<string>("all");
   const [markets, setMarkets] = useState<string[]>([]);
+  // Scheduling-status filter — "all" | "already_scheduled" |
+  // "needs_scheduling". Applied client-side to the loaded rows.
+  const [schedulingFilter, setSchedulingFilter] = useState<string>("all");
   // Source row for the "⎘ Clone ×N" modal. null = closed.
   const [cloneSource, setCloneSource] = useState<{
     id: string;
@@ -838,6 +879,7 @@ export default function MasterTracker() {
       "Address",
       "Type",
       "Time",
+      "Scheduling",
       "Recap",
       "Recap Count",
       "Event UUID",
@@ -859,6 +901,9 @@ export default function MasterTracker() {
           r.address,
           r.type,
           r.timeLabel,
+          r.schedulingStatus
+            ? (SCHEDULING_LABEL[r.schedulingStatus] ?? r.schedulingStatus)
+            : "",
           r.recapStatus,
           String(r.recapCount),
           r.eventUuid ?? "",
@@ -901,6 +946,9 @@ export default function MasterTracker() {
       "Address",
       "Type",
       "Time",
+      "Scheduling",
+      "Recap",
+      "Recap Count",
       "Event UUID",
       "Request UUID",
     ];
@@ -917,6 +965,9 @@ export default function MasterTracker() {
           r.address,
           r.type,
           r.timeLabel,
+          r.schedulingStatus
+            ? (SCHEDULING_LABEL[r.schedulingStatus] ?? r.schedulingStatus)
+            : "",
           r.recapStatus,
           String(r.recapCount),
           r.eventUuid ?? "",
@@ -1233,6 +1284,16 @@ export default function MasterTracker() {
             ]}
           />
           <FilterSelect
+            label="SCHEDULING"
+            value={schedulingFilter}
+            onChange={setSchedulingFilter}
+            options={[
+              { value: "all", label: "All scheduling" },
+              { value: "already_scheduled", label: "Already scheduled" },
+              { value: "needs_scheduling", label: "Needs scheduling" },
+            ]}
+          />
+          <FilterSelect
             label="SORT"
             value={sortMode}
             onChange={(v) =>
@@ -1247,11 +1308,13 @@ export default function MasterTracker() {
           />
           {(dateRange !== "all" ||
             marketFilter !== "all" ||
+            schedulingFilter !== "all" ||
             sortMode !== "date-desc") && (
             <button
               onClick={() => {
                 setDateRange("all");
                 setMarketFilter("all");
+                setSchedulingFilter("all");
                 setSortMode("date-desc");
               }}
               className="mono text-[10px] px-3 py-1.5 rounded-xl"
@@ -1336,6 +1399,7 @@ export default function MasterTracker() {
             dateRange={dateRange}
             sortMode={sortMode}
             marketFilter={marketFilter}
+            schedulingFilter={schedulingFilter}
             mentionables={[
               ...rmmList,
               ...(adminList.length > 0 ? adminList : ADMIN_ROSTER_FALLBACK),

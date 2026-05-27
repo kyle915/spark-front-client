@@ -222,6 +222,12 @@ const SparkRequestInner: React.FC = () => {
   );
   const [requestTypeId, setRequestTypeId] = useState(qpRequestTypeId);
   const [timezoneId, setTimezoneId] = useState(qpTimezoneId);
+  // Required scheduling choice. "already_scheduled" = the account
+  // already has this visit booked; "needs_scheduling" = Ignite still
+  // needs to book it. Plain metadata, no approval-flow impact.
+  const [schedulingStatus, setSchedulingStatus] = useState(
+    searchParams.get("schedulingStatus") ?? "",
+  );
   const [rmmId, setRmmId] = useState("");
   // RMM picker state used to drive the inline ROUTING chip that lived
   // alongside the Address/Time block. That block is gone in Express
@@ -290,6 +296,8 @@ const SparkRequestInner: React.FC = () => {
         setRequestTypeId(draft.requestTypeId);
       if (typeof draft.timezoneId === "string")
         setTimezoneId(draft.timezoneId);
+      if (typeof draft.schedulingStatus === "string")
+        setSchedulingStatus(draft.schedulingStatus);
       if (typeof draft.rmmId === "string") setRmmId(draft.rmmId);
       if (typeof draft.storeNumber === "string")
         setStoreNumber(draft.storeNumber);
@@ -323,6 +331,7 @@ const SparkRequestInner: React.FC = () => {
         endTime,
         requestTypeId,
         timezoneId,
+        schedulingStatus,
         rmmId,
         distributorId,
         storeNumber,
@@ -356,6 +365,7 @@ const SparkRequestInner: React.FC = () => {
     endTime,
     requestTypeId,
     timezoneId,
+    schedulingStatus,
     rmmId,
     distributorId,
     storeNumber,
@@ -459,6 +469,13 @@ const SparkRequestInner: React.FC = () => {
       );
       return;
     }
+    if (!schedulingStatus) {
+      showAlert(
+        "Pick a scheduling status — already scheduled, or needs scheduling.",
+        "warning",
+      );
+      return;
+    }
     const allDates = [date, ...extraDates.filter(Boolean)];
     const geocoded = await geocode(address);
     const coords: ReadonlyArray<number> = geocoded ?? [0, 0];
@@ -512,6 +529,7 @@ const SparkRequestInner: React.FC = () => {
               endTime: `${d}T${(endTime || "16:00").padEnd(5, "0")}:00`,
               timezoneId,
               requestTypeId,
+              schedulingStatus: schedulingStatus || undefined,
               rmmAsignedId: rmmId || undefined,
               tenantId: tenantId ?? undefined,
               clientName: fullName || undefined,
@@ -624,6 +642,7 @@ const SparkRequestInner: React.FC = () => {
               setBaCount(1);
               setDistributorId("");
               setStoreNumber("");
+              setSchedulingStatus("");
               clearDraft();
               setDraftRestored(false);
             }}
@@ -788,6 +807,27 @@ const SparkRequestInner: React.FC = () => {
                         : t.name}
                     </option>
                   ))}
+              </select>
+            </div>
+            <div>
+              <label className="label-mini block mb-1.5">Scheduling *</label>
+              {/* Required. Tells the captain whether this visit is
+                  already on the account's calendar or Ignite still
+                  needs to book it. Plain metadata — doesn't gate
+                  approval. */}
+              <select
+                style={inputStyle}
+                value={schedulingStatus}
+                onChange={(e) => setSchedulingStatus(e.target.value)}
+                required
+              >
+                <option value="">Select scheduling status</option>
+                <option value="already_scheduled">
+                  Already scheduled with the account
+                </option>
+                <option value="needs_scheduling">
+                  Needs scheduling by Ignite
+                </option>
               </select>
             </div>
             <div className="relative">
@@ -1277,16 +1317,17 @@ const SparkRequestInner: React.FC = () => {
           </button>
           <button
             type="submit"
-            disabled={isCommitting || !venue || !date}
+            disabled={isCommitting || !venue || !date || !schedulingStatus}
             className="px-6 py-3 rounded-2xl text-sm font-semibold transition"
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
               boxShadow:
-                !venue || !date
+                !venue || !date || !schedulingStatus
                   ? "none"
                   : "0 0 24px rgba(197,245,70,0.35)",
-              opacity: isCommitting || !venue || !date ? 0.5 : 1,
+              opacity:
+                isCommitting || !venue || !date || !schedulingStatus ? 0.5 : 1,
             }}
           >
             {isCommitting ? "Submitting…" : "Submit & route to RMM →"}

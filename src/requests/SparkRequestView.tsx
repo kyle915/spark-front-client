@@ -141,6 +141,12 @@ const STATUS_CHIP: Record<string, string> = {
   declined: "chip chip-muted",
 };
 
+// Friendly labels for the two-value schedulingStatus metadata field.
+const SCHEDULING_LABEL: Record<string, string> = {
+  already_scheduled: "Already scheduled with the account",
+  needs_scheduling: "Needs scheduling by Ignite",
+};
+
 type Request = NonNullable<RequestUuidQueryType["response"]["request"]>;
 
 async function callApprovalMutation(
@@ -488,6 +494,8 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               params.set("timezoneId", String(request.timezone.id));
             if (request.distributor?.id)
               params.set("distributorId", String(request.distributor.id));
+            if (request.schedulingStatus)
+              params.set("schedulingStatus", request.schedulingStatus);
             if (request.notes) params.set("notes", request.notes);
             const productIds = (request.products ?? [])
               .map((p) => (p ? String(p.id) : ""))
@@ -583,6 +591,12 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           )}
           {request.distributor?.name && (
             <Field label="DISTRIBUTOR">{request.distributor.name}</Field>
+          )}
+          {request.schedulingStatus && (
+            <Field label="SCHEDULING">
+              {SCHEDULING_LABEL[request.schedulingStatus] ??
+                request.schedulingStatus}
+            </Field>
           )}
         </div>
       </div>
