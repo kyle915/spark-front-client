@@ -2,14 +2,18 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
-// GooglePlacesInput / matchTimezoneOption were used by the (now-removed)
-// inline Address field. Express Mode infers address from Venue + lets
-// the Edit Request page handle adjustments, so they no longer ship in
-// this bundle. Keep them out of the import list to stop the lazy chunk
-// from pulling Google Maps loader on every Create Request open.
+// GooglePlacesInput powers the Address field's autocomplete and, via
+// matchTimezoneOption, derives the venue's timezone from the picked
+// place — mirroring the external /spark-form. This pulls the Google
+// Maps loader into the Create Request chunk, which is the intended
+// trade for not shipping requests with a guessed (wrong) timezone.
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import GooglePlacesInput, {
+  matchTimezoneOption,
+} from "@/components/inputs/GooglePlacesInput";
+import TimeSlotSelect from "@/components/inputs/TimeSlotSelect";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
 import type { RequestMutation } from "@api/mutations/__generated__/RequestMutation.graphql";
 import { CreateDistributorMutation } from "@/api/mutations/CreateDistributorMutation";
@@ -26,9 +30,9 @@ import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { DistributorsQuery } from "@/api/queries/DistributorsQuery";
 import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__generated__/DistributorsQuery.graphql";
-// TimeSlotSelect was used by the (now-removed) inline start/end-time
-// fields. Defaults to 12:00 PM – 4:00 PM via useState init; edit on
-// the request view when needed.
+// Start/End time pickers (TimeSlotSelect) ship inline so the time is
+// set at create time rather than deferred to the edit page. They still
+// default to 12:00 PM – 4:00 PM via useState init.
 
 /**
  * Spark v2 — minimal "Express" request form.
@@ -409,13 +413,11 @@ const SparkRequestInner: React.FC = () => {
     if (!requestTypeId && requestTypes[0]) {
       setRequestTypeId(String(requestTypes[0].id));
     }
-    if (!timezoneId && timezones[0]) {
-      // Default to America/Chicago if present, else first.
-      const chicago = timezones.find((t) =>
-        (t?.name ?? "").includes("Chicago"),
-      );
-      setTimezoneId(String((chicago ?? timezones[0])?.id));
-    }
+    // NOTE: we intentionally do NOT auto-pick a timezone here anymore.
+    // The old "Chicago-or-first" guess silently stamped requests with the
+    // wrong zone (it fell through to timezones[0] = Alaska when no Central
+    // row matched). Timezone is now derived from the Google Places address
+    // (matchTimezoneOption) or chosen explicitly in the Time Zone select.
     if (!rmmId && rmms.length > 0) {
       // If the logged-in user is themselves one of the RMMs (typical
       // client-role flow — Kristyn / Lauren / etc. submit on their
@@ -780,20 +782,28 @@ const SparkRequestInner: React.FC = () => {
               cheapest way to keep the new routing path warm. */}
           <div>
             <label className="label-mini block mb-1.5">Address *</label>
-            <input
-              style={inputStyle}
+            <GooglePlacesInput
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="123 Main St, City, ST 12345"
-              required
-              autoComplete="off"
+              onChange={setAddress}
+              onResolved={(p) => {
+                setAddress(p.formattedAddress);
+                // Derive the venue timezone from the picked place — same
+                // as the external /spark-form. Replaces the old silent
+                // "Chicago-or-first" guess that produced Alaska.
+                if (p.timezoneId) {
+                  const match = matchTimezoneOption(p.timezoneId, timezones);
+                  if (match) setTimezoneId(String(match.id));
+                }
+              }}
+              placeholder="Start typing — Google suggestions appear"
+              style={inputStyle}
             />
             <p
               className="text-xs mt-1.5"
               style={{ color: "rgba(255,255,255,0.45)" }}
             >
               Full street, city, state, zip — used to route to the
-              right Liquid Death territory manager.
+              right territory manager and to set the venue timezone.
             </p>
           </div>
 
@@ -807,6 +817,45 @@ const SparkRequestInner: React.FC = () => {
                 onChange={(e) => setDate(e.target.value)}
                 required
               />
+            </div>
+            <div>
+              <label className="label-mini block mb-1.5">Start time *</label>
+              <TimeSlotSelect
+                value={startTime}
+                onChange={setStartTime}
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label className="label-mini block mb-1.5">End time *</label>
+              <TimeSlotSelect
+                value={endTime}
+                onChange={setEndTime}
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label className="label-mini block mb-1.5">Time zone *</label>
+              <select
+                style={inputStyle}
+                value={timezoneId}
+                onChange={(e) => setTimezoneId(e.target.value)}
+                required
+              >
+                <option value="">Select timezone</option>
+                {timezones.map((tz) => (
+                  <option key={tz.id} value={tz.id}>
+                    {tz.name}
+                  </option>
+                ))}
+              </select>
+              <p
+                className="text-xs mt-1.5"
+                style={{ color: "rgba(255,255,255,0.45)" }}
+              >
+                Auto-fills from the address — venue local time, not your
+                browser.
+              </p>
             </div>
             <div>
               <label className="label-mini block mb-1.5">Activation type *</label>
@@ -1171,10 +1220,11 @@ const SparkRequestInner: React.FC = () => {
                   Google Places suggestion (handled in the Venue input
                   via onResolved). Empty otherwise — backend tolerates
                   null.
-                - Start/end time: default 12:00 PM – 4:00 PM (set by
-                  qpStart / qpEnd useState init).
-                - Time zone: derived from the address geocode on the
-                  backend if not set.
+                - Start/end time: shown inline (TimeSlotSelect),
+                  default 12:00 PM – 4:00 PM.
+                - Time zone: shown inline; auto-set from the Google
+                  Places address (matchTimezoneOption) or picked in the
+                  Time Zone select. No more silent backend guess.
                 - Routing: empty string means "first available RMM" —
                   the Inbox shows which one accepted.
 
