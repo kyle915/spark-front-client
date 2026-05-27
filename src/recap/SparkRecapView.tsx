@@ -185,6 +185,13 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   // `draft` holds the in-progress string values keyed by field.
   const [editingNumbers, setEditingNumbers] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
+  // Tracks whether Products Sold was set explicitly (stored value or the
+  // admin typed one) vs auto-derived from Cans + Packs. While false, we
+  // keep Products Sold = Cans + Packs as the admin edits either — mirrors
+  // the create form. Liquid Death recaps came in with a null productsSold,
+  // so the editor showed it blank even though Cans was filled; this makes
+  // it auto-fill on open and as the numbers are corrected.
+  const [productsSoldManual, setProductsSoldManual] = useState(false);
   // BA the admin newly picked in the editor. Null = leave the recap's
   // current ambassador unchanged (updateRecap's ambassador_id is guarded
   // server-side, so a null is a no-op, not a clear).
@@ -255,15 +262,49 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   // every current scalar value, applying only the user's edits on top.
   // Dropping any of them would delete photos or null out numbers.
   const startEditNumbers = () => {
+    // If Products Sold has no stored value, seed it from Cans + Packs
+    // (and keep auto-deriving as they're edited). A present value is
+    // treated as deliberate — left as-is and flagged manual so editing
+    // Cans/Packs won't overwrite it.
+    const hasStoredProductsSold = recap.productsSold != null;
+    const cans = recap.totalCansSold ?? 0;
+    const packs = recap.totalPacksSold ?? 0;
+    const autoSum = cans + packs;
     setDraft({
-      productsSold: recap.productsSold?.toString() ?? "",
+      productsSold: hasStoredProductsSold
+        ? recap.productsSold!.toString()
+        : autoSum > 0
+          ? String(autoSum)
+          : "",
       totalCansSold: recap.totalCansSold?.toString() ?? "",
       totalPacksSold: recap.totalPacksSold?.toString() ?? "",
       accountSpendAmount: recap.accountSpendAmount?.toString() ?? "",
       totalConsumer: engagement?.totalConsumer?.toString() ?? "",
     });
+    setProductsSoldManual(hasStoredProductsSold);
     setPickedBa(null);
     setEditingNumbers(true);
+  };
+
+  // Field-change handler for the number editor. Products Sold auto-fills
+  // from Cans + Packs until the admin types into it directly.
+  const handleNumberChange = (key: string, value: string) => {
+    setDraft((d) => {
+      const nextDraft = { ...d, [key]: value };
+      if (key === "productsSold") {
+        // handled by setProductsSoldManual below
+      } else if (
+        (key === "totalCansSold" || key === "totalPacksSold") &&
+        !productsSoldManual
+      ) {
+        const cans = Number(nextDraft.totalCansSold) || 0;
+        const packs = Number(nextDraft.totalPacksSold) || 0;
+        const sum = cans + packs;
+        nextDraft.productsSold = sum > 0 ? String(sum) : "";
+      }
+      return nextDraft;
+    });
+    if (key === "productsSold") setProductsSoldManual(true);
   };
 
   const numOrNull = (s: string): number | null => {
@@ -683,8 +724,11 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   type="number"
                   inputMode="decimal"
                   value={draft[f.key] ?? ""}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, [f.key]: e.target.value }))
+                  onChange={(e) => handleNumberChange(f.key, e.target.value)}
+                  title={
+                    f.key === "productsSold"
+                      ? "Auto-fills from Cans + Packs until you edit it"
+                      : undefined
                   }
                   className="w-full rounded-lg px-3 py-2 text-[15px]"
                   style={{
@@ -696,6 +740,13 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               </div>
             ))}
           </div>
+          <p
+            className="mono text-[10px] mt-2"
+            style={{ color: "rgba(255,255,255,0.45)" }}
+          >
+            * Products sold auto-fills from Cans + Packs. Type a value to
+            override.
+          </p>
 
           {/* BA assignment. Nevena: "I cant add BA for that recap
               anywhere." Shows the current BA and lets the admin search +
