@@ -1539,13 +1539,35 @@ export default function MasterTracker() {
           Reuses the shared InviteBAModal so the admin can pick a BA
           and fire a shift offer for this row's event. */}
       {assignBaSource && (
-        <InviteBAModal
-          eventId={assignBaSource.eventId}
-          eventDate={assignBaSource.eventDate}
-          eventAddress={assignBaSource.eventAddress}
-          onClose={() => setAssignBaSource(null)}
-          onInvited={() => setAssignBaSource(null)}
-        />
+        // InviteBAModal loads the BA list via useLazyLoadQuery (it suspends).
+        // Without a Suspense boundary here the whole page blanks while it
+        // loads; the boundary keeps the suspension local to the modal.
+        <Suspense
+          fallback={
+            <div
+              className="fixed inset-0 z-[60] flex items-center justify-center"
+              style={{
+                background: "rgba(10,11,13,0.7)",
+                backdropFilter: "blur(8px)",
+              }}
+            >
+              <span
+                className="mono text-[11px]"
+                style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.6)" }}
+              >
+                LOADING BAs…
+              </span>
+            </div>
+          }
+        >
+          <InviteBAModal
+            eventId={assignBaSource.eventId}
+            eventDate={assignBaSource.eventDate}
+            eventAddress={assignBaSource.eventAddress}
+            onClose={() => setAssignBaSource(null)}
+            onInvited={() => setAssignBaSource(null)}
+          />
+        </Suspense>
       )}
 
       {/* Post-to-board modal — triggered by the 📣 POST TO BOARD row
