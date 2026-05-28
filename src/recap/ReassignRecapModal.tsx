@@ -44,7 +44,12 @@ const Inner: React.FC<Props> = ({
 
   const data = useLazyLoadQuery<EventsQueryType>(
     EventsQuery,
-    { first: 50, q: search || null, filters: null },
+    // Scope to the active tenant. The backend reassign mutation already
+    // enforces a same-tenant guard, but without this filter an Ignite
+    // admin (unrestricted role) saw EVERY tenant's events in the picker
+    // and could pick one that the mutation would then reject — leaking
+    // other clients' event names in the dropdown along the way.
+    { first: 50, q: search || null, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
 

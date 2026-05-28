@@ -8,6 +8,7 @@ import type { CustomRecapTemplatesQuery as CustomRecapTemplatesQueryType } from 
 import { ImportConnecteamRecapPdfMutation } from "@/api/mutations/ImportConnecteamRecapPdfMutation";
 import type { ImportConnecteamRecapPdfMutation as ImportConnecteamRecapPdfMutationType } from "@api/mutations/__generated__/ImportConnecteamRecapPdfMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Drop a Connecteam-exported recap PDF onto a Spark event and turn it
@@ -65,15 +66,27 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Scope both pickers to the active tenant. Connecteam import writes a
+  // CustomRecap tying an event to a template — without this, an Ignite
+  // admin could import a Girl Beer PDF against a Liquid Death event or
+  // template (cross-tenant corruption + a read leak of other clients'
+  // event/template names). Clients are already server-scoped; this
+  // closes the admin-side footgun.
+  const { tenantId } = useAuthStore();
+
   const eventsData = useLazyLoadQuery<EventsQueryType>(
     EventsQuery,
-    { first: 25, q: search || null, filters: null },
+    {
+      first: 25,
+      q: search || null,
+      filters: tenantId ? { tenantId } : null,
+    },
     { fetchPolicy: "store-or-network" },
   );
 
   const templatesData = useLazyLoadQuery<CustomRecapTemplatesQueryType>(
     CustomRecapTemplatesQuery,
-    { first: 50, filters: null },
+    { first: 50, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
 
