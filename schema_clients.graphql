@@ -1412,6 +1412,42 @@ type ImportConnecteamRecapPdfResponse {
   stats: [ImportConnecteamRecapPdfStat!]!
 }
 
+input ParseConnecteamRecapPdfInput {
+  clientMutationId: ID = null
+  pdfBase64: String!
+}
+
+type ConnecteamRawPair {
+  label: String!
+  value: String!
+}
+
+type ParseConnecteamRecapPdfResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  totalConsumer: String
+  firstTime: String
+  brandAware: String
+  willing: String
+  notWilling: String
+  productsSold: String
+  totalCansSold: String
+  totalPacksSold: String
+  accountSpend: String
+  trafficDescription: String
+  competitivePresence: String
+  quotes: String
+  feedback: String
+  demographics: String
+  positiveStories: String
+  reasonsToDecline: String
+  doDifferently: String
+  accountNotes: String
+  matchedCount: Int!
+  rawPairs: [ConnecteamRawPair!]!
+}
+
 input CreateDistributorInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -3434,6 +3470,7 @@ type Mutation {
   createCustomRecapTemplate(input: CreateCustomRecapTemplateInput!): CustomRecapTemplateDetailResponse!
   updateCustomRecapTemplate(input: UpdateCustomRecapTemplateInput!): CustomRecapTemplateDetailResponse!
   importConnecteamRecapPdf(input: ImportConnecteamRecapPdfInput!): ImportConnecteamRecapPdfResponse!
+  parseConnecteamRecapPdf(input: ParseConnecteamRecapPdfInput!): ParseConnecteamRecapPdfResponse!
   openChatThread(input: OpenChatThreadInput!): ChatThread!
   sendChatMessage(input: SendChatMessageInput!): ChatMessage!
   markChatThreadRead(input: MarkChatThreadReadInput!): Int!
