@@ -328,6 +328,20 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       totalPacksSold: recap.totalPacksSold?.toString() ?? "",
       accountSpendAmount: recap.accountSpendAmount?.toString() ?? "",
       totalConsumer: engagement?.totalConsumer?.toString() ?? "",
+      // Recap-level scalars
+      trafficDescription: recap.trafficDescription ?? "",
+      competitivePresence: recap.competitivePresence ?? "",
+      // Consumer feedback (most-recent row; same row the backend
+      // updates in-place when feedback is sent).
+      cfFeedback: consumerFeedback?.feedback ?? "",
+      cfQuotes: consumerFeedback?.quotes ?? "",
+      cfPositiveStories: consumerFeedback?.positiveStories ?? "",
+      cfReasonsToDecline: consumerFeedback?.reasonsToDecline ?? "",
+      cfDemographics: consumerFeedback?.demographics ?? "",
+      // Account feedback
+      afFeedback: accountFeedback?.feedback ?? "",
+      afDoDifferently: accountFeedback?.doDifferentlyFeedback ?? "",
+      afCorpoCard: accountFeedback?.corpoCard ?? "",
     });
     setProductsSoldManual(hasStoredProductsSold);
     setPickedBa(null);
@@ -403,11 +417,13 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           totalCansSold: numOrNull(draft.totalCansSold),
           totalPacksSold: numOrNull(draft.totalPacksSold),
           accountSpendAmount: numOrNull(draft.accountSpendAmount),
-          // Preserve the rest of the recap's current scalars so the
-          // unconditional overwrite on the backend doesn't blank them.
+          // Preserve totalEarnings; the editor doesn't touch it.
           totalEarnings: recap.totalEarnings ?? null,
-          trafficDescription: recap.trafficDescription ?? null,
-          competitivePresence: recap.competitivePresence ?? null,
+          // Recap-level scalars now editable. Empty string clears.
+          trafficDescription:
+            (draft.trafficDescription ?? "").trim() || null,
+          competitivePresence:
+            (draft.competitivePresence ?? "").trim() || null,
           // Engagements: keep the existing breakdown, only update the
           // headline total_consumer the editor exposes.
           consumerEngagements: {
@@ -417,6 +433,25 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             willingToPurchaseConsumers:
               engagement?.willingToPurchaseConsumers ?? null,
             notWillingConsumers: engagement?.notWillingConsumers ?? null,
+          },
+          // Consumer feedback — backend upserts the most-recent row.
+          // Always send so the admin can clear fields by emptying them.
+          consumerFeedback: {
+            feedback: (draft.cfFeedback ?? "").trim() || null,
+            quotes: (draft.cfQuotes ?? "").trim() || null,
+            positiveStories: (draft.cfPositiveStories ?? "").trim() || null,
+            reasonsToDecline:
+              (draft.cfReasonsToDecline ?? "").trim() || null,
+            demographics: (draft.cfDemographics ?? "").trim() || null,
+          },
+          // Account feedback — same upsert pattern. wasCorpoCardUsed
+          // not exposed in the editor yet; preserve the stored value.
+          accountFeedback: {
+            feedback: (draft.afFeedback ?? "").trim() || null,
+            doDifferentlyFeedback:
+              (draft.afDoDifferently ?? "").trim() || null,
+            corpoCard: (draft.afCorpoCard ?? "").trim() || null,
+            wasCorpoCardUsed: accountFeedback?.wasCorpoCardUsed ?? false,
           },
         },
       },
@@ -755,11 +790,12 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             EDIT RECAP · ADMIN
           </p>
           <h3 className="display font-bold mt-1" style={{ letterSpacing: "-0.02em" }}>
-            Correct recap numbers + BA
+            Edit recap details
           </h3>
           <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
-            Photos, feedback, and all other fields are preserved — only the
-            numbers below change. Leave a field blank to clear it.
+            Numbers, BA assignment, environment notes, and feedback all
+            save together. Leave a field blank to clear it. Photos and
+            sales-performance rows are preserved.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
             {(
@@ -883,6 +919,207 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 onPick={(id, name) => setPickedBa({ id, name })}
               />
             </Suspense>
+          </div>
+
+          {/* ─── Text fields: feedback, environment, account notes ───
+              Kyle hit a reconciliation gap where the editor only let him
+              fix numbers + BA. Everything below is the rest of the
+              recap's editable text — saved on the same "Save changes"
+              click. Trimmed empty strings clear the underlying field.
+          */}
+          <div className="mt-6 pt-5" style={{ borderTop: "1px solid var(--spark-border)" }}>
+            <p
+              className="mono text-[10px] mb-3"
+              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.55)" }}
+            >
+              FEEDBACK &amp; NOTES
+            </p>
+
+            {/* Recap-level: traffic + competitive presence (single line each) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label
+                  className="mono text-[10px] block mb-1"
+                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                >
+                  TRAFFIC DESCRIPTION
+                </label>
+                <input
+                  value={draft.trafficDescription ?? ""}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, trafficDescription: e.target.value }))
+                  }
+                  placeholder="e.g. Steady afternoon, busy after 5pm"
+                  className="w-full rounded-lg px-3 py-2 text-[15px]"
+                  style={{
+                    background: "var(--spark-bg)",
+                    border: "1px solid var(--spark-border)",
+                    color: "var(--spark-text)",
+                  }}
+                />
+              </div>
+              <div>
+                <label
+                  className="mono text-[10px] block mb-1"
+                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                >
+                  COMPETITIVE PRESENCE
+                </label>
+                <input
+                  value={draft.competitivePresence ?? ""}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, competitivePresence: e.target.value }))
+                  }
+                  placeholder="e.g. White Claw was sampling next aisle"
+                  className="w-full rounded-lg px-3 py-2 text-[15px]"
+                  style={{
+                    background: "var(--spark-bg)",
+                    border: "1px solid var(--spark-border)",
+                    color: "var(--spark-text)",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Consumer feedback group */}
+            <p
+              className="mono text-[10px] mt-5 mb-2"
+              style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+            >
+              CONSUMER FEEDBACK
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[
+                { key: "cfFeedback", label: "GENERAL FEEDBACK", placeholder: "What did consumers say overall?" },
+                { key: "cfQuotes", label: "QUOTES", placeholder: "Verbatim quotes from consumers" },
+                { key: "cfPositiveStories", label: "POSITIVE STORIES", placeholder: "Standout reactions, conversions" },
+                { key: "cfReasonsToDecline", label: "REASONS TO DECLINE", placeholder: "Why consumers passed" },
+              ].map(({ key, label, placeholder }) => (
+                <div key={key}>
+                  <label
+                    className="mono text-[10px] block mb-1"
+                    style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                  >
+                    {label}
+                  </label>
+                  <textarea
+                    value={draft[key] ?? ""}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, [key]: e.target.value }))
+                    }
+                    placeholder={placeholder}
+                    rows={3}
+                    className="w-full rounded-lg px-3 py-2 text-[14px] leading-relaxed"
+                    style={{
+                      background: "var(--spark-bg)",
+                      border: "1px solid var(--spark-border)",
+                      color: "var(--spark-text)",
+                      resize: "vertical",
+                    }}
+                  />
+                </div>
+              ))}
+              <div className="md:col-span-2">
+                <label
+                  className="mono text-[10px] block mb-1"
+                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                >
+                  DEMOGRAPHICS
+                </label>
+                <textarea
+                  value={draft.cfDemographics ?? ""}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, cfDemographics: e.target.value }))
+                  }
+                  placeholder="Age range, gender mix, vibe, etc."
+                  rows={2}
+                  className="w-full rounded-lg px-3 py-2 text-[14px] leading-relaxed"
+                  style={{
+                    background: "var(--spark-bg)",
+                    border: "1px solid var(--spark-border)",
+                    color: "var(--spark-text)",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Account feedback group */}
+            <p
+              className="mono text-[10px] mt-5 mb-2"
+              style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+            >
+              ACCOUNT FEEDBACK
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label
+                  className="mono text-[10px] block mb-1"
+                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                >
+                  ACCOUNT FEEDBACK
+                </label>
+                <textarea
+                  value={draft.afFeedback ?? ""}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, afFeedback: e.target.value }))
+                  }
+                  placeholder="Store/account manager comments"
+                  rows={3}
+                  className="w-full rounded-lg px-3 py-2 text-[14px] leading-relaxed"
+                  style={{
+                    background: "var(--spark-bg)",
+                    border: "1px solid var(--spark-border)",
+                    color: "var(--spark-text)",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+              <div>
+                <label
+                  className="mono text-[10px] block mb-1"
+                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                >
+                  THINGS TO DO DIFFERENTLY
+                </label>
+                <textarea
+                  value={draft.afDoDifferently ?? ""}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, afDoDifferently: e.target.value }))
+                  }
+                  placeholder="Improvement notes for next time"
+                  rows={3}
+                  className="w-full rounded-lg px-3 py-2 text-[14px] leading-relaxed"
+                  style={{
+                    background: "var(--spark-bg)",
+                    border: "1px solid var(--spark-border)",
+                    color: "var(--spark-text)",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label
+                  className="mono text-[10px] block mb-1"
+                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                >
+                  CORPORATE CARD REFERENCE
+                </label>
+                <input
+                  value={draft.afCorpoCard ?? ""}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, afCorpoCard: e.target.value }))
+                  }
+                  placeholder="Last 4, identifier, or note"
+                  className="w-full rounded-lg px-3 py-2 text-[15px]"
+                  style={{
+                    background: "var(--spark-bg)",
+                    border: "1px solid var(--spark-border)",
+                    color: "var(--spark-text)",
+                  }}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-2 mt-5">

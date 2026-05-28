@@ -114,6 +114,7 @@ export const RecapQuery = graphql`
         uuid
         doDifferentlyFeedback
         feedback
+        corpoCard
         wasCorpoCardUsed
       }
       recapFiles {
