@@ -4626,6 +4626,9 @@ input RequestFiltersInput {
   distributorStateId: ID = null
   storeNumber: String = null
   date: String = null
+  startDate: String = null
+  endDate: String = null
+  dateSort: String = null
   createdWithinHours: Int = null
   edited: Boolean = null
   reviewed: Boolean = null
