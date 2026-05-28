@@ -5,6 +5,7 @@ import useSparkRole from "@/hooks/useSparkRole";
 import TenantPicker from "./TenantPicker";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import useSidebarCounts from "@/hooks/useSidebarCounts";
+import useChatUnreadCount from "@/hooks/useChatUnreadCount";
 import {
   LayoutDashboard,
   ListChecks,
@@ -17,6 +18,7 @@ import {
   FileText,
   BarChart3,
   Mail,
+  MessageCircle,
   Bell,
   Clock,
   CreditCard,
@@ -150,6 +152,7 @@ const SECTIONS: NavSection[] = [
   {
     title: "Communication",
     items: [
+      { label: "Chat", Icon: MessageCircle, to: "/chat" },
       { label: "Inbox", Icon: Mail, to: "/inbox" },
       { label: "Alerts", Icon: Bell, to: "/alerts" },
     ],
@@ -333,10 +336,20 @@ const SidebarNav: React.FC<{
   onStub: (label: string) => void;
 }> = ({ sections, pathname, isClient, onStub }) => {
   const counts = useSidebarCounts();
+  // Chat unread is on its own polled hook (60s) so it can refresh
+  // without re-pulling the heavy RequestsQuery that useSidebarCounts
+  // owns. Lime tone matches the mobile badge.
+  const chatUnread = useChatUnreadCount();
   const withChips: NavSection[] = sections.map((s) => ({
     ...s,
     items: s.items.map((it) => {
       let chip: NavItem["chip"];
+      if (it.to === "/chat" && chatUnread > 0) {
+        chip = {
+          text: chatUnread > 99 ? "99+" : String(chatUnread),
+          tone: "lime",
+        };
+      }
       if (it.to === "/requests/list" && counts.tracker > 0) {
         // Recap-due takes priority over the active-tracker count so
         // ops sees "12 RECAPS DUE" (orange) before the calmer total.
