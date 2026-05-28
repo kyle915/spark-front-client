@@ -318,6 +318,33 @@ type AmbassadorJobDetailResponse {
   ambassadorJob: AmbassadorJob
 }
 
+type JobApplication {
+  uuid: String!
+  status: String!
+  note: String!
+  appliedAt: String!
+  decidedAt: String
+  ambassadorId: ID!
+  ambassadorFirstName: String!
+  ambassadorLastName: String!
+  ambassadorEmail: String!
+  ambassadorUuid: String!
+}
+
+type JobLifecycleResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  jobUuid: String
+  lifecycleStatus: String
+}
+
+input AssignAmbassadorToJobInput {
+  clientMutationId: ID = null
+  jobId: ID!
+  ambassadorId: ID!
+}
+
 input AmbassadorJobFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -3572,6 +3599,7 @@ type Mutation {
   approveAmbassadorJob(input: ApproveAmbassadorJobInput!): AmbassadorJobDetailResponse!
   inviteAmbassadorsToJob(input: InviteAmbassadorsToJobInput!): InviteAmbassadorsToJobResponse!
   declineAmbassadorJob(input: DeclineAmbassadorJobInput!): AmbassadorJobDetailResponse!
+  assignAmbassadorToJob(input: AssignAmbassadorToJobInput!): JobLifecycleResponse!
   applyAmbassadorEvent(eventId: ID!, ambassadorId: ID = null): ApplyAmbassadorEventResponse!
   applyAmbassadorJob(jobId: ID!, acceptedTerms: Boolean! = false): ApplyAmbassadorJobResponse!
   createPublicAmbassador(input: CreatePublicAmbassadorInput!): PublicAmbassadorCreationResponse!
@@ -3901,6 +3929,7 @@ type WingspanPayment {
 }
 
 type Query {
+  jobApplications(jobId: ID!): [JobApplication!]!
   chatThreads(includeArchived: Boolean! = false): [ChatThread!]!
   chatThread(uuid: ID!): ChatThread
   chatUnreadCount: Int!

@@ -1,10 +1,15 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { JobsQuery } from "@/api/queries/JobsQuery";
 import type { JobsQuery as JobsQueryType } from "@api/queries/__generated__/JobsQuery.graphql";
+import { JobApplicationsQuery } from "@/api/queries/JobApplicationsQuery";
+import type { JobApplicationsQuery as JobApplicationsQueryType } from "@api/queries/__generated__/JobApplicationsQuery.graphql";
+import { AssignAmbassadorToJobMutation } from "@/api/mutations/AssignAmbassadorToJobMutation";
+import type { AssignAmbassadorToJobMutation as AssignAmbassadorToJobMutationType } from "@api/mutations/__generated__/AssignAmbassadorToJobMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
+import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import {
   loadModules,
@@ -73,19 +78,169 @@ const fmtDate = (raw: string | null | undefined) => {
   }
 };
 
-const APPLICANTS = [
-  { name: "Maya R.", initials: "MR", distance: "2.1 mi", rating: 4.9, jobs: 142, tier: "TOP", endorsement: "LD ★ 24" },
-  { name: "Tricia Moreno", initials: "TM", distance: "2.2 mi", rating: 4.7, jobs: 64, tier: "NEW" },
-  { name: "Morgan Peterson", initials: "MP", distance: "2.4 mi", rating: 4.8, jobs: 98, tier: "NEW" },
-  { name: "Jordan T.", initials: "JT", distance: "5.2 mi", rating: 4.9, jobs: 174, tier: "TOP", endorsement: "LD ★ 32" },
-  { name: "Sasha P.", initials: "SP", distance: "3.8 mi", rating: 4.7, jobs: 64, tier: "NEW" },
-  { name: "Alex M.", initials: "AM", distance: "7.8 mi", rating: 4.8, jobs: 110, tier: "TOP", endorsement: "LD ★ 18" },
-];
+const STATUS_CHIP: Record<string, string> = {
+  applied: "chip chip-sky",
+  accepted: "chip chip-lime",
+  declined: "chip chip-muted",
+  withdrawn: "chip chip-muted",
+};
 
-const TIER_CHIP: Record<string, string> = {
-  TOP: "chip chip-lime",
-  NEW: "chip chip-sky",
-  FAR: "chip chip-orange",
+const initialsOf = (first: string, last: string): string => {
+  const a = (first || "").trim()[0] ?? "";
+  const b = (last || "").trim()[0] ?? "";
+  return (a + b).toUpperCase() || "BA";
+};
+
+const fmtApplied = (raw: string | null | undefined): string => {
+  if (!raw) return "";
+  try {
+    return new Date(raw).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return "";
+  }
+};
+
+/**
+ * Real applicant-review panel (#181). Loads jobApplications for the job
+ * and lets an admin accept one (assignAmbassadorToJob — which also
+ * declines the rest + moves the job to filled). Replaces the old
+ * placeholder roster.
+ */
+const ApplicantsCard: React.FC<{
+  jobId: string;
+  isAdmin: boolean;
+  jobFilled: boolean;
+}> = ({ jobId, isAdmin, jobFilled }) => {
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const data = useLazyLoadQuery<JobApplicationsQueryType>(
+    JobApplicationsQuery,
+    { jobId },
+    { fetchPolicy: "store-and-network" },
+  );
+  const apps = useMemo(() => data.jobApplications ?? [], [data]);
+  const [commit, inFlight] = useMutation<AssignAmbassadorToJobMutationType>(
+    AssignAmbassadorToJobMutation,
+  );
+
+  const counts = useMemo(() => {
+    const c = { applied: 0, accepted: 0, declined: 0, withdrawn: 0 };
+    for (const a of apps) {
+      if (a.status in c) (c as Record<string, number>)[a.status] += 1;
+    }
+    return c;
+  }, [apps]);
+
+  const accept = (ambassadorId: string, name: string) => {
+    if (inFlight) return;
+    commit({
+      variables: { input: { jobId, ambassadorId } },
+      onCompleted: (res) => {
+        if (res.assignAmbassadorToJob?.success) {
+          showAlert(`${name} accepted — others declined, job marked filled.`, "success");
+          // Reload so the job status chip + roster reflect the change.
+          window.location.reload();
+        } else {
+          showAlert(
+            res.assignAmbassadorToJob?.message ?? "Couldn't accept applicant.",
+            "error",
+          );
+        }
+      },
+      onError: (e) => showAlert(`Accept failed: ${e.message}`, "error"),
+    });
+  };
+
+  return (
+    <div className="spark-card overflow-hidden flex flex-col">
+      <div
+        className="p-4 flex items-center justify-between"
+        style={{ borderBottom: "1px solid var(--spark-border)" }}
+      >
+        <h3 className="font-bold">
+          Applicants{" "}
+          <span className="mono text-xs ml-1" style={{ color: "rgba(255,255,255,0.45)" }}>
+            {apps.length}
+          </span>
+        </h3>
+      </div>
+
+      <div className="px-4 pt-3 flex gap-1 overflow-x-auto hide-scroll">
+        <button className="chip chip-lime">Applied {counts.applied}</button>
+        <button className="chip chip-muted">Accepted {counts.accepted}</button>
+        <button className="chip chip-muted">Declined {counts.declined}</button>
+      </div>
+
+      {apps.length === 0 ? (
+        <div className="p-6 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          No applications yet. BAs who apply from the mobile app will show up here.
+        </div>
+      ) : (
+        <ul className="flex-1 overflow-y-auto">
+          {apps.map((a, i) => {
+            const name =
+              `${a.ambassadorFirstName} ${a.ambassadorLastName}`.trim() ||
+              a.ambassadorEmail ||
+              "Ambassador";
+            const canAccept =
+              isAdmin && !jobFilled && a.status === "applied";
+            return (
+              <li
+                key={a.uuid}
+                className="p-3"
+                style={{
+                  borderBottom:
+                    i < apps.length - 1 ? "1px solid var(--spark-border)" : "none",
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="spark-avatar">
+                    {initialsOf(a.ambassadorFirstName, a.ambassadorLastName)}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-sm">{name}</p>
+                      <span className={STATUS_CHIP[a.status] ?? "chip chip-muted"}>
+                        {a.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <p
+                      className="mono text-[10px] uppercase mt-0.5 truncate"
+                      style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+                    >
+                      {a.ambassadorEmail}
+                      {a.appliedAt ? ` · applied ${fmtApplied(a.appliedAt)}` : ""}
+                    </p>
+                    {a.note ? (
+                      <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
+                        “{a.note}”
+                      </p>
+                    ) : null}
+                  </div>
+                  {canAccept ? (
+                    <button
+                      onClick={() => accept(a.ambassadorId, name)}
+                      disabled={inFlight}
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0"
+                      style={{
+                        background: "var(--spark-lime)",
+                        color: "#0a0d09",
+                        opacity: inFlight ? 0.6 : 1,
+                      }}
+                    >
+                      Accept
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
 };
 
 const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
@@ -273,7 +428,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               className="font-bold mt-1"
               style={{ color: "var(--spark-lime)" }}
             >
-              {APPLICANTS.length} in pool
+              See list →
             </p>
           </div>
         </div>
@@ -549,104 +704,22 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           </ul>
         </div>
 
-        <div className="spark-card overflow-hidden flex flex-col">
-          <div
-            className="p-4 flex items-center justify-between"
-            style={{ borderBottom: "1px solid var(--spark-border)" }}
-          >
-            <h3 className="font-bold">
-              Applicants{" "}
-              <span
-                className="mono text-xs ml-1"
-                style={{ color: "rgba(255,255,255,0.45)" }}
-              >
-                {APPLICANTS.length}
-              </span>
-            </h3>
-            <button
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold transition"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
+        <Suspense
+          fallback={
+            <div
+              className="spark-card p-6 text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
             >
-              ⚡ Auto-assign top 2
-            </button>
-          </div>
-
-          <div className="px-4 pt-3 flex gap-1 overflow-x-auto hide-scroll">
-            <button className="chip chip-muted">Hired 0/2</button>
-            <button className="chip chip-muted">Offered 0</button>
-            <button className="chip chip-lime">Applied {APPLICANTS.length}</button>
-            <button className="chip chip-muted">Hidden 0</button>
-          </div>
-
-          <ul className="flex-1 overflow-y-auto">
-            {APPLICANTS.map((a, i) => (
-              <li
-                key={a.name}
-                className="p-3 cursor-pointer transition"
-                style={{
-                  borderBottom:
-                    i < APPLICANTS.length - 1
-                      ? "1px solid var(--spark-border)"
-                      : "none",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(255,255,255,0.02)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
-              >
-                <div className="flex items-center gap-3">
-                  <span className="spark-avatar">{a.initials}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-sm">{a.name}</p>
-                      <span
-                        className={`${TIER_CHIP[a.tier] ?? "chip chip-muted"}`}
-                      >
-                        {a.tier}
-                      </span>
-                      {a.endorsement && (
-                        <span
-                          className="mono text-[10px]"
-                          style={{
-                            letterSpacing: "0.14em",
-                            color: "var(--spark-lime)",
-                          }}
-                        >
-                          {a.endorsement}
-                        </span>
-                      )}
-                    </div>
-                    <p
-                      className="mono text-[10px] uppercase mt-0.5"
-                      style={{
-                        letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.45)",
-                      }}
-                    >
-                      {a.distance} · ★ {a.rating} · {a.jobs} jobs
-                    </p>
-                  </div>
-                  <button
-                    onClick={(e) => e.stopPropagation()}
-                    className="px-3 py-1.5 rounded-xl text-xs font-semibold"
-                    style={{
-                      background: "var(--spark-lime)",
-                      color: "#0a0d09",
-                    }}
-                  >
-                    Hire
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+              Loading applicants…
+            </div>
+          }
+        >
+          <ApplicantsCard
+            jobId={node.id}
+            isAdmin={isAdmin}
+            jobFilled={status === "confirmed"}
+          />
+        </Suspense>
       </div>
     </div>
   );
