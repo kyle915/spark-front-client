@@ -121,10 +121,14 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
   backTo,
 }) => {
   const role = useSparkRole();
+  // Bumped after an invite so the Roster panel refetches and shows the
+  // newly-invited BA immediately (otherwise the page looked like "nothing
+  // happened" until a manual reload).
+  const [refreshKey, setRefreshKey] = useState(0);
   const data = useLazyLoadQuery<EventUuidQueryType>(
     EventUuidQuery,
     { uuid },
-    { fetchPolicy: "store-and-network" },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
   const event = data.event as Event | null;
   // Admin "Assign BA" modal (same InviteBAModal the Master Tracker row
@@ -563,7 +567,11 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
             eventDate={event.date ?? event.startTime ?? null}
             eventAddress={event.address ?? null}
             onClose={() => setShowAssign(false)}
-            onInvited={() => setShowAssign(false)}
+            onInvited={() => {
+              setShowAssign(false);
+              // Refetch so the Roster panel shows the newly-invited BA.
+              setRefreshKey((k) => k + 1);
+            }}
           />
         </Suspense>
       )}
