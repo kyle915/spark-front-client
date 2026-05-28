@@ -125,6 +125,7 @@ export const RecapUploader: React.FC<Props> = ({
         }}
       />
       <button
+        type="button"
         onClick={() => inputRef.current?.click()}
         disabled={busy}
         className="px-4 py-2 rounded-xl text-sm font-semibold transition"
