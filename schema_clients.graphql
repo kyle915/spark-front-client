@@ -3327,6 +3327,57 @@ type MonthlyPerformanceTrend {
   dataPoints: [MonthlyDataPoint!]!
 }
 
+"""A chat thread between an Ambassador and a tenant's admin side. Two
+kinds: persistent BA↔admin DM (kind=general) or per-job thread."""
+type ChatThread implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  kind: String!
+  lastMessageAt: String
+  lastMessagePreview: String
+  lastMessageSenderIsAmbassador: Boolean!
+  archivedAt: String
+  createdAt: String!
+  ambassadorUuid: String!
+  ambassadorName: String!
+  jobUuid: String
+  jobName: String
+  unreadForAdmin: Int!
+  unreadForAmbassador: Int!
+  messages(first: Int! = 50, beforeUuid: String = null): [ChatMessage!]!
+}
+
+"""A single message inside a ChatThread."""
+type ChatMessage implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  body: String!
+  senderIsAmbassador: Boolean!
+  senderName: String!
+  createdAt: String!
+  readByAdminAt: String
+  readByAmbassadorAt: String
+}
+
+input OpenChatThreadInput {
+  clientMutationId: ID = null
+  ambassadorUuid: String = null
+  jobUuid: String = null
+}
+
+input SendChatMessageInput {
+  clientMutationId: ID = null
+  threadUuid: String!
+  body: String!
+}
+
+input MarkChatThreadReadInput {
+  clientMutationId: ID = null
+  threadUuid: String!
+}
+
 type Mutation {
   createAcademyModule(input: CreateAcademyModuleInput!): AcademyModuleResponse!
   updateAcademyModule(input: UpdateAcademyModuleInput!): AcademyModuleResponse!
@@ -3383,6 +3434,9 @@ type Mutation {
   createCustomRecapTemplate(input: CreateCustomRecapTemplateInput!): CustomRecapTemplateDetailResponse!
   updateCustomRecapTemplate(input: UpdateCustomRecapTemplateInput!): CustomRecapTemplateDetailResponse!
   importConnecteamRecapPdf(input: ImportConnecteamRecapPdfInput!): ImportConnecteamRecapPdfResponse!
+  openChatThread(input: OpenChatThreadInput!): ChatThread!
+  sendChatMessage(input: SendChatMessageInput!): ChatMessage!
+  markChatThreadRead(input: MarkChatThreadReadInput!): Int!
   removeCustomField(input: RemoveCustomFieldInput!): CustomFieldDetailResponse!
   createCustomRecapFieldType(input: CreateCustomRecapFieldTypeInput!): CustomRecapFieldTypeDetailResponse!
   updateCustomRecapFieldType(input: UpdateCustomRecapFieldTypeInput!): CustomRecapFieldTypeDetailResponse!
@@ -3810,6 +3864,9 @@ type WingspanPayment {
 }
 
 type Query {
+  chatThreads(includeArchived: Boolean! = false): [ChatThread!]!
+  chatThread(uuid: ID!): ChatThread
+  chatUnreadCount: Int!
   academyModulesAdmin(filters: AcademyModuleFiltersInput = null): [AcademyModule!]!
   academyModule(uuid: ID!): AcademyModule
   wingspanStatus: WingspanStatus!
