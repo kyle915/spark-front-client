@@ -399,6 +399,45 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
   );
   const filtersTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Quick date-filter chips + Date sort, per the tracker-findability fix.
+  // "all" keeps the existing default view (no date filter, furthest-future
+  // first) so nothing changes until the user clicks a chip — they were
+  // explicit about not flipping the global default. "past" surfaces
+  // wrapped events (e.g. the Girl Beer bulk batch) that previously sat
+  // ~100 rows down under future-dated placeholders.
+  const [dateChip, setDateChip] = useState<
+    "all" | "this_week" | "upcoming" | "past"
+  >("all");
+  const [dateSort, setDateSort] = useState<"asc" | "desc">("desc");
+
+  // Translate the active chip into an inclusive YYYY-MM-DD range the
+  // backend understands (RequestFiltersInput.start_date / end_date).
+  const { startDate, endDate } = useMemo(() => {
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    const today = new Date();
+    const todayIso = iso(today);
+    if (dateChip === "this_week") {
+      const wk = new Date(today);
+      wk.setDate(wk.getDate() + 7);
+      return { startDate: todayIso, endDate: iso(wk) };
+    }
+    if (dateChip === "upcoming") {
+      return { startDate: todayIso, endDate: undefined as string | undefined };
+    }
+    if (dateChip === "past") {
+      const yest = new Date(today);
+      yest.setDate(yest.getDate() - 1);
+      return {
+        startDate: undefined as string | undefined,
+        endDate: iso(yest),
+      };
+    }
+    return {
+      startDate: undefined as string | undefined,
+      endDate: undefined as string | undefined,
+    };
+  }, [dateChip]);
+
   const handleToggleFilters = () => {
     if (filtersTimerRef.current) clearTimeout(filtersTimerRef.current);
     if (isFiltersOpen) {
@@ -483,6 +522,10 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
       statusId: selectedStatus || undefined,
       stateId: selectedState || undefined,
       date: selectedDate || undefined,
+      // Quick-chip date range + Date column sort (backend PR #616).
+      startDate,
+      endDate,
+      dateSort,
       rmmAsigned: selectedRmmClient || undefined,
       ...fixedFilters,
     }),
@@ -498,6 +541,9 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
       fixedFilters,
       selectedDate,
       selectedRmmClient,
+      startDate,
+      endDate,
+      dateSort,
     ],
   );
 
@@ -940,9 +986,58 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                 </div>
               </div>
 
+              {/* Quick date-filter chips + Date sort toggle. Lets ops jump
+                  to Past (wrapped events owing recaps) / This week /
+                  Upcoming without digging through the Filters panel, and
+                  flip the date order so soonest-first is one click away. */}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {([
+                  ["all", "All"],
+                  ["this_week", "This week"],
+                  ["upcoming", "Upcoming"],
+                  ["past", "Past"],
+                ] as const).map(([key, label]) => {
+                  const active = dateChip === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setDateChip(key)}
+                      className="px-3 py-1.5 rounded-full text-xs font-semibold transition"
+                      style={{
+                        background: active
+                          ? "var(--spark-lime)"
+                          : "transparent",
+                        color: active ? "#0a0d09" : "var(--spark-text)",
+                        border: `1px solid ${
+                          active ? "var(--spark-lime)" : "var(--spark-border)"
+                        }`,
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDateSort((s) => (s === "desc" ? "asc" : "desc"))
+                  }
+                  className="ml-auto px-3 py-1.5 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 transition"
+                  style={{
+                    background: "transparent",
+                    color: "var(--spark-text)",
+                    border: "1px solid var(--spark-border)",
+                  }}
+                  title="Toggle event-date sort"
+                >
+                  Date {dateSort === "desc" ? "↓ Latest first" : "↑ Soonest first"}
+                </button>
+              </div>
+
               <div className="mt-2">
                 <RequestsListInner
-                  key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedState}-${selectedDate}-${selectedRequestType}-${selectedRmmClient}-${JSON.stringify(fixedFilters)}`} // Reset inner component when filters change to reset pagination
+                  key={`${selectedRetailer}-${selectedDistributor}-${selectedStatus}-${selectedState}-${selectedDate}-${selectedRequestType}-${selectedRmmClient}-${dateChip}-${dateSort}-${JSON.stringify(fixedFilters)}`} // Reset inner component when filters change to reset pagination
                   filters={filters}
                 />
               </div>
