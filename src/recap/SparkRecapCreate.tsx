@@ -29,6 +29,41 @@ import { parseLocaleNumber } from "@/utils";
  *  to GCS first (via signed-URL); the resulting blob paths are passed
  *  into the createRecap mutation `files[]`.
  */
+
+const _DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const _MON = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * Human-readable event date/time for the picker.
+ *
+ * Input is the stored ISO ("2026-08-22T07:00:00"[+offset]). We parse the
+ * Y/M/D/H/M components straight off the string rather than `new Date()`
+ * + locale conversion, because the stored time IS the event's local
+ * time — running it through the browser's timezone would shift it (the
+ * same class of bug as the recap-edit DST fix). Output:
+ *   "Sat, Aug 22 2026 · 7:00 AM"  (or just the date if no time present)
+ */
+function fmtEventWhen(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(iso);
+  if (!m) return iso;
+  const year = +m[1];
+  const month = +m[2];
+  const day = +m[3];
+  const dow = new Date(year, month - 1, day).getDay();
+  let label = `${_DOW[dow] ?? ""}, ${_MON[month - 1] ?? ""} ${day} ${year}`;
+  if (m[4] != null) {
+    let h = +m[4];
+    const ampm = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    label += ` · ${h}:${m[5]} ${ampm}`;
+  }
+  return label;
+}
+
 export default function SparkRecapCreate() {
   const navigate = useNavigate();
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -209,7 +244,7 @@ export default function SparkRecapCreate() {
                 {selectedEvent.request?.retailer?.name ?? selectedEvent.name}
               </p>
               <p className="mono text-[11px] mt-1" style={{ color: "rgba(255,255,255,0.6)", letterSpacing: "0.12em" }}>
-                {selectedEvent.date} · {selectedEvent.address}
+                {fmtEventWhen(selectedEvent.date)} · {selectedEvent.address}
               </p>
             </div>
             <button type="button" onClick={() => setSelectedEvent(null)} className="mono text-[10px] px-3 py-1.5 rounded-full" style={{ letterSpacing: "0.18em", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
@@ -235,7 +270,7 @@ export default function SparkRecapCreate() {
                 >
                   <p className="text-sm font-semibold">{evt.request?.retailer?.name ?? evt.name}</p>
                   <p className="mono text-[10px] mt-1" style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.55)" }}>
-                    {evt.date} · {evt.address?.slice(0, 60)}
+                    {fmtEventWhen(evt.date)} · {evt.address?.slice(0, 60)}
                   </p>
                 </button>
               ))}

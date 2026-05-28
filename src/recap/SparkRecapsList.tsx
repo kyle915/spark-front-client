@@ -1116,12 +1116,29 @@ export default function SparkRecapsList() {
                 }
                 className="px-4 py-2 rounded-xl text-sm font-semibold"
                 style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                + Build template
+              </button>
+            )}
+            {!isClient && (
+              // Primary action: build a recap against any Master-Tracker
+              // event. /recap/create's event picker already lists every
+              // tenant event, so this is the global "file a recap" entry
+              // point from the recaps tab.
+              <button
+                onClick={() => (window.location.href = "/recap/create")}
+                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{
                   background: "var(--spark-lime)",
                   color: "#0a0d09",
                   boxShadow: "0 0 24px rgba(197,245,70,0.35)",
                 }}
               >
-                + Build template
+                + New recap
               </button>
             )}
           </div>
