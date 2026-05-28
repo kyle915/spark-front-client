@@ -400,15 +400,16 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
   const filtersTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Quick date-filter chips + Date sort, per the tracker-findability fix.
-  // "all" keeps the existing default view (no date filter, furthest-future
-  // first) so nothing changes until the user clicks a chip — they were
-  // explicit about not flipping the global default. "past" surfaces
-  // wrapped events (e.g. the Girl Beer bulk batch) that previously sat
-  // ~100 rows down under future-dated placeholders.
+  // Default: no date filter ("all") + OLDEST-first ("asc"), so the board
+  // reads chronologically top-to-bottom. This deliberately surfaces
+  // recently-wrapped events (e.g. last week's Girl Beer bulk batch) near
+  // the top instead of burying them ~100 rows down beneath future-dated
+  // placeholders — the recurring "my bulk upload is missing" confusion.
+  // Users can flip to newest-first via the Date sort toggle anytime.
   const [dateChip, setDateChip] = useState<
     "all" | "this_week" | "upcoming" | "past"
   >("all");
-  const [dateSort, setDateSort] = useState<"asc" | "desc">("desc");
+  const [dateSort, setDateSort] = useState<"asc" | "desc">("asc");
 
   // Translate the active chip into an inclusive YYYY-MM-DD range the
   // backend understands (RequestFiltersInput.start_date / end_date).
