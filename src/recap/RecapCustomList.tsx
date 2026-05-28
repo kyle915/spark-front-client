@@ -38,6 +38,7 @@ import FormAutocomplete from "@/shared/FormAutocomplete";
 import FormDatePicker from "@/shared/FormDatePicker";
 import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
+import ImportConnecteamButton from "./ImportConnecteamButton";
 
 const PAGE_SIZE = 10;
 
@@ -391,14 +392,19 @@ const RecapCustomList = () => {
       {/* =========================
           HEADER
       ========================= */}
-      <div className="mb-4 flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
-          <div className="p-2 rounded-xl bg-primary/10 text-primary">
-            <CameraIcon className="w-6 h-6" />
+      <div className="mb-4 flex items-end justify-between gap-3 flex-wrap">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <CameraIcon className="w-6 h-6" />
+            </div>
+            <h1>Custom Recaps</h1>
           </div>
-          <h1>Custom Recaps</h1>
+          <p className="text-base-content/70">Manage your custom recaps.</p>
         </div>
-        <p className="text-base-content/70">Manage your custom recaps.</p>
+        <ImportConnecteamButton
+          onImported={() => refreshRef.current?.()}
+        />
       </div>
 
       {/* =========================

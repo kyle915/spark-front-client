@@ -8,6 +8,7 @@ import { MissingRecapEventsQuery } from "@/api/queries/MissingRecapEventsQuery";
 import type { MissingRecapEventsQuery as MissingRecapEventsQueryType } from "@api/queries/__generated__/MissingRecapEventsQuery.graphql";
 import { NudgeAmbassadorForRecapMutation } from "@/api/mutations/NudgeAmbassadorForRecapMutation";
 import type { NudgeAmbassadorForRecapMutation as NudgeAmbassadorForRecapMutationType } from "@api/mutations/__generated__/NudgeAmbassadorForRecapMutation.graphql";
+import ImportConnecteamButton from "./ImportConnecteamButton";
 
 /**
  * /recaps/missing — admin drill-down for events that already wrapped
@@ -463,7 +464,8 @@ export default function SparkRecapsMissing() {
               BA via push, or file the recap on their behalf.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <ImportConnecteamButton variant="ghost" />
             <span
               className="mono text-[10px]"
               style={{

@@ -1385,6 +1385,33 @@ input CreateCustomRecapTemplateInput {
   customFields: [CustomRecapTemplateFieldInput!] = null
 }
 
+input ImportConnecteamRecapPdfInput {
+  clientMutationId: ID = null
+  eventId: ID!
+  customRecapTemplateId: ID!
+  pdfBase64: String!
+  name: String = null
+}
+
+type ImportConnecteamRecapPdfStat {
+  pdfLabel: String!
+  pdfValue: String!
+  fieldName: String
+  fieldId: ID
+  score: Float
+  skippedReason: String
+}
+
+type ImportConnecteamRecapPdfResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  customRecap: CustomRecap
+  matchedCount: Int!
+  unmatchedCount: Int!
+  stats: [ImportConnecteamRecapPdfStat!]!
+}
+
 input CreateDistributorInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -3354,6 +3381,7 @@ type Mutation {
   updateCustomField(input: UpdateCustomFieldInput!): CustomFieldDetailResponse!
   createCustomRecapTemplate(input: CreateCustomRecapTemplateInput!): CustomRecapTemplateDetailResponse!
   updateCustomRecapTemplate(input: UpdateCustomRecapTemplateInput!): CustomRecapTemplateDetailResponse!
+  importConnecteamRecapPdf(input: ImportConnecteamRecapPdfInput!): ImportConnecteamRecapPdfResponse!
   removeCustomField(input: RemoveCustomFieldInput!): CustomFieldDetailResponse!
   createCustomRecapFieldType(input: CreateCustomRecapFieldTypeInput!): CustomRecapFieldTypeDetailResponse!
   updateCustomRecapFieldType(input: UpdateCustomRecapFieldTypeInput!): CustomRecapFieldTypeDetailResponse!
