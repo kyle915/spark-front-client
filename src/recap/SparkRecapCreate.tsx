@@ -10,6 +10,7 @@ import type { CreateRecapMutation as CreateRecapMutationType } from "@/api/mutat
 import RecapUploader from "./RecapUploader";
 import { useAlertStore } from "@/store/alertStore";
 import { useSparkRole } from "@/hooks/useSparkRole";
+import { useAuthStore } from "@/store/authStore";
 import { parseLocaleNumber } from "@/utils";
 
 /**
@@ -32,6 +33,15 @@ export default function SparkRecapCreate() {
   const navigate = useNavigate();
   const showAlert = useAlertStore((s) => s.showAlert);
   const { isAdmin } = useSparkRole();
+  // Active tenant from the dashboard's tenant picker. The event picker
+  // MUST scope to this — otherwise an Ignite admin (unrestricted role)
+  // viewing the Girl Beer dashboard sees EVERY tenant's events in the
+  // dropdown and can file a recap against another client's event
+  // (Kyle hit this: selecting a Liquid Death "Valero Grand Opening"
+  // while in the GB dashboard). Clients are already scoped server-side
+  // to their own tenant; this closes the admin-side footgun by passing
+  // the selected tenant so the events resolver filters to it.
+  const { tenantId } = useAuthStore();
   const [params] = useSearchParams();
   const presetEventUuid = params.get("event");
 
@@ -43,7 +53,11 @@ export default function SparkRecapCreate() {
   const deferredEventQ = useDeferredValue(eventQ);
   const eventsData = useLazyLoadQuery<EventsQueryType>(
     EventsQuery,
-    { first: 30, q: deferredEventQ || null, filters: null },
+    {
+      first: 30,
+      q: deferredEventQ || null,
+      filters: tenantId ? { tenantId } : null,
+    },
     { fetchPolicy: "store-or-network" },
   );
   const events = useMemo(
