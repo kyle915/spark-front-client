@@ -126,7 +126,15 @@ const Inner: React.FC = () => {
   );
 
   const templates: Template[] = useMemo(() => {
-    const map = new Map<string, Template>();
+    // Usage stats come from filed custom recaps, keyed by template id.
+    // This is a SECONDARY overlay — it must NOT decide which templates
+    // appear. Previously the list was built entirely from this map, so
+    // a template with zero recaps filed was invisible (the page showed
+    // "0 ACTIVE / no templates" even though the template existed — which
+    // is exactly what the create-form's duplicate-check correctly
+    // flagged). Now the list is driven by the actual customRecapTemplates
+    // rows below and usage is layered on, defaulting to 0.
+    const usageById = new Map<string, { usage: number; lastUsed: string | null }>();
     const recaps =
       data?.customRecaps?.edges
         ?.map((e) => e?.node)
@@ -135,15 +143,10 @@ const Inner: React.FC = () => {
       const t = r.customRecapTemplate;
       if (!t) continue;
       const id = String(t.id);
-      const existing = map.get(id);
-      const submittedAt = r.submittedAt ?? r.createdAt;
+      const submittedAt = r.submittedAt ?? r.createdAt ?? null;
+      const existing = usageById.get(id);
       if (!existing) {
-        map.set(id, {
-          id,
-          name: t.name ?? "Untitled template",
-          usage: 1,
-          lastUsed: submittedAt ?? null,
-        });
+        usageById.set(id, { usage: 1, lastUsed: submittedAt });
       } else {
         existing.usage += 1;
         if (
@@ -155,8 +158,25 @@ const Inner: React.FC = () => {
         }
       }
     }
-    return Array.from(map.values()).sort((a, b) => b.usage - a.usage);
-  }, [data]);
+
+    // Source of truth = the real CustomRecapTemplate rows (same data the
+    // create-form duplicate-check reads). A template shows the moment it
+    // exists, with 0 usage until recaps start coming in.
+    return templatesWithFields
+      .map((t) => {
+        const id = String(t.id);
+        const stats = usageById.get(id);
+        return {
+          id,
+          name: t.name ?? "Untitled template",
+          usage: stats?.usage ?? 0,
+          lastUsed: stats?.lastUsed ?? null,
+        };
+      })
+      // Most-used first, then alphabetical so unused templates sort
+      // predictably instead of by insertion order.
+      .sort((a, b) => b.usage - a.usage || a.name.localeCompare(b.name));
+  }, [data, templatesWithFields]);
 
   return (
     <div className="space-y-6 max-w-7xl">
