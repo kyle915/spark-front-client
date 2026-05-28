@@ -1637,6 +1637,7 @@ input CreateRecapInput {
   locationId: ID = null
   stateId: ID = null
   ambassadorId: ID = null
+  externalBaName: String = null
   consumerEngagements: ConsumerEngagementsInput = null
   productSamples: [ProductSampleInput!] = null
   salesPerformance: [SalesPerformanceInput!] = null
@@ -4143,6 +4144,7 @@ type Recap implements Node {
   event: Event!
   eventId: ID!
   ambassador: Ambassador
+  externalBaName: String
   jobId: ID
   job: Job
   retailerId: ID
@@ -5628,6 +5630,7 @@ input UpdateRecapInput {
   locationId: ID = null
   stateId: ID = null
   ambassadorId: ID = null
+  externalBaName: String = null
   consumerEngagements: ConsumerEngagementsInput = null
   productSamples: [ProductSampleInput!] = null
   salesPerformance: [SalesPerformanceInput!] = null

@@ -93,6 +93,13 @@ const KpiTile: React.FC<{
  * the picker on the recap-create form. Suspends on the search query, so
  * the caller wraps it in <Suspense>.
  */
+// Sentinel id prefix for "external BA" picks — when the worker isn't
+// in Spark yet (sub-contractor, one-off helper, etc.). The save handler
+// branches on this prefix to send `externalBaName` instead of
+// `ambassadorId`. Kept as a string so the existing pickedBa state shape
+// (id + name) doesn't have to fork into a discriminated union.
+const EXTERNAL_BA_ID_PREFIX = "external:";
+
 const BaSearch: React.FC<{
   onPick: (id: string, name: string) => void;
 }> = ({ onPick }) => {
@@ -105,6 +112,7 @@ const BaSearch: React.FC<{
   const matches = (data?.activeAmbassadors?.edges ?? [])
     .map((e) => e?.node)
     .filter((n): n is NonNullable<typeof n> => Boolean(n));
+  const trimmedQ = q.trim();
   return (
     <div>
       <input
@@ -121,12 +129,51 @@ const BaSearch: React.FC<{
       {q && (
         <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
           {matches.length === 0 ? (
-            <p
-              className="mono text-[10px] py-1"
-              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
-            >
-              NO MATCHES
-            </p>
+            <div>
+              <p
+                className="mono text-[10px] py-1"
+                style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+              >
+                NO MATCHES
+              </p>
+              {/* Reconciliation fallback: let the admin save the typed
+                  name as a free-text "external BA" when the worker
+                  isn't in Spark yet. Saves to recap.externalBaName so
+                  the recap is properly attributed without polluting
+                  the Ambassador table with stub accounts. */}
+              {trimmedQ.length >= 2 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onPick(
+                      `${EXTERNAL_BA_ID_PREFIX}${trimmedQ}`,
+                      trimmedQ,
+                    )
+                  }
+                  className="mt-2 w-full text-left rounded-lg px-3 py-2 text-sm"
+                  style={{
+                    background:
+                      "var(--spark-surface-2, rgba(255,255,255,0.04))",
+                    border: "1px dashed var(--spark-border)",
+                  }}
+                >
+                  + Save{" "}
+                  <span style={{ color: "var(--spark-lime)" }}>
+                    “{trimmedQ}”
+                  </span>{" "}
+                  as external BA
+                  <span
+                    className="mono text-[10px] block mt-1"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "rgba(255,255,255,0.45)",
+                    }}
+                  >
+                    USE WHEN THE WORKER ISN'T IN SPARK YET
+                  </span>
+                </button>
+              )}
+            </div>
           ) : (
             matches.map((amb) => {
               const full = [amb.user?.firstName, amb.user?.lastName]
@@ -327,6 +374,16 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       }))
       .filter((f) => f.file.length > 0);
 
+    // Branch on the sentinel prefix: external picks ride
+    // externalBaName, real Spark BAs ride ambassadorId. The backend
+    // guards both fields (only updates when not null), so leaving the
+    // other side null is a no-op rather than a clear — exactly what
+    // we want when the user only touched one of them.
+    const isExternalPick = pickedBa?.id?.startsWith(EXTERNAL_BA_ID_PREFIX);
+    const externalNameToSend = isExternalPick ? pickedBa!.name : null;
+    const ambassadorIdToSend =
+      pickedBa && !isExternalPick ? pickedBa.id : null;
+
     commitUpdate({
       variables: {
         input: {
@@ -337,7 +394,10 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           // BA assignment — only sent when the admin picked one. The
           // backend guards ambassador_id (only updates when present),
           // so a null here leaves the current BA untouched.
-          ambassadorId: pickedBa?.id ?? null,
+          ambassadorId: ambassadorIdToSend,
+          // Free-text external BA, used for reconciliation when the
+          // actual worker isn't in Spark yet.
+          externalBaName: externalNameToSend,
           // Edited numbers (null clears a value intentionally).
           productsSold: numOrNull(draft.productsSold),
           totalCansSold: numOrNull(draft.totalCansSold),
@@ -761,7 +821,20 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 <>
                   <span style={{ color: "var(--spark-lime)" }}>
                     {pickedBa.name}
-                  </span>{" "}
+                  </span>
+                  {pickedBa.id.startsWith(EXTERNAL_BA_ID_PREFIX) && (
+                    <span
+                      className="mono text-[10px] ml-2 px-1.5 py-0.5 rounded"
+                      style={{
+                        letterSpacing: "0.14em",
+                        color: "rgba(255,255,255,0.55)",
+                        background: "rgba(255,255,255,0.06)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      EXTERNAL
+                    </span>
+                  )}{" "}
                   <button
                     type="button"
                     onClick={() => setPickedBa(null)}
@@ -775,6 +848,21 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 [ambassadors[0]?.user?.firstName, ambassadors[0]?.user?.lastName]
                   .filter(Boolean)
                   .join(" ") || "Current BA"
+              ) : recap.externalBaName ? (
+                <>
+                  {recap.externalBaName}
+                  <span
+                    className="mono text-[10px] ml-2 px-1.5 py-0.5 rounded"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "rgba(255,255,255,0.55)",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    EXTERNAL
+                  </span>
+                </>
               ) : (
                 <span style={{ color: "rgba(255,255,255,0.45)" }}>
                   No BA assigned yet
