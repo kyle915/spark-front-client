@@ -17,6 +17,7 @@ export const RecapQuery = graphql`
       accountSpendAmount
       trafficDescription
       competitivePresence
+      externalBaName
       job {
         id
         uuid
