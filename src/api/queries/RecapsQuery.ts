@@ -157,6 +157,18 @@ export const RecapsQuery = graphql`
           totalEngagements
           productsSold
           totalCansSold
+          totalPacksSold
+          accountSpendAmount
+          externalBaName
+          ambassador {
+            id
+            uuid
+            user {
+              id
+              firstName
+              lastName
+            }
+          }
           # List view only needs the count + one renderable photo.
           # Server-side resolvers cap the work — recapFilesCount runs
           # a single COUNT(*), heroFile returns the first image-typed

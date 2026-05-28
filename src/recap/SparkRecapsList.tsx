@@ -57,6 +57,20 @@ type Recap = {
   fileCount: number;
   engagements: number | null;
   productsSold: number | null;
+  // Granular sale + spend numbers. Kept separate from productsSold so
+  // exports can break out "Cans Sold" vs "Packs Sold" — clients
+  // reconciling invoices need that split, not the combined number.
+  // Custom recaps don't carry these scalars; rows from CustomRecap
+  // leave them null and the export shows blank cells.
+  cansSold: number | null;
+  packsSold: number | null;
+  accountSpendAmount: number | null;
+  // BA attribution for exports + cards. Prefers the linked Ambassador's
+  // full name; falls back to externalBaName for shifts worked by
+  // people not yet in Spark (sub-contractors, one-off helpers).
+  // Empty string when neither is set.
+  baName: string;
+  isExternalBa: boolean;
   // Deep-link back to the parent request on the Master Tracker so
   // ops can pivot from "what happened in the field" to "who asked
   // for this activation" in one click.
@@ -449,6 +463,17 @@ const RecapsListInner: React.FC<{
           // hasn't been categorised yet.
           const requestType =
             n.event?.request?.requestType?.name ?? null;
+          const linkedBaName = [
+            n.ambassador?.user?.firstName,
+            n.ambassador?.user?.lastName,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+          const baName =
+            linkedBaName ||
+            (n.externalBaName ?? "").trim() ||
+            "";
           return {
             kind: "legacy" as const,
             id: String(n.id),
@@ -462,6 +487,11 @@ const RecapsListInner: React.FC<{
             fileCount,
             engagements: n.totalEngagements ?? null,
             productsSold: n.productsSold ?? null,
+            cansSold: n.totalCansSold ?? null,
+            packsSold: n.totalPacksSold ?? null,
+            accountSpendAmount: n.accountSpendAmount ?? null,
+            baName,
+            isExternalBa: !linkedBaName && Boolean(n.externalBaName),
             requestUuid: requestUuid ? String(requestUuid) : null,
             requestShortId: requestUuid
               ? `R-${String(requestUuid).slice(-4).toUpperCase()}`
@@ -552,6 +582,21 @@ const RecapsListInner: React.FC<{
             engagements:
               n.totalEngagements ?? customConsumersSampled(n.customField),
             productsSold: customSoldUnits(n.customField),
+            // CustomRecap doesn't carry these scalar fields; leave
+            // blank in the row so the export shows empty cells rather
+            // than fake zeroes. Future work could pull from custom
+            // fields when templates name them clearly.
+            cansSold: null,
+            packsSold: null,
+            accountSpendAmount: null,
+            baName: [
+              n.ambassador?.user?.firstName,
+              n.ambassador?.user?.lastName,
+            ]
+              .filter(Boolean)
+              .join(" ")
+              .trim(),
+            isExternalBa: false,
             requestUuid: null,
             requestShortId: null,
             requestType: n.customRecapTemplate?.name ?? null,
@@ -857,9 +902,14 @@ export default function SparkRecapsList() {
       // Nevena needs this so client reports can group by activation
       // type. Empty when the recap isn't linked to a request.
       "Request Type",
+      "BA Name",
+      "BA Type",
       "Status",
       "Engagements",
       "Products Sold",
+      "Cans Sold",
+      "Packs Sold",
+      "Account Spend",
       "Conv %",
       "Files",
       "UUID",
@@ -878,9 +928,14 @@ export default function SparkRecapsList() {
           r.stateCode ?? "",
           r.date,
           r.requestType ?? "",
+          r.baName,
+          r.isExternalBa ? "external" : (r.baName ? "spark" : ""),
           r.approved ? "approved" : "draft",
           r.engagements ?? "",
           r.productsSold ?? "",
+          r.cansSold ?? "",
+          r.packsSold ?? "",
+          r.accountSpendAmount ?? "",
           conv,
           r.fileCount,
           r.uuid,
@@ -918,9 +973,14 @@ export default function SparkRecapsList() {
       "State",
       "Date",
       "Request Type",
+      "BA Name",
+      "BA Type",
       "Status",
       "Engagements",
       "Products Sold",
+      "Cans Sold",
+      "Packs Sold",
+      "Account Spend",
       "Conv %",
       "Files",
       "UUID",
@@ -941,9 +1001,14 @@ export default function SparkRecapsList() {
           r.stateCode ?? "",
           r.date,
           r.requestType ?? "",
+          r.baName,
+          r.isExternalBa ? "external" : (r.baName ? "spark" : ""),
           r.approved ? "approved" : "draft",
           r.engagements ?? "",
           r.productsSold ?? "",
+          r.cansSold ?? "",
+          r.packsSold ?? "",
+          r.accountSpendAmount ?? "",
           conv,
           r.fileCount,
           r.uuid,

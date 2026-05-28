@@ -1788,7 +1788,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               >
                 "{notes}"
               </blockquote>
-              {ambassadors[0]?.user && (
+              {ambassadors[0]?.user ? (
                 <p
                   className="mono text-[10px] mt-3"
                   style={{
@@ -1799,7 +1799,17 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   — {ambassadors[0].user.firstName?.toUpperCase() ?? ""}{" "}
                   {ambassadors[0].user.lastName?.toUpperCase() ?? ""}
                 </p>
-              )}
+              ) : recap.externalBaName ? (
+                <p
+                  className="mono text-[10px] mt-3"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "rgba(255,255,255,0.45)",
+                  }}
+                >
+                  — {recap.externalBaName.toUpperCase()} (EXTERNAL)
+                </p>
+              ) : null}
             </div>
           )}
         </div>
@@ -1808,7 +1818,43 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         <aside className="space-y-4">
           <div className="spark-card p-5">
             <h3 className="font-bold mb-3">Team</h3>
-            {ambassadors.length === 0 ? (
+            {ambassadors.length === 0 && recap.externalBaName ? (
+              // External BA fallback — when the recap was attributed
+              // to a worker who isn't in Spark yet (sub-contractor,
+              // not-yet-onboarded BA), surface the typed name here so
+              // the read-only view (and PDF) actually credit them
+              // instead of saying "No team logged yet". No avatar,
+              // no rating, no rate-control — they're not a real BA row.
+              <div className="flex items-center gap-3">
+                <span
+                  className="spark-avatar"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    fontSize: "0.75rem",
+                    opacity: 0.55,
+                  }}
+                >
+                  {initials(recap.externalBaName)}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">
+                    {recap.externalBaName}
+                  </p>
+                  <p
+                    className="mono text-[10px] mt-0.5 inline-block px-1.5 py-0.5 rounded"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "rgba(255,255,255,0.6)",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    EXTERNAL · NOT IN SPARK
+                  </p>
+                </div>
+              </div>
+            ) : ambassadors.length === 0 ? (
               <p
                 className="text-sm"
                 style={{ color: "rgba(255,255,255,0.55)" }}
