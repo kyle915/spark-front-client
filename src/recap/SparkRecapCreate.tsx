@@ -5,8 +5,10 @@ import { EventsQuery } from "@/api/queries/EventsQuery";
 import { AmbassadorSearchQuery } from "@/api/queries/AmbassadorSearchQuery";
 import type { AmbassadorSearchQuery as AmbassadorSearchQueryType } from "@/api/queries/__generated__/AmbassadorSearchQuery.graphql";
 import { CreateRecapMutation } from "@/api/mutations/CreateRecapMutation";
+import { ParseConnecteamRecapPdfMutation } from "@/api/mutations/ParseConnecteamRecapPdfMutation";
 import type { EventsQuery as EventsQueryType } from "@/api/queries/__generated__/EventsQuery.graphql";
 import type { CreateRecapMutation as CreateRecapMutationType } from "@/api/mutations/__generated__/CreateRecapMutation.graphql";
+import type { ParseConnecteamRecapPdfMutation as ParseConnecteamRecapPdfMutationType } from "@/api/mutations/__generated__/ParseConnecteamRecapPdfMutation.graphql";
 import RecapUploader from "./RecapUploader";
 import { useAlertStore } from "@/store/alertStore";
 import { useSparkRole } from "@/hooks/useSparkRole";
@@ -154,8 +156,98 @@ export default function SparkRecapCreate() {
 
   const [commit, inFlight] = useMutation<CreateRecapMutationType>(CreateRecapMutation);
 
+  // Connecteam PDF → form pre-fill (admin convenience). Read-only on the
+  // backend: scrapes the PDF and maps its labels onto these form fields.
+  // The admin reviews/edits the pre-filled values, then submits normally.
+  const [parseCommit, parsing] =
+    useMutation<ParseConnecteamRecapPdfMutationType>(
+      ParseConnecteamRecapPdfMutation,
+    );
+
   // Locale-tolerant parse so "96,63" (comma decimal) doesn't become NaN.
   const num = (s: string): number | null => parseLocaleNumber(s);
+
+  // Apply a parsed Connecteam PDF to the form. Only overwrites a field
+  // when the parser actually found a value for it — so re-importing or
+  // importing after some manual entry never blanks out what's there.
+  const applyParsedConnecteam = (
+    r: ParseConnecteamRecapPdfMutationType["response"]["parseConnecteamRecapPdf"],
+  ) => {
+    const set = (v: string | null | undefined, fn: (s: string) => void) => {
+      if (v != null && v !== "") fn(v);
+    };
+    set(r.totalConsumer, setTotalConsumer);
+    set(r.firstTime, setFirstTime);
+    set(r.brandAware, setBrandAware);
+    set(r.willing, setWilling);
+    set(r.notWilling, setNotWilling);
+    set(r.totalCansSold, setTotalCansSold);
+    set(r.totalPacksSold, setTotalPacksSold);
+    // Products Sold: prefer the PDF's explicit figure (mark it manual so
+    // the Cans+Packs auto-calc doesn't clobber it). If the PDF only gave
+    // cans/packs, seed Products Sold from their sum but leave it on
+    // auto-calc so later edits keep flowing through.
+    if (r.productsSold != null && r.productsSold !== "") {
+      setProductsSold(r.productsSold);
+      setProductsSoldManual(true);
+    } else if (
+      (r.totalCansSold && r.totalCansSold !== "") ||
+      (r.totalPacksSold && r.totalPacksSold !== "")
+    ) {
+      const cansN = parseLocaleNumber(r.totalCansSold ?? "") ?? 0;
+      const packsN = parseLocaleNumber(r.totalPacksSold ?? "") ?? 0;
+      setProductsSold(String(cansN + packsN));
+    }
+    set(r.accountSpend, setAccountSpend);
+    set(r.trafficDescription, setTrafficDescription);
+    set(r.competitivePresence, setCompetitivePresence);
+    set(r.quotes, setQuotes);
+    set(r.feedback, setFeedback);
+    set(r.demographics, setDemographics);
+    set(r.positiveStories, setPositiveStories);
+    set(r.reasonsToDecline, setReasonsToDecline);
+    set(r.doDifferently, setDoDifferently);
+    set(r.accountNotes, setAccountNotes);
+  };
+
+  const onPickConnecteamPdf = (file: File) => {
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      showAlert("File must be a PDF.", "warning");
+      return;
+    }
+    if (parsing) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      // data:application/pdf;base64,<...>  →  strip the prefix.
+      const comma = dataUrl.indexOf(",");
+      if (comma < 0) {
+        showAlert("Couldn't read the PDF — try a different file.", "error");
+        return;
+      }
+      parseCommit({
+        variables: { input: { pdfBase64: dataUrl.slice(comma + 1) } },
+        onCompleted: (res) => {
+          const r = res.parseConnecteamRecapPdf;
+          if (!r?.success) {
+            showAlert(r?.message ?? "Couldn't read the Connecteam PDF.", "error");
+            return;
+          }
+          applyParsedConnecteam(r);
+          showAlert(
+            r.message ||
+              `Imported ${r.matchedCount} field(s) — review before submitting.`,
+            "success",
+          );
+        },
+        onError: (err) =>
+          showAlert(`Connecteam parse failed: ${err.message}`, "error"),
+      });
+    };
+    reader.onerror = () =>
+      showAlert("Couldn't read the PDF — try a different file.", "error");
+    reader.readAsDataURL(file);
+  };
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,6 +375,46 @@ export default function SparkRecapCreate() {
           </>
         )}
       </Card>
+
+      {/* Admin-only: pre-fill the whole form from a Connecteam recap PDF.
+          Read-only scrape — fills the inputs below, nothing is saved until
+          the admin reviews and submits. Distinct from the CustomRecap
+          importer (which drafts against a tenant template). */}
+      {isAdmin && (
+        <Card title="IMPORT FROM CONNECTEAM">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <p className="text-sm" style={{ color: "rgba(255,255,255,0.65)" }}>
+              Drop a Connecteam recap PDF to auto-fill the numbers and notes
+              below. Review everything before submitting — values you've
+              already typed are kept.
+            </p>
+            <label
+              className="shrink-0 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold cursor-pointer"
+              style={{
+                background: parsing ? "var(--spark-surface-2)" : "var(--spark-lime)",
+                color: parsing ? "rgba(255,255,255,0.6)" : "#0b0b0b",
+                border: "1px solid var(--spark-border)",
+                opacity: parsing ? 0.7 : 1,
+                cursor: parsing ? "wait" : "pointer",
+              }}
+            >
+              {parsing ? "Reading PDF…" : "Import from Connecteam PDF"}
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                className="hidden"
+                disabled={parsing}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) onPickConnecteamPdf(f);
+                  // Reset so picking the same file again re-triggers onChange.
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          </div>
+        </Card>
+      )}
 
       {/* Admin-only filling-for toggle */}
       {isAdmin && (
