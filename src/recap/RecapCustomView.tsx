@@ -428,19 +428,37 @@ const RecapCustomView = () => {
     return typeName === "pdf" || cleanUrl.endsWith(".pdf");
   }, []);
 
-  const isImageFile = useCallback((file: (typeof recapFiles)[number]) => {
-    const typeName = file.fileType?.name?.toLowerCase() ?? "";
-    const url = file.url?.toLowerCase() ?? "";
-    if (typeName === "image" || typeName === "img") return true;
-    if (typeName === "pdf" || url.endsWith(".pdf")) return false;
-    return /\.(jpg|jpeg|png|gif|heic|heif|webp)/i.test(url);
-  }, []);
+  // Prefer the backend `displayUrl` everywhere: for HEIC uploads it's the
+  // server-converted .jpg sibling, so the gallery renders a plain <img>
+  // with no in-browser HEIC decode / bucket-CORS dependency. Falls back to
+  // `url` for older query results.
+  const displaySrc = useCallback(
+    (file: (typeof recapFiles)[number]) => file.displayUrl ?? file.url ?? "",
+    [],
+  );
 
-  const isHeicFile = useCallback((file: (typeof recapFiles)[number]) => {
-    const url = file.url?.toLowerCase() ?? "";
-    const cleanUrl = url.split("?")[0]?.split("#")[0] ?? "";
-    return cleanUrl.endsWith(".heic") || cleanUrl.endsWith(".heif");
-  }, []);
+  const isImageFile = useCallback(
+    (file: (typeof recapFiles)[number]) => {
+      const typeName = file.fileType?.name?.toLowerCase() ?? "";
+      const url = displaySrc(file).toLowerCase();
+      if (typeName === "image" || typeName === "img") return true;
+      if (typeName === "pdf" || url.endsWith(".pdf")) return false;
+      return /\.(jpg|jpeg|png|gif|heic|heif|webp)/i.test(url);
+    },
+    [displaySrc],
+  );
+
+  // True only for a *still-unconverted* HEIC (no server .jpg sibling yet) —
+  // those are the only files that need the in-browser libheif fallback. A
+  // converted HEIC has displayUrl ending in .jpg, so it's NOT flagged here.
+  const isHeicFile = useCallback(
+    (file: (typeof recapFiles)[number]) => {
+      const url = displaySrc(file).toLowerCase();
+      const cleanUrl = url.split("?")[0]?.split("#")[0] ?? "";
+      return cleanUrl.endsWith(".heic") || cleanUrl.endsWith(".heif");
+    },
+    [displaySrc],
+  );
 
   const categories = useMemo(() => {
     if (recapFiles.length === 0) return [];
@@ -485,8 +503,10 @@ const RecapCustomView = () => {
     const resolveImageSources = async () => {
       const heicFiles = flatImages.filter(isHeicFile);
       if (heicFiles.length === 0) {
+        // Common path now that HEIC is converted server-side: every image
+        // already has a renderable displayUrl, no in-browser decode needed.
         setImageSources(
-          Object.fromEntries(flatImages.map((f) => [f.id, f.url ?? ""])),
+          Object.fromEntries(flatImages.map((f) => [f.id, displaySrc(f)])),
         );
         return;
       }
@@ -495,7 +515,7 @@ const RecapCustomView = () => {
 
       const nextSources = await Promise.all(
         flatImages.map(async (file) => {
-          const fallbackSrc = file.url ?? "";
+          const fallbackSrc = displaySrc(file);
           if (!fallbackSrc || !isHeicFile(file)) {
             return [file.id, fallbackSrc] as const;
           }
@@ -632,7 +652,7 @@ const RecapCustomView = () => {
       isCancelled = true;
       objectUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [flatImages, isHeicFile]);
+  }, [flatImages, isHeicFile, displaySrc]);
 
   const closePreview = useCallback(() => {
     setPreviewIndex(null);
@@ -683,7 +703,7 @@ const RecapCustomView = () => {
   const currentPreview =
     flatImages && previewIndex !== null ? flatImages[previewIndex] : null;
   const currentPreviewSrc = currentPreview
-    ? (imageSources[currentPreview.id] ?? currentPreview.url ?? "")
+    ? (imageSources[currentPreview.id] ?? displaySrc(currentPreview))
     : "";
 
   if (!recap) {
@@ -1339,8 +1359,7 @@ const RecapCustomView = () => {
                                       <img
                                         src={
                                           imageSources[file.id] ||
-                                          file.url ||
-                                          ""
+                                          displaySrc(file)
                                         }
                                         alt={file.name || "Evidence"}
                                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"

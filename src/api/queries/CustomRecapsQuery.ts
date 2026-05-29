@@ -94,6 +94,10 @@ export const GetCustomRecapsQuery = graphql`
             id
             name
             url
+            # Browser-renderable URL: server-converted .jpg sibling for
+            # HEIC uploads (plain img, no in-browser decode or CORS),
+            # otherwise equal to the url field.
+            displayUrl
             approved
             fileRecapCategory {
               id
@@ -204,6 +208,10 @@ export const GetCustomRecapQuery = graphql`
         id
         name
         url
+        # Browser-renderable URL: server-converted .jpg sibling for HEIC
+        # uploads (plain img, no in-browser decode or CORS), otherwise
+        # equal to the url field.
+        displayUrl
         approved
         fileRecapCategory {
           id
