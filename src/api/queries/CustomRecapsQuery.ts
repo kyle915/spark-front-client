@@ -94,10 +94,12 @@ export const GetCustomRecapsQuery = graphql`
             id
             name
             url
-            # Browser-renderable URL: server-converted .jpg sibling for
-            # HEIC uploads (plain img, no in-browser decode or CORS),
-            # otherwise equal to the url field.
-            displayUrl
+            # NB: displayUrl is intentionally NOT requested in the list
+            # query. Its resolver does a GCS HEAD per HEIC file and the list
+            # serializes thousands of file rows, so requesting it here times
+            # the whole query out. The hero thumbnail uses the url field
+            # (HEIC falls back to HeicImage); displayUrl lives only on the
+            # detail query below, where file counts are small.
             approved
             fileRecapCategory {
               id
