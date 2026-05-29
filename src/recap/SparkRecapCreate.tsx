@@ -1,12 +1,12 @@
 import { Suspense, useDeferredValue, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { EventsQuery } from "@/api/queries/EventsQuery";
+import { RecapEventOptionsQuery } from "@/api/queries/RecapEventOptionsQuery";
 import { AmbassadorSearchQuery } from "@/api/queries/AmbassadorSearchQuery";
 import type { AmbassadorSearchQuery as AmbassadorSearchQueryType } from "@/api/queries/__generated__/AmbassadorSearchQuery.graphql";
 import { CreateRecapMutation } from "@/api/mutations/CreateRecapMutation";
 import { ParseConnecteamRecapPdfMutation } from "@/api/mutations/ParseConnecteamRecapPdfMutation";
-import type { EventsQuery as EventsQueryType } from "@/api/queries/__generated__/EventsQuery.graphql";
+import type { RecapEventOptionsQuery as RecapEventOptionsQueryType } from "@/api/queries/__generated__/RecapEventOptionsQuery.graphql";
 import type { CreateRecapMutation as CreateRecapMutationType } from "@/api/mutations/__generated__/CreateRecapMutation.graphql";
 import type { ParseConnecteamRecapPdfMutation as ParseConnecteamRecapPdfMutationType } from "@/api/mutations/__generated__/ParseConnecteamRecapPdfMutation.graphql";
 import RecapUploader from "./RecapUploader";
@@ -88,18 +88,24 @@ export default function SparkRecapCreate() {
   // Without this, each keystroke changed the query var → useLazyLoadQuery
   // suspended → the input unmounted → focus was lost after one letter.
   const deferredEventQ = useDeferredValue(eventQ);
-  const eventsData = useLazyLoadQuery<EventsQueryType>(
-    EventsQuery,
+  // Recap-form event picker. Uses the dedicated `recapEventOptions`
+  // query, NOT the general `events` query: the backend hard-scopes this
+  // one to the active tenant and returns nothing when no tenant is in
+  // scope, so the picker can't leak another client's events even if
+  // `tenantId` is somehow empty. We still pass tenantId so staff get
+  // their currently-selected dashboard tenant.
+  const eventsData = useLazyLoadQuery<RecapEventOptionsQueryType>(
+    RecapEventOptionsQuery,
     {
       first: 30,
       q: deferredEventQ || null,
-      filters: tenantId ? { tenantId } : null,
+      tenantId: tenantId || null,
     },
     { fetchPolicy: "store-or-network" },
   );
   const events = useMemo(
     () =>
-      (eventsData.events?.edges ?? [])
+      (eventsData.recapEventOptions?.edges ?? [])
         .map((e) => e?.node)
         .filter((n): n is NonNullable<typeof n> => !!n),
     [eventsData],
@@ -332,6 +338,14 @@ export default function SparkRecapCreate() {
         {selectedEvent ? (
           <div className="rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap" style={{ background: "var(--spark-surface-2)", border: "1px solid var(--spark-border)" }}>
             <div>
+              {selectedEvent.tenant?.name && (
+                <span
+                  className="chip chip-muted mb-1"
+                  style={{ display: "inline-flex" }}
+                >
+                  {selectedEvent.tenant.name}
+                </span>
+              )}
               <p className="display font-bold text-lg">
                 {selectedEvent.request?.retailer?.name ?? selectedEvent.name}
               </p>
@@ -360,6 +374,16 @@ export default function SparkRecapCreate() {
                   className="text-left rounded-xl p-3"
                   style={{ background: "var(--spark-surface-2)", border: "1px solid var(--spark-border)" }}
                 >
+                  {/* Client/brand label — so you can always tell which
+                      client an event belongs to before filing against it. */}
+                  {evt.tenant?.name && (
+                    <span
+                      className="chip chip-muted mb-1"
+                      style={{ display: "inline-flex" }}
+                    >
+                      {evt.tenant.name}
+                    </span>
+                  )}
                   <p className="text-sm font-semibold">{evt.request?.retailer?.name ?? evt.name}</p>
                   <p className="mono text-[10px] mt-1" style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.55)" }}>
                     {fmtEventWhen(evt.date)} · {evt.address?.slice(0, 60)}

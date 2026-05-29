@@ -4067,6 +4067,7 @@ type Query {
   recaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RecapFiltersInput = null): RecapCountableConnection!
   recap(uuid: ID!): Recap
   missingRecapEvents(tenantId: ID = null, lookbackDays: Int! = 30): [MissingRecapEventType!]!
+  recapEventOptions(tenantId: ID = null, tenantUuid: ID = null, q: String = null, first: Int = null, after: String = null, last: Int = null, before: String = null): EventCountableConnection!
   executiveSummary(tenantId: ID = null, windowDays: Int! = 7): ExecutiveSummaryType
   ambassadorsBookedOnDate(onDate: String!, tenantId: ID = null): [ID!]!
   customRecaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: CustomRecapFiltersInput = null): CustomRecapCountableConnection!
