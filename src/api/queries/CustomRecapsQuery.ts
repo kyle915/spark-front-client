@@ -205,6 +205,14 @@ export const GetCustomRecapQuery = graphql`
         id
         name
         value
+        # Field type (text / number / longtext / image) so the view can
+        # render the right control. IMAGE fields get an upload/replace
+        # control in inline-edit mode instead of a text input — see
+        # RecapCustomView (mirrors SparkRecapCreate's fieldKind()).
+        customFieldType {
+          id
+          name
+        }
         # ID of the CustomFieldValue row tying this template field to
         # the recap's submitted value. Needed by the inline-edit save
         # path on RecapCustomView so we can target the right row
