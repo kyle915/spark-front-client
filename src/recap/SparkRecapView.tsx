@@ -14,6 +14,8 @@ import { ApproveRecapMutation } from "@/api/mutations/ApproveRecapMutation";
 import type { ApproveRecapMutation as ApproveRecapMutationType } from "@/api/mutations/__generated__/ApproveRecapMutation.graphql";
 import { RemoveRecapFileMutation } from "@/api/mutations/RemoveRecapFileMutation";
 import type { RemoveRecapFileMutation as RemoveRecapFileMutationType } from "@/api/mutations/__generated__/RemoveRecapFileMutation.graphql";
+import { DeleteRecapMutation } from "@/api/mutations/DeleteRecapMutation";
+import type { DeleteRecapMutation as DeleteRecapMutationType } from "@/api/mutations/__generated__/DeleteRecapMutation.graphql";
 import { AmbassadorSearchQuery } from "@/api/queries/AmbassadorSearchQuery";
 import type { AmbassadorSearchQuery as AmbassadorSearchQueryType } from "@/api/queries/__generated__/AmbassadorSearchQuery.graphql";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -226,6 +228,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
   const [commitRemoveFile] =
     useMutation<RemoveRecapFileMutationType>(RemoveRecapFileMutation);
+  const [commitDelete, isDeleting] =
+    useMutation<DeleteRecapMutationType>(DeleteRecapMutation);
   const { isAdmin } = useSparkRole();
   const [isZipping, setIsZipping] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
@@ -498,6 +502,31 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     });
   };
 
+  // Delete the whole recap (admin-only on the backend; tenant-scoped).
+  // Confirms first, then navigates back to the recaps list — which frees
+  // the event for a fresh recap. The list refetches on mount so the row
+  // is gone when we land there.
+  const deleteRecap = () => {
+    if (isDeleting) return;
+    const ok = window.confirm(
+      "Delete this recap? This permanently removes it and frees the event " +
+        "for a new recap. This cannot be undone.",
+    );
+    if (!ok) return;
+    commitDelete({
+      variables: { input: { id: recap.id } },
+      onCompleted: (res) => {
+        if (res.deleteRecap?.success) {
+          showAlert("Recap deleted.", "success");
+          navigate("/recaps/list");
+        } else {
+          showAlert(res.deleteRecap?.message ?? "Delete failed.", "error");
+        }
+      },
+      onError: (err) => showAlert(`Delete failed: ${err.message}`, "error"),
+    });
+  };
+
   // Remove a photo/receipt from the recap. Destructive (deletes the
   // blob) so we gate behind a confirm. The mutation returns the
   // refreshed recapFiles so the grid updates from the Relay store.
@@ -749,6 +778,25 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   {isApproving ? "Approving…" : "✓ Approve recap"}
                 </button>
               ))}
+
+            {/* Admin-only delete. Removes the recap and frees the event
+                for a new one (see multi-recap-per-event). Confirms first. */}
+            {isAdmin && (
+              <button
+                onClick={deleteRecap}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-orange)",
+                  border: "1px solid rgba(239,90,42,0.4)",
+                  opacity: isDeleting ? 0.5 : 1,
+                }}
+                title="Delete this recap and free the event for a new one"
+              >
+                {isDeleting ? "Deleting…" : "🗑 Delete"}
+              </button>
+            )}
 
             {/* Admin-only number editor. Replaced the old dead-route
                 placeholder (which black-screened, then showed a "ping

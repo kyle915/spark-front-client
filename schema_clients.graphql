@@ -2037,6 +2037,20 @@ type CustomRecapDetailResponse {
   customRecap: CustomRecap
 }
 
+type DeleteCustomRecapResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  deletedCustomRecapUuid: String
+}
+
+type DeleteRecapResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  deletedRecapUuid: String
+}
+
 """
 CustomRecapFieldType(id, uuid, name, created_by, updated_by, created_at, updated_at)
 """
@@ -2352,6 +2366,11 @@ input DeleteRecapFileInput {
 }
 
 input DeleteRecapInput {
+  clientMutationId: ID = null
+  id: ID!
+}
+
+input DeleteCustomRecapInput {
   clientMutationId: ID = null
   id: ID!
 }
@@ -3651,7 +3670,8 @@ type Mutation {
   updateCustomRecapFieldType(input: UpdateCustomRecapFieldTypeInput!): CustomRecapFieldTypeDetailResponse!
   createRecapSection(input: CreateRecapSectionInput!): RecapSectionDetailResponse!
   updateRecapSection(input: UpdateRecapSectionInput!): RecapSectionDetailResponse!
-  deleteRecap(input: DeleteRecapInput!): RecapDetailResponse!
+  deleteRecap(input: DeleteRecapInput!): DeleteRecapResponse!
+  deleteCustomRecap(input: DeleteCustomRecapInput!): DeleteCustomRecapResponse!
   addRecapFile(input: AddRecapFileInput!): RecapDetailResponse!
   addCustomRecapFile(input: AddCustomRecapFileInput!): CustomRecapDetailResponse!
   removeRecapFile(input: RemoveRecapFileInput!): RecapDetailResponse!

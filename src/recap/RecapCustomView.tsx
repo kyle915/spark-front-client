@@ -7,9 +7,11 @@ import { ApproveCustomRecapMutation } from "@/api/mutations/ApproveCustomRecapMu
 import type { ApproveCustomRecapMutation as ApproveCustomRecapMutationType } from "@/api/mutations/__generated__/ApproveCustomRecapMutation.graphql";
 import { AddCustomRecapFileMutation } from "@/api/mutations/AddCustomRecapFileMutation";
 import type { AddCustomRecapFileMutation as AddCustomRecapFileMutationType } from "@/api/mutations/__generated__/AddCustomRecapFileMutation.graphql";
+import { DeleteCustomRecapMutation } from "@/api/mutations/DeleteCustomRecapMutation";
+import type { DeleteCustomRecapMutation as DeleteCustomRecapMutationType } from "@/api/mutations/__generated__/DeleteCustomRecapMutation.graphql";
 import { RecapUploader } from "./RecapUploader";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { useParams, Link, useSearchParams } from "react-router";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDate } from "@/utils";
 import {
@@ -25,6 +27,7 @@ import {
   FolderOpen,
   FileText,
   Pencil,
+  Trash2,
   X as XIcon,
 } from "lucide-react";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
@@ -118,6 +121,7 @@ const KpiCardContainer = ({
 
 const RecapCustomView = () => {
   const { uuid } = useParams();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
@@ -154,6 +158,8 @@ const RecapCustomView = () => {
   const [commitAddFile] = useMutation<AddCustomRecapFileMutationType>(
     AddCustomRecapFileMutation,
   );
+  const [commitDelete, isDeleting] =
+    useMutation<DeleteCustomRecapMutationType>(DeleteCustomRecapMutation);
 
   const enterEditMode = useCallback(() => {
     const seed: Record<string, string> = {};
@@ -278,6 +284,33 @@ const RecapCustomView = () => {
     },
     [recap?.id, commitAddFile, showAlert],
   );
+
+  // Delete this custom recap (admin-only on the backend; tenant-scoped).
+  // Confirms first, then navigates back to the recaps list on success —
+  // freeing the event for a fresh recap. window.confirm keeps this a
+  // one-file change; the recaps list refetches on mount (store-or-network)
+  // so the deleted row is gone when we land there.
+  const handleDelete = useCallback(() => {
+    if (!recap?.id) return;
+    const ok = window.confirm(
+      "Delete this recap? This permanently removes it and frees the event " +
+        "for a new recap. This cannot be undone.",
+    );
+    if (!ok) return;
+    commitDelete({
+      variables: { input: { id: recap.id as string } },
+      onCompleted: (res) => {
+        const payload = res.deleteCustomRecap;
+        if (payload?.success) {
+          showAlert("Recap deleted.", "success");
+          navigate("/recaps/list");
+        } else {
+          showAlert(payload?.message ?? "Delete failed.", "error");
+        }
+      },
+      onError: (err) => showAlert(`Delete failed: ${err.message}`, "error"),
+    });
+  }, [recap?.id, commitDelete, showAlert, navigate]);
 
   const backToListUrl = useMemo(() => {
     const pageRaw = Number(searchParams.get("fromPage") ?? "1");
@@ -626,6 +659,15 @@ const RecapCustomView = () => {
                 >
                   <Pencil className="w-4 h-4" />
                   Edit values
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="btn btn-sm btn-outline btn-error gap-2"
+                  title="Delete this recap and free the event for a new one"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {isDeleting ? "Deleting…" : "Delete"}
                 </button>
               </div>
             ) : (
