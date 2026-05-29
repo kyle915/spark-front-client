@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import { RecapEventOptionsQuery } from "@/api/queries/RecapEventOptionsQuery";
@@ -114,13 +114,39 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
     [templatesData],
   );
 
-  // Auto-pick if there's exactly one template for the tenant — saves
-  // a click in the common case (one client = one recap shape).
-  useMemo(() => {
+  // Default + guard the template selection against the ACTIVE tenant's
+  // templates. This is the structure the imported recap is built from, so
+  // picking the wrong client's template is exactly how Girl Beer PDFs end
+  // up matched against the wrong fields.
+  //
+  //   * Auto-pick when the tenant has exactly one template (one client =
+  //     one recap shape — saves a click in the common case).
+  //   * If the currently-selected templateId is NOT in the freshly loaded
+  //     tenant list (e.g. the admin switched the dashboard tenant), clear
+  //     it so a stale cross-tenant id can never be submitted — then
+  //     re-auto-pick if the new tenant has a single template.
+  //
+  // Done in an effect (not useMemo) because it's a state side-effect —
+  // useMemo isn't guaranteed to run for effects and React may discard it.
+  useEffect(() => {
+    const ids = templates.map((t) => String(t.id));
+    if (templateId && !ids.includes(templateId)) {
+      setTemplateId(ids.length === 1 ? ids[0] : null);
+      return;
+    }
     if (!templateId && templates.length === 1) {
-      setTemplateId(String(templates[0].id));
+      setTemplateId(ids[0]);
     }
   }, [templates, templateId]);
+
+  // The client whose recap structure the import will use. Drawn from the
+  // selected template (falls back to the sole tenant template) so the
+  // admin always sees which client they're importing for.
+  const selectedTemplate = useMemo(
+    () => templates.find((t) => String(t.id) === templateId) ?? null,
+    [templates, templateId],
+  );
+  const clientName = selectedTemplate?.tenant?.name ?? null;
 
   const [commit, isImporting] =
     useMutation<ImportConnecteamRecapPdfMutationType>(
@@ -339,10 +365,14 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                 )}
               </div>
 
-              {/* Template */}
+              {/* Client / recap template — the structure the imported
+                  recap is built from. Explicit + prominent: the wrong
+                  pick here is what makes a Girl Beer PDF match against
+                  another client's fields. Scoped to the active tenant on
+                  the server, defaulted to the sole tenant template. */}
               <div>
                 <label className="label-mini block mb-1.5">
-                  Recap template
+                  Client recap template
                 </label>
                 <select
                   value={templateId ?? ""}
@@ -352,17 +382,36 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                     padding: "8px 10px",
                     borderRadius: 8,
                     background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.12)",
+                    border: templateId
+                      ? "1px solid rgba(197,245,70,0.4)"
+                      : "1px solid rgba(255,200,80,0.5)",
                     color: "#fff",
                   }}
                 >
-                  <option value="">— Select template —</option>
+                  <option value="">— Select client template —</option>
                   {templates.map((t) => (
                     <option key={String(t.id)} value={String(t.id)}>
-                      {t.name}
+                      {t.tenant?.name ? `${t.tenant.name} · ${t.name}` : t.name}
                     </option>
                   ))}
                 </select>
+                {clientName ? (
+                  <p
+                    className="text-xs mt-1"
+                    style={{ color: "rgba(197,245,70,0.85)" }}
+                  >
+                    Recap fields from <b>{clientName}</b>’s template will be
+                    used to map this PDF.
+                  </p>
+                ) : templates.length > 1 ? (
+                  <p
+                    className="text-xs mt-1"
+                    style={{ color: "rgba(255,200,80,0.85)" }}
+                  >
+                    This client has multiple templates — pick the one that
+                    matches the PDF.
+                  </p>
+                ) : null}
                 {templates.length === 0 && (
                   <p
                     className="text-xs mt-1"
