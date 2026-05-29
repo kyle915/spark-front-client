@@ -361,7 +361,14 @@ const RecapCard: React.FC<{
 type Meta = {
   retailers: string[];
   states: string[];
+  // The tenant's full published total (server totalCount) — drives the
+  // header + stats cards.
   total: number;
+  // How many recaps match the ACTIVE client-side filters (date / search /
+  // status / retailer / state). The "Load more" gate + "N of M" counter
+  // track this so paging reveals every matching recap, not just the
+  // newest page. Equals `total` when no filters are applied.
+  filteredTotal: number;
   totalConsumers: number;
   totalProducts: number;
 };
@@ -369,7 +376,22 @@ type Meta = {
 type SortKey = "date-desc" | "date-asc" | "eng-desc" | "sold-desc";
 type StatusKey = "all" | "approved" | "draft";
 
+// Client-side render page size — how many cards we paint at once. "Load
+// more" bumps it in PAGE_SIZE chunks. This is a DISPLAY cap only; the
+// full tenant set is already in memory (see FETCH_ALL below), so every
+// recap is reachable by paging and all client-side filters operate over
+// the COMPLETE set.
 const PAGE_SIZE = 60;
+
+// We fetch the whole tenant set up front so the client-side filters
+// (date range, search, status, retailer, state) see every recap — not
+// just the newest page. Without this the date filter was blind to any
+// recap older than the first page (Liquid Death: 830 total, only ~50
+// reachable). The backend `recaps` / `customRecaps` list resolvers cap
+// at max_limit=2000 to match; recap list rows are lightweight (heroFile
+// + recapFilesCount) so one bounded payload is acceptable. Kept in sync
+// with the backend RECAPS_LIST_MAX_LIMIT.
+const FETCH_ALL = 2000;
 
 const RecapsListInner: React.FC<{
   search: string;
@@ -405,17 +427,20 @@ const RecapsListInner: React.FC<{
   // toggle (which the server can't distinguish from a normal admin).
   const { isClient } = useSparkRole();
   const approvedOnly = isClient ? true : null;
-  // Initial page is PAGE_SIZE (60); "Load more" bumps pageSize in
-  // 60-row chunks. We grow `first` rather than walk endCursor because
-  // the existing query lacks @connection/@refetchable wiring and the
-  // dataset is bounded (~hundreds, not millions) so refetching the
-  // growing window is acceptable. Relay's response cache + the
-  // network's gzip mean the additional bytes per click are roughly
-  // 60-rows worth, not the full N-rows-cumulative.
+  // Fetch the WHOLE tenant set in one page (FETCH_ALL), not a growing
+  // window. The list applies date / search / status / retailer / state
+  // filters CLIENT-SIDE, so it must hold every recap or those filters
+  // only ever see the newest page — the live Liquid Death bug (830
+  // total, ~50 reachable, date-search blind to anything older). The
+  // backend list resolver caps at the same ceiling. `pageSize` below is
+  // now a pure DISPLAY cap (how many cards we paint), so "Load more"
+  // walks the already-loaded set with no extra fetches. The dataset is
+  // bounded (hundreds, not millions) and rows are slim, so the single
+  // payload is acceptable.
   const data = useLazyLoadQuery<RecapsQueryType>(
     RecapsQuery,
     {
-      first: pageSize,
+      first: FETCH_ALL,
       filters: tenantId
         ? {
             tenantId,
@@ -429,17 +454,16 @@ const RecapsListInner: React.FC<{
   );
 
   // Parallel query for tenants on a Custom Recap Template. We don't
-  // paginate this independently of the legacy list — for now we just
-  // grab the same pageSize and merge on the client. That's fine
-  // because typical tenants have either-or (legacy XOR custom), and
-  // the combined dataset is bounded by the same hundreds-not-millions
-  // assumption the parent comment already calls out. If we hit a
-  // tenant with both flows AND >1k rows we'll need a unified server
-  // resolver; until then, two fetches + merge is the cheapest fix.
+  // paginate this independently of the legacy list — we grab the full
+  // set and merge on the client. Typical tenants have either-or (legacy
+  // XOR custom), and the combined dataset is bounded by the same
+  // hundreds-not-millions assumption. If we ever hit a tenant with both
+  // flows AND >2k combined rows we'll need a unified server resolver;
+  // until then, two full fetches + merge is the cheapest fix.
   const customData = useLazyLoadQuery<CustomRecapsQueryType>(
     GetCustomRecapsQuery,
     {
-      first: pageSize,
+      first: FETCH_ALL,
       // Client view → approved-only; admin/RMM view → drafts too.
       filters: tenantId ? { tenantId, approved: approvedOnly } : null,
     },
@@ -641,24 +665,6 @@ const RecapsListInner: React.FC<{
     [recaps],
   );
 
-  useMemo(() => {
-    const totalConsumers = recaps.reduce(
-      (s, r) => s + (r.engagements ?? 0),
-      0,
-    );
-    const totalProducts = recaps.reduce(
-      (s, r) => s + (r.productsSold ?? 0),
-      0,
-    );
-    onMeta({
-      retailers,
-      states,
-      total: data?.recaps?.totalCount ?? recaps.length,
-      totalConsumers,
-      totalProducts,
-    });
-  }, [retailers, states, data?.recaps?.totalCount, recaps, onMeta]);
-
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     const matched = recaps.filter((r) => {
@@ -705,11 +711,45 @@ const RecapsListInner: React.FC<{
     });
   }, [recaps, search, retailerFilter, stateFilter, statusFilter, dateFrom, dateTo, sortKey]);
 
-  // Bubble the currently-visible recaps up so the outer page can
-  // wire them to the CSV export button.
+  // The slice we actually paint. The full filtered set lives in
+  // `filtered`; `displayed` is the first `pageSize` of it, and "Load
+  // more" grows `pageSize` to reveal the rest — all client-side, no
+  // refetch (the whole tenant set is already loaded).
+  const displayed = useMemo(
+    () => filtered.slice(0, pageSize),
+    [filtered, pageSize],
+  );
+
+  // Publish counts up to the page chrome. `total` is the tenant's full
+  // published count (server totalCount); `filteredTotal` is how many
+  // rows match the active client-side filters and drives the "Load
+  // more" gate + "N of M" counter so paging can reach every match.
   useEffect(() => {
-    if (onVisibleRecapsChange) onVisibleRecapsChange(filtered);
-  }, [filtered, onVisibleRecapsChange]);
+    const totalConsumers = recaps.reduce((s, r) => s + (r.engagements ?? 0), 0);
+    const totalProducts = recaps.reduce((s, r) => s + (r.productsSold ?? 0), 0);
+    onMeta({
+      retailers,
+      states,
+      total: data?.recaps?.totalCount ?? recaps.length,
+      filteredTotal: filtered.length,
+      totalConsumers,
+      totalProducts,
+    });
+  }, [
+    retailers,
+    states,
+    data?.recaps?.totalCount,
+    recaps,
+    filtered.length,
+    onMeta,
+  ]);
+
+  // Bubble the currently-visible (painted) recaps up so the outer page
+  // can wire them to the CSV / TSV export buttons — the "Copy N" label
+  // then matches what's on screen.
+  useEffect(() => {
+    if (onVisibleRecapsChange) onVisibleRecapsChange(displayed);
+  }, [displayed, onVisibleRecapsChange]);
 
   if (filtered.length === 0) {
     return (
@@ -724,7 +764,7 @@ const RecapsListInner: React.FC<{
 
   return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {filtered.map((r) => (
+      {displayed.map((r) => (
         <RecapCard
           key={r.uuid}
           recap={r}
@@ -802,17 +842,26 @@ export default function SparkRecapsList() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
-  // "Load more" bumps this by PAGE_SIZE (60). Reset when filters
-  // change so the user doesn't see "Load more (60 of 12)" when
-  // narrowing the dataset.
+  // "Load more" bumps this DISPLAY page by PAGE_SIZE (60). Reset when
+  // filters (incl. search) change so the user doesn't see "Load more
+  // (60 of 12)" when narrowing the dataset.
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   useEffect(() => {
     setPageSize(PAGE_SIZE);
-  }, [retailerFilter, stateFilter, rmmFilter, statusFilter, dateFrom, dateTo]);
+  }, [
+    search,
+    retailerFilter,
+    stateFilter,
+    rmmFilter,
+    statusFilter,
+    dateFrom,
+    dateTo,
+  ]);
   const [meta, setMeta] = useState<Meta>({
     retailers: [],
     states: [],
     total: 0,
+    filteredTotal: 0,
     totalConsumers: 0,
     totalProducts: 0,
   });
@@ -1388,7 +1437,11 @@ export default function SparkRecapsList() {
           />
         </Suspense>
 
-        {meta.total > pageSize && (
+        {/* Gate + counter track the FILTERED total (not the tenant
+            total) so "Load more" reveals every recap matching the
+            active filters — the whole tenant set is already loaded, so
+            this is pure client-side paging. */}
+        {meta.filteredTotal > pageSize && (
           <div className="flex flex-col items-center gap-2 py-4">
             <button
               onClick={() => setPageSize((p) => p + PAGE_SIZE)}
@@ -1399,7 +1452,7 @@ export default function SparkRecapsList() {
                 boxShadow: "0 0 20px rgba(197,245,70,0.35)",
               }}
             >
-              Load {Math.min(PAGE_SIZE, meta.total - pageSize)} more →
+              Load {Math.min(PAGE_SIZE, meta.filteredTotal - pageSize)} more →
             </button>
             <p
               className="mono text-[10px]"
@@ -1408,7 +1461,7 @@ export default function SparkRecapsList() {
                 color: "rgba(255,255,255,0.45)",
               }}
             >
-              {Math.min(pageSize, meta.total)} of {meta.total}
+              {Math.min(pageSize, meta.filteredTotal)} of {meta.filteredTotal}
             </p>
           </div>
         )}
