@@ -157,6 +157,7 @@ export const GetCustomRecapQuery = graphql`
           lastName
         }
       }
+      externalBaName
       job {
         id
         name
