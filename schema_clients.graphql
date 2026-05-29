@@ -2014,6 +2014,12 @@ type CustomRecap implements Node {
   customRecapSalePerformance: [CustomRecapSalePerformance!]!
   customRecapFiles: [CustomRecapFile!]!
   customField: [CustomField!]!
+  eventDate: String
+  eventAddress: String
+  eventVenue: String
+  eventRetailer: String
+  eventCity: String
+  eventState: String
 }
 
 type CustomRecapCountableConnection {

@@ -730,7 +730,13 @@ const RecapsListInner: React.FC<{
     onMeta({
       retailers,
       states,
-      total: data?.recaps?.totalCount ?? recaps.length,
+      // Tenant's full published total spans BOTH flows. Summing the two
+      // server totalCounts so a custom-only tenant (legacy totalCount = 0)
+      // no longer shows "0 PUBLISHED". filteredTotal is unaffected — it
+      // still tracks the merged client-side filtered set.
+      total:
+        (data?.recaps?.totalCount ?? 0) +
+        (customData?.customRecaps?.totalCount ?? 0),
       filteredTotal: filtered.length,
       totalConsumers,
       totalProducts,
@@ -739,6 +745,7 @@ const RecapsListInner: React.FC<{
     retailers,
     states,
     data?.recaps?.totalCount,
+    customData?.customRecaps?.totalCount,
     recaps,
     filtered.length,
     onMeta,
