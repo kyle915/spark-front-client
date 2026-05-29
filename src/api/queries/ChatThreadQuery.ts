@@ -18,6 +18,15 @@ export const ChatThreadQuery = graphql`
         senderIsAmbassador
         senderName
         createdAt
+        attachments {
+          id
+          uuid
+          kind
+          url
+          originalFilename
+          contentType
+          byteSize
+        }
       }
     }
   }
