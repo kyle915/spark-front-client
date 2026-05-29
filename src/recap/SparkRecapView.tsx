@@ -293,6 +293,19 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const brandAware = engagement?.brandAwareConsumers ?? null;
   const willing = engagement?.willingToPurchaseConsumers ?? null;
   const productsSold = recap.productsSold ?? null;
+  // View-mode KPI tiles. Each carries its raw numeric value so we can drop
+  // tiles that have no data (null/blank) before rendering — keeps custom-
+  // template recaps from showing a wall of empty "—" cards. Order/labels/
+  // icons match the previous fixed layout; "Samples" keeps its glow.
+  const kpiTiles = (
+    [
+      { icon: "◉", label: "Samples", value: totalConsumer, glow: true },
+      { icon: "★", label: "First-time", value: firstTime },
+      { icon: "◍", label: "Brand aware", value: brandAware },
+      { icon: "$", label: "Willing to buy", value: willing },
+      { icon: "$", label: "Products sold", value: productsSold },
+    ] as { icon: string; label: string; value: number | null; glow?: boolean }[]
+  ).filter((t) => t.value != null);
   const ambassadors = (recap.ambassadors ?? []).filter(Boolean);
   // All non-empty files. We split into renderable images (img tag) vs
   // unrenderable (HEIC + PDF + video), shown as labeled tiles.
@@ -1213,19 +1226,28 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         />
       )}
 
-      {/* 5 KPI tiles */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <KpiTile
-          icon="◉"
-          label="Samples"
-          value={fmtNum(totalConsumer)}
-          glow
-        />
-        <KpiTile icon="★" label="First-time" value={fmtNum(firstTime)} />
-        <KpiTile icon="◍" label="Brand aware" value={fmtNum(brandAware)} />
-        <KpiTile icon="$" label="Willing to buy" value={fmtNum(willing)} />
-        <KpiTile icon="$" label="Products sold" value={fmtNum(productsSold)} />
-      </div>
+      {/* KPI tiles — view mode. These are the legacy generic metrics
+          (samples / engagement funnel / products sold). On custom-template
+          tenants (e.g. Girl Beer) most of them are never collected, so a
+          blank "—" tile is just noise. The legacy Recap node exposes no
+          template-status signal (and we won't add a backend field just for
+          this), so we apply the general rule: drop any tile whose value is
+          null/blank, and hide the whole row if none remain. A fully-filled
+          recap (e.g. Liquid Death) keeps all five tiles unchanged. The
+          admin edit panel above still renders every field regardless. */}
+      {kpiTiles.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          {kpiTiles.map((t) => (
+            <KpiTile
+              key={t.label}
+              icon={t.icon}
+              label={t.label}
+              value={fmtNum(t.value)}
+              glow={t.glow}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Performance row — financial + qualitative signals */}
       {(recap.totalEarnings != null ||
@@ -1245,61 +1267,69 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               FIELD-LOGGED · UNITS + DOLLARS
             </span>
           </div>
+          {/* Only render metrics that actually have a value — a partial
+              recap shows just the numbers it logged instead of "—" cards.
+              The section header above is already gated on at least one of
+              these being present. */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            <div>
-              <p className="label-mini">CANS SOLD</p>
-              <p
-                className="display tab-num font-bold mt-1"
-                style={{
-                  fontSize: "1.75rem",
-                  letterSpacing: "-0.03em",
-                  color: "var(--spark-lime)",
-                }}
-              >
-                {fmtNum(recap.totalCansSold)}
-              </p>
-            </div>
-            <div>
-              <p className="label-mini">PACKS SOLD</p>
-              <p
-                className="display tab-num font-bold mt-1"
-                style={{
-                  fontSize: "1.75rem",
-                  letterSpacing: "-0.03em",
-                }}
-              >
-                {fmtNum(recap.totalPacksSold)}
-              </p>
-            </div>
-            <div>
-              <p className="label-mini">REVENUE</p>
-              <p
-                className="display tab-num font-bold mt-1"
-                style={{
-                  fontSize: "1.75rem",
-                  letterSpacing: "-0.03em",
-                  color: "var(--spark-lime)",
-                }}
-              >
-                {typeof recap.totalEarnings === "number"
-                  ? `$${recap.totalEarnings.toLocaleString()}`
-                  : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="label-mini">ACCOUNT SPEND</p>
-              <p
-                className="display tab-num font-bold mt-1"
-                style={{
-                  fontSize: "1.75rem",
-                  letterSpacing: "-0.03em",
-                }}
-              >
-                {typeof recap.accountSpendAmount === "number"
-                  ? `$${recap.accountSpendAmount.toLocaleString()}`
-                  : "—"}
-              </p>
-            </div>
+            {recap.totalCansSold != null && (
+              <div>
+                <p className="label-mini">CANS SOLD</p>
+                <p
+                  className="display tab-num font-bold mt-1"
+                  style={{
+                    fontSize: "1.75rem",
+                    letterSpacing: "-0.03em",
+                    color: "var(--spark-lime)",
+                  }}
+                >
+                  {fmtNum(recap.totalCansSold)}
+                </p>
+              </div>
+            )}
+            {recap.totalPacksSold != null && (
+              <div>
+                <p className="label-mini">PACKS SOLD</p>
+                <p
+                  className="display tab-num font-bold mt-1"
+                  style={{
+                    fontSize: "1.75rem",
+                    letterSpacing: "-0.03em",
+                  }}
+                >
+                  {fmtNum(recap.totalPacksSold)}
+                </p>
+              </div>
+            )}
+            {typeof recap.totalEarnings === "number" && (
+              <div>
+                <p className="label-mini">REVENUE</p>
+                <p
+                  className="display tab-num font-bold mt-1"
+                  style={{
+                    fontSize: "1.75rem",
+                    letterSpacing: "-0.03em",
+                    color: "var(--spark-lime)",
+                  }}
+                >
+                  {`$${recap.totalEarnings.toLocaleString()}`}
+                </p>
+              </div>
+            )}
+            {typeof recap.accountSpendAmount === "number" && (
+              <div>
+                <p className="label-mini">ACCOUNT SPEND</p>
+                <p
+                  className="display tab-num font-bold mt-1"
+                  style={{
+                    fontSize: "1.75rem",
+                    letterSpacing: "-0.03em",
+                  }}
+                >
+                  {`$${recap.accountSpendAmount.toLocaleString()}`}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
