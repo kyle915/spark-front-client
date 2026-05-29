@@ -8,6 +8,8 @@ import { JobApplicationsQuery } from "@/api/queries/JobApplicationsQuery";
 import type { JobApplicationsQuery as JobApplicationsQueryType } from "@api/queries/__generated__/JobApplicationsQuery.graphql";
 import { AssignAmbassadorToJobMutation } from "@/api/mutations/AssignAmbassadorToJobMutation";
 import type { AssignAmbassadorToJobMutation as AssignAmbassadorToJobMutationType } from "@api/mutations/__generated__/AssignAmbassadorToJobMutation.graphql";
+import { SetJobBriefingMutation } from "@/api/mutations/SetJobBriefingMutation";
+import type { SetJobBriefingMutation as SetJobBriefingMutationType } from "@api/mutations/__generated__/SetJobBriefingMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -243,6 +245,187 @@ const ApplicantsCard: React.FC<{
   );
 };
 
+/**
+ * BA Briefing editor (#191). The real, backend-backed pre-shift
+ * briefing the mobile app reads via job.briefing / jobBriefingForEvent.
+ * Loads the current title+body off the JobsQuery node and saves via
+ * setJobBriefing. Distinct from the localStorage "Job brief" card
+ * above (which holds the structured what-to-do / academy links until a
+ * model lands).
+ */
+const BABriefingCard: React.FC<{
+  jobId: string;
+  initialTitle: string;
+  initialBody: string;
+  isAdmin: boolean;
+}> = ({ jobId, initialTitle, initialBody, isAdmin }) => {
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState(initialTitle);
+  const [body, setBody] = useState(initialBody);
+  const [commit, inFlight] = useMutation<SetJobBriefingMutationType>(
+    SetJobBriefingMutation,
+  );
+
+  // Keep local draft in sync if the loaded job changes underneath us.
+  useEffect(() => {
+    setTitle(initialTitle);
+    setBody(initialBody);
+  }, [initialTitle, initialBody]);
+
+  const dirty = title !== initialTitle || body !== initialBody;
+
+  const save = () => {
+    if (inFlight) return;
+    commit({
+      variables: { input: { jobId, title, body } },
+      onCompleted: (res) => {
+        if (res.setJobBriefing?.success) {
+          showAlert(
+            res.setJobBriefing.message || "Briefing saved.",
+            "success",
+          );
+          setOpen(false);
+        } else {
+          showAlert(
+            res.setJobBriefing?.message ?? "Couldn't save briefing.",
+            "error",
+          );
+        }
+      },
+      onError: (e) => showAlert(`Save failed: ${e.message}`, "error"),
+    });
+  };
+
+  return (
+    <div className="spark-card p-6 space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <p
+            className="mono text-[10px]"
+            style={{ letterSpacing: "0.18em", color: "var(--spark-lime)" }}
+          >
+            BA BRIEFING
+          </p>
+          <h3
+            className="display text-lg font-bold mt-1"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            Pre-shift briefing
+          </h3>
+        </div>
+        {isAdmin && (
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              color: open ? "var(--spark-orange)" : "var(--spark-lime)",
+            }}
+          >
+            {open ? "× CLOSE EDITOR" : "✎ EDIT BRIEFING"}
+          </button>
+        )}
+      </div>
+
+      {open && isAdmin ? (
+        <div className="space-y-4">
+          <div>
+            <label className="label-mini block mb-1.5">TITLE</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Liquid Death @ Whole Foods — Sampling 101"
+              style={{
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                borderRadius: 12,
+                padding: "0.65rem 0.85rem",
+                color: "var(--spark-text)",
+                fontSize: "0.875rem",
+                outline: "none",
+                width: "100%",
+              }}
+            />
+          </div>
+          <div>
+            <label className="label-mini block mb-1.5">BODY</label>
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={8}
+              placeholder="What the BA needs to know before clocking in — arrival, contact, dress code, talking points, what to bring."
+              style={{
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                borderRadius: 12,
+                padding: "0.65rem 0.85rem",
+                color: "var(--spark-text)",
+                fontSize: "0.875rem",
+                outline: "none",
+                width: "100%",
+                resize: "vertical",
+                minHeight: 180,
+                lineHeight: 1.6,
+              }}
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={save}
+              disabled={inFlight || !dirty}
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{
+                background: "var(--spark-lime)",
+                color: "#0a0d09",
+                opacity: inFlight || !dirty ? 0.5 : 1,
+                boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+              }}
+            >
+              {inFlight ? "Saving…" : "Save briefing"}
+            </button>
+            {dirty && !inFlight && (
+              <span
+                className="mono text-[10px]"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.45)",
+                }}
+              >
+                UNSAVED CHANGES
+              </span>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {initialTitle ? (
+            <p className="font-semibold text-base">{initialTitle}</p>
+          ) : null}
+          {initialBody ? (
+            <p
+              className="text-sm leading-relaxed whitespace-pre-wrap"
+              style={{ color: "rgba(255,255,255,0.85)" }}
+            >
+              {initialBody}
+            </p>
+          ) : (
+            <p
+              className="text-xs italic"
+              style={{ color: "rgba(255,255,255,0.4)" }}
+            >
+              {isAdmin
+                ? "No briefing yet — click EDIT BRIEFING to write the pre-shift instructions BAs see in the app."
+                : "No briefing posted yet."}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
@@ -433,6 +616,14 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           </div>
         </div>
       </div>
+
+      {/* BA Briefing — real backend-backed pre-shift briefing (#191) */}
+      <BABriefingCard
+        jobId={node.id}
+        initialTitle={node.briefing?.title ?? ""}
+        initialBody={node.briefing?.body ?? ""}
+        isAdmin={isAdmin}
+      />
 
       {/* Job brief — what to do, expect, bring + linked academy modules */}
       <div className="spark-card p-6 space-y-5">
