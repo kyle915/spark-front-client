@@ -27,6 +27,13 @@ export const UpdateCustomRecapMutation = graphql`
           id
           name
           value
+          # Keep the field kind in the store after an in-place save so an
+          # IMAGE field stays an image (renders its blob / upload control)
+          # instead of reverting to a text input until the next reload.
+          customFieldType {
+            id
+            name
+          }
           customFieldValueId
           recapSection {
             id

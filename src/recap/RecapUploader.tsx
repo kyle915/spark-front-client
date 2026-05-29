@@ -18,6 +18,12 @@ type Props = {
   recapUuid: string;
   category?: "photo" | "receipt";
   onUploaded: (blobName: string, kind: "photo" | "receipt") => void;
+  // Optional override for the button text. Without it the label is derived
+  // from `category` ("Upload photos" / "Upload receipt"). Callers that
+  // reuse this control for an arbitrary image field (e.g. "Table setup
+  // pictures") pass a field-appropriate label so it doesn't read
+  // "Upload receipt" on every image field.
+  label?: string;
 };
 
 // NOTE: keep photo accept as the broad `image/*`. iOS Safari falls back
@@ -34,6 +40,7 @@ export const RecapUploader: React.FC<Props> = ({
   recapUuid,
   category = "photo",
   onUploaded,
+  label: labelOverride,
 }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -100,7 +107,8 @@ export const RecapUploader: React.FC<Props> = ({
   };
 
   const label =
-    category === "receipt" ? "📎 Upload receipt" : "📷 Upload photos";
+    labelOverride ??
+    (category === "receipt" ? "📎 Upload receipt" : "📷 Upload photos");
 
   return (
     <>
