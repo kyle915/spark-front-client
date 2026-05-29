@@ -16,6 +16,10 @@ export const CustomRecapTemplatesQuery = graphql`
           id
           uuid
           name
+          tenant {
+            id
+            name
+          }
         }
       }
     }
