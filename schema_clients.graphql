@@ -3486,6 +3486,8 @@ type Mutation {
   createAcademyModule(input: CreateAcademyModuleInput!): AcademyModuleResponse!
   updateAcademyModule(input: UpdateAcademyModuleInput!): AcademyModuleResponse!
   deleteAcademyModule(input: DeleteAcademyModuleInput!): AcademyModuleResponse!
+  createAnnouncement(input: CreateAnnouncementInput!): AnnouncementResponse!
+  deleteAnnouncement(input: DeleteAnnouncementInput!): AnnouncementResponse!
   createEvent(input: CreateEventInput!): EventDetailResponse!
   createEventWithRequest(input: CreateEventWithRequestInput!): EventWithRequestDetailResponse!
   updateEventWithRequest(input: UpdateEventWithRequestInput!): EventWithRequestDetailResponse!
@@ -3943,6 +3945,41 @@ input DeleteAcademyModuleInput {
   uuid: ID!
 }
 
+type Announcement implements Node {
+  id: ID!
+  uuid: String!
+  title: String!
+  body: String!
+  audience: String!
+  publishedAt: String
+  createdAt: String!
+  updatedAt: String!
+  tenantId: ID!
+  createdByName: String!
+}
+
+type AnnouncementResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  announcement: Announcement
+}
+
+input AnnouncementFiltersInput {
+  tenantId: ID = null
+}
+
+input CreateAnnouncementInput {
+  title: String!
+  body: String! = ""
+  audience: String! = "all_bas"
+  tenantId: ID = null
+}
+
+input DeleteAnnouncementInput {
+  uuid: ID!
+}
+
 type WingspanStatus {
   connected: Boolean!
   message: String!
@@ -3977,6 +4014,7 @@ type Query {
   chatUnreadCount: Int!
   academyModulesAdmin(filters: AcademyModuleFiltersInput = null): [AcademyModule!]!
   academyModule(uuid: ID!): AcademyModule
+  announcementsAdmin(filters: AnnouncementFiltersInput = null): [Announcement!]!
   wingspanStatus: WingspanStatus!
   wingspanPayrollPeriods(limit: Int! = 12): [WingspanPayrollPeriod!]!
   wingspanPayments(periodId: ID = null, limit: Int! = 50): [WingspanPayment!]!

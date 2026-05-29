@@ -258,6 +258,9 @@ const SparkAcademyManage = lazyDefault(
   () => import("@/components/pages/academy/SparkAcademyManage"),
 );
 const SparkChatPage = lazyDefault(() => import("@/chat/SparkChatPage"));
+const SparkAnnouncements = lazyDefault(
+  () => import("@/components/pages/announcements/SparkAnnouncements"),
+);
 const SparkTeam = lazyDefault(
   () => import("@/components/pages/team/SparkTeam"),
 );
@@ -490,6 +493,11 @@ const RequestsLinks = {
     {
       path: "/chat",
       component: <SparkChatPage />,
+      isPublic: false,
+    },
+    {
+      path: "/announcements",
+      component: <SparkAnnouncements />,
       isPublic: false,
     },
     {
