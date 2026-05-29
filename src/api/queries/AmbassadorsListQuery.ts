@@ -23,6 +23,9 @@ export const AmbassadorsListQuery = graphql`
           rating
           address
           isActive
+          college
+          inCollege
+          headshotUrl
           user {
             firstName
             lastName

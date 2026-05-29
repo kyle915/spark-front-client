@@ -91,6 +91,10 @@ const SECTIONS: NavSection[] = [
         to: "/recent",
         adminOnly: true,
       },
+      // Chat lives in WORKSPACE (moved up from COMMUNICATION) — it's a
+      // day-to-day BA-messaging surface, not a broadcast channel. Route,
+      // badge (wired by route below), and icon are unchanged.
+      { label: "Chat", Icon: MessageCircle, to: "/chat" },
       {
         label: "Master Tracker",
         Icon: ListChecks,
@@ -153,7 +157,8 @@ const SECTIONS: NavSection[] = [
   {
     title: "Communication",
     items: [
-      { label: "Chat", Icon: MessageCircle, to: "/chat" },
+      // Chat moved to the WORKSPACE group above (keeps its /chat route,
+      // unread badge, and MessageCircle icon).
       { label: "Announcements", Icon: Megaphone, to: "/announcements" },
       { label: "Inbox", Icon: Mail, to: "/inbox" },
       { label: "Alerts", Icon: Bell, to: "/alerts" },
