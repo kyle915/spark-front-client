@@ -9,6 +9,15 @@ export const SendChatMessageMutation = graphql`
       senderIsAmbassador
       senderName
       createdAt
+      attachments {
+        id
+        uuid
+        kind
+        url
+        originalFilename
+        contentType
+        byteSize
+      }
     }
   }
 `;

@@ -12,6 +12,83 @@ import type { SendChatMessageMutation as SendChatMessageMutationType } from "@ap
 import { MarkChatThreadReadMutation } from "@/api/mutations/MarkChatThreadReadMutation";
 import type { MarkChatThreadReadMutation as MarkChatThreadReadMutationType } from "@api/mutations/__generated__/MarkChatThreadReadMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
+import BroadcastComposer from "./BroadcastComposer";
+
+/* ─── Attachment rendering ─── */
+
+type ChatAttachment = {
+  readonly uuid: string;
+  readonly kind: string;
+  readonly url: string | null | undefined;
+  readonly originalFilename: string | null | undefined;
+  readonly byteSize?: number | null;
+};
+
+/**
+ * Renders a message's attachments: images inline as thumbnails that open
+ * full-size in a new tab; PDFs / other files as a tappable "📎 filename"
+ * chip that opens the URL. A message with only an attachment + empty
+ * body still shows the attachment (the body <p> is omitted upstream).
+ */
+const MessageAttachments: React.FC<{
+  attachments: ReadonlyArray<ChatAttachment> | null | undefined;
+  mine: boolean;
+}> = ({ attachments, mine }) => {
+  const items = (attachments ?? []).filter((a) => a && a.url);
+  if (items.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-2 mt-1">
+      {items.map((a) => {
+        if (a.kind === "image") {
+          return (
+            <a
+              key={a.uuid}
+              href={a.url ?? "#"}
+              target="_blank"
+              rel="noreferrer"
+              style={{ display: "block" }}
+            >
+              <img
+                src={a.url ?? ""}
+                alt={a.originalFilename ?? "attachment"}
+                style={{
+                  maxWidth: 220,
+                  maxHeight: 220,
+                  borderRadius: 10,
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+            </a>
+          );
+        }
+        return (
+          <a
+            key={a.uuid}
+            href={a.url ?? "#"}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs"
+            style={{
+              background: mine ? "rgba(10,13,9,0.12)" : "rgba(255,255,255,0.07)",
+              color: mine ? "#0a0d09" : "var(--spark-text)",
+              border: mine
+                ? "1px solid rgba(10,13,9,0.2)"
+                : "1px solid var(--spark-border)",
+              textDecoration: "none",
+              maxWidth: 240,
+            }}
+          >
+            <span>📎</span>
+            <span className="truncate">
+              {a.originalFilename ?? "Attachment"}
+            </span>
+          </a>
+        );
+      })}
+    </div>
+  );
+};
 
 /**
  * Admin-side chat page — split layout, thread list on the left,
@@ -300,9 +377,15 @@ const Conversation: React.FC<{
                     borderBottomLeftRadius: mine ? undefined : 6,
                   }}
                 >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {m.body}
-                  </p>
+                  {m.body ? (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                      {m.body}
+                    </p>
+                  ) : null}
+                  <MessageAttachments
+                    attachments={m.attachments}
+                    mine={mine}
+                  />
                   <p
                     className="mono text-[9px] mt-1.5"
                     style={{
@@ -369,6 +452,7 @@ const Conversation: React.FC<{
 const SparkChatPage: React.FC = () => {
   const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [composerOpen, setComposerOpen] = useState(false);
 
   // Poll the thread list every 30s so new conversations + unread
   // counts stay current without manual refresh.
@@ -402,20 +486,33 @@ const SparkChatPage: React.FC = () => {
   return (
     <Layout>
       <div className="max-w-6xl">
-        <div className="mb-4">
-          <p
-            className="mono text-[10px]"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <p
+              className="mono text-[10px]"
+              style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            >
+              COMMS · CHAT
+            </p>
+            <h1 className="display text-3xl font-bold mt-1" style={{ letterSpacing: "-0.02em" }}>
+              Chat
+            </h1>
+            <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+              Two-way messaging with your BAs. General DMs and per-job threads in one
+              place; mobile push notifies them on every reply.
+            </p>
+          </div>
+          <button
+            onClick={() => setComposerOpen(true)}
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+            }}
           >
-            COMMS · CHAT
-          </p>
-          <h1 className="display text-3xl font-bold mt-1" style={{ letterSpacing: "-0.02em" }}>
-            Chat
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
-            Two-way messaging with your BAs. General DMs and per-job threads in one
-            place; mobile push notifies them on every reply.
-          </p>
+            ✏️ New message
+          </button>
         </div>
         <div
           className="grid grid-cols-1 md:grid-cols-[340px_1fr] rounded-2xl overflow-hidden"
@@ -469,6 +566,12 @@ const SparkChatPage: React.FC = () => {
           </div>
         </div>
       </div>
+      {composerOpen ? (
+        <BroadcastComposer
+          onClose={() => setComposerOpen(false)}
+          onSent={() => setRefreshKey((k) => k + 1)}
+        />
+      ) : null}
     </Layout>
   );
 };

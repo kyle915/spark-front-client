@@ -3463,6 +3463,28 @@ type ChatMessage implements Node {
   createdAt: String!
   readByAdminAt: String
   readByAmbassadorAt: String
+  attachments: [ChatMessageAttachment!]!
+}
+
+"""A file (image or PDF) attached to a chat message."""
+type ChatMessageAttachment {
+  uuid: String!
+  kind: String!
+  originalFilename: String
+  contentType: String
+  byteSize: Int
+  createdAt: String!
+  id: ID!
+  url: String
+}
+
+input ChatAttachmentInput {
+  clientMutationId: ID = null
+  file: String!
+  kind: String = null
+  originalFilename: String = null
+  contentType: String = null
+  byteSize: Int = null
 }
 
 input OpenChatThreadInput {
@@ -3474,7 +3496,25 @@ input OpenChatThreadInput {
 input SendChatMessageInput {
   clientMutationId: ID = null
   threadUuid: String!
-  body: String!
+  body: String = null
+  attachments: [ChatAttachmentInput!] = null
+}
+
+input BroadcastChatMessageInput {
+  clientMutationId: ID = null
+  body: String = null
+  attachments: [ChatAttachmentInput!] = null
+  ambassadorUuids: [String!] = null
+  groupUuids: [String!] = null
+  tenantId: ID = null
+  tenantUuid: ID = null
+}
+
+type BroadcastChatMessageResult {
+  success: Boolean!
+  message: String!
+  recipientCount: Int!
+  threadUuids: [String!]!
 }
 
 input MarkChatThreadReadInput {
@@ -3543,6 +3583,7 @@ type Mutation {
   parseConnecteamRecapPdf(input: ParseConnecteamRecapPdfInput!): ParseConnecteamRecapPdfResponse!
   openChatThread(input: OpenChatThreadInput!): ChatThread!
   sendChatMessage(input: SendChatMessageInput!): ChatMessage!
+  broadcastChatMessage(input: BroadcastChatMessageInput!): BroadcastChatMessageResult!
   markChatThreadRead(input: MarkChatThreadReadInput!): Int!
   removeCustomField(input: RemoveCustomFieldInput!): CustomFieldDetailResponse!
   createCustomRecapFieldType(input: CreateCustomRecapFieldTypeInput!): CustomRecapFieldTypeDetailResponse!
