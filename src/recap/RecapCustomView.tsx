@@ -590,6 +590,63 @@ const RecapCustomView = () => {
     [categoriesWithImages],
   );
 
+  // Download every photo in this recap as a ZIP (mirrors the legacy
+  // SparkRecapView "Download photos" button). Uses displaySrc so HEIC
+  // uploads come down as their server-converted JPG (viewable anywhere),
+  // not an unopenable .heic.
+  const [isZipping, setIsZipping] = useState(false);
+  const handleDownloadPhotos = useCallback(async () => {
+    if (flatImages.length === 0) {
+      showAlert("No photos to download.", "warning");
+      return;
+    }
+    setIsZipping(true);
+    try {
+      const { default: JSZip } = await import("jszip");
+      const zip = new JSZip();
+      // Cap at 200 for sanity; larger sets can be mass-exported backend-side.
+      let added = 0;
+      for (const f of flatImages.slice(0, 200)) {
+        const src = displaySrc(f);
+        if (!src) continue;
+        try {
+          const resp = await fetch(src);
+          if (!resp.ok) continue;
+          const blob = await resp.blob();
+          const base = src.split("?")[0]?.split("/").pop() || `photo-${added}`;
+          const filename = /\.[a-z0-9]+$/i.test(base) ? base : `${base}.jpg`;
+          zip.file(filename, blob);
+          added += 1;
+        } catch {
+          /* skip individual failures */
+        }
+      }
+      if (added === 0) {
+        showAlert("No downloadable photos.", "warning");
+        return;
+      }
+      const out = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 },
+      });
+      const a = document.createElement("a");
+      const downloadUrl = URL.createObjectURL(out);
+      a.href = downloadUrl;
+      a.download = `recap-${(uuid ?? "").slice(-6) || "photos"}-photos.zip`;
+      a.click();
+      URL.revokeObjectURL(downloadUrl);
+      showAlert(
+        `Downloaded ${added} photo${added === 1 ? "" : "s"}.`,
+        "success",
+      );
+    } catch (e) {
+      showAlert(`Download failed: ${(e as Error).message}`, "error");
+    } finally {
+      setIsZipping(false);
+    }
+  }, [flatImages, displaySrc, showAlert, uuid]);
+
   const [imageSources, setImageSources] = useState<Record<string, string>>({});
   const [convertingImageIds, setConvertingImageIds] = useState<string[]>([]);
 
@@ -853,6 +910,16 @@ const RecapCustomView = () => {
                   title="Generate and download this recap as a PDF"
                 >
                   {isGeneratingPdf ? "Generating…" : "⬇ PDF"}
+                </button>
+                <button
+                  onClick={handleDownloadPhotos}
+                  disabled={isZipping || flatImages.length === 0}
+                  className="btn btn-sm btn-outline gap-2"
+                  title="Download all photos in this recap as a ZIP"
+                >
+                  {isZipping
+                    ? `Zipping ${flatImages.length}…`
+                    : `⬇ Photos (${flatImages.length})`}
                 </button>
                 <button
                   onClick={enterEditMode}
