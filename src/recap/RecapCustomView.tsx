@@ -772,10 +772,51 @@ const RecapCustomView = () => {
                   <span className="text-sm">Job</span>
                   <span className="font-medium">{recap.job?.name ?? "—"}</span>
                 </div>
+                {/* Linked-event location. The recap's own retailer/
+                    location/state FKs are usually null on custom recaps,
+                    so we read the event-derived fields (walked server-
+                    side from event -> request/retailer/location/state)
+                    and fall back to the recap's own FK where one exists.
+                    Together these tell a client exactly where the
+                    activation happened. */}
                 <div className="flex justify-between items-center py-2 border-b border-base-100/30">
                   <span className="text-sm">Retailer</span>
-                  <span className="font-medium">
-                    {recap.retailer?.name ?? "-"}
+                  <span className="font-medium text-right">
+                    {recap.eventRetailer ?? recap.retailer?.name ?? "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-base-100/30">
+                  <span className="text-sm">Venue</span>
+                  <span className="font-medium text-right">
+                    {recap.eventVenue ?? "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-start py-2 border-b border-base-100/30 gap-4">
+                  <span className="text-sm whitespace-nowrap flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 opacity-60" />
+                    Address
+                  </span>
+                  <span className="font-medium text-right">
+                    {recap.eventAddress ?? "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-base-100/30">
+                  <span className="text-sm">City / State</span>
+                  <span className="font-medium text-right">
+                    {recap.eventCity || recap.eventState
+                      ? [recap.eventCity, recap.eventState]
+                          .filter(Boolean)
+                          .join(", ")
+                      : "—"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-base-100/30">
+                  <span className="text-sm whitespace-nowrap flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 opacity-60" />
+                    Event Date
+                  </span>
+                  <span className="font-medium text-right">
+                    {formatDate(recap.eventDate ?? recap.event?.date ?? null)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">

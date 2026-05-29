@@ -133,6 +133,18 @@ export const GetCustomRecapQuery = graphql`
       incomplete
       approved
       usedCorpoCard
+      # Linked-event location, walked server-side from the recap's event
+      # (and its request/retailer/location/state). The recap's own
+      # retailer/location/state FKs are usually null on custom recaps, so
+      # these power the Information panel's Address / Venue / Retailer /
+      # City / State / Event Date rows — enough for a client to locate
+      # where the activation happened.
+      eventDate
+      eventAddress
+      eventVenue
+      eventRetailer
+      eventCity
+      eventState
       event {
         id
         name
