@@ -1,7 +1,7 @@
 import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { EventsQuery } from "@/api/queries/EventsQuery";
-import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
+import { RecapEventOptionsQuery } from "@/api/queries/RecapEventOptionsQuery";
+import type { RecapEventOptionsQuery as RecapEventOptionsQueryType } from "@api/queries/__generated__/RecapEventOptionsQuery.graphql";
 import { ReassignRecapEventMutation } from "@/api/mutations/ReassignRecapEventMutation";
 import type { ReassignRecapEventMutation as ReassignRecapEventMutationType } from "@api/mutations/__generated__/ReassignRecapEventMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -42,14 +42,16 @@ const Inner: React.FC<Props> = ({
   const showAlert = useAlertStore((s) => s.showAlert);
   const [search, setSearch] = useState("");
 
-  const data = useLazyLoadQuery<EventsQueryType>(
-    EventsQuery,
-    // Scope to the active tenant. The backend reassign mutation already
-    // enforces a same-tenant guard, but without this filter an Ignite
-    // admin (unrestricted role) saw EVERY tenant's events in the picker
-    // and could pick one that the mutation would then reject — leaking
-    // other clients' event names in the dropdown along the way.
-    { first: 50, q: search || null, filters: tenantId ? { tenantId } : null },
+  // Use the tenant-scoped `recapEventOptions` query, NOT the general
+  // `events` query. The backend hard-scopes this to the active tenant and
+  // returns nothing when no tenant is in scope, so the picker can't leak
+  // another client's events even if `tenantId` is somehow empty. The
+  // reassign mutation already enforces a same-tenant guard server-side;
+  // this keeps the picker itself from ever surfacing cross-tenant events
+  // (which the general `events` query did for unrestricted roles).
+  const data = useLazyLoadQuery<RecapEventOptionsQueryType>(
+    RecapEventOptionsQuery,
+    { first: 50, q: search || null, tenantId: tenantId || null },
     { fetchPolicy: "store-or-network" },
   );
 
@@ -58,7 +60,7 @@ const Inner: React.FC<Props> = ({
   // mutation round-trip.
   const events = useMemo(
     () =>
-      (data?.events?.edges ?? [])
+      (data?.recapEventOptions?.edges ?? [])
         .map((e) => e?.node)
         .filter((n): n is NonNullable<typeof n> => Boolean(n))
         .filter((n) => String(n.id) !== currentEventId),
@@ -85,8 +87,6 @@ const Inner: React.FC<Props> = ({
       onError: (err) => showAlert(err.message, "error"),
     });
   };
-
-  void tenantId; // useAuthStore destructure for future scoping hooks
 
   return (
     <div
@@ -157,7 +157,11 @@ const Inner: React.FC<Props> = ({
             </p>
           )}
           {events.map((ev) => {
-            const label = ev.name ?? ev.address ?? `Event ${ev.uuid?.slice(-4)}`;
+            const label =
+              ev.request?.retailer?.name ??
+              ev.name ??
+              ev.address ??
+              `Event ${ev.uuid?.slice(-4)}`;
             return (
               <button
                 type="button"
@@ -180,6 +184,17 @@ const Inner: React.FC<Props> = ({
                 }}
               >
                 <div className="flex-1 min-w-0">
+                  {/* Client/brand label so it's always clear which client
+                      an event belongs to before reassigning to it.
+                      Consistent with the recap-create picker. */}
+                  {ev.tenant?.name && (
+                    <span
+                      className="chip chip-muted mb-1"
+                      style={{ display: "inline-flex" }}
+                    >
+                      {ev.tenant.name}
+                    </span>
+                  )}
                   <p className="text-sm font-medium truncate">{label}</p>
                   {ev.address && (
                     <p

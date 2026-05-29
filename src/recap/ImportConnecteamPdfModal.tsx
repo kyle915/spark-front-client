@@ -1,8 +1,8 @@
 import { Suspense, useMemo, useRef, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate } from "react-router";
-import { EventsQuery } from "@/api/queries/EventsQuery";
-import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
+import { RecapEventOptionsQuery } from "@/api/queries/RecapEventOptionsQuery";
+import type { RecapEventOptionsQuery as RecapEventOptionsQueryType } from "@api/queries/__generated__/RecapEventOptionsQuery.graphql";
 import { CustomRecapTemplatesQuery } from "@/api/queries/CustomRecapTemplatesQuery";
 import type { CustomRecapTemplatesQuery as CustomRecapTemplatesQueryType } from "@api/queries/__generated__/CustomRecapTemplatesQuery.graphql";
 import { ImportConnecteamRecapPdfMutation } from "@/api/mutations/ImportConnecteamRecapPdfMutation";
@@ -66,24 +66,32 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Scope both pickers to the active tenant. Connecteam import writes a
-  // CustomRecap tying an event to a template — without this, an Ignite
-  // admin could import a Girl Beer PDF against a Liquid Death event or
-  // template (cross-tenant corruption + a read leak of other clients'
-  // event/template names). Clients are already server-scoped; this
-  // closes the admin-side footgun.
+  // Connecteam import writes a CustomRecap tying an event to a template —
+  // both pickers MUST be locked to the active tenant or an Ignite admin
+  // could import a Girl Beer PDF against a Liquid Death event/template
+  // (cross-tenant corruption + a read leak of other clients' event and
+  // template names).
   const { tenantId } = useAuthStore();
 
-  const eventsData = useLazyLoadQuery<EventsQueryType>(
-    EventsQuery,
+  // Event picker uses the dedicated `recapEventOptions` query, NOT the
+  // general `events` query. The backend hard-scopes this to the active
+  // tenant and returns nothing when no tenant is in scope, so the picker
+  // can't leak another client's events even if `tenantId` is somehow
+  // empty (the general `events` query returns every tenant's events for
+  // unrestricted roles).
+  const eventsData = useLazyLoadQuery<RecapEventOptionsQueryType>(
+    RecapEventOptionsQuery,
     {
       first: 25,
       q: search || null,
-      filters: tenantId ? { tenantId } : null,
+      tenantId: tenantId || null,
     },
     { fetchPolicy: "store-or-network" },
   );
 
+  // Templates are now hard-scoped to the active tenant on the SERVER too
+  // (customRecapTemplates returns an empty page when no tenant is in
+  // scope), so this picker can never offer another client's template.
   const templatesData = useLazyLoadQuery<CustomRecapTemplatesQueryType>(
     CustomRecapTemplatesQuery,
     { first: 50, filters: tenantId ? { tenantId } : null },
@@ -92,7 +100,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
 
   const events = useMemo(
     () =>
-      (eventsData?.events?.edges ?? [])
+      (eventsData?.recapEventOptions?.edges ?? [])
         .map((e) => e?.node)
         .filter((n): n is NonNullable<typeof n> => Boolean(n)),
     [eventsData],
@@ -292,23 +300,37 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                     ) : (
                       events.map((ev) => {
                         const id = String(ev.id);
+                        const label =
+                          ev.request?.retailer?.name ??
+                          ev.name ??
+                          "Untitled event";
                         return (
                           <button
                             key={id}
                             type="button"
                             onClick={() => {
-                              const label = ev.name ?? "Untitled event";
                               setEventId(id);
                               setEventLabel(label);
                               setSearch(label);
                             }}
-                            className="w-full text-left px-3 py-2 text-sm flex items-center justify-between transition hover:bg-white/5"
+                            className="w-full text-left px-3 py-2 text-sm flex items-center justify-between gap-2 transition hover:bg-white/5"
                             style={{
                               background: "transparent",
                               borderBottom: "1px solid rgba(255,255,255,0.04)",
                             }}
                           >
-                            <span>{ev.name ?? "Untitled event"}</span>
+                            <span className="min-w-0 truncate">{label}</span>
+                            {/* Client/brand label so it's always clear
+                                which client an event belongs to before
+                                importing a PDF against it. */}
+                            {ev.tenant?.name && (
+                              <span
+                                className="chip chip-muted shrink-0"
+                                style={{ display: "inline-flex" }}
+                              >
+                                {ev.tenant.name}
+                              </span>
+                            )}
                           </button>
                         );
                       })
