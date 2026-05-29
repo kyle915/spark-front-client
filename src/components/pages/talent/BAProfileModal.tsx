@@ -2,8 +2,9 @@ import { Suspense, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { AmbassadorProfileDetailQuery } from "@/api/queries/AmbassadorProfileDetailQuery";
 import type { AmbassadorProfileDetailQuery as AmbassadorProfileDetailQueryType } from "@api/queries/__generated__/AmbassadorProfileDetailQuery.graphql";
-import { BroadcastChatMessageMutation } from "@/api/mutations/BroadcastChatMessageMutation";
-import type { BroadcastChatMessageMutation as BroadcastChatMessageMutationType } from "@api/mutations/__generated__/BroadcastChatMessageMutation.graphql";
+import { OpenChatThreadMutation } from "@/api/mutations/OpenChatThreadMutation";
+import type { OpenChatThreadMutation as OpenChatThreadMutationType } from "@api/mutations/__generated__/OpenChatThreadMutation.graphql";
+import ChatConversation from "@/chat/ChatConversation";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 
@@ -12,10 +13,12 @@ import { useAlertStore } from "@/store/alertStore";
  *
  * Shows headshot, bio, college, email + phone (click-to-copy + mailto/
  * tel), an event-photo gallery, a résumé download link, the gig-history
- * list, and the rating / on-time / jobs stats. The "DM" button opens an
- * inline quick-DM composer that sends via broadcastChatMessage — the same
- * tenant-scoped chat path the BroadcastComposer uses (delivers in-app +
- * push). A single-recipient broadcast is just a broadcast of one.
+ * list, and the rating / on-time / jobs stats. The "DM" button opens the
+ * real two-way chat thread with this BA inline (open/get-or-create via
+ * openChatThread → the shared <ChatConversation> renders message history
+ * + a reply box, exactly like the main Chat page). Replies deliver
+ * in-app + push and mark-as-read fires on open. Tenant scoping is
+ * enforced server-side by openChatThread (keyed on the ambassador).
  */
 
 type Props = {
@@ -81,10 +84,12 @@ const ProfileInner: React.FC<{
     { fetchPolicy: "store-and-network" },
   );
 
-  const [dmOpen, setDmOpen] = useState(false);
-  const [dmBody, setDmBody] = useState("");
-  const [commitDM, dmInFlight] =
-    useMutation<BroadcastChatMessageMutationType>(BroadcastChatMessageMutation);
+  // DM: open/get-or-create the 1:1 thread, then render it inline. The
+  // thread uuid is what <ChatConversation> needs; once we have it the
+  // DM area swaps from the button to the full conversation pane.
+  const [threadUuid, setThreadUuid] = useState<string | null>(null);
+  const [commitOpenThread, openingThread] =
+    useMutation<OpenChatThreadMutationType>(OpenChatThreadMutation);
 
   const p = data?.ambassadorProfileDetail;
 
@@ -112,35 +117,27 @@ const ProfileInner: React.FC<{
     );
   };
 
-  const sendDM = () => {
-    const body = dmBody.trim();
-    if (!body) return;
+  const openDM = () => {
+    if (openingThread || threadUuid) return;
     if (!tenantId) {
       showAlert("No active workspace to message under.", "warning");
       return;
     }
-    commitDM({
-      variables: {
-        input: {
-          ambassadorUuids: [ambassadorUuid],
-          body,
-          tenantId,
-        },
-      },
+    // open_chat_thread gets-or-creates the persistent 1:1 (general) DM
+    // for this BA. No jobUuid → general thread. Tenant scoping is
+    // enforced server-side from the admin's auth context.
+    commitOpenThread({
+      variables: { input: { ambassadorUuid } },
       onCompleted: (res) => {
-        const ok = res?.broadcastChatMessage?.success;
-        if (ok && (res?.broadcastChatMessage?.recipientCount ?? 0) > 0) {
-          showAlert("Message sent.", "success");
-          setDmBody("");
-          setDmOpen(false);
+        const uuid = res?.openChatThread?.uuid;
+        if (uuid) {
+          setThreadUuid(String(uuid));
         } else {
-          showAlert(
-            res?.broadcastChatMessage?.message || "Couldn't send the message.",
-            "error",
-          );
+          showAlert("Couldn't open the conversation.", "error");
         }
       },
-      onError: () => showAlert("Couldn't send the message.", "error"),
+      onError: (err) =>
+        showAlert(`Couldn't open the conversation: ${err.message}`, "error"),
     });
   };
 
@@ -150,6 +147,8 @@ const ProfileInner: React.FC<{
     jobs: String(p.jobsCount ?? 0),
     onTime: p.onTimeRate != null ? `${Math.round(p.onTimeRate)}%` : "—",
   };
+
+  const firstName = p.fullName.split(/\s+/)[0] || "BA";
 
   return (
     <div style={panel}>
@@ -246,59 +245,58 @@ const ProfileInner: React.FC<{
         )}
       </div>
 
-      {/* DM */}
+      {/* DM — open the real two-way thread inline */}
       <div className="mt-4">
-        {!dmOpen ? (
+        {!threadUuid ? (
           <button
-            onClick={() => setDmOpen(true)}
+            onClick={openDM}
+            disabled={openingThread}
             className="px-4 py-2 rounded-xl text-sm font-semibold w-full"
-            style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              opacity: openingThread ? 0.6 : 1,
+            }}
           >
-            💬 DM {p.fullName.split(/\s+/)[0] || "BA"}
+            {openingThread
+              ? "Opening…"
+              : `💬 DM ${firstName}`}
           </button>
         ) : (
-          <div className="spark-card p-3">
-            <textarea
-              value={dmBody}
-              onChange={(e) => setDmBody(e.target.value)}
-              placeholder={`Message ${p.fullName.split(/\s+/)[0] || "this BA"}…`}
-              rows={3}
-              autoFocus
-              style={{
-                width: "100%",
-                background: "var(--spark-bg)",
-                border: "1px solid var(--spark-border)",
-                borderRadius: 10,
-                padding: "0.6rem 0.75rem",
-                color: "var(--spark-text)",
-                fontSize: "0.875rem",
-                outline: "none",
-                resize: "vertical",
-              }}
-            />
-            <div className="flex items-center justify-end gap-2 mt-2">
+          <div
+            className="spark-card overflow-hidden"
+            style={{ padding: 0 }}
+          >
+            <div
+              className="flex items-center justify-between px-4 py-2.5"
+              style={{ borderBottom: "1px solid var(--spark-border)" }}
+            >
+              <p style={labelMini}>DIRECT MESSAGE · {firstName.toUpperCase()}</p>
               <button
-                onClick={() => {
-                  setDmOpen(false);
-                  setDmBody("");
-                }}
+                onClick={() => setThreadUuid(null)}
                 style={labelMini}
+                title="Collapse conversation"
               >
-                CANCEL
-              </button>
-              <button
-                onClick={sendDM}
-                disabled={dmInFlight || !dmBody.trim()}
-                className="px-3 py-1.5 rounded-lg text-sm font-semibold"
-                style={{
-                  background: "var(--spark-lime)",
-                  color: "#0a0d09",
-                  opacity: dmInFlight || !dmBody.trim() ? 0.6 : 1,
-                }}
-              >
-                {dmInFlight ? "Sending…" : "Send"}
+                COLLAPSE
               </button>
             </div>
+            <Suspense
+              fallback={
+                <div className="p-6" style={labelMini}>
+                  LOADING CONVERSATION…
+                </div>
+              }
+            >
+              {/* Reuse the exact Chat-page thread pane: history bubbles
+                  (inbound + outbound), scrollable newest-at-bottom, +
+                  reply box. Header hidden — the modal already shows the
+                  BA's name. Mark-as-read + push are handled inside. */}
+              <ChatConversation
+                threadUuid={threadUuid}
+                showHeader={false}
+                height="min(460px, 60vh)"
+              />
+            </Suspense>
           </div>
         )}
       </div>
