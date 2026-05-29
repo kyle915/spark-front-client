@@ -19,6 +19,7 @@ import {
   BarChart3,
   Mail,
   MessageCircle,
+  Megaphone,
   Bell,
   Clock,
   CreditCard,
@@ -153,6 +154,7 @@ const SECTIONS: NavSection[] = [
     title: "Communication",
     items: [
       { label: "Chat", Icon: MessageCircle, to: "/chat" },
+      { label: "Announcements", Icon: Megaphone, to: "/announcements" },
       { label: "Inbox", Icon: Mail, to: "/inbox" },
       { label: "Alerts", Icon: Bell, to: "/alerts" },
     ],
