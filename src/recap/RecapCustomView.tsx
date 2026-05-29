@@ -9,7 +9,10 @@ import { AddCustomRecapFileMutation } from "@/api/mutations/AddCustomRecapFileMu
 import type { AddCustomRecapFileMutation as AddCustomRecapFileMutationType } from "@/api/mutations/__generated__/AddCustomRecapFileMutation.graphql";
 import { DeleteCustomRecapMutation } from "@/api/mutations/DeleteCustomRecapMutation";
 import type { DeleteCustomRecapMutation as DeleteCustomRecapMutationType } from "@/api/mutations/__generated__/DeleteCustomRecapMutation.graphql";
+import { DeleteCustomRecapFileMutation } from "@/api/mutations/DeleteCustomRecapFileMutation";
+import type { DeleteCustomRecapFileMutation as DeleteCustomRecapFileMutationType } from "@/api/mutations/__generated__/DeleteCustomRecapFileMutation.graphql";
 import { RecapUploader } from "./RecapUploader";
+import { buildCustomFieldValuesPayload } from "./customRecapSave";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -136,6 +139,10 @@ const RecapCustomView = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  // Id of the Evidences file currently being deleted, so only that card's
+  // ×-button shows the in-flight state (the useMutation `isDeletingFile`
+  // flag is global to the gallery).
+  const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
 
   const data = useLazyLoadQuery<CustomRecapsQueryDetailsQueryType>(
     GetCustomRecapQuery,
@@ -172,6 +179,10 @@ const RecapCustomView = () => {
   );
   const [commitDelete, isDeleting] =
     useMutation<DeleteCustomRecapMutationType>(DeleteCustomRecapMutation);
+  const [commitDeleteFile, isDeletingFile] =
+    useMutation<DeleteCustomRecapFileMutationType>(
+      DeleteCustomRecapFileMutation,
+    );
 
   const enterEditMode = useCallback(() => {
     const seed: Record<string, string> = {};
@@ -191,6 +202,31 @@ const RecapCustomView = () => {
     setEditedValues({});
   }, []);
 
+  // Template fields grouped by section. This is the canonical, COMPLETE
+  // field list — the backend's customField resolver returns every field
+  // on the template (each enriched with this recap's value, or null when
+  // unfilled), so this covers blank fields too. Both the render below and
+  // saveValues read from it, so what the admin edits is exactly what gets
+  // saved (the dropped-image fix depends on these being the same source).
+  const customFieldsBySection = useMemo(() => {
+    if (!recap?.customField) return [];
+    type CustomFieldItem = NonNullable<typeof recap.customField>[number];
+    const sections = new Map<string, CustomFieldItem[]>();
+
+    recap.customField.forEach((field) => {
+      const sectionName = field.recapSection?.name ?? "Other Details";
+      if (!sections.has(sectionName)) {
+        sections.set(sectionName, []);
+      }
+      sections.get(sectionName)!.push(field);
+    });
+
+    return Array.from(sections.entries()).map(([name, fields]) => ({
+      name,
+      fields,
+    }));
+  }, [recap?.customField]);
+
   const saveValues = useCallback(() => {
     if (!recap?.id) return;
     const eventId = recap.event?.id;
@@ -202,17 +238,29 @@ const RecapCustomView = () => {
       );
       return;
     }
-    // Build the full customFieldValues list — every existing field
-    // re-sent so the backend doesn't wipe any while replacing the
-    // set. Using customFieldValueId targets the existing row (no
-    // extra round-trip / lookup on the backend).
-    const customFieldValues = (recap.customField ?? [])
-      .filter((f): f is NonNullable<typeof f> => Boolean(f))
-      .map((field) => ({
-        customFieldId: field.id as string,
-        customFieldValueId: (field.customFieldValueId as string | null) ?? null,
-        value: editedValues[String(field.id)] ?? field.value ?? "",
-      }));
+    // Build the full customFieldValues list from the SAME complete field
+    // list the render/edit controls use (every template field, grouped
+    // into sections), NOT just the rows that already have a value. This
+    // is the fix for the dropped-image bug: a previously-blank field
+    // (image / text / number / longtext) is editable in the UI, but if
+    // we only walked rows that already existed we'd never include the
+    // newly-set value and the backend would drop it. Walking the full
+    // template list guarantees a blank-then-filled field is sent.
+    //
+    // For fields that already have a CustomFieldValue row we pass its
+    // customFieldValueId so the backend updates in place; for fields with
+    // no row yet we send customFieldValueId: null so the backend upserts
+    // (creates) one — update_custom_recap takes the create path when the
+    // value id is null and customFieldId is provided. The value is read
+    // from the working-copy map (seeded from the recap on enter-edit, so
+    // it's always present), falling back to the stored value.
+    const allFields = customFieldsBySection.flatMap(
+      (section) => section.fields,
+    );
+    const customFieldValues = buildCustomFieldValuesPayload(
+      allFields,
+      editedValues,
+    );
 
     commitUpdateCustomRecap({
       variables: {
@@ -243,7 +291,7 @@ const RecapCustomView = () => {
     recap?.name,
     recap?.event?.id,
     recap?.customRecapTemplate?.id,
-    recap?.customField,
+    customFieldsBySection,
     editedValues,
     editedUsedCorpoCard,
     commitUpdateCustomRecap,
@@ -295,6 +343,42 @@ const RecapCustomView = () => {
       });
     },
     [recap?.id, commitAddFile, showAlert],
+  );
+
+  // Delete a single file from the Evidences & Attachments gallery (e.g. a
+  // misfiled receipt that landed under "Table setup"). Confirms first,
+  // then calls deleteCustomRecapFile — which hard-deletes the
+  // CustomRecapFile row (leaving the GCS blob) and returns the FULL
+  // refreshed customRecapFiles list, so Relay merges it by recap id and
+  // the gallery re-renders without the removed file (no reload). Admin-
+  // only + tenant-scoped server-side.
+  const handleDeleteFile = useCallback(
+    (fileId: string, fileName: string | null | undefined) => {
+      const ok = window.confirm(
+        `Remove "${fileName || "this file"}" from this recap? ` +
+          "It will no longer appear in the Evidences gallery. " +
+          "This cannot be undone.",
+      );
+      if (!ok) return;
+      setDeletingFileId(fileId);
+      commitDeleteFile({
+        variables: { input: { id: fileId } },
+        onCompleted: (res) => {
+          setDeletingFileId(null);
+          const payload = res.deleteCustomRecapFile;
+          if (payload?.success) {
+            showAlert("File removed.", "success");
+          } else {
+            showAlert(payload?.message ?? "Couldn't remove file.", "error");
+          }
+        },
+        onError: (err) => {
+          setDeletingFileId(null);
+          showAlert(`Couldn't remove file: ${err.message}`, "error");
+        },
+      });
+    },
+    [commitDeleteFile, showAlert],
   );
 
   // Delete this custom recap (admin-only on the backend; tenant-scoped).
@@ -390,25 +474,6 @@ const RecapCustomView = () => {
     () => categoriesWithImages.flatMap((category) => category.imageFiles),
     [categoriesWithImages],
   );
-
-  const customFieldsBySection = useMemo(() => {
-    if (!recap?.customField) return [];
-    type CustomFieldItem = NonNullable<typeof recap.customField>[number];
-    const sections = new Map<string, CustomFieldItem[]>();
-
-    recap.customField.forEach((field) => {
-      const sectionName = field.recapSection?.name ?? "Other Details";
-      if (!sections.has(sectionName)) {
-        sections.set(sectionName, []);
-      }
-      sections.get(sectionName)!.push(field);
-    });
-
-    return Array.from(sections.entries()).map(([name, fields]) => ({
-      name,
-      fields,
-    }));
-  }, [recap?.customField]);
 
   const [imageSources, setImageSources] = useState<Record<string, string>>({});
   const [convertingImageIds, setConvertingImageIds] = useState<string[]>([]);
@@ -1035,9 +1100,18 @@ const RecapCustomView = () => {
                           )}
                           {isEditingValues && recap.uuid && (
                             <div className="flex flex-wrap items-center gap-2 pt-1">
+                              {/* Generic image-field uploader. Use the
+                                  "photo" category (NOT "receipt") so the
+                                  blob isn't tagged/labeled as a receipt on
+                                  non-receipt fields, and label it from the
+                                  field name ("Table setup pictures",
+                                  "Sampling pictures (photos)", …) so every
+                                  image field no longer reads "Upload
+                                  receipt". */}
                               <RecapUploader
                                 recapUuid={recap.uuid}
-                                category="receipt"
+                                category="photo"
+                                label={`📷 Upload ${field.name ?? "photo"}`}
                                 onUploaded={(blobName) =>
                                   setEditedValues((prev) => ({
                                     ...prev,
@@ -1228,6 +1302,34 @@ const RecapCustomView = () => {
                                 }}
                               >
                                 <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-base-200/60">
+                                  {/* Per-file delete (admin). Hard-removes
+                                      this file from the recap's Evidences
+                                      gallery — for pulling a misfiled image
+                                      (e.g. a receipt that landed under the
+                                      wrong category). stopPropagation so the
+                                      click doesn't also open the preview /
+                                      a new tab. */}
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleDeleteFile(file.id, file.name);
+                                    }}
+                                    disabled={
+                                      isDeletingFile &&
+                                      deletingFileId === file.id
+                                    }
+                                    title="Remove this file from the recap"
+                                    aria-label="Remove this file from the recap"
+                                    className="absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 shadow transition hover:bg-error focus:opacity-100 group-hover:opacity-100 disabled:opacity-60"
+                                  >
+                                    {isDeletingFile &&
+                                    deletingFileId === file.id ? (
+                                      <span className="loading loading-spinner loading-xs" />
+                                    ) : (
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    )}
+                                  </button>
                                   {isImage ? (
                                     convertingImageIds.includes(file.id) ? (
                                       <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-base-content/60">
