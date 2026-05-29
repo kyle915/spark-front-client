@@ -11,8 +11,17 @@ import { SendChatMessageMutation } from "@/api/mutations/SendChatMessageMutation
 import type { SendChatMessageMutation as SendChatMessageMutationType } from "@api/mutations/__generated__/SendChatMessageMutation.graphql";
 import { MarkChatThreadReadMutation } from "@/api/mutations/MarkChatThreadReadMutation";
 import type { MarkChatThreadReadMutation as MarkChatThreadReadMutationType } from "@api/mutations/__generated__/MarkChatThreadReadMutation.graphql";
+import { ArchiveChatThreadMutation } from "@/api/mutations/ArchiveChatThreadMutation";
+import type { ArchiveChatThreadMutation as ArchiveChatThreadMutationType } from "@api/mutations/__generated__/ArchiveChatThreadMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
 import BroadcastComposer from "./BroadcastComposer";
+import {
+  CHAT_ATTACHMENT_ACCEPT,
+  humanSize,
+  toAttachmentInputs,
+  uploadChatAttachment,
+  type PendingAttachment,
+} from "./chatAttachments";
 
 /* ─── Attachment rendering ─── */
 
@@ -146,13 +155,38 @@ const ThreadList: React.FC<{
   refreshKey: number;
   selectedUuid: string | null;
   onSelect: (uuid: string) => void;
-}> = ({ refreshKey, selectedUuid, onSelect }) => {
+  onDeleted: (uuid: string) => void;
+}> = ({ refreshKey, selectedUuid, onSelect, onDeleted }) => {
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [commitArchive, isArchiving] =
+    useMutation<ArchiveChatThreadMutationType>(ArchiveChatThreadMutation);
   const data = useLazyLoadQuery<ChatThreadsQueryType>(
     ChatThreadsQuery,
     {},
     { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
   const threads = (data?.chatThreads ?? []).filter(Boolean);
+
+  const onDelete = (uuid: string, name: string) => {
+    if (
+      !window.confirm(
+        `Delete the chat with ${name}? It's removed from your list but recoverable — messages aren't purged.`,
+      )
+    )
+      return;
+    commitArchive({
+      variables: { input: { threadUuid: uuid, archived: true } },
+      onCompleted: (res) => {
+        if (res.archiveChatThread) {
+          showAlert("Chat deleted.", "success");
+          onDeleted(uuid);
+        } else {
+          showAlert("Couldn't delete chat.", "error");
+        }
+      },
+      onError: (err) => showAlert(`Delete failed: ${err.message}`, "error"),
+    });
+  };
   if (threads.length === 0) {
     return (
       <div className="p-6 text-center" style={{ color: "rgba(255,255,255,0.55)" }}>
@@ -167,57 +201,63 @@ const ThreadList: React.FC<{
     <div className="overflow-y-auto" style={{ maxHeight: "calc(100vh - 180px)" }}>
       {threads.map((t) => {
         const active = t.uuid === selectedUuid;
+        const name = String(t.ambassadorName ?? "this BA");
         return (
-          <button
+          <div
             key={t.uuid}
-            onClick={() => onSelect(String(t.uuid))}
-            className="w-full text-left px-4 py-3 flex items-center gap-3 transition"
+            className="group w-full px-4 py-3 flex items-center gap-3 transition"
             style={{
               background: active ? "var(--spark-surface-2)" : "transparent",
               borderBottom: "1px solid var(--spark-border)",
             }}
           >
-            <span
-              className="spark-avatar"
-              style={{
-                width: 36,
-                height: 36,
-                fontSize: "0.8rem",
-                background: t.kind === "job" ? "rgba(95,184,239,0.15)" : undefined,
-              }}
+            <button
+              onClick={() => onSelect(String(t.uuid))}
+              className="flex-1 min-w-0 text-left flex items-center gap-3"
+              style={{ background: "transparent", border: "none" }}
             >
-              {t.kind === "job"
-                ? initials(String(t.jobName ?? "Job"))
-                : initials(String(t.ambassadorName ?? "BA"))}
-            </span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold text-sm truncate">
-                  {t.ambassadorName ?? "Ambassador"}
-                </p>
-                <span
-                  className="mono text-[9px]"
-                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
-                >
-                  {fmtRelative(t.lastMessageAt)}
-                </span>
-              </div>
-              <p
-                className="text-xs truncate mt-0.5"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+              <span
+                className="spark-avatar"
+                style={{
+                  width: 36,
+                  height: 36,
+                  fontSize: "0.8rem",
+                  background: t.kind === "job" ? "rgba(95,184,239,0.15)" : undefined,
+                }}
               >
-                {t.kind === "job" && t.jobName ? (
-                  <span style={{ color: "var(--spark-sky, #5fb8ef)" }}>
-                    {t.jobName} ·{" "}
+                {t.kind === "job"
+                  ? initials(String(t.jobName ?? "Job"))
+                  : initials(String(t.ambassadorName ?? "BA"))}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-sm truncate">
+                    {t.ambassadorName ?? "Ambassador"}
+                  </p>
+                  <span
+                    className="mono text-[9px]"
+                    style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+                  >
+                    {fmtRelative(t.lastMessageAt)}
                   </span>
-                ) : null}
-                {t.lastMessageSenderIsAmbassador ? "" : "You: "}
-                {t.lastMessagePreview ?? "No messages yet"}
-              </p>
-            </div>
+                </div>
+                <p
+                  className="text-xs truncate mt-0.5"
+                  style={{ color: "rgba(255,255,255,0.55)" }}
+                >
+                  {t.kind === "job" && t.jobName ? (
+                    <span style={{ color: "var(--spark-sky, #5fb8ef)" }}>
+                      {t.jobName} ·{" "}
+                    </span>
+                  ) : null}
+                  {t.lastMessageSenderIsAmbassador ? "" : "You: "}
+                  {t.lastMessagePreview ?? "No messages yet"}
+                </p>
+              </div>
+            </button>
             {t.unreadForAdmin > 0 ? (
               <span
-                className="mono text-[10px] rounded-full px-2 py-0.5"
+                className="mono text-[10px] rounded-full px-2 py-0.5 shrink-0"
                 style={{
                   background: "var(--spark-lime)",
                   color: "#0a0d09",
@@ -228,7 +268,22 @@ const ThreadList: React.FC<{
                 {t.unreadForAdmin > 99 ? "99+" : t.unreadForAdmin}
               </span>
             ) : null}
-          </button>
+            {/* Trash / delete (soft delete) — appears on row hover. */}
+            <button
+              onClick={() => onDelete(String(t.uuid), name)}
+              disabled={isArchiving}
+              title="Delete chat"
+              aria-label={`Delete chat with ${name}`}
+              className="shrink-0 rounded-lg px-2 py-1 text-xs transition opacity-0 group-hover:opacity-100 focus:opacity-100"
+              style={{
+                background: "transparent",
+                color: "rgba(255,90,42,0.95)",
+                border: "1px solid rgba(255,90,42,0.4)",
+              }}
+            >
+              🗑
+            </button>
+          </div>
         );
       })}
     </div>
@@ -255,6 +310,9 @@ const Conversation: React.FC<{
     MarkChatThreadReadMutation,
   );
   const [composer, setComposer] = useState("");
+  const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   // Mark-read on first paint when unread > 0. The ref keeps us from
@@ -307,14 +365,44 @@ const Conversation: React.FC<{
     );
   }
 
+  const onPickFiles = async (files: File[]) => {
+    setUploading(true);
+    for (const file of files) {
+      try {
+        const att = await uploadChatAttachment(file, String(thread.uuid));
+        setAttachments((prev) => [...prev, att]);
+      } catch (e) {
+        showAlert(
+          `Couldn't attach ${file.name}: ${(e as Error).message}`,
+          "error",
+        );
+      }
+    }
+    setUploading(false);
+  };
+
+  const removeAttachment = (localId: string) =>
+    setAttachments((prev) => prev.filter((a) => a.localId !== localId));
+
   const send = () => {
     const body = composer.trim();
-    if (!body || isSending) return;
+    // Body is optional when at least one attachment is present (send a
+    // photo/PDF with no caption) — mirrors the server + broadcast rule.
+    if ((!body && attachments.length === 0) || isSending || uploading) return;
     commitSend({
-      variables: { input: { threadUuid: String(thread.uuid), body } },
+      variables: {
+        input: {
+          threadUuid: String(thread.uuid),
+          body: body || null,
+          attachments: attachments.length
+            ? toAttachmentInputs(attachments)
+            : null,
+        },
+      },
       onCompleted: (res) => {
         if (res.sendChatMessage) {
           setComposer("");
+          setAttachments([]);
           setRefreshKey((k) => k + 1);
           onSent();
         } else {
@@ -406,42 +494,128 @@ const Conversation: React.FC<{
 
       {/* Composer */}
       <div
-        className="px-5 py-3 flex items-end gap-2"
+        className="px-5 py-3"
         style={{ borderTop: "1px solid var(--spark-border)" }}
       >
-        <textarea
-          value={composer}
-          onChange={(e) => setComposer(e.target.value)}
-          onKeyDown={(e) => {
-            // Enter to send; Shift+Enter for newline. Matches Slack
-            // and most chat conventions.
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              send();
+        {/* Pending attachment chips */}
+        {attachments.length > 0 ? (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {attachments.map((a) => (
+              <span
+                key={a.localId}
+                className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-xs"
+                style={{
+                  background: "var(--spark-bg)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                {a.kind === "image" && a.previewUrl ? (
+                  <img
+                    src={a.previewUrl}
+                    alt={a.originalFilename}
+                    style={{ width: 22, height: 22, objectFit: "cover", borderRadius: 4 }}
+                  />
+                ) : (
+                  <span>📎</span>
+                )}
+                <span className="truncate" style={{ maxWidth: 160 }}>
+                  {a.originalFilename}
+                </span>
+                {a.byteSize ? (
+                  <span style={{ color: "rgba(255,255,255,0.4)" }}>
+                    {humanSize(a.byteSize)}
+                  </span>
+                ) : null}
+                <button
+                  onClick={() => removeAttachment(a.localId)}
+                  style={{ color: "rgba(255,255,255,0.6)" }}
+                  aria-label="Remove attachment"
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="flex items-end gap-2">
+          {/* Attach image / PDF */}
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept={CHAT_ATTACHMENT_ACCEPT}
+            style={{ display: "none" }}
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                const picked = Array.from(e.target.files);
+                e.target.value = "";
+                void onPickFiles(picked);
+              }
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading || isSending}
+            title="Attach image or PDF"
+            aria-label="Attach image or PDF"
+            className="rounded-xl text-sm font-semibold transition shrink-0"
+            style={{
+              width: 42,
+              height: 42,
+              background: "transparent",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+              opacity: uploading || isSending ? 0.5 : 1,
+            }}
+          >
+            {uploading ? "…" : "📎"}
+          </button>
+
+          <textarea
+            value={composer}
+            onChange={(e) => setComposer(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter to send; Shift+Enter for newline. Matches Slack
+              // and most chat conventions.
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send();
+              }
+            }}
+            placeholder="Type a message — Enter to send, Shift+Enter for newline"
+            rows={2}
+            className="flex-1 rounded-xl px-3 py-2 text-sm leading-relaxed"
+            style={{
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+              resize: "none",
+            }}
+          />
+          <button
+            onClick={send}
+            disabled={
+              isSending ||
+              uploading ||
+              (!composer.trim() && attachments.length === 0)
             }
-          }}
-          placeholder="Type a message — Enter to send, Shift+Enter for newline"
-          rows={2}
-          className="flex-1 rounded-xl px-3 py-2 text-sm leading-relaxed"
-          style={{
-            background: "var(--spark-bg)",
-            border: "1px solid var(--spark-border)",
-            color: "var(--spark-text)",
-            resize: "none",
-          }}
-        />
-        <button
-          onClick={send}
-          disabled={isSending || !composer.trim()}
-          className="px-4 py-2.5 rounded-xl text-sm font-semibold transition"
-          style={{
-            background: "var(--spark-lime)",
-            color: "#0a0d09",
-            opacity: isSending || !composer.trim() ? 0.5 : 1,
-          }}
-        >
-          {isSending ? "Sending…" : "Send"}
-        </button>
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold transition"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              opacity:
+                isSending ||
+                uploading ||
+                (!composer.trim() && attachments.length === 0)
+                  ? 0.5
+                  : 1,
+            }}
+          >
+            {isSending ? "Sending…" : "Send"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -533,6 +707,12 @@ const SparkChatPage: React.FC = () => {
                 refreshKey={refreshKey}
                 selectedUuid={selectedUuid}
                 onSelect={setSelectedUuid}
+                onDeleted={(uuid) => {
+                  // Clear the conversation pane if the open thread was the
+                  // one deleted, then refetch so the row drops out.
+                  setSelectedUuid((cur) => (cur === uuid ? null : cur));
+                  setRefreshKey((k) => k + 1);
+                }}
               />
             </Suspense>
           </div>

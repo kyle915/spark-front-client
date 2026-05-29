@@ -36,10 +36,13 @@ function fmtWhen(iso: string | null): string {
 
 const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const { showAlert } = useAlertStore();
+  // Bumped after create/delete so the list re-queries the network and
+  // the new/removed row shows immediately — no manual page refresh.
+  const [refreshKey, setRefreshKey] = useState(0);
   const data = useLazyLoadQuery<AnnouncementsAdminQueryType>(
     AnnouncementsAdminQuery,
     { filters: { tenantId } },
-    { fetchPolicy: "store-and-network" },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
   const rows = useMemo<Row[]>(
     () =>
@@ -89,6 +92,8 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         if (resp.createAnnouncement.success) {
           showAlert("Announcement sent to all BAs.", "success");
           reset();
+          // Refetch so the new announcement appears without a refresh.
+          setRefreshKey((k) => k + 1);
         } else {
           showAlert(
             resp.createAnnouncement.message || "Send failed.",
@@ -114,6 +119,8 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             );
           } else {
             showAlert("Announcement deleted.", "success");
+            // Refetch so the deleted row drops out without a refresh.
+            setRefreshKey((k) => k + 1);
           }
         },
         onError: () => showAlert("Delete failed.", "error"),

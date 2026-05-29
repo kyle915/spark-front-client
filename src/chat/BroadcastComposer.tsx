@@ -25,15 +25,6 @@ import {
  * can only ever reach this brand's BAs.
  */
 
-function baName(u: {
-  firstName: string;
-  lastName: string;
-  email: string;
-}): string {
-  const full = [u.firstName, u.lastName].filter(Boolean).join(" ").trim();
-  return full || u.email || "Ambassador";
-}
-
 const RecipientPicker: React.FC<{
   tenantId: string;
   selectedBAs: Set<string>;
@@ -48,10 +39,14 @@ const RecipientPicker: React.FC<{
   onToggleGroup,
 }) => {
   const [search, setSearch] = useState("");
+  // chatRecipientAmbassadors is tenant-scoped by BA event history (the
+  // same reachability rule the broadcast enforces), so the picker lists
+  // exactly the BAs a broadcast can reach — fixing "No ambassadors
+  // found". Groups stay scoped via filters.tenantId.
   const data = useLazyLoadQuery<ChatRecipientsQueryType>(
     ChatRecipientsQuery,
     {
-      ambassadorFilters: { tenantId, isActive: true },
+      tenantId,
       groupFilters: {},
     },
     { fetchPolicy: "store-and-network" },
@@ -63,15 +58,19 @@ const RecipientPicker: React.FC<{
     NonNullable<ChatRecipientsQueryType["response"]["ambassadorGroups"]>["edges"][number]
   >["node"][];
 
-  const bas = (data?.ambassadors?.edges ?? [])
-    .map((e) => e?.node)
-    .filter(Boolean) as NonNullable<
-    NonNullable<ChatRecipientsQueryType["response"]["ambassadors"]>["edges"][number]
-  >["node"][];
+  const bas = (data?.chatRecipientAmbassadors ?? []).filter(
+    Boolean,
+  ) as NonNullable<
+    ChatRecipientsQueryType["response"]["chatRecipientAmbassadors"][number]
+  >[];
 
   const q = search.trim().toLowerCase();
   const filteredBAs = q
-    ? bas.filter((b) => baName(b.user).toLowerCase().includes(q))
+    ? bas.filter(
+        (b) =>
+          b.name.toLowerCase().includes(q) ||
+          (b.email ?? "").toLowerCase().includes(q),
+      )
     : bas;
   const filteredGroups = q
     ? groups.filter((g) => g.name.toLowerCase().includes(q))
@@ -155,7 +154,7 @@ const RecipientPicker: React.FC<{
                   checked={checked}
                   onChange={() => onToggleBA(String(b.uuid))}
                 />
-                <span className="flex-1">{baName(b.user)}</span>
+                <span className="flex-1">{b.name}</span>
               </label>
             );
           })
