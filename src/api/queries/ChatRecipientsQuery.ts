@@ -2,29 +2,28 @@ import { graphql } from "react-relay";
 
 /**
  * Recipient picker source for the broadcast composer: the active
- * tenant's ambassadors AND ambassador groups in one round-trip. Both
- * lists are tenant-scoped via filters.tenantId (the same scoping the
- * recap pickers use), so the composer can never target another brand's
- * BAs/groups.
+ * tenant's BAs AND ambassador groups in one round-trip.
+ *
+ * Ambassadors come from `chatRecipientAmbassadors`, NOT the generic
+ * `ambassadors` query. The generic query scopes BAs by TenantedUser
+ * membership — BAs are linked to a brand by their worked events, not a
+ * TenantedUser row, so it returned nothing ("No ambassadors found").
+ * `chatRecipientAmbassadors` scopes by event history in the tenant — the
+ * SAME reachability rule broadcastChatMessage enforces — so the picker
+ * lists exactly the BAs a broadcast can actually reach. It also takes a
+ * server-side `q` search term (name/email). Groups stay tenant-scoped via
+ * filters.tenantId.
  */
 export const ChatRecipientsQuery = graphql`
   query ChatRecipientsQuery(
-    $ambassadorFilters: AmbassadorFiltersInput
+    $tenantId: ID
+    $q: String
     $groupFilters: AmbassadorGroupFiltersInput
   ) {
-    ambassadors(filters: $ambassadorFilters, first: 500) {
-      edges {
-        node {
-          id
-          uuid
-          isActive
-          user {
-            firstName
-            lastName
-            email
-          }
-        }
-      }
+    chatRecipientAmbassadors(tenantId: $tenantId, q: $q) {
+      uuid
+      name
+      email
     }
     ambassadorGroups(filters: $groupFilters, first: 200) {
       edges {
