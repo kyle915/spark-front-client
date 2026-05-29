@@ -1463,6 +1463,7 @@ input CreateCustomRecapInput {
   locationId: ID = null
   stateId: ID = null
   ambassadorId: ID = null
+  externalBaName: String = null
   customFieldValues: [CustomFieldValueInput!] = null
 }
 
@@ -1998,6 +1999,7 @@ type CustomRecap implements Node {
   event: Event!
   ambassadorId: ID
   ambassador: Ambassador
+  externalBaName: String
   jobId: ID
   job: Job
   retailerId: ID
@@ -3591,6 +3593,7 @@ type BroadcastChatMessageResult {
 }
 
 type ChatRecipient {
+  id: ID!
   uuid: String!
   name: String!
   email: String!

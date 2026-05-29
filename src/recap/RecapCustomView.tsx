@@ -757,16 +757,50 @@ const RecapCustomView = () => {
             >
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-base-200 flex items-center justify-center font-medium uppercase">
-                    {recap.ambassador?.user?.firstName?.[0]}
-                  </div>
-                  <div>
-                    <p className="font-medium">
-                      {recap.ambassador?.user?.firstName}{" "}
-                      {recap.ambassador?.user?.lastName}
-                    </p>
-                    <p className="text-sm text-base-content/60">Ambassador</p>
-                  </div>
+                  {/* Ambassador if linked, else the free-text external BA
+                      name (sub-contractor / not-yet-onboarded worker). A
+                      linked Ambassador always wins (set server-side), so we
+                      only fall back to externalBaName when there's no FK. */}
+                  {recap.ambassador ? (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-base-200 flex items-center justify-center font-medium uppercase">
+                        {recap.ambassador?.user?.firstName?.[0]}
+                      </div>
+                      <div>
+                        <p className="font-medium">
+                          {recap.ambassador?.user?.firstName}{" "}
+                          {recap.ambassador?.user?.lastName}
+                        </p>
+                        <p className="text-sm text-base-content/60">
+                          Ambassador
+                        </p>
+                      </div>
+                    </>
+                  ) : recap.externalBaName ? (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-base-200 flex items-center justify-center font-medium uppercase">
+                        {recap.externalBaName[0]}
+                      </div>
+                      <div>
+                        <p className="font-medium">{recap.externalBaName}</p>
+                        <p className="text-sm text-base-content/60">
+                          Ambassador (external)
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-base-200 flex items-center justify-center font-medium uppercase">
+                        —
+                      </div>
+                      <div>
+                        <p className="font-medium">—</p>
+                        <p className="text-sm text-base-content/60">
+                          Ambassador
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-base-100/30">
                   <span className="text-sm">Job</span>

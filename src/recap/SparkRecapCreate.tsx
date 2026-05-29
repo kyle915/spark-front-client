@@ -2,8 +2,10 @@ import { Suspense, useDeferredValue, useEffect, useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { RecapEventOptionsQuery } from "@/api/queries/RecapEventOptionsQuery";
-import { AmbassadorSearchQuery } from "@/api/queries/AmbassadorSearchQuery";
-import type { AmbassadorSearchQuery as AmbassadorSearchQueryType } from "@/api/queries/__generated__/AmbassadorSearchQuery.graphql";
+import { RecapBaRosterQuery } from "@/api/queries/RecapBaRosterQuery";
+import type { RecapBaRosterQuery as RecapBaRosterQueryType } from "@/api/queries/__generated__/RecapBaRosterQuery.graphql";
+import { CreateAmbassadorWithUserMutation } from "@/api/mutations/CreateAmbassadorWithUserMutation";
+import type { CreateAmbassadorWithUserMutation as CreateAmbassadorWithUserMutationType } from "@/api/mutations/__generated__/CreateAmbassadorWithUserMutation.graphql";
 import { CustomRecapTemplatesWithFieldsQuery } from "@/api/queries/CustomRecapTemplatesWithFieldsQuery";
 import type { CustomRecapTemplatesWithFieldsQuery as CustomRecapTemplatesWithFieldsQueryType } from "@/api/queries/__generated__/CustomRecapTemplatesWithFieldsQuery.graphql";
 import { CreateRecapMutation } from "@/api/mutations/CreateRecapMutation";
@@ -242,6 +244,11 @@ export default function SparkRecapCreate() {
   // stored alongside so we render a "selected BA" chip without re-querying.
   const [ambassadorOverride, setAmbassadorOverride] = useState("");
   const [ambassadorDisplayName, setAmbassadorDisplayName] = useState("");
+  // Free-text "external" BA name for a worker who isn't in Spark yet
+  // (sub-contractor, one-off helper, not-yet-onboarded BA). Set instead
+  // of ambassadorOverride; submitted as externalBaName. A picked/created
+  // real BA always clears this (ambassador wins server-side too).
+  const [externalBaName, setExternalBaName] = useState("");
   const [fillingForOther, setFillingForOther] = useState(false);
 
   const [commit, inFlight] = useMutation<CreateRecapMutationType>(CreateRecapMutation);
@@ -388,6 +395,12 @@ export default function SparkRecapCreate() {
           name: `${selectedEvent.request?.retailer?.name ?? selectedEvent.name} recap`,
           ambassadorId:
             isAdmin && fillingForOther ? ambassadorOverride || null : null,
+          // Write-in name when no real BA was picked. The backend ignores
+          // it if ambassadorId is also set (ambassador wins).
+          externalBaName:
+            isAdmin && fillingForOther && !ambassadorOverride
+              ? externalBaName.trim() || null
+              : null,
           fillingForAmbassador: isAdmin && fillingForOther,
           customFieldValues,
           files,
@@ -430,6 +443,10 @@ export default function SparkRecapCreate() {
           eventId: selectedEvent.id,
           name: `${selectedEvent.request?.retailer?.name ?? selectedEvent.name} recap`,
           ambassadorId: isAdmin && fillingForOther ? ambassadorOverride || null : null,
+          externalBaName:
+            isAdmin && fillingForOther && !ambassadorOverride
+              ? externalBaName.trim() || null
+              : null,
           fillingForAmbassador: isAdmin && fillingForOther,
           totalCansSold: num(totalCansSold),
           totalPacksSold: num(totalPacksSold),
@@ -669,6 +686,7 @@ export default function SparkRecapCreate() {
                 // changes their mind.
                 setAmbassadorOverride("");
                 setAmbassadorDisplayName("");
+                setExternalBaName("");
               }
             }} />
             <span className="text-sm">Yes, I'm submitting this on behalf of an ambassador.</span>
@@ -684,15 +702,26 @@ export default function SparkRecapCreate() {
               }
             >
               <AmbassadorPicker
+                tenantId={tenantId || null}
                 selectedId={ambassadorOverride}
                 selectedName={ambassadorDisplayName}
+                externalName={externalBaName}
                 onSelect={(id, name) => {
                   setAmbassadorOverride(id);
                   setAmbassadorDisplayName(name);
+                  setExternalBaName("");
+                }}
+                onUseExternal={(name) => {
+                  // Write-in: record the typed name, drop any real-BA
+                  // selection so only externalBaName is submitted.
+                  setExternalBaName(name);
+                  setAmbassadorOverride("");
+                  setAmbassadorDisplayName("");
                 }}
                 onClear={() => {
                   setAmbassadorOverride("");
                   setAmbassadorDisplayName("");
+                  setExternalBaName("");
                 }}
               />
             </Suspense>
@@ -1087,40 +1116,124 @@ const CustomTemplateFields: React.FC<{
   );
 };
 
-// Type-ahead picker for the "filling for a BA" toggle. Searches
-// the current tenant's active ambassadors as the admin types
-// (backend `activeAmbassadors` resolver is tenant-scoped). On pick,
-// hands the uuid back up + caches the display name so the chip can
-// render without an extra round-trip. Empty query string returns
-// the top N active BAs so the admin sees something useful even
-// before they start typing.
+// Type-ahead picker for the "filling for a BA" toggle.
+//
+// Lists the ACTIVE tenant's BA roster via `chatRecipientAmbassadors`
+// (scoped by AmbassadorEvent history) — NOT activeAmbassadors/ambassadors,
+// which scope by TenantedUser membership and return nothing for BAs (they
+// join a brand through worked events, not a TenantedUser row). That empty
+// result was the "NO MATCHES for every name" bug.
+//
+// When nothing matches the typed text the picker still offers two ways
+// forward, so the admin is never stuck:
+//   • "Use '<name>'" — record a free-text external BA (externalBaName),
+//     for sub-contractors / one-off helpers not in Spark.
+//   • "+ Create BA '<name>'" — create the Ambassador in the active tenant
+//     (createAmbassadorWithUser) and select it. Email is required because
+//     this codebase has no login-less Ambassador; admins without one use
+//     the write-in instead.
+//
+// On pick it hands the Relay global id up (resolve_id_to_int needs a
+// global id / digit string, not a uuid) + caches the display name.
 const AmbassadorPicker: React.FC<{
+  tenantId: string | null;
   selectedId: string;
   selectedName: string;
+  externalName: string;
   onSelect: (id: string, name: string) => void;
+  onUseExternal: (name: string) => void;
   onClear: () => void;
-}> = ({ selectedId, selectedName, onSelect, onClear }) => {
+}> = ({
+  tenantId,
+  selectedId,
+  selectedName,
+  externalName,
+  onSelect,
+  onUseExternal,
+  onClear,
+}) => {
   const [q, setQ] = useState("");
   // Defer the query var so typing keeps focus — same fix as the event
   // search: the input tracks `q` immediately, the suspending refetch runs
   // off `deferredQ` as a transition (no unmount → no focus loss).
   const deferredQ = useDeferredValue(q);
+  const showAlert = useAlertStore((s) => s.showAlert);
 
-  const data = useLazyLoadQuery<AmbassadorSearchQueryType>(
-    AmbassadorSearchQuery,
-    { q: deferredQ, first: 8 },
+  // Inline create-BA: revealed by "+ Create BA"; email is required by the
+  // create mutation (no login-less Ambassador exists), so we collect it
+  // in a small field before firing.
+  const [creatingName, setCreatingName] = useState<string | null>(null);
+  const [newEmail, setNewEmail] = useState("");
+  const [createBa, creatingInFlight] =
+    useMutation<CreateAmbassadorWithUserMutationType>(
+      CreateAmbassadorWithUserMutation,
+    );
+
+  const data = useLazyLoadQuery<RecapBaRosterQueryType>(
+    RecapBaRosterQuery,
+    { q: deferredQ || null, tenantId },
     { fetchPolicy: "store-or-network" },
   );
 
   const matches = useMemo(
     () =>
-      (data?.activeAmbassadors?.edges ?? [])
-        .map((e) => e?.node)
-        .filter((n): n is NonNullable<typeof n> => Boolean(n)),
+      (data?.chatRecipientAmbassadors ?? []).filter(
+        (r): r is NonNullable<typeof r> => Boolean(r),
+      ),
     [data],
   );
 
-  if (selectedId && selectedName) {
+  const typed = q.trim();
+
+  const submitCreate = () => {
+    const name = (creatingName ?? "").trim();
+    const email = newEmail.trim();
+    if (!name) return;
+    if (!email) {
+      showAlert("Enter an email to create this BA.", "warning");
+      return;
+    }
+    // Split the typed name into first/last for the new User.
+    const parts = name.split(/\s+/);
+    const firstName = parts[0];
+    const lastName = parts.slice(1).join(" ") || null;
+    createBa({
+      variables: {
+        input: {
+          firstName,
+          lastName,
+          email,
+          // Active by default so the new BA is immediately usable on the
+          // recap; admin-created path skips the activation email.
+          isActive: true,
+        },
+      },
+      onCompleted: (res) => {
+        const created = res.createAmbassadorWithUser;
+        if (created?.success && created.ambassador?.id) {
+          const u = created.ambassador.user;
+          const display =
+            [u?.firstName, u?.lastName].filter(Boolean).join(" ").trim() ||
+            u?.email ||
+            name;
+          onSelect(String(created.ambassador.id), display);
+          setCreatingName(null);
+          setNewEmail("");
+          showAlert(`Created BA "${display}".`, "success");
+        } else {
+          showAlert(
+            created?.message ?? "Couldn't create the BA.",
+            "error",
+          );
+        }
+      },
+      onError: (err) => showAlert(`Create BA failed: ${err.message}`, "error"),
+    });
+  };
+
+  // Selected real BA OR write-in external name → show the chosen-state chip.
+  if ((selectedId && selectedName) || externalName.trim()) {
+    const isExternal = !selectedId && Boolean(externalName.trim());
     return (
       <div
         className="rounded-xl p-3 flex items-center justify-between gap-3"
@@ -1130,7 +1243,9 @@ const AmbassadorPicker: React.FC<{
         }}
       >
         <div>
-          <p className="display font-bold text-sm">{selectedName}</p>
+          <p className="display font-bold text-sm">
+            {isExternal ? externalName.trim() : selectedName}
+          </p>
           <p
             className="mono text-[10px] mt-0.5"
             style={{
@@ -1138,7 +1253,7 @@ const AmbassadorPicker: React.FC<{
               letterSpacing: "0.12em",
             }}
           >
-            BA SELECTED
+            {isExternal ? "EXTERNAL BA (NOT IN SPARK)" : "BA SELECTED"}
           </p>
         </div>
         <button
@@ -1167,26 +1282,129 @@ const AmbassadorPicker: React.FC<{
       />
       <div className="mt-3 max-h-72 overflow-y-auto space-y-1.5">
         {matches.length === 0 ? (
-          <p
-            className="mono text-[10px] py-2"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            {q ? "NO MATCHES" : "START TYPING TO SEARCH"}
-          </p>
+          typed ? (
+            // No roster match — offer the write-in + inline create so the
+            // admin is never blocked on a name Spark doesn't know yet.
+            <div className="space-y-1.5">
+              <p
+                className="mono text-[10px] py-1"
+                style={{
+                  letterSpacing: "0.18em",
+                  color: "rgba(255,255,255,0.45)",
+                }}
+              >
+                NO MATCHES
+              </p>
+              <button
+                type="button"
+                onClick={() => onUseExternal(typed)}
+                className="w-full text-left rounded-xl p-3"
+                style={{
+                  background: "var(--spark-surface-2)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                <p className="text-sm font-semibold">Use “{typed}”</p>
+                <p
+                  className="mono text-[10px] mt-0.5"
+                  style={{
+                    color: "rgba(255,255,255,0.5)",
+                    letterSpacing: "0.12em",
+                  }}
+                >
+                  RECORD AS EXTERNAL BA
+                </p>
+              </button>
+              {creatingName === typed ? (
+                <div
+                  className="rounded-xl p-3 space-y-2"
+                  style={{
+                    background: "var(--spark-surface-2)",
+                    border: "1px solid var(--spark-border)",
+                  }}
+                >
+                  <p className="text-sm font-semibold">Create “{typed}”</p>
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="BA email (required)"
+                    className={inputCls}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={submitCreate}
+                      disabled={creatingInFlight}
+                      className="mono text-[10px] px-3 py-1.5 rounded-full"
+                      style={{
+                        letterSpacing: "0.18em",
+                        background: "rgba(255,255,255,0.08)",
+                        border: "1px solid rgba(255,255,255,0.15)",
+                        opacity: creatingInFlight ? 0.5 : 1,
+                      }}
+                    >
+                      {creatingInFlight ? "CREATING…" : "CREATE & SELECT"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreatingName(null);
+                        setNewEmail("");
+                      }}
+                      className="mono text-[10px] px-3 py-1.5 rounded-full"
+                      style={{
+                        letterSpacing: "0.18em",
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      CANCEL
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreatingName(typed);
+                    setNewEmail("");
+                  }}
+                  className="w-full text-left rounded-xl p-3"
+                  style={{
+                    background: "var(--spark-surface-2)",
+                    border: "1px solid var(--spark-border)",
+                  }}
+                >
+                  <p className="text-sm font-semibold">+ Create BA “{typed}”</p>
+                  <p
+                    className="mono text-[10px] mt-0.5"
+                    style={{
+                      color: "rgba(255,255,255,0.5)",
+                      letterSpacing: "0.12em",
+                    }}
+                  >
+                    ADD TO THIS TENANT (EMAIL REQUIRED)
+                  </p>
+                </button>
+              )}
+            </div>
+          ) : (
+            <p
+              className="mono text-[10px] py-2"
+              style={{
+                letterSpacing: "0.18em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              START TYPING TO SEARCH
+            </p>
+          )
         ) : (
           matches.map((amb) => {
-            const fullName = [amb.user?.firstName, amb.user?.lastName]
-              .filter(Boolean)
-              .join(" ")
-              .trim();
-            const display = fullName || amb.user?.email || "(unnamed BA)";
+            const display = amb.name || amb.email || "(unnamed BA)";
             // Pass the Relay-encoded global id — backend's resolve_id_to_int
             // accepts globalIds or pure digit strings but NOT raw uuids.
-            // (Earlier version of this picker passed amb.uuid and every
-            // submit failed with "Ambassador not found".)
             const id = String(amb.id);
             return (
               <button
@@ -1200,7 +1418,7 @@ const AmbassadorPicker: React.FC<{
                 }}
               >
                 <p className="text-sm font-semibold">{display}</p>
-                {fullName && amb.user?.email && (
+                {amb.name && amb.email && (
                   <p
                     className="mono text-[10px] mt-0.5"
                     style={{
@@ -1208,7 +1426,7 @@ const AmbassadorPicker: React.FC<{
                       letterSpacing: "0.12em",
                     }}
                   >
-                    {amb.user.email}
+                    {amb.email}
                   </p>
                 )}
               </button>
