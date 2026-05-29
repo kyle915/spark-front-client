@@ -2108,6 +2108,7 @@ type CustomRecapFile implements Node {
   fileType: FileType!
   fileRecapCategory: FileRecapCategory
   url: String
+  displayUrl: String
 }
 
 type CustomRecapFileDetailResponse {
@@ -4607,6 +4608,7 @@ type RecapFile implements Node {
   fileType: FileType!
   fileRecapCategory: FileRecapCategory
   file: String
+  displayUrl: String
 }
 
 type RecapFileDetailResponse {

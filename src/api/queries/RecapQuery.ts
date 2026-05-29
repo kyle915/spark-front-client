@@ -123,6 +123,11 @@ export const RecapQuery = graphql`
         name
         approved
         file
+        # Browser-renderable URL. For HEIC uploads this is the
+        # server-converted .jpg sibling (a plain img works, with no
+        # in-browser HEIC decode or bucket-CORS dependency); otherwise
+        # it equals the file field.
+        displayUrl
         fileTypeId
         fileType {
           id

@@ -1737,8 +1737,18 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               </div>
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                 {allFiles.slice(0, 36).map((p, i) => {
-                  const kind = recapFileKind(p?.file);
-                  const url = recapFileUrlFresh(p?.file);
+                  // Prefer the backend `displayUrl` — for HEIC uploads it's
+                  // the server-converted .jpg sibling, so we render a plain
+                  // <img> with no in-browser HEIC decode / bucket-CORS
+                  // dependency. It's an absolute URL; recapFileUrlFresh
+                  // passes http(s) through untouched (just adds the cache-
+                  // buster). Falls back to `file` for older query results.
+                  // `kind` is computed from the chosen source so a converted
+                  // HEIC (now a .jpg) is treated as a normal image, and only
+                  // a still-unconverted .heic drops to the HeicImage path.
+                  const source = p?.displayUrl ?? p?.file;
+                  const kind = recapFileKind(source);
+                  const url = recapFileUrlFresh(source);
                   const labelByKind: Record<typeof kind, string> = {
                     image: "",
                     heic: "HEIC",
