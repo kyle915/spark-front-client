@@ -345,6 +345,22 @@ input AssignAmbassadorToJobInput {
   ambassadorId: ID!
 }
 
+input BriefingTemplateAttachmentInput {
+  clientMutationId: ID = null
+  name: String!
+  url: String!
+  contentType: String = null
+  size: Int = null
+}
+
+input SetJobBriefingInput {
+  clientMutationId: ID = null
+  jobId: ID!
+  title: String = null
+  body: String = null
+  attachments: [BriefingTemplateAttachmentInput!] = null
+}
+
 input AmbassadorJobFiltersInput {
   clientMutationId: ID = null
   tenantId: ID = null
@@ -2980,6 +2996,30 @@ type LocationPingType {
   eventName: String!
 }
 
+type JobBriefingAttachment {
+  uuid: String!
+  name: String!
+  url: String!
+  contentType: String!
+  size: Int
+  createdAt: String!
+}
+
+type JobBriefingPayload {
+  title: String!
+  body: String!
+  templateUuid: String
+  attachments: [JobBriefingAttachment!]!
+}
+
+type JobBriefingResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  jobUuid: String
+  title: String
+}
+
 type Job implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
@@ -3007,6 +3047,7 @@ type Job implements Node {
   attendances: [Attendance!]!
   ambassadorJobs: [AmbassadorJob!]!
   applied: Boolean!
+  briefing: JobBriefingPayload!
 }
 
 type JobCountableConnection {
@@ -3600,6 +3641,7 @@ type Mutation {
   inviteAmbassadorsToJob(input: InviteAmbassadorsToJobInput!): InviteAmbassadorsToJobResponse!
   declineAmbassadorJob(input: DeclineAmbassadorJobInput!): AmbassadorJobDetailResponse!
   assignAmbassadorToJob(input: AssignAmbassadorToJobInput!): JobLifecycleResponse!
+  setJobBriefing(input: SetJobBriefingInput!): JobBriefingResponse!
   applyAmbassadorEvent(eventId: ID!, ambassadorId: ID = null): ApplyAmbassadorEventResponse!
   applyAmbassadorJob(jobId: ID!, acceptedTerms: Boolean! = false): ApplyAmbassadorJobResponse!
   createPublicAmbassador(input: CreatePublicAmbassadorInput!): PublicAmbassadorCreationResponse!

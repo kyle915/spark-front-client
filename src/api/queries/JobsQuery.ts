@@ -50,6 +50,11 @@ export const JobsQuery = graphql`
           }
           description
           address
+          briefing {
+            title
+            body
+            templateUuid
+          }
         }
       }
     }
