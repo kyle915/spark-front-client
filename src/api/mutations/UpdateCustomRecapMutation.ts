@@ -23,6 +23,22 @@ export const UpdateCustomRecapMutation = graphql`
         id
         uuid
         name
+        # Echo back the scalars the inline editor can change so the Relay
+        # store reflects the saved truth without a hard reload. Before this,
+        # the response omitted usedCorpoCard / ambassador / externalBaName /
+        # fillingForAmbassador, so the store kept the stale pre-save values
+        # (the "Corporate Card reverts to No" bug) until the page reloaded.
+        usedCorpoCard
+        fillingForAmbassador
+        externalBaName
+        ambassador {
+          id
+          user {
+            id
+            firstName
+            lastName
+          }
+        }
         customField {
           id
           name
