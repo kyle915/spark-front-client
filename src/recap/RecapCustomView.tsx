@@ -12,6 +12,7 @@ import type { DeleteCustomRecapMutation as DeleteCustomRecapMutationType } from 
 import { DeleteCustomRecapFileMutation } from "@/api/mutations/DeleteCustomRecapFileMutation";
 import type { DeleteCustomRecapFileMutation as DeleteCustomRecapFileMutationType } from "@/api/mutations/__generated__/DeleteCustomRecapFileMutation.graphql";
 import { RecapUploader } from "./RecapUploader";
+import { buildCustomFieldValuesPayload } from "./customRecapSave";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -256,13 +257,10 @@ const RecapCustomView = () => {
     const allFields = customFieldsBySection.flatMap(
       (section) => section.fields,
     );
-    const customFieldValues = allFields
-      .filter((f): f is NonNullable<typeof f> => Boolean(f))
-      .map((field) => ({
-        customFieldId: field.id as string,
-        customFieldValueId: (field.customFieldValueId as string | null) ?? null,
-        value: editedValues[String(field.id)] ?? field.value ?? "",
-      }));
+    const customFieldValues = buildCustomFieldValuesPayload(
+      allFields,
+      editedValues,
+    );
 
     commitUpdateCustomRecap({
       variables: {
