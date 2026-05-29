@@ -32,6 +32,18 @@ import {
 } from "lucide-react";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import { useAlertStore } from "@/store/alertStore";
+import { recapFileUrl } from "@/utils/recapFileUrl";
+
+// Custom-field type → control kind. Field-type names are lowercase by
+// convention (text / number / image / longtext); match case-insensitively
+// and treat anything unknown as text. Mirrors SparkRecapCreate.fieldKind so
+// the view and the create form agree on what an "image" field is.
+function customFieldKind(typeName: string | null | undefined): "image" | "other" {
+  const name = (typeName ?? "").toLowerCase();
+  if (name.includes("image") || name.includes("photo") || name.includes("img"))
+    return "image";
+  return "other";
+}
 
 type HeifDecodedImage = {
   get_width: () => number;
@@ -909,6 +921,78 @@ const RecapCustomView = () => {
                     const displayValue = isEditingValues
                       ? (editedValues[fieldId] ?? field.value ?? "")
                       : (field.value ?? "");
+                    const kind = customFieldKind(
+                      field.customFieldType?.name,
+                    );
+
+                    // ── IMAGE field ────────────────────────────────
+                    // The field's value is a GCS blob path (or full URL);
+                    // recapFileUrl() resolves it to something <img src>
+                    // can load. In read mode show the image (or a dash);
+                    // in edit mode show it plus an upload/replace + clear
+                    // control. Uploading writes the new blob path into
+                    // editedValues so the existing saveValues mutation
+                    // persists it as this field's CustomFieldValue —
+                    // exactly mirroring how SparkRecapCreate captures
+                    // image fields via the GCS upload flow.
+                    if (kind === "image") {
+                      const imgSrc = displayValue
+                        ? recapFileUrl(displayValue)
+                        : "";
+                      return (
+                        <div
+                          key={field.id}
+                          className="border border-base-100/30 rounded-xl p-4 space-y-3 bg-base-200/20 shadow-sm transition hover:border-primary/20 xl:col-span-2"
+                        >
+                          <p className="text-[11px] uppercase font-bold text-base-content/50 tracking-wider">
+                            {field.name}
+                          </p>
+                          {imgSrc ? (
+                            <img
+                              src={imgSrc}
+                              alt={field.name ?? "Field image"}
+                              className="max-h-64 w-auto rounded-lg border border-base-100/30 object-contain bg-base-200/40"
+                            />
+                          ) : (
+                            <p className="text-sm text-base-content/40 italic">
+                              No image
+                            </p>
+                          )}
+                          {isEditingValues && recap.uuid && (
+                            <div className="flex flex-wrap items-center gap-2 pt-1">
+                              <RecapUploader
+                                recapUuid={recap.uuid}
+                                category="receipt"
+                                onUploaded={(blobName) =>
+                                  setEditedValues((prev) => ({
+                                    ...prev,
+                                    [fieldId]: blobName,
+                                  }))
+                                }
+                              />
+                              {displayValue && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setEditedValues((prev) => ({
+                                      ...prev,
+                                      [fieldId]: "",
+                                    }))
+                                  }
+                                  className="btn btn-sm btn-ghost btn-error gap-1"
+                                  title="Remove the image from this field"
+                                >
+                                  <XIcon className="w-4 h-4" />
+                                  Clear
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    // ── TEXT / NUMBER / LONGTEXT field ─────────────
                     const isLongText =
                       displayValue && displayValue.length > 50;
                     // Render a multiline textarea for long values
