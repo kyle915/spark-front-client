@@ -1135,7 +1135,7 @@ const CustomTemplateFields: React.FC<{
 //
 // On pick it hands the Relay global id up (resolve_id_to_int needs a
 // global id / digit string, not a uuid) + caches the display name.
-const AmbassadorPicker: React.FC<{
+export const AmbassadorPicker: React.FC<{
   tenantId: string | null;
   selectedId: string;
   selectedName: string;

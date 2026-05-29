@@ -11,11 +11,15 @@ import { DeleteCustomRecapMutation } from "@/api/mutations/DeleteCustomRecapMuta
 import type { DeleteCustomRecapMutation as DeleteCustomRecapMutationType } from "@/api/mutations/__generated__/DeleteCustomRecapMutation.graphql";
 import { DeleteCustomRecapFileMutation } from "@/api/mutations/DeleteCustomRecapFileMutation";
 import type { DeleteCustomRecapFileMutation as DeleteCustomRecapFileMutationType } from "@/api/mutations/__generated__/DeleteCustomRecapFileMutation.graphql";
+import { GenerateCustomRecapPdfMutation } from "@/api/mutations/GenerateCustomRecapPdfMutation";
+import type { GenerateCustomRecapPdfMutation as GenerateCustomRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateCustomRecapPdfMutation.graphql";
 import { RecapUploader } from "./RecapUploader";
+import { AmbassadorPicker } from "./SparkRecapCreate";
 import { buildCustomFieldValuesPayload } from "./customRecapSave";
+import { useAuthStore } from "@/store/authStore";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { formatDate } from "@/utils";
 import {
   ArrowLeftIcon,
@@ -170,8 +174,28 @@ const RecapCustomView = () => {
   // "Corporate Card Used" is a typed boolean on CustomRecap (not a custom
   // field), so it needs its own working-copy state to be editable.
   const [editedUsedCorpoCard, setEditedUsedCorpoCard] = useState(false);
+  // ----- Ambassador / "filling for BA" inline edit -----
+  // Mirrors SparkRecapCreate's filling-for flow. editedAmbassadorId holds
+  // the picked/inline-created Ambassador's Relay global id (sent as
+  // ambassadorId); editedAmbassadorName is its display label for the
+  // picker chip; editedExternalBaName is the free-text write-in;
+  // editedFillingForAmbassador is the typed boolean. All seeded from the
+  // recap on enter-edit.
+  const [editedAmbassadorId, setEditedAmbassadorId] = useState("");
+  const [editedAmbassadorName, setEditedAmbassadorName] = useState("");
+  const [editedExternalBaName, setEditedExternalBaName] = useState("");
+  const [editedFillingForAmbassador, setEditedFillingForAmbassador] =
+    useState(false);
+  // Active dashboard tenant — scopes the BA roster picker to this client
+  // (same as SparkRecapCreate), so the dropdown can't leak another
+  // tenant's ambassadors.
+  const tenantId = useAuthStore((s) => s.tenantId);
   const [commitUpdateCustomRecap, isSavingValues] =
     useMutation<UpdateCustomRecapMutationType>(UpdateCustomRecapMutation);
+  const [commitGeneratePdf, isGeneratingPdf] =
+    useMutation<GenerateCustomRecapPdfMutationType>(
+      GenerateCustomRecapPdfMutation,
+    );
   const [commitApprove, isApproving] =
     useMutation<ApproveCustomRecapMutationType>(ApproveCustomRecapMutation);
   const [commitAddFile] = useMutation<AddCustomRecapFileMutationType>(
@@ -194,12 +218,36 @@ const RecapCustomView = () => {
     });
     setEditedValues(seed);
     setEditedUsedCorpoCard(!!recap?.usedCorpoCard);
+    // Seed the ambassador controls from the recap. A linked Ambassador
+    // (FK) seeds the picked id + display name; otherwise seed the
+    // free-text write-in. fillingForAmbassador is the typed boolean.
+    setEditedAmbassadorId(recap?.ambassador?.id ? String(recap.ambassador.id) : "");
+    setEditedAmbassadorName(
+      [recap?.ambassador?.user?.firstName, recap?.ambassador?.user?.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim(),
+    );
+    setEditedExternalBaName(recap?.externalBaName ?? "");
+    setEditedFillingForAmbassador(!!recap?.fillingForAmbassador);
     setIsEditingValues(true);
-  }, [recap?.customField, recap?.usedCorpoCard]);
+  }, [
+    recap?.customField,
+    recap?.usedCorpoCard,
+    recap?.ambassador?.id,
+    recap?.ambassador?.user?.firstName,
+    recap?.ambassador?.user?.lastName,
+    recap?.externalBaName,
+    recap?.fillingForAmbassador,
+  ]);
 
   const exitEditMode = useCallback(() => {
     setIsEditingValues(false);
     setEditedValues({});
+    setEditedAmbassadorId("");
+    setEditedAmbassadorName("");
+    setEditedExternalBaName("");
+    setEditedFillingForAmbassador(false);
   }, []);
 
   // Template fields grouped by section. This is the canonical, COMPLETE
@@ -262,6 +310,24 @@ const RecapCustomView = () => {
       editedValues,
     );
 
+    // Ambassador to persist: prefer the picked / inline-created BA's id.
+    // SCHEMA NOTE: UpdateCustomRecapInput exposes ambassadorId +
+    // fillingForAmbassador but NOT externalBaName (unlike CreateCustomRecap
+    // / UpdateRecap), so a pure free-text write-in can't be persisted from
+    // this edit flow. If the admin typed a name we couldn't resolve to a
+    // real BA, block the save and point them at "+ Create BA" (which yields
+    // a real ambassadorId) rather than silently dropping the name and
+    // half-applying the rest of the edits.
+    const ambassadorId = editedAmbassadorId || null;
+    const hasWriteInOnly = !ambassadorId && editedExternalBaName.trim() !== "";
+    if (hasWriteInOnly) {
+      showAlert(
+        'Write-in BA names can\'t be saved from this screen. Use "+ Create BA" in the picker to add them as a real ambassador, then save.',
+        "warning",
+      );
+      return;
+    }
+
     commitUpdateCustomRecap({
       variables: {
         input: {
@@ -272,6 +338,11 @@ const RecapCustomView = () => {
           customFieldValues,
           // Typed boolean on CustomRecap — now editable from the view.
           usedCorpoCard: editedUsedCorpoCard,
+          // Adding/clearing the BA on an existing recap. A resolved
+          // ambassador FK wins over any write-in server-side; passing null
+          // clears the link.
+          ambassadorId,
+          fillingForAmbassador: editedFillingForAmbassador,
         },
       },
       onCompleted: (res) => {
@@ -294,10 +365,41 @@ const RecapCustomView = () => {
     customFieldsBySection,
     editedValues,
     editedUsedCorpoCard,
+    editedAmbassadorId,
+    editedExternalBaName,
+    editedFillingForAmbassador,
     commitUpdateCustomRecap,
     showAlert,
     exitEditMode,
   ]);
+
+  // Generate (or regenerate) the recap PDF, then open the returned file in
+  // a new tab. Mirrors the legacy SparkRecapView PDF button. CustomRecapFile
+  // exposes url / displayUrl (no `file` field), so we open url ?? displayUrl.
+  const handleGeneratePdf = useCallback(() => {
+    if (!recap?.id) return;
+    commitGeneratePdf({
+      variables: { input: { id: recap.id as string } },
+      onCompleted: (res) => {
+        const payload = res.generateCustomRecapPdf;
+        if (payload?.success) {
+          const fileUrl =
+            payload.customRecapFile?.url ??
+            payload.customRecapFile?.displayUrl ??
+            "";
+          if (fileUrl) {
+            window.open(fileUrl, "_blank", "noopener,noreferrer");
+            showAlert("PDF generated.", "success");
+          } else {
+            showAlert("PDF generated, but no file URL was returned.", "warning");
+          }
+        } else {
+          showAlert(payload?.message ?? "PDF generation failed.", "error");
+        }
+      },
+      onError: (err) => showAlert(`PDF failed: ${err.message}`, "error"),
+    });
+  }, [recap?.id, commitGeneratePdf, showAlert]);
 
   // Approve the custom recap → backend emails the requestor + mapped RMM
   // (with the PDF). Returns `approved` so the view flips in-place.
@@ -418,7 +520,10 @@ const RecapCustomView = () => {
     params.set("page", String(page));
     if (after) params.set("after", after);
 
-    return `/recaps/custom-list?${params.toString()}`;
+    // Point at the workspace Recaps list (SparkRecapsList). The old
+    // /recaps/custom-list page is gone in new Spark, so "Back to list"
+    // dead-ended there. The page/after params are kept (harmless).
+    return `/recaps/list?${params.toString()}`;
   }, [searchParams]);
 
   const isPdfFile = useCallback((file: (typeof recapFiles)[number]) => {
@@ -750,6 +855,14 @@ const RecapCustomView = () => {
                   </button>
                 )}
                 <button
+                  onClick={handleGeneratePdf}
+                  disabled={isGeneratingPdf}
+                  className="btn btn-sm btn-outline gap-2"
+                  title="Generate and download this recap as a PDF"
+                >
+                  {isGeneratingPdf ? "Generating…" : "⬇ PDF"}
+                </button>
+                <button
                   onClick={enterEditMode}
                   className="btn btn-sm btn-outline gap-2"
                   title="Edit submitted field values"
@@ -841,6 +954,66 @@ const RecapCustomView = () => {
               icon={<Users className="text-primary" />}
             >
               <div className="space-y-4">
+                {/* Ambassador editor (edit mode) — reuses the same
+                    AmbassadorPicker the create form uses: pick a roster BA,
+                    write in an external name, or inline-create a new BA.
+                    Seeded from the recap on enter-edit; the picked id is
+                    saved as ambassadorId in saveValues. */}
+                {isEditingValues ? (
+                  <div className="space-y-3 rounded-xl border border-base-100/30 bg-base-200/30 p-3">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        className="checkbox checkbox-sm"
+                        checked={editedFillingForAmbassador}
+                        onChange={(e) => {
+                          setEditedFillingForAmbassador(e.target.checked);
+                          // Toggling off clears any half-picked selection so
+                          // the save doesn't carry a stale BA.
+                          if (!e.target.checked) {
+                            setEditedAmbassadorId("");
+                            setEditedAmbassadorName("");
+                            setEditedExternalBaName("");
+                          }
+                        }}
+                      />
+                      <span className="text-sm font-medium">
+                        Ambassador / Filling for BA
+                      </span>
+                    </label>
+                    {editedFillingForAmbassador && (
+                      <Suspense
+                        fallback={
+                          <div className="text-sm text-base-content/60">
+                            Loading ambassadors…
+                          </div>
+                        }
+                      >
+                        <AmbassadorPicker
+                          tenantId={tenantId || null}
+                          selectedId={editedAmbassadorId}
+                          selectedName={editedAmbassadorName}
+                          externalName={editedExternalBaName}
+                          onSelect={(id, name) => {
+                            setEditedAmbassadorId(id);
+                            setEditedAmbassadorName(name);
+                            setEditedExternalBaName("");
+                          }}
+                          onUseExternal={(name) => {
+                            setEditedExternalBaName(name);
+                            setEditedAmbassadorId("");
+                            setEditedAmbassadorName("");
+                          }}
+                          onClear={() => {
+                            setEditedAmbassadorId("");
+                            setEditedAmbassadorName("");
+                            setEditedExternalBaName("");
+                          }}
+                        />
+                      </Suspense>
+                    )}
+                  </div>
+                ) : (
                 <div className="flex items-center gap-3">
                   {/* Ambassador if linked, else the free-text external BA
                       name (sub-contractor / not-yet-onboarded worker). A
@@ -887,6 +1060,7 @@ const RecapCustomView = () => {
                     </>
                   )}
                 </div>
+                )}
                 <div className="flex justify-between items-center py-2 border-b border-base-100/30">
                   <span className="text-sm">Job</span>
                   <span className="font-medium">{recap.job?.name ?? "—"}</span>
@@ -976,14 +1150,20 @@ const RecapCustomView = () => {
                     </span>
                   )}
                 </div>
-                <div className="flex justify-between items-center p-3 border border-base-100/30 rounded-lg">
-                  <span className="text-sm">Filling for Ambassador</span>
-                  <span
-                    className={`badge badge-soft ${recap.fillingForAmbassador ? "badge-info" : "badge-ghost text-base-content/40"}`}
-                  >
-                    {recap.fillingForAmbassador ? "Yes" : "No"}
-                  </span>
-                </div>
+                {/* Read-only mirror of the typed boolean. In edit mode the
+                    Ambassador / Filling-for editor in the Information card
+                    owns this, so we hide the stale badge to avoid showing two
+                    competing values. */}
+                {!isEditingValues && (
+                  <div className="flex justify-between items-center p-3 border border-base-100/30 rounded-lg">
+                    <span className="text-sm">Filling for Ambassador</span>
+                    <span
+                      className={`badge badge-soft ${recap.fillingForAmbassador ? "badge-info" : "badge-ghost text-base-content/40"}`}
+                    >
+                      {recap.fillingForAmbassador ? "Yes" : "No"}
+                    </span>
+                  </div>
+                )}
               </div>
             </KpiCardContainer>
 
