@@ -4,20 +4,24 @@ import Layout from "@/layout/Layout";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import InviteNewBAModal from "./InviteNewBAModal";
+import BAProfileModal from "./BAProfileModal";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Spark v2 — Talent search.
  *
- * Wired to the live AmbassadorsListQuery (was hardcoded "Maya R. /
- * Devon K. / Jordan T." demo data). Fields we surface today:
- *   - name + initials (from user.firstName / lastName)
+ * Wired to the live AmbassadorsListQuery. Fields we surface today:
+ *   - name + initials (from user.firstName / lastName) + headshot
  *   - rating (live)
  *   - email + city (parsed from address when present)
+ *   - college + in-college flag
  *   - active status
  *
- * Jobs count + brand history rely on a separate aggregation backend
- * that doesn't ship yet. Cards still render those slots as "—" so the
- * layout stays consistent for when they come online.
+ * Search by address + city, by college, and an "In college only" toggle
+ * are pushed to the server (AmbassadorFiltersInput). Clicking a card
+ * opens the BAProfileModal — full profile + gig history + DM. The
+ * ambassador-events aggregation that powers jobs/brand history now ships
+ * (ambassadorProfileDetail / ambassadorGigHistory).
  */
 
 type Tier = "CAPTAIN" | "TOP" | "RISING" | "NEW";
@@ -28,6 +32,9 @@ type BA = {
   email: string;
   initials: string;
   location: string;
+  college: string;
+  inCollege: boolean;
+  headshotUrl: string | null;
   rating: number | null;
   jobs: number | null;
   tier: Tier;
@@ -93,17 +100,40 @@ const cityFromAddress = (raw: string): string => {
 };
 
 const TalentInner: React.FC = () => {
-  const data = useLazyLoadQuery<AmbassadorsListQueryType>(
-    AmbassadorsListQuery,
-    { first: 200 },
-    { fetchPolicy: "store-or-network" },
-  );
+  const { tenantId } = useAuthStore();
 
   const [query, setQuery] = useState("");
-  const [radius, setRadius] = useState("any");
+  const [city, setCity] = useState("");
+  const [college, setCollege] = useState("");
   const [minRating, setMinRating] = useState("any");
   const [activeOnly, setActiveOnly] = useState(true);
+  const [inCollegeOnly, setInCollegeOnly] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  // Selected BA whose profile pop-up is open.
+  const [openBA, setOpenBA] = useState<{ uuid: string; name: string } | null>(
+    null,
+  );
+
+  // Server-side filters. address+city, college and the in-college flag
+  // are pushed down (AmbassadorFiltersInput); the free-text `query` box
+  // stays client-side over the loaded page for snappy name/email typing.
+  const filters = useMemo(() => {
+    const f: Record<string, unknown> = {};
+    if (tenantId) f.tenantId = tenantId;
+    if (city.trim()) f.city = city.trim();
+    if (college.trim()) f.college = college.trim();
+    if (inCollegeOnly) f.inCollege = true;
+    if (activeOnly) f.isActive = true;
+    const minR = minRating === "any" ? null : parseInt(minRating, 10);
+    if (minR != null && !Number.isNaN(minR)) f.ratingMin = minR;
+    return f;
+  }, [tenantId, city, college, inCollegeOnly, activeOnly, minRating]);
+
+  const data = useLazyLoadQuery<AmbassadorsListQueryType>(
+    AmbassadorsListQuery,
+    { first: 200, filters },
+    { fetchPolicy: "store-and-network" },
+  );
 
   const all: BA[] = useMemo(() => {
     return (data?.ambassadors?.edges ?? [])
@@ -124,6 +154,9 @@ const TalentInner: React.FC = () => {
           email: n.user?.email ?? "",
           initials: initialsOf(name),
           location: cityFromAddress(n.address ?? ""),
+          college: n.college ?? "",
+          inCollege: Boolean(n.inCollege),
+          headshotUrl: n.headshotUrl ?? null,
           rating,
           jobs: null,
           tier: tierFromRating(rating, isActive),
@@ -134,22 +167,19 @@ const TalentInner: React.FC = () => {
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
-    const minR =
-      minRating === "any" ? null : parseFloat(minRating);
     return all.filter((b) => {
-      if (activeOnly && !b.isActive) return false;
-      if (minR !== null && (b.rating == null || b.rating < minR)) return false;
       if (
         q &&
         !b.name.toLowerCase().includes(q) &&
         !b.location.toLowerCase().includes(q) &&
+        !b.college.toLowerCase().includes(q) &&
         !b.email.toLowerCase().includes(q)
       ) {
         return false;
       }
       return true;
     });
-  }, [all, query, minRating, activeOnly]);
+  }, [all, query]);
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -174,8 +204,9 @@ const TalentInner: React.FC = () => {
             className="mt-2"
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            Live from the BA roster. Jobs + brand history land when the
-            ambassador-events aggregation backend ships.
+            Live from the BA roster. Filter by city, college, or in-college
+            status, then open a card for the full profile, gig history, and
+            a quick DM.
           </p>
         </div>
         <button
@@ -193,34 +224,60 @@ const TalentInner: React.FC = () => {
       {inviteOpen && (
         <InviteNewBAModal onClose={() => setInviteOpen(false)} />
       )}
+      {openBA && (
+        <BAProfileModal
+          ambassadorUuid={openBA.uuid}
+          fallbackName={openBA.name}
+          onClose={() => setOpenBA(null)}
+        />
+      )}
 
       {/* Filter row */}
-      <div className="spark-card p-4 grid lg:grid-cols-4 gap-3">
+      <div className="spark-card p-4 grid lg:grid-cols-3 gap-3">
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Name, city, email…"
+          placeholder="Name, email…"
           style={inputStyle}
         />
-        <select
-          value={radius}
-          onChange={(e) => setRadius(e.target.value)}
+        <input
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          placeholder="City / address…"
           style={inputStyle}
-        >
-          <option value="any">Any distance</option>
-          <option value="25">Within 25 mi (when geocoded)</option>
-          <option value="50">Within 50 mi (when geocoded)</option>
-        </select>
+        />
+        <input
+          value={college}
+          onChange={(e) => setCollege(e.target.value)}
+          placeholder="College…"
+          style={inputStyle}
+        />
         <select
           value={minRating}
           onChange={(e) => setMinRating(e.target.value)}
           style={inputStyle}
         >
           <option value="any">Any rating</option>
-          <option value="4.0">★ 4.0+</option>
-          <option value="4.5">★ 4.5+</option>
-          <option value="4.7">★ 4.7+</option>
+          <option value="3">★ 3+</option>
+          <option value="4">★ 4+</option>
+          <option value="5">★ 5</option>
         </select>
+        <label
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm cursor-pointer"
+          style={{
+            background: "var(--spark-bg)",
+            border: "1px solid var(--spark-border)",
+            color: "var(--spark-text)",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={inCollegeOnly}
+            onChange={(e) => setInCollegeOnly(e.target.checked)}
+            className="accent-[var(--spark-lime)]"
+          />
+          In college only
+        </label>
         <label
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm cursor-pointer"
           style={{
@@ -250,19 +307,44 @@ const TalentInner: React.FC = () => {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((b) => (
-            <div key={b.uuid} className="spark-card hov p-5">
+            <div
+              key={b.uuid}
+              role="button"
+              tabIndex={0}
+              onClick={() => setOpenBA({ uuid: b.uuid, name: b.name })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setOpenBA({ uuid: b.uuid, name: b.name });
+                }
+              }}
+              className="spark-card hov p-5 text-left cursor-pointer"
+            >
               <div className="flex items-start gap-3">
-                <span
-                  className="spark-avatar"
-                  style={{
-                    width: 56,
-                    height: 56,
-                    fontSize: "1.05rem",
-                    borderRadius: 16,
-                  }}
-                >
-                  {b.initials}
-                </span>
+                {b.headshotUrl ? (
+                  <img
+                    src={b.headshotUrl}
+                    alt={b.name}
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 16,
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <span
+                    className="spark-avatar"
+                    style={{
+                      width: 56,
+                      height: 56,
+                      fontSize: "1.05rem",
+                      borderRadius: 16,
+                    }}
+                  >
+                    {b.initials}
+                  </span>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <h4 className="font-bold truncate">{b.name}</h4>
@@ -289,13 +371,26 @@ const TalentInner: React.FC = () => {
                       {b.location || b.email}
                     </p>
                   )}
-                  <span
-                    className={`${TIER_CHIP[b.tier]} mt-2 inline-flex`}
-                  >
-                    {b.tier}
-                  </span>
+                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                    <span className={`${TIER_CHIP[b.tier]} inline-flex`}>
+                      {b.tier}
+                    </span>
+                    {b.inCollege && (
+                      <span className="chip chip-sky inline-flex">
+                        IN COLLEGE
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
+              {b.college && (
+                <p
+                  className="text-[11px] mt-3 truncate"
+                  style={{ color: "rgba(255,255,255,0.55)" }}
+                >
+                  🎓 {b.college}
+                </p>
+              )}
               <div
                 className="mt-4 pt-3 grid grid-cols-3 gap-2 text-center"
                 style={{ borderTop: "1px solid var(--spark-border)" }}
@@ -305,37 +400,28 @@ const TalentInner: React.FC = () => {
                     className="tab-num text-lg font-bold"
                     style={{ color: "var(--spark-lime)" }}
                   >
-                    {b.rating != null ? `★ ${b.rating.toFixed(1)}` : "—"}
+                    {b.rating != null && b.rating > 0
+                      ? `★ ${b.rating.toFixed(1)}`
+                      : "—"}
                   </p>
                   <p className="label-mini">RATING</p>
                 </div>
                 <div>
                   <p className="tab-num text-lg font-bold">
-                    {b.jobs != null ? b.jobs : "—"}
+                    {b.isActive ? "Active" : "—"}
                   </p>
-                  <p className="label-mini">JOBS</p>
+                  <p className="label-mini">STATUS</p>
                 </div>
                 <div>
-                  <p className="tab-num text-lg font-bold">—</p>
-                  <p className="label-mini">ON-TIME</p>
+                  <p
+                    className="tab-num text-sm font-bold"
+                    style={{ color: "var(--spark-sky)" }}
+                  >
+                    View →
+                  </p>
+                  <p className="label-mini">PROFILE</p>
                 </div>
               </div>
-              {b.email && (
-                <p
-                  className="text-[11px] mt-3 truncate"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
-                >
-                  <a
-                    href={`mailto:${b.email}`}
-                    style={{
-                      color: "var(--spark-sky)",
-                      textDecoration: "none",
-                    }}
-                  >
-                    {b.email}
-                  </a>
-                </p>
-              )}
             </div>
           ))}
         </div>

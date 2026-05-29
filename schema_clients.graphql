@@ -80,6 +80,9 @@ type Ambassador implements Node {
   address: String
   phone: String
   aboutMe: String
+  bio: String!
+  college: String!
+  inCollege: Boolean!
   coordinates: [Float!]!
   isActive: Boolean!
   location: Location
@@ -87,6 +90,48 @@ type Ambassador implements Node {
   user: SparkUserType!
   createdAt: String!
   updatedAt: String!
+  headshotUrl: String
+  resumeUrl: String
+}
+
+type AmbassadorPhotoType implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  caption: String!
+  ambassadorId: ID!
+  createdAt: String!
+  imageUrl: String
+}
+
+type GigHistoryRow {
+  ambassadorEventUuid: ID!
+  eventUuid: ID!
+  brandName: String
+  venue: String
+  city: String
+  stateCode: String
+  date: String
+  isApproved: Boolean!
+  status: String!
+}
+
+type AmbassadorProfileDetail {
+  ambassador: Ambassador!
+  fullName: String!
+  email: String
+  phone: String
+  bio: String!
+  college: String!
+  inCollege: Boolean!
+  headshotUrl: String
+  resumeUrl: String
+  photos: [AmbassadorPhotoType!]!
+  gigHistory: [GigHistoryRow!]!
+  ratingAverage: Float!
+  ratingCount: Int!
+  jobsCount: Int!
+  onTimeRate: Float
 }
 
 type AmbassadorCountableConnection {
@@ -185,6 +230,9 @@ input AmbassadorFiltersInput {
   email: String = null
   name: String = null
   address: String = null
+  city: String = null
+  college: String = null
+  inCollege: Boolean = null
   aboutMe: String = null
   search: String = null
 }
@@ -4147,6 +4195,8 @@ type Query {
   ambassadors(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: AmbassadorFiltersInput = null): AmbassadorCountableConnection!
   ambassador(id: ID = null, uuid: ID = null): Ambassador
   ambassadorProfile(id: ID = null, uuid: ID = null, userId: ID = null): AmbassadorProfile
+  ambassadorProfileDetail(ambassadorUuid: ID!, tenantId: ID = null, tenantUuid: ID = null): AmbassadorProfileDetail
+  ambassadorGigHistory(ambassadorUuid: ID!, tenantId: ID = null, tenantUuid: ID = null): [GigHistoryRow!]!
   ambassadorReviews(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: AmbassadorReviewFiltersInput = null): AmbassadorReviewTypeCountableConnection!
   ambassadorReview(reviewId: ID!): AmbassadorReviewType
   ambassadorRatings(ambassadorId: ID!): [AmbassadorRatingType!]!
