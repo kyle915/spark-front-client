@@ -395,6 +395,16 @@ const RecapsListInner: React.FC<{
 }> = ({ search, retailerFilter, stateFilter, rmmFilter, statusFilter, dateFrom, dateTo, sortKey, pageSize, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
+  // Client view (an Ignite admin toggled into client mode, or a genuine
+  // client login) must NOT see unapproved drafts — only approved recaps.
+  // We ask the server for approved-only by passing `approved: true` in
+  // the filters when in client mode. The admin/RMM view passes no
+  // `approved` filter so it still sees drafts. The backend independently
+  // forces approved-only for genuine client logins, so this is the
+  // belt-and-suspenders frontend half for the admin-side "Client view"
+  // toggle (which the server can't distinguish from a normal admin).
+  const { isClient } = useSparkRole();
+  const approvedOnly = isClient ? true : null;
   // Initial page is PAGE_SIZE (60); "Load more" bumps pageSize in
   // 60-row chunks. We grow `first` rather than walk endCursor because
   // the existing query lacks @connection/@refetchable wiring and the
@@ -410,6 +420,8 @@ const RecapsListInner: React.FC<{
         ? {
             tenantId,
             rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
+            // Client view → approved-only; admin/RMM view → drafts too.
+            approved: approvedOnly,
           }
         : null,
     },
@@ -428,7 +440,8 @@ const RecapsListInner: React.FC<{
     GetCustomRecapsQuery,
     {
       first: pageSize,
-      filters: tenantId ? { tenantId } : null,
+      // Client view → approved-only; admin/RMM view → drafts too.
+      filters: tenantId ? { tenantId, approved: approvedOnly } : null,
     },
     { fetchPolicy: "store-or-network" },
   );
