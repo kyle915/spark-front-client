@@ -1,3 +1,4 @@
+import "@/lib/chartSetup";
 import {
   Chart as ChartJS,
   CategoryScale,
