@@ -68,57 +68,15 @@ export const GetCustomRecapsQuery = graphql`
             id
             name
           }
-          customRecapProductSample {
-            id
-            quantity
-            product {
-              id
-              name
-              image
-            }
-          }
-          customRecapSalePerformance {
-            id
-            price
-            product {
-              id
-              name
-              image
-            }
-            typeOfGood {
-              id
-              name
-            }
-          }
-          customRecapFiles {
-            id
-            name
-            url
-            # NB: displayUrl is intentionally NOT requested in the list
-            # query. Its resolver does a GCS HEAD per HEIC file and the list
-            # serializes thousands of file rows, so requesting it here times
-            # the whole query out. The hero thumbnail uses the url field
-            # (HEIC falls back to HeicImage); displayUrl lives only on the
-            # detail query below, where file counts are small.
-            approved
-            fileRecapCategory {
-              id
-              name
-            }
-            fileType {
-              id
-              name
-            }
-          }
-          customField {
-            id
-            name
-            value
-            recapSection {
-              id
-              name
-            }
-          }
+          # PERF: the list cards only need four numbers, computed
+          # server-side, instead of every product sample / sale / file /
+          # field value per recap. Shipping all that across thousands of
+          # rows is what made the Recaps list slow. The detail query below
+          # still fetches the full arrays.
+          soldUnits
+          consumersSampled
+          heroImageUrl
+          customRecapFilesCount
         }
       }
     }
