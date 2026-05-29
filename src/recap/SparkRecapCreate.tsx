@@ -1,13 +1,17 @@
-import { Suspense, useDeferredValue, useMemo, useState } from "react";
+import { Suspense, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { RecapEventOptionsQuery } from "@/api/queries/RecapEventOptionsQuery";
 import { AmbassadorSearchQuery } from "@/api/queries/AmbassadorSearchQuery";
 import type { AmbassadorSearchQuery as AmbassadorSearchQueryType } from "@/api/queries/__generated__/AmbassadorSearchQuery.graphql";
+import { CustomRecapTemplatesWithFieldsQuery } from "@/api/queries/CustomRecapTemplatesWithFieldsQuery";
+import type { CustomRecapTemplatesWithFieldsQuery as CustomRecapTemplatesWithFieldsQueryType } from "@/api/queries/__generated__/CustomRecapTemplatesWithFieldsQuery.graphql";
 import { CreateRecapMutation } from "@/api/mutations/CreateRecapMutation";
+import { CreateCustomRecapMutation } from "@/api/mutations/CreateCustomRecapMutation";
 import { ParseConnecteamRecapPdfMutation } from "@/api/mutations/ParseConnecteamRecapPdfMutation";
 import type { RecapEventOptionsQuery as RecapEventOptionsQueryType } from "@/api/queries/__generated__/RecapEventOptionsQuery.graphql";
 import type { CreateRecapMutation as CreateRecapMutationType } from "@/api/mutations/__generated__/CreateRecapMutation.graphql";
+import type { CreateCustomRecapMutation as CreateCustomRecapMutationType } from "@/api/mutations/__generated__/CreateCustomRecapMutation.graphql";
 import type { ParseConnecteamRecapPdfMutation as ParseConnecteamRecapPdfMutationType } from "@/api/mutations/__generated__/ParseConnecteamRecapPdfMutation.graphql";
 import RecapUploader from "./RecapUploader";
 import { useAlertStore } from "@/store/alertStore";
@@ -25,11 +29,16 @@ import { parseLocaleNumber } from "@/utils";
  *    pick the event manually, optionally override the ambassador (so
  *    they can fill in for a BA who can't), and submit.
  *
- *  Both share the same form. We capture all of: numbers grid, consumer
- *  voice (quotes / feedback / demographics / positive stories / reasons
- *  to decline), account feedback, and direct file uploads. Files upload
- *  to GCS first (via signed-URL); the resulting blob paths are passed
- *  into the createRecap mutation `files[]`.
+ *  TEMPLATE-AWARE: tenants on a Custom Recap Template (Girl Beer,
+ *  Borjomi, Liquid Death, …) must file against THEIR template — every
+ *  section + field the template defines — not the legacy fixed grid.
+ *  This form loads the active tenant's CustomRecapTemplate(s) and, when
+ *  one is selected, renders its real sections and creates a CustomRecap
+ *  (createCustomRecap) with one CustomFieldValue per filled field. The
+ *  template picker mirrors ImportConnecteamPdfModal: default to the sole
+ *  tenant template, show its client/name, let the admin switch if there
+ *  are several. Only tenants with NO template at all fall back to the
+ *  legacy fixed `Recap` form below.
  */
 
 const _DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -64,6 +73,35 @@ function fmtEventWhen(iso: string | null | undefined): string {
     label += ` · ${h}:${m[5]} ${ampm}`;
   }
   return label;
+}
+
+// Field-type → input kind. Field-type names are lowercased by convention
+// (text / number / image / longtext); match case-insensitively and treat
+// anything unknown as single-line text.
+type SelectedEvent =
+  NonNullable<
+    NonNullable<RecapEventOptionsQueryType["response"]["recapEventOptions"]>["edges"][number]
+  >["node"];
+
+type TemplateNode = NonNullable<
+  NonNullable<
+    CustomRecapTemplatesWithFieldsQueryType["response"]["customRecapTemplates"]
+  >["edges"][number]
+>["node"];
+
+type TemplateField = NonNullable<TemplateNode["customField"]>[number];
+
+function fieldKind(
+  field: TemplateField,
+): "text" | "number" | "longtext" | "image" {
+  const name = (field?.customFieldType?.name ?? "").toLowerCase();
+  if (name.includes("image") || name.includes("photo") || name.includes("img"))
+    return "image";
+  if (name.includes("number") || name.includes("numeric") || name === "int")
+    return "number";
+  if (name.includes("long") || name.includes("textarea") || name.includes("paragraph"))
+    return "longtext";
+  return "text";
 }
 
 export default function SparkRecapCreate() {
@@ -115,8 +153,49 @@ export default function SparkRecapCreate() {
   const initialEvent = presetEventUuid
     ? events.find((e) => e.uuid === presetEventUuid) ?? null
     : null;
-  const [selectedEvent, setSelectedEvent] = useState<typeof events[number] | null>(initialEvent);
+  const [selectedEvent, setSelectedEvent] = useState<SelectedEvent | null>(
+    initialEvent,
+  );
 
+  // Active-tenant custom templates WITH their full field structure. The
+  // server scopes this to the active tenant, so an empty list means this
+  // tenant files via the legacy fixed form (fallback below).
+  const templatesData = useLazyLoadQuery<CustomRecapTemplatesWithFieldsQueryType>(
+    CustomRecapTemplatesWithFieldsQuery,
+    { first: 50, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+  const templates = useMemo(
+    () =>
+      (templatesData?.customRecapTemplates?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n)),
+    [templatesData],
+  );
+
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  // Default + guard the template selection against the ACTIVE tenant's
+  // templates (mirror of ImportConnecteamPdfModal):
+  //   * auto-pick when the tenant has exactly one template;
+  //   * if the selected id is no longer in the freshly loaded list (the
+  //     admin switched dashboard tenant), clear it then re-auto-pick.
+  useEffect(() => {
+    const ids = templates.map((t) => String(t.id));
+    if (templateId && !ids.includes(templateId)) {
+      setTemplateId(ids.length === 1 ? ids[0] : null);
+      return;
+    }
+    if (!templateId && templates.length === 1) {
+      setTemplateId(ids[0]);
+    }
+  }, [templates, templateId]);
+
+  const selectedTemplate = useMemo(
+    () => templates.find((t) => String(t.id) === templateId) ?? null,
+    [templates, templateId],
+  );
+
+  // ─── Legacy fixed-form state (fallback for non-template tenants) ──
   // Numbers
   const [totalConsumer, setTotalConsumer] = useState("");
   const [firstTime, setFirstTime] = useState("");
@@ -147,6 +226,11 @@ export default function SparkRecapCreate() {
   const [accountNotes, setAccountNotes] = useState("");
   const [corpoCardUsed, setCorpoCardUsed] = useState(false);
 
+  // ─── Custom-template field values (keyed by CustomField id) ───────
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const setFieldValue = (id: string, v: string) =>
+    setFieldValues((prev) => ({ ...prev, [id]: v }));
+
   // Files
   const [photoBlobs, setPhotoBlobs] = useState<string[]>([]);
   const [receiptBlobs, setReceiptBlobs] = useState<string[]>([]);
@@ -161,6 +245,8 @@ export default function SparkRecapCreate() {
   const [fillingForOther, setFillingForOther] = useState(false);
 
   const [commit, inFlight] = useMutation<CreateRecapMutationType>(CreateRecapMutation);
+  const [commitCustom, customInFlight] =
+    useMutation<CreateCustomRecapMutationType>(CreateCustomRecapMutation);
 
   // Connecteam PDF → form pre-fill (admin convenience). Read-only on the
   // backend: scrapes the PDF and maps its labels onto these form fields.
@@ -255,7 +341,80 @@ export default function SparkRecapCreate() {
     reader.readAsDataURL(file);
   };
 
-  const onSubmit = (e: React.FormEvent) => {
+  // ─── Submit: custom-template path ─────────────────────────────────
+  const onSubmitCustom = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEvent) {
+      showAlert("Pick the event this recap is for.", "warning");
+      return;
+    }
+    if (!selectedTemplate) {
+      showAlert("Pick the recap template.", "warning");
+      return;
+    }
+    // One CustomFieldValue per non-empty field. We deliberately don't
+    // send blank fields — the detail view renders every template field
+    // anyway (it iterates the template, not just stored values), so an
+    // unfilled field shows "—" without us persisting an empty row.
+    const customFieldValues = (selectedTemplate.customField ?? [])
+      .filter((f): f is NonNullable<typeof f> => Boolean(f))
+      // Image fields are captured via the uploader → files[], not as a
+      // text value, so skip them here.
+      .filter((f) => fieldKind(f) !== "image")
+      .map((f) => ({
+        customFieldId: String(f.id),
+        value: (fieldValues[String(f.id)] ?? "").trim(),
+      }))
+      .filter((v) => v.value !== "");
+
+    const files = [
+      ...photoBlobs.map((blob) => ({
+        file: blob,
+        fileTypeId: "1",
+        fileRecapCategoryId: "1",
+      })),
+      ...receiptBlobs.map((blob) => ({
+        file: blob,
+        fileTypeId: "1",
+        fileRecapCategoryId: "2",
+      })),
+    ];
+
+    commitCustom({
+      variables: {
+        input: {
+          eventId: selectedEvent.id,
+          customRecapTemplateId: selectedTemplate.id,
+          name: `${selectedEvent.request?.retailer?.name ?? selectedEvent.name} recap`,
+          ambassadorId:
+            isAdmin && fillingForOther ? ambassadorOverride || null : null,
+          fillingForAmbassador: isAdmin && fillingForOther,
+          customFieldValues,
+          files,
+        },
+      },
+      onCompleted: (res) => {
+        if (
+          res.createCustomRecap?.success &&
+          res.createCustomRecap.customRecap?.uuid
+        ) {
+          showAlert("Recap submitted.", "success");
+          navigate(
+            `/recap/view-custom/${res.createCustomRecap.customRecap.uuid}`,
+          );
+        } else {
+          showAlert(
+            res.createCustomRecap?.message ?? "Recap submission failed.",
+            "error",
+          );
+        }
+      },
+      onError: (err) => showAlert(`Recap failed: ${err.message}`, "error"),
+    });
+  };
+
+  // ─── Submit: legacy fixed-form path ───────────────────────────────
+  const onSubmitLegacy = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEvent) {
       showAlert("Pick the event this recap is for.", "warning");
@@ -312,13 +471,27 @@ export default function SparkRecapCreate() {
     });
   };
 
+  // The form renders the custom-template flow whenever the active tenant
+  // has at least one template; only template-less tenants get the legacy
+  // fixed grid. A tenant with templates that hasn't picked one yet shows
+  // the picker and a prompt (no field grid), so we never silently file a
+  // generic recap for a custom-template client.
+  const useCustomFlow = templates.length > 0;
+  const submitting = useCustomFlow ? customInFlight : inFlight;
+  const canSubmit = useCustomFlow
+    ? Boolean(selectedEvent && selectedTemplate)
+    : Boolean(selectedEvent);
+
   // For the uploader we need a stub uuid so it can namespace blob paths
-  // by event. Once createRecap returns the real recap uuid we re-key
-  // file rows server-side via AddRecapFile.
+  // by event. Once create returns the real recap uuid we re-key file
+  // rows server-side via AddRecapFile.
   const stubUuid = selectedEvent?.uuid ?? "new";
 
   return (
-    <form onSubmit={onSubmit} className="max-w-4xl mx-auto px-1 sm:px-0 space-y-5">
+    <form
+      onSubmit={useCustomFlow ? onSubmitCustom : onSubmitLegacy}
+      className="max-w-4xl mx-auto px-1 sm:px-0 space-y-5"
+    >
       <div className="spark-card p-6">
         <p className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "var(--spark-lime)" }}>
           NEW RECAP
@@ -400,11 +573,55 @@ export default function SparkRecapCreate() {
         )}
       </Card>
 
-      {/* Admin-only: pre-fill the whole form from a Connecteam recap PDF.
-          Read-only scrape — fills the inputs below, nothing is saved until
-          the admin reviews and submits. Distinct from the CustomRecap
-          importer (which drafts against a tenant template). */}
-      {isAdmin && (
+      {/* Template / client selector — the structure this recap is filed
+          against. Mirrors ImportConnecteamPdfModal: defaults to the sole
+          tenant template, names the client, lets the admin switch when
+          there are several. Only shown when the tenant has templates. */}
+      {useCustomFlow && (
+        <Card title="RECAP TEMPLATE">
+          <label className="block">
+            <span className="mono text-[10px] block mb-1.5" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.55)" }}>
+              CLIENT RECAP TEMPLATE
+            </span>
+            <select
+              value={templateId ?? ""}
+              onChange={(e) => setTemplateId(e.target.value || null)}
+              className={inputCls}
+              style={{
+                border: templateId
+                  ? "1px solid rgba(197,245,70,0.4)"
+                  : "1px solid rgba(255,200,80,0.5)",
+              }}
+            >
+              <option value="">— Select recap template —</option>
+              {templates.map((t) => (
+                <option key={String(t.id)} value={String(t.id)}>
+                  {t.tenant?.name ? `${t.tenant.name} · ${t.name}` : t.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {selectedTemplate ? (
+            <p className="text-xs mt-1" style={{ color: "rgba(197,245,70,0.85)" }}>
+              Filing against{" "}
+              <b>{selectedTemplate.tenant?.name ?? "this client"}</b>’s{" "}
+              <b>{selectedTemplate.name}</b> ·{" "}
+              {(selectedTemplate.customField ?? []).length} fields.
+            </p>
+          ) : templates.length > 1 ? (
+            <p className="text-xs mt-1" style={{ color: "rgba(255,200,80,0.85)" }}>
+              This client has multiple templates — pick the one for this recap.
+            </p>
+          ) : null}
+        </Card>
+      )}
+
+      {/* Admin-only: pre-fill the whole legacy form from a Connecteam
+          recap PDF. Only meaningful on the legacy fixed grid — custom
+          templates use the dedicated Import Connecteam modal (which
+          drafts a CustomRecap against the template), so this card is
+          hidden in the custom flow to avoid two competing importers. */}
+      {isAdmin && !useCustomFlow && (
         <Card title="IMPORT FROM CONNECTEAM">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <p className="text-sm" style={{ color: "rgba(255,255,255,0.65)" }}>
@@ -483,129 +700,150 @@ export default function SparkRecapCreate() {
         </Card>
       )}
 
-      {/* Numbers */}
-      <Card title="NUMBERS">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <Field label="Samples / Total Consumer">
-            <input value={totalConsumer} onChange={(e) => setTotalConsumer(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
-          </Field>
-          <Field label="First-Time">
-            <input value={firstTime} onChange={(e) => setFirstTime(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
-          </Field>
-          <Field label="Brand-Aware">
-            <input value={brandAware} onChange={(e) => setBrandAware(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
-          </Field>
-          <Field label="Willing to Buy">
-            <input value={willing} onChange={(e) => setWilling(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
-          </Field>
-          <Field label="Not Willing">
-            <input value={notWilling} onChange={(e) => setNotWilling(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
-          </Field>
-          <Field label="Products Sold *">
-            <input
-              value={productsSold}
-              onChange={(e) => {
-                // User-typed change — stop auto-populating from
-                // Cans + Packs from this point on so we don't clobber
-                // their intentional override.
-                setProductsSold(e.target.value);
-                setProductsSoldManual(true);
-              }}
-              className={inputCls}
-              inputMode="numeric"
-              placeholder="0"
-              title="Auto-fills from Cans + Packs until you edit it"
-            />
-          </Field>
-          <Field label="Cans Sold">
-            <input
-              value={totalCansSold}
-              onChange={(e) => {
-                const next = e.target.value;
-                setTotalCansSold(next);
-                // Auto-update Products Sold from Cans + Packs unless
-                // the user has manually edited Products Sold.
-                if (!productsSoldManual) {
-                  const cans = parseLocaleNumber(next) ?? 0;
-                  const packs = parseLocaleNumber(totalPacksSold) ?? 0;
-                  const sum = cans + packs;
-                  setProductsSold(sum > 0 ? String(sum) : "");
-                }
-              }}
-              className={inputCls}
-              inputMode="numeric"
-              placeholder="0"
-            />
-          </Field>
-          <Field label="Packs Sold">
-            <input
-              value={totalPacksSold}
-              onChange={(e) => {
-                const next = e.target.value;
-                setTotalPacksSold(next);
-                if (!productsSoldManual) {
-                  const cans = parseLocaleNumber(totalCansSold) ?? 0;
-                  const packs = parseLocaleNumber(next) ?? 0;
-                  const sum = cans + packs;
-                  setProductsSold(sum > 0 ? String(sum) : "");
-                }
-              }}
-              className={inputCls}
-              inputMode="numeric"
-              placeholder="0"
-            />
-          </Field>
-          <Field label="Account Spend ($)">
-            <input value={accountSpend} onChange={(e) => setAccountSpend(e.target.value)} className={inputCls} inputMode="decimal" placeholder="0.00" />
-          </Field>
-        </div>
-        <p
-          className="text-[11px] opacity-60 mt-2"
-          style={{ fontFamily: "var(--mono-stack)" }}
-        >
-          * Products Sold auto-fills from Cans + Packs. Type a value to
-          override.
-        </p>
-        <Field label="Traffic Description">
-          <textarea value={trafficDescription} onChange={(e) => setTrafficDescription(e.target.value)} className={inputCls} rows={2} placeholder="Foot traffic, busy hours, slow patches…" />
-        </Field>
-        <Field label="Competitive Presence">
-          <textarea value={competitivePresence} onChange={(e) => setCompetitivePresence(e.target.value)} className={inputCls} rows={2} placeholder="Other brands on display? Demos in the store?" />
-        </Field>
-      </Card>
+      {/* ─── Custom-template fields, grouped by section ─── */}
+      {useCustomFlow && selectedTemplate && (
+        <CustomTemplateFields
+          template={selectedTemplate}
+          values={fieldValues}
+          onChange={setFieldValue}
+        />
+      )}
+      {useCustomFlow && !selectedTemplate && (
+        <Card title="FIELDS">
+          <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+            Pick a recap template above to load this client's fields.
+          </p>
+        </Card>
+      )}
 
-      {/* Consumer voice */}
-      <Card title="CONSUMER VOICE">
-        <Field label="Quotes (direct lines from real consumers)">
-          <textarea value={quotes} onChange={(e) => setQuotes(e.target.value)} className={inputCls} rows={3} />
-        </Field>
-        <Field label="General Feedback">
-          <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} className={inputCls} rows={3} />
-        </Field>
-        <Field label="Demographics">
-          <textarea value={demographics} onChange={(e) => setDemographics(e.target.value)} className={inputCls} rows={2} placeholder="Age, gender mix, vibe of the crowd." />
-        </Field>
-        <Field label="Positive Stories">
-          <textarea value={positiveStories} onChange={(e) => setPositiveStories(e.target.value)} className={inputCls} rows={2} />
-        </Field>
-        <Field label="Reasons to Decline">
-          <textarea value={reasonsToDecline} onChange={(e) => setReasonsToDecline(e.target.value)} className={inputCls} rows={2} />
-        </Field>
-      </Card>
+      {/* ─── Legacy fixed grid (template-less tenants only) ─── */}
+      {!useCustomFlow && (
+        <>
+          {/* Numbers */}
+          <Card title="NUMBERS">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <Field label="Samples / Total Consumer">
+                <input value={totalConsumer} onChange={(e) => setTotalConsumer(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
+              </Field>
+              <Field label="First-Time">
+                <input value={firstTime} onChange={(e) => setFirstTime(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
+              </Field>
+              <Field label="Brand-Aware">
+                <input value={brandAware} onChange={(e) => setBrandAware(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
+              </Field>
+              <Field label="Willing to Buy">
+                <input value={willing} onChange={(e) => setWilling(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
+              </Field>
+              <Field label="Not Willing">
+                <input value={notWilling} onChange={(e) => setNotWilling(e.target.value)} className={inputCls} inputMode="numeric" placeholder="0" />
+              </Field>
+              <Field label="Products Sold *">
+                <input
+                  value={productsSold}
+                  onChange={(e) => {
+                    // User-typed change — stop auto-populating from
+                    // Cans + Packs from this point on so we don't clobber
+                    // their intentional override.
+                    setProductsSold(e.target.value);
+                    setProductsSoldManual(true);
+                  }}
+                  className={inputCls}
+                  inputMode="numeric"
+                  placeholder="0"
+                  title="Auto-fills from Cans + Packs until you edit it"
+                />
+              </Field>
+              <Field label="Cans Sold">
+                <input
+                  value={totalCansSold}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setTotalCansSold(next);
+                    // Auto-update Products Sold from Cans + Packs unless
+                    // the user has manually edited Products Sold.
+                    if (!productsSoldManual) {
+                      const cans = parseLocaleNumber(next) ?? 0;
+                      const packs = parseLocaleNumber(totalPacksSold) ?? 0;
+                      const sum = cans + packs;
+                      setProductsSold(sum > 0 ? String(sum) : "");
+                    }
+                  }}
+                  className={inputCls}
+                  inputMode="numeric"
+                  placeholder="0"
+                />
+              </Field>
+              <Field label="Packs Sold">
+                <input
+                  value={totalPacksSold}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setTotalPacksSold(next);
+                    if (!productsSoldManual) {
+                      const cans = parseLocaleNumber(totalCansSold) ?? 0;
+                      const packs = parseLocaleNumber(next) ?? 0;
+                      const sum = cans + packs;
+                      setProductsSold(sum > 0 ? String(sum) : "");
+                    }
+                  }}
+                  className={inputCls}
+                  inputMode="numeric"
+                  placeholder="0"
+                />
+              </Field>
+              <Field label="Account Spend ($)">
+                <input value={accountSpend} onChange={(e) => setAccountSpend(e.target.value)} className={inputCls} inputMode="decimal" placeholder="0.00" />
+              </Field>
+            </div>
+            <p
+              className="text-[11px] opacity-60 mt-2"
+              style={{ fontFamily: "var(--mono-stack)" }}
+            >
+              * Products Sold auto-fills from Cans + Packs. Type a value to
+              override.
+            </p>
+            <Field label="Traffic Description">
+              <textarea value={trafficDescription} onChange={(e) => setTrafficDescription(e.target.value)} className={inputCls} rows={2} placeholder="Foot traffic, busy hours, slow patches…" />
+            </Field>
+            <Field label="Competitive Presence">
+              <textarea value={competitivePresence} onChange={(e) => setCompetitivePresence(e.target.value)} className={inputCls} rows={2} placeholder="Other brands on display? Demos in the store?" />
+            </Field>
+          </Card>
 
-      {/* Account feedback */}
-      <Card title="ACCOUNT FEEDBACK">
-        <Field label="What would you do differently next time?">
-          <textarea value={doDifferently} onChange={(e) => setDoDifferently(e.target.value)} className={inputCls} rows={2} />
-        </Field>
-        <Field label="Anything else about this account?">
-          <textarea value={accountNotes} onChange={(e) => setAccountNotes(e.target.value)} className={inputCls} rows={2} />
-        </Field>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={corpoCardUsed} onChange={(e) => setCorpoCardUsed(e.target.checked)} />
-          <span className="text-sm">Corporate card was used for this event spend.</span>
-        </label>
-      </Card>
+          {/* Consumer voice */}
+          <Card title="CONSUMER VOICE">
+            <Field label="Quotes (direct lines from real consumers)">
+              <textarea value={quotes} onChange={(e) => setQuotes(e.target.value)} className={inputCls} rows={3} />
+            </Field>
+            <Field label="General Feedback">
+              <textarea value={feedback} onChange={(e) => setFeedback(e.target.value)} className={inputCls} rows={3} />
+            </Field>
+            <Field label="Demographics">
+              <textarea value={demographics} onChange={(e) => setDemographics(e.target.value)} className={inputCls} rows={2} placeholder="Age, gender mix, vibe of the crowd." />
+            </Field>
+            <Field label="Positive Stories">
+              <textarea value={positiveStories} onChange={(e) => setPositiveStories(e.target.value)} className={inputCls} rows={2} />
+            </Field>
+            <Field label="Reasons to Decline">
+              <textarea value={reasonsToDecline} onChange={(e) => setReasonsToDecline(e.target.value)} className={inputCls} rows={2} />
+            </Field>
+          </Card>
+
+          {/* Account feedback */}
+          <Card title="ACCOUNT FEEDBACK">
+            <Field label="What would you do differently next time?">
+              <textarea value={doDifferently} onChange={(e) => setDoDifferently(e.target.value)} className={inputCls} rows={2} />
+            </Field>
+            <Field label="Anything else about this account?">
+              <textarea value={accountNotes} onChange={(e) => setAccountNotes(e.target.value)} className={inputCls} rows={2} />
+            </Field>
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={corpoCardUsed} onChange={(e) => setCorpoCardUsed(e.target.checked)} />
+              <span className="text-sm">Corporate card was used for this event spend.</span>
+            </label>
+          </Card>
+        </>
+      )}
 
       {/* Photos + receipts. We show a per-file chip list with a Remove
           button so the admin can see exactly which photos are queued
@@ -711,16 +949,16 @@ export default function SparkRecapCreate() {
         </div>
         <button
           type="submit"
-          disabled={inFlight || !selectedEvent}
+          disabled={submitting || !canSubmit}
           className="px-5 py-3 rounded-xl text-sm font-semibold"
           style={{
             background: "var(--spark-lime)",
             color: "#0a0d09",
             boxShadow: "0 0 24px rgba(197,245,70,0.4)",
-            opacity: inFlight || !selectedEvent ? 0.5 : 1,
+            opacity: submitting || !canSubmit ? 0.5 : 1,
           }}
         >
-          {inFlight ? "Submitting…" : "Submit recap →"}
+          {submitting ? "Submitting…" : "Submit recap →"}
         </button>
       </div>
     </form>
@@ -747,6 +985,107 @@ const Card: React.FC<{ title: string; children: React.ReactNode }> = ({ title, c
     {children}
   </div>
 );
+
+// Render a custom template's fields grouped by section, in the section
+// order the template's layout JSON declares (falling back to first-seen
+// order). Each field renders the input appropriate to its field type:
+// number → numeric input, long/paragraph → textarea, image → a note that
+// photos go in the uploader below, everything else → single-line text.
+// Bound to the parent's `values` map keyed by CustomField id.
+const CustomTemplateFields: React.FC<{
+  template: TemplateNode;
+  values: Record<string, string>;
+  onChange: (id: string, v: string) => void;
+}> = ({ template, values, onChange }) => {
+  const sections = useMemo(() => {
+    const fields = (template.customField ?? []).filter(
+      (f): f is NonNullable<typeof f> => Boolean(f),
+    );
+    // Group by section name.
+    const bySection = new Map<string, typeof fields>();
+    for (const f of fields) {
+      const name = f.recapSection?.name ?? "Details";
+      if (!bySection.has(name)) bySection.set(name, []);
+      bySection.get(name)!.push(f);
+    }
+    // Order sections by the template layout hint when present.
+    const layout = (template.layout ?? {}) as { sections?: unknown };
+    const order: string[] = Array.isArray(layout.sections)
+      ? (layout.sections as unknown[]).map((s) => String(s))
+      : [];
+    const ordered = [...bySection.keys()].sort((a, b) => {
+      const ia = order.indexOf(a);
+      const ib = order.indexOf(b);
+      if (ia === -1 && ib === -1) return 0;
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+    return ordered.map((name) => ({ name, fields: bySection.get(name)! }));
+  }, [template]);
+
+  if (sections.length === 0) {
+    return (
+      <Card title="FIELDS">
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+          This template has no fields configured.
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      {sections.map((section) => (
+        <Card key={section.name} title={section.name.toUpperCase()}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {section.fields.map((f) => {
+              const id = String(f.id);
+              const kind = fieldKind(f);
+              const label = f.required ? `${f.name} *` : f.name;
+              if (kind === "image") {
+                return (
+                  <div key={id} className="sm:col-span-2">
+                    <Field label={label}>
+                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
+                        Attach this in “Photos + Receipts” below.
+                      </p>
+                    </Field>
+                  </div>
+                );
+              }
+              if (kind === "longtext") {
+                return (
+                  <div key={id} className="sm:col-span-2">
+                    <Field label={label}>
+                      <textarea
+                        value={values[id] ?? ""}
+                        onChange={(e) => onChange(id, e.target.value)}
+                        className={inputCls}
+                        rows={3}
+                      />
+                    </Field>
+                  </div>
+                );
+              }
+              return (
+                <Field key={id} label={label}>
+                  <input
+                    value={values[id] ?? ""}
+                    onChange={(e) => onChange(id, e.target.value)}
+                    className={inputCls}
+                    inputMode={kind === "number" ? "numeric" : undefined}
+                    placeholder={kind === "number" ? "0" : undefined}
+                  />
+                </Field>
+              );
+            })}
+          </div>
+        </Card>
+      ))}
+    </>
+  );
+};
 
 // Type-ahead picker for the "filling for a BA" toggle. Searches
 // the current tenant's active ambassadors as the admin types
