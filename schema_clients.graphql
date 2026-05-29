@@ -5732,6 +5732,7 @@ input UpdateCustomRecapInput {
   locationId: ID = null
   stateId: ID = null
   ambassadorId: ID = null
+  externalBaName: String = null
   customFieldValues: [CustomFieldValueInput!] = null
   id: ID!
 }

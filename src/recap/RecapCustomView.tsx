@@ -310,23 +310,14 @@ const RecapCustomView = () => {
       editedValues,
     );
 
-    // Ambassador to persist: prefer the picked / inline-created BA's id.
-    // SCHEMA NOTE: UpdateCustomRecapInput exposes ambassadorId +
-    // fillingForAmbassador but NOT externalBaName (unlike CreateCustomRecap
-    // / UpdateRecap), so a pure free-text write-in can't be persisted from
-    // this edit flow. If the admin typed a name we couldn't resolve to a
-    // real BA, block the save and point them at "+ Create BA" (which yields
-    // a real ambassadorId) rather than silently dropping the name and
-    // half-applying the rest of the edits.
+    // Ambassador to persist: prefer the picked / inline-created BA's id;
+    // otherwise fall back to the free-text write-in. UpdateCustomRecapInput
+    // accepts both (a resolved ambassador FK wins over a write-in
+    // server-side; passing null for both clears the link).
     const ambassadorId = editedAmbassadorId || null;
-    const hasWriteInOnly = !ambassadorId && editedExternalBaName.trim() !== "";
-    if (hasWriteInOnly) {
-      showAlert(
-        'Write-in BA names can\'t be saved from this screen. Use "+ Create BA" in the picker to add them as a real ambassador, then save.',
-        "warning",
-      );
-      return;
-    }
+    const externalBaName = ambassadorId
+      ? null
+      : editedExternalBaName.trim() || null;
 
     commitUpdateCustomRecap({
       variables: {
@@ -340,8 +331,9 @@ const RecapCustomView = () => {
           usedCorpoCard: editedUsedCorpoCard,
           // Adding/clearing the BA on an existing recap. A resolved
           // ambassador FK wins over any write-in server-side; passing null
-          // clears the link.
+          // for both clears the link.
           ambassadorId,
+          externalBaName,
           fillingForAmbassador: editedFillingForAmbassador,
         },
       },
