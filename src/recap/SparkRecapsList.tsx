@@ -552,58 +552,17 @@ const RecapsListInner: React.FC<{
     //   - requestUuid/requestShortId: null because CustomRecap
     //     doesn't link to a Request row (it's tied to a JobAssignment
     //     instead; opening the recap shows the BA + event)
-    const isImage = (name: string | null | undefined) =>
-      Boolean(
-        name && /\.(jpe?g|png|webp|gif)(\?|$)/i.test(name),
-      );
-    // CustomRecap has no totalised products-sold scalar; for templates that
-    // track units (Borjomi / Girl Beer: "single cans" + "packs" number
-    // fields) derive SOLD = cans + packs from the custom field values, same
-    // as the legacy form's "Products Sold = Cans + Packs". Match field names
-    // containing the whole word "can(s)" or "pack(s)" so "willing to
-    // purchase"-style fields are excluded. Returns null (→ "—") when a
-    // template has no such fields, so non-unit templates don't show a
-    // misleading 0.
-    const SOLD_FIELD_RE = /\b(cans?|packs?)\b/i;
-    const customSoldUnits = (
-      fields: ReadonlyArray<{ name?: string | null; value?: string | null } | null> | null | undefined,
-    ): number | null => {
-      let total = 0;
-      let matched = false;
-      for (const f of fields ?? []) {
-        if (!f?.name || !SOLD_FIELD_RE.test(f.name)) continue;
-        const n = parseInt(String(f.value ?? "").replace(/[^\d-]/g, ""), 10);
-        if (Number.isFinite(n)) {
-          total += n;
-          matched = true;
-        }
-      }
-      return matched ? total : null;
-    };
-    // Borjomi's "engagements" is the "Total number of consumers sampled"
-    // custom field, not the typed total_engagements column — so a recap that
-    // filled the field but not the column shows ENG "—". Use the field as a
-    // fallback. Only fills blanks (used with ?? below) so a populated
-    // totalEngagements is never overridden.
-    const customConsumersSampled = (
-      fields: ReadonlyArray<{ name?: string | null; value?: string | null } | null> | null | undefined,
-    ): number | null => {
-      for (const f of fields ?? []) {
-        if (!f?.name || !/consumers?\s+sampled/i.test(f.name)) continue;
-        const n = parseInt(String(f.value ?? "").replace(/[^\d-]/g, ""), 10);
-        if (Number.isFinite(n)) return n;
-      }
-      return null;
-    };
+    // SOLD (cans+packs), ENG (consumers-sampled fallback), the hero image,
+    // and the file count are now computed SERVER-SIDE (CustomRecap.soldUnits /
+    // consumersSampled / heroImageUrl / customRecapFilesCount) so the list
+    // query no longer pulls every field value + file per recap — that full
+    // payload across thousands of rows is what made the list slow. The server
+    // helpers replicate the old client derivations byte-for-byte.
     const custom: Recap[] =
       customData?.customRecaps?.edges
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
         ?.map((n) => {
-          const files = (n.customRecapFiles ?? []).filter(
-            (f): f is NonNullable<typeof f> => Boolean(f),
-          );
-          const heroFile = files.find((f) => isImage(f.url));
           return {
             kind: "custom" as const,
             id: String(n.id),
@@ -614,11 +573,10 @@ const RecapsListInner: React.FC<{
             retailerName: n.retailer?.name ?? "—",
             stateCode: null,
             approved: Boolean(n.approved),
-            heroImage: heroFile?.url ?? null,
-            fileCount: files.length,
-            engagements:
-              n.totalEngagements ?? customConsumersSampled(n.customField),
-            productsSold: customSoldUnits(n.customField),
+            heroImage: n.heroImageUrl ?? null,
+            fileCount: n.customRecapFilesCount ?? 0,
+            engagements: n.totalEngagements ?? n.consumersSampled ?? null,
+            productsSold: n.soldUnits ?? null,
             // CustomRecap doesn't carry these scalar fields; leave
             // blank in the row so the export shows empty cells rather
             // than fake zeroes. Future work could pull from custom

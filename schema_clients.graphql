@@ -1994,6 +1994,10 @@ type CustomRecap implements Node {
   incomplete: Boolean!
   approved: Boolean!
   usedCorpoCard: Boolean!
+  soldUnits: Int
+  consumersSampled: Int
+  heroImageUrl: String
+  customRecapFilesCount: Int!
   timezoneId: ID
   eventId: ID!
   event: Event!
