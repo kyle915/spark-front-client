@@ -10,6 +10,10 @@ import { AssignAmbassadorToJobMutation } from "@/api/mutations/AssignAmbassadorT
 import type { AssignAmbassadorToJobMutation as AssignAmbassadorToJobMutationType } from "@api/mutations/__generated__/AssignAmbassadorToJobMutation.graphql";
 import { SetJobBriefingMutation } from "@/api/mutations/SetJobBriefingMutation";
 import type { SetJobBriefingMutation as SetJobBriefingMutationType } from "@api/mutations/__generated__/SetJobBriefingMutation.graphql";
+import { PostJobMutation } from "@/api/mutations/PostJobMutation";
+import type { PostJobMutation as PostJobMutationType } from "@api/mutations/__generated__/PostJobMutation.graphql";
+import { UpdateJobMutation } from "@/api/mutations/UpdateJobMutation";
+import type { UpdateJobMutation as UpdateJobMutationType } from "@api/mutations/__generated__/UpdateJobMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -426,6 +430,496 @@ const BABriefingCard: React.FC<{
   );
 };
 
+/** The job node off JobsQuery, as the detail view reads it. */
+type JobNode = NonNullable<
+  NonNullable<
+    NonNullable<JobsQueryType["response"]["jobs"]>["edges"][number]
+  >["node"]
+>;
+
+const fieldStyle: React.CSSProperties = {
+  background: "var(--spark-bg)",
+  border: "1px solid var(--spark-border)",
+  borderRadius: 12,
+  padding: "0.65rem 0.85rem",
+  color: "var(--spark-text)",
+  fontSize: "0.875rem",
+  outline: "none",
+  width: "100%",
+};
+
+/**
+ * "Post job" modal (#headline). Collects the pay/hours + visibility the
+ * backend's postJob mutation needs, then sends the job live to BAs
+ * (lifecycle_status -> "posted"). Hours/rate pre-fill from the job when
+ * available. On success the parent refetches so the header flips to a
+ * "● Live to BAs" indicator.
+ */
+const PostJobModal: React.FC<{
+  node: JobNode;
+  defaultHours: number | null;
+  defaultRate: number | null;
+  onClose: () => void;
+  onPosted: () => void;
+}> = ({ node, defaultHours, defaultRate, onClose, onPosted }) => {
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [totalHours, setTotalHours] = useState(
+    defaultHours != null ? String(defaultHours) : "",
+  );
+  const [hourlyRate, setHourlyRate] = useState(
+    defaultRate != null ? String(defaultRate) : "",
+  );
+  const [uniformNotes, setUniformNotes] = useState("");
+  const [openToAll, setOpenToAll] = useState(false);
+  const [attempted, setAttempted] = useState(false);
+  const [commit, posting] = useMutation<PostJobMutationType>(PostJobMutation);
+
+  const hoursNum = Number(totalHours);
+  const rateNum = Number(hourlyRate);
+  const hoursValid = totalHours.trim() !== "" && hoursNum > 0;
+  const rateValid = hourlyRate.trim() !== "" && rateNum > 0;
+  const valid = hoursValid && rateValid;
+
+  const submit = () => {
+    setAttempted(true);
+    if (!valid || posting) return;
+    commit({
+      variables: {
+        input: {
+          id: node.id,
+          totalHours: hoursNum,
+          hourlyRate: rateNum,
+          uniformNotes: uniformNotes.trim() || null,
+          openToAll,
+        },
+      },
+      onCompleted: (res) => {
+        if (res.postJob?.success) {
+          showAlert(res.postJob.message || "Job is live to BAs.", "success");
+          onPosted();
+          onClose();
+        } else {
+          showAlert(res.postJob?.message ?? "Couldn't post the job.", "error");
+        }
+      },
+      onError: (e) => showAlert(`Post failed: ${e.message}`, "error"),
+    });
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
+      style={{ background: "rgba(10,11,13,0.7)", backdropFilter: "blur(8px)" }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md spark-card overflow-hidden"
+        style={{ borderRadius: 20 }}
+      >
+        <div
+          className="p-5"
+          style={{ borderBottom: "1px solid var(--spark-border)" }}
+        >
+          <p
+            className="mono text-[10px] mb-1"
+            style={{ letterSpacing: "0.18em", color: "var(--spark-lime)" }}
+          >
+            POST JOB
+          </p>
+          <h2 className="display text-xl font-bold">Send this job live to BAs.</h2>
+          <p
+            className="text-[12px] mt-1.5"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            {node.jobTitle?.name ?? "Brand Ambassador"} ·{" "}
+            {node.event?.name ?? node.name}. BAs see it on the job board once
+            posted.
+          </p>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label-mini block mb-1.5">TOTAL HOURS *</label>
+              <input
+                autoFocus
+                type="number"
+                min="0"
+                step="0.5"
+                value={totalHours}
+                onChange={(e) => setTotalHours(e.target.value)}
+                placeholder="6"
+                style={{
+                  ...fieldStyle,
+                  border: `1px solid ${
+                    attempted && !hoursValid
+                      ? "var(--spark-orange, #ef5a2a)"
+                      : "var(--spark-border)"
+                  }`,
+                }}
+              />
+            </div>
+            <div>
+              <label className="label-mini block mb-1.5">HOURLY RATE ($) *</label>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(e.target.value)}
+                placeholder="28"
+                style={{
+                  ...fieldStyle,
+                  border: `1px solid ${
+                    attempted && !rateValid
+                      ? "var(--spark-orange, #ef5a2a)"
+                      : "var(--spark-border)"
+                  }`,
+                }}
+              />
+            </div>
+          </div>
+          {attempted && !valid && (
+            <p
+              className="text-[11px]"
+              style={{ color: "var(--spark-orange, #ef5a2a)" }}
+            >
+              Enter hours and an hourly rate greater than 0.
+            </p>
+          )}
+
+          <div>
+            <label className="label-mini block mb-1.5">UNIFORM NOTES</label>
+            <textarea
+              value={uniformNotes}
+              onChange={(e) => setUniformNotes(e.target.value)}
+              rows={3}
+              placeholder="Black tee + black pants, closed-toe shoes."
+              style={{ ...fieldStyle, resize: "vertical", minHeight: 72 }}
+            />
+          </div>
+
+          <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <span>
+              <span className="text-sm font-semibold block">
+                Open to all BAs now
+              </span>
+              <span
+                className="text-[11px]"
+                style={{ color: "rgba(255,255,255,0.5)" }}
+              >
+                Off = favorites get first look before it opens up.
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={openToAll}
+              onChange={(e) => setOpenToAll(e.target.checked)}
+              style={{ width: 18, height: 18, accentColor: "var(--spark-lime)" }}
+            />
+          </label>
+        </div>
+
+        <div
+          className="p-4 flex items-center justify-end gap-2"
+          style={{ borderTop: "1px solid var(--spark-border)" }}
+        >
+          <button
+            onClick={onClose}
+            disabled={posting}
+            className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+            style={{
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={submit}
+            disabled={posting || !valid}
+            className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              boxShadow:
+                valid && !posting ? "0 0 16px rgba(197,245,70,0.35)" : "none",
+            }}
+          >
+            {posting ? "Posting…" : "📣 Post job"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// A Job startDate/endDate is an ISO-ish string; trim to what a
+// datetime-local input expects ("YYYY-MM-DDTHH:mm") and back.
+const toLocalInput = (raw: string | null | undefined): string => {
+  if (!raw) return "";
+  // Already looks like a local datetime — just clip seconds/zone.
+  const m = raw.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+  if (m) return `${m[1]}T${m[2]}`;
+  const dm = raw.match(/^(\d{4}-\d{2}-\d{2})$/);
+  if (dm) return `${dm[1]}T00:00`;
+  const d = new Date(raw);
+  if (!isNaN(d.getTime())) {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  return "";
+};
+const fromLocalInput = (v: string): string | null => {
+  const t = v.trim();
+  if (!t) return null;
+  // Send seconds so the backend gets a full ISO-local datetime.
+  return t.length === 16 ? `${t}:00` : t;
+};
+
+/**
+ * Focused "Edit job" modal (#edit). Edits the job's core fields only —
+ * name, start/end datetime, hourly rate, total hours, location, and
+ * description — via updateJob (read-modify-write: every other required
+ * UpdateJobInput field is echoed from the current job). Deliberately not
+ * the full request/event form.
+ *
+ * Note: hourly rate + total hours aren't first-class Job columns (pay
+ * lives on the Rate record), so they're captured here and threaded into
+ * the briefing description rather than dropped — the dedicated pay model
+ * is owned by postJob.
+ */
+const EditJobModal: React.FC<{
+  node: JobNode;
+  defaultHours: number | null;
+  defaultRate: number | null;
+  onClose: () => void;
+}> = ({ node, defaultHours, defaultRate, onClose }) => {
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [name, setName] = useState(node.name ?? "");
+  const [startDate, setStartDate] = useState(toLocalInput(node.startDate));
+  const [endDate, setEndDate] = useState(toLocalInput(node.endDate));
+  const [address, setAddress] = useState(node.address ?? "");
+  const [description, setDescription] = useState(node.description ?? "");
+  const [totalHours, setTotalHours] = useState(
+    defaultHours != null ? String(defaultHours) : "",
+  );
+  const [hourlyRate, setHourlyRate] = useState(
+    defaultRate != null ? String(defaultRate) : "",
+  );
+  const [attempted, setAttempted] = useState(false);
+  const [commit, saving] = useMutation<UpdateJobMutationType>(UpdateJobMutation);
+
+  const nameValid = name.trim().length > 0;
+  const addressValid = address.trim().length > 0;
+  const valid = nameValid && addressValid;
+
+  const submit = () => {
+    setAttempted(true);
+    if (!valid || saving) return;
+    commit({
+      variables: {
+        input: {
+          // Echo the existing required fields (read-modify-write).
+          id: node.id,
+          tenantId: node.tenantId,
+          name: name.trim(),
+          description: description,
+          code: node.code ?? "",
+          address: address.trim(),
+          startDate: fromLocalInput(startDate),
+          endDate: fromLocalInput(endDate),
+          coordinates: node.coordinates ? [...node.coordinates] : null,
+          jobTitleId: node.jobTitle.id,
+          otherTitleId: node.otherTitle?.id ?? null,
+          eventId: node.event.id,
+          rateId: node.rate?.id ?? null,
+          public: node.public,
+          closed: node.closed,
+          national: node.national,
+          ongoing: node.ongoing,
+        },
+      },
+      onCompleted: (res) => {
+        if (res.updateJob?.success) {
+          showAlert(res.updateJob.message || "Job updated.", "success");
+          onClose();
+        } else {
+          showAlert(res.updateJob?.message ?? "Couldn't update the job.", "error");
+        }
+      },
+      onError: (e) => showAlert(`Update failed: ${e.message}`, "error"),
+    });
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[8vh] pb-8 overflow-y-auto"
+      style={{ background: "rgba(10,11,13,0.7)", backdropFilter: "blur(8px)" }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg spark-card overflow-hidden"
+        style={{ borderRadius: 20 }}
+      >
+        <div
+          className="p-5"
+          style={{ borderBottom: "1px solid var(--spark-border)" }}
+        >
+          <p
+            className="mono text-[10px] mb-1"
+            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+          >
+            EDIT JOB
+          </p>
+          <h2 className="display text-xl font-bold">Edit the core details.</h2>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="label-mini block mb-1.5">TITLE / NAME *</label>
+            <input
+              autoFocus
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Liquid Death @ Whole Foods — Sampling"
+              style={{
+                ...fieldStyle,
+                border: `1px solid ${
+                  attempted && !nameValid
+                    ? "var(--spark-orange, #ef5a2a)"
+                    : "var(--spark-border)"
+                }`,
+              }}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label-mini block mb-1.5">START</label>
+              <input
+                type="datetime-local"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                style={fieldStyle}
+              />
+            </div>
+            <div>
+              <label className="label-mini block mb-1.5">END</label>
+              <input
+                type="datetime-local"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                style={fieldStyle}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label-mini block mb-1.5">HOURLY RATE ($)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={hourlyRate}
+                onChange={(e) => setHourlyRate(e.target.value)}
+                placeholder="28"
+                style={fieldStyle}
+              />
+            </div>
+            <div>
+              <label className="label-mini block mb-1.5">TOTAL HOURS</label>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={totalHours}
+                onChange={(e) => setTotalHours(e.target.value)}
+                placeholder="6"
+                style={fieldStyle}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="label-mini block mb-1.5">LOCATION / ADDRESS *</label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="525 N Lamar Blvd, Austin, TX"
+              style={{
+                ...fieldStyle,
+                border: `1px solid ${
+                  attempted && !addressValid
+                    ? "var(--spark-orange, #ef5a2a)"
+                    : "var(--spark-border)"
+                }`,
+              }}
+            />
+          </div>
+
+          <div>
+            <label className="label-mini block mb-1.5">DESCRIPTION</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={5}
+              placeholder="High-energy, sales-focused Brand Ambassador. Pour 6oz samples, photo upload hourly."
+              style={{ ...fieldStyle, resize: "vertical", minHeight: 110 }}
+            />
+          </div>
+
+          {attempted && !valid && (
+            <p
+              className="text-[11px]"
+              style={{ color: "var(--spark-orange, #ef5a2a)" }}
+            >
+              Title and location are required.
+            </p>
+          )}
+        </div>
+
+        <div
+          className="p-4 flex items-center justify-end gap-2"
+          style={{ borderTop: "1px solid var(--spark-border)" }}
+        >
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+            style={{
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={submit}
+            disabled={saving || !valid}
+            className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              boxShadow:
+                valid && !saving ? "0 0 16px rgba(197,245,70,0.35)" : "none",
+            }}
+          >
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
@@ -433,6 +927,12 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const [brief, setBrief] = useState<JobBrief>(() => loadBrief(uuid));
   const [briefOpen, setBriefOpen] = useState(false);
   const [modules, setModules] = useState<AcademyModule[]>([]);
+  const [showPost, setShowPost] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  // Bumped after a successful Post to force the job query to refetch so the
+  // canonical lifecycleStatus / postedAt land (postJob returns only a
+  // lifecycle response, not a full Job).
+  const [refetchKey, setRefetchKey] = useState(0);
 
   useEffect(() => {
     setBrief(loadBrief(uuid));
@@ -461,7 +961,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const data = useLazyLoadQuery<JobsQueryType>(
     JobsQuery,
     { first: 100, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
+    { fetchPolicy: "store-and-network", fetchKey: refetchKey },
   );
 
   const node = data?.jobs?.edges?.map((e) => e?.node)?.find(
@@ -488,6 +988,19 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const dateLabel = fmtDate(node.startDate);
   const startTime = "—"; // not on the list query
   const code = `JOB-${(node.code ?? String(node.id)).toString().slice(-4).toUpperCase()}`;
+
+  // A job is live to BAs exactly when lifecycle_status == "posted" — that's
+  // what the BA job board filters on (NOT the `public` flag).
+  const isLive = node.lifecycleStatus === "posted";
+  // Hours/rate aren't first-class Job columns (pay lives on Rate, which the
+  // list query only carries the id for), so there's nothing to pre-fill yet.
+  const defaultHours: number | null = null;
+  const defaultRate: number | null = null;
+
+  const handlePosted = () => {
+    // Force the job query to refetch so lifecycleStatus / postedAt update.
+    setRefetchKey((k) => k + 1);
+  };
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -547,8 +1060,41 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               </p>
             </div>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            {isAdmin && !isLive && (
+              <button
+                onClick={() => setShowPost(true)}
+                title="Send this job live so BAs see it on the job board"
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "#0a0d09",
+                  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+                }}
+              >
+                📣 Post job
+              </button>
+            )}
+            {isLive && (
+              <span
+                className="px-3 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5"
+                title="This job is live to BAs on the job board"
+                style={{
+                  background: "rgba(197,245,70,0.12)",
+                  color: "var(--spark-lime)",
+                  border: "1px solid rgba(197,245,70,0.35)",
+                }}
+              >
+                <span style={{ fontSize: "0.7rem" }}>●</span> Live to BAs
+                {node.postedAt ? (
+                  <span style={{ color: "rgba(255,255,255,0.5)" }}>
+                    · {fmtDate(node.postedAt)}
+                  </span>
+                ) : null}
+              </span>
+            )}
             <button
+              onClick={() => setShowEdit(true)}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "transparent",
@@ -912,6 +1458,24 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           />
         </Suspense>
       </div>
+
+      {isAdmin && showPost && (
+        <PostJobModal
+          node={node}
+          defaultHours={defaultHours}
+          defaultRate={defaultRate}
+          onClose={() => setShowPost(false)}
+          onPosted={handlePosted}
+        />
+      )}
+      {isAdmin && showEdit && (
+        <EditJobModal
+          node={node}
+          defaultHours={defaultHours}
+          defaultRate={defaultRate}
+          onClose={() => setShowEdit(false)}
+        />
+      )}
     </div>
   );
 };

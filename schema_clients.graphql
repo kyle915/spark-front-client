@@ -3119,6 +3119,8 @@ type Job implements Node {
   closed: Boolean!
   national: Boolean!
   ongoing: Boolean!
+  lifecycleStatus: String!
+  postedAt: String
   coordinates: [Float!]
   jobTitle: JobTitle!
   otherTitle: JobTitle
@@ -3761,6 +3763,7 @@ type Mutation {
   updateRate(input: UpdateRateInput!): RateDetailResponse!
   createJob(input: CreateJobInput!): JobDetailResponse!
   updateJob(input: UpdateJobInput!): JobDetailResponse!
+  postJob(input: PostJobInput!): JobLifecycleResponse!
   createJobFile(input: CreateJobFileInput!): JobFileDetailResponse!
   updateJobFile(input: UpdateJobFileInput!): JobFileDetailResponse!
   createJobRequirementType(input: CreateJobRequirementTypeInput!): JobRequirementTypeDetailResponse!
@@ -5825,6 +5828,17 @@ input UpdateJobFileInput {
   jobId: ID!
   fileTypeId: ID!
   id: ID!
+}
+
+input PostJobInput {
+  clientMutationId: ID = null
+  id: ID!
+  totalHours: Float!
+  hourlyRate: Float!
+  uniformNotes: String = null
+  description: String = null
+  maxApplications: Int = null
+  openToAll: Boolean = null
 }
 
 input UpdateJobInput {
