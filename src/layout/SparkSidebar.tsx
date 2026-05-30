@@ -85,6 +85,9 @@ const SECTIONS: NavSection[] = [
       },
       { label: "Today", Icon: Radio, to: "/today" },
       { label: "Upcoming", Icon: CalendarRange, to: "/upcoming" },
+      // Jobs moved up from TALENT — it's a primary day-to-day staffing
+      // workflow, not a back-office talent tool. Same /jobs route + icon.
+      { label: "Jobs", Icon: Hammer, to: "/jobs", adminOnly: true },
       {
         label: "Recent submissions",
         Icon: Inbox,
@@ -140,7 +143,6 @@ const SECTIONS: NavSection[] = [
     title: "Talent",
     adminOnly: true,
     items: [
-      { label: "Jobs", Icon: Hammer, to: "/jobs" },
       { label: "Search Talent", Icon: Users, to: "/talent" },
       { label: "Favorites", Icon: Star, to: "/favorites" },
       { label: "People", Icon: UsersRound, to: "/people" },
