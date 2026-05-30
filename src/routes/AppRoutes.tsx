@@ -38,6 +38,7 @@ import { Palette, PencilIcon, TagIcon, Archive } from "lucide-react";
 // or a recap with HEIC photos never download them.
 
 import { lazy, type ComponentType } from "react";
+import { Navigate } from "react-router";
 
 // Preserve the underlying component's prop types through React.lazy.
 // Without the explicit C generic the wrapped component would type-check
@@ -242,12 +243,8 @@ const SparkFormBuilder = lazyDefault(
 const SparkNewClient = lazyDefault(
   () => import("@/components/pages/clients/SparkNewClient"),
 );
-const SparkBaPortal = lazyDefault(
-  () => import("@/components/pages/ba/SparkBaPortal"),
-);
-const SparkBaDetail = lazyDefault(
-  () => import("@/components/pages/ba/SparkBaDetail"),
-);
+// SparkBaPortal / SparkBaDetail retired — the /ba routes now redirect to
+// /talent (the complete BA surface). See the route entries below.
 const SparkAcademy = lazyDefault(
   () => import("@/components/pages/academy/SparkAcademy"),
 );
@@ -571,18 +568,19 @@ const RequestsLinks = {
       isPublic: false,
     },
     {
-      // BA portal — separate chrome (no admin sidebar, top tabs only).
-      // Anyone signed in can hit this; the route owns its own layout.
+      // Retired: the old BA portal/detail used a stale ambassadorProfile
+      // query (no college/bio/gig-history/photos/résumé; DM + favorite
+      // were stubbed). The complete BA surface is now /talent (SparkTalent
+      // + BAProfileModal), so both /ba routes redirect there.
       path: "/ba",
-      component: <SparkBaPortal />,
+      component: <Navigate to="/talent" replace />,
       isPublic: false,
     },
     {
-      // Admin view of a single Brand Ambassador — stats, reviews,
-      // notes, contact, favorite toggle. Distinct from /ba which is
-      // the BA's own portal.
+      // Retired → /talent (see /ba above). The talent roster opens each
+      // BA's full profile in a modal on click.
       path: "/ba/:uuid",
-      component: <SparkBaDetail />,
+      component: <Navigate to="/talent" replace />,
       isPublic: false,
     },
     {
