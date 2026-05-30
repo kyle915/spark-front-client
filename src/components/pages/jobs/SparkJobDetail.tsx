@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { JobsQuery } from "@/api/queries/JobsQuery";
 import type { JobsQuery as JobsQueryType } from "@api/queries/__generated__/JobsQuery.graphql";
@@ -10,6 +10,8 @@ import { AssignAmbassadorToJobMutation } from "@/api/mutations/AssignAmbassadorT
 import type { AssignAmbassadorToJobMutation as AssignAmbassadorToJobMutationType } from "@api/mutations/__generated__/AssignAmbassadorToJobMutation.graphql";
 import { SetJobBriefingMutation } from "@/api/mutations/SetJobBriefingMutation";
 import type { SetJobBriefingMutation as SetJobBriefingMutationType } from "@api/mutations/__generated__/SetJobBriefingMutation.graphql";
+import { PostJobMutation } from "@/api/mutations/PostJobMutation";
+import type { PostJobMutation as PostJobMutationType } from "@api/mutations/__generated__/PostJobMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -258,9 +260,10 @@ const BABriefingCard: React.FC<{
   initialTitle: string;
   initialBody: string;
   isAdmin: boolean;
-}> = ({ jobId, initialTitle, initialBody, isAdmin }) => {
+  autoOpen?: boolean;
+}> = ({ jobId, initialTitle, initialBody, isAdmin, autoOpen = false }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen && isAdmin);
   const [title, setTitle] = useState(initialTitle);
   const [body, setBody] = useState(initialBody);
   const [commit, inFlight] = useMutation<SetJobBriefingMutationType>(
@@ -272,6 +275,11 @@ const BABriefingCard: React.FC<{
     setTitle(initialTitle);
     setBody(initialBody);
   }, [initialTitle, initialBody]);
+
+  // Open the editor when the Edit button asks for it (?edit=briefing).
+  useEffect(() => {
+    if (autoOpen && isAdmin) setOpen(true);
+  }, [autoOpen, isAdmin]);
 
   const dirty = title !== initialTitle || body !== initialBody;
 
@@ -298,7 +306,7 @@ const BABriefingCard: React.FC<{
   };
 
   return (
-    <div className="spark-card p-6 space-y-5">
+    <div id="ba-briefing" className="spark-card p-6 space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <p
@@ -430,9 +438,12 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   const { isAdmin } = useSparkRole();
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [brief, setBrief] = useState<JobBrief>(() => loadBrief(uuid));
   const [briefOpen, setBriefOpen] = useState(false);
   const [modules, setModules] = useState<AcademyModule[]>([]);
+  const [postJob, posting] = useMutation<PostJobMutationType>(PostJobMutation);
 
   useEffect(() => {
     setBrief(loadBrief(uuid));
@@ -488,6 +499,86 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const dateLabel = fmtDate(node.startDate);
   const startTime = "—"; // not on the list query
   const code = `JOB-${(node.code ?? String(node.id)).toString().slice(-4).toUpperCase()}`;
+
+  // A job is "live to BAs" iff it's public — that's what surfaces it on the
+  // BA job board (myAvailableJobs / public, open jobs). There is no
+  // lifecycle_status field on Job in the schema, so public IS the signal.
+  const isLive = node.public;
+
+  // "Post job" — flip the job public via updateJob (no dedicated postJob
+  // mutation exists). UpdateJobInput requires the core non-null fields, so
+  // we echo the current values back alongside public: true (read-modify
+  // -write). The returned `job` (keyed by id) merges into the Relay store,
+  // so the button + indicator flip to "live" with no manual refetch.
+  const handlePostJob = () => {
+    if (posting || isLive) return;
+    if (!window.confirm("Post this job live to BAs?")) return;
+    postJob({
+      variables: {
+        input: {
+          id: node.id,
+          name: node.name,
+          description: node.description ?? "",
+          code: node.code ?? "",
+          address: node.address,
+          startDate: node.startDate ?? null,
+          endDate: node.endDate ?? null,
+          coordinates: node.coordinates ? [...node.coordinates] : null,
+          jobTitleId: node.jobTitle.id,
+          otherTitleId: node.otherTitle?.id ?? null,
+          eventId: node.event.id,
+          rateId: node.rate?.id ?? null,
+          tenantId: node.tenantId,
+          national: node.national,
+          closed: node.closed,
+          ongoing: node.ongoing,
+          public: true,
+        },
+      },
+      onCompleted: (res) => {
+        if (res.updateJob?.success && res.updateJob.job?.public) {
+          showAlert(
+            res.updateJob.message || "Job is live to BAs.",
+            "success",
+          );
+        } else {
+          showAlert(
+            res.updateJob?.message ?? "Couldn't post the job.",
+            "error",
+          );
+        }
+      },
+      onError: (e) => showAlert(`Post failed: ${e.message}`, "error"),
+    });
+  };
+
+  // Edit — open the job's editable fields. There is no reusable job
+  // create/edit form in the app today (the "+ Post new job" button on the
+  // jobs board points at /requests/create, which is the *Request* flow — a
+  // different entity — and there's no /job/edit route or shared job form).
+  // The only editable, backend-backed job fields with real UI are the
+  // pre-shift briefing (setJobBriefing). So Edit opens that editor in place
+  // via ?edit=briefing and scrolls to it, rather than being a dead no-op.
+  // A full core-fields editor (title/date/pay/slots/location, which would
+  // ride on updateJob) is a larger net-new form and intentionally deferred.
+  const handleEdit = () => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("edit", "briefing");
+        return next;
+      },
+      { replace: true },
+    );
+    document
+      .getElementById("ba-briefing")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    showAlert(
+      "Editing the job briefing below. A full editor for core fields (title, date, pay, slots, location) is coming soon.",
+      "info",
+      5000,
+    );
+  };
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -547,8 +638,9 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               </p>
             </div>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
+              onClick={handleEdit}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "transparent",
@@ -568,6 +660,35 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
             >
               ⎘ Duplicate
             </button>
+            {isAdmin && !isLive && (
+              <button
+                onClick={handlePostJob}
+                disabled={posting}
+                title="Make this job public so BAs see it on the job board"
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "#0a0d09",
+                  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+                  opacity: posting ? 0.6 : 1,
+                }}
+              >
+                {posting ? "Posting…" : "📣 Post job"}
+              </button>
+            )}
+            {isLive && (
+              <span
+                className="px-3 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5"
+                title="This job is public and visible to BAs on the job board"
+                style={{
+                  background: "rgba(197,245,70,0.12)",
+                  color: "var(--spark-lime)",
+                  border: "1px solid rgba(197,245,70,0.35)",
+                }}
+              >
+                <span style={{ fontSize: "0.7rem" }}>●</span> Live to BAs
+              </span>
+            )}
             <button
               className="px-4 py-2 rounded-xl text-sm font-semibold"
               style={{
@@ -623,6 +744,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
         initialTitle={node.briefing?.title ?? ""}
         initialBody={node.briefing?.body ?? ""}
         isAdmin={isAdmin}
+        autoOpen={searchParams.get("edit") === "briefing"}
       />
 
       {/* Job brief — what to do, expect, bring + linked academy modules */}

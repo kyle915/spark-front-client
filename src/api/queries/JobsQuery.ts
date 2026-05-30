@@ -37,16 +37,25 @@ export const JobsQuery = graphql`
           ongoing
           national
           tenantId
+          coordinates
           jobTitle {
             __typename
             id
             name
+          }
+          otherTitle {
+            __typename
+            id
           }
           event {
             __typename
             id
             uuid
             name
+          }
+          rate {
+            __typename
+            id
           }
           description
           address
