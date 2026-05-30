@@ -3636,6 +3636,7 @@ type Mutation {
   archiveEvent(input: ArchiveEventInput!): EventDetailResponse!
   approveEvent(input: ApproveEventInput!): EventDetailResponse!
   declineEvent(input: DeclineEventInput!): EventDetailResponse!
+  reviewReceipt(input: ReviewReceiptInput!): ReviewReceiptResponse!
   createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
   createEventType(input: CreateEventTypeInput!): EventTypeDetailResponse!
   updateEventType(input: UpdateEventTypeInput!): EventTypeDetailResponse!
@@ -4166,6 +4167,8 @@ type Query {
   wingspanPayments(periodId: ID = null, limit: Int! = 50): [WingspanPayment!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   event(id: ID = null, uuid: ID = null): Event
+  receipts(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: ConsumerReceiptFiltersInput = null): ConsumerReceiptTypeCountableConnection!
+  eventReceiptUploadLink(eventId: ID!): EventReceiptUploadLinkType!
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   todayEventsCoordinates(coordinates: [Float!]!, range: Float!, unit: DistanceUnit! = KILOMETERS, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   recentLocationPings(withinMinutes: Int! = 30, tenantId: ID = null): [LocationPingType!]!
@@ -5284,6 +5287,78 @@ type SparkUserType implements Node {
   firstName: String!
   lastName: String!
   image: DjangoImageType
+}
+
+"""
+ConsumerReceipt — a receipt photo submitted by a consumer via the public
+no-login upload page, awaiting admin validation. status is one of
+pending / validated / rejected.
+"""
+type ConsumerReceiptType implements Node {
+  """The Globally Unique ID of this object"""
+  id: ID!
+  uuid: String!
+  status: String!
+  submittedAt: String
+  createdAt: String
+  updatedAt: String
+  eventId: ID
+  eventName: String
+  consumerName: String
+  consumerEmail: String
+  consumerPhone: String
+  storeName: String
+  purchaseDate: String
+  amount: String
+  product: String
+  reviewNote: String
+  reviewedAt: String
+  publicUrl: String
+  reviewedBy: SparkUserType
+}
+
+type ConsumerReceiptTypeCountableConnection {
+  pageInfo: PageInfo!
+  edges: [ConsumerReceiptTypeCountableEdge!]!
+  totalCount: Int!
+}
+
+type ConsumerReceiptTypeCountableEdge {
+  """A cursor for use in pagination"""
+  cursor: String!
+
+  """The item at the end of the edge"""
+  node: ConsumerReceiptType!
+}
+
+input ConsumerReceiptFiltersInput {
+  tenantId: ID
+  eventId: ID
+  status: String
+}
+
+input ReviewReceiptInput {
+  id: ID!
+  status: String!
+  note: String
+  clientMutationId: ID
+}
+
+type ReviewReceiptResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  receipt: ConsumerReceiptType
+}
+
+"""
+Per-event public upload link. token is embedded in the public
+upload-page URL; url is the absolute backend resolve endpoint.
+"""
+type EventReceiptUploadLinkType {
+  eventId: ID!
+  token: String!
+  url: String!
 }
 
 """
