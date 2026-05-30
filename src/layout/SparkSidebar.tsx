@@ -36,6 +36,7 @@ import {
   Wrench,
   Plus,
   GraduationCap,
+  Receipt,
 } from "lucide-react";
 
 /**
@@ -116,6 +117,15 @@ const SECTIONS: NavSection[] = [
         to: "/recaps/missing",
         // Client tenants don't typically nudge BAs — this is an
         // ops/admin action. Hide on client surface.
+        adminOnly: true,
+      },
+      {
+        // Consumer receipt validation queue — admin-only. Distinct
+        // route from /recaps. Ops review consumer-submitted receipts
+        // here and mint per-event public upload links.
+        label: "Receipts",
+        Icon: Receipt,
+        to: "/receipts",
         adminOnly: true,
       },
       {

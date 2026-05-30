@@ -279,6 +279,9 @@ const SparkPayments = lazyDefault(
 const SparkBilling = lazyDefault(
   () => import("@/components/pages/billing/SparkBilling"),
 );
+const SparkReceipts = lazyDefault(
+  () => import("@/components/pages/receipts/SparkReceipts"),
+);
 
 // User
 const UsersList = lazyDefault(() => import("@/users/UsersList"));
@@ -290,6 +293,7 @@ const SparkPublicExpressForm = lazyDefault(
   () => import("@/public/form/SparkPublicExpressForm"),
 );
 const PublicApprove = lazyDefault(() => import("@/public/approve/PublicApprove"));
+const ReceiptUpload = lazyDefault(() => import("@/public/receipts/ReceiptUpload"));
 const MagicLinkExchange = lazyDefault(() => import("@/auth/MagicLinkExchange"));
 const ForgotPassword = lazyDefault(() => import("@/auth/ForgotPassword"));
 const ResetPassword = lazyDefault(() => import("@/auth/ResetPassword"));
@@ -334,6 +338,15 @@ const PublicRoutes = {
     {
       path: "/approve/:token",
       component: <PublicApprove />,
+      isPublic: true,
+    },
+    // Public, token-authenticated consumer receipt upload page. The token
+    // in the URL is minted per-event by the admin Receipts page
+    // (eventReceiptUploadLink) and is the auth — no login, no tenant
+    // guard. Submissions land in the admin Receipts validation queue.
+    {
+      path: "/receipt-upload/:token",
+      component: <ReceiptUpload />,
       isPublic: true,
     },
     {
@@ -527,6 +540,18 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkRecentSubmissions />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      // Consumer receipt validation queue. Admin-only — distinct from
+      // /recaps. Lists consumer-submitted receipts and lets ops mint
+      // per-event public upload links that feed this queue.
+      path: "/receipts",
+      component: (
+        <AdminOnly>
+          <SparkReceipts />
         </AdminOnly>
       ),
       isPublic: false,
