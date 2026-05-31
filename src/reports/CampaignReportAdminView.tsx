@@ -7,8 +7,6 @@ import environment from "@/api/relay/environment";
 import { useAlertStore } from "@/store/alertStore";
 import { CampaignReportQuery } from "@/api/queries/CampaignReportQuery";
 import type { CampaignReportQuery as CampaignReportQueryType } from "@api/queries/__generated__/CampaignReportQuery.graphql";
-import { CampaignReportAiSummaryQuery } from "@/api/queries/CampaignReportAiSummaryQuery";
-import type { CampaignReportAiSummaryQuery as CampaignReportAiSummaryQueryType } from "@api/queries/__generated__/CampaignReportAiSummaryQuery.graphql";
 import { CampaignReportAiAnswerQuery } from "@/api/queries/CampaignReportAiAnswerQuery";
 import type { CampaignReportAiAnswerQuery as CampaignReportAiAnswerQueryType } from "@api/queries/__generated__/CampaignReportAiAnswerQuery.graphql";
 import CampaignReportView from "./CampaignReportView";
@@ -51,171 +49,6 @@ const limeBtn: React.CSSProperties = {
   background: "var(--spark-lime)",
   color: "#0a0d09",
   boxShadow: "0 0 24px rgba(197,245,70,0.35)",
-};
-
-type AiSummaryResult = {
-  ok: boolean;
-  summary: string;
-  reason?: string | null;
-};
-
-/**
- * On-demand AI executive summary card (admin report view only).
- *
- * Renders a Generate button that fires `campaignReportAiSummary(requestId)`
- * imperatively on click — never on mount — so the model cost is only paid
- * when an admin actually asks for it. While in flight it shows a spinner;
- * on success it renders the copy (paragraph breaks preserved) with a Copy
- * button that writes to the clipboard and toasts "Copied". A failure
- * (`ok: false`) shows the server's `reason` muted. Re-generating is allowed
- * at any time.
- */
-const AiSummaryCard: React.FC<{ requestId: string }> = ({ requestId }) => {
-  const showAlert = useAlertStore((s) => s.showAlert);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<AiSummaryResult | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  const generate = useCallback(async () => {
-    setLoading(true);
-    setCopied(false);
-    try {
-      const data = await fetchQuery<CampaignReportAiSummaryQueryType>(
-        environment,
-        CampaignReportAiSummaryQuery,
-        { requestId },
-        { fetchPolicy: "network-only" },
-      ).toPromise();
-
-      const res = data?.campaignReportAiSummary;
-      if (!res) {
-        setResult({
-          ok: false,
-          summary: "",
-          reason: "No response from the summary service.",
-        });
-        return;
-      }
-      setResult({ ok: res.ok, summary: res.summary, reason: res.reason });
-    } catch {
-      setResult({
-        ok: false,
-        summary: "",
-        reason: "Couldn't reach the summary service — try again.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [requestId]);
-
-  const copySummary = useCallback(async () => {
-    if (!result?.summary) return;
-    try {
-      await navigator.clipboard.writeText(result.summary);
-      setCopied(true);
-      showAlert("Copied", "success");
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      showAlert("Couldn't reach the clipboard — copy the text manually.", "warning");
-    }
-  }, [result, showAlert]);
-
-  // Preserve paragraph breaks: split on blank lines into paragraphs and
-  // keep single newlines inside a paragraph as soft line breaks.
-  const paragraphs = useMemo(() => {
-    if (!result?.ok || !result.summary) return [];
-    return result.summary
-      .replace(/\r\n/g, "\n")
-      .split(/\n{2,}/)
-      .map((block) => block.trim())
-      .filter(Boolean);
-  }, [result]);
-
-  return (
-    <div className="spark-card p-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              textTransform: "uppercase",
-              color: "rgba(255,255,255,0.4)",
-            }}
-          >
-            AI Executive Summary
-          </p>
-          <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
-            Generate a written recap of this campaign's results on demand.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {result && !loading && (
-            <button
-              type="button"
-              onClick={copySummary}
-              disabled={!result.ok || !result.summary}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed"
-              style={
-                copied
-                  ? {
-                      background: "rgba(95,184,239,0.18)",
-                      color: "var(--spark-sky)",
-                      border: "1px solid rgba(95,184,239,0.5)",
-                    }
-                  : ghostBtn
-              }
-              title="Copy the summary to your clipboard"
-            >
-              {copied ? "✓ Copied" : "Copy"}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={generate}
-            disabled={loading}
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
-            style={limeBtn}
-            title="Generate an AI executive summary"
-          >
-            {loading && (
-              <span
-                aria-hidden
-                className="inline-block w-3.5 h-3.5 rounded-full animate-spin"
-                style={{
-                  border: "2px solid rgba(10,13,9,0.35)",
-                  borderTopColor: "#0a0d09",
-                }}
-              />
-            )}
-            {loading ? "Generating…" : result ? "Re-generate" : "Generate"}
-          </button>
-        </div>
-      </div>
-
-      {result && !loading && (
-        <div className="mt-4">
-          {result.ok ? (
-            <div className="space-y-3" style={{ color: "var(--spark-text)" }}>
-              {paragraphs.map((para, i) => (
-                <p
-                  key={i}
-                  className="text-sm leading-relaxed"
-                  style={{ whiteSpace: "pre-wrap" }}
-                >
-                  {para}
-                </p>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
-              {result.reason || "AI summary is unavailable right now."}
-            </p>
-          )}
-        </div>
-      )}
-    </div>
-  );
 };
 
 type AiAnswerResult = {
@@ -488,9 +321,6 @@ const ReportLoaded: React.FC<{ requestId: string }> = ({ requestId }) => {
           </a>
         </div>
       </div>
-
-      {/* On-demand AI executive summary — admin view only */}
-      <AiSummaryCard requestId={report.requestId} />
 
       {/* On-demand campaign Q&A — admin view only */}
       <AiAnswerCard requestId={report.requestId} />

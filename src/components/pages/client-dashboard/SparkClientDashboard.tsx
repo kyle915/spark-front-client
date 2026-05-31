@@ -29,6 +29,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useSidebarCounts } from "@/hooks/useSidebarCounts";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import AskAiButton from "@/components/ai/AskAiButton";
 // Embedded as tabs on this dashboard — the named exports are the
 // Layout-less bodies so we don't double-render the admin shell.
 import { ApprovalsBody } from "@/components/pages/approvals/SparkApprovals";
@@ -264,28 +265,34 @@ const ClientInner: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl">
       {/* Header */}
-      <div>
-        <p
-          className="mono text-[10px]"
-          style={{
-            letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
-          }}
-        >
-          YOUR PROGRAM · LAST 7 DAYS FORWARD
-        </p>
-        <h1
-          className="display text-4xl font-bold mt-2"
-          style={{ letterSpacing: "-0.04em" }}
-        >
-          Where things stand.
-        </h1>
-        <p
-          className="mt-2"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          Live from the field. Tap any tile to drill in.
-        </p>
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            YOUR PROGRAM · LAST 7 DAYS FORWARD
+          </p>
+          <h1
+            className="display text-4xl font-bold mt-2"
+            style={{ letterSpacing: "-0.04em" }}
+          >
+            Where things stand.
+          </h1>
+          <p
+            className="mt-2"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            Live from the field. Tap any tile to drill in.
+          </p>
+        </div>
+        {/* Ask AI about this client's own program — scoped to the client's
+            own tenant (useAuthStore().tenantId), the same tenant id every
+            per-tenant surface resolves. */}
+        <AskAiButton tenantId={tenantId} />
       </div>
 
       {/* Tab bar — Overview / Approvals / Account Map. The latter two

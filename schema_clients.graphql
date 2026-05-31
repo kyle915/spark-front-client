@@ -4187,6 +4187,7 @@ type Query {
   campaignReport(requestId: ID!): CampaignReport
   campaignReportAiSummary(requestId: ID!): CampaignReportAiSummary!
   campaignReportAiAnswer(requestId: ID!, question: String!): CampaignReportAiAnswer!
+  tenantAiAnswer(tenantId: ID!, question: String!): TenantAiAnswer!
   eventStaffing(eventId: ID!, limit: Int): EventStaffing
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   todayEventsCoordinates(coordinates: [Float!]!, range: Float!, unit: DistanceUnit! = KILOMETERS, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
@@ -6463,6 +6464,7 @@ type CampaignReportQuote { text: String!  source: String }
 type CampaignReport { requestId: ID!  brandName: String!  title: String!  dateRange: String  generatedAt: String!  shareToken: String!  kpis: CampaignReportKpis!  events: [CampaignReportEventRow!]!  photos: [CampaignReportPhoto!]!  ambassadors: [CampaignReportBa!]!  highlights: [CampaignReportQuote!]! }
 type CampaignReportAiSummary { ok: Boolean!  summary: String!  reason: String }
 type CampaignReportAiAnswer { ok: Boolean!  answer: String!  reason: String }
+type TenantAiAnswer { ok: Boolean!  answer: String!  reason: String }
 
 type InvoiceLineItem { id: ID!  description: String!  quantity: String!  unitPrice: String!  amount: String!  eventId: ID  sortOrder: Int! }
 type Invoice implements Node { id: ID!  uuid: String!  number: String!  status: String!  clientName: String!  issueDate: String  dueDate: String  currency: String!  notes: String  subtotal: String!  taxRate: String!  taxAmount: String!  total: String!  lineItems: [InvoiceLineItem!]!  sentAt: String  paidAt: String  shareToken: String!  createdAt: String!  updatedAt: String! }
