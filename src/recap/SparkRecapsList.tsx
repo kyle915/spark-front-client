@@ -450,7 +450,12 @@ const RecapsListInner: React.FC<{
           }
         : null,
     },
-    { fetchPolicy: "store-or-network" },
+    // Always refetch on mount. store-or-network served a STALE cached
+    // connection that omitted recaps created/approved after the cache was
+    // populated — so a recap submitted minutes earlier looked "lost" from
+    // the list (it was always safe in the DB). store-and-network paints the
+    // cache instantly, then refreshes from the server.
+    { fetchPolicy: "store-and-network" },
   );
 
   // Parallel query for tenants on a Custom Recap Template. We don't
@@ -467,7 +472,10 @@ const RecapsListInner: React.FC<{
       // Client view → approved-only; admin/RMM view → drafts too.
       filters: tenantId ? { tenantId, approved: approvedOnly } : null,
     },
-    { fetchPolicy: "store-or-network" },
+    // Always refetch on mount — same reason as the legacy query above. A
+    // stale cached connection here is what made just-submitted CUSTOM recaps
+    // vanish from the list after approve.
+    { fetchPolicy: "store-and-network" },
   );
 
   const recaps: Recap[] = useMemo(() => {
