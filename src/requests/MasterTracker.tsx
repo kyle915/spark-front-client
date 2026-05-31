@@ -517,6 +517,20 @@ const TrackerTable: React.FC<{
                         >
                           {isExpanded ? "× CLOSE" : "✎ NOTES"}
                         </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/report-view/${r.uuid}`);
+                          }}
+                          className="mono text-[10px] transition"
+                          style={{
+                            letterSpacing: "0.14em",
+                            color: "var(--spark-lime)",
+                          }}
+                          title="Open this request's branded campaign report"
+                        >
+                          📊 REPORT
+                        </button>
                         {onClone && (
                           <button
                             onClick={(e) => {

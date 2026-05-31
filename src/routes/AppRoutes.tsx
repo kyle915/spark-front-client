@@ -282,6 +282,11 @@ const SparkBilling = lazyDefault(
 const SparkReceipts = lazyDefault(
   () => import("@/components/pages/receipts/SparkReceipts"),
 );
+// Authenticated campaign report view (per-request). Linked from the Master
+// Tracker "Report" row action. Public twin is /report/:token below.
+const CampaignReportAdminView = lazyDefault(
+  () => import("@/reports/CampaignReportAdminView"),
+);
 
 // User
 const UsersList = lazyDefault(() => import("@/users/UsersList"));
@@ -296,6 +301,12 @@ const PublicApprove = lazyDefault(() => import("@/public/approve/PublicApprove")
 const ReceiptUpload = lazyDefault(() => import("@/public/receipts/ReceiptUpload"));
 const CampaignUpload = lazyDefault(
   () => import("@/public/receipts/CampaignUpload"),
+);
+// Public, no-login shareable campaign report. The signed :token in the URL
+// is the auth — fetches the no-auth REST report endpoint and renders the
+// same <CampaignReportView> the admin view uses.
+const PublicCampaignReport = lazyDefault(
+  () => import("@/public/reports/PublicCampaignReport"),
 );
 const MagicLinkExchange = lazyDefault(() => import("@/auth/MagicLinkExchange"));
 const ForgotPassword = lazyDefault(() => import("@/auth/ForgotPassword"));
@@ -360,6 +371,15 @@ const PublicRoutes = {
     {
       path: "/c/:slug",
       component: <CampaignUpload />,
+      isPublic: true,
+    },
+    // Public, no-login shareable campaign report. The signed :token in the
+    // URL is the auth (no tenant guard, like /c/:slug). Fetches the no-auth
+    // REST report endpoint; renders the shared <CampaignReportView> + a
+    // Download-PDF button.
+    {
+      path: "/report/:token",
+      component: <PublicCampaignReport />,
       isPublic: true,
     },
     {
@@ -501,6 +521,14 @@ const RequestsLinks = {
     {
       path: "/reports",
       component: <SparkReports />,
+      isPublic: false,
+    },
+    {
+      // Authenticated, tenant-guarded campaign report for one request.
+      // Reached from the Master Tracker "Report" row action. Public twin
+      // is /report/:token (no auth).
+      path: "/report-view/:requestId",
+      component: <CampaignReportAdminView />,
       isPublic: false,
     },
     {

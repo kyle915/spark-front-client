@@ -4176,6 +4176,7 @@ type Query {
   receipts(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: ConsumerReceiptFiltersInput = null): ConsumerReceiptTypeCountableConnection!
   receiptCampaigns(filters: ReceiptCampaignFiltersInput = null): [ReceiptCampaign!]!
   eventReceiptUploadLink(eventId: ID!): EventReceiptUploadLinkType!
+  campaignReport(requestId: ID!): CampaignReport
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   todayEventsCoordinates(coordinates: [Float!]!, range: Float!, unit: DistanceUnit! = KILOMETERS, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   recentLocationPings(withinMinutes: Int! = 30, tenantId: ID = null): [LocationPingType!]!
@@ -6441,3 +6442,10 @@ type VerifyTokenType implements OutputInterface {
 }
 
 scalar dict
+
+type CampaignReportKpis { events: Int!  recaps: Int!  consumersReached: Int!  samplesDistributed: Int!  productsSold: Int!  cansSold: Int!  packsSold: Int!  totalEngagements: Int!  firstTimeConsumers: Int!  brandAwareConsumers: Int!  willingToPurchase: Int! }
+type CampaignReportPhoto { url: String!  caption: String }
+type CampaignReportEventRow { id: ID!  name: String  date: String  locationName: String  city: String  state: String  coordinates: String  recapCount: Int! }
+type CampaignReportBa { name: String!  isExternal: Boolean!  eventCount: Int! }
+type CampaignReportQuote { text: String!  source: String }
+type CampaignReport { requestId: ID!  brandName: String!  title: String!  dateRange: String  generatedAt: String!  shareToken: String!  kpis: CampaignReportKpis!  events: [CampaignReportEventRow!]!  photos: [CampaignReportPhoto!]!  ambassadors: [CampaignReportBa!]!  highlights: [CampaignReportQuote!]! }
