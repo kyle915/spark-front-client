@@ -30,6 +30,10 @@ export const UpdateReceiptCampaignMutation = graphql`
         paidCount
         createdAt
         updatedAt
+        budgetCap
+        totalPaid
+        totalCommitted
+        budgetRemaining
       }
     }
   }

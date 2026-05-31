@@ -28,6 +28,10 @@ export const ReceiptCampaignsQuery = graphql`
       paidCount
       createdAt
       updatedAt
+      budgetCap
+      totalPaid
+      totalCommitted
+      budgetRemaining
     }
   }
 `;
