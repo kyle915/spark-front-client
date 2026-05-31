@@ -294,6 +294,9 @@ const SparkPublicExpressForm = lazyDefault(
 );
 const PublicApprove = lazyDefault(() => import("@/public/approve/PublicApprove"));
 const ReceiptUpload = lazyDefault(() => import("@/public/receipts/ReceiptUpload"));
+const CampaignUpload = lazyDefault(
+  () => import("@/public/receipts/CampaignUpload"),
+);
 const MagicLinkExchange = lazyDefault(() => import("@/auth/MagicLinkExchange"));
 const ForgotPassword = lazyDefault(() => import("@/auth/ForgotPassword"));
 const ResetPassword = lazyDefault(() => import("@/auth/ResetPassword"));
@@ -347,6 +350,16 @@ const PublicRoutes = {
     {
       path: "/receipt-upload/:token",
       component: <ReceiptUpload />,
+      isPublic: true,
+    },
+    // Public, no-login consumer rebate upload page. The :slug identifies an
+    // always-on per-client receipt campaign (no token, no tenant guard — a
+    // missing or inactive campaign 404s server-side). Consumers upload a
+    // receipt + their Venmo handle; submissions land in the per-campaign
+    // queue on the admin Receipts dashboard.
+    {
+      path: "/c/:slug",
+      component: <CampaignUpload />,
       isPublic: true,
     },
     {
