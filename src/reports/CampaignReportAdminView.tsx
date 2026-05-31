@@ -9,6 +9,8 @@ import { CampaignReportQuery } from "@/api/queries/CampaignReportQuery";
 import type { CampaignReportQuery as CampaignReportQueryType } from "@api/queries/__generated__/CampaignReportQuery.graphql";
 import { CampaignReportAiSummaryQuery } from "@/api/queries/CampaignReportAiSummaryQuery";
 import type { CampaignReportAiSummaryQuery as CampaignReportAiSummaryQueryType } from "@api/queries/__generated__/CampaignReportAiSummaryQuery.graphql";
+import { CampaignReportAiAnswerQuery } from "@/api/queries/CampaignReportAiAnswerQuery";
+import type { CampaignReportAiAnswerQuery as CampaignReportAiAnswerQueryType } from "@api/queries/__generated__/CampaignReportAiAnswerQuery.graphql";
 import CampaignReportView from "./CampaignReportView";
 import type { CampaignReportData } from "./CampaignReportView";
 
@@ -216,6 +218,162 @@ const AiSummaryCard: React.FC<{ requestId: string }> = ({ requestId }) => {
   );
 };
 
+type AiAnswerResult = {
+  ok: boolean;
+  answer: string;
+  reason?: string | null;
+};
+
+/**
+ * On-demand campaign Q&A card (admin report view only).
+ *
+ * Sibling of <AiSummaryCard>: a text input + "Ask" button that fires
+ * `campaignReportAiAnswer(requestId, question)` imperatively on submit —
+ * never on mount — so the model cost is only paid when an admin actually
+ * asks something. The answer is grounded strictly in this campaign's
+ * aggregated data. While in flight it shows a spinner ("Thinking…"); on
+ * success it renders the answer (paragraph breaks preserved); a failure
+ * (`ok: false`) shows the server's `reason` muted. The input stays editable
+ * so the user can ask again — the latest answer replaces the previous one.
+ * The button is disabled while empty or a request is in flight.
+ */
+const AiAnswerCard: React.FC<{ requestId: string }> = ({ requestId }) => {
+  const [question, setQuestion] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<AiAnswerResult | null>(null);
+
+  const trimmed = question.trim();
+  const canAsk = trimmed.length > 0 && !loading;
+
+  const ask = useCallback(async () => {
+    const q = question.trim();
+    if (!q) return;
+    setLoading(true);
+    try {
+      const data = await fetchQuery<CampaignReportAiAnswerQueryType>(
+        environment,
+        CampaignReportAiAnswerQuery,
+        { requestId, question: q },
+        { fetchPolicy: "network-only" },
+      ).toPromise();
+
+      const res = data?.campaignReportAiAnswer;
+      if (!res) {
+        setResult({
+          ok: false,
+          answer: "",
+          reason: "No response from the answer service.",
+        });
+        return;
+      }
+      setResult({ ok: res.ok, answer: res.answer, reason: res.reason });
+    } catch {
+      setResult({
+        ok: false,
+        answer: "",
+        reason: "Couldn't reach the answer service — try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [requestId, question]);
+
+  // Preserve paragraph breaks: split on blank lines into paragraphs and
+  // keep single newlines inside a paragraph as soft line breaks.
+  const paragraphs = useMemo(() => {
+    if (!result?.ok || !result.answer) return [];
+    return result.answer
+      .replace(/\r\n/g, "\n")
+      .split(/\n{2,}/)
+      .map((block) => block.trim())
+      .filter(Boolean);
+  }, [result]);
+
+  return (
+    <div className="spark-card p-5">
+      <div>
+        <p
+          className="mono text-[10px]"
+          style={{
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: "rgba(255,255,255,0.4)",
+          }}
+        >
+          Ask about this campaign
+        </p>
+        <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+          Ask a question about this campaign&apos;s data and get an answer on
+          demand.
+        </p>
+      </div>
+
+      <form
+        className="mt-4 flex items-center gap-2 flex-wrap"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (canAsk) void ask();
+        }}
+      >
+        <input
+          type="text"
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          disabled={loading}
+          placeholder="Ask about this campaign's results…"
+          className="flex-1 min-w-[220px] px-4 py-2 rounded-xl text-sm transition disabled:opacity-60"
+          style={{
+            background: "rgba(255,255,255,0.04)",
+            color: "var(--spark-text)",
+            border: "1px solid var(--spark-border)",
+          }}
+        />
+        <button
+          type="submit"
+          disabled={!canAsk}
+          className="px-4 py-2 rounded-xl text-sm font-semibold transition disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
+          style={limeBtn}
+          title="Ask a question about this campaign's data"
+        >
+          {loading && (
+            <span
+              aria-hidden
+              className="inline-block w-3.5 h-3.5 rounded-full animate-spin"
+              style={{
+                border: "2px solid rgba(10,13,9,0.35)",
+                borderTopColor: "#0a0d09",
+              }}
+            />
+          )}
+          {loading ? "Thinking…" : "Ask"}
+        </button>
+      </form>
+
+      {result && !loading && (
+        <div className="mt-4">
+          {result.ok ? (
+            <div className="space-y-3" style={{ color: "var(--spark-text)" }}>
+              {paragraphs.map((para, i) => (
+                <p
+                  key={i}
+                  className="text-sm leading-relaxed"
+                  style={{ whiteSpace: "pre-wrap" }}
+                >
+                  {para}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+              {result.reason || "Couldn't answer that from this campaign's data."}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ReportLoaded: React.FC<{ requestId: string }> = ({ requestId }) => {
   const navigate = useNavigate();
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -333,6 +491,9 @@ const ReportLoaded: React.FC<{ requestId: string }> = ({ requestId }) => {
 
       {/* On-demand AI executive summary — admin view only */}
       <AiSummaryCard requestId={report.requestId} />
+
+      {/* On-demand campaign Q&A — admin view only */}
+      <AiAnswerCard requestId={report.requestId} />
 
       <CampaignReportView report={viewData} />
     </div>
