@@ -30,6 +30,7 @@ import { useSidebarCounts } from "@/hooks/useSidebarCounts";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import AskAiButton from "@/components/ai/AskAiButton";
+import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
 // Embedded as tabs on this dashboard — the named exports are the
 // Layout-less bodies so we don't double-render the admin shell.
 import { ApprovalsBody } from "@/components/pages/approvals/SparkApprovals";
@@ -412,6 +413,26 @@ const ClientInner: React.FC = () => {
           onClick={() => navigate("/tracker?status=done")}
         />
       </div>
+
+      {/* Aggregated program KPIs + 12-month trend for this client's own
+          tenant. Scoped to useAuthStore().tenantId (the same id the Ask-AI
+          button above uses); renders nothing when no tenant is in scope.
+          Own Suspense so the tiles/week-bars above paint without waiting on
+          the KPI fetch. */}
+      {tenantId && (
+        <Suspense
+          fallback={
+            <div
+              className="spark-card p-6 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Loading program KPIs…
+            </div>
+          }
+        >
+          <TenantKpiCharts tenantId={tenantId} />
+        </Suspense>
+      )}
 
       {/* Week-ahead bars */}
       <div className="spark-card p-5">
