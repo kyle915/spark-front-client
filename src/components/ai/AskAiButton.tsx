@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import { TenantAiAnswerQuery } from "@/api/queries/TenantAiAnswerQuery";
 import type { TenantAiAnswerQuery as TenantAiAnswerQueryType } from "@api/queries/__generated__/TenantAiAnswerQuery.graphql";
+import AiMarkdown from "./AiMarkdown";
 
 /**
  * Reusable "Ask AI" surface — a prominent button that opens a pop-up modal
@@ -22,8 +23,9 @@ import type { TenantAiAnswerQuery as TenantAiAnswerQueryType } from "@api/querie
  * the query is fired imperatively via `fetchQuery(environment, …, {
  * fetchPolicy: "network-only" }).toPromise()` on submit — never on mount — so
  * the model cost is only paid when someone actually asks something. While in
- * flight it shows "Thinking…"; on success it renders `answer` (paragraph
- * breaks preserved); a failure (`ok: false`) shows the server's `reason`
+ * flight it shows "Thinking…"; on success it renders `answer` as markdown
+ * (headings, bold, bullet lists) via <AiMarkdown>; a failure (`ok: false`)
+ * shows the server's `reason`
  * muted. The input stays editable so the user can ask again — the latest
  * answer replaces the previous one. The Ask button is disabled while the
  * input is empty or a request is in flight.
@@ -94,17 +96,6 @@ const AskAiModal: React.FC<{
       setLoading(false);
     }
   }, [tenantId, question]);
-
-  // Preserve paragraph breaks: split on blank lines into paragraphs and
-  // keep single newlines inside a paragraph as soft line breaks.
-  const paragraphs = useMemo(() => {
-    if (!result?.ok || !result.answer) return [];
-    return result.answer
-      .replace(/\r\n/g, "\n")
-      .split(/\n{2,}/)
-      .map((block) => block.trim())
-      .filter(Boolean);
-  }, [result]);
 
   return (
     <div
@@ -208,20 +199,7 @@ const AskAiModal: React.FC<{
         {result && !loading && (
           <div className="mt-4 max-h-[55vh] overflow-y-auto pr-1">
             {result.ok ? (
-              <div
-                className="space-y-3"
-                style={{ color: "var(--spark-text)" }}
-              >
-                {paragraphs.map((para, i) => (
-                  <p
-                    key={i}
-                    className="text-sm leading-relaxed"
-                    style={{ whiteSpace: "pre-wrap" }}
-                  >
-                    {para}
-                  </p>
-                ))}
-              </div>
+              <AiMarkdown>{result.answer}</AiMarkdown>
             ) : (
               <p
                 className="text-sm"

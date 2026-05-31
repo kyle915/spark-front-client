@@ -4188,6 +4188,7 @@ type Query {
   campaignReportAiSummary(requestId: ID!): CampaignReportAiSummary!
   campaignReportAiAnswer(requestId: ID!, question: String!): CampaignReportAiAnswer!
   tenantAiAnswer(tenantId: ID!, question: String!): TenantAiAnswer!
+  tenantKpis(tenantId: ID!): TenantKpis!
   eventStaffing(eventId: ID!, limit: Int): EventStaffing
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   todayEventsCoordinates(coordinates: [Float!]!, range: Float!, unit: DistanceUnit! = KILOMETERS, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
@@ -6465,6 +6466,8 @@ type CampaignReport { requestId: ID!  brandName: String!  title: String!  dateRa
 type CampaignReportAiSummary { ok: Boolean!  summary: String!  reason: String }
 type CampaignReportAiAnswer { ok: Boolean!  answer: String!  reason: String }
 type TenantAiAnswer { ok: Boolean!  answer: String!  reason: String }
+type TenantKpis { events: Int!  recaps: Int!  consumersReached: Int!  samplesDistributed: Int!  productsSold: Int!  cansSold: Int!  packsSold: Int!  totalEngagements: Int!  firstTimeConsumers: Int!  brandAwareConsumers: Int!  willingToPurchase: Int!  monthlyTrend: [TenantKpiMonth!]! }
+type TenantKpiMonth { month: String!  recaps: Int!  engagements: Int!  samples: Int! }
 
 type InvoiceLineItem { id: ID!  description: String!  quantity: String!  unitPrice: String!  amount: String!  eventId: ID  sortOrder: Int! }
 type Invoice implements Node { id: ID!  uuid: String!  number: String!  status: String!  clientName: String!  issueDate: String  dueDate: String  currency: String!  notes: String  subtotal: String!  taxRate: String!  taxAmount: String!  total: String!  lineItems: [InvoiceLineItem!]!  sentAt: String  paidAt: String  shareToken: String!  createdAt: String!  updatedAt: String! }

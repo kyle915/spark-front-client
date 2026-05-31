@@ -11,6 +11,7 @@ import { CampaignReportAiAnswerQuery } from "@/api/queries/CampaignReportAiAnswe
 import type { CampaignReportAiAnswerQuery as CampaignReportAiAnswerQueryType } from "@api/queries/__generated__/CampaignReportAiAnswerQuery.graphql";
 import CampaignReportView from "./CampaignReportView";
 import type { CampaignReportData } from "./CampaignReportView";
+import AiMarkdown from "@/components/ai/AiMarkdown";
 
 /**
  * Authenticated admin campaign-report view — /report-view/:requestId.
@@ -65,8 +66,9 @@ type AiAnswerResult = {
  * never on mount — so the model cost is only paid when an admin actually
  * asks something. The answer is grounded strictly in this campaign's
  * aggregated data. While in flight it shows a spinner ("Thinking…"); on
- * success it renders the answer (paragraph breaks preserved); a failure
- * (`ok: false`) shows the server's `reason` muted. The input stays editable
+ * success it renders the answer as markdown (headings, bold, bullet lists)
+ * via <AiMarkdown>; a failure (`ok: false`) shows the server's `reason`
+ * muted. The input stays editable
  * so the user can ask again — the latest answer replaces the previous one.
  * The button is disabled while empty or a request is in flight.
  */
@@ -110,17 +112,6 @@ const AiAnswerCard: React.FC<{ requestId: string }> = ({ requestId }) => {
       setLoading(false);
     }
   }, [requestId, question]);
-
-  // Preserve paragraph breaks: split on blank lines into paragraphs and
-  // keep single newlines inside a paragraph as soft line breaks.
-  const paragraphs = useMemo(() => {
-    if (!result?.ok || !result.answer) return [];
-    return result.answer
-      .replace(/\r\n/g, "\n")
-      .split(/\n{2,}/)
-      .map((block) => block.trim())
-      .filter(Boolean);
-  }, [result]);
 
   return (
     <div className="spark-card p-5">
@@ -185,17 +176,7 @@ const AiAnswerCard: React.FC<{ requestId: string }> = ({ requestId }) => {
       {result && !loading && (
         <div className="mt-4">
           {result.ok ? (
-            <div className="space-y-3" style={{ color: "var(--spark-text)" }}>
-              {paragraphs.map((para, i) => (
-                <p
-                  key={i}
-                  className="text-sm leading-relaxed"
-                  style={{ whiteSpace: "pre-wrap" }}
-                >
-                  {para}
-                </p>
-              ))}
-            </div>
+            <AiMarkdown>{result.answer}</AiMarkdown>
           ) : (
             <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
               {result.reason || "Couldn't answer that from this campaign's data."}

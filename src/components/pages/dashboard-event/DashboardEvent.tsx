@@ -10,6 +10,7 @@ import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generate
 import AttentionEngine from "./AttentionEngine";
 import PaceWidget from "./PaceWidget";
 import AskAiButton from "@/components/ai/AskAiButton";
+import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useNavigate } from "react-router";
 
@@ -792,6 +793,25 @@ export default function DashboardIndex() {
             </div>
           );
         })()}
+
+        {/* Aggregated program KPIs + 12-month trend for the active tenant.
+            Scoped to useAuthStore().tenantId (same id the Ask-AI button
+            above uses); renders nothing when no tenant is in scope. Self-
+            suspends like the other lazy dashboard cards. */}
+        {tenantId && (
+          <Suspense
+            fallback={
+              <div
+                className="spark-card p-6 text-center text-sm"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
+                Loading program KPIs…
+              </div>
+            }
+          >
+            <TenantKpiCharts tenantId={tenantId} />
+          </Suspense>
+        )}
 
         {/* Activation-type breakdown (Retail · Event · On-Premise) */}
         <Suspense
