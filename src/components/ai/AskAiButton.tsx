@@ -206,7 +206,7 @@ const AskAiModal: React.FC<{
         </form>
 
         {result && !loading && (
-          <div className="mt-4">
+          <div className="mt-4 max-h-[55vh] overflow-y-auto pr-1">
             {result.ok ? (
               <div
                 className="space-y-3"
