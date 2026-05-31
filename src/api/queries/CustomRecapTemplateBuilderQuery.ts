@@ -48,6 +48,7 @@ export const CustomRecapTemplateBuilderQuery = graphql`
           id
           uuid
           name
+          productSamples
           eventType {
             id
             name
