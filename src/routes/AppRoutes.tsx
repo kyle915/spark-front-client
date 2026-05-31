@@ -308,6 +308,12 @@ const CampaignUpload = lazyDefault(
 const PublicCampaignReport = lazyDefault(
   () => import("@/public/reports/PublicCampaignReport"),
 );
+// Public, no-login invoice page. The :token in the URL is the auth (no
+// tenant guard, like /c/:slug and /report/:token). Fetches the no-auth REST
+// invoice endpoint; renders a clean branded invoice + a Download-PDF button.
+const PublicInvoice = lazyDefault(
+  () => import("@/public/billing/PublicInvoice"),
+);
 const MagicLinkExchange = lazyDefault(() => import("@/auth/MagicLinkExchange"));
 const ForgotPassword = lazyDefault(() => import("@/auth/ForgotPassword"));
 const ResetPassword = lazyDefault(() => import("@/auth/ResetPassword"));
@@ -380,6 +386,14 @@ const PublicRoutes = {
     {
       path: "/report/:token",
       component: <PublicCampaignReport />,
+      isPublic: true,
+    },
+    // Public, no-login invoice page. The :token is the auth (no tenant
+    // guard, like /report/:token). Fetches the no-auth REST invoice
+    // endpoint and renders a clean branded invoice + Download-PDF button.
+    {
+      path: "/invoice/:token",
+      component: <PublicInvoice />,
       isPublic: true,
     },
     {

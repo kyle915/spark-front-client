@@ -3641,6 +3641,10 @@ type Mutation {
   createReceiptCampaign(input: CreateReceiptCampaignInput!): ReceiptCampaignResponse!
   updateReceiptCampaign(input: UpdateReceiptCampaignInput!): ReceiptCampaignResponse!
   deleteReceiptCampaign(input: DeleteReceiptCampaignInput!): ReceiptCampaignResponse!
+  createInvoice(input: CreateInvoiceInput!): InvoiceResponse!
+  updateInvoice(input: UpdateInvoiceInput!): InvoiceResponse!
+  setInvoiceStatus(input: SetInvoiceStatusInput!): InvoiceResponse!
+  deleteInvoice(input: DeleteInvoiceInput!): InvoiceResponse!
   runReceiptOcr(input: RunReceiptOcrInput!): ReviewReceiptResponse!
   markReceiptPaid(input: MarkReceiptPaidInput!): ReviewReceiptResponse!
   createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
@@ -4175,6 +4179,8 @@ type Query {
   event(id: ID = null, uuid: ID = null): Event
   receipts(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: ConsumerReceiptFiltersInput = null): ConsumerReceiptTypeCountableConnection!
   receiptCampaigns(filters: ReceiptCampaignFiltersInput = null): [ReceiptCampaign!]!
+  invoices(filters: InvoiceFiltersInput): [Invoice!]!
+  invoice(id: ID!): Invoice
   eventReceiptUploadLink(eventId: ID!): EventReceiptUploadLinkType!
   campaignReport(requestId: ID!): CampaignReport
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
@@ -6449,3 +6455,13 @@ type CampaignReportEventRow { id: ID!  name: String  date: String  locationName:
 type CampaignReportBa { name: String!  isExternal: Boolean!  eventCount: Int! }
 type CampaignReportQuote { text: String!  source: String }
 type CampaignReport { requestId: ID!  brandName: String!  title: String!  dateRange: String  generatedAt: String!  shareToken: String!  kpis: CampaignReportKpis!  events: [CampaignReportEventRow!]!  photos: [CampaignReportPhoto!]!  ambassadors: [CampaignReportBa!]!  highlights: [CampaignReportQuote!]! }
+
+type InvoiceLineItem { id: ID!  description: String!  quantity: String!  unitPrice: String!  amount: String!  eventId: ID  sortOrder: Int! }
+type Invoice implements Node { id: ID!  uuid: String!  number: String!  status: String!  clientName: String!  issueDate: String  dueDate: String  currency: String!  notes: String  subtotal: String!  taxRate: String!  taxAmount: String!  total: String!  lineItems: [InvoiceLineItem!]!  sentAt: String  paidAt: String  shareToken: String!  createdAt: String!  updatedAt: String! }
+input InvoiceLineItemInput { description: String!  quantity: Float  unitPrice: Float  eventId: ID }
+input InvoiceFiltersInput { tenantId: ID  status: String }
+input CreateInvoiceInput { clientMutationId: ID  tenantId: ID  issueDate: String  dueDate: String  notes: String  taxRate: Float  lineItems: [InvoiceLineItemInput!] }
+input UpdateInvoiceInput { clientMutationId: ID  id: ID!  issueDate: String  dueDate: String  notes: String  taxRate: Float  lineItems: [InvoiceLineItemInput!] }
+input SetInvoiceStatusInput { clientMutationId: ID  id: ID!  status: String! }
+input DeleteInvoiceInput { clientMutationId: ID  id: ID! }
+type InvoiceResponse { success: Boolean!  message: String!  clientMutationId: ID  invoice: Invoice }
