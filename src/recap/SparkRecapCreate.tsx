@@ -8,6 +8,8 @@ import { CreateAmbassadorWithUserMutation } from "@/api/mutations/CreateAmbassad
 import type { CreateAmbassadorWithUserMutation as CreateAmbassadorWithUserMutationType } from "@/api/mutations/__generated__/CreateAmbassadorWithUserMutation.graphql";
 import { CustomRecapTemplatesWithFieldsQuery } from "@/api/queries/CustomRecapTemplatesWithFieldsQuery";
 import type { CustomRecapTemplatesWithFieldsQuery as CustomRecapTemplatesWithFieldsQueryType } from "@/api/queries/__generated__/CustomRecapTemplatesWithFieldsQuery.graphql";
+import { ProductsQuery } from "@/api/queries/ProductsQuery";
+import type { ProductsQuery as ProductsQueryType } from "@/api/queries/__generated__/ProductsQuery.graphql";
 import { CreateRecapMutation } from "@/api/mutations/CreateRecapMutation";
 import { CreateCustomRecapMutation } from "@/api/mutations/CreateCustomRecapMutation";
 import { ParseConnecteamRecapPdfMutation } from "@/api/mutations/ParseConnecteamRecapPdfMutation";
@@ -233,6 +235,17 @@ export default function SparkRecapCreate() {
   const setFieldValue = (id: string, v: string) =>
     setFieldValues((prev) => ({ ...prev, [id]: v }));
 
+  // ─── Per-SKU "products sampled" units (keyed by Product id) ───────
+  // Only meaningful when the selected template's productSamples flag is
+  // on (Liquid Death, …). Quantities are kept as raw strings so the
+  // input stays controlled; on submit we coerce to int and drop blanks /
+  // zeros, sending one ProductSampleInput {productId, quantity} per SKU
+  // the BA actually handed out. Mirrors RecapCustomView's read-only
+  // Product Samples card (product + quantity distributed).
+  const [sampleQtys, setSampleQtys] = useState<Record<string, string>>({});
+  const setSampleQty = (productId: string, v: string) =>
+    setSampleQtys((prev) => ({ ...prev, [productId]: v }));
+
   // Files
   const [photoBlobs, setPhotoBlobs] = useState<string[]>([]);
   const [receiptBlobs, setReceiptBlobs] = useState<string[]>([]);
@@ -374,6 +387,24 @@ export default function SparkRecapCreate() {
       }))
       .filter((v) => v.value !== "");
 
+    // One ProductSampleInput per SKU that actually got handed out. Only
+    // gated on when this template tracks samples; rows are coerced to a
+    // positive int and blanks / zeros / NaN are dropped so we never
+    // persist a "0 units" sample. No-op (undefined) when the template
+    // doesn't track samples, so the backend leaves samples untouched.
+    const productSamples = selectedTemplate.productSamples
+      ? Object.entries(sampleQtys)
+          .map(([productId, raw]) => ({
+            productId,
+            quantity: parseLocaleNumber(raw),
+          }))
+          .filter(
+            (s): s is { productId: string; quantity: number } =>
+              s.quantity != null && Number.isFinite(s.quantity) && s.quantity > 0,
+          )
+          .map((s) => ({ productId: s.productId, quantity: Math.round(s.quantity) }))
+      : [];
+
     const files = [
       ...photoBlobs.map((blob) => ({
         file: blob,
@@ -403,6 +434,10 @@ export default function SparkRecapCreate() {
               : null,
           fillingForAmbassador: isAdmin && fillingForOther,
           customFieldValues,
+          // Send the per-SKU samples only when there's at least one — keep
+          // the payload identical to before for templates that don't track
+          // samples (or when nothing was entered).
+          ...(productSamples.length > 0 ? { productSamples } : {}),
           files,
         },
       },
@@ -743,6 +778,31 @@ export default function SparkRecapCreate() {
             Pick a recap template above to load this client's fields.
           </p>
         </Card>
+      )}
+
+      {/* ─── Per-SKU products sampled (template-gated) ───
+          Only shown when the picked template tracks samples
+          (CustomRecapTemplate.productSamples — on for Liquid Death &c.).
+          Lists the tenant's products and a units-sampled input per SKU;
+          the values flow into productSamples on submit. Scope to the
+          active dashboard tenant, falling back to the template's own
+          tenant so it still works when no dashboard tenant is set. */}
+      {useCustomFlow && selectedTemplate?.productSamples && (
+        <Suspense
+          fallback={
+            <Card title="PRODUCTS SAMPLED">
+              <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+                Loading products…
+              </p>
+            </Card>
+          }
+        >
+          <ProductSamplesSection
+            tenantId={tenantId || selectedTemplate.tenant?.id || null}
+            quantities={sampleQtys}
+            onChange={setSampleQty}
+          />
+        </Suspense>
       )}
 
       {/* ─── Legacy fixed grid (template-less tenants only) ─── */}
@@ -1113,6 +1173,133 @@ const CustomTemplateFields: React.FC<{
         </Card>
       ))}
     </>
+  );
+};
+
+// Per-SKU "products sampled" capture for the custom create flow. Rendered
+// only when the selected template's productSamples flag is on (gated by
+// the caller). Loads the tenant's products via the shared ProductsQuery
+// (same source the legacy Sampled-Products picker and RecapCustomView's
+// Product Samples card use) and shows one numeric units-sampled input per
+// SKU. Values are owned by the parent (keyed by product id) so the submit
+// handler can build the productSamples payload. On-brand: dark surface
+// cards, lime accents, mono labels — mirrors the rest of this form.
+const ProductSamplesSection: React.FC<{
+  tenantId: string | null;
+  quantities: Record<string, string>;
+  onChange: (productId: string, v: string) => void;
+}> = ({ tenantId, quantities, onChange }) => {
+  // Pull the tenant's catalog. Scoped to the tenant via filters; we ask
+  // for a generous page so a full SKU list shows without paging (mirrors
+  // SparkRequestCreate's products picker). store-or-network keeps it warm
+  // across template switches.
+  const data = useLazyLoadQuery<ProductsQueryType>(
+    ProductsQuery,
+    { first: 100, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+  const products = useMemo(
+    () =>
+      (data.products?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n)),
+    [data],
+  );
+
+  // Running total of units across all SKUs — a quick gut-check for the BA
+  // ("did I really hand out 480?") without re-adding it themselves.
+  const totalUnits = useMemo(
+    () =>
+      products.reduce((sum, p) => {
+        const n = parseLocaleNumber(quantities[String(p.id)] ?? "");
+        return sum + (n != null && Number.isFinite(n) && n > 0 ? Math.round(n) : 0);
+      }, 0),
+    [products, quantities],
+  );
+
+  if (products.length === 0) {
+    return (
+      <Card title="PRODUCTS SAMPLED">
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+          No products are set up for this client yet — add SKUs in Products
+          to track units sampled.
+        </p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card title="PRODUCTS SAMPLED">
+      <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+        Units sampled per SKU. Leave a product at 0 if none went out.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {products.map((p) => {
+          const id = String(p.id);
+          return (
+            <div
+              key={id}
+              className="rounded-xl p-3 flex items-center gap-3"
+              style={{
+                background: "var(--spark-surface-2)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              <div
+                className="w-12 h-12 rounded-lg shrink-0 grid place-items-center overflow-hidden"
+                style={{ background: "rgba(255,255,255,0.9)" }}
+              >
+                {p.image ? (
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <span
+                    className="mono text-[9px]"
+                    style={{ letterSpacing: "0.12em", color: "#0a0d09" }}
+                  >
+                    SKU
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate" title={p.name}>
+                  {p.name}
+                </p>
+                {p.productType?.name && (
+                  <p
+                    className="mono text-[10px] mt-0.5 truncate"
+                    style={{
+                      letterSpacing: "0.12em",
+                      color: "rgba(255,255,255,0.5)",
+                    }}
+                  >
+                    {p.productType.name.toUpperCase()}
+                  </p>
+                )}
+              </div>
+              <input
+                value={quantities[id] ?? ""}
+                onChange={(e) => onChange(id, e.target.value)}
+                className="w-20 rounded-lg px-2.5 py-2 text-sm text-right bg-transparent focus:outline-none focus:ring-2 shrink-0"
+                style={{ border: "1px solid var(--spark-border)" }}
+                inputMode="numeric"
+                placeholder="0"
+                aria-label={`Units sampled — ${p.name}`}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <p
+        className="mono text-[10px]"
+        style={{ letterSpacing: "0.18em", color: "var(--spark-lime)" }}
+      >
+        {totalUnits} UNIT{totalUnits === 1 ? "" : "S"} SAMPLED
+      </p>
+    </Card>
   );
 };
 
