@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from "react";
+import { Fragment, Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useLocation, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
@@ -14,6 +14,7 @@ import InternalNotesPanel from "./InternalNotesPanel";
 import ShiftReplayPanel from "./ShiftReplayPanel";
 import InviteBAModal from "./InviteBAModal";
 import EventRosterPanel from "./EventRosterPanel";
+import SmartStaffingPanel from "./SmartStaffingPanel";
 import { pickHeroImage } from "@/utils/recapFileUrl";
 
 type Mentionable = { id: string; name: string; email: string };
@@ -794,17 +795,26 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         />
       </Suspense>
 
-      {/* Roster — who's invited / accepted for each event. Admin-
-          only, since BAs don't need to see each other's invite state. */}
+      {/* Smart staffing + Roster — per event, admin-only. The
+          Smart-staffing panel sits directly above each event's roster:
+          fill status + a server-ranked BA shortlist with a bulk
+          "Invite selected" action. The roster below shows who's
+          already invited / accepted. BAs don't need to see either, so
+          both are gated behind the admin role. */}
       {role.isAdmin &&
         (request.events ?? [])
           .filter((e): e is NonNullable<typeof e> => Boolean(e))
           .map((ev) => (
-            <EventRosterPanel
-              key={`roster-${String(ev.uuid)}`}
-              eventId={String(ev.id)}
-              eventLabel={String(ev.name ?? ev.uuid ?? "shift")}
-            />
+            <Fragment key={`staffing-${String(ev.uuid)}`}>
+              <SmartStaffingPanel
+                eventId={String(ev.id)}
+                eventLabel={String(ev.name ?? ev.uuid ?? "shift")}
+              />
+              <EventRosterPanel
+                eventId={String(ev.id)}
+                eventLabel={String(ev.name ?? ev.uuid ?? "shift")}
+              />
+            </Fragment>
           ))}
 
       {/* Field reports — every recap submitted against the events

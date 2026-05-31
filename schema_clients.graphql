@@ -3809,6 +3809,7 @@ type Mutation {
   acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
   inviteAmbassadorToShift(input: InviteAmbassadorToShiftInput!): InviteAmbassadorToShiftResponse!
+  bulkInviteAmbassadorsToShift(input: BulkInviteToShiftInput!): BulkInviteResponse!
   disableAmbassador(input: DisableAmbassadorInput!): DisableAmbassadorResponse!
   regenerateAmbassadorPasswords(input: RegenerateAmbassadorPasswordsInput!): RegenerateAmbassadorPasswordsResponse!
   createAmbassador(input: CreateAmbassadorInput!): CreateAmbassadorResponse!
@@ -4183,6 +4184,7 @@ type Query {
   invoice(id: ID!): Invoice
   eventReceiptUploadLink(eventId: ID!): EventReceiptUploadLinkType!
   campaignReport(requestId: ID!): CampaignReport
+  eventStaffing(eventId: ID!, limit: Int): EventStaffing
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   todayEventsCoordinates(coordinates: [Float!]!, range: Float!, unit: DistanceUnit! = KILOMETERS, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   recentLocationPings(withinMinutes: Int! = 30, tenantId: ID = null): [LocationPingType!]!
@@ -6464,4 +6466,9 @@ input CreateInvoiceInput { clientMutationId: ID  tenantId: ID  issueDate: String
 input UpdateInvoiceInput { clientMutationId: ID  id: ID!  issueDate: String  dueDate: String  notes: String  taxRate: Float  lineItems: [InvoiceLineItemInput!] }
 input SetInvoiceStatusInput { clientMutationId: ID  id: ID!  status: String! }
 input DeleteInvoiceInput { clientMutationId: ID  id: ID! }
+
+type SuggestedAmbassador { id: ID!  uuid: String!  name: String!  rating: Int!  distanceMiles: Float  isAvailable: Boolean  alreadyInvited: Boolean!  alreadyAssigned: Boolean!  email: String  phone: String }
+type EventStaffing { eventId: ID!  assigned: Int!  confirmed: Int!  needed: Int  fillRate: Float  suggestions: [SuggestedAmbassador!]! }
+input BulkInviteToShiftInput { clientMutationId: ID  eventId: ID!  ambassadorIds: [ID!]! }
+type BulkInviteResponse { success: Boolean!  message: String!  clientMutationId: ID  invited: Int!  skipped: Int! }
 type InvoiceResponse { success: Boolean!  message: String!  clientMutationId: ID  invoice: Invoice }
