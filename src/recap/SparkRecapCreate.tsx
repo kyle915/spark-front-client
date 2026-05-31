@@ -1401,37 +1401,65 @@ export const AmbassadorPicker: React.FC<{
             </p>
           )
         ) : (
-          matches.map((amb) => {
-            const display = amb.name || amb.email || "(unnamed BA)";
-            // Pass the Relay-encoded global id — backend's resolve_id_to_int
-            // accepts globalIds or pure digit strings but NOT raw uuids.
-            const id = String(amb.id);
-            return (
+          <>
+            {matches.map((amb) => {
+              const display = amb.name || amb.email || "(unnamed BA)";
+              // Pass the Relay-encoded global id — backend's resolve_id_to_int
+              // accepts globalIds or pure digit strings but NOT raw uuids.
+              const id = String(amb.id);
+              return (
+                <button
+                  type="button"
+                  key={id}
+                  onClick={() => onSelect(id, display)}
+                  className="w-full text-left rounded-xl p-3"
+                  style={{
+                    background: "var(--spark-surface-2)",
+                    border: "1px solid var(--spark-border)",
+                  }}
+                >
+                  <p className="text-sm font-semibold">{display}</p>
+                  {amb.name && amb.email && (
+                    <p
+                      className="mono text-[10px] mt-0.5"
+                      style={{
+                        color: "rgba(255,255,255,0.5)",
+                        letterSpacing: "0.12em",
+                      }}
+                    >
+                      {amb.email}
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+            {typed && (
+              // The external write-in is ALWAYS offered once something is
+              // typed — even when roster names match — so an external BA (one
+              // not in this tenant's roster) is never hidden behind a partial
+              // name match. Mirrors the no-matches branch's RECORD AS EXTERNAL.
               <button
                 type="button"
-                key={id}
-                onClick={() => onSelect(id, display)}
+                onClick={() => onUseExternal(typed)}
                 className="w-full text-left rounded-xl p-3"
                 style={{
                   background: "var(--spark-surface-2)",
-                  border: "1px solid var(--spark-border)",
+                  border: "1px dashed var(--spark-border)",
                 }}
               >
-                <p className="text-sm font-semibold">{display}</p>
-                {amb.name && amb.email && (
-                  <p
-                    className="mono text-[10px] mt-0.5"
-                    style={{
-                      color: "rgba(255,255,255,0.5)",
-                      letterSpacing: "0.12em",
-                    }}
-                  >
-                    {amb.email}
-                  </p>
-                )}
+                <p className="text-sm font-semibold">Use “{typed}” instead</p>
+                <p
+                  className="mono text-[10px] mt-0.5"
+                  style={{
+                    color: "rgba(255,255,255,0.5)",
+                    letterSpacing: "0.12em",
+                  }}
+                >
+                  RECORD AS EXTERNAL BA (NOT IN SPARK)
+                </p>
               </button>
-            );
-          })
+            )}
+          </>
         )}
       </div>
     </>
