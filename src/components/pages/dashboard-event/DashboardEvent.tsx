@@ -9,6 +9,7 @@ import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import AttentionEngine from "./AttentionEngine";
 import PaceWidget from "./PaceWidget";
+import AskAiButton from "@/components/ai/AskAiButton";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useNavigate } from "react-router";
 
@@ -617,6 +618,10 @@ export default function DashboardIndex() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Ask AI about the currently-active tenant — same tenant id
+                (useAuthStore().tenantId) every other per-tenant surface
+                uses, with the resolved brand name for the modal heading. */}
+            <AskAiButton tenantId={tenantId} tenantName={tenantDisplay} />
             {linkedSheetUrl && (
               <a
                 href={linkedSheetUrl}
