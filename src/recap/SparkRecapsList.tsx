@@ -361,14 +361,20 @@ const RecapCard: React.FC<{
 type Meta = {
   retailers: string[];
   states: string[];
-  // The tenant's full published total (server totalCount) — drives the
-  // header + stats cards.
+  // The tenant's full server-side total (combined legacy + custom
+  // totalCount, honouring any server-side date bounds) — drives the
+  // header + stats cards and the "of {total}" in the count indicator.
   total: number;
-  // How many recaps match the ACTIVE client-side filters (date / search /
-  // status / retailer / state). The "Load more" gate + "N of M" counter
-  // track this so paging reveals every matching recap, not just the
-  // newest page. Equals `total` when no filters are applied.
+  // How many recaps match the ACTIVE client-side filters (search /
+  // status / retailer / state / date) over the rows currently LOADED.
   filteredTotal: number;
+  // How many rows are currently loaded (merged legacy + custom, before
+  // client-side filtering). Drives the "Showing {loaded} of {total}"
+  // counter so the user can see there are more rows behind "Load more".
+  loaded: number;
+  // True when EITHER list resolver reports pageInfo.hasNextPage — i.e.
+  // more rows exist on the server than we've fetched. Gates "Load more".
+  hasMore: boolean;
   totalConsumers: number;
   totalProducts: number;
 };
@@ -376,22 +382,19 @@ type Meta = {
 type SortKey = "date-desc" | "date-asc" | "eng-desc" | "sold-desc";
 type StatusKey = "all" | "approved" | "draft";
 
-// Client-side render page size — how many cards we paint at once. "Load
-// more" bumps it in PAGE_SIZE chunks. This is a DISPLAY cap only; the
-// full tenant set is already in memory (see FETCH_ALL below), so every
-// recap is reachable by paging and all client-side filters operate over
-// the COMPLETE set.
-const PAGE_SIZE = 60;
+// Initial number of rows fetched from EACH list resolver (legacy +
+// custom). "Load more" grows this by LOAD_MORE_STEP, re-fetching both
+// queries with a larger `first`. We used to fetch the whole tenant set
+// in one shot (first: 2000) which, for a high-volume tenant like Liquid
+// Death, made the single payload so heavy the page hung on "Loading
+// recaps…". A bounded initial page paints fast; "Load more" pulls the
+// rest on demand.
+const INITIAL_LIMIT = 300;
 
-// We fetch the whole tenant set up front so the client-side filters
-// (date range, search, status, retailer, state) see every recap — not
-// just the newest page. Without this the date filter was blind to any
-// recap older than the first page (Liquid Death: 830 total, only ~50
-// reachable). The backend `recaps` / `customRecaps` list resolvers cap
-// at max_limit=2000 to match; recap list rows are lightweight (heroFile
-// + recapFilesCount) so one bounded payload is acceptable. Kept in sync
-// with the backend RECAPS_LIST_MAX_LIMIT.
-const FETCH_ALL = 2000;
+// How many more rows each "Load more" click requests (added to `first`
+// on BOTH queries). Re-fetches are cheap relative to the all-at-once
+// fetch and only happen when the user explicitly asks for more.
+const LOAD_MORE_STEP = 300;
 
 const RecapsListInner: React.FC<{
   search: string;
@@ -406,7 +409,9 @@ const RecapsListInner: React.FC<{
   dateFrom: string;
   dateTo: string;
   sortKey: SortKey;
-  pageSize: number;
+  // Server fetch size — the `first` we ask BOTH list resolvers for. Grown
+  // by the parent's "Load more" button (see onMeta.hasMore below).
+  limit: number;
   onMeta: (m: Meta) => void;
   onVisibleRecapsChange?: (recaps: Recap[]) => void;
   // Campaign Report multi-select. The Set lives in the parent so
@@ -414,7 +419,7 @@ const RecapsListInner: React.FC<{
   // checkboxes against it and reports toggles back up.
   selectedIds: Set<string>;
   onToggleSelected: (id: string) => void;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, statusFilter, dateFrom, dateTo, sortKey, pageSize, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected }) => {
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
@@ -427,26 +432,38 @@ const RecapsListInner: React.FC<{
   // toggle (which the server can't distinguish from a normal admin).
   const { isClient } = useSparkRole();
   const approvedOnly = isClient ? true : null;
-  // Fetch the WHOLE tenant set in one page (FETCH_ALL), not a growing
-  // window. The list applies date / search / status / retailer / state
-  // filters CLIENT-SIDE, so it must hold every recap or those filters
-  // only ever see the newest page — the live Liquid Death bug (830
-  // total, ~50 reachable, date-search blind to anything older). The
-  // backend list resolver caps at the same ceiling. `pageSize` below is
-  // now a pure DISPLAY cap (how many cards we paint), so "Load more"
-  // walks the already-loaded set with no extra fetches. The dataset is
-  // bounded (hundreds, not millions) and rows are slim, so the single
-  // payload is acceptable.
+  // Server-side date bounds. The backend RecapFiltersInput /
+  // CustomRecapFiltersInput both expose inclusive startDate / endDate
+  // (YYYY-MM-DD), so when the user picks a date range we push it into the
+  // query. That matters now that we only load a bounded page: without it
+  // a date filter could only see rows already pulled into the window
+  // (newest first), so a query for an OLDER period would come back empty
+  // until the user clicked "Load more" enough times. Passing the bounds
+  // server-side lets older matches surface in the first page. The
+  // client-side date filter below still runs (belt-and-suspenders, and it
+  // also handles undated rows), so behaviour is unchanged for the no-date
+  // case. Empty string = unbounded on that side → send null.
+  const startDate = dateFrom || null;
+  const endDate = dateTo || null;
+  // Fetch a BOUNDED page from the legacy `recaps` resolver (first: limit),
+  // grown by the parent's "Load more". We used to fetch the whole tenant
+  // set in one shot which hung the page for high-volume tenants (Liquid
+  // Death). The list still applies search / status / retailer / state
+  // filters CLIENT-SIDE over whatever rows are loaded; date bounds are
+  // additionally pushed to the server (above) so older matches aren't
+  // hidden behind the load window.
   const data = useLazyLoadQuery<RecapsQueryType>(
     RecapsQuery,
     {
-      first: FETCH_ALL,
+      first: limit,
       filters: tenantId
         ? {
             tenantId,
             rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
             // Client view → approved-only; admin/RMM view → drafts too.
             approved: approvedOnly,
+            startDate,
+            endDate,
           }
         : null,
     },
@@ -458,19 +475,20 @@ const RecapsListInner: React.FC<{
     { fetchPolicy: "store-and-network" },
   );
 
-  // Parallel query for tenants on a Custom Recap Template. We don't
-  // paginate this independently of the legacy list — we grab the full
-  // set and merge on the client. Typical tenants have either-or (legacy
-  // XOR custom), and the combined dataset is bounded by the same
-  // hundreds-not-millions assumption. If we ever hit a tenant with both
-  // flows AND >2k combined rows we'll need a unified server resolver;
-  // until then, two full fetches + merge is the cheapest fix.
+  // Parallel query for tenants on a Custom Recap Template. Fetched with
+  // the SAME bounded `first: limit` as the legacy list and merged on the
+  // client. Both queries grow together when "Load more" bumps `limit`, so
+  // neither flow is starved. Typical tenants have either-or (legacy XOR
+  // custom); a tenant with both just loads `limit` of each per page.
   const customData = useLazyLoadQuery<CustomRecapsQueryType>(
     GetCustomRecapsQuery,
     {
-      first: FETCH_ALL,
-      // Client view → approved-only; admin/RMM view → drafts too.
-      filters: tenantId ? { tenantId, approved: approvedOnly } : null,
+      first: limit,
+      // Client view → approved-only; admin/RMM view → drafts too. Date
+      // bounds pushed server-side for the same reason as the legacy query.
+      filters: tenantId
+        ? { tenantId, approved: approvedOnly, startDate, endDate }
+        : null,
     },
     // Always refetch on mount — same reason as the legacy query above. A
     // stale cached connection here is what made just-submitted CUSTOM recaps
@@ -677,33 +695,39 @@ const RecapsListInner: React.FC<{
     });
   }, [recaps, search, retailerFilter, stateFilter, statusFilter, dateFrom, dateTo, sortKey]);
 
-  // The slice we actually paint. The full filtered set lives in
-  // `filtered`; `displayed` is the first `pageSize` of it, and "Load
-  // more" grows `pageSize` to reveal the rest — all client-side, no
-  // refetch (the whole tenant set is already loaded).
-  const displayed = useMemo(
-    () => filtered.slice(0, pageSize),
-    [filtered, pageSize],
+  // We paint every loaded row that matches the client-side filters.
+  // Pagination now lives at the FETCH layer (`limit` / "Load more"), so
+  // there's no separate client-side display slice — `filtered` is what
+  // renders.
+  const displayed = filtered;
+
+  // Whether either resolver has more rows on the server than we've
+  // fetched. Drives the parent's "Load more" gate.
+  const hasMore = Boolean(
+    data?.recaps?.pageInfo?.hasNextPage ||
+      customData?.customRecaps?.pageInfo?.hasNextPage,
   );
 
-  // Publish counts up to the page chrome. `total` is the tenant's full
-  // published count (server totalCount); `filteredTotal` is how many
-  // rows match the active client-side filters and drives the "Load
-  // more" gate + "N of M" counter so paging can reach every match.
+  // Publish counts up to the page chrome. `total` is the combined
+  // server-side total (both flows). `loaded` is how many rows we've
+  // pulled; `hasMore` gates "Load more"; `filteredTotal` is how many of
+  // the loaded rows match the active client-side filters.
   useEffect(() => {
     const totalConsumers = recaps.reduce((s, r) => s + (r.engagements ?? 0), 0);
     const totalProducts = recaps.reduce((s, r) => s + (r.productsSold ?? 0), 0);
     onMeta({
       retailers,
       states,
-      // Tenant's full published total spans BOTH flows. Summing the two
-      // server totalCounts so a custom-only tenant (legacy totalCount = 0)
-      // no longer shows "0 PUBLISHED". filteredTotal is unaffected — it
-      // still tracks the merged client-side filtered set.
+      // Tenant's full total spans BOTH flows. Summing the two server
+      // totalCounts so a custom-only tenant (legacy totalCount = 0) no
+      // longer shows "0 PUBLISHED". Honours server-side date bounds when
+      // a range is active.
       total:
         (data?.recaps?.totalCount ?? 0) +
         (customData?.customRecaps?.totalCount ?? 0),
       filteredTotal: filtered.length,
+      loaded: recaps.length,
+      hasMore,
       totalConsumers,
       totalProducts,
     });
@@ -714,6 +738,7 @@ const RecapsListInner: React.FC<{
     customData?.customRecaps?.totalCount,
     recaps,
     filtered.length,
+    hasMore,
     onMeta,
   ]);
 
@@ -815,26 +840,22 @@ export default function SparkRecapsList() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
-  // "Load more" bumps this DISPLAY page by PAGE_SIZE (60). Reset when
-  // filters (incl. search) change so the user doesn't see "Load more
-  // (60 of 12)" when narrowing the dataset.
-  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  // Server fetch size — how many rows we ask EACH list resolver for.
+  // "Load more" bumps it by LOAD_MORE_STEP, re-fetching both queries with
+  // a larger `first`. Reset to INITIAL_LIMIT when the server-side filters
+  // change (tenant scope, RMM, and the date bounds we push to the server)
+  // so a freshly-scoped query starts from a small, fast page again.
+  const [limit, setLimit] = useState(INITIAL_LIMIT);
   useEffect(() => {
-    setPageSize(PAGE_SIZE);
-  }, [
-    search,
-    retailerFilter,
-    stateFilter,
-    rmmFilter,
-    statusFilter,
-    dateFrom,
-    dateTo,
-  ]);
+    setLimit(INITIAL_LIMIT);
+  }, [rmmFilter, dateFrom, dateTo]);
   const [meta, setMeta] = useState<Meta>({
     retailers: [],
     states: [],
     total: 0,
     filteredTotal: 0,
+    loaded: 0,
+    hasMore: false,
     totalConsumers: 0,
     totalProducts: 0,
   });
@@ -1402,7 +1423,7 @@ export default function SparkRecapsList() {
             dateFrom={dateFrom}
             dateTo={dateTo}
             sortKey={sortKey}
-            pageSize={pageSize}
+            limit={limit}
             onMeta={onMeta}
             onVisibleRecapsChange={setVisibleRecaps}
             selectedIds={selectedIds}
@@ -1410,23 +1431,28 @@ export default function SparkRecapsList() {
           />
         </Suspense>
 
-        {/* Gate + counter track the FILTERED total (not the tenant
-            total) so "Load more" reveals every recap matching the
-            active filters — the whole tenant set is already loaded, so
-            this is pure client-side paging. */}
-        {meta.filteredTotal > pageSize && (
+        {/* Load-more gate + counter. The gate fires off the SERVER's
+            pageInfo.hasNextPage (meta.hasMore) — i.e. there are more rows
+            on the server than we've fetched — so each click pulls another
+            bounded page instead of loading everything up front (the old
+            2000-row hang). The counter shows how many rows are loaded vs
+            the combined server total; client-side filters (search /
+            status / retailer / state / date) run over the loaded rows. */}
+        {(meta.hasMore || (meta.total > 0 && meta.loaded > 0)) && (
           <div className="flex flex-col items-center gap-2 py-4">
-            <button
-              onClick={() => setPageSize((p) => p + PAGE_SIZE)}
-              className="px-5 py-2.5 rounded-2xl text-sm font-semibold"
-              style={{
-                background: "var(--spark-lime)",
-                color: "#0a0d09",
-                boxShadow: "0 0 20px rgba(197,245,70,0.35)",
-              }}
-            >
-              Load {Math.min(PAGE_SIZE, meta.filteredTotal - pageSize)} more →
-            </button>
+            {meta.hasMore && (
+              <button
+                onClick={() => setLimit((l) => l + LOAD_MORE_STEP)}
+                className="px-5 py-2.5 rounded-2xl text-sm font-semibold"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "#0a0d09",
+                  boxShadow: "0 0 20px rgba(197,245,70,0.35)",
+                }}
+              >
+                Load {LOAD_MORE_STEP} more →
+              </button>
+            )}
             <p
               className="mono text-[10px]"
               style={{
@@ -1434,7 +1460,10 @@ export default function SparkRecapsList() {
                 color: "rgba(255,255,255,0.45)",
               }}
             >
-              {Math.min(pageSize, meta.filteredTotal)} of {meta.filteredTotal}
+              Showing {meta.loaded} of {Math.max(meta.total, meta.loaded)}
+              {meta.filteredTotal !== meta.loaded
+                ? ` · ${meta.filteredTotal} match filters`
+                : ""}
             </p>
           </div>
         )}
