@@ -526,6 +526,18 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           ✎ Edit
         </button>
         <button
+          onClick={() => navigate(`/report-view/${request.uuid}`)}
+          className="px-4 py-2 rounded-xl text-sm"
+          style={{
+            background: "transparent",
+            color: "var(--spark-text)",
+            border: "1px solid var(--spark-border)",
+          }}
+          title="Open this request's branded campaign report — KPIs, gallery, map, BA roster"
+        >
+          📊 Report
+        </button>
+        <button
           onClick={() => window.print()}
           className="px-4 py-2 rounded-xl text-sm"
           style={{
