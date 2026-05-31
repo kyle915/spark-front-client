@@ -52,6 +52,16 @@ export const ReceiptsQuery = graphql`
           reviewNote
           reviewedAt
           publicUrl
+          campaign {
+            id
+            name
+          }
+          campaignName
+          payoutMethod
+          payoutHandle
+          rewardAmount
+          paidAt
+          payoutLink
           reviewedBy {
             __typename
             uuid

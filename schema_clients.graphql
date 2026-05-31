@@ -3638,6 +3638,9 @@ type Mutation {
   approveEvent(input: ApproveEventInput!): EventDetailResponse!
   declineEvent(input: DeclineEventInput!): EventDetailResponse!
   reviewReceipt(input: ReviewReceiptInput!): ReviewReceiptResponse!
+  createReceiptCampaign(input: CreateReceiptCampaignInput!): ReceiptCampaignResponse!
+  updateReceiptCampaign(input: UpdateReceiptCampaignInput!): ReceiptCampaignResponse!
+  markReceiptPaid(input: MarkReceiptPaidInput!): ReviewReceiptResponse!
   createRequestByUrl(input: CreateRequestWithDependenciesInput!, requestUrlName: String!): RequestDetailResponse!
   createEventType(input: CreateEventTypeInput!): EventTypeDetailResponse!
   updateEventType(input: UpdateEventTypeInput!): EventTypeDetailResponse!
@@ -4169,6 +4172,7 @@ type Query {
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   event(id: ID = null, uuid: ID = null): Event
   receipts(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: ConsumerReceiptFiltersInput = null): ConsumerReceiptTypeCountableConnection!
+  receiptCampaigns(filters: ReceiptCampaignFiltersInput = null): [ReceiptCampaign!]!
   eventReceiptUploadLink(eventId: ID!): EventReceiptUploadLinkType!
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   todayEventsCoordinates(coordinates: [Float!]!, range: Float!, unit: DistanceUnit! = KILOMETERS, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
@@ -5316,6 +5320,13 @@ type ConsumerReceiptType implements Node {
   reviewedAt: String
   publicUrl: String
   reviewedBy: SparkUserType
+  campaign: ReceiptCampaign
+  campaignName: String
+  payoutMethod: String
+  payoutHandle: String
+  rewardAmount: String
+  paidAt: String
+  payoutLink: String
 }
 
 type ConsumerReceiptTypeCountableConnection {
@@ -5336,6 +5347,8 @@ input ConsumerReceiptFiltersInput {
   tenantId: ID
   eventId: ID
   status: String
+  campaignId: ID
+  paid: Boolean
 }
 
 input ReviewReceiptInput {
@@ -5350,6 +5363,76 @@ type ReviewReceiptResponse {
   message: String!
   clientMutationId: ID
   receipt: ConsumerReceiptType
+}
+
+"""
+ReceiptCampaign — a per-client (tenant), always-on consumer rebate
+campaign. Consumers upload a purchase receipt via the public no-login
+page (/c/<slug>); an admin validates it, then pays a fixed reward via
+Venmo. Counts roll up the campaign's submissions by state.
+"""
+type ReceiptCampaign implements Node {
+  id: ID!
+  uuid: String!
+  name: String!
+  slug: String!
+  headline: String
+  description: String
+  product: String
+  rewardAmount: String!
+  payoutNote: String
+  isActive: Boolean!
+  receiptsCount: Int!
+  pendingCount: Int!
+  validatedCount: Int!
+  paidCount: Int!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input ReceiptCampaignFiltersInput {
+  tenantId: ID
+  isActive: Boolean
+}
+
+input CreateReceiptCampaignInput {
+  clientMutationId: ID
+  tenantId: ID
+  name: String!
+  headline: String
+  description: String
+  product: String
+  rewardAmount: Float
+  payoutNote: String
+  isActive: Boolean
+  slug: String
+}
+
+input UpdateReceiptCampaignInput {
+  clientMutationId: ID
+  id: ID!
+  name: String
+  headline: String
+  description: String
+  product: String
+  rewardAmount: Float
+  payoutNote: String
+  isActive: Boolean
+  slug: String
+}
+
+input MarkReceiptPaidInput {
+  clientMutationId: ID
+  id: ID!
+  amount: Float
+  payoutHandle: String
+}
+
+type ReceiptCampaignResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  campaign: ReceiptCampaign
 }
 
 """
