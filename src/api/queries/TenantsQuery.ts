@@ -23,6 +23,7 @@ export const TenantsQuery = graphql`
           uuid
           name
           requestUrlName
+          recapRecipientEmails
           defaultExternalRmm {
             id
             uuid

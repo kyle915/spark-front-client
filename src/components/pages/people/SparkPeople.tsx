@@ -8,6 +8,8 @@ import { TenantsQuery } from "@/api/queries/TenantsQuery";
 import type { TenantsQuery as TenantsQueryType } from "@api/queries/__generated__/TenantsQuery.graphql";
 import { SetDefaultExternalRmmMutation } from "@/api/mutations/SetDefaultExternalRmmMutation";
 import type { SetDefaultExternalRmmMutation as SetDefaultExternalRmmMutationType } from "@api/mutations/__generated__/SetDefaultExternalRmmMutation.graphql";
+import { SetTenantRecapRecipientEmailsMutation } from "@/api/mutations/SetTenantRecapRecipientEmailsMutation";
+import type { SetTenantRecapRecipientEmailsMutation as SetTenantRecapRecipientEmailsMutationType } from "@api/mutations/__generated__/SetTenantRecapRecipientEmailsMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 
@@ -176,6 +178,49 @@ const Inner: React.FC<{
     });
   };
 
+  // Recap-approval email recipients — extra addresses that get the
+  // recap-approval email for this brand on top of the RMM, client
+  // users, and requestor. Free-form text (comma/newline separated),
+  // so unlike the RMM select we save on an explicit button press
+  // rather than on every keystroke. Same tenant payload as above is
+  // the source of truth.
+  const currentRecapEmails = activeTenant?.recapRecipientEmails ?? "";
+  const [recapEmails, setRecapEmails] = useState<string>(currentRecapEmails);
+  const [recapDirty, setRecapDirty] = useState(false);
+  useEffect(() => {
+    setRecapEmails(currentRecapEmails);
+    setRecapDirty(false);
+  }, [currentRecapEmails]);
+
+  const [commitRecapEmails, recapEmailsInFlight] =
+    useMutation<SetTenantRecapRecipientEmailsMutationType>(
+      SetTenantRecapRecipientEmailsMutation,
+    );
+
+  const handleSaveRecapEmails = () => {
+    if (recapEmailsInFlight) return;
+    if (!tenantId) {
+      showAlert("No tenant in scope.", "error");
+      return;
+    }
+    commitRecapEmails({
+      variables: { tenantId, emails: recapEmails },
+      onCompleted: (res) => {
+        const t = res.setTenantRecapRecipientEmails;
+        if (t) {
+          setRecapEmails(t.recapRecipientEmails);
+          setRecapDirty(false);
+          showAlert("Recap email recipients saved.", "success");
+        } else {
+          showAlert("Could not update recap email recipients.", "error");
+        }
+      },
+      onError: (err) => {
+        showAlert(`Update failed: ${err.message}`, "error");
+      },
+    });
+  };
+
   const confirmRemove = async () => {
     if (!removing) return;
     setRemoveBusy(true);
@@ -337,6 +382,69 @@ const Inner: React.FC<{
             ))}
           </select>
           {defaultRmmInFlight && (
+            <span
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.14em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              SAVING…
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Recap-approval email recipients — extra addresses CC'd on the
+          recap-approval email for this brand, in addition to the RMM,
+          client users, and requestor. Free-form text, saved on the
+          button press. */}
+      <div className="spark-card p-4">
+        <p className="label-mini">RECAP EMAIL RECIPIENTS</p>
+        <p
+          className="text-xs mt-1 mb-3"
+          style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+        >
+          Comma- or newline-separated email addresses that receive the
+          recap-approval email for this brand, in addition to the RMM, client
+          users, and requestor.
+        </p>
+        <textarea
+          value={recapEmails}
+          disabled={recapEmailsInFlight}
+          onChange={(e) => {
+            setRecapEmails(e.target.value);
+            setRecapDirty(true);
+          }}
+          rows={4}
+          placeholder="ross@liquid-death.com, ops@liquid-death.com"
+          className="rounded-xl text-sm w-full"
+          style={{
+            padding: "0.55rem 0.9rem",
+            background: "var(--spark-bg)",
+            border: "1px solid var(--spark-border)",
+            color: "var(--spark-text)",
+            outline: "none",
+            resize: "vertical",
+            minHeight: 96,
+            opacity: recapEmailsInFlight ? 0.6 : 1,
+          }}
+        />
+        <div className="flex flex-wrap items-center gap-3 mt-3">
+          <button
+            onClick={handleSaveRecapEmails}
+            disabled={recapEmailsInFlight || !recapDirty}
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+              opacity: recapEmailsInFlight || !recapDirty ? 0.5 : 1,
+            }}
+          >
+            Save recipients
+          </button>
+          {recapEmailsInFlight && (
             <span
               className="mono text-[10px]"
               style={{
