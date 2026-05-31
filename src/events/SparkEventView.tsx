@@ -17,7 +17,7 @@
 
 import React, { Suspense, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
-import { Link, useLocation, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import useSparkRole from "@/hooks/useSparkRole";
 
@@ -25,6 +25,10 @@ import { EventUuidQuery } from "@/api/queries/EventUuidQuery";
 import type { EventUuidQuery as EventUuidQueryType } from "@api/queries/__generated__/EventUuidQuery.graphql";
 import ShiftReplayPanel from "@/requests/ShiftReplayPanel";
 import InviteBAModal from "@/requests/InviteBAModal";
+import { pickHeroImage } from "@/utils/recapFileUrl";
+
+// Element id the header recap chip scrolls to when an event has >1 recap.
+const RECAPS_SECTION_ID = "event-recaps";
 
 type Event = NonNullable<EventUuidQueryType["response"]["event"]>;
 
@@ -121,6 +125,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
   backTo,
 }) => {
   const role = useSparkRole();
+  const navigate = useNavigate();
   // Bumped after an invite so the Roster panel refetches and shows the
   // newly-invited BA immediately (otherwise the page looked like "nothing
   // happened" until a manual reload).
@@ -161,6 +166,23 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
   const hasNotes = Boolean(event.notes?.trim());
   const ambassadors = event.ambassadors ?? [];
   const confirmedCount = ambassadors.filter((a) => a.isApproved).length;
+  // Recaps filed against this event. The Master Tracker surfaces these as a
+  // green "● n RECAP" chip but clicking the event used to dead-end here —
+  // we now mirror SparkRequestView's recap cards + /recap/view route.
+  const recaps = (event.recaps ?? []).filter(
+    (r): r is NonNullable<typeof r> => Boolean(r),
+  );
+  // Header chip behavior: a single recap jumps straight to its detail; many
+  // recaps smooth-scroll to the bottom Recaps section so the user can pick.
+  const onRecapChip = () => {
+    if (recaps.length === 1) {
+      navigate(`/recap/view/${recaps[0].uuid}`);
+      return;
+    }
+    document
+      .getElementById(RECAPS_SECTION_ID)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -211,6 +233,21 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
           <span className="chip chip-muted">
             {scope === "National" ? "◉ NATIONAL" : "⌖ LOCAL"}
           </span>
+          {recaps.length > 0 && (
+            <button
+              type="button"
+              onClick={onRecapChip}
+              className="chip chip-lime"
+              style={{ cursor: "pointer", border: "none" }}
+              title={
+                recaps.length === 1
+                  ? "View recap"
+                  : `View ${recaps.length} recaps`
+              }
+            >
+              ● {recaps.length} RECAP{recaps.length === 1 ? "" : "S"}
+            </button>
+          )}
           {role.isAdmin && (
             <>
               <button
@@ -502,6 +539,162 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                 </span>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Recaps — field reports filed against this event. Mirrors the
+          recap cards on SparkRequestView; the header chip scrolls here. */}
+      <div id={RECAPS_SECTION_ID} className="spark-card p-6">
+        <p
+          className="mono text-[10px] mb-4"
+          style={{
+            letterSpacing: "0.18em",
+            color: "var(--spark-lime)",
+          }}
+        >
+          RECAPS · {recaps.length}
+        </p>
+        {recaps.length === 0 ? (
+          <div
+            className="spark-card overflow-hidden"
+            style={{ borderStyle: "dashed", opacity: 0.7 }}
+          >
+            <div
+              className="h-32 relative overflow-hidden grid place-items-center"
+              style={{ background: "rgba(255,255,255,0.02)" }}
+            >
+              <div className="text-center">
+                <p
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-orange)",
+                  }}
+                >
+                  AWAITING RECAP
+                </p>
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "rgba(255,255,255,0.55)" }}
+                >
+                  No recap filed yet.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recaps.map((recap) => {
+              const hero = pickHeroImage(recap.recapFiles ?? []);
+              const baName =
+                [
+                  recap.ambassador?.user?.firstName,
+                  recap.ambassador?.user?.lastName,
+                ]
+                  .filter(Boolean)
+                  .join(" ") || null;
+              const fileCount = (recap.recapFiles ?? []).filter(
+                (f) => f && (f.file?.toString() || "").length > 0,
+              ).length;
+              return (
+                <div
+                  key={String(recap.uuid)}
+                  onClick={() => navigate(`/recap/view/${recap.uuid}`)}
+                  className="spark-card hov overflow-hidden cursor-pointer"
+                >
+                  <div
+                    className="h-32 relative overflow-hidden"
+                    style={{
+                      background:
+                        "radial-gradient(circle at 50% 50%, rgba(197,245,70,0.10), transparent 70%)",
+                    }}
+                  >
+                    {hero ? (
+                      <img
+                        src={hero}
+                        alt=""
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.display =
+                            "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 grid place-items-center">
+                        <span className="text-3xl" aria-hidden>
+                          ◈
+                        </span>
+                      </div>
+                    )}
+                    <span
+                      className={`absolute top-2 right-2 chip ${recap.approved ? "chip-lime" : "chip-orange"}`}
+                    >
+                      ● {recap.approved ? "APPROVED" : "DRAFT"}
+                    </span>
+                    {fileCount > 0 && (
+                      <span
+                        className="absolute bottom-2 left-2 mono"
+                        style={{
+                          fontSize: 9,
+                          letterSpacing: "0.14em",
+                          padding: "2px 6px",
+                          borderRadius: 999,
+                          background: "rgba(197,245,70,0.15)",
+                          color: "var(--spark-lime)",
+                          border: "1px solid rgba(197,245,70,0.35)",
+                        }}
+                      >
+                        ◉ {fileCount} FILE{fileCount === 1 ? "" : "S"}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <p
+                      className="font-bold text-sm truncate"
+                      title={recap.name ?? event.name ?? "Recap"}
+                    >
+                      {recap.name ?? event.name ?? "Recap"}
+                    </p>
+                    <p
+                      className="mono text-[10px] uppercase mt-1 truncate"
+                      style={{
+                        letterSpacing: "0.14em",
+                        color: "rgba(255,255,255,0.45)",
+                      }}
+                    >
+                      {baName ? `BY ${baName} · ` : ""}
+                      {fmtDate(recap.createdAt ?? event.date)}
+                    </p>
+                    <div
+                      className="mt-3 pt-3 grid grid-cols-2 gap-2 text-center"
+                      style={{ borderTop: "1px solid var(--spark-border)" }}
+                    >
+                      <div>
+                        <p
+                          className="tab-num text-base font-bold"
+                          style={{ color: "var(--spark-lime)" }}
+                        >
+                          {recap.totalEngagements != null
+                            ? recap.totalEngagements.toLocaleString()
+                            : "—"}
+                        </p>
+                        <p className="label-mini">ENG</p>
+                      </div>
+                      <div>
+                        <p className="tab-num text-base font-bold">
+                          {recap.productsSold != null
+                            ? recap.productsSold.toLocaleString()
+                            : "—"}
+                        </p>
+                        <p className="label-mini">SOLD</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

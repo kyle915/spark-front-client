@@ -169,6 +169,34 @@ export const EventUuidQuery = graphql`
         email
         isApproved
       }
+      recaps {
+        id
+        uuid
+        name
+        approved
+        totalEngagements
+        productsSold
+        totalCansSold
+        createdAt
+        ambassador {
+          id
+          uuid
+          user {
+            id
+            firstName
+            lastName
+          }
+        }
+        recapFiles {
+          id
+          file
+          fileType {
+            id
+            name
+            extension
+          }
+        }
+      }
     }
   }
 `;
