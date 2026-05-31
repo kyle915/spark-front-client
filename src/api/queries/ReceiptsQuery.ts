@@ -62,6 +62,13 @@ export const ReceiptsQuery = graphql`
           rewardAmount
           paidAt
           payoutLink
+          isFlagged
+          flagReason
+          ocrStore
+          ocrAmount
+          ocrDate
+          ocrText
+          ocrRanAt
           reviewedBy {
             __typename
             uuid

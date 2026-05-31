@@ -1,5 +1,13 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { QRCodeCanvas } from "qrcode.react";
 import Layout from "@/layout/Layout";
 import { ReceiptsQuery } from "@/api/queries/ReceiptsQuery";
 import type { ReceiptsQuery as ReceiptsQueryType } from "@api/queries/__generated__/ReceiptsQuery.graphql";
@@ -16,6 +24,10 @@ import { CreateReceiptCampaignMutation } from "@/api/mutations/CreateReceiptCamp
 import type { CreateReceiptCampaignMutation as CreateReceiptCampaignMutationType } from "@api/mutations/__generated__/CreateReceiptCampaignMutation.graphql";
 import { UpdateReceiptCampaignMutation } from "@/api/mutations/UpdateReceiptCampaignMutation";
 import type { UpdateReceiptCampaignMutation as UpdateReceiptCampaignMutationType } from "@api/mutations/__generated__/UpdateReceiptCampaignMutation.graphql";
+import { DeleteReceiptCampaignMutation } from "@/api/mutations/DeleteReceiptCampaignMutation";
+import type { DeleteReceiptCampaignMutation as DeleteReceiptCampaignMutationType } from "@api/mutations/__generated__/DeleteReceiptCampaignMutation.graphql";
+import { RunReceiptOcrMutation } from "@/api/mutations/RunReceiptOcrMutation";
+import type { RunReceiptOcrMutation as RunReceiptOcrMutationType } from "@api/mutations/__generated__/RunReceiptOcrMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 
@@ -95,16 +107,28 @@ type Receipt = {
   rewardAmount: string | null;
   paidAt: string | null;
   payoutLink: string | null;
+  isFlagged: boolean;
+  flagReason: string | null;
+  ocrStore: string | null;
+  ocrAmount: string | null;
+  ocrDate: string | null;
+  ocrText: string | null;
+  ocrRanAt: string | null;
 };
 
-// Local overrides applied after a review / payout so the row updates in
-// place without a refetch.
+// Local overrides applied after a review / payout / OCR run so the row
+// updates in place without a refetch.
 type ReceiptOverride = {
   status?: string;
   reviewNote?: string | null;
   paidAt?: string | null;
   payoutLink?: string | null;
   rewardAmount?: string | null;
+  ocrStore?: string | null;
+  ocrAmount?: string | null;
+  ocrDate?: string | null;
+  ocrText?: string | null;
+  ocrRanAt?: string | null;
 };
 
 const formatDateTime = (raw: string | null | undefined): string => {
@@ -179,6 +203,21 @@ const ghostButton: React.CSSProperties = {
   border: "1px solid var(--spark-border)",
 };
 
+// Subtle-red, used for the destructive Delete action so it reads as
+// dangerous without shouting.
+const dangerButton: React.CSSProperties = {
+  background: "rgba(239,90,42,0.12)",
+  color: "var(--spark-orange)",
+  border: "1px solid rgba(239,90,42,0.5)",
+};
+
+// Parse a money-ish string ("12.50", "$12.50") to a finite number, else null.
+const parseMoney = (raw: string | null | undefined): number | null => {
+  if (raw == null) return null;
+  const n = Number(String(raw).trim().replace(/^\$/, ""));
+  return Number.isFinite(n) ? n : null;
+};
+
 // ─── Copyable share link ───────────────────────────────────────────────
 const ShareLink: React.FC<{ slug: string }> = ({ slug }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -239,6 +278,130 @@ const ShareLink: React.FC<{ slug: string }> = ({ slug }) => {
   );
 };
 
+// ─── Rendered QR + PNG download ────────────────────────────────────────
+// Renders the public campaign URL as a scannable QR on a white rounded
+// background and exports the underlying <canvas> to a downloadable PNG.
+const QrPanel: React.FC<{ slug: string }> = ({ slug }) => {
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const url = campaignShareUrl(slug);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const download = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // QRCodeCanvas renders a single <canvas>; grab it from the wrapper so
+    // we don't need to juggle a forwarded ref through the typed component.
+    const canvas = wrapRef.current?.querySelector("canvas");
+    if (!canvas) {
+      showAlert("QR isn't ready yet — try again in a moment.", "warning");
+      return;
+    }
+    try {
+      const dataUrl = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `${slug}-qr.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch {
+      showAlert("Couldn't export the QR image.", "error");
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      <div
+        ref={wrapRef}
+        className="rounded-xl shrink-0 grid place-items-center"
+        style={{ background: "#ffffff", padding: 8 }}
+      >
+        <QRCodeCanvas
+          value={url}
+          size={104}
+          bgColor="#ffffff"
+          fgColor="#0a0d09"
+          level="M"
+          marginSize={1}
+        />
+      </div>
+      <div className="min-w-0">
+        <p
+          className="mono text-[10px] uppercase"
+          style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.45)" }}
+        >
+          Scan to open the public page
+        </p>
+        <button
+          type="button"
+          onClick={download}
+          className="mt-2 px-3 py-2 rounded-xl text-xs font-semibold"
+          style={ghostButton}
+        >
+          ⬇ Download QR
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── Confirm dialog ────────────────────────────────────────────────────
+// A small modal that requires an explicit confirm before a destructive
+// action runs. Tone "danger" gives the confirm button the subtle-red look.
+const ConfirmDialog: React.FC<{
+  title: string;
+  body: React.ReactNode;
+  confirmLabel: string;
+  busy?: boolean;
+  tone?: "danger" | "default";
+  onConfirm: () => void;
+  onCancel: () => void;
+}> = ({ title, body, confirmLabel, busy, tone = "default", onConfirm, onCancel }) => (
+  <div
+    className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+    style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+    onClick={onCancel}
+  >
+    <div
+      className="spark-card w-full max-w-sm"
+      style={{ background: "var(--spark-surface, #0f1310)" }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="p-6">
+        <h2 className="display text-lg font-bold">{title}</h2>
+        <div
+          className="text-sm mt-2"
+          style={{ color: "rgba(255,255,255,0.65)" }}
+        >
+          {body}
+        </div>
+      </div>
+      <div
+        className="px-6 py-4 flex justify-end gap-3"
+        style={{ borderTop: "1px solid var(--spark-border)" }}
+      >
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={busy}
+          className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+          style={ghostButton}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          disabled={busy}
+          className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+          style={tone === "danger" ? dangerButton : limeButton}
+        >
+          {busy ? "…" : confirmLabel}
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 // ─── Count tile ────────────────────────────────────────────────────────
 const CountTile: React.FC<{
   label: string;
@@ -262,6 +425,70 @@ const CountTile: React.FC<{
   </div>
 );
 
+// ─── Budget cap progress ───────────────────────────────────────────────
+// Shown only when a campaign has a budgetCap (budgetRemaining is non-null).
+// Renders paid-of-cap progress, the committed-but-unpaid amount, and a
+// "Budget reached" note when nothing is left.
+const BudgetBar: React.FC<{ campaign: Campaign }> = ({ campaign }) => {
+  const cap = parseMoney(campaign.budgetCap);
+  const paid = parseMoney(campaign.totalPaid) ?? 0;
+  const committed = parseMoney(campaign.totalCommitted) ?? 0;
+  const remaining = parseMoney(campaign.budgetRemaining);
+  const reached = remaining != null && remaining <= 0;
+  const pct =
+    cap && cap > 0 ? Math.min(100, Math.max(0, (paid / cap) * 100)) : 0;
+
+  return (
+    <div
+      className="mt-4 pt-4"
+      style={{ borderTop: "1px solid var(--spark-border)" }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="label-mini">BUDGET</p>
+        <p
+          className="mono text-[11px]"
+          style={{ color: "rgba(255,255,255,0.7)" }}
+        >
+          Paid {formatMoney(campaign.totalPaid)} of {formatMoney(campaign.budgetCap)}
+        </p>
+      </div>
+      <div
+        className="mt-2 h-2 w-full rounded-full overflow-hidden"
+        style={{ background: "rgba(255,255,255,0.08)" }}
+        role="progressbar"
+        aria-valuenow={Math.round(pct)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${pct}%`,
+            background: reached ? "var(--spark-orange)" : "var(--spark-lime)",
+            transition: "width 240ms ease",
+          }}
+        />
+      </div>
+      {committed > 0 && (
+        <p
+          className="mono text-[10px] mt-1.5"
+          style={{ letterSpacing: "0.08em", color: "rgba(255,255,255,0.45)" }}
+        >
+          {formatMoney(campaign.totalCommitted)} awaiting payout
+        </p>
+      )}
+      {reached && (
+        <p
+          className="mono text-[10px] mt-1.5"
+          style={{ letterSpacing: "0.08em", color: "rgba(255,255,255,0.4)" }}
+        >
+          Budget reached
+        </p>
+      )}
+    </div>
+  );
+};
+
 // ─── Campaign card ─────────────────────────────────────────────────────
 const CampaignCard: React.FC<{
   campaign: Campaign;
@@ -269,8 +496,20 @@ const CampaignCard: React.FC<{
   onSelect: () => void;
   onEdit: () => void;
   onToggleActive: (next: boolean) => void;
+  onDelete: () => void;
   toggling: boolean;
-}> = ({ campaign, selected, onSelect, onEdit, onToggleActive, toggling }) => {
+  deleting: boolean;
+}> = ({
+  campaign,
+  selected,
+  onSelect,
+  onEdit,
+  onToggleActive,
+  onDelete,
+  toggling,
+  deleting,
+}) => {
+  const hasBudget = campaign.budgetRemaining != null;
   return (
     <div
       onClick={onSelect}
@@ -309,6 +548,10 @@ const CampaignCard: React.FC<{
         </p>
       )}
 
+      <div className="mt-4" onClick={(e) => e.stopPropagation()}>
+        <QrPanel slug={campaign.slug} />
+      </div>
+
       <div className="mt-4">
         <ShareLink slug={campaign.slug} />
       </div>
@@ -327,6 +570,8 @@ const CampaignCard: React.FC<{
           tone="var(--spark-sky)"
         />
       </div>
+
+      {hasBudget && <BudgetBar campaign={campaign} />}
 
       <div
         className="flex items-center justify-between gap-3 mt-4 pt-4"
@@ -351,17 +596,31 @@ const CampaignCard: React.FC<{
               ? "⏸ PAUSE CAMPAIGN"
               : "▶ ACTIVATE"}
         </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
-          className="mono text-[11px]"
-          style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.6)" }}
-        >
-          ✎ EDIT
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="mono text-[11px]"
+            style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.6)" }}
+          >
+            ✎ EDIT
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            disabled={deleting}
+            className="mono text-[11px] disabled:opacity-40"
+            style={{ letterSpacing: "0.12em", color: "var(--spark-orange)" }}
+          >
+            {deleting ? "…" : "🗑 DELETE"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -385,6 +644,9 @@ const CampaignFormModal: React.FC<{
   const [payoutNote, setPayoutNote] = useState(existing?.payoutNote ?? "");
   const [slug, setSlug] = useState(existing?.slug ?? "");
   const [isActive, setIsActive] = useState(existing?.isActive ?? true);
+  const [budgetCap, setBudgetCap] = useState(
+    existing ? stripMoney(existing.budgetCap) : "",
+  );
 
   const [createCommit, creating] = useMutation<CreateReceiptCampaignMutationType>(
     CreateReceiptCampaignMutation,
@@ -407,6 +669,14 @@ const CampaignFormModal: React.FC<{
       showAlert("Reward amount must be a number (e.g. 5 or 5.00).", "warning");
       return;
     }
+    // Budget cap is an optional Float (dollars). Blank clears it (null);
+    // a non-numeric value is rejected.
+    const budgetTrimmed = budgetCap.trim();
+    const budgetNum = budgetTrimmed === "" ? undefined : Number(budgetTrimmed);
+    if (budgetNum !== undefined && !Number.isFinite(budgetNum)) {
+      showAlert("Budget cap must be a number (e.g. 500 or 500.00).", "warning");
+      return;
+    }
 
     if (existing) {
       updateCommit({
@@ -421,6 +691,7 @@ const CampaignFormModal: React.FC<{
             payoutNote: payoutNote.trim() || null,
             slug: slug.trim() || null,
             isActive,
+            budgetCap: budgetNum ?? null,
           },
         },
         onCompleted: (res) => {
@@ -448,6 +719,7 @@ const CampaignFormModal: React.FC<{
             payoutNote: payoutNote.trim() || null,
             slug: slug.trim() || null,
             isActive,
+            budgetCap: budgetNum ?? null,
           },
         },
         onCompleted: (res) => {
@@ -529,6 +801,20 @@ const CampaignFormModal: React.FC<{
               />
             </Field>
           </div>
+
+          <Field label="Budget cap ($, optional)">
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              value={budgetCap}
+              onChange={(e) => setBudgetCap(e.target.value)}
+              placeholder="Total to spend on this campaign — leave blank for no cap."
+              className="w-full rounded-xl text-sm"
+              style={inputStyle}
+            />
+          </Field>
 
           <Field label="Headline">
             <input
@@ -629,13 +915,41 @@ const CampaignFormModal: React.FC<{
   );
 };
 
+// Tiny inline spinner used inside buttons while a mutation is in flight.
+const Spinner: React.FC = () => (
+  <span
+    aria-hidden
+    className="inline-block rounded-full align-[-1px] animate-spin"
+    style={{
+      width: 10,
+      height: 10,
+      border: "2px solid currentColor",
+      borderTopColor: "transparent",
+    }}
+  />
+);
+
+// Build the muted "OCR: Store X · $Y · date" comparison line, or null if
+// nothing has been read off the image yet.
+const ocrSummary = (receipt: Receipt): string | null => {
+  const parts = [
+    receipt.ocrStore,
+    receipt.ocrAmount ? formatMoney(receipt.ocrAmount) : null,
+    receipt.ocrDate,
+  ].filter((p): p is string => Boolean(p && String(p).trim()));
+  if (parts.length === 0) return null;
+  return `OCR: ${parts.join(" · ")}`;
+};
+
 // ─── Receipt card (within a campaign queue) ────────────────────────────
 const ReceiptCard: React.FC<{
   receipt: Receipt;
   onReview: (status: "validated" | "rejected", note: string) => void;
   onMarkPaid: () => void;
+  onOcr: () => void;
   busy: boolean;
-}> = ({ receipt, onReview, onMarkPaid, busy }) => {
+  ocrBusy: boolean;
+}> = ({ receipt, onReview, onMarkPaid, onOcr, busy, ocrBusy }) => {
   const chip = statusChip(receipt.status);
   const [note, setNote] = useState(receipt.reviewNote ?? "");
   const isPaid = Boolean(receipt.paidAt);
@@ -643,6 +957,8 @@ const ReceiptCard: React.FC<{
   const awaitingPayout = receipt.status === "validated" && !isPaid;
   const reward = formatMoney(receipt.rewardAmount);
   const handle = receipt.payoutHandle?.trim().replace(/^@+/, "") ?? "";
+  const ocrLine = ocrSummary(receipt);
+  const ocrRan = Boolean(receipt.ocrRanAt) || ocrLine != null;
 
   return (
     <div className="spark-card overflow-hidden">
@@ -707,8 +1023,33 @@ const ReceiptCard: React.FC<{
                 {receipt.consumerEmail || receipt.consumerPhone || "—"}
               </p>
             </div>
-            <span className={chip.cls}>● {chip.label}</span>
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              <span className={chip.cls}>● {chip.label}</span>
+              {receipt.isFlagged && (
+                <span
+                  className="mono inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]"
+                  style={{
+                    letterSpacing: "0.06em",
+                    background: "rgba(255,201,96,0.12)",
+                    border: "1px solid rgba(255,201,96,0.5)",
+                    color: "#ffc960",
+                  }}
+                  title={receipt.flagReason || "Possible duplicate submission"}
+                >
+                  ⚠ Possible duplicate
+                </span>
+              )}
+            </div>
           </div>
+
+          {receipt.isFlagged && receipt.flagReason && (
+            <p
+              className="text-[11px] mt-1.5"
+              style={{ color: "#ffc960" }}
+            >
+              {receipt.flagReason}
+            </p>
+          )}
 
           <div
             className="mono text-[10px] uppercase mt-2"
@@ -718,6 +1059,38 @@ const ReceiptCard: React.FC<{
             {receipt.purchaseDate ? ` · ${formatDate(receipt.purchaseDate)}` : ""}
             {receipt.amount ? ` · ${receipt.amount}` : ""}
             {receipt.product ? ` · ${receipt.product}` : ""}
+          </div>
+
+          {/* OCR comparison + admin trigger */}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {ocrLine && (
+              <span
+                className="mono text-[10px]"
+                style={{ letterSpacing: "0.06em", color: "rgba(255,255,255,0.4)" }}
+                title={receipt.ocrText || undefined}
+              >
+                {ocrLine}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={onOcr}
+              disabled={ocrBusy}
+              className="mono inline-flex items-center gap-1.5 text-[10px] disabled:opacity-50"
+              style={{
+                letterSpacing: "0.1em",
+                color: "var(--spark-sky)",
+              }}
+              title="Read the receipt image with OCR and fill the OCR fields"
+            >
+              {ocrBusy ? (
+                <>
+                  <Spinner /> READING…
+                </>
+              ) : (
+                <>🔍 {ocrRan ? "RE-RUN OCR" : "AUTO-READ (OCR)"}</>
+              )}
+            </button>
           </div>
 
           {/* Venmo handle */}
@@ -886,14 +1259,19 @@ const SubmissionsQueue: React.FC<{
   const [paidCommit, payingMut] = useMutation<MarkReceiptPaidMutationType>(
     MarkReceiptPaidMutation,
   );
+  const [ocrCommit] = useMutation<RunReceiptOcrMutationType>(
+    RunReceiptOcrMutation,
+  );
 
   // Local overrides keyed by receipt id so a row reflects its new state
-  // after a review / payout without waiting on a refetch.
+  // after a review / payout / OCR run without waiting on a refetch.
   const [overrides, setOverrides] = useState<Record<string, ReceiptOverride>>(
     {},
   );
-  // Which row id is mid-mutation, so only that card shows a busy state.
+  // Which row id is mid review/payout, so only that card shows a busy state.
   const [busyId, setBusyId] = useState<string | null>(null);
+  // OCR runs independently of review/payout, so it has its own busy id.
+  const [ocrBusyId, setOcrBusyId] = useState<string | null>(null);
 
   const receipts: Receipt[] = useMemo(() => {
     return (
@@ -929,6 +1307,13 @@ const SubmissionsQueue: React.FC<{
             rewardAmount: ov.rewardAmount ?? n.rewardAmount ?? null,
             paidAt: ov.paidAt ?? n.paidAt ?? null,
             payoutLink: ov.payoutLink ?? n.payoutLink ?? null,
+            isFlagged: n.isFlagged ?? false,
+            flagReason: n.flagReason ?? null,
+            ocrStore: ov.ocrStore ?? n.ocrStore ?? null,
+            ocrAmount: ov.ocrAmount ?? n.ocrAmount ?? null,
+            ocrDate: ov.ocrDate ?? n.ocrDate ?? null,
+            ocrText: ov.ocrText ?? n.ocrText ?? null,
+            ocrRanAt: ov.ocrRanAt ?? n.ocrRanAt ?? null,
           } satisfies Receipt;
         }) ?? []
     );
@@ -1018,6 +1403,45 @@ const SubmissionsQueue: React.FC<{
     });
   };
 
+  // Admin-triggered OCR. Independent of review/payout so it doesn't block
+  // them. OCR can be unavailable — surface the server message and never
+  // throw.
+  const runOcr = (receipt: Receipt) => {
+    if (ocrBusyId) return;
+    setOcrBusyId(receipt.id);
+    ocrCommit({
+      variables: { input: { id: receipt.id } },
+      onCompleted: (res) => {
+        setOcrBusyId(null);
+        const payload = res.runReceiptOcr;
+        if (payload?.success) {
+          showAlert(payload.message || "Receipt read.", "success");
+          setOverrides((prev) => ({
+            ...prev,
+            [receipt.id]: {
+              ...prev[receipt.id],
+              ocrStore: payload.receipt?.ocrStore ?? prev[receipt.id]?.ocrStore,
+              ocrAmount:
+                payload.receipt?.ocrAmount ?? prev[receipt.id]?.ocrAmount,
+              ocrDate: payload.receipt?.ocrDate ?? prev[receipt.id]?.ocrDate,
+              ocrText: payload.receipt?.ocrText ?? prev[receipt.id]?.ocrText,
+              ocrRanAt:
+                payload.receipt?.ocrRanAt ??
+                prev[receipt.id]?.ocrRanAt ??
+                new Date().toISOString(),
+            },
+          }));
+        } else {
+          showAlert(payload?.message ?? "OCR is unavailable right now.", "error");
+        }
+      },
+      onError: (err) => {
+        setOcrBusyId(null);
+        showAlert(`OCR failed: ${err.message}`, "error");
+      },
+    });
+  };
+
   if (visible.length === 0) {
     return (
       <div
@@ -1039,8 +1463,10 @@ const SubmissionsQueue: React.FC<{
           key={r.uuid}
           receipt={r}
           busy={busy && busyId === r.id}
+          ocrBusy={ocrBusyId === r.id}
           onReview={(status, note) => review(r, status, note)}
           onMarkPaid={() => markPaid(r)}
+          onOcr={() => runOcr(r)}
         />
       ))}
     </div>
@@ -1086,7 +1512,13 @@ const CampaignList: React.FC<{
   const [updateCommit] = useMutation<UpdateReceiptCampaignMutationType>(
     UpdateReceiptCampaignMutation,
   );
+  const [deleteCommit] = useMutation<DeleteReceiptCampaignMutationType>(
+    DeleteReceiptCampaignMutation,
+  );
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  // Campaign awaiting an explicit delete confirmation, and the id mid-delete.
+  const [pendingDelete, setPendingDelete] = useState<Campaign | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Publish total + the resolved selected campaign up to the header.
   useEffect(() => {
@@ -1120,6 +1552,32 @@ const CampaignList: React.FC<{
     });
   };
 
+  // Runs after the user confirms in the dialog. The backend decides whether
+  // to hard-delete (empty) or soft-archive (has receipts); we just surface
+  // its message and refetch.
+  const confirmDelete = (campaign: Campaign) => {
+    if (deletingId) return;
+    setDeletingId(campaign.id);
+    deleteCommit({
+      variables: { input: { id: campaign.id } },
+      onCompleted: (res) => {
+        setDeletingId(null);
+        const payload = res.deleteReceiptCampaign;
+        if (payload?.success) {
+          showAlert(payload.message || "Campaign deleted.", "success");
+          setPendingDelete(null);
+          onChanged();
+        } else {
+          showAlert(payload?.message ?? "Couldn't delete the campaign.", "error");
+        }
+      },
+      onError: (err) => {
+        setDeletingId(null);
+        showAlert(`Delete failed: ${err.message}`, "error");
+      },
+    });
+  };
+
   if (campaigns.length === 0) {
     return (
       <div
@@ -1135,19 +1593,46 @@ const CampaignList: React.FC<{
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      {campaigns.map((c) => (
-        <CampaignCard
-          key={c.id}
-          campaign={c}
-          selected={c.id === selectedId}
-          onSelect={() => onSelect(c)}
-          onEdit={() => onEdit(c)}
-          onToggleActive={(next) => toggleActive(c, next)}
-          toggling={togglingId === c.id}
+    <>
+      <div className="grid gap-4 md:grid-cols-2">
+        {campaigns.map((c) => (
+          <CampaignCard
+            key={c.id}
+            campaign={c}
+            selected={c.id === selectedId}
+            onSelect={() => onSelect(c)}
+            onEdit={() => onEdit(c)}
+            onToggleActive={(next) => toggleActive(c, next)}
+            onDelete={() => setPendingDelete(c)}
+            toggling={togglingId === c.id}
+            deleting={deletingId === c.id}
+          />
+        ))}
+      </div>
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title="Delete campaign?"
+          tone="danger"
+          confirmLabel="Delete campaign"
+          busy={deletingId === pendingDelete.id}
+          body={
+            <>
+              <span className="font-semibold" style={{ color: "var(--spark-text)" }}>
+                {pendingDelete.name}
+              </span>{" "}
+              will be removed. Campaigns with existing receipts are archived
+              instead of permanently deleted. This can't be undone.
+            </>
+          }
+          onConfirm={() => confirmDelete(pendingDelete)}
+          onCancel={() => {
+            if (deletingId) return;
+            setPendingDelete(null);
+          }}
         />
-      ))}
-    </div>
+      )}
+    </>
   );
 };
 
