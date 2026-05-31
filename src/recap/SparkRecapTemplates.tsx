@@ -10,6 +10,8 @@ import { RemoveCustomFieldMutation } from "@/api/mutations/RemoveCustomFieldMuta
 import type { RemoveCustomFieldMutation as RemoveCustomFieldMutationType } from "@api/mutations/__generated__/RemoveCustomFieldMutation.graphql";
 import { CreateCustomFieldMutation } from "@/api/mutations/CreateCustomFieldMutation";
 import type { CreateCustomFieldMutation as CreateCustomFieldMutationType } from "@api/mutations/__generated__/CreateCustomFieldMutation.graphql";
+import { UpdateCustomRecapTemplateMutation } from "@/api/mutations/UpdateCustomRecapTemplateMutation";
+import type { UpdateCustomRecapTemplateMutation as UpdateCustomRecapTemplateMutationType } from "@api/mutations/__generated__/UpdateCustomRecapTemplateMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 
@@ -340,6 +342,13 @@ const Inner: React.FC = () => {
           key={String(managingTemplate.id)}
           templateId={String(managingTemplate.id)}
           templateName={managingTemplate.name ?? "Template"}
+          // Current values for the partial update payload. The toggle
+          // only changes productSamples; name + eventTypeId are sent
+          // unchanged (both are non-null inputs) so nothing else moves,
+          // and customFields is deliberately omitted so the backend
+          // preserves the template's existing field rows.
+          eventTypeId={String(managingTemplate.eventType?.id ?? "")}
+          productSamples={Boolean(managingTemplate.productSamples)}
           fields={(managingTemplate.customField ?? [])
             .filter((f): f is NonNullable<typeof f> => Boolean(f))
             .map((f) => ({
@@ -372,6 +381,8 @@ const Inner: React.FC = () => {
 const ManageFieldsModal: React.FC<{
   templateId: string;
   templateName: string;
+  eventTypeId: string;
+  productSamples: boolean;
   fields: {
     id: string;
     name: string;
@@ -385,6 +396,8 @@ const ManageFieldsModal: React.FC<{
 }> = ({
   templateId,
   templateName,
+  eventTypeId,
+  productSamples,
   fields,
   sections,
   fieldTypes,
@@ -396,6 +409,58 @@ const ManageFieldsModal: React.FC<{
     useMutation<RemoveCustomFieldMutationType>(RemoveCustomFieldMutation);
   const [commitCreate, isCreating] =
     useMutation<CreateCustomFieldMutationType>(CreateCustomFieldMutation);
+  const [commitUpdateTemplate, isUpdatingTemplate] =
+    useMutation<UpdateCustomRecapTemplateMutationType>(
+      UpdateCustomRecapTemplateMutation,
+    );
+
+  // Local mirror of the template's productSamples flag so the checkbox
+  // reflects intent immediately; reverted in onError if the mutation
+  // fails. Seeded from the prop (the template's current value).
+  const [sampledOn, setSampledOn] = useState(productSamples);
+
+  const toggleProductSamples = (next: boolean) => {
+    // Optimistic flip so the checkbox tracks the click; revert on error.
+    setSampledOn(next);
+    commitUpdateTemplate({
+      variables: {
+        input: {
+          id: templateId,
+          // Send the template's CURRENT name + eventTypeId unchanged
+          // (both required, non-null) and ONLY change productSamples.
+          // customFields is intentionally omitted — the backend
+          // preserves existing fields when it's null/absent.
+          name: templateName,
+          eventTypeId,
+          productSamples: next,
+        },
+      },
+      onCompleted: (res) => {
+        const payload = res.updateCustomRecapTemplate;
+        if (payload?.success) {
+          showAlert(
+            next
+              ? `Sampled-products tracking ON for "${templateName}".`
+              : `Sampled-products tracking OFF for "${templateName}".`,
+            "success",
+          );
+          // Refresh so the persisted value is reflected from the store.
+          onChanged();
+        } else {
+          // Server rejected the change — revert the checkbox.
+          setSampledOn(!next);
+          showAlert(
+            payload?.message ?? "Couldn't update template.",
+            "error",
+          );
+        }
+      },
+      onError: (err) => {
+        setSampledOn(!next);
+        showAlert(`Update failed: ${err.message}`, "error");
+      },
+    });
+  };
   // Tracks the field id mid-confirm so we can show inline "are you
   // sure" UX without a system dialog (system dialogs eat focus on
   // mobile and feel disconnected from the page state).
@@ -515,6 +580,45 @@ const ManageFieldsModal: React.FC<{
           >
             ✕
           </button>
+        </div>
+
+        {/* Per-template "Track sampled products" toggle. Flipping it sends
+            a partial update (no customFields) so the template's fields are
+            preserved — this is what turns on the per-SKU products-sampled
+            section the recap forms render when productSamples === true. */}
+        <div
+          className="rounded-xl px-3 py-2.5 flex items-center justify-between gap-3"
+          style={{
+            background: "var(--spark-bg)",
+            border: "1px solid var(--spark-border)",
+          }}
+        >
+          <label
+            className="flex items-center gap-2 text-sm cursor-pointer"
+            title="When on, BAs see the per-SKU products-sampled section on this template's recap form."
+          >
+            <input
+              type="checkbox"
+              checked={sampledOn}
+              disabled={isUpdatingTemplate}
+              onChange={(e) => toggleProductSamples(e.target.checked)}
+              className="accent-[var(--spark-lime)]"
+            />
+            Track sampled products
+          </label>
+          <span
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              color: isUpdatingTemplate
+                ? "rgba(255,255,255,0.45)"
+                : sampledOn
+                  ? "var(--spark-lime)"
+                  : "rgba(255,255,255,0.4)",
+            }}
+          >
+            {isUpdatingTemplate ? "SAVING…" : sampledOn ? "● ON" : "○ OFF"}
+          </span>
         </div>
 
         <p className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
