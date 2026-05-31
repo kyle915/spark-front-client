@@ -3737,6 +3737,7 @@ type Mutation {
   upsertTenantTheme(input: CreateOrUpdateTenantThemeInput!): TenantThemeResponse!
   setLinkedSheet(input: SetLinkedSheetInput!): UpdateTenantResponse!
   setDefaultExternalRmm(input: SetDefaultExternalRmmInput!): UpdateTenantResponse!
+  setTenantRecapRecipientEmails(tenantId: ID!, emails: String!): TenantType
 
   "### Checks if a token is not expired and correct.\n\n*Note that this is not for refresh tokens.*\n"
   verifyToken(input: VerifyTokenInput!): VerifyTokenType!
@@ -5592,6 +5593,7 @@ type TenantType implements Node {
   image: String
   linkedSheetUrl: String
   defaultExternalRmm: SparkUserType
+  recapRecipientEmails: String!
 }
 
 input SetLinkedSheetInput {
