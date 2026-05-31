@@ -156,7 +156,19 @@ const CreateRequestForm = ({
   const hasMountedProductsEffectRef = useRef(false);
   const hasInitializedProductTypeRef = useRef(false);
 
-  const timezones = timezonesData.timezones?.edges.map((e) => e.node) || [];
+  // Dedup by name — the TimeZone table has duplicate rows (each zone seeded
+  // twice), which rendered every option twice in the dropdown. One per name.
+  const timezones = (() => {
+    const seen = new Set<string>();
+    return (timezonesData.timezones?.edges.map((e) => e.node) || []).filter(
+      (tz) => {
+        const name = tz?.name ?? "";
+        if (!name || seen.has(name)) return false;
+        seen.add(name);
+        return true;
+      },
+    );
+  })();
 
   useEffect(() => {
     setProducts(initialProducts);

@@ -2530,6 +2530,7 @@ type Event implements Node {
   startTime: String
   endTime: String
   recaps: [Recap!]!
+  customRecaps: [CustomRecap!]!
   assignedAmbassadorsCount: Int!
   confirmedAmbassadorsCount: Int!
   ambassadors: [EventAmbassador!]!

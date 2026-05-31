@@ -655,7 +655,12 @@ const MasterTrackerInner: React.FC<{
             (e): e is NonNullable<typeof e> => Boolean(e),
           );
           const recapCount = events.reduce(
-            (sum, e) => sum + (e.recaps?.length ?? 0),
+            // Count BOTH legacy recaps and custom-template recaps — a filed
+            // customRecap must clear the DUE chip (it already clears
+            // /recaps/missing). Was counting only e.recaps, so a custom
+            // recap left the chip stuck on DUE.
+            (sum, e) =>
+              sum + (e.recaps?.length ?? 0) + (e.customRecaps?.length ?? 0),
             0,
           );
           const recapStatus: RecapStatus =

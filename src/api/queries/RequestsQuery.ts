@@ -102,6 +102,12 @@ export const RequestsQuery = graphql`
             recaps {
               id
             }
+            # Custom-template recaps count toward the RECAP chip too — an
+            # event is "filed" when EITHER list is non-empty (matches
+            # /recaps/missing). Prefetched server-side, so no N+1.
+            customRecaps {
+              id
+            }
           }
           tenantId
           createdAt
