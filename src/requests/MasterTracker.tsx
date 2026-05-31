@@ -400,13 +400,13 @@ const TrackerTable: React.FC<{
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col items-start gap-1">
-                      <span className={chipClass}>{label}</span>
+                      <span className={`${chipClass} chip-sm`}>{label}</span>
                       {r.assignedBa > 0 ? (
                         <span
                           className={
                             r.confirmedBa > 0
-                              ? "chip chip-lime"
-                              : "chip chip-muted"
+                              ? "chip chip-lime chip-sm"
+                              : "chip chip-muted chip-sm"
                           }
                           style={{ display: "inline-flex" }}
                           title={`${r.confirmedBa} confirmed of ${r.assignedBa} assigned`}
@@ -418,11 +418,11 @@ const TrackerTable: React.FC<{
                     </div>
                   </td>
                   <td className="px-4 py-3">{r.market}</td>
-                  <td className="px-4 py-3 font-medium">
-                    <span>{r.venue}</span>
+                  <td className="px-4 py-3">
+                    <span className="font-semibold text-[15px]">{r.venue}</span>
                     {r.schedulingStatus === "needs_scheduling" ? (
                       <span
-                        className="chip chip-gold mt-1"
+                        className="chip chip-gold chip-sm mt-1"
                         style={{ display: "inline-flex" }}
                         title="Ignite still needs to schedule this with the account"
                       >
@@ -430,7 +430,7 @@ const TrackerTable: React.FC<{
                       </span>
                     ) : r.schedulingStatus === "already_scheduled" ? (
                       <span
-                        className="chip chip-muted mt-1"
+                        className="chip chip-muted chip-sm mt-1"
                         style={{ display: "inline-flex" }}
                         title="Already scheduled with the account"
                       >
@@ -439,8 +439,8 @@ const TrackerTable: React.FC<{
                     ) : null}
                   </td>
                   <td
-                    className="px-4 py-3 text-xs max-w-[280px]"
-                    style={{ color: "rgba(255,255,255,0.7)" }}
+                    className="px-4 py-3 text-[13px] max-w-[280px]"
+                    style={{ color: "rgba(255,255,255,0.85)" }}
                   >
                     <span className="line-clamp-2">{r.address || "—"}</span>
                   </td>
@@ -470,13 +470,13 @@ const TrackerTable: React.FC<{
                   <td className="px-4 py-3 whitespace-nowrap">
                     {r.recapStatus === "submitted" ? (
                       <span
-                        className="chip chip-lime"
+                        className="chip chip-lime chip-sm"
                         title={`${r.recapCount} recap${r.recapCount === 1 ? "" : "s"} submitted`}
                       >
                         ● {r.recapCount} RECAP{r.recapCount === 1 ? "" : "S"}
                       </span>
                     ) : r.recapStatus === "due" ? (
-                      <span className="chip chip-orange" title="Activation scheduled, no recap filed yet">
+                      <span className="chip chip-orange chip-sm" title="Activation scheduled, no recap filed yet">
                         ◌ DUE
                       </span>
                     ) : (

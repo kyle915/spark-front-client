@@ -346,6 +346,17 @@ h1, h2, h3, h4, h5, h6, .display {
 .chip-gold    { color: #ffc960; background: rgba(255, 201, 96, 0.10); }
 .chip-purple  { color: #c9a4ff; background: rgba(201, 164, 255, 0.10); }
 
+/* Compact chip — smaller padding/type for dense table rows (e.g. the Master
+   Tracker status / recap cells) so status labels read as quiet tags rather
+   than loud pills. Use alongside .chip + a color variant; must follow .chip
+   so its padding/font-size win the cascade. */
+.chip-sm {
+  padding: 0.08rem 0.45rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.07em;
+  gap: 0.2rem;
+}
+
 /* Subtle grid background used on hero panels (e.g. login splash) */
 .spark-grid-bg {
   background-image:
