@@ -1,11 +1,13 @@
 import { graphql } from "react-relay";
 
 /**
- * Proactive insight cards for a single client (tenant) — short, plain-language
- * call-outs the model surfaces from that tenant's program (e.g. "Sampling is up
- * 18% vs last month", "3 markets have gone quiet"). Each item carries a `title`,
- * a `detail` line, a `sentiment` ("positive" / "neutral" / "attention") used to
- * color-code the card, and an optional `metric` badge.
+ * Bucket scoreboard for a single client (tenant) — a fixed set of deterministic
+ * categories the backend computes from that tenant's program. Each item is a
+ * bucket carrying a `title` (category label, e.g. "Reach"), a `metric` (the
+ * headline number as a preformatted string, e.g. "147,466"), a `detail`
+ * one-line takeaway, a `sentiment` ("positive" / "neutral" / "attention"), and
+ * a stable `key` slug (`reach` / `sampling` / `sales` / `new_audience` /
+ * `momentum`) used to map the leading icon. `key` may be null for legacy data.
  *
  * Powers the <TenantInsightsPanel> mounted on both dashboards (the admin home
  * dashboard and the client dashboard), scoped to the active tenant from
@@ -13,7 +15,7 @@ import { graphql } from "react-relay";
  * components load it the usual way (useLazyLoadQuery / store-or-network) so it
  * paints on mount rather than firing on a click.
  *
- * `generatedAt` is when the insights were last computed (shown as a small
+ * `generatedAt` is when the buckets were last computed (shown as a small
  * caption). When the tenant has nothing worth surfacing yet, `items` is empty
  * and the panel renders a quiet empty state.
  */
@@ -26,6 +28,7 @@ export const TenantInsightsQuery = graphql`
         detail
         sentiment
         metric
+        key
       }
     }
   }

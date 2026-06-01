@@ -6473,7 +6473,7 @@ type CampaignReportAiAnswer { ok: Boolean!  answer: String!  reason: String  cha
 type TenantAiAnswer { ok: Boolean!  answer: String!  reason: String  chart: AiChart }
 type TenantKpis { events: Int!  recaps: Int!  consumersReached: Int!  samplesDistributed: Int!  productsSold: Int!  cansSold: Int!  packsSold: Int!  totalEngagements: Int!  firstTimeConsumers: Int!  brandAwareConsumers: Int!  willingToPurchase: Int!  monthlyTrend: [TenantKpiMonth!]! }
 type TenantKpiMonth { month: String!  recaps: Int!  engagements: Int!  samples: Int! }
-type TenantInsightItem { title: String!  detail: String!  sentiment: String!  metric: String }
+type TenantInsightItem { title: String!  detail: String!  sentiment: String!  metric: String  key: String }
 type TenantInsights { generatedAt: String  items: [TenantInsightItem!]! }
 type TenantGoalItem { metric: String!  label: String!  target: Int!  current: Int!  pacePct: Float! }
 type TenantGoals { year: Int!  items: [TenantGoalItem!]! }
