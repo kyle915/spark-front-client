@@ -76,6 +76,63 @@ const initials = (label: string) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
+// A recap can be a legacy `Recap` or a custom-template `CustomRecap`. The
+// two share a chip on the Master Tracker but differ in shape, so we
+// normalize each into this one card model and render a single grid below.
+type RecapCard = {
+  uuid: string;
+  // Detail route — legacy and custom recaps live on different pages.
+  viewPath: string;
+  name: string | null;
+  approved: boolean;
+  createdAt: string | null;
+  baName: string | null;
+  totalEngagements: number | null;
+  productsSold: number | null;
+  hero: string | null;
+  fileCount: number;
+};
+
+type LegacyRecap = NonNullable<NonNullable<Event["recaps"]>[number]>;
+type CustomRecap = NonNullable<NonNullable<Event["customRecaps"]>[number]>;
+
+const baNameFrom = (
+  user: { firstName?: string | null; lastName?: string | null } | null | undefined,
+): string | null =>
+  [user?.firstName, user?.lastName].filter(Boolean).join(" ") || null;
+
+const normalizeLegacyRecap = (recap: LegacyRecap): RecapCard => ({
+  uuid: String(recap.uuid),
+  viewPath: `/recap/view/${recap.uuid}`,
+  name: recap.name ?? null,
+  approved: Boolean(recap.approved),
+  createdAt: recap.createdAt ?? null,
+  baName: baNameFrom(recap.ambassador?.user),
+  totalEngagements: recap.totalEngagements ?? null,
+  productsSold: recap.productsSold ?? null,
+  hero: pickHeroImage(recap.recapFiles ?? []),
+  fileCount: (recap.recapFiles ?? []).filter(
+    (f) => f && (f.file?.toString() || "").length > 0,
+  ).length,
+});
+
+const normalizeCustomRecap = (recap: CustomRecap): RecapCard => ({
+  uuid: String(recap.uuid),
+  // Custom recaps render on their own detail page (RecapCustomView).
+  viewPath: `/recap/view-custom/${recap.uuid}`,
+  name: recap.name ?? null,
+  approved: Boolean(recap.approved),
+  createdAt: recap.createdAt ?? null,
+  baName: baNameFrom(recap.ambassador?.user),
+  totalEngagements: recap.totalEngagements ?? null,
+  // CustomRecap exposes a single soldUnits count rather than productsSold.
+  productsSold: recap.soldUnits ?? null,
+  // CustomRecap precomputes a browser-renderable hero URL server-side; the
+  // file list isn't fetched here, just its count.
+  hero: recap.heroImageUrl ?? null,
+  fileCount: recap.customRecapFilesCount ?? 0,
+});
+
 const Field: React.FC<{
   label: string;
   children: React.ReactNode;
@@ -169,14 +226,26 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
   // Recaps filed against this event. The Master Tracker surfaces these as a
   // green "● n RECAP" chip but clicking the event used to dead-end here —
   // we now mirror SparkRequestView's recap cards + /recap/view route.
-  const recaps = (event.recaps ?? []).filter(
-    (r): r is NonNullable<typeof r> => Boolean(r),
-  );
+  //
+  // BOTH legacy recaps and custom-template recaps count toward the chip
+  // (and toward /recaps/missing), so we render both here. The two backend
+  // types have different shapes (Recap: recapFiles/productsSold; CustomRecap:
+  // heroImageUrl/soldUnits), so we normalize each into one RecapCard model
+  // and render a single card grid — no duplicated card markup, and the chip
+  // count matches the list.
+  const recaps: RecapCard[] = [
+    ...(event.recaps ?? [])
+      .filter((r): r is NonNullable<typeof r> => Boolean(r))
+      .map((r) => normalizeLegacyRecap(r)),
+    ...(event.customRecaps ?? [])
+      .filter((r): r is NonNullable<typeof r> => Boolean(r))
+      .map((r) => normalizeCustomRecap(r)),
+  ];
   // Header chip behavior: a single recap jumps straight to its detail; many
   // recaps smooth-scroll to the bottom Recaps section so the user can pick.
   const onRecapChip = () => {
     if (recaps.length === 1) {
-      navigate(`/recap/view/${recaps[0].uuid}`);
+      navigate(recaps[0].viewPath);
       return;
     }
     document
@@ -586,21 +655,11 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {recaps.map((recap) => {
-              const hero = pickHeroImage(recap.recapFiles ?? []);
-              const baName =
-                [
-                  recap.ambassador?.user?.firstName,
-                  recap.ambassador?.user?.lastName,
-                ]
-                  .filter(Boolean)
-                  .join(" ") || null;
-              const fileCount = (recap.recapFiles ?? []).filter(
-                (f) => f && (f.file?.toString() || "").length > 0,
-              ).length;
+              const { hero, baName, fileCount } = recap;
               return (
                 <div
-                  key={String(recap.uuid)}
-                  onClick={() => navigate(`/recap/view/${recap.uuid}`)}
+                  key={recap.uuid}
+                  onClick={() => navigate(recap.viewPath)}
                   className="spark-card hov overflow-hidden cursor-pointer"
                 >
                   <div

@@ -197,6 +197,32 @@ export const EventUuidQuery = graphql`
           }
         }
       }
+      # Custom-template recaps filed against this event. The Master Tracker
+      # counts these toward the "● n RECAP" chip, so the detail view must
+      # render them too — otherwise a recap the list counted is invisible
+      # here. CustomRecap has a different shape than Recap (heroImageUrl /
+      # soldUnits instead of recapFiles / productsSold), so the view
+      # normalizes both into one card model.
+      customRecaps {
+        id
+        uuid
+        name
+        approved
+        totalEngagements
+        soldUnits
+        createdAt
+        heroImageUrl
+        customRecapFilesCount
+        ambassador {
+          id
+          uuid
+          user {
+            id
+            firstName
+            lastName
+          }
+        }
+      }
     }
   }
 `;
