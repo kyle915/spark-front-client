@@ -3849,6 +3849,7 @@ type Mutation {
   setGoals(input: SetGoalsInput!): Goal!
   enqueueCreateGoalsForTenant(tenantId: ID!, year: Int!): EnqueueCreateGoalsForTenantPayload!
   enqueueCreateGoalsForAllTenants(year: Int!): EnqueueCreateGoalsForAllTenantsPayload!
+  setMyPreferences(input: SetMyPreferencesInput!): SetMyPreferencesResponse!
 }
 
 type MutationNormalOutput {
@@ -4355,6 +4356,7 @@ type Query {
   goalsList(tenantId: ID!, year: Int = null, userId: ID = null): [Goal!]!
   getUploadUrl(filePath: String!, contentType: String! = "image/jpeg"): UploadUrlResponse!
   getDownloadUrl(filePath: String!): String!
+  myPreferences: UserPreferencesType!
 }
 
 """
@@ -5608,6 +5610,22 @@ input SetLinkedSheetInput {
   clientMutationId: ID = null
   tenantId: ID = null
   sheetUrl: String = null
+}
+
+type UserPreferencesType {
+  prefs: JSON!
+}
+
+input SetMyPreferencesInput {
+  clientMutationId: ID = null
+  prefs: JSON = null
+}
+
+type SetMyPreferencesResponse {
+  success: Boolean!
+  message: String!
+  preferences: UserPreferencesType
+  clientMutationId: ID
 }
 
 input SetDefaultExternalRmmInput {
