@@ -19,6 +19,65 @@ import { pickHeroImage } from "@/utils/recapFileUrl";
 
 type Mentionable = { id: string; name: string; email: string };
 
+// A recap can be a legacy `Recap` or a custom-template `CustomRecap`. They
+// share the Master Tracker chip but differ in shape, so the Field Reports
+// panel normalizes each into this one card model and renders a single grid.
+type RecapCard = {
+  uuid: string;
+  // Detail route — legacy and custom recaps live on different pages.
+  viewPath: string;
+  name: string | null;
+  approved: boolean;
+  totalEngagements: number | null;
+  productsSold: number | null;
+  baName: string | null;
+  hero: string | null;
+  fileCount: number;
+};
+
+type RequestEvent = NonNullable<
+  NonNullable<RequestUuidQueryType["response"]["request"]>["events"]
+>[number];
+type LegacyRecap = NonNullable<NonNullable<RequestEvent>["recaps"]>[number];
+type CustomRecap = NonNullable<
+  NonNullable<RequestEvent>["customRecaps"]
+>[number];
+
+const baNameFrom = (
+  user: { firstName?: string | null; lastName?: string | null } | null | undefined,
+): string | null =>
+  [user?.firstName, user?.lastName].filter(Boolean).join(" ") || null;
+
+const normalizeLegacyRecap = (recap: NonNullable<LegacyRecap>): RecapCard => ({
+  uuid: String(recap.uuid),
+  viewPath: `/recap/view/${recap.uuid}`,
+  name: recap.name ?? null,
+  approved: Boolean(recap.approved),
+  totalEngagements: recap.totalEngagements ?? null,
+  productsSold: recap.productsSold ?? null,
+  baName: baNameFrom(recap.ambassador?.user),
+  hero: pickHeroImage(recap.recapFiles ?? []),
+  fileCount: (recap.recapFiles ?? []).filter(
+    (f) => f && (f.file?.toString() || "").length > 0,
+  ).length,
+});
+
+const normalizeCustomRecap = (recap: NonNullable<CustomRecap>): RecapCard => ({
+  uuid: String(recap.uuid),
+  // Custom recaps render on their own detail page (RecapCustomView).
+  viewPath: `/recap/view-custom/${recap.uuid}`,
+  name: recap.name ?? null,
+  approved: Boolean(recap.approved),
+  totalEngagements: recap.totalEngagements ?? null,
+  // CustomRecap exposes a single soldUnits count rather than productsSold.
+  productsSold: recap.soldUnits ?? null,
+  baName: baNameFrom(recap.ambassador?.user),
+  // CustomRecap precomputes a browser-renderable hero URL server-side; the
+  // file list isn't fetched here, just its count.
+  hero: recap.heroImageUrl ?? null,
+  fileCount: recap.customRecapFilesCount ?? 0,
+});
+
 const LinkedSheetChipForView: React.FC = () => {
   const { tenantId } = useAuthStore();
   const url = (() => {
@@ -1078,18 +1137,28 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
   // Flatten to a flat list of recap rows so the panel reads like a
   // timeline. Each recap remembers its event so we can show which
   // shift it came from when a request has multiple events.
+  //
+  // BOTH legacy recaps and custom-template recaps belong here — the
+  // Master Tracker counts both toward the "● n RECAP" chip, so the panel
+  // must show both or it'll under-count vs the list. The two backend
+  // types have different shapes (Recap: recapFiles/productsSold;
+  // CustomRecap: heroImageUrl/soldUnits), so we normalize each into one
+  // RecapCard model and render a single card grid below.
   type Row = {
     eventName: string | null;
     eventDate: string | null;
-    recap: NonNullable<NonNullable<typeof events>[number]["recaps"]>[number];
+    recap: RecapCard;
   };
   const rows: Row[] = [];
   const awaiting: { uuid: string; name: string; date: string | null }[] = [];
   for (const ev of events) {
-    const recaps = (ev.recaps ?? []).filter(
+    const legacy = (ev.recaps ?? []).filter(
       (r): r is NonNullable<typeof r> => Boolean(r),
     );
-    if (recaps.length === 0) {
+    const custom = (ev.customRecaps ?? []).filter(
+      (r): r is NonNullable<typeof r> => Boolean(r),
+    );
+    if (legacy.length === 0 && custom.length === 0) {
       awaiting.push({
         uuid: String(ev.uuid),
         name: ev.name || "Untitled event",
@@ -1097,11 +1166,18 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
       });
       continue;
     }
-    for (const r of recaps) {
+    for (const r of legacy) {
       rows.push({
         eventName: ev.name ?? null,
         eventDate: ev.date ?? null,
-        recap: r,
+        recap: normalizeLegacyRecap(r),
+      });
+    }
+    for (const r of custom) {
+      rows.push({
+        eventName: ev.name ?? null,
+        eventDate: ev.date ?? null,
+        recap: normalizeCustomRecap(r),
       });
     }
   }
@@ -1185,18 +1261,11 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {rows.map(({ recap, eventName, eventDate }) => {
-          const hero = pickHeroImage(recap.recapFiles ?? []);
-          const baName =
-            [recap.ambassador?.user?.firstName, recap.ambassador?.user?.lastName]
-              .filter(Boolean)
-              .join(" ") || null;
-          const fileCount = (recap.recapFiles ?? []).filter(
-            (f) => f && (f.file?.toString() || "").length > 0,
-          ).length;
+          const { hero, baName, fileCount } = recap;
           return (
             <div
-              key={String(recap.uuid)}
-              onClick={() => navigate(`/recap/view/${recap.uuid}`)}
+              key={recap.uuid}
+              onClick={() => navigate(recap.viewPath)}
               className="spark-card hov overflow-hidden cursor-pointer"
             >
               <div

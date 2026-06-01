@@ -171,6 +171,31 @@ export const RequestUuidQuery = graphql`
             }
           }
         }
+        # Custom-template recaps for this event. Field Reports must show
+        # these alongside legacy recaps so the panel matches the count the
+        # Master Tracker chip reported. CustomRecap has a different shape
+        # (heroImageUrl / soldUnits vs recapFiles / productsSold); the
+        # panel normalizes both into one row model.
+        customRecaps {
+          id
+          uuid
+          name
+          approved
+          totalEngagements
+          soldUnits
+          createdAt
+          heroImageUrl
+          customRecapFilesCount
+          ambassador {
+            id
+            uuid
+            user {
+              id
+              firstName
+              lastName
+            }
+          }
+        }
       }
       createdAt
       updatedAt

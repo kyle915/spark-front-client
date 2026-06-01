@@ -95,10 +95,13 @@ export const RequestsQuery = graphql`
             confirmedAmbassadorsCount
           }
           # Used by the sidebar recap-due badge + the Master Tracker
-          # RECAP chip. Just enough event/recap data — no fields
-          # beyond id — so the per-row payload stays tiny.
+          # RECAP chip. Just enough event/recap data — id + uuid + the
+          # recap counts — so the per-row payload stays tiny. The uuid
+          # lets a "N RECAP" row click navigate to the specific event
+          # that actually holds the recap, not just the first event.
           events {
             id
+            uuid
             recaps {
               id
             }

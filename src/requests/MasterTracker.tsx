@@ -124,6 +124,12 @@ type Row = {
   eventId: string | null;
   eventDate: string | null;
   eventAddress: string | null;
+  // UUID of the event that actually holds recaps (legacy or custom).
+  // The list counts recaps across ALL of a request's events, but the
+  // singular `event` (lowest-id) may be recap-less — clicking a "N
+  // RECAP" row should land on the event that shows the recap. null when
+  // no event on the request has any recap.
+  recapEventUuid: string | null;
   // Aggregate of the request's events + recaps for the chip:
   //   "submitted" → at least one event has at least one recap
   //   "due"       → events scheduled but no recaps yet
@@ -347,6 +353,12 @@ const TrackerTable: React.FC<{
                 });
               };
               // Click target by row state:
+              //   has recap        → the event that HOLDS the recap
+              //                      (recapEventUuid), so a "N RECAP" row
+              //                      lands on a page that shows it — the
+              //                      list counts recaps across all events
+              //                      but `event` is the lowest-id one,
+              //                      which may be recap-less.
               //   done + has event → event detail
               //   done, no event   → recap list
               //   has event row    → event detail
@@ -355,7 +367,9 @@ const TrackerTable: React.FC<{
               //                      see context first, then edit
               //                      via the Edit button there).
               const onClick = () => {
-                if (isDone && r.eventUuid) {
+                if (r.recapEventUuid) {
+                  navigate(`/event/view/${r.recapEventUuid}`);
+                } else if (isDone && r.eventUuid) {
                   navigate(`/event/view/${r.eventUuid}`);
                 } else if (isDone) {
                   navigate("/recap/list");
@@ -677,6 +691,15 @@ const MasterTrackerInner: React.FC<{
               sum + (e.recaps?.length ?? 0) + (e.customRecaps?.length ?? 0),
             0,
           );
+          // The specific event holding a recap (legacy OR custom). The
+          // chip counts across all events, but `n.event` is the lowest-id
+          // event, which may be recap-less — so a "N RECAP" row click
+          // would dead-end on a page with no recaps. Target the first
+          // event that actually has one instead.
+          const recapEvent = events.find(
+            (e) =>
+              (e.recaps?.length ?? 0) + (e.customRecaps?.length ?? 0) > 0,
+          );
           const recapStatus: RecapStatus =
             events.length === 0
               ? "none"
@@ -701,6 +724,7 @@ const MasterTrackerInner: React.FC<{
             eventId: n.event?.id ? String(n.event.id) : null,
             eventDate: (n.startTime ?? n.date) ? String(n.startTime ?? n.date) : null,
             eventAddress: n.address ? String(n.address) : null,
+            recapEventUuid: recapEvent?.uuid ? String(recapEvent.uuid) : null,
             recapStatus,
             recapCount,
             schedulingStatus: n.schedulingStatus ?? "",
