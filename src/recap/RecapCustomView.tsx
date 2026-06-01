@@ -147,11 +147,15 @@ const RecapCustomView = () => {
   // ×-button shows the in-flight state (the useMutation `isDeletingFile`
   // flag is global to the gallery).
   const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
+  // Bumped after a mutation that doesn't reliably re-render off its payload
+  // (approve) so the query refetches and the view reflects the new state —
+  // mirrors the legacy SparkRecapView refreshKey pattern.
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const data = useLazyLoadQuery<CustomRecapsQueryDetailsQueryType>(
     GetCustomRecapQuery,
     { uuid: uuid ?? "" },
-    { fetchPolicy: "store-and-network" },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
 
   const recap = data?.customRecap;
@@ -406,6 +410,11 @@ const RecapCustomView = () => {
             "Recap approved — the requestor and mapped RMM have been emailed.",
             "success",
           );
+          // Refetch so the status flips to Approved in-place. Relay's
+          // auto-normalization of the mutation payload wasn't reliably
+          // re-rendering this view, so bump the query's fetchKey to force
+          // a fresh read (same fix the legacy SparkRecapView uses).
+          setRefreshKey((k) => k + 1);
         } else {
           showAlert(payload?.message ?? "Approve failed.", "error");
         }

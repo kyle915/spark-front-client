@@ -177,13 +177,22 @@ const SparkRequestInner: React.FC = () => {
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [],
     [requestTypesData],
   );
-  const timezones = useMemo(
-    () =>
+  const timezones = useMemo(() => {
+    const nodes =
       timezonesData?.timezones?.edges
         ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [],
-    [timezonesData],
-  );
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+    // Guard against duplicate DB rows so the dropdown never doubles. The
+    // root cause is duplicate timezone rows (fixed separately in the data);
+    // here we dedup by name+code+offset, keeping the first occurrence.
+    const seen = new Set<string>();
+    return nodes.filter((tz) => {
+      const key = `${tz.name}|${tz.code}|${tz.offset}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [timezonesData]);
   const rmms = useMemo(
     () => (rmmData?.rmmClients ?? []).filter(Boolean),
     [rmmData],

@@ -228,7 +228,13 @@ export default function SparkRecapCreate() {
   // Account feedback
   const [doDifferently, setDoDifferently] = useState("");
   const [accountNotes, setAccountNotes] = useState("");
+  // Corporate-card-used toggle. A native boolean on both Recap (legacy) and
+  // CustomRecap (custom flow) — shared by both submit paths below.
   const [corpoCardUsed, setCorpoCardUsed] = useState(false);
+  // Total engagements — a native int field on CustomRecap. Kept MANUAL for
+  // now (no auto-compute) so the BA/admin can enter it on the custom flow;
+  // raw string so the input stays controlled, coerced to int on submit.
+  const [totalEngagements, setTotalEngagements] = useState("");
 
   // ─── Custom-template field values (keyed by CustomField id) ───────
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
@@ -433,6 +439,15 @@ export default function SparkRecapCreate() {
               ? externalBaName.trim() || null
               : null,
           fillingForAmbassador: isAdmin && fillingForOther,
+          // Native CustomRecap fields the custom fill form now captures
+          // (previously only collectable post-submit on the detail view).
+          // Corporate card is a plain boolean; total engagements is an
+          // optional int — send null when left blank rather than 0.
+          usedCorpoCard: corpoCardUsed,
+          totalEngagements: (() => {
+            const n = num(totalEngagements);
+            return n != null && Number.isFinite(n) ? Math.round(n) : null;
+          })(),
           customFieldValues,
           // Send the per-SKU samples only when there's at least one — keep
           // the payload identical to before for templates that don't track
@@ -803,6 +818,38 @@ export default function SparkRecapCreate() {
             onChange={setSampleQty}
           />
         </Suspense>
+      )}
+
+      {/* ─── Native CustomRecap fields (custom flow) ───
+          Total Engagements + Corporate Card Used are typed columns on
+          CustomRecap (not template customFields), so they have no entry in
+          the template-driven field grid above. The detail view renders both
+          (Metrics card), but the fill form had no control for either — so
+          they always saved null/false. These inputs close that gap. Total
+          Engagements stays MANUAL (no auto-compute). Shown only once a
+          template is picked so it sits with the rest of the recap fields. */}
+      {useCustomFlow && selectedTemplate && (
+        <Card title="ENGAGEMENT + SPEND">
+          <Field label="Total Engagements">
+            <input
+              value={totalEngagements}
+              onChange={(e) => setTotalEngagements(e.target.value)}
+              className={inputCls}
+              inputMode="numeric"
+              placeholder="0"
+            />
+          </Field>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={corpoCardUsed}
+              onChange={(e) => setCorpoCardUsed(e.target.checked)}
+            />
+            <span className="text-sm">
+              Corporate card was used for this event spend.
+            </span>
+          </label>
+        </Card>
       )}
 
       {/* ─── Legacy fixed grid (template-less tenants only) ─── */}

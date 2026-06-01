@@ -20,6 +20,8 @@ export const CreateCustomRecapMutation = graphql`
         id
         uuid
         name
+        usedCorpoCard
+        totalEngagements
       }
     }
   }

@@ -90,10 +90,13 @@ const SECTIONS: NavSection[] = [
       // workflow, not a back-office talent tool. Same /jobs route + icon.
       { label: "Jobs", Icon: Hammer, to: "/jobs", adminOnly: true },
       {
+        // Visible to clients too — the page uses the tenant-scoped
+        // RequestsQuery and no admin-only fields, and the backend forces
+        // clients to their own tenant, so it's safe to expose.
         label: "Recent submissions",
         Icon: Inbox,
         to: "/recent",
-        adminOnly: true,
+        clientLabel: "Recent Activity",
       },
       // Chat lives in WORKSPACE (moved up from COMMUNICATION) — it's a
       // day-to-day BA-messaging surface, not a broadcast channel. Route,

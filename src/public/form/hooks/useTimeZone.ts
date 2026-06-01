@@ -66,14 +66,25 @@ export function usePublicTimeZones() {
     setLoading(true);
     gqlRequest<NodeTimeZone>(QUERY_PUBLIC_TIME_ZONES)
       .then((data) => {
-        const formattedTimeZones = mapQuery(data.publicTimezones?.edges).map(
-          (tz) => ({
-            ...tz,
-            name: formatTimeZoneLabel(tz),
-            code: tz.code ?? "",
-            offset: tz.offset ? Number(tz.offset) : 0,
-          })
+        // Guard against duplicate DB rows so the dropdown never doubles
+        // (root cause — duplicate timezone rows — is fixed in the data
+        // separately). Dedup on the raw name+code+offset, keeping the first,
+        // BEFORE we rewrite `name` into the display label.
+        const seen = new Set<string>();
+        const uniqueNodes = mapQuery(data.publicTimezones?.edges).filter(
+          (tz) => {
+            const key = `${tz.name}|${tz.code ?? ""}|${tz.offset ?? ""}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          }
         );
+        const formattedTimeZones = uniqueNodes.map((tz) => ({
+          ...tz,
+          name: formatTimeZoneLabel(tz),
+          code: tz.code ?? "",
+          offset: tz.offset ? Number(tz.offset) : 0,
+        }));
         setTimeZones(formattedTimeZones);
       })
       .finally(() => setLoading(false));
