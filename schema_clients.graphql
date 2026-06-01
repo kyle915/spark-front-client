@@ -4193,6 +4193,7 @@ type Query {
   tenantInsights(tenantId: ID!): TenantInsights!
   tenantGoals(tenantId: ID!, year: Int): TenantGoals!
   tenantMarketPerformance(tenantId: ID!, year: Int): [MarketPerformance!]!
+  tenantBaLeaderboard(tenantId: ID!, year: Int): [BaLeaderboardEntry!]!
   eventStaffing(eventId: ID!, limit: Int): EventStaffing
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   todayEventsCoordinates(coordinates: [Float!]!, range: Float!, unit: DistanceUnit! = KILOMETERS, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
@@ -6479,6 +6480,7 @@ type TenantInsights { generatedAt: String  items: [TenantInsightItem!]! }
 type TenantGoalItem { metric: String!  label: String!  target: Int!  current: Int!  pacePct: Float! }
 type TenantGoals { year: Int!  items: [TenantGoalItem!]! }
 type MarketPerformance { state: String!  eventCount: Int!  recapCount: Int!  consumersReached: Int!  samplesDistributed: Int!  productsSold: Int!  totalEngagements: Int! }
+type BaLeaderboardEntry { baId: ID!  name: String!  shiftsWorked: Int!  recapsFiled: Int!  avgRating: Float  ratingsCount: Int!  reliabilityPct: Int }
 
 type InvoiceLineItem { id: ID!  description: String!  quantity: String!  unitPrice: String!  amount: String!  eventId: ID  sortOrder: Int! }
 type Invoice implements Node { id: ID!  uuid: String!  number: String!  status: String!  clientName: String!  issueDate: String  dueDate: String  currency: String!  notes: String  subtotal: String!  taxRate: String!  taxAmount: String!  total: String!  lineItems: [InvoiceLineItem!]!  sentAt: String  paidAt: String  shareToken: String!  createdAt: String!  updatedAt: String! }
