@@ -5,21 +5,27 @@
  * for ops who keep a roster of trusted "captains" they want first
  * dibs on shifts.
  *
- * v1 persistence is localStorage (per-tenant); when an
- * `Ambassador.is_favorited` backend field ships, swap the toggle
- * helper in src/lib/favorites.ts for a GraphQL mutation. The
- * page's data flow stays the same.
+ * Backed by the tenant-scoped favorites backend: the "Your favorites"
+ * roster loads from `favoriteAmbassadors(tenantId)`, and the star on
+ * each browse card drives off `Ambassador.isFavorited`. Toggling fires
+ * the add/remove mutations and refetches so both lists stay in sync.
  */
 
-import React, { Suspense, useMemo, useState, useEffect } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import React, { Suspense, useMemo, useState } from "react";
+import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
+import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
-import { loadFavorites, toggleFavorite } from "@/lib/favorites";
+import { FavoriteAmbassadorsQuery } from "@/api/queries/FavoriteAmbassadorsQuery";
+import type { FavoriteAmbassadorsQuery as FavoriteAmbassadorsQueryType } from "@api/queries/__generated__/FavoriteAmbassadorsQuery.graphql";
+import { AddFavoriteAmbassadorMutation } from "@/api/mutations/AddFavoriteAmbassadorMutation";
+import type { AddFavoriteAmbassadorMutation as AddFavoriteAmbassadorMutationType } from "@api/mutations/__generated__/AddFavoriteAmbassadorMutation.graphql";
+import { RemoveFavoriteAmbassadorMutation } from "@/api/mutations/RemoveFavoriteAmbassadorMutation";
+import type { RemoveFavoriteAmbassadorMutation as RemoveFavoriteAmbassadorMutationType } from "@api/mutations/__generated__/RemoveFavoriteAmbassadorMutation.graphql";
 
 type Row = NonNullable<
   NonNullable<
@@ -29,54 +35,79 @@ type Row = NonNullable<
   >["node"]
 >;
 
+type FavRow =
+  FavoriteAmbassadorsQueryType["response"]["favoriteAmbassadors"][number];
+
 const displayName = (n: Row) =>
   [n.user?.firstName, n.user?.lastName].filter(Boolean).join(" ") ||
   n.user?.email ||
   "(unnamed)";
 
-const initials = (n: Row) => {
-  const a = (n.user?.firstName ?? "")[0] ?? "";
-  const b = (n.user?.lastName ?? "")[0] ?? "";
-  return (a + b).toUpperCase() || "?";
+const favName = (f: FavRow) =>
+  [f.firstName, f.lastName].filter(Boolean).join(" ") ||
+  f.email ||
+  "(unnamed)";
+
+const initialsFrom = (name: string, fallbackEmail?: string) => {
+  const parts = name.split(/\s+/).filter(Boolean);
+  const a = parts[0]?.[0] ?? "";
+  const b = parts[1]?.[0] ?? "";
+  const got = (a + b).toUpperCase();
+  if (got) return got;
+  return (fallbackEmail?.[0] ?? "?").toUpperCase();
 };
 
 const Inner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
-  const [favIds, setFavIds] = useState<Set<string>>(() =>
-    loadFavorites(tenantId),
-  );
+  const showAlert = useAlertStore((s) => s.showAlert);
   const [search, setSearch] = useState("");
+  // Bumped after every toggle so both the favorites roster and the
+  // browse pool re-fetch (store-and-network) and the star state stays
+  // honest with the backend.
+  const [refreshKey, setRefreshKey] = useState(0);
+  // Ambassador global ids with a toggle in flight — disables the star
+  // so a double-tap can't fire a second mutation before the refetch.
+  const [pending, setPending] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    setFavIds(loadFavorites(tenantId));
-  }, [tenantId]);
+  const favData = useLazyLoadQuery<FavoriteAmbassadorsQueryType>(
+    FavoriteAmbassadorsQuery,
+    { tenantId: tenantId ?? null },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+  );
 
-  const data = useLazyLoadQuery<AmbassadorsListQueryType>(
+  const poolData = useLazyLoadQuery<AmbassadorsListQueryType>(
     AmbassadorsListQuery,
     {
-      filters: tenantId
-        ? { tenantId, isActive: true }
-        : { isActive: true },
+      filters: tenantId ? { tenantId, isActive: true } : { isActive: true },
       first: 500,
     },
-    { fetchPolicy: "store-or-network" },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+  );
+
+  const [commitAdd] = useMutation<AddFavoriteAmbassadorMutationType>(
+    AddFavoriteAmbassadorMutation,
+  );
+  const [commitRemove] = useMutation<RemoveFavoriteAmbassadorMutationType>(
+    RemoveFavoriteAmbassadorMutation,
   );
 
   const all = useMemo<Row[]>(() => {
-    return (data?.ambassadors?.edges ?? [])
+    return (poolData?.ambassadors?.edges ?? [])
       .map((e) => e?.node)
       .filter((n): n is Row => Boolean(n));
-  }, [data]);
+  }, [poolData]);
 
-  const favs = useMemo(
-    () => all.filter((n) => favIds.has(String(n.id))),
-    [all, favIds],
+  const favs = useMemo<FavRow[]>(
+    () => [...(favData?.favoriteAmbassadors ?? [])],
+    [favData],
   );
 
+  // Browse list = the active pool minus anyone already favorited (the
+  // star field is the source of truth), then name/email/market search.
   const others = useMemo(() => {
     const q = search.toLowerCase().trim();
-    const candidates = all.filter((n) => !favIds.has(String(n.id)));
+    const candidates = all.filter((n) => !n.isFavorited);
     if (!q) return candidates;
     return candidates.filter(
       (n) =>
@@ -84,20 +115,70 @@ const Inner: React.FC = () => {
         (n.user?.email ?? "").toLowerCase().includes(q) ||
         (n.address ?? "").toLowerCase().includes(q),
     );
-  }, [all, favIds, search]);
+  }, [all, search]);
 
-  const onToggle = (id: string) => {
-    const next = toggleFavorite(tenantId, id);
-    setFavIds(next);
-  };
-
+  // Average rating across the favorited BAs we can see in the active
+  // pool (the favorites rows don't carry rating). Falls back to "—".
   const avgRating = useMemo(() => {
-    const ratings = favs
+    const ratings = all
+      .filter((n) => n.isFavorited)
       .map((n) => Number(n.rating))
       .filter((r) => Number.isFinite(r) && r > 0);
     if (ratings.length === 0) return null;
     return ratings.reduce((s, v) => s + v, 0) / ratings.length;
-  }, [favs]);
+  }, [all]);
+
+  const setPendingFor = (id: string, on: boolean) =>
+    setPending((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
+  const addFav = (id: string, name: string) => {
+    if (pending.has(id)) return;
+    setPendingFor(id, true);
+    commitAdd({
+      variables: { input: { ambassadorId: id, tenantId: tenantId ?? null } },
+      onCompleted: (resp) => {
+        setPendingFor(id, false);
+        const r = resp.addFavoriteAmbassador;
+        if (r?.success) {
+          showAlert(`Starred ${name}.`, "success");
+          setRefreshKey((k) => k + 1);
+        } else {
+          showAlert(r?.message || `Couldn't star ${name}.`, "error");
+        }
+      },
+      onError: (err) => {
+        setPendingFor(id, false);
+        showAlert(`${name}: ${err.message}`, "error");
+      },
+    });
+  };
+
+  const removeFav = (id: string, name: string) => {
+    if (pending.has(id)) return;
+    setPendingFor(id, true);
+    commitRemove({
+      variables: { input: { ambassadorId: id, tenantId: tenantId ?? null } },
+      onCompleted: (resp) => {
+        setPendingFor(id, false);
+        const r = resp.removeFavoriteAmbassador;
+        if (r?.success) {
+          showAlert(`Removed ${name} from favorites.`, "info");
+          setRefreshKey((k) => k + 1);
+        } else {
+          showAlert(r?.message || `Couldn't remove ${name}.`, "error");
+        }
+      },
+      onError: (err) => {
+        setPendingFor(id, false);
+        showAlert(`${name}: ${err.message}`, "error");
+      },
+    });
+  };
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -122,8 +203,8 @@ const Inner: React.FC = () => {
           style={{ color: "rgba(255,255,255,0.55)" }}
         >
           BAs you've starred — Spark surfaces them first on every
-          applicant pool. Stored locally for now; moves to your
-          tenant when the backend favorites field ships.
+          applicant pool. Saved to your workspace, so the roster
+          follows your whole team.
         </p>
       </div>
 
@@ -156,12 +237,14 @@ const Inner: React.FC = () => {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {favs.map((n) => (
-              <BaCard
-                key={n.id}
-                row={n}
-                isFav
-                onToggle={() => onToggle(String(n.id))}
+            {favs.map((f) => (
+              <FavCard
+                key={f.uuid}
+                row={f}
+                busy={pending.has(String(f.ambassadorId))}
+                onToggle={() =>
+                  removeFav(String(f.ambassadorId), favName(f))
+                }
                 onClick={() => navigate(`/talent`)}
               />
             ))}
@@ -206,8 +289,8 @@ const Inner: React.FC = () => {
               <BaCard
                 key={n.id}
                 row={n}
-                isFav={false}
-                onToggle={() => onToggle(String(n.id))}
+                busy={pending.has(String(n.id))}
+                onToggle={() => addFav(String(n.id), displayName(n))}
                 onClick={() => navigate(`/talent`)}
               />
             ))}
@@ -242,12 +325,97 @@ const Kpi: React.FC<{
   </div>
 );
 
-const BaCard: React.FC<{
-  row: Row;
+const StarButton: React.FC<{
   isFav: boolean;
+  busy: boolean;
+  onToggle: () => void;
+}> = ({ isFav, busy, onToggle }) => (
+  <button
+    onClick={onToggle}
+    disabled={busy}
+    aria-label={isFav ? "Unstar" : "Star"}
+    className="mono text-lg transition"
+    style={{
+      background: "transparent",
+      border: "none",
+      color: isFav ? "var(--spark-lime)" : "rgba(255,255,255,0.30)",
+      cursor: busy ? "default" : "pointer",
+      opacity: busy ? 0.5 : 1,
+    }}
+    title={isFav ? "Remove from favorites" : "Add to favorites"}
+  >
+    ★
+  </button>
+);
+
+const FavCard: React.FC<{
+  row: FavRow;
+  busy: boolean;
   onToggle: () => void;
   onClick: () => void;
-}> = ({ row, isFav, onToggle, onClick }) => {
+}> = ({ row, busy, onToggle, onClick }) => {
+  const name = favName(row);
+  return (
+    <div className="spark-card p-5">
+      <div className="flex items-start gap-3">
+        <div
+          className="display font-bold"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            background: "rgba(197,245,70,0.10)",
+            color: "var(--spark-lime)",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 14,
+          }}
+        >
+          {initialsFrom(name, row.email)}
+        </div>
+        <button
+          onClick={onClick}
+          className="flex-1 min-w-0 text-left"
+          style={{
+            background: "transparent",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            color: "inherit",
+          }}
+        >
+          <p className="text-sm font-semibold truncate">{name}</p>
+          <p
+            className="text-xs truncate"
+            style={{ color: "rgba(255,255,255,0.45)" }}
+          >
+            {row.email || "—"}
+          </p>
+        </button>
+        <StarButton isFav busy={busy} onToggle={onToggle} />
+      </div>
+      {row.note ? (
+        <p
+          className="text-xs mt-3"
+          style={{
+            color: "rgba(255,255,255,0.55)",
+            borderTop: "1px solid rgba(255,255,255,0.05)",
+            paddingTop: "0.6rem",
+          }}
+        >
+          {row.note}
+        </p>
+      ) : null}
+    </div>
+  );
+};
+
+const BaCard: React.FC<{
+  row: Row;
+  busy: boolean;
+  onToggle: () => void;
+  onClick: () => void;
+}> = ({ row, busy, onToggle, onClick }) => {
   const rating = Number(row.rating);
   const ratingText = Number.isFinite(rating) && rating > 0
     ? rating.toFixed(1)
@@ -268,7 +436,7 @@ const BaCard: React.FC<{
             fontSize: 14,
           }}
         >
-          {initials(row)}
+          {initialsFrom(displayName(row), row.user?.email ?? undefined)}
         </div>
         <button
           onClick={onClick}
@@ -291,20 +459,7 @@ const BaCard: React.FC<{
             {row.address ?? row.user?.email ?? "—"}
           </p>
         </button>
-        <button
-          onClick={onToggle}
-          aria-label={isFav ? "Unstar" : "Star"}
-          className="mono text-lg transition"
-          style={{
-            background: "transparent",
-            border: "none",
-            color: isFav ? "var(--spark-lime)" : "rgba(255,255,255,0.30)",
-            cursor: "pointer",
-          }}
-          title={isFav ? "Remove from favorites" : "Add to favorites"}
-        >
-          ★
-        </button>
+        <StarButton isFav={row.isFavorited} busy={busy} onToggle={onToggle} />
       </div>
       <div
         className="flex items-center justify-between mt-3"
