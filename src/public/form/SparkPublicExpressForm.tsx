@@ -12,6 +12,7 @@ import { useCreateRequest } from "./hooks/useCreateRequest";
 import SharedTimeSlotSelect from "@/components/inputs/TimeSlotSelect";
 import type { CreateRequestInput } from "./types/CreateRequestByUrl";
 import GooglePlacesInput, { matchTimezoneOption } from "@/components/inputs/GooglePlacesInput";
+import { buildRequestDateTimes } from "./utils/buildPayload";
 
 /**
  * Spark v2 — public Express request form.
@@ -144,13 +145,26 @@ export default function SparkPublicExpressForm() {
       // DateTimeFields on the Django model — they each need to be ISO
       // strings, not bare YYYY-MM-DD or HH:MM. Combine date + time on
       // every field before posting so Django's validator accepts.
-      const isoFor = (hhmm: string) =>
-        `${d}T${(hhmm || "12:00").padEnd(5, "0")}:00`;
+      //
+      // CRITICAL: bake the selected timezone's DST-aware offset (for
+      // THIS date) into each timestamp — otherwise a naive `...T11:00:00`
+      // gets stored as 11:00 UTC and reads back shifted (the B4 bug).
+      // We resolve per-date inside the loop so a bulk submission that
+      // straddles the DST boundary gets the right offset on each row.
+      // `buildRequestDateTimes` is the same helper the wizard form's
+      // `buildPayload` uses, so both forms emit the identical UTC instant.
+      const dateTimes = buildRequestDateTimes(
+        timeZones,
+        timezoneId,
+        d,
+        normalizeHourMinute(startTime),
+        normalizeHourMinute(endTime),
+      );
       const input: CreateRequestInput = {
         name: venue,
-        date: isoFor(startTime),
-        startTime: isoFor(startTime),
-        endTime: isoFor(endTime),
+        date: dateTimes.date,
+        startTime: dateTimes.startTime,
+        endTime: dateTimes.endTime,
         address,
         coordinates: [0, 0],
         requestorEmail,
@@ -909,6 +923,22 @@ export default function SparkPublicExpressForm() {
 
 const inputCls =
   "w-full rounded-lg px-3 py-2 text-[15px] focus:outline-none focus:ring-2 spark-input";
+
+/**
+ * Normalize a "H:MM"/"HH:MM" time to a zero-padded "HH:MM".
+ *
+ * Replaces the old `(hhmm || "12:00").padEnd(5, "0")`, which padded the
+ * wrong end: a single-digit-hour value like "9:30" became "9:300"
+ * (length 4 → 5 by appending a trailing "0") — a corrupt time. Padding
+ * the HOUR keeps "9:30" → "09:30" and leaves "11:00" untouched. Falls
+ * back to noon for blank/garbage so a missing slot can't poison the
+ * timestamp.
+ */
+const normalizeHourMinute = (hhmm: string): string => {
+  const match = (hhmm || "").trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return "12:00";
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+};
 
 // Time-slot picker moved to a shared component used here + on the
 // internal /requests/create form. Local thin wrapper keeps the
