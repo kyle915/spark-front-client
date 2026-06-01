@@ -1,19 +1,32 @@
 /**
  * Spark v2 — Help & Support page.
  *
- * Static for v1 — no support backend yet. Surfaces the things admins
- * actually ask about: getting BAs onto a shift, the recap workflow,
- * payroll questions, and contact paths. When a real ticketing
- * integration ships (Linear / Zendesk / etc.) swap the support card
- * for a real form.
+ * Primary support path is the ticket form, which opens a real ticket via
+ * createSupportTicket (success/error surfaced through the alert store).
+ * Direct-contact cards stay as a secondary fallback for urgent, day-of
+ * issues that shouldn't wait on a ticket. FAQs and a live system-status
+ * card round out the page.
  */
 
+import { useState } from "react";
+import { useMutation } from "react-relay/hooks";
+
 import Layout from "@/layout/Layout";
+import { CreateSupportTicketMutation } from "@/api/mutations/CreateSupportTicketMutation";
+import type { CreateSupportTicketMutation as CreateSupportTicketMutationType } from "@api/mutations/__generated__/CreateSupportTicketMutation.graphql";
+import { useAlertStore } from "@/store/alertStore";
 
 type FAQItem = {
   q: string;
   a: React.ReactNode;
 };
+
+const CATEGORIES: { value: string; label: string }[] = [
+  { value: "question", label: "General question" },
+  { value: "bug", label: "Something's broken (bug)" },
+  { value: "billing", label: "Billing / payroll" },
+  { value: "other", label: "Something else" },
+];
 
 const FAQS: FAQItem[] = [
   {
@@ -121,6 +134,133 @@ const ResourceLink: React.FC<{
   </a>
 );
 
+const inputStyle: React.CSSProperties = {
+  background: "var(--spark-bg)",
+  border: "1px solid var(--spark-border)",
+  color: "var(--spark-text)",
+};
+
+const captionStyle: React.CSSProperties = {
+  letterSpacing: "0.16em",
+  color: "rgba(255,255,255,0.55)",
+};
+
+const SupportTicketForm: React.FC = () => {
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [subject, setSubject] = useState("");
+  const [category, setCategory] = useState(CATEGORIES[0].value);
+  const [body, setBody] = useState("");
+
+  const [commit, inFlight] = useMutation<CreateSupportTicketMutationType>(
+    CreateSupportTicketMutation,
+  );
+
+  const canSubmit = !inFlight && subject.trim() !== "" && body.trim() !== "";
+
+  const submit = () => {
+    if (!canSubmit) return;
+
+    commit({
+      variables: {
+        input: {
+          subject: subject.trim(),
+          body: body.trim(),
+          category,
+        },
+      },
+      onCompleted: (res) => {
+        const payload = res.createSupportTicket;
+        if (payload?.success) {
+          showAlert(
+            "Support request sent — we'll be in touch.",
+            "success",
+          );
+          setSubject("");
+          setCategory(CATEGORIES[0].value);
+          setBody("");
+        } else {
+          showAlert(
+            payload?.message ?? "Couldn't send your request.",
+            "error",
+          );
+        }
+      },
+      onError: (err) => showAlert(`Couldn't send your request: ${err.message}`, "error"),
+    });
+  };
+
+  return (
+    <div className="spark-card p-5 space-y-3">
+      <p
+        className="mono text-[10px]"
+        style={{ letterSpacing: "0.16em", color: "var(--spark-lime)" }}
+      >
+        ✦ OPEN A SUPPORT REQUEST
+      </p>
+      <label className="block">
+        <span className="mono text-[10px]" style={captionStyle}>
+          SUBJECT
+        </span>
+        <input
+          type="text"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          maxLength={200}
+          placeholder="Short summary of what you need"
+          className="mt-1 w-full px-3 py-2 rounded-xl text-sm"
+          style={inputStyle}
+        />
+      </label>
+      <label className="block">
+        <span className="mono text-[10px]" style={captionStyle}>
+          CATEGORY
+        </span>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="mt-1 w-full px-3 py-2 rounded-xl text-sm"
+          style={inputStyle}
+        >
+          {CATEGORIES.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block">
+        <span className="mono text-[10px]" style={captionStyle}>
+          DETAILS
+        </span>
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          rows={6}
+          placeholder="What's going on? Include the request URL and any steps if it's a bug."
+          className="mt-1 w-full px-3 py-2 rounded-xl text-sm"
+          style={inputStyle}
+        />
+      </label>
+      <div className="flex justify-end">
+        <button
+          onClick={submit}
+          disabled={!canSubmit}
+          className="px-4 py-2 rounded-xl text-sm font-semibold"
+          style={{
+            background: "var(--spark-lime)",
+            color: "#0a0d09",
+            border: "none",
+            opacity: canSubmit ? 1 : 0.5,
+            cursor: canSubmit ? "pointer" : "not-allowed",
+          }}
+        >
+          {inFlight ? "SENDING…" : "SEND REQUEST"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function SparkHelp() {
   return (
     <Layout>
@@ -145,30 +285,49 @@ export default function SparkHelp() {
             className="mt-2"
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            FAQs, runbooks, and direct lines to the Ignite team.
+            Send the Ignite team a support request, browse the FAQs, or
+            reach us directly.
           </p>
         </div>
 
-        {/* Contact + resources */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <ResourceLink
-            emoji="✉"
-            title="Email staffing"
-            body="staffing@igniteproductions.co — invites, scheduling, recaps"
-            href="mailto:staffing@igniteproductions.co"
-          />
-          <ResourceLink
-            emoji="💸"
-            title="Email finance"
-            body="finance@igniteproductions.co — payroll, billing, invoices"
-            href="mailto:finance@igniteproductions.co"
-          />
-          <ResourceLink
-            emoji="🚨"
-            title="Urgent / day-of issue"
-            body="Text Kyle at +1 (513) 614-3884 — only for active shifts"
-            href="sms:+15136143884"
-          />
+        {/* Primary support path: open a ticket */}
+        <SupportTicketForm />
+
+        {/* Secondary fallback: direct contact for urgent / day-of issues */}
+        <div>
+          <h2
+            className="display text-2xl font-bold mb-1"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            Need a human right now?
+          </h2>
+          <p
+            className="text-sm mb-3"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            For active shifts and time-sensitive issues, skip the ticket
+            and reach us directly.
+          </p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <ResourceLink
+              emoji="✉"
+              title="Email staffing"
+              body="staffing@igniteproductions.co — invites, scheduling, recaps"
+              href="mailto:staffing@igniteproductions.co"
+            />
+            <ResourceLink
+              emoji="💸"
+              title="Email finance"
+              body="finance@igniteproductions.co — payroll, billing, invoices"
+              href="mailto:finance@igniteproductions.co"
+            />
+            <ResourceLink
+              emoji="🚨"
+              title="Urgent / day-of issue"
+              body="Text Kyle at +1 (513) 614-3884 — only for active shifts"
+              href="sms:+15136143884"
+            />
+          </div>
         </div>
 
         {/* FAQ */}
