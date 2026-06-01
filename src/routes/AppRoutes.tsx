@@ -243,8 +243,6 @@ const SparkFormBuilder = lazyDefault(
 const SparkNewClient = lazyDefault(
   () => import("@/components/pages/clients/SparkNewClient"),
 );
-// SparkBaPortal / SparkBaDetail retired — the /ba routes now redirect to
-// /talent (the complete BA surface). See the route entries below.
 const SparkAcademy = lazyDefault(
   () => import("@/components/pages/academy/SparkAcademy"),
 );
