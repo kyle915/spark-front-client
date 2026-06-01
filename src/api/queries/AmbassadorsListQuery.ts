@@ -23,6 +23,7 @@ export const AmbassadorsListQuery = graphql`
           rating
           address
           isActive
+          isFavorited
           college
           inCollege
           headshotUrl

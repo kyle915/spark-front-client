@@ -85,6 +85,7 @@ type Ambassador implements Node {
   inCollege: Boolean!
   coordinates: [Float!]!
   isActive: Boolean!
+  isFavorited: Boolean!
   location: Location
   tShirtSize: String
   user: SparkUserType!
@@ -1238,6 +1239,41 @@ type InviteAmbassadorToShiftResponse {
   message: String!
   clientMutationId: ID
   ambassadorEventUuid: ID
+}
+
+"""
+A tenant-scoped favorite row: the admin's starred BAs, denormalized
+with the BA's display fields so the Favorites page can render without
+a join back to Ambassador.
+"""
+type TenantFavoriteAmbassador {
+  uuid: String!
+  ambassadorId: ID!
+  ambassadorUuid: String!
+  firstName: String!
+  lastName: String!
+  email: String!
+  note: String!
+  createdAt: String!
+}
+
+type FavoriteAmbassadorResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+}
+
+input AddFavoriteAmbassadorInput {
+  clientMutationId: ID = null
+  ambassadorId: ID!
+  tenantId: ID = null
+  note: String = null
+}
+
+input RemoveFavoriteAmbassadorInput {
+  clientMutationId: ID = null
+  ambassadorId: ID!
+  tenantId: ID = null
 }
 
 input CreateAmbassadorInput {
@@ -3811,6 +3847,8 @@ type Mutation {
   acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
   inviteAmbassadorToShift(input: InviteAmbassadorToShiftInput!): InviteAmbassadorToShiftResponse!
+  addFavoriteAmbassador(input: AddFavoriteAmbassadorInput!): FavoriteAmbassadorResponse!
+  removeFavoriteAmbassador(input: RemoveFavoriteAmbassadorInput!): FavoriteAmbassadorResponse!
   bulkInviteAmbassadorsToShift(input: BulkInviteToShiftInput!): BulkInviteResponse!
   disableAmbassador(input: DisableAmbassadorInput!): DisableAmbassadorResponse!
   regenerateAmbassadorPasswords(input: RegenerateAmbassadorPasswordsInput!): RegenerateAmbassadorPasswordsResponse!
@@ -4249,6 +4287,7 @@ type Query {
   recapEventOptions(tenantId: ID = null, tenantUuid: ID = null, q: String = null, first: Int = null, after: String = null, last: Int = null, before: String = null): EventCountableConnection!
   executiveSummary(tenantId: ID = null, windowDays: Int! = 7): ExecutiveSummaryType
   ambassadorsBookedOnDate(onDate: String!, tenantId: ID = null): [ID!]!
+  favoriteAmbassadors(tenantId: ID = null): [TenantFavoriteAmbassador!]!
   customRecaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: CustomRecapFiltersInput = null): CustomRecapCountableConnection!
   customRecap(id: ID = null, uuid: ID = null): CustomRecap
   typeOfGoods(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: TypeOfGoodFiltersInput = null): TypeOfGoodCountableConnection!

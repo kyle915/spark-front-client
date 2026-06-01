@@ -8,7 +8,6 @@ import { InviteAmbassadorToShiftMutation } from "@/api/mutations/InviteAmbassado
 import type { InviteAmbassadorToShiftMutation as InviteAmbassadorToShiftMutationType } from "@api/mutations/__generated__/InviteAmbassadorToShiftMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
-import { loadFavorites } from "@/lib/favorites";
 
 /**
  * Admin modal that lists active BAs and lets the admin invite one
@@ -70,13 +69,6 @@ const Inner: React.FC<{
   const { tenantId } = useAuthStore();
   const showAlert = useAlertStore((s) => s.showAlert);
   const [search, setSearch] = useState("");
-  // Favorites set from localStorage (PR #226). Read once on render —
-  // localStorage is sync; rebuilding the Set per render is cheap and
-  // keeps the modal honest if kyle stars/unstars from another tab.
-  const favoritesSet = useMemo(
-    () => loadFavorites(tenantId ?? null),
-    [tenantId],
-  );
 
   // Cross-reference: BAs already booked on the same date (any
   // AmbassadorEvent, approved or pending). If we don't have a date
@@ -161,8 +153,8 @@ const Inner: React.FC<{
           ) {
             localityScore = 1;
           }
-          // Favorites are keyed by Ambassador.id (relay-encoded) per
-          // PR #226. Match against the same id we render in the row.
+          // Favorite state comes straight off the tenant-scoped
+          // Ambassador.isFavorited field — no client-side store.
           return {
             id,
             uuid: String(n.uuid),
@@ -171,7 +163,7 @@ const Inner: React.FC<{
             address: n.address ?? "",
             alreadyInvited:
               alreadyInvited.has(id) || optimisticDone.has(id),
-            isFavorited: favoritesSet.has(id),
+            isFavorited: Boolean(n.isFavorited),
             hasConflict: conflictSet.has(id),
             localityScore,
           };
@@ -200,7 +192,6 @@ const Inner: React.FC<{
     data,
     alreadyInvited,
     optimisticDone,
-    favoritesSet,
     conflictSet,
     localityTokens,
   ]);
