@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
+import { MyPreferencesQuery } from "@/api/queries/MyPreferencesQuery";
+import type { MyPreferencesQuery as MyPreferencesQueryType } from "@api/queries/__generated__/MyPreferencesQuery.graphql";
+import { SetMyPreferencesMutation } from "@/api/mutations/SetMyPreferencesMutation";
+import type { SetMyPreferencesMutation as SetMyPreferencesMutationType } from "@api/mutations/__generated__/SetMyPreferencesMutation.graphql";
 
 /**
  * Spark v2 — Settings (Workspace).
@@ -24,29 +29,27 @@ const TZ_OPTIONS = [
   "America/Phoenix",
 ];
 
-// localStorage keys for the per-user UI prefs that don't yet have a
-// backend home. Scoped under @spark.settings.* so we can add a real
-// tenant-level save later without colliding.
-const TZ_KEY = "@spark.settings.timezone";
-const CUR_KEY = "@spark.settings.currency";
-const ACTIVATION_KEY = "@spark.settings.activations";
+// Shape of the opaque `prefs` JSON blob returned by myPreferences.
+// The backend types it as a plain JSON scalar (TS `any`), so we cast
+// at the boundary and apply our own defaults defensively for any key
+// the user hasn't saved yet.
+interface ActivationPrefs {
+  retail: boolean;
+  onprem: boolean;
+  event: boolean;
+}
+interface UserPrefs {
+  timezone?: string;
+  currency?: string;
+  activations?: Partial<ActivationPrefs>;
+}
 
-const readJson = <T,>(key: string, fallback: T): T => {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-};
-
-const readString = (key: string, fallback: string): string => {
-  try {
-    return localStorage.getItem(key) ?? fallback;
-  } catch {
-    return fallback;
-  }
+const DEFAULT_TZ = "America/Chicago";
+const DEFAULT_CURRENCY = "USD ($)";
+const DEFAULT_ACTIVATIONS: ActivationPrefs = {
+  retail: true,
+  onprem: true,
+  event: true,
 };
 
 /**
@@ -177,44 +180,66 @@ const LinkedSheetRow: React.FC = () => {
 export default function SparkSettings() {
   const { tenantMeta } = useAuthStore();
   const showAlert = useAlertStore((s) => s.showAlert);
-  const [tzSel, setTzSel] = useState(() =>
-    readString(TZ_KEY, "America/Chicago"),
+
+  // Backend is the source of truth for per-user prefs. Load once, then
+  // hold the three fields in local state for snappy controlled inputs;
+  // each change is partial-saved back via setMyPreferences.
+  const data = useLazyLoadQuery<MyPreferencesQueryType>(
+    MyPreferencesQuery,
+    {},
+    { fetchPolicy: "store-or-network" },
   );
-  const [curSel, setCurSel] = useState(() =>
-    readString(CUR_KEY, "USD ($)"),
+  const prefs = (data.myPreferences.prefs ?? {}) as UserPrefs;
+
+  const [tzSel, setTzSel] = useState(() => prefs.timezone ?? DEFAULT_TZ);
+  const [curSel, setCurSel] = useState(
+    () => prefs.currency ?? DEFAULT_CURRENCY,
   );
-  const [enabled, setEnabled] = useState<Record<string, boolean>>(() =>
-    readJson<Record<string, boolean>>(ACTIVATION_KEY, {
-      retail: true,
-      onprem: true,
-      event: true,
-    }),
+  const [enabled, setEnabled] = useState<ActivationPrefs>(() => ({
+    ...DEFAULT_ACTIVATIONS,
+    ...(prefs.activations ?? {}),
+  }));
+
+  const [commit] = useMutation<SetMyPreferencesMutationType>(
+    SetMyPreferencesMutation,
   );
 
-  // Persist on change so a refresh doesn't reset choices. Quiet —
-  // no toast for routine prefs; we'd over-notify.
-  useEffect(() => {
-    try {
-      localStorage.setItem(TZ_KEY, tzSel);
-    } catch {
-      /* ignore quota */
-    }
-  }, [tzSel]);
-  useEffect(() => {
-    try {
-      localStorage.setItem(CUR_KEY, curSel);
-    } catch {
-      /* ignore */
-    }
-  }, [curSel]);
-  useEffect(() => {
-    try {
-      localStorage.setItem(ACTIVATION_KEY, JSON.stringify(enabled));
-    } catch {
-      /* ignore */
-    }
-  }, [enabled]);
-  void showAlert;
+  // Partial-save a single pref key. The backend shallow-merges, so we
+  // only send the field that changed. Optimistic local state already
+  // reflects the new value; we just surface a toast on failure (and a
+  // quiet confirmation on success).
+  const savePref = (patch: UserPrefs) => {
+    commit({
+      variables: { input: { prefs: patch } },
+      onCompleted: (resp) => {
+        const r = resp.setMyPreferences;
+        if (r?.success) {
+          showAlert("Settings saved.", "success");
+        } else {
+          showAlert(r?.message || "Couldn't save settings.", "error");
+        }
+      },
+      onError: (e) => {
+        showAlert(e.message || "Couldn't save settings.", "error");
+      },
+    });
+  };
+
+  const onTzChange = (value: string) => {
+    setTzSel(value);
+    savePref({ timezone: value });
+  };
+  const onCurrencyChange = (value: string) => {
+    setCurSel(value);
+    savePref({ currency: value });
+  };
+  const onToggleActivation = (id: keyof ActivationPrefs) => {
+    setEnabled((e) => {
+      const next = { ...e, [id]: !e[id] };
+      savePref({ activations: next });
+      return next;
+    });
+  };
 
   const slug = tenantMeta?.requestUrlName ?? "—";
   const displayName = slug
@@ -274,7 +299,7 @@ export default function SparkSettings() {
               <select
                 style={inputStyle}
                 value={tzSel}
-                onChange={(e) => setTzSel(e.target.value)}
+                onChange={(e) => onTzChange(e.target.value)}
               >
                 {TZ_OPTIONS.map((tz) => (
                   <option key={tz}>{tz}</option>
@@ -286,7 +311,7 @@ export default function SparkSettings() {
               <select
                 style={inputStyle}
                 value={curSel}
-                onChange={(e) => setCurSel(e.target.value)}
+                onChange={(e) => onCurrencyChange(e.target.value)}
               >
                 <option>USD ($)</option>
                 <option>CAD ($)</option>
@@ -300,41 +325,42 @@ export default function SparkSettings() {
           <div>
             <h3 className="font-bold mb-3">Activation types</h3>
             <div className="space-y-2">
-              {ACTIVATION_TYPES.map((t) => (
-                <div
-                  key={t.id}
-                  className="flex items-center gap-3 py-2 px-3 rounded-xl"
-                  style={{
-                    background: "rgba(255,255,255,0.025)",
-                    border: "1px solid var(--spark-border)",
-                  }}
-                >
-                  <span
-                    className="mono w-8 h-8 rounded-lg flex items-center justify-center"
+              {ACTIVATION_TYPES.map((t) => {
+                const id = t.id as keyof ActivationPrefs;
+                return (
+                  <div
+                    key={t.id}
+                    className="flex items-center gap-3 py-2 px-3 rounded-xl"
                     style={{
-                      background: "rgba(197,245,70,0.10)",
-                      border: "1px solid rgba(197,245,70,0.25)",
-                      color: "var(--spark-lime)",
+                      background: "rgba(255,255,255,0.025)",
+                      border: "1px solid var(--spark-border)",
                     }}
                   >
-                    {t.icon}
-                  </span>
-                  <span className="flex-1 text-sm font-medium">{t.label}</span>
-                  <button
-                    onClick={() =>
-                      setEnabled((e) => ({ ...e, [t.id]: !e[t.id] }))
-                    }
-                    className={`pill-btn ${enabled[t.id] ? "on" : ""}`}
-                    style={
-                      enabled[t.id]
-                        ? undefined
-                        : { border: "1px solid var(--spark-border)" }
-                    }
-                  >
-                    {enabled[t.id] ? "Enabled" : "Disabled"}
-                  </button>
-                </div>
-              ))}
+                    <span
+                      className="mono w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{
+                        background: "rgba(197,245,70,0.10)",
+                        border: "1px solid rgba(197,245,70,0.25)",
+                        color: "var(--spark-lime)",
+                      }}
+                    >
+                      {t.icon}
+                    </span>
+                    <span className="flex-1 text-sm font-medium">{t.label}</span>
+                    <button
+                      onClick={() => onToggleActivation(id)}
+                      className={`pill-btn ${enabled[id] ? "on" : ""}`}
+                      style={
+                        enabled[id]
+                          ? undefined
+                          : { border: "1px solid var(--spark-border)" }
+                      }
+                    >
+                      {enabled[id] ? "Enabled" : "Disabled"}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
