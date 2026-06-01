@@ -34,6 +34,7 @@ import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
 import TenantGoalsPanel from "@/components/ai/TenantGoalsPanel";
 import TenantInsightsPanel from "@/components/ai/TenantInsightsPanel";
 import TenantGeoHeatmap from "@/components/ai/TenantGeoHeatmap";
+import TenantBaLeaderboard from "@/components/ai/TenantBaLeaderboard";
 // Embedded as tabs on this dashboard — the named exports are the
 // Layout-less bodies so we don't double-render the admin shell.
 import { ApprovalsBody } from "@/components/pages/approvals/SparkApprovals";
@@ -491,6 +492,25 @@ const ClientInner: React.FC = () => {
           }
         >
           <TenantGeoHeatmap tenantId={tenantId} />
+        </Suspense>
+      )}
+
+      {/* "Top performers" BA leaderboard for this client's own tenant. Scoped to
+          the same useAuthStore().tenantId as the KPI panel above; renders
+          nothing when no tenant is in scope. Own Suspense so the tiles above
+          paint without waiting on the leaderboard fetch. */}
+      {tenantId && (
+        <Suspense
+          fallback={
+            <div
+              className="spark-card p-6 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Loading top performers…
+            </div>
+          }
+        >
+          <TenantBaLeaderboard tenantId={tenantId} />
         </Suspense>
       )}
 
