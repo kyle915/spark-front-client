@@ -262,6 +262,9 @@ const SparkTeam = lazyDefault(
 const SparkClients = lazyDefault(
   () => import("@/components/pages/clients/SparkClients"),
 );
+const SparkClientDetail = lazyDefault(
+  () => import("@/components/pages/clients/SparkClientDetail"),
+);
 const SparkHelp = lazyDefault(
   () => import("@/components/pages/help/SparkHelp"),
 );
@@ -684,6 +687,20 @@ const RequestsLinks = {
     {
       path: "/clients",
       component: <SparkClients />,
+      isPublic: false,
+    },
+    {
+      // Per-client detail (admin). Click-through from a /clients row.
+      // The :tenantId is the row's Client.tenantId; the page composes
+      // the existing per-tenant analytics cards scoped to it. Static
+      // /clients/new is registered above and out-ranks this dynamic
+      // segment in react-router, so "new" never hits this route.
+      path: "/clients/:tenantId",
+      component: (
+        <AdminOnly>
+          <SparkClientDetail />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {

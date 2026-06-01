@@ -10,6 +10,7 @@ export const ClientsQuery = graphql`
           uuid
           name
           email
+          tenantId
         }
       }
     }

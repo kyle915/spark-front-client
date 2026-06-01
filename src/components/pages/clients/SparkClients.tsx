@@ -3,8 +3,9 @@
  *
  * Lists every Client (brand stakeholder organization) in the
  * workspace. Wire is read-only for v1 — create lives at
- * /clients/new, edit lives on each row's detail page (not yet built;
- * routed to /clients/new for now as a placeholder).
+ * /clients/new, and tapping a row opens the per-client detail page
+ * at /clients/:tenantId (SparkClientDetail), routed with the row's
+ * Client.tenantId and the name/email in router state.
  */
 
 import React, { Suspense, useMemo, useState } from "react";
@@ -73,7 +74,7 @@ const Inner: React.FC = () => {
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
             Every client organization in this workspace. Tap a row to
-            see the brand's recent requests + recaps.
+            see the brand's program performance, insights & field team.
           </p>
         </div>
         <button
@@ -116,7 +117,14 @@ const Inner: React.FC = () => {
           {filtered.map((c) => (
             <button
               key={c.id}
-              onClick={() => navigate(`/requests/list?clientId=${c.id}`)}
+              onClick={() =>
+                navigate(`/clients/${c.tenantId}`, {
+                  // Pass the name/email so the detail header paints
+                  // instantly — there's no tenant-by-id query to fetch
+                  // it from on the detail page.
+                  state: { clientName: c.name, clientEmail: c.email },
+                })
+              }
               className="spark-card hov p-5 text-left"
               style={{
                 background: "var(--spark-card)",
@@ -158,7 +166,7 @@ const Inner: React.FC = () => {
                   color: "var(--spark-lime)",
                 }}
               >
-                VIEW REQUESTS →
+                VIEW CLIENT →
               </p>
             </button>
           ))}
