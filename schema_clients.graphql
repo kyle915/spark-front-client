@@ -4243,6 +4243,7 @@ type Query {
   tenantBaLeaderboard(tenantId: ID!, year: Int): [BaLeaderboardEntry!]!
   eventStaffing(eventId: ID!, limit: Int): EventStaffing
   staffingSuggestions(eventId: ID!, limit: Int = 20): [StaffingSuggestion!]!
+  recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   todayEvents(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   todayEventsCoordinates(coordinates: [Float!]!, range: Float!, unit: DistanceUnit! = KILOMETERS, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   recentLocationPings(withinMinutes: Int! = 30, tenantId: ID = null): [LocationPingType!]!
@@ -6637,6 +6638,8 @@ input DeleteInvoiceInput { clientMutationId: ID  id: ID! }
 type SuggestedAmbassador { id: ID!  uuid: String!  name: String!  rating: Int!  distanceMiles: Float  isAvailable: Boolean  alreadyInvited: Boolean!  alreadyAssigned: Boolean!  email: String  phone: String }
 type EventStaffing { eventId: ID!  assigned: Int!  confirmed: Int!  needed: Int  fillRate: Float  suggestions: [SuggestedAmbassador!]! }
 type StaffingSuggestion { baId: ID!  name: String!  score: Int!  avgRating: Float  gigsForBrand: Int!  isFavorited: Boolean!  isAvailable: Boolean  distanceMi: Float  reasons: [String!]! }
+type RecapQualityFlag { code: String!  label: String!  severity: String! }
+type RecapQualityResult { score: Int!  flags: [RecapQualityFlag!]! }
 input BulkInviteToShiftInput { clientMutationId: ID  eventId: ID!  ambassadorIds: [ID!]! }
 type BulkInviteResponse { success: Boolean!  message: String!  clientMutationId: ID  invited: Int!  skipped: Int! }
 

@@ -14,6 +14,7 @@ import type { DeleteCustomRecapFileMutation as DeleteCustomRecapFileMutationType
 import { GenerateCustomRecapPdfMutation } from "@/api/mutations/GenerateCustomRecapPdfMutation";
 import type { GenerateCustomRecapPdfMutation as GenerateCustomRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateCustomRecapPdfMutation.graphql";
 import { RecapUploader } from "./RecapUploader";
+import RecapQualityPanel from "./RecapQualityPanel";
 import { AmbassadorPicker } from "./SparkRecapCreate";
 import { buildCustomFieldValuesPayload } from "./customRecapSave";
 import { useAuthStore } from "@/store/authStore";
@@ -1012,6 +1013,24 @@ const RecapCustomView = () => {
               </div>
             </div>
           </div>
+
+          {/* ======================================================
+          QUALITY CHECK — server-computed review aid for the approver.
+          Custom recap → isCustom={true}. Self-degrades to nothing on
+          failure; wrapped in Suspense for the initial load.
+          ====================================================== */}
+          <Suspense
+            fallback={
+              <div
+                className="spark-card p-6 text-sm"
+                style={{ color: "rgba(255,255,255,0.5)" }}
+              >
+                Checking recap quality…
+              </div>
+            }
+          >
+            <RecapQualityPanel recapId={recap.id} isCustom={true} />
+          </Suspense>
 
           {/* ======================================================
           KPI GRID
