@@ -1,17 +1,31 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
+import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import { TenantFormsQuery } from "@/api/queries/TenantFormsQuery";
+import type { TenantFormsQuery as TenantFormsQueryType } from "@api/queries/__generated__/TenantFormsQuery.graphql";
+import { SaveFormMutation } from "@/api/mutations/SaveFormMutation";
+import type { SaveFormMutation as SaveFormMutationType } from "@api/mutations/__generated__/SaveFormMutation.graphql";
+import { UpdateFormMutation } from "@/api/mutations/UpdateFormMutation";
+import type { UpdateFormMutation as UpdateFormMutationType } from "@api/mutations/__generated__/UpdateFormMutation.graphql";
+import { DeleteFormMutation } from "@/api/mutations/DeleteFormMutation";
+import type { DeleteFormMutation as DeleteFormMutationType } from "@api/mutations/__generated__/DeleteFormMutation.graphql";
 
 /**
  * Spark v2 — Custom Form Builder.
  *
  * Lets admins define custom request types per tenant with their own field
- * sets. The form definition persists to localStorage v1; backend support
- * is the next step (CreateRequestType + a CustomField model + mutations
- * to add/remove fields per type). When wired, the public form at
- * /spark-form/:slug + the internal /requests/create form both read from
- * these definitions to render the right fields.
+ * sets. Form definitions persist to the tenantForms / saveForm / updateForm
+ * / deleteForm backend (Relay), scoped to the active tenant. When wired,
+ * the public form at /spark-form/:slug + the internal /requests/create form
+ * both read from these definitions to render the right fields.
+ *
+ * FE↔backend mapping: only `name` + `isPublished` are top-level columns;
+ * everything else (description, internal/external targets, the field list)
+ * rides in the opaque `schema` JSON blob. A form is "published"
+ * (isPublished) when it targets internal or external. On load we
+ * reconstruct each FormDef from { id, name, ...schema, updatedAt }.
  */
 
 type FieldKind =
@@ -44,6 +58,16 @@ type FormDef = {
   updatedAt: string;
 };
 
+// Shape of the opaque `schema` JSON blob stored per form. The backend
+// types it as a plain JSON scalar (TS `any`), so we cast at the boundary
+// and apply defensive defaults for anything missing.
+type FormSchemaBlob = {
+  description?: string;
+  internal?: boolean;
+  external?: boolean;
+  fields?: CustomField[];
+};
+
 const KIND_LABEL: Record<FieldKind, string> = {
   text: "Short text",
   longtext: "Long text",
@@ -56,13 +80,42 @@ const KIND_LABEL: Record<FieldKind, string> = {
   file: "File upload",
 };
 
-const STORAGE_KEY = (tenantId: string) => `@spark.formBuilder/${tenantId}`;
-
 const newField = (): CustomField => ({
   id: `f_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
   label: "New field",
   kind: "text",
   required: false,
+});
+
+/**
+ * Reconstruct the FE's FormDef from a backend CustomFormType row: id /
+ * name / updatedAt come from top-level columns, the rest is spread out
+ * of the `schema` JSON blob with defensive defaults.
+ */
+const toFormDef = (row: {
+  readonly id: string;
+  readonly name: string;
+  readonly schema: unknown;
+  readonly updatedAt: string;
+}): FormDef => {
+  const blob = (row.schema ?? {}) as FormSchemaBlob;
+  return {
+    id: row.id,
+    name: row.name,
+    description: blob.description ?? "",
+    internal: blob.internal ?? false,
+    external: blob.external ?? false,
+    fields: Array.isArray(blob.fields) ? blob.fields : [],
+    updatedAt: row.updatedAt,
+  };
+};
+
+/** Pack a FormDef back into the { schema blob, isPublished } the backend wants. */
+const toSchemaBlob = (def: FormDef): FormSchemaBlob => ({
+  description: def.description,
+  internal: def.internal,
+  external: def.external,
+  fields: def.fields,
 });
 
 const inputStyle: React.CSSProperties = {
@@ -290,36 +343,53 @@ const FormDefCard: React.FC<{
   </div>
 );
 
-export default function SparkFormBuilder() {
-  const { tenantId } = useAuthStore();
+const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
-  const [defs, setDefs] = useState<FormDef[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!tenantId) return;
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY(tenantId));
-      setDefs(raw ? JSON.parse(raw) : []);
-    } catch {
-      setDefs([]);
-    }
-  }, [tenantId]);
-
-  const persist = (next: FormDef[]) => {
-    if (!tenantId) return;
-    localStorage.setItem(STORAGE_KEY(tenantId), JSON.stringify(next));
-    setDefs(next);
-  };
-
-  const editing = useMemo(
-    () => defs.find((d) => d.id === editingId),
-    [defs, editingId],
+  // Bumped after every create/update/delete so the list re-queries the
+  // network and the change shows immediately — no manual page refresh.
+  const [refreshKey, setRefreshKey] = useState(0);
+  const data = useLazyLoadQuery<TenantFormsQueryType>(
+    TenantFormsQuery,
+    { tenantId },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
 
+  // Backend rows mapped back into the FE's FormDef shape (schema blob
+  // spread out, id/name/updatedAt from the top level).
+  const defs = useMemo<FormDef[]>(
+    () => (data.tenantForms ?? []).map(toFormDef),
+    [data],
+  );
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  // Local editing buffer: the open form's edits live here for snappy
+  // controlled inputs, then commit to the backend via updateForm on
+  // "Save". `editingId === null` means we're on the list view.
+  const [draft, setDraft] = useState<FormDef | null>(null);
+
+  const [saveCommit, saving] =
+    useMutation<SaveFormMutationType>(SaveFormMutation);
+  const [updateCommit, updating] =
+    useMutation<UpdateFormMutationType>(UpdateFormMutation);
+  const [deleteCommit, deleting] =
+    useMutation<DeleteFormMutationType>(DeleteFormMutation);
+  const busy = saving || updating || deleting;
+
+  const openEditor = (def: FormDef) => {
+    setEditingId(def.id);
+    setDraft(def);
+  };
+  const closeEditor = () => {
+    setEditingId(null);
+    setDraft(null);
+  };
+
+  // Create: mint a new form on the backend immediately (we need the
+  // server-assigned id), then open the editor on the returned form.
   const createNew = () => {
-    const def: FormDef = {
-      id: `def_${Date.now()}`,
+    const seed: FormDef = {
+      id: "",
       name: "Untitled form",
       description: "",
       internal: true,
@@ -327,289 +397,385 @@ export default function SparkFormBuilder() {
       fields: [newField()],
       updatedAt: new Date().toISOString(),
     };
-    persist([def, ...defs]);
-    setEditingId(def.id);
+    saveCommit({
+      variables: {
+        input: {
+          name: seed.name,
+          tenantId,
+          schema: toSchemaBlob(seed),
+          isPublished: seed.internal || seed.external,
+        },
+      },
+      onCompleted: (resp) => {
+        const r = resp.saveForm;
+        if (r?.success && r.form) {
+          setRefreshKey((k) => k + 1);
+          openEditor(toFormDef(r.form));
+        } else {
+          showAlert(r?.message || "Couldn't create form.", "error");
+        }
+      },
+      onError: (e) => showAlert(e.message || "Couldn't create form.", "error"),
+    });
   };
 
-  const updateEditing = (patch: Partial<FormDef>) => {
-    if (!editing) return;
-    const next = defs.map((d) =>
-      d.id === editing.id
-        ? { ...d, ...patch, updatedAt: new Date().toISOString() }
-        : d,
-    );
-    persist(next);
+  // Duplicate: persist a copy of an existing form, then refetch the list.
+  const duplicate = (def: FormDef) => {
+    const copy: FormDef = { ...def, name: `${def.name} (copy)` };
+    saveCommit({
+      variables: {
+        input: {
+          name: copy.name,
+          tenantId,
+          schema: toSchemaBlob(copy),
+          isPublished: copy.internal || copy.external,
+        },
+      },
+      onCompleted: (resp) => {
+        const r = resp.saveForm;
+        if (r?.success) {
+          showAlert("Form duplicated.", "success");
+          setRefreshKey((k) => k + 1);
+        } else {
+          showAlert(r?.message || "Couldn't duplicate form.", "error");
+        }
+      },
+      onError: (e) =>
+        showAlert(e.message || "Couldn't duplicate form.", "error"),
+    });
+  };
+
+  const remove = (def: FormDef) => {
+    if (!confirm(`Delete "${def.name}"?`)) return;
+    deleteCommit({
+      variables: { input: { id: def.id } },
+      onCompleted: (resp) => {
+        const r = resp.deleteForm;
+        if (r?.success) {
+          showAlert("Form deleted.", "success");
+          if (editingId === def.id) closeEditor();
+          setRefreshKey((k) => k + 1);
+        } else {
+          showAlert(r?.message || "Couldn't delete form.", "error");
+        }
+      },
+      onError: (e) => showAlert(e.message || "Couldn't delete form.", "error"),
+    });
+  };
+
+  // Local-only edit of the open draft (no network until "Save").
+  const patchDraft = (patch: Partial<FormDef>) => {
+    setDraft((d) => (d ? { ...d, ...patch } : d));
+  };
+
+  // Persist the open draft via updateForm, then refetch the list.
+  const saveDraft = () => {
+    if (!draft) return;
+    if (!draft.name.trim()) {
+      showAlert("Give the form a name first.", "warning");
+      return;
+    }
+    updateCommit({
+      variables: {
+        input: {
+          id: draft.id,
+          name: draft.name,
+          schema: toSchemaBlob(draft),
+          isPublished: draft.internal || draft.external,
+        },
+      },
+      onCompleted: (resp) => {
+        const r = resp.updateForm;
+        if (r?.success) {
+          showAlert("Form saved.", "success");
+          if (r.form) setDraft(toFormDef(r.form));
+          setRefreshKey((k) => k + 1);
+        } else {
+          showAlert(r?.message || "Couldn't save form.", "error");
+        }
+      },
+      onError: (e) => showAlert(e.message || "Couldn't save form.", "error"),
+    });
   };
 
   return (
-    <Layout>
-      <div className="space-y-6 max-w-7xl">
-        <div className="flex items-end justify-between flex-wrap gap-4">
-          <div>
-            <p
-              className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              CUSTOM FORMS · {defs.length}
-            </p>
-            <h1
-              className="display text-4xl font-bold mt-2"
-              style={{ letterSpacing: "-0.04em" }}
-            >
-              Form builder.
-            </h1>
-            <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
-              Design custom request forms per brand. Each form can be
-              published to the internal admin queue, the public client
-              link, or both.
-            </p>
-          </div>
-          {!editing && (
-            <button
-              onClick={createNew}
-              className="px-5 py-3 rounded-2xl text-sm font-semibold"
-              style={{
-                background: "var(--spark-lime)",
-                color: "#0a0d09",
-                boxShadow: "0 0 20px rgba(197,245,70,0.35)",
-              }}
-            >
-              + New form
-            </button>
-          )}
+    <div className="space-y-6 max-w-7xl">
+      <div className="flex items-end justify-between flex-wrap gap-4">
+        <div>
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            CUSTOM FORMS · {defs.length}
+          </p>
+          <h1
+            className="display text-4xl font-bold mt-2"
+            style={{ letterSpacing: "-0.04em" }}
+          >
+            Form builder.
+          </h1>
+          <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+            Design custom request forms per brand. Each form can be
+            published to the internal admin queue, the public client
+            link, or both.
+          </p>
         </div>
-
-        {!editing && (
-          <>
-            {defs.length === 0 ? (
-              <div
-                className="spark-card p-10 text-center text-sm"
-                style={{ color: "rgba(255,255,255,0.55)" }}
-              >
-                <p className="mb-4">
-                  No custom forms yet. Build one to capture brand-specific
-                  fields when requests come in.
-                </p>
-                <button
-                  onClick={createNew}
-                  className="px-5 py-3 rounded-2xl text-sm font-semibold"
-                  style={{
-                    background: "var(--spark-lime)",
-                    color: "#0a0d09",
-                  }}
-                >
-                  + Build your first form
-                </button>
-              </div>
-            ) : (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {defs.map((d) => (
-                  <FormDefCard
-                    key={d.id}
-                    def={d}
-                    onEdit={() => setEditingId(d.id)}
-                    onDelete={() => {
-                      if (!confirm(`Delete "${d.name}"?`)) return;
-                      persist(defs.filter((x) => x.id !== d.id));
-                    }}
-                    onDuplicate={() => {
-                      const copy: FormDef = {
-                        ...d,
-                        id: `def_${Date.now()}`,
-                        name: `${d.name} (copy)`,
-                        updatedAt: new Date().toISOString(),
-                      };
-                      persist([copy, ...defs]);
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </>
+        {!draft && (
+          <button
+            onClick={createNew}
+            disabled={busy}
+            className="px-5 py-3 rounded-2xl text-sm font-semibold"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              boxShadow: "0 0 20px rgba(197,245,70,0.35)",
+              opacity: busy ? 0.6 : 1,
+            }}
+          >
+            + New form
+          </button>
         )}
+      </div>
 
-        {editing && (
-          <div className="space-y-5">
-            <button
-              onClick={() => setEditingId(null)}
-              className="mono text-[11px] transition"
-              style={{
-                letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              ← BACK TO FORMS
-            </button>
-
-            <div className="spark-card p-6 space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="label-mini block mb-1.5">Form name</label>
-                  <input
-                    style={inputStyle}
-                    value={editing.name}
-                    onChange={(e) =>
-                      updateEditing({ name: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="label-mini block mb-1.5">Description</label>
-                  <input
-                    style={inputStyle}
-                    value={editing.description}
-                    onChange={(e) =>
-                      updateEditing({ description: e.target.value })
-                    }
-                    placeholder="What this form is for"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-3 flex-wrap">
-                <label
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer text-sm"
-                  style={{
-                    background: editing.internal
-                      ? "rgba(197,245,70,0.10)"
-                      : "rgba(255,255,255,0.025)",
-                    border: `1px solid ${editing.internal ? "rgba(197,245,70,0.4)" : "var(--spark-border)"}`,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={editing.internal}
-                    onChange={(e) =>
-                      updateEditing({ internal: e.target.checked })
-                    }
-                    style={{ accentColor: "var(--spark-lime)" }}
-                  />
-                  Publish to internal /requests/create
-                </label>
-                <label
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer text-sm"
-                  style={{
-                    background: editing.external
-                      ? "rgba(95,184,239,0.10)"
-                      : "rgba(255,255,255,0.025)",
-                    border: `1px solid ${editing.external ? "rgba(95,184,239,0.4)" : "var(--spark-border)"}`,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={editing.external}
-                    onChange={(e) =>
-                      updateEditing({ external: e.target.checked })
-                    }
-                    style={{ accentColor: "var(--spark-sky)" }}
-                  />
-                  Publish to public /spark-form/&lt;slug&gt;
-                </label>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {editing.fields.map((f, idx) => (
-                <FieldRow
-                  key={f.id}
-                  field={f}
-                  onChange={(next) =>
-                    updateEditing({
-                      fields: editing.fields.map((x) =>
-                        x.id === f.id ? next : x,
-                      ),
-                    })
-                  }
-                  onRemove={() =>
-                    updateEditing({
-                      fields: editing.fields.filter((x) => x.id !== f.id),
-                    })
-                  }
-                  onMoveUp={() => {
-                    if (idx === 0) return;
-                    const next = [...editing.fields];
-                    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-                    updateEditing({ fields: next });
-                  }}
-                  onMoveDown={() => {
-                    if (idx === editing.fields.length - 1) return;
-                    const next = [...editing.fields];
-                    [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
-                    updateEditing({ fields: next });
-                  }}
-                />
-              ))}
-              <button
-                onClick={() =>
-                  updateEditing({
-                    fields: [...editing.fields, newField()],
-                  })
-                }
-                className="w-full py-3 rounded-xl text-sm transition"
-                style={{
-                  background: "transparent",
-                  color: "rgba(255,255,255,0.55)",
-                  border: "1px dashed var(--spark-border)",
-                }}
-              >
-                + Add field
-              </button>
-            </div>
-
+      {!draft && (
+        <>
+          {defs.length === 0 ? (
             <div
-              className="spark-card p-5"
-              style={{
-                borderColor: "rgba(95,184,239,0.25)",
-                background:
-                  "linear-gradient(180deg, rgba(95,184,239,0.06), transparent)",
-              }}
+              className="spark-card p-10 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
             >
-              <p
-                className="mono text-[10px]"
-                style={{
-                  letterSpacing: "0.16em",
-                  color: "var(--spark-sky)",
-                }}
-              >
-                BACKEND WIRING PENDING
-              </p>
-              <p
-                className="mt-2 text-sm"
-                style={{ color: "rgba(255,255,255,0.75)" }}
-              >
-                Form definitions persist to localStorage for now. To make
-                them render in the internal + external request forms,
-                we need backend mutations to (a) save the form definition,
-                (b) attach custom fields to a RequestType, and (c) read
-                them on form load. Schedule the backend work and I'll wire
-                the mutations.
+              <p className="mb-4">
+                No custom forms yet. Build one to capture brand-specific
+                fields when requests come in.
               </p>
               <button
-                onClick={() => {
-                  if (!editing.name.trim()) {
-                    showAlert("Give the form a name first.", "warning");
-                    return;
-                  }
-                  showAlert(
-                    "Form saved locally. Backend persistence ships next.",
-                    "success",
-                  );
-                }}
-                className="mt-3 px-4 py-2 rounded-xl text-sm font-semibold"
+                onClick={createNew}
+                disabled={busy}
+                className="px-5 py-3 rounded-2xl text-sm font-semibold"
                 style={{
                   background: "var(--spark-lime)",
                   color: "#0a0d09",
-                  boxShadow: "0 0 14px rgba(197,245,70,0.25)",
+                  opacity: busy ? 0.6 : 1,
                 }}
               >
-                Save (local) →
+                + Build your first form
               </button>
             </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {defs.map((d) => (
+                <FormDefCard
+                  key={d.id}
+                  def={d}
+                  onEdit={() => openEditor(d)}
+                  onDelete={() => remove(d)}
+                  onDuplicate={() => duplicate(d)}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {draft && (
+        <div className="space-y-5">
+          <button
+            onClick={closeEditor}
+            className="mono text-[11px] transition"
+            style={{
+              letterSpacing: "0.14em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            ← BACK TO FORMS
+          </button>
+
+          <div className="spark-card p-6 space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="label-mini block mb-1.5">Form name</label>
+                <input
+                  style={inputStyle}
+                  value={draft.name}
+                  onChange={(e) => patchDraft({ name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label-mini block mb-1.5">Description</label>
+                <input
+                  style={inputStyle}
+                  value={draft.description}
+                  onChange={(e) =>
+                    patchDraft({ description: e.target.value })
+                  }
+                  placeholder="What this form is for"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              <label
+                className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer text-sm"
+                style={{
+                  background: draft.internal
+                    ? "rgba(197,245,70,0.10)"
+                    : "rgba(255,255,255,0.025)",
+                  border: `1px solid ${draft.internal ? "rgba(197,245,70,0.4)" : "var(--spark-border)"}`,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={draft.internal}
+                  onChange={(e) =>
+                    patchDraft({ internal: e.target.checked })
+                  }
+                  style={{ accentColor: "var(--spark-lime)" }}
+                />
+                Publish to internal /requests/create
+              </label>
+              <label
+                className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer text-sm"
+                style={{
+                  background: draft.external
+                    ? "rgba(95,184,239,0.10)"
+                    : "rgba(255,255,255,0.025)",
+                  border: `1px solid ${draft.external ? "rgba(95,184,239,0.4)" : "var(--spark-border)"}`,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={draft.external}
+                  onChange={(e) =>
+                    patchDraft({ external: e.target.checked })
+                  }
+                  style={{ accentColor: "var(--spark-sky)" }}
+                />
+                Publish to public /spark-form/&lt;slug&gt;
+              </label>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {draft.fields.map((f, idx) => (
+              <FieldRow
+                key={f.id}
+                field={f}
+                onChange={(next) =>
+                  patchDraft({
+                    fields: draft.fields.map((x) =>
+                      x.id === f.id ? next : x,
+                    ),
+                  })
+                }
+                onRemove={() =>
+                  patchDraft({
+                    fields: draft.fields.filter((x) => x.id !== f.id),
+                  })
+                }
+                onMoveUp={() => {
+                  if (idx === 0) return;
+                  const next = [...draft.fields];
+                  [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                  patchDraft({ fields: next });
+                }}
+                onMoveDown={() => {
+                  if (idx === draft.fields.length - 1) return;
+                  const next = [...draft.fields];
+                  [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+                  patchDraft({ fields: next });
+                }}
+              />
+            ))}
+            <button
+              onClick={() =>
+                patchDraft({
+                  fields: [...draft.fields, newField()],
+                })
+              }
+              className="w-full py-3 rounded-xl text-sm transition"
+              style={{
+                background: "transparent",
+                color: "rgba(255,255,255,0.55)",
+                border: "1px dashed var(--spark-border)",
+              }}
+            >
+              + Add field
+            </button>
+          </div>
+
+          <div
+            className="spark-card p-5"
+            style={{
+              borderColor: "rgba(95,184,239,0.25)",
+              background:
+                "linear-gradient(180deg, rgba(95,184,239,0.06), transparent)",
+            }}
+          >
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.16em",
+                color: "var(--spark-sky)",
+              }}
+            >
+              SAVES TO BACKEND
+            </p>
+            <p
+              className="mt-2 text-sm"
+              style={{ color: "rgba(255,255,255,0.75)" }}
+            >
+              Form definitions persist per brand to the Spark backend. Edits
+              here stay local until you save; the internal + external request
+              forms read these definitions on load.
+            </p>
+            <button
+              onClick={saveDraft}
+              disabled={busy}
+              className="mt-3 px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{
+                background: "var(--spark-lime)",
+                color: "#0a0d09",
+                boxShadow: "0 0 14px rgba(197,245,70,0.25)",
+                opacity: busy ? 0.6 : 1,
+              }}
+            >
+              {updating ? "Saving…" : "Save form →"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default function SparkFormBuilder() {
+  const { tenantId } = useAuthStore();
+
+  return (
+    <Layout>
+      <Suspense
+        fallback={
+          <div
+            className="grid place-items-center text-xs py-12"
+            style={{ color: "rgba(255,255,255,0.45)" }}
+          >
+            Loading forms…
+          </div>
+        }
+      >
+        {tenantId ? (
+          <Inner tenantId={tenantId} />
+        ) : (
+          <div
+            className="text-xs"
+            style={{ color: "rgba(255,255,255,0.45)" }}
+          >
+            No tenant selected.
           </div>
         )}
-      </div>
+      </Suspense>
     </Layout>
   );
 }

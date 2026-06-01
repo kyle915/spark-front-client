@@ -3850,6 +3850,9 @@ type Mutation {
   enqueueCreateGoalsForTenant(tenantId: ID!, year: Int!): EnqueueCreateGoalsForTenantPayload!
   enqueueCreateGoalsForAllTenants(year: Int!): EnqueueCreateGoalsForAllTenantsPayload!
   setMyPreferences(input: SetMyPreferencesInput!): SetMyPreferencesResponse!
+  saveForm(input: SaveFormInput!): SaveFormResponse!
+  updateForm(input: UpdateFormInput!): SaveFormResponse!
+  deleteForm(input: DeleteFormInput!): DeleteFormResponse!
 }
 
 type MutationNormalOutput {
@@ -4357,6 +4360,8 @@ type Query {
   getUploadUrl(filePath: String!, contentType: String! = "image/jpeg"): UploadUrlResponse!
   getDownloadUrl(filePath: String!): String!
   myPreferences: UserPreferencesType!
+  tenantForms(tenantId: ID!): [CustomFormType!]!
+  tenantForm(id: ID!): CustomFormType
 }
 
 """
@@ -5626,6 +5631,50 @@ type SetMyPreferencesResponse {
   message: String!
   preferences: UserPreferencesType
   clientMutationId: ID
+}
+
+type CustomFormType {
+  id: ID!
+  name: String!
+  schema: JSON!
+  isPublished: Boolean!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type SaveFormResponse {
+  success: Boolean!
+  message: String!
+  form: CustomFormType
+  clientMutationId: ID
+}
+
+type DeleteFormResponse {
+  success: Boolean!
+  message: String!
+  deletedId: ID
+  clientMutationId: ID
+}
+
+input SaveFormInput {
+  clientMutationId: ID = null
+  name: String!
+  tenantId: ID = null
+  schema: JSON = null
+  isPublished: Boolean = null
+}
+
+input UpdateFormInput {
+  clientMutationId: ID = null
+  id: ID!
+  name: String = null
+  schema: JSON = null
+  isPublished: Boolean = null
+}
+
+input DeleteFormInput {
+  clientMutationId: ID = null
+  id: ID!
 }
 
 input SetDefaultExternalRmmInput {
