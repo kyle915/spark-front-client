@@ -3,6 +3,7 @@ import LoadingButton from "@/shared/LoadingButton";
 import SocialAuthButtons from "@auth/components/SocialAuthButtons";
 import type { Control, UseFormHandleSubmit } from "react-hook-form";
 import { Controller, useWatch } from "react-hook-form";
+import { Link } from "react-router";
 import type { RegisterFormFields } from "@/types/auth";
 
 
@@ -102,9 +103,12 @@ export default function RegisterForm({ control, handleSubmit, onSubmit }: Props)
               />
               <span>
                 I agree to the{" "}
-                <a href="#" className="text-primary hover:underline">
+                <Link
+                  to="/terms-of-service"
+                  className="text-primary hover:underline"
+                >
                   Terms & Conditions
-                </a>
+                </Link>
               </span>
             </label>
             {error && (

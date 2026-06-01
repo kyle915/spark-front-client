@@ -16,8 +16,14 @@ import type { LatestInsightsQuery as LatestInsightsQueryType } from "@/api/queri
 import { useAuthStore } from "@/store/authStore";
 
 interface Props {
-  insights: AIInsightItem[];
-  isLoading: boolean;
+  /**
+   * Supplementary, externally-supplied insights to merge in alongside the
+   * tenant's previously-generated feedback insights (which this component
+   * fetches itself via LatestInsightsQuery). Optional — callers that only
+   * want the tenant's own AI insights can omit it.
+   */
+  insights?: AIInsightItem[];
+  isLoading?: boolean;
 }
 
 const focusTabs = [
@@ -49,7 +55,10 @@ const focusTabs = [
   },
 ];
 
-export function AiInsightsSection({ insights, isLoading }: Props) {
+export function AiInsightsSection({
+  insights = [],
+  isLoading = false,
+}: Props) {
   const [activeTab, setActiveTab] = useState(focusTabs[0].value);
   const tenantId = useAuthStore((state) => state.tenantId);
   const latestInsightsData = useLazyLoadQuery<LatestInsightsQueryType>(
