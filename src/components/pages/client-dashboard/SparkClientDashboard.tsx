@@ -33,6 +33,7 @@ import AskAiButton from "@/components/ai/AskAiButton";
 import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
 import TenantGoalsPanel from "@/components/ai/TenantGoalsPanel";
 import TenantInsightsPanel from "@/components/ai/TenantInsightsPanel";
+import TenantSentimentCard from "@/components/ai/TenantSentimentCard";
 import TenantGeoHeatmap from "@/components/ai/TenantGeoHeatmap";
 import TenantBaLeaderboard from "@/components/ai/TenantBaLeaderboard";
 // Embedded as tabs on this dashboard — the named exports are the
@@ -473,6 +474,27 @@ const ClientInner: React.FC = () => {
           }
         >
           <TenantInsightsPanel tenantId={tenantId} />
+        </Suspense>
+      )}
+
+      {/* "What people are saying" — consumer-sentiment card for this client's
+          own tenant. Mounted right after Insights, scoped to the same
+          useAuthStore().tenantId; renders nothing when no tenant is in scope
+          (and the card itself renders nothing when there's no feedback text
+          yet). Own Suspense so the tiles above paint without waiting on the
+          sentiment fetch. */}
+      {tenantId && (
+        <Suspense
+          fallback={
+            <div
+              className="spark-card p-6 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Loading sentiment…
+            </div>
+          }
+        >
+          <TenantSentimentCard tenantId={tenantId} />
         </Suspense>
       )}
 

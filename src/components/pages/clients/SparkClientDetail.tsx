@@ -34,6 +34,7 @@ import AskAiButton from "@/components/ai/AskAiButton";
 import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
 import TenantGoalsPanel from "@/components/ai/TenantGoalsPanel";
 import TenantInsightsPanel from "@/components/ai/TenantInsightsPanel";
+import TenantSentimentCard from "@/components/ai/TenantSentimentCard";
 import TenantGeoHeatmap from "@/components/ai/TenantGeoHeatmap";
 import TenantBaLeaderboard from "@/components/ai/TenantBaLeaderboard";
 
@@ -119,6 +120,13 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
       {/* Proactive insight cards for this client. */}
       <Suspense fallback={<CardFallback label="Loading insights…" />}>
         <TenantInsightsPanel tenantId={tenantId} />
+      </Suspense>
+
+      {/* "What people are saying" — consumer-sentiment card for this client.
+          Mounted right after Insights; the card renders nothing when there's
+          no feedback text yet. */}
+      <Suspense fallback={<CardFallback label="Loading sentiment…" />}>
+        <TenantSentimentCard tenantId={tenantId} />
       </Suspense>
 
       {/* Goals & pace-to-target for this client. */}
