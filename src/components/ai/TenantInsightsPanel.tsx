@@ -4,14 +4,17 @@ import { TenantInsightsQuery } from "@/api/queries/TenantInsightsQuery";
 import type { TenantInsightsQuery as TenantInsightsQueryType } from "@api/queries/__generated__/TenantInsightsQuery.graphql";
 
 /**
- * Proactive Insights panel for the dashboards.
+ * Bucket scoreboard panel for the dashboards.
  *
- * Loads `tenantInsights` for ONE client (tenant) and renders a stack of short
- * insight cards — each a bold `title`, a `detail` line, and an optional `metric`
- * badge — color-coded by `sentiment`:
- *   - "positive"  → lime/green accent
- *   - "neutral"   → muted
- *   - "attention" → amber/orange accent
+ * Loads `tenantInsights` for ONE client (tenant) and renders a fixed set of
+ * deterministic buckets as scoreboard tiles — each tile a small UPPERCASE mono
+ * category label (`title`), a big headline number (`metric`), a one-line
+ * takeaway (`detail`), and a leading icon mapped from the bucket `key`
+ * (reach / sampling / sales / new_audience / momentum). The visual deliberately
+ * matches <TenantKpiCharts>'s StatTile so Insights and KPIs read as one
+ * dashboard: a calm `spark-card` dark tile with a subtle top-border accent —
+ * not a wall of colored alerts. A restrained amber accent is reserved ONLY for
+ * `sentiment === "attention"`; everything else stays calm/neutral.
  *
  * Mounted on both dashboards (admin DashboardEvent and the client
  * SparkClientDashboard) near the KPI charts / Ask-AI button, scoped to the
@@ -21,46 +24,33 @@ import type { TenantInsightsQuery as TenantInsightsQueryType } from "@api/querie
  * lazy-loaded dashboard cards) so it loads the data the app's usual way and
  * doesn't block first paint.
  *
- * Dark-theme styled to match <TenantKpiCharts> and the dashboard cards. A small
- * "Updated …" caption shows when the insights were last computed. When the
- * tenant has nothing worth surfacing yet (`items` empty) we show a quiet empty
- * state instead.
+ * A small "UPDATED …" caption shows when the buckets were last computed. When
+ * the tenant has nothing worth surfacing yet (`items` empty) we show a quiet
+ * empty state instead.
  */
 
-type Sentiment = "positive" | "neutral" | "attention";
+// Restrained accent reserved for the "attention" sentiment. Every other
+// sentiment (positive / neutral / unknown) renders the same calm tile with a
+// muted top border, so the scoreboard stays scannable rather than alarm-heavy.
+const ATTENTION_ACCENT = "var(--spark-gold)";
+const CALM_ACCENT = "var(--spark-border)";
 
-type Accent = {
-  color: string;
-  bg: string;
-  border: string;
+const accentFor = (sentiment: string): string =>
+  sentiment.toLowerCase() === "attention" ? ATTENTION_ACCENT : CALM_ACCENT;
+
+// Bucket `key` → leading icon. Emoji is the convention across the AI surfaces
+// (e.g. the "✨ Ask AI" button). Unknown / null keys fall back to a quiet dot
+// so a legacy or new bucket never renders without a leading glyph.
+const ICON_FOR_KEY: Record<string, string> = {
+  reach: "👥",
+  sampling: "🧪",
+  sales: "🛒",
+  new_audience: "✨",
+  momentum: "📈",
 };
 
-// Sentiment → accent. Unknown / unexpected sentiments fall back to the muted
-// (neutral) treatment so a new backend value never renders as an unstyled card.
-const accentFor = (sentiment: string): Accent => {
-  const s = sentiment.toLowerCase() as Sentiment;
-  switch (s) {
-    case "positive":
-      return {
-        color: "var(--spark-lime)",
-        bg: "rgba(197,245,70,0.06)",
-        border: "rgba(197,245,70,0.30)",
-      };
-    case "attention":
-      return {
-        color: "var(--spark-orange, #ef5a2a)",
-        bg: "rgba(239,90,42,0.07)",
-        border: "rgba(239,90,42,0.32)",
-      };
-    case "neutral":
-    default:
-      return {
-        color: "rgba(255,255,255,0.55)",
-        bg: "rgba(255,255,255,0.03)",
-        border: "var(--spark-border)",
-      };
-  }
-};
+const iconFor = (key: string | null | undefined): string =>
+  (key && ICON_FOR_KEY[key.toLowerCase()]) || "•";
 
 /**
  * Format the `generatedAt` timestamp into a short, friendly caption: a relative
@@ -88,45 +78,56 @@ const formatUpdated = (raw: string | null | undefined): string | null => {
   });
 };
 
-/* ───────────────────────── insight card ───────────────────────── */
+/* ───────────────────────── scoreboard tile ───────────────────────── */
 
-const InsightCard: React.FC<{
+// Calm scoreboard tile — same `spark-card` dark tile + top-border accent as the
+// KPI StatTile (see TenantKpiCharts), so the two panels feel like one surface.
+// Layout top→bottom: leading icon + UPPERCASE mono category label, then a big
+// tab-num headline number (omitted gracefully when `metric` is empty), then the
+// muted `detail` one-liner.
+const InsightTile: React.FC<{
   title: string;
   detail: string;
   sentiment: string;
   metric?: string | null;
-}> = ({ title, detail, sentiment, metric }) => {
+  insightKey?: string | null;
+}> = ({ title, detail, sentiment, metric, insightKey }) => {
   const accent = accentFor(sentiment);
+  const icon = iconFor(insightKey);
+  const hasMetric = !!metric && metric.trim().length > 0;
   return (
     <div
-      className="rounded-2xl px-4 py-4"
-      style={{
-        background: accent.bg,
-        border: `1px solid ${accent.border}`,
-        borderLeft: `3px solid ${accent.color}`,
-      }}
+      className="spark-card rounded-2xl px-4 py-4"
+      style={{ borderTop: `2px solid ${accent}` }}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <span aria-hidden="true" className="text-[13px] leading-none shrink-0">
+          {icon}
+        </span>
         <p
-          className="font-bold text-sm leading-snug"
-          style={{ color: "var(--spark-text)", letterSpacing: "-0.01em" }}
+          className="mono text-[9px]"
+          style={{
+            letterSpacing: "0.18em",
+            color: "rgba(255,255,255,0.55)",
+            textTransform: "uppercase",
+          }}
         >
           {title}
         </p>
-        {metric && (
-          <span
-            className="mono text-[10px] tab-num px-2 py-1 rounded-full shrink-0"
-            style={{
-              letterSpacing: "0.10em",
-              color: accent.color,
-              background: accent.bg,
-              border: `1px solid ${accent.border}`,
-            }}
-          >
-            {metric}
-          </span>
-        )}
       </div>
+      {hasMetric && (
+        <p
+          className="display tab-num font-bold mt-1.5"
+          style={{
+            fontSize: "clamp(1.4rem, 3vw, 1.9rem)",
+            letterSpacing: "-0.03em",
+            lineHeight: 1.05,
+            color: "var(--spark-text)",
+          }}
+        >
+          {metric}
+        </p>
+      )}
       <p
         className="text-[13px] mt-1.5 leading-relaxed"
         style={{ color: "rgba(255,255,255,0.65)" }}
@@ -180,15 +181,30 @@ const TenantInsightsPanel: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         </p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {items.map((item, i) => (
-            <InsightCard
-              key={`${item.title}-${i}`}
-              title={item.title}
-              detail={item.detail}
-              sentiment={item.sentiment}
-              metric={item.metric}
-            />
-          ))}
+          {items.map((item, i) => {
+            // 5 fixed buckets read cleanly as a 2-col grid with the last tile
+            // (momentum) spanning full width so an odd count never leaves an
+            // awkward orphan. Anchored on the momentum bucket, with a fallback
+            // to the trailing odd tile for legacy / shorter payloads.
+            const isLastOdd =
+              items.length % 2 === 1 && i === items.length - 1;
+            const spanFull =
+              item.key?.toLowerCase() === "momentum" || isLastOdd;
+            return (
+              <div
+                key={`${item.key ?? item.title}-${i}`}
+                className={spanFull ? "md:col-span-2" : undefined}
+              >
+                <InsightTile
+                  title={item.title}
+                  detail={item.detail}
+                  sentiment={item.sentiment}
+                  metric={item.metric}
+                  insightKey={item.key}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
