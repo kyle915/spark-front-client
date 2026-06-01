@@ -31,6 +31,20 @@ export default defineConfig({
           if (id.includes("/@vis.gl/") || id.includes("/leaflet/") || id.includes("/react-leaflet/")) {
             return "vendor-maps";
           }
+          // Geo-heatmap leaf libs: d3-geo (+ its d3-array transitive) /
+          // topojson-client / us-atlas are self-contained and don't import
+          // React, so they're safe to split (same TDZ-safety rule as above —
+          // only React-free leaf libraries get their own chunk). The choropleth
+          // renders straight from these now (no react-simple-maps), so this
+          // keeps the map weight out of the main index chunk.
+          if (
+            id.includes("/d3-geo/") ||
+            id.includes("/d3-array/") ||
+            id.includes("/topojson-client/") ||
+            id.includes("/us-atlas/")
+          ) {
+            return "vendor-maps";
+          }
           if (id.includes("/xlsx/") || id.includes("/papaparse/")) {
             return "vendor-parsers";
           }

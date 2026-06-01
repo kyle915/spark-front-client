@@ -13,6 +13,7 @@ import AskAiButton from "@/components/ai/AskAiButton";
 import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
 import TenantGoalsPanel from "@/components/ai/TenantGoalsPanel";
 import TenantInsightsPanel from "@/components/ai/TenantInsightsPanel";
+import TenantGeoHeatmap from "@/components/ai/TenantGeoHeatmap";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useNavigate } from "react-router";
 
@@ -850,6 +851,26 @@ export default function DashboardIndex() {
             }
           >
             <TenantInsightsPanel tenantId={tenantId} />
+          </Suspense>
+        )}
+
+        {/* Geographic performance heatmap (US choropleth) for the active
+            tenant. Scoped to the same useAuthStore().tenantId as the KPI panel
+            above; renders nothing when no tenant is in scope. Self-suspends
+            like the other lazy dashboard cards so it doesn't block first
+            paint. */}
+        {tenantId && (
+          <Suspense
+            fallback={
+              <div
+                className="spark-card p-6 text-center text-sm"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
+                Loading geographic performance…
+              </div>
+            }
+          >
+            <TenantGeoHeatmap tenantId={tenantId} />
           </Suspense>
         )}
 
