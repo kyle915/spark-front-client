@@ -21,6 +21,15 @@ export const TenantAiAnswerQuery = graphql`
       ok
       answer
       reason
+      chart {
+        type
+        title
+        labels
+        series {
+          label
+          data
+        }
+      }
     }
   }
 `;
