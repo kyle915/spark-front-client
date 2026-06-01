@@ -1,83 +1,44 @@
 /**
- * Spark Academy — localStorage-backed knowledge base for BAs.
+ * Spark Academy — presentation helpers.
  *
- * Each tenant has a set of training modules: brand history, product
- * deep-dives, activation playbooks, compliance docs. Admins create
- * them; BAs read them; job postings link to required modules so a BA
- * has to complete the brief before clocking in.
+ * Training modules (brand history, product deep-dives, activation
+ * playbooks, compliance/policy docs) now live on the backend
+ * `AcademyModule` model and are loaded via the `academyModulesAdmin`
+ * and `academyModule` GraphQL queries. Admins create/edit/publish them
+ * on /academy/manage (backed by the create/update/delete mutations).
  *
- * Persistence: localStorage v1 (per-tenant). When the backend Academy
- * model ships (BACKEND-PATCH.md addendum) the writes swap to mutations.
+ * The backend `kind` is a free-form string, so the label/color helpers
+ * below degrade gracefully for any value the backend returns.
  */
 
-export type AcademyKind = "brand" | "product" | "playbook" | "compliance";
-
-export type AcademyAttachment = {
-  id: string;
-  name: string;
-  url: string;
-  kind: "pdf" | "video" | "link" | "image";
-};
-
-export type AcademyModule = {
-  id: string;
-  title: string;
-  kind: AcademyKind;
-  brand: string;
-  summary: string;
-  body: string; // markdown / plain text
-  attachments: AcademyAttachment[];
-  estMinutes: number;
-  requiredFor: string[]; // job uuids that require this
-  published: boolean;
-  createdAt: string;
-  updatedAt: string;
-};
-
-const KEY = (tenantId: string) => `@spark.academy/${tenantId}`;
-
-export const KIND_LABEL: Record<AcademyKind, string> = {
+const KIND_LABELS: Record<string, string> = {
   brand: "Brand 101",
   product: "Product training",
+  training: "Training",
   playbook: "Activation playbook",
+  policy: "Policy",
   compliance: "Compliance",
+  announcement: "Announcement",
 };
 
-export const KIND_COLOR: Record<AcademyKind, string> = {
+const KIND_COLORS: Record<string, string> = {
   brand: "var(--spark-lime)",
   product: "var(--spark-sky)",
+  training: "var(--spark-lime)",
   playbook: "var(--spark-purple)",
+  policy: "var(--spark-orange)",
   compliance: "var(--spark-orange)",
+  announcement: "var(--spark-sky)",
 };
 
-export const loadModules = (tenantId: string): AcademyModule[] => {
-  try {
-    const raw = localStorage.getItem(KEY(tenantId));
-    return raw ? (JSON.parse(raw) as AcademyModule[]) : [];
-  } catch {
-    return [];
-  }
-};
+const titleCase = (s: string): string =>
+  s
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
 
-export const saveModules = (tenantId: string, modules: AcademyModule[]) => {
-  try {
-    localStorage.setItem(KEY(tenantId), JSON.stringify(modules));
-  } catch {
-    /* quota or private mode — ignore */
-  }
-};
+export const kindLabel = (kind: string): string =>
+  KIND_LABELS[kind?.toLowerCase()] ?? (kind ? titleCase(kind) : "Module");
 
-export const newModule = (brand: string): AcademyModule => ({
-  id: `mod_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-  title: "Untitled module",
-  kind: "brand",
-  brand,
-  summary: "",
-  body: "",
-  attachments: [],
-  estMinutes: 5,
-  requiredFor: [],
-  published: false,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-});
+export const kindColor = (kind: string): string =>
+  KIND_COLORS[kind?.toLowerCase()] ?? "var(--spark-lime)";

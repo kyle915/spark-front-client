@@ -14,15 +14,27 @@ import { PostJobMutation } from "@/api/mutations/PostJobMutation";
 import type { PostJobMutation as PostJobMutationType } from "@api/mutations/__generated__/PostJobMutation.graphql";
 import { UpdateJobMutation } from "@/api/mutations/UpdateJobMutation";
 import type { UpdateJobMutation as UpdateJobMutationType } from "@api/mutations/__generated__/UpdateJobMutation.graphql";
+import { AcademyModulesAdminQuery } from "@/api/queries/AcademyModulesAdminQuery";
+import type { AcademyModulesAdminQuery as AcademyModulesAdminQueryType } from "@api/queries/__generated__/AcademyModulesAdminQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
-import {
-  loadModules,
-  KIND_COLOR,
-  KIND_LABEL,
-  type AcademyModule,
-} from "@/lib/academy";
+import { kindColor, kindLabel } from "@/lib/academy";
+
+/**
+ * A required-reading row, sourced from the backend `academyModulesAdmin`
+ * query. The job brief stores the linked modules by `uuid`.
+ */
+type AcademyModuleRow = {
+  uuid: string;
+  title: string;
+  kind: string;
+  body: string;
+  published: boolean;
+};
+
+const readMinutes = (body: string): number =>
+  Math.max(1, Math.round(body.split(/\s+/).filter(Boolean).length / 200));
 
 /**
  * Job brief lives in localStorage keyed by job uuid until a backend
@@ -926,7 +938,6 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const { isAdmin } = useSparkRole();
   const [brief, setBrief] = useState<JobBrief>(() => loadBrief(uuid));
   const [briefOpen, setBriefOpen] = useState(false);
-  const [modules, setModules] = useState<AcademyModule[]>([]);
   const [showPost, setShowPost] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   // Bumped after a successful Post to force the job query to refetch so the
@@ -937,9 +948,25 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   useEffect(() => {
     setBrief(loadBrief(uuid));
   }, [uuid]);
-  useEffect(() => {
-    if (tenantId) setModules(loadModules(tenantId));
-  }, [tenantId]);
+
+  const academyData = useLazyLoadQuery<AcademyModulesAdminQueryType>(
+    AcademyModulesAdminQuery,
+    { filters: tenantId ? { tenantId } : {} },
+    { fetchPolicy: "store-and-network" },
+  );
+  const modules = useMemo<AcademyModuleRow[]>(
+    () =>
+      (academyData.academyModulesAdmin ?? [])
+        .filter((m): m is NonNullable<typeof m> => Boolean(m))
+        .map((m) => ({
+          uuid: String(m.uuid),
+          title: m.title,
+          kind: m.kind,
+          body: m.body,
+          published: m.published,
+        })),
+    [academyData],
+  );
 
   const updateBrief = (patch: Partial<JobBrief>) => {
     const next = { ...brief, ...patch };
@@ -948,13 +975,13 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   };
 
   const linkedModules = useMemo(
-    () => modules.filter((m) => brief.requiredModules.includes(m.id)),
+    () => modules.filter((m) => brief.requiredModules.includes(m.uuid)),
     [modules, brief.requiredModules],
   );
   const unlinkedModules = useMemo(
     () =>
       modules.filter(
-        (m) => !brief.requiredModules.includes(m.id) && m.published,
+        (m) => !brief.requiredModules.includes(m.uuid) && m.published,
       ),
     [modules, brief.requiredModules],
   );
@@ -1328,8 +1355,8 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
             >
               <option value="">+ Link an Academy module</option>
               {unlinkedModules.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {KIND_LABEL[m.kind]} · {m.title}
+                <option key={m.uuid} value={m.uuid}>
+                  {kindLabel(m.kind)} · {m.title}
                 </option>
               ))}
             </select>
@@ -1348,10 +1375,10 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
         ) : (
           <div className="space-y-2">
             {linkedModules.map((m) => {
-              const color = KIND_COLOR[m.kind];
+              const color = kindColor(m.kind);
               return (
                 <div
-                  key={m.id}
+                  key={m.uuid}
                   className="flex items-center gap-3 p-3 rounded-xl transition"
                   style={{
                     background: "rgba(255,255,255,0.025)",
@@ -1365,7 +1392,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       color,
                     }}
                   >
-                    {KIND_LABEL[m.kind].split(" ")[0].toUpperCase()}
+                    {kindLabel(m.kind).split(" ")[0].toUpperCase()}
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{m.title}</p>
@@ -1376,12 +1403,11 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                         color: "rgba(255,255,255,0.45)",
                       }}
                     >
-                      {m.estMinutes} MIN · {m.attachments.length} ATTACHMENT
-                      {m.attachments.length === 1 ? "" : "S"}
+                      ~{readMinutes(m.body)} MIN READ
                     </p>
                   </div>
                   <button
-                    onClick={() => navigate(`/academy/${m.id}`)}
+                    onClick={() => navigate(`/academy/${m.uuid}`)}
                     className="mono text-[10px]"
                     style={{
                       letterSpacing: "0.14em",
@@ -1395,7 +1421,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       onClick={() =>
                         updateBrief({
                           requiredModules: brief.requiredModules.filter(
-                            (id) => id !== m.id,
+                            (id) => id !== m.uuid,
                           ),
                         })
                       }
