@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
-import { geoAlbersUsa } from "d3-geo";
-import { ComposableMap, Geographies, Geography } from "react-simple-maps";
+import { geoAlbersUsa, geoPath } from "d3-geo";
+import { feature } from "topojson-client";
 import statesTopoJson from "us-atlas/states-10m.json";
 import { TenantMarketPerformanceQuery } from "@/api/queries/TenantMarketPerformanceQuery";
 import type { TenantMarketPerformanceQuery as TenantMarketPerformanceQueryType } from "@api/queries/__generated__/TenantMarketPerformanceQuery.graphql";
@@ -14,8 +14,10 @@ import type { TenantMarketPerformanceQuery as TenantMarketPerformanceQueryType }
  * ramp from a muted base → the bright spark-lime accent — plus a hover tooltip
  * per state, a low→high color legend, and a compact "Top states" ranked list
  * beside the map. The map geometry is the static `us-atlas` states TopoJSON
- * (bundled by Vite), joined to the backend's 2-letter `state` codes through a
- * static 50-state FIPS lookup (us-atlas keys geographies by FIPS id).
+ * (bundled by Vite), decoded to GeoJSON features with `topojson-client` and
+ * drawn as SVG paths via a d3-geo Albers-USA projection — no map-library
+ * dependency. Each feature is joined to the backend's 2-letter `state` codes
+ * through a static 50-state FIPS lookup (us-atlas keys features by FIPS id).
  *
  * A KPI selector (Consumers reached / Samples distributed / Products sold /
  * Total engagements / Events) chooses which metric colors the map; default is
@@ -130,6 +132,40 @@ const codeForGeoId = (id: string | number | undefined): string | undefined => {
   return CODE_BY_FIPS[key];
 };
 
+/* ─────────────────────── map geometry (topojson → svg paths) ─────────────────────── */
+
+// SVG user-space box the projection is fit to; the <svg> scales responsively to
+// its container via viewBox while staying within a bounded height (see render).
+const MAP_W = 800;
+const MAP_H = 420;
+
+// One GeoJSON feature per state geometry. `feature()` decodes the us-atlas
+// states TopoJSON object into a FeatureCollection; we read its `.features`
+// once at module load (pure + cheap, no React peer). Each feature's `id` is the
+// 2-digit FIPS string we join to the backend rows via codeForGeoId.
+type StateFeature = {
+  id?: string | number;
+  properties: { name?: string } & Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+/* eslint-disable @typescript-eslint/no-explicit-any -- topojson/d3-geo decode:
+   the us-atlas Topology is a hand-shimmed JSON module, so we hand topojson's
+   feature() and d3-geo's projection the structural objects via `any` (exactly
+   the published topojson-client recipe) and re-type the decoded result. */
+const STATE_FEATURES: StateFeature[] = (
+  feature(statesTopoJson as any, (statesTopoJson as any).objects.states) as any
+).features;
+
+// Albers-USA projection fit to the MAP_W×MAP_H box over the full state set, and
+// a path generator that turns each feature into an SVG `d` string.
+const mapProjection = geoAlbersUsa().fitSize([MAP_W, MAP_H], {
+  type: "FeatureCollection",
+  features: STATE_FEATURES,
+} as any);
+const mapPathGen = geoPath(mapProjection);
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 /* ─────────────────────── color ramp ─────────────────────── */
 
 // Muted base (a dark spark-surface tone) → bright spark-lime accent. We
@@ -225,6 +261,9 @@ const Tooltip: React.FC<{ tip: NonNullable<TooltipState> }> = ({ tip }) => {
 const TenantGeoHeatmap: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const [metricKey, setMetricKey] = useState<MetricKey>("consumersReached");
   const [tip, setTip] = useState<TooltipState>(null);
+  // Which state path the cursor is over — drives the lime hover fill that RSM's
+  // style.hover used to handle. Matched against each feature's FIPS `id`.
+  const [hoverId, setHoverId] = useState<string | number | null>(null);
 
   const data = useLazyLoadQuery<TenantMarketPerformanceQueryType>(
     TenantMarketPerformanceQuery,
@@ -262,13 +301,6 @@ const TenantGeoHeatmap: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         .filter((r) => r[metricKey] > 0)
         .sort((a, b) => b[metricKey] - a[metricKey]),
     [rows, metricKey],
-  );
-
-  // Albers-USA projection sized to the map box; passed as a function (RSM
-  // accepts a projection function directly), so we control fit explicitly.
-  const projection = useMemo(
-    () => geoAlbersUsa().scale(620).translate([400, 195]),
-    [],
   );
 
   // Empty: no placed activity anywhere. Quiet card instead of a blank map.
@@ -343,78 +375,69 @@ const TenantGeoHeatmap: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             style={{ width: "100%", maxHeight: 360 }}
             onMouseLeave={() => setTip(null)}
           >
-            <ComposableMap
-              projection={projection}
-              width={800}
-              height={420}
+            <svg
+              viewBox={`0 0 ${MAP_W} ${MAP_H}`}
+              role="img"
+              aria-label={`US map shaded by ${metric.label.toLowerCase()} per state`}
+              preserveAspectRatio="xMidYMid meet"
               style={{ width: "100%", height: "auto", maxHeight: 360 }}
             >
-              <Geographies geography={statesTopoJson}>
-                {({ geographies }) =>
-                  geographies.map((geo) => {
-                    const code = codeForGeoId(geo.id);
-                    const row = code ? byCode[code] : undefined;
-                    const value = row ? row[metricKey] : 0;
-                    const fill =
-                      row && value > 0
-                        ? rampColor(maxValue > 0 ? value / maxValue : 0)
-                        : EMPTY_FILL;
-                    return (
-                      <Geography
-                        key={geo.rsmKey}
-                        geography={geo}
-                        onMouseEnter={(e) => {
-                          if (!row || !code) return;
-                          setTip({
-                            row,
-                            name:
-                              STATE_BY_CODE[code]?.name ??
-                              (geo.properties.name as string) ??
-                              code,
-                            x: e.nativeEvent.offsetX,
-                            y: e.nativeEvent.offsetY,
-                          });
-                        }}
-                        onMouseMove={(e) => {
-                          if (!row) return;
-                          setTip((prev) =>
-                            prev
-                              ? {
-                                  ...prev,
-                                  x: e.nativeEvent.offsetX,
-                                  y: e.nativeEvent.offsetY,
-                                }
-                              : prev,
-                          );
-                        }}
-                        onMouseLeave={() => setTip(null)}
-                        style={{
-                          default: {
-                            fill,
-                            stroke: STROKE,
-                            strokeWidth: 0.5,
-                            outline: "none",
-                          },
-                          hover: {
-                            fill: row ? "var(--spark-lime)" : EMPTY_FILL,
-                            stroke: STROKE,
-                            strokeWidth: 0.75,
-                            outline: "none",
-                            cursor: row ? "pointer" : "default",
-                          },
-                          pressed: {
-                            fill: row ? "var(--spark-lime)" : EMPTY_FILL,
-                            stroke: STROKE,
-                            strokeWidth: 0.75,
-                            outline: "none",
-                          },
-                        }}
-                      />
-                    );
-                  })
-                }
-              </Geographies>
-            </ComposableMap>
+              {STATE_FEATURES.map((feat) => {
+                const code = codeForGeoId(feat.id);
+                const row = code ? byCode[code] : undefined;
+                const value = row ? row[metricKey] : 0;
+                const baseFill =
+                  row && value > 0
+                    ? rampColor(maxValue > 0 ? value / maxValue : 0)
+                    : EMPTY_FILL;
+                const hovered = hoverId != null && feat.id === hoverId;
+                const fill = hovered && row ? "var(--spark-lime)" : baseFill;
+                const d = mapPathGen(feat as never);
+                if (!d) return null;
+                return (
+                  <path
+                    key={String(feat.id)}
+                    d={d}
+                    fill={fill}
+                    stroke={STROKE}
+                    strokeWidth={hovered ? 0.75 : 0.5}
+                    style={{
+                      outline: "none",
+                      cursor: row ? "pointer" : "default",
+                    }}
+                    onMouseEnter={(e) => {
+                      setHoverId(feat.id ?? null);
+                      if (!row || !code) return;
+                      setTip({
+                        row,
+                        name:
+                          STATE_BY_CODE[code]?.name ??
+                          (feat.properties.name as string) ??
+                          code,
+                        x: e.nativeEvent.offsetX,
+                        y: e.nativeEvent.offsetY,
+                      });
+                    }}
+                    onMouseMove={(e) => {
+                      if (!row) return;
+                      setTip((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              x: e.nativeEvent.offsetX,
+                              y: e.nativeEvent.offsetY,
+                            }
+                          : prev,
+                      );
+                    }}
+                    onMouseLeave={() => {
+                      setHoverId((prev) => (prev === feat.id ? null : prev));
+                      setTip(null);
+                    }}
+                  />
+                );
+              })}
+            </svg>
             {tip && <Tooltip tip={tip} />}
           </div>
 
