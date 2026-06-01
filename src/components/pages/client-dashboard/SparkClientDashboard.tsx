@@ -31,6 +31,7 @@ import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import AskAiButton from "@/components/ai/AskAiButton";
 import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
+import TenantKpiComparison from "@/components/ai/TenantKpiComparison";
 import TenantGoalsPanel from "@/components/ai/TenantGoalsPanel";
 import TenantInsightsPanel from "@/components/ai/TenantInsightsPanel";
 import TenantSentimentCard from "@/components/ai/TenantSentimentCard";
@@ -436,6 +437,27 @@ const ClientInner: React.FC = () => {
           }
         >
           <TenantKpiCharts tenantId={tenantId} />
+        </Suspense>
+      )}
+
+      {/* Period comparison — each headline KPI this-period vs last-period with
+          up/down deltas. Mounted right after the KPI panel, scoped to the same
+          useAuthStore().tenantId; renders nothing when no tenant is in scope
+          (and the card itself renders nothing when there's no data for the
+          period). Own Suspense so the tiles above paint without waiting on the
+          comparison fetch. */}
+      {tenantId && (
+        <Suspense
+          fallback={
+            <div
+              className="spark-card p-6 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Loading period comparison…
+            </div>
+          }
+        >
+          <TenantKpiComparison tenantId={tenantId} />
         </Suspense>
       )}
 

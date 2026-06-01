@@ -4235,6 +4235,7 @@ type Query {
   tenantKpis(tenantId: ID!, year: Int): TenantKpis!
   tenantInsights(tenantId: ID!): TenantInsights!
   tenantSentiment(tenantId: ID!, year: Int): TenantSentiment
+  tenantKpiComparison(tenantId: ID!, period: String! = "month"): TenantKpiComparison
   tenantGoals(tenantId: ID!, year: Int): TenantGoals!
   tenantMarketPerformance(tenantId: ID!, year: Int): [MarketPerformance!]!
   tenantBaLeaderboard(tenantId: ID!, year: Int): [BaLeaderboardEntry!]!
@@ -6588,6 +6589,8 @@ type TenantInsights { generatedAt: String  items: [TenantInsightItem!]! }
 type SentimentTheme { label: String!  tone: String! }
 type SentimentQuote { text: String!  tone: String! }
 type TenantSentiment { overallSentiment: String!  positivePct: Int!  summary: String!  themes: [SentimentTheme!]!  quotes: [SentimentQuote!]!  sampleSize: Int!  generatedAt: DateTime }
+type TenantKpiTotals { events: Int!  recaps: Int!  consumersReached: Int!  samplesDistributed: Int!  productsSold: Int!  cansSold: Int!  packsSold: Int!  totalEngagements: Int!  firstTimeConsumers: Int!  brandAwareConsumers: Int!  willingToPurchase: Int! }
+type TenantKpiComparison { period: String!  currentLabel: String!  previousLabel: String!  current: TenantKpiTotals!  previous: TenantKpiTotals! }
 type TenantGoalItem { metric: String!  label: String!  target: Int!  current: Int!  pacePct: Float! }
 type TenantGoals { year: Int!  items: [TenantGoalItem!]! }
 type MarketPerformance { state: String!  eventCount: Int!  recapCount: Int!  consumersReached: Int!  samplesDistributed: Int!  productsSold: Int!  totalEngagements: Int! }

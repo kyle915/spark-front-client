@@ -32,6 +32,7 @@ import Layout from "@/layout/Layout";
 import useSparkRole from "@/hooks/useSparkRole";
 import AskAiButton from "@/components/ai/AskAiButton";
 import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
+import TenantKpiComparison from "@/components/ai/TenantKpiComparison";
 import TenantGoalsPanel from "@/components/ai/TenantGoalsPanel";
 import TenantInsightsPanel from "@/components/ai/TenantInsightsPanel";
 import TenantSentimentCard from "@/components/ai/TenantSentimentCard";
@@ -115,6 +116,13 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           Own Suspense so the header paints without waiting on the fetch. */}
       <Suspense fallback={<CardFallback label="Loading program KPIs…" />}>
         <TenantKpiCharts tenantId={tenantId} />
+      </Suspense>
+
+      {/* Period comparison — each headline KPI this-period vs last-period with
+          up/down deltas. Mounted right after the KPI panel; the card renders
+          nothing when there's no data for the period. */}
+      <Suspense fallback={<CardFallback label="Loading period comparison…" />}>
+        <TenantKpiComparison tenantId={tenantId} />
       </Suspense>
 
       {/* Proactive insight cards for this client. */}
