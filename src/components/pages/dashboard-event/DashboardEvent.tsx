@@ -11,6 +11,7 @@ import AttentionEngine from "./AttentionEngine";
 import PaceWidget from "./PaceWidget";
 import AskAiButton from "@/components/ai/AskAiButton";
 import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
+import TenantKpiComparison from "@/components/ai/TenantKpiComparison";
 import TenantGoalsPanel from "@/components/ai/TenantGoalsPanel";
 import TenantInsightsPanel from "@/components/ai/TenantInsightsPanel";
 import TenantSentimentCard from "@/components/ai/TenantSentimentCard";
@@ -815,6 +816,27 @@ export default function DashboardIndex() {
             }
           >
             <TenantKpiCharts tenantId={tenantId} />
+          </Suspense>
+        )}
+
+        {/* Period comparison — each headline KPI this-period vs last-period
+            with up/down deltas. Mounted right after the KPI panel, scoped to the
+            same useAuthStore().tenantId; renders nothing when no tenant is in
+            scope (and the card itself renders nothing when there's no data for
+            the period). Self-suspends like the other lazy dashboard cards so it
+            doesn't block first paint. */}
+        {tenantId && (
+          <Suspense
+            fallback={
+              <div
+                className="spark-card p-6 text-center text-sm"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
+                Loading period comparison…
+              </div>
+            }
+          >
+            <TenantKpiComparison tenantId={tenantId} />
           </Suspense>
         )}
 
