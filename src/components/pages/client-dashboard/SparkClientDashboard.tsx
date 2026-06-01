@@ -31,6 +31,7 @@ import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import AskAiButton from "@/components/ai/AskAiButton";
 import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
+import TenantInsightsPanel from "@/components/ai/TenantInsightsPanel";
 // Embedded as tabs on this dashboard — the named exports are the
 // Layout-less bodies so we don't double-render the admin shell.
 import { ApprovalsBody } from "@/components/pages/approvals/SparkApprovals";
@@ -431,6 +432,25 @@ const ClientInner: React.FC = () => {
           }
         >
           <TenantKpiCharts tenantId={tenantId} />
+        </Suspense>
+      )}
+
+      {/* Proactive insight cards for this client's own tenant. Scoped to the
+          same useAuthStore().tenantId as the KPI panel above; renders nothing
+          when no tenant is in scope. Own Suspense so the tiles above paint
+          without waiting on the insights fetch. */}
+      {tenantId && (
+        <Suspense
+          fallback={
+            <div
+              className="spark-card p-6 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Loading insights…
+            </div>
+          }
+        >
+          <TenantInsightsPanel tenantId={tenantId} />
         </Suspense>
       )}
 

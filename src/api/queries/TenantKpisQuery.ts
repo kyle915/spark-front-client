@@ -15,10 +15,15 @@ import { graphql } from "react-relay";
  * entry carries that month's recaps, engagements and samples for the trend
  * chart. When the tenant has no activity yet the totals are all zero and
  * `monthlyTrend` may be empty — the panel renders an empty state in that case.
+ *
+ * The optional `year` narrows the rollup to a single calendar year (Jan→current
+ * month for the current year, Jan→Dec for a past year). Pass null for the
+ * all-time / trailing-12-month view. The <TenantKpiCharts> year dropdown drives
+ * this; default is the current calendar year.
  */
 export const TenantKpisQuery = graphql`
-  query TenantKpisQuery($tenantId: ID!) {
-    tenantKpis(tenantId: $tenantId) {
+  query TenantKpisQuery($tenantId: ID!, $year: Int) {
+    tenantKpis(tenantId: $tenantId, year: $year) {
       events
       recaps
       consumersReached

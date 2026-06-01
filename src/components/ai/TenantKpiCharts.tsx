@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import {
   Chart as ChartJS,
@@ -190,12 +190,38 @@ const StatTile: React.FC<{
   );
 };
 
+/* ───────────────────────── year dropdown ───────────────────────── */
+
+// "All time" is modelled as null (trailing-12-month / all-time view on the
+// backend); a real year selects that calendar year's totals + Jan→current-month
+// (current year) or Jan→Dec (past year).
+type YearChoice = number | null;
+
+const YEAR_ALL = "all" as const;
+
+const useYearOptions = () =>
+  useMemo(() => {
+    const now = new Date().getFullYear();
+    return [
+      { value: String(now), label: "This year", year: now as YearChoice },
+      { value: String(now - 1), label: "Last year", year: (now - 1) as YearChoice },
+      { value: YEAR_ALL, label: "All time", year: null as YearChoice },
+    ];
+  }, []);
+
 /* ───────────────────────── panel ───────────────────────── */
 
 const TenantKpiCharts: React.FC<{ tenantId: string }> = ({ tenantId }) => {
+  const yearOptions = useYearOptions();
+  // Default = This year (current calendar year). The selected value drives the
+  // query variable below, so changing it refetches via useLazyLoadQuery.
+  const [yearValue, setYearValue] = useState<string>(yearOptions[0].value);
+  const selectedYear: YearChoice =
+    yearOptions.find((o) => o.value === yearValue)?.year ?? null;
+
   const data = useLazyLoadQuery<TenantKpisQueryType>(
     TenantKpisQuery,
-    { tenantId },
+    { tenantId, year: selectedYear },
     { fetchPolicy: "store-or-network" },
   );
 
@@ -241,12 +267,38 @@ const TenantKpiCharts: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         >
           Program KPIs
         </h2>
-        <p
-          className="mono text-[10px]"
-          style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
-        >
-          {kpis.events > 0 ? `${fmt(kpis.events)} EVENTS · ${fmt(kpis.recaps)} RECAPS` : "ALL TIME"}
-        </p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <p
+            className="mono text-[10px]"
+            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+          >
+            {kpis.events > 0
+              ? `${fmt(kpis.events)} EVENTS · ${fmt(kpis.recaps)} RECAPS`
+              : selectedYear === null
+                ? "ALL TIME"
+                : `${selectedYear}`}
+          </p>
+          {/* Compact year dropdown — drives the $year query variable above, so
+              selecting a year refetches the KPI rollup. Default = This year. */}
+          <select
+            aria-label="KPI time range"
+            value={yearValue}
+            onChange={(e) => setYearValue(e.target.value)}
+            className="mono text-[11px] rounded-lg px-2.5 py-1.5 cursor-pointer"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+              letterSpacing: "0.06em",
+            }}
+          >
+            {yearOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {!hasActivity ? (
