@@ -4,6 +4,8 @@ import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import { AmbassadorsBookedOnDateQuery } from "@/api/queries/AmbassadorsBookedOnDateQuery";
 import type { AmbassadorsBookedOnDateQuery as AmbassadorsBookedOnDateQueryType } from "@api/queries/__generated__/AmbassadorsBookedOnDateQuery.graphql";
+import { StaffingSuggestionsQuery } from "@/api/queries/StaffingSuggestionsQuery";
+import type { StaffingSuggestionsQuery as StaffingSuggestionsQueryType } from "@api/queries/__generated__/StaffingSuggestionsQuery.graphql";
 import { InviteAmbassadorToShiftMutation } from "@/api/mutations/InviteAmbassadorToShiftMutation";
 import type { InviteAmbassadorToShiftMutation as InviteAmbassadorToShiftMutationType } from "@api/mutations/__generated__/InviteAmbassadorToShiftMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -57,6 +59,247 @@ type Row = {
   // substring match, 0 = neither.
   localityScore: number;
 };
+
+const initials = (name: string): string =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "BA";
+
+type Suggestion =
+  StaffingSuggestionsQueryType["response"]["staffingSuggestions"][number];
+
+/**
+ * "Suggested for this gig" — the server-ranked shortlist that sits at
+ * the TOP of the modal, above the browse-all list. The backend scores
+ * + orders the BAs (best fit first); we render the order we get and
+ * surface each suggestion's `reasons` as chips.
+ *
+ * Clicking a row invites that BA immediately via the SAME single-BA
+ * invite path the rest of the modal uses (matched by `baId` →
+ * ambassadorId). Rows already on the shift (already-invited or just
+ * invited this session) are disabled + labelled "✓ INVITED" — the
+ * `done` set is the union the parent already tracks, so a BA invited
+ * from the list below also flips here and vice-versa.
+ *
+ * Loads behind its own Suspense boundary so the main BA list paints
+ * first; when the server returns no suggestions this renders nothing
+ * and the browse-all list stands alone.
+ */
+const SuggestionsInner: React.FC<{
+  eventId: string;
+  done: Set<string>;
+  pendingIds: Set<string>;
+  onInvite: (baId: string, name: string) => void;
+}> = ({ eventId, done, pendingIds, onInvite }) => {
+  const data = useLazyLoadQuery<StaffingSuggestionsQueryType>(
+    StaffingSuggestionsQuery,
+    { eventId, limit: 20 },
+    { fetchPolicy: "store-or-network" },
+  );
+
+  // Pre-ranked by the server — render in the order we receive.
+  const suggestions: Suggestion[] = useMemo(
+    () => (data?.staffingSuggestions ?? []).filter(Boolean),
+    [data],
+  );
+
+  // Empty → render nothing so the existing list is the whole modal.
+  if (suggestions.length === 0) return null;
+
+  return (
+    <div style={{ borderBottom: "1px solid var(--spark-border)" }}>
+      <div className="flex items-center justify-between px-5 pt-4 pb-2">
+        <p
+          className="mono text-[10px]"
+          style={{
+            letterSpacing: "0.18em",
+            color: "var(--spark-lime)",
+          }}
+        >
+          ✦ SUGGESTED FOR THIS GIG
+        </p>
+        <span
+          className="mono text-[9px]"
+          style={{
+            letterSpacing: "0.16em",
+            color: "rgba(255,255,255,0.35)",
+          }}
+        >
+          TAP TO INVITE
+        </span>
+      </div>
+      {suggestions.map((s, i) => {
+        const invited = done.has(s.baId);
+        const busy = pendingIds.has(s.baId);
+        const onClick = () => {
+          if (invited || busy) return;
+          onInvite(s.baId, s.name);
+        };
+        return (
+          <div
+            key={s.baId}
+            onClick={onClick}
+            className="flex items-center gap-3 px-5 py-3"
+            style={{
+              borderTop: "1px solid rgba(255,255,255,0.04)",
+              cursor: invited || busy ? "default" : "pointer",
+              background: invited
+                ? "rgba(197,245,70,0.04)"
+                : "transparent",
+              opacity: invited ? 0.7 : 1,
+            }}
+            title={invited ? undefined : `Invite ${s.name} to this shift`}
+          >
+            {/* Rank # */}
+            <span
+              className="mono text-[11px] shrink-0 text-right"
+              style={{
+                width: 18,
+                color:
+                  i === 0 ? "var(--spark-lime)" : "rgba(255,255,255,0.4)",
+                fontWeight: i === 0 ? 700 : 400,
+              }}
+            >
+              {i + 1}
+            </span>
+            <div
+              className="rounded-full grid place-items-center font-bold shrink-0"
+              style={{
+                width: 32,
+                height: 32,
+                background: "rgba(197,245,70,0.10)",
+                color: "var(--spark-lime)",
+                fontSize: 12,
+              }}
+            >
+              {initials(s.name)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                {s.isFavorited && (
+                  <span
+                    style={{ color: "var(--spark-lime)", fontSize: 12 }}
+                    title="Favorited BA"
+                    aria-label="Favorited"
+                  >
+                    ★
+                  </span>
+                )}
+                <span className="truncate">{s.name}</span>
+                {s.avgRating != null && (
+                  <span
+                    className="mono text-[10px] shrink-0"
+                    style={{
+                      letterSpacing: "0.1em",
+                      color: "var(--spark-gold)",
+                    }}
+                    title={`${s.avgRating.toFixed(1)} / 5 average rating`}
+                  >
+                    ★ {s.avgRating.toFixed(1)}
+                  </span>
+                )}
+              </p>
+              {/* Reasons rendered as small chips. */}
+              <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                {s.reasons.map((reason, ri) => (
+                  <span
+                    key={ri}
+                    className="mono text-[9px] shrink-0"
+                    style={{
+                      letterSpacing: "0.12em",
+                      color: "rgba(255,255,255,0.6)",
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid var(--spark-border)",
+                      padding: "1px 6px",
+                      borderRadius: 999,
+                    }}
+                  >
+                    {reason}
+                  </span>
+                ))}
+              </div>
+            </div>
+            {/* Score indicator — number over a small bar. */}
+            <div className="shrink-0 flex flex-col items-end gap-1" style={{ width: 44 }}>
+              {invited ? (
+                <span
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "var(--spark-lime)",
+                  }}
+                >
+                  ✓ INVITED
+                </span>
+              ) : busy ? (
+                <span
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.16em",
+                    color: "rgba(255,255,255,0.55)",
+                  }}
+                >
+                  …
+                </span>
+              ) : (
+                <>
+                  <span
+                    className="mono text-[12px] font-bold leading-none"
+                    style={{ color: "var(--spark-lime)" }}
+                    title={`Match score ${s.score} / 100`}
+                  >
+                    {s.score}
+                  </span>
+                  <div
+                    className="h-1 w-full overflow-hidden rounded-full"
+                    style={{ background: "rgba(255,255,255,0.08)" }}
+                    aria-hidden
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.max(0, Math.min(100, s.score))}%`,
+                        background: "var(--spark-lime)",
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const SuggestionsSection: React.FC<{
+  eventId: string;
+  done: Set<string>;
+  pendingIds: Set<string>;
+  onInvite: (baId: string, name: string) => void;
+}> = (props) => (
+  <Suspense
+    fallback={
+      <div
+        className="px-5 py-4 mono text-[10px]"
+        style={{
+          letterSpacing: "0.18em",
+          color: "rgba(255,255,255,0.45)",
+          borderBottom: "1px solid var(--spark-border)",
+        }}
+      >
+        ✦ FINDING BEST MATCHES…
+      </div>
+    }
+  >
+    <SuggestionsInner {...props} />
+  </Suspense>
+);
 
 const Inner: React.FC<{
   eventId: string;
@@ -216,6 +459,64 @@ const Inner: React.FC<{
     });
   };
 
+  // Fires exactly one invite mutation for a single BA (by Relay
+  // ambassador id) against this event. Resolves true on success.
+  // Shared by both the batch "Invite N" footer flow AND the
+  // "Suggested for this gig" rows so there's a single code path that
+  // touches the InviteAmbassadorToShift mutation. Marks the row done
+  // in optimisticDone (so it flips to "✓ INVITED" in every list that
+  // matches the id) and threads the new AmbassadorEvent uuid up to
+  // onInvited. `silent` suppresses the per-row error toast so the
+  // batch flow can roll its failures up into one summary toast.
+  const inviteOne = (
+    baId: string,
+    name: string,
+    silent = false,
+  ): Promise<boolean> => {
+    setPendingIds((prev) => {
+      const next = new Set(prev);
+      next.add(baId);
+      return next;
+    });
+    return new Promise<boolean>((resolve) => {
+      commitInvite({
+        variables: { input: { ambassadorId: baId, eventId } },
+        onCompleted: (resp) => {
+          const r = resp.inviteAmbassadorToShift;
+          let ok = false;
+          if (r?.success) {
+            ok = true;
+            setOptimisticDone((prev) => {
+              const next = new Set(prev);
+              next.add(baId);
+              return next;
+            });
+            if (r.ambassadorEventUuid) {
+              onInvited?.(String(r.ambassadorEventUuid));
+            }
+          } else if (!silent) {
+            showAlert(r?.message || `Couldn't invite ${name}.`, "error");
+          }
+          setPendingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(baId);
+            return next;
+          });
+          resolve(ok);
+        },
+        onError: (err) => {
+          if (!silent) showAlert(`${name}: ${err.message}`, "error");
+          setPendingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(baId);
+            return next;
+          });
+          resolve(false);
+        },
+      });
+    });
+  };
+
   // Fires one invite mutation per selected BA. Sequential rather than
   // Promise.all so we get well-ordered toasts + can show "X of N"
   // progress in the footer button. For a typical 2–5 BA batch the
@@ -229,53 +530,16 @@ const Inner: React.FC<{
       showAlert("Nothing new to invite — already on the shift.", "info");
       return;
     }
-    setPendingIds(new Set(targets.map((t) => t.id)));
     let okCount = 0;
     let failCount = 0;
     for (const row of targets) {
       // Each iteration awaits the mutation so the in-flight set
       // shrinks one row at a time — gives the user real progress.
-      await new Promise<void>((resolve) => {
-        commitInvite({
-          variables: { input: { ambassadorId: row.id, eventId } },
-          onCompleted: (resp) => {
-            const r = resp.inviteAmbassadorToShift;
-            if (r?.success) {
-              okCount += 1;
-              setOptimisticDone((prev) => {
-                const next = new Set(prev);
-                next.add(row.id);
-                return next;
-              });
-              if (r.ambassadorEventUuid) {
-                onInvited?.(String(r.ambassadorEventUuid));
-              }
-            } else {
-              failCount += 1;
-              showAlert(
-                r?.message || `Couldn't invite ${row.name}.`,
-                "error",
-              );
-            }
-            setPendingIds((prev) => {
-              const next = new Set(prev);
-              next.delete(row.id);
-              return next;
-            });
-            resolve();
-          },
-          onError: (err) => {
-            failCount += 1;
-            showAlert(`${row.name}: ${err.message}`, "error");
-            setPendingIds((prev) => {
-              const next = new Set(prev);
-              next.delete(row.id);
-              return next;
-            });
-            resolve();
-          },
-        });
-      });
+      // silent=true so we can show a single rollup toast below
+      // instead of N per-row error toasts.
+      const ok = await inviteOne(row.id, row.name, true);
+      if (ok) okCount += 1;
+      else failCount += 1;
     }
     // Single rollup toast on completion so the user doesn't see N
     // individual success toasts.
@@ -286,10 +550,35 @@ const Inner: React.FC<{
           : `Invited ${okCount} BA${okCount === 1 ? "" : "s"}.`,
         failCount > 0 ? "warning" : "success",
       );
+    } else if (failCount > 0) {
+      showAlert(
+        `Couldn't invite ${failCount} BA${failCount === 1 ? "" : "s"}.`,
+        "error",
+      );
     }
     // Clear selection once the batch is done so the modal is ready
     // for a follow-up round (rare but cheap).
     setSelectedIds(new Set());
+  };
+
+  // BAs already on the shift — the union the parent passed plus
+  // anything invited this session (from either the suggestions strip
+  // or the list below). Shared with the suggestions section so its
+  // rows flip to "✓ INVITED" in lockstep with the list.
+  const doneIds = useMemo(
+    () => new Set<string>([...alreadyInvited, ...optimisticDone]),
+    [alreadyInvited, optimisticDone],
+  );
+
+  // Single-click invite from a suggestion row. Reuses the shared
+  // single-BA invite path and toasts on success (the batch flow
+  // handles its own rollup toast, so this only fires for the
+  // tap-to-invite shortcut).
+  const inviteFromSuggestion = (baId: string, name: string) => {
+    if (doneIds.has(baId) || pendingIds.has(baId)) return;
+    void inviteOne(baId, name).then((ok) => {
+      if (ok) showAlert(`Invited ${name}.`, "success");
+    });
   };
 
   return (
@@ -337,6 +626,16 @@ const Inner: React.FC<{
         </div>
 
         <div className="overflow-y-auto" style={{ flex: 1 }}>
+          {/* Server-ranked shortlist for THIS event, pinned at the top.
+              Tapping a row invites that BA via the same invite path the
+              list below uses. Renders nothing when the server has no
+              suggestions, leaving the browse-all list as the whole modal. */}
+          <SuggestionsSection
+            eventId={eventId}
+            done={doneIds}
+            pendingIds={pendingIds}
+            onInvite={inviteFromSuggestion}
+          />
           {filtered.length === 0 && (
             <p
               className="p-6 text-center text-sm"
