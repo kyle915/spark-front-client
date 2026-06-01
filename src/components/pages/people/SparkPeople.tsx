@@ -10,6 +10,10 @@ import { SetDefaultExternalRmmMutation } from "@/api/mutations/SetDefaultExterna
 import type { SetDefaultExternalRmmMutation as SetDefaultExternalRmmMutationType } from "@api/mutations/__generated__/SetDefaultExternalRmmMutation.graphql";
 import { SetTenantRecapRecipientEmailsMutation } from "@/api/mutations/SetTenantRecapRecipientEmailsMutation";
 import type { SetTenantRecapRecipientEmailsMutation as SetTenantRecapRecipientEmailsMutationType } from "@api/mutations/__generated__/SetTenantRecapRecipientEmailsMutation.graphql";
+import { SetScheduledReportEnabledMutation } from "@/api/mutations/SetScheduledReportEnabledMutation";
+import type { SetScheduledReportEnabledMutation as SetScheduledReportEnabledMutationType } from "@api/mutations/__generated__/SetScheduledReportEnabledMutation.graphql";
+import { SendTestClientReportMutation } from "@/api/mutations/SendTestClientReportMutation";
+import type { SendTestClientReportMutation as SendTestClientReportMutationType } from "@api/mutations/__generated__/SendTestClientReportMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 
@@ -217,6 +221,98 @@ const Inner: React.FC<{
       },
       onError: (err) => {
         showAlert(`Update failed: ${err.message}`, "error");
+      },
+    });
+  };
+
+  // Monthly client report — automated monthly performance PDF emailed to
+  // the recap recipients above on the 1st, for the prior month. The
+  // toggle is bound to the tenant's `scheduledReportEnabled` flag (server
+  // is source of truth). Shares its recipients with the recap card above,
+  // so we key the "set recipients first" hint off the same `recapEmails`
+  // state rather than a second field. Same active-tenant payload feeds it.
+  const currentReportEnabled = activeTenant?.scheduledReportEnabled ?? false;
+  const [reportEnabled, setReportEnabled] = useState<boolean>(
+    currentReportEnabled,
+  );
+  useEffect(() => {
+    setReportEnabled(currentReportEnabled);
+  }, [currentReportEnabled]);
+
+  // Recipients come from the (already-trimmed) recap email field above.
+  // An empty list means the report has nowhere to go, so we warn before
+  // enabling and surface a muted hint under the toggle.
+  const hasRecapRecipients = recapEmails.trim().length > 0;
+
+  const [commitReportEnabled, reportEnabledInFlight] =
+    useMutation<SetScheduledReportEnabledMutationType>(
+      SetScheduledReportEnabledMutation,
+    );
+
+  const handleToggleReport = (next: boolean) => {
+    if (reportEnabledInFlight) return;
+    if (!tenantId) {
+      showAlert("No tenant in scope.", "error");
+      return;
+    }
+    // Turning it ON with no recipients would email a report into the void.
+    if (next && !hasRecapRecipients) {
+      showAlert(
+        "Add at least one recap recipient above before enabling the monthly report.",
+        "error",
+      );
+      return;
+    }
+    const prev = reportEnabled;
+    setReportEnabled(next); // optimistic
+    commitReportEnabled({
+      variables: { input: { tenantId, enabled: next } },
+      onCompleted: (res) => {
+        const r = res.setScheduledReportEnabled;
+        if (r?.success) {
+          setReportEnabled(r.enabled); // reflect server's resolved state
+          showAlert(
+            r.enabled
+              ? "Monthly client report turned on."
+              : "Monthly client report turned off.",
+            "success",
+          );
+        } else {
+          setReportEnabled(prev); // roll back
+          showAlert(r?.message || "Could not update the monthly report.", "error");
+        }
+      },
+      onError: (err) => {
+        setReportEnabled(prev); // roll back
+        showAlert(`Update failed: ${err.message}`, "error");
+      },
+    });
+  };
+
+  // "Send me a test" — emails a one-off preview report to the SIGNED-IN
+  // user only (never the client / recap recipients). Defaults to the
+  // prior complete month server-side.
+  const [commitTestReport, testReportInFlight] =
+    useMutation<SendTestClientReportMutationType>(SendTestClientReportMutation);
+
+  const handleSendTestReport = () => {
+    if (testReportInFlight) return;
+    if (!tenantId) {
+      showAlert("No tenant in scope.", "error");
+      return;
+    }
+    commitTestReport({
+      variables: { input: { tenantId } },
+      onCompleted: (res) => {
+        const r = res.sendTestClientReport;
+        if (r?.success) {
+          showAlert("Test report emailed to you.", "success");
+        } else {
+          showAlert(r?.message || "Could not send the test report.", "error");
+        }
+      },
+      onError: (err) => {
+        showAlert(`Test report failed: ${err.message}`, "error");
       },
     });
   };
@@ -453,6 +549,111 @@ const Inner: React.FC<{
               }}
             >
               SAVING…
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Monthly client report — automated monthly performance PDF mailed
+          to the recap recipients above on the 1st (for the prior month).
+          Toggle is bound to the tenant's scheduledReportEnabled flag; the
+          "Send me a test" button previews it to the signed-in user only. */}
+      <div className="spark-card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+            <p className="label-mini">MONTHLY CLIENT REPORT</p>
+            <p
+              className="text-xs mt-1"
+              style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+            >
+              When on, this client gets an automated monthly performance
+              report (PDF) emailed to the recap recipients above, on the 1st
+              for the prior month.
+            </p>
+          </div>
+          {/* On/off switch — spark-themed, lime when enabled. */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={reportEnabled}
+            aria-label="Toggle monthly client report"
+            disabled={reportEnabledInFlight}
+            onClick={() => handleToggleReport(!reportEnabled)}
+            className="rounded-full shrink-0"
+            style={{
+              position: "relative",
+              width: 46,
+              height: 26,
+              padding: 0,
+              border: "1px solid var(--spark-border)",
+              background: reportEnabled
+                ? "var(--spark-lime)"
+                : "var(--spark-surface-2)",
+              boxShadow: reportEnabled
+                ? "0 0 14px rgba(197,245,70,0.35)"
+                : "none",
+              cursor: reportEnabledInFlight ? "default" : "pointer",
+              opacity: reportEnabledInFlight ? 0.6 : 1,
+              transition: "background 0.15s ease, box-shadow 0.15s ease",
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                top: 2,
+                left: reportEnabled ? 22 : 2,
+                width: 20,
+                height: 20,
+                borderRadius: "9999px",
+                background: reportEnabled ? "#0a0d09" : "var(--spark-text)",
+                transition: "left 0.15s ease",
+              }}
+            />
+          </button>
+        </div>
+
+        {/* No-recipients hint — the report has nowhere to go until at least
+            one recap recipient is set above. */}
+        {!hasRecapRecipients && (
+          <p
+            className="text-xs mt-3"
+            style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}
+          >
+            Add at least one recap recipient above first — the report has
+            nowhere to send otherwise.
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3 mt-3">
+          <button
+            onClick={handleSendTestReport}
+            disabled={testReportInFlight}
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold"
+            style={{
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+              cursor: testReportInFlight ? "default" : "pointer",
+              opacity: testReportInFlight ? 0.5 : 1,
+            }}
+          >
+            Send me a test
+          </button>
+          <span
+            className="text-xs"
+            style={{ color: "rgba(255,255,255,0.4)" }}
+          >
+            The test goes to you, not the client.
+          </span>
+          {testReportInFlight && (
+            <span
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.14em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              SENDING…
             </span>
           )}
         </div>

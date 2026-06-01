@@ -3774,6 +3774,8 @@ type Mutation {
   setLinkedSheet(input: SetLinkedSheetInput!): UpdateTenantResponse!
   setDefaultExternalRmm(input: SetDefaultExternalRmmInput!): UpdateTenantResponse!
   setTenantRecapRecipientEmails(tenantId: ID!, emails: String!): TenantType
+  setScheduledReportEnabled(input: SetScheduledReportEnabledInput!): SetScheduledReportEnabledResponse!
+  sendTestClientReport(input: SendTestClientReportInput!): SendTestClientReportResponse!
   setTenantGoals(tenantId: ID!, year: Int!, targetConsumersReached: Int, targetSamplesDistributed: Int, targetProductsSold: Int, targetTotalEngagements: Int): TenantGoals!
 
   "### Checks if a token is not expired and correct.\n\n*Note that this is not for refresh tokens.*\n"
@@ -5651,6 +5653,7 @@ type TenantType implements Node {
   linkedSheetUrl: String
   defaultExternalRmm: SparkUserType
   recapRecipientEmails: String!
+  scheduledReportEnabled: Boolean!
 }
 
 input SetLinkedSheetInput {
@@ -5723,6 +5726,31 @@ input SetDefaultExternalRmmInput {
   clientMutationId: ID = null
   tenantId: ID = null
   userId: ID = null
+}
+
+input SetScheduledReportEnabledInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+  enabled: Boolean!
+}
+
+type SetScheduledReportEnabledResponse {
+  success: Boolean!
+  message: String!
+  enabled: Boolean!
+  clientMutationId: ID
+}
+
+input SendTestClientReportInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+  month: String = null
+}
+
+type SendTestClientReportResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
 }
 
 type UpdateTenantResponse {
