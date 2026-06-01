@@ -387,8 +387,7 @@ export default function DashboardRetail() {
 
           <AiInsightsSection
             key={aiInsightsRefreshKey}
-            insights={[]}
-            isLoading={false}
+            isLoading={isGeneratingInsights}
           />
         </section>
       </main>
