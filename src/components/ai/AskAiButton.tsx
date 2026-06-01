@@ -4,6 +4,7 @@ import environment from "@/api/relay/environment";
 import { TenantAiAnswerQuery } from "@/api/queries/TenantAiAnswerQuery";
 import type { TenantAiAnswerQuery as TenantAiAnswerQueryType } from "@api/queries/__generated__/TenantAiAnswerQuery.graphql";
 import AiMarkdown from "./AiMarkdown";
+import AiChartView, { type AiChart } from "./AiChartView";
 
 /**
  * Reusable "Ask AI" surface — a prominent button that opens a pop-up modal
@@ -35,6 +36,7 @@ type AiAnswerResult = {
   ok: boolean;
   answer: string;
   reason?: string | null;
+  chart?: AiChart | null;
 };
 
 const limeBtn: React.CSSProperties = {
@@ -85,7 +87,12 @@ const AskAiModal: React.FC<{
         });
         return;
       }
-      setResult({ ok: res.ok, answer: res.answer, reason: res.reason });
+      setResult({
+        ok: res.ok,
+        answer: res.answer,
+        reason: res.reason,
+        chart: res.chart,
+      });
     } catch {
       setResult({
         ok: false,
@@ -199,7 +206,10 @@ const AskAiModal: React.FC<{
         {result && !loading && (
           <div className="mt-4 max-h-[55vh] overflow-y-auto pr-1">
             {result.ok ? (
-              <AiMarkdown>{result.answer}</AiMarkdown>
+              <>
+                <AiMarkdown>{result.answer}</AiMarkdown>
+                {result.chart ? <AiChartView chart={result.chart} /> : null}
+              </>
             ) : (
               <p
                 className="text-sm"

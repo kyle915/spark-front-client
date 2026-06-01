@@ -6464,8 +6464,10 @@ type CampaignReportBa { name: String!  isExternal: Boolean!  eventCount: Int! }
 type CampaignReportQuote { text: String!  source: String }
 type CampaignReport { requestId: ID!  brandName: String!  title: String!  dateRange: String  generatedAt: String!  shareToken: String!  kpis: CampaignReportKpis!  events: [CampaignReportEventRow!]!  photos: [CampaignReportPhoto!]!  ambassadors: [CampaignReportBa!]!  highlights: [CampaignReportQuote!]! }
 type CampaignReportAiSummary { ok: Boolean!  summary: String!  reason: String }
-type CampaignReportAiAnswer { ok: Boolean!  answer: String!  reason: String }
-type TenantAiAnswer { ok: Boolean!  answer: String!  reason: String }
+type AiChartSeries { label: String!  data: [Float!]! }
+type AiChart { type: String!  title: String  labels: [String!]!  series: [AiChartSeries!]! }
+type CampaignReportAiAnswer { ok: Boolean!  answer: String!  reason: String  chart: AiChart }
+type TenantAiAnswer { ok: Boolean!  answer: String!  reason: String  chart: AiChart }
 type TenantKpis { events: Int!  recaps: Int!  consumersReached: Int!  samplesDistributed: Int!  productsSold: Int!  cansSold: Int!  packsSold: Int!  totalEngagements: Int!  firstTimeConsumers: Int!  brandAwareConsumers: Int!  willingToPurchase: Int!  monthlyTrend: [TenantKpiMonth!]! }
 type TenantKpiMonth { month: String!  recaps: Int!  engagements: Int!  samples: Int! }
 

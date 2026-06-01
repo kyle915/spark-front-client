@@ -12,6 +12,7 @@ import type { CampaignReportAiAnswerQuery as CampaignReportAiAnswerQueryType } f
 import CampaignReportView from "./CampaignReportView";
 import type { CampaignReportData } from "./CampaignReportView";
 import AiMarkdown from "@/components/ai/AiMarkdown";
+import AiChartView, { type AiChart } from "@/components/ai/AiChartView";
 
 /**
  * Authenticated admin campaign-report view — /report-view/:requestId.
@@ -56,6 +57,7 @@ type AiAnswerResult = {
   ok: boolean;
   answer: string;
   reason?: string | null;
+  chart?: AiChart | null;
 };
 
 /**
@@ -101,7 +103,12 @@ const AiAnswerCard: React.FC<{ requestId: string }> = ({ requestId }) => {
         });
         return;
       }
-      setResult({ ok: res.ok, answer: res.answer, reason: res.reason });
+      setResult({
+        ok: res.ok,
+        answer: res.answer,
+        reason: res.reason,
+        chart: res.chart,
+      });
     } catch {
       setResult({
         ok: false,
@@ -176,7 +183,10 @@ const AiAnswerCard: React.FC<{ requestId: string }> = ({ requestId }) => {
       {result && !loading && (
         <div className="mt-4">
           {result.ok ? (
-            <AiMarkdown>{result.answer}</AiMarkdown>
+            <>
+              <AiMarkdown>{result.answer}</AiMarkdown>
+              {result.chart ? <AiChartView chart={result.chart} /> : null}
+            </>
           ) : (
             <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
               {result.reason || "Couldn't answer that from this campaign's data."}
