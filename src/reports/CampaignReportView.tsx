@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import markerIconUrl from "leaflet/dist/images/marker-icon.png?url";
 import markerIcon2xUrl from "leaflet/dist/images/marker-icon-2x.png?url";
 import markerShadowUrl from "leaflet/dist/images/marker-shadow.png?url";
+import CampaignPhotoHighlights from "./CampaignPhotoHighlights";
 
 /**
  * Shared, presentational campaign-report renderer.
@@ -531,56 +532,9 @@ const CampaignReportView: React.FC<{ report: CampaignReportData }> = ({
         </div>
       </section>
 
-      {/* Photo gallery */}
-      {report.photos.length > 0 && (
-        <section style={{ marginBottom: 28 }}>
-          <SectionLabel>Gallery</SectionLabel>
-          <div
-            style={{
-              display: "grid",
-              gap: 12,
-              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-              marginTop: 10,
-            }}
-          >
-            {report.photos.map((p, i) => (
-              <figure
-                key={`${p.url}-${i}`}
-                style={{
-                  ...cardStyle,
-                  margin: 0,
-                  padding: 0,
-                  overflow: "hidden",
-                }}
-              >
-                <img
-                  src={p.url}
-                  alt={p.caption || `Activation photo ${i + 1}`}
-                  loading="lazy"
-                  style={{
-                    width: "100%",
-                    height: 180,
-                    objectFit: "cover",
-                    display: "block",
-                  }}
-                />
-                {p.caption && (
-                  <figcaption
-                    style={{
-                      padding: "0.6rem 0.8rem",
-                      fontSize: 12,
-                      color: C.muted,
-                      borderTop: `1px solid ${C.border}`,
-                    }}
-                  >
-                    {p.caption}
-                  </figcaption>
-                )}
-              </figure>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Photo highlights gallery (responsive grid + click-to-enlarge
+          lightbox; renders nothing when there are no photos) */}
+      <CampaignPhotoHighlights photos={report.photos} />
 
       {/* Activation map / location list */}
       <section style={{ marginBottom: 28 }}>
