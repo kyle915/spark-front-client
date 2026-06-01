@@ -3891,6 +3891,7 @@ type Mutation {
   saveForm(input: SaveFormInput!): SaveFormResponse!
   updateForm(input: UpdateFormInput!): SaveFormResponse!
   deleteForm(input: DeleteFormInput!): DeleteFormResponse!
+  createSupportTicket(input: CreateSupportTicketInput!): CreateSupportTicketResponse!
 }
 
 type MutationNormalOutput {
@@ -6601,4 +6602,8 @@ type SuggestedAmbassador { id: ID!  uuid: String!  name: String!  rating: Int!  
 type EventStaffing { eventId: ID!  assigned: Int!  confirmed: Int!  needed: Int  fillRate: Float  suggestions: [SuggestedAmbassador!]! }
 input BulkInviteToShiftInput { clientMutationId: ID  eventId: ID!  ambassadorIds: [ID!]! }
 type BulkInviteResponse { success: Boolean!  message: String!  clientMutationId: ID  invited: Int!  skipped: Int! }
+
+input CreateSupportTicketInput { clientMutationId: ID = null  subject: String!  body: String!  category: String = null }
+type CreateSupportTicketResponse { success: Boolean!  message: String!  ticket: SupportTicketType  clientMutationId: ID }
+type SupportTicketType implements Node { id: ID!  uuid: UUID!  subject: String!  body: String!  category: String!  status: String!  createdAt: DateTime!  createdBy: SparkUserType  tenant: TenantType }
 type InvoiceResponse { success: Boolean!  message: String!  clientMutationId: ID  invoice: Invoice }
