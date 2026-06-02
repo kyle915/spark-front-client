@@ -105,17 +105,19 @@ export function useSidebarCounts(): SidebarCounts {
         }
         if (isDone && t > now - days(30) && t < now) done30d += 1;
       }
-      // Recap due = events scheduled, no recaps filed across any of them.
-      // Mirrors the per-row chip logic on the Master Tracker.
+      // Recap due = events scheduled, no recap filed across any of them.
+      // Matches /recaps/missing: an event is "filed" when it has EITHER a
+      // legacy recap OR a custom-template recap, and only past events within
+      // the last 30 days (isRecapDue's default lower bound) count — so the
+      // badge stops ratcheting up on ancient un-recapped events.
       const events = (r.events ?? []).filter(
         (e): e is NonNullable<typeof e> => Boolean(e),
       );
       if (events.length > 0) {
         const anyRecap = events.some(
-          (e) => (e.recaps?.length ?? 0) > 0,
+          (e) =>
+            (e.recaps?.length ?? 0) > 0 || (e.customRecaps?.length ?? 0) > 0,
         );
-        // Only due once the event has passed (the day after) — mirrors the
-        // tracker chip so future bookings don't inflate the badge.
         if (!anyRecap && isRecapDue(r.date)) recapsDue += 1;
       }
     }
