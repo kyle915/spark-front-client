@@ -152,14 +152,30 @@ const timezoneForLatLng = async (lat: number, lng: number): Promise<string | nul
 };
 
 /**
- * Map a Google IANA tz id (e.g. America/Los_Angeles) to the Spark
- * timezone dropdown label format the backend stores (e.g.
- * "Pacific-PDT (UTC-07:00)"). We pick the DST or STD variant based on
- * whether DST is in effect right now at that location.
+ * Map a Google IANA tz id (e.g. America/Los_Angeles) to a Spark timezone
+ * dropdown option. We pick the DST or STD variant based on whether DST is
+ * in effect right now at that location, then find the option whose
+ * abbreviation (PDT/PST/…) matches.
+ *
+ * Two callers feed two different option shapes, and we must match BOTH:
+ *  - Internal /requests/create + /event forms hold the raw backend rows,
+ *    where `code` is the abbreviation ("PST") and `name` is just the
+ *    region ("Pacific").
+ *  - The public /spark-form holds rows whose `name` has been rewritten to
+ *    a display label ("Pacific-PST (UTC-08:00)") and may not carry `code`.
+ *
+ * So we match against `code` first (exact abbreviation — the reliable
+ * signal on the internal forms), then fall back to substring patterns on
+ * the display `name` (for the public form's label). Keying off `name`
+ * alone silently failed on the internal form — every region name like
+ * "Pacific" lacks the "PDT" token — which left the Time Zone field
+ * unset and made NV/CA/etc. fall back to the first row (Alaska).
  *
  * Caller passes the dropdown options so we don't hard-code IDs.
  */
-export const matchTimezoneOption = <T extends { id: string; name: string | null }>(
+export const matchTimezoneOption = <
+  T extends { id: string; name: string | null; code?: string | null },
+>(
   ianaId: string,
   options: ReadonlyArray<T | null | undefined>,
 ): T | null => {
@@ -212,9 +228,16 @@ export const matchTimezoneOption = <T extends { id: string; name: string | null 
   const target = map[ianaId];
   if (!target) return null;
   const want = (isDst ? target[0] : target[1]).toUpperCase();
-  // Match options whose name contains the abbreviation, e.g.
-  // "Pacific-PDT (UTC-07:00)" or "PDT" — we match a few patterns.
-  const match = options.find((o) => {
+  // Prefer an exact match on the abbreviation `code` ("PDT") — the
+  // reliable signal on the internal forms whose `name` is just the region.
+  const byCode = options.find(
+    (o) => o && (o.code ?? "").trim().toUpperCase() === want,
+  );
+  if (byCode) return byCode as T;
+  // Fallback: the public form rewrites `name` into a display label like
+  // "Pacific-PDT (UTC-07:00)" and may drop `code`, so match the
+  // abbreviation as a token inside the label.
+  const byName = options.find((o) => {
     if (!o) return false;
     const upper = (o.name ?? "").toUpperCase();
     return (
@@ -224,7 +247,7 @@ export const matchTimezoneOption = <T extends { id: string; name: string | null 
       upper.endsWith(want)
     );
   });
-  return (match as T | undefined) ?? null;
+  return (byName as T | undefined) ?? null;
 };
 
 export default function GooglePlacesInput({
