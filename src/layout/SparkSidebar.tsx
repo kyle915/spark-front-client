@@ -155,17 +155,19 @@ const SECTIONS: NavSection[] = [
         clientLabel: "Account Map",
       },
       {
-        // Admin-only: this is the RMM request approval QUEUE (bulk
-        // approve/decline, decline-reason emails to requestors, SLA
-        // tracking, "copy queue for Slack"). It's an ops action surface,
-        // not a brand-stakeholder view — clients sign off on external
-        // requests via the one-click email / public /approve/<token>
-        // flow, not this queue. Held adminOnly even though the underlying
-        // RequestsQuery is itself tenant-scoped.
+        // Two surfaces behind one nav item, split by role:
+        //  - ADMINS → /approvals: the RMM request-approval QUEUE (bulk
+        //    approve/decline, decline-reason emails to requestors, SLA
+        //    tracking, "copy queue for Slack"). An ops action surface.
+        //  - CLIENTS → /my-approvals: a clean, list-only view of their
+        //    own recaps still awaiting sign-off, each linking to the
+        //    recap detail to review. No ops controls.
+        // clientTo/clientLabel are honored by NavRow below.
         label: "Approvals",
         Icon: CheckCircle2,
         to: "/approvals",
-        adminOnly: true,
+        clientTo: "/my-approvals",
+        clientLabel: "Approvals",
       },
     ],
   },
