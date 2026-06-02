@@ -142,12 +142,26 @@ const SECTIONS: NavSection[] = [
       },
       { label: "Calendar", Icon: Calendar, to: "/connect-calendar" },
       {
+        // Visible to clients too. The page's only data source is the
+        // tenant-scoped RequestsQuery; the backend forces a client to
+        // their own membership tenant (events/queries.py resolve_tenant_id
+        // → get_user_tenant → user.get_tenant), so the map can only ever
+        // show the client's own accounts. No cross-tenant / "all accounts"
+        // controls exist on the page, and the account uploader is
+        // client-side + per-tenant. Safe to expose.
         label: "Account Map",
         Icon: MapPin,
         to: "/account-map",
-        adminOnly: true,
+        clientLabel: "Account Map",
       },
       {
+        // Admin-only: this is the RMM request approval QUEUE (bulk
+        // approve/decline, decline-reason emails to requestors, SLA
+        // tracking, "copy queue for Slack"). It's an ops action surface,
+        // not a brand-stakeholder view — clients sign off on external
+        // requests via the one-click email / public /approve/<token>
+        // flow, not this queue. Held adminOnly even though the underlying
+        // RequestsQuery is itself tenant-scoped.
         label: "Approvals",
         Icon: CheckCircle2,
         to: "/approvals",
