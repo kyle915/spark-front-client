@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
@@ -14,6 +14,11 @@ import GooglePlacesInput, {
   matchTimezoneOption,
 } from "@/components/inputs/GooglePlacesInput";
 import TimeSlotSelect from "@/components/inputs/TimeSlotSelect";
+// resolveTimezoneIdByDate maps a picked zone to its DST-correct STD/DST
+// sibling for a given date. We dedupe the Time Zone dropdown to one
+// option per region (Pacific/Central/…), so we re-expand the picked
+// region to the right sibling for the visit date at submit time.
+import { resolveTimezoneIdByDate } from "@/utils";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
 import type { RequestMutation } from "@api/mutations/__generated__/RequestMutation.graphql";
 import { CreateDistributorMutation } from "@/api/mutations/CreateDistributorMutation";
@@ -26,8 +31,8 @@ import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import type { ProductsQuery as ProductsQueryType } from "@api/queries/__generated__/ProductsQuery.graphql";
-import { RequestsQuery } from "@/api/queries/RequestsQuery";
-import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { CreateFormVenueIndexQuery } from "@/api/queries/CreateFormVenueIndexQuery";
+import type { CreateFormVenueIndexQuery as CreateFormVenueIndexQueryType } from "@api/queries/__generated__/CreateFormVenueIndexQuery.graphql";
 import { DistributorsQuery } from "@/api/queries/DistributorsQuery";
 import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__generated__/DistributorsQuery.graphql";
 // Start/End time pickers (TimeSlotSelect) ship inline so the time is
@@ -56,6 +61,86 @@ const inputStyle: React.CSSProperties = {
   outline: "none",
   width: "100%",
   fontFamily: "Space Grotesk, sans-serif",
+};
+
+// A repeat-venue suggestion built from prior requests.
+type VenueEntry = {
+  name: string;
+  address: string;
+  count: number;
+  lastDate: string;
+  // Carried forward from the most-recent prior request at this venue so
+  // picking a repeat venue can auto-fill distributor + activation type.
+  distributorId: string | null;
+  requestTypeId: string | null;
+};
+
+/**
+ * Collapse prior requests into a ranked list of distinct venues for the
+ * Create form's type-ahead. Pure — the same logic the old inline memo
+ * ran, lifted out so the deferred loader can own the fetch.
+ */
+const buildVenueIndex = (
+  edges: CreateFormVenueIndexQueryType["response"]["requests"]["edges"],
+): VenueEntry[] => {
+  const seen = new Map<string, VenueEntry>();
+  for (const e of edges ?? []) {
+    const n = e?.node;
+    if (!n) continue;
+    const name = n.retailer?.name ?? n.name ?? "";
+    if (!name) continue;
+    const addr = n.address ?? "";
+    const key = `${name.toLowerCase()}|${addr.toLowerCase()}`;
+    const existing = seen.get(key);
+    const date = n.date ?? "";
+    const distId = n.distributor?.id ? String(n.distributor.id) : null;
+    const typeId = n.requestType?.id ? String(n.requestType.id) : null;
+    if (!existing) {
+      seen.set(key, {
+        name,
+        address: addr,
+        count: 1,
+        lastDate: date,
+        distributorId: distId,
+        requestTypeId: typeId,
+      });
+    } else {
+      existing.count += 1;
+      if (date > existing.lastDate) {
+        existing.lastDate = date;
+        if (distId) existing.distributorId = distId;
+        if (typeId) existing.requestTypeId = typeId;
+      }
+    }
+  }
+  return Array.from(seen.values()).sort((a, b) => b.count - a.count);
+};
+
+/**
+ * Deferred loader for the venue type-ahead index. Rendered inside its own
+ * <Suspense fallback={null}> so it fetches in the background and never
+ * blocks the form's first paint (the old blocking RequestsQuery did).
+ * Reports the built index up via onLoaded and renders nothing.
+ */
+const VenueIndexLoader: React.FC<{
+  tenantId: string | null;
+  onLoaded: (index: VenueEntry[]) => void;
+}> = ({ tenantId, onLoaded }) => {
+  const data = useLazyLoadQuery<CreateFormVenueIndexQueryType>(
+    CreateFormVenueIndexQuery,
+    {
+      // Cap well below the old 500. The index dedupes by venue, so a
+      // couple hundred recent rows already surface every repeat venue
+      // a requestor would realistically pick.
+      first: 200,
+      filters: tenantId ? { tenantId } : null,
+    },
+    { fetchPolicy: "store-or-network" },
+  );
+  useEffect(() => {
+    onLoaded(buildVenueIndex(data?.requests?.edges ?? null));
+  }, [data, onLoaded]);
+  return null;
 };
 
 const SparkRequestInner: React.FC = () => {
@@ -112,63 +197,20 @@ const SparkRequestInner: React.FC = () => {
     [distributorsData],
   );
 
-  // Pull existing requests so we can offer type-ahead venue suggestions
-  // for the 80%+ of activations that repeat at known addresses.
-  const recentRequestsData = useLazyLoadQuery<RequestsQueryType>(
-    RequestsQuery,
-    {
-      first: 500,
-      filters: tenantId ? { tenantId } : null,
-    },
-    { fetchPolicy: "store-or-network" },
+  // Venue type-ahead index for repeat activations. This used to be loaded
+  // by a blocking useLazyLoadQuery here (RequestsQuery, first: 500), which
+  // pulled the full per-request payload — status, events, recaps,
+  // coordinates, the retailer location tree — for hundreds of rows and
+  // was the dominant "Loading form…" cost. It's now fetched by a deferred
+  // <VenueIndexLoader> in its own Suspense boundary (narrow query, capped
+  // rows), so the form's core fields paint immediately and the venue
+  // suggestions populate a beat later. Empty until that resolves.
+  const [venueIndex, setVenueIndex] = useState<VenueEntry[]>([]);
+  // Stable so the loader's effect doesn't re-run every render.
+  const handleVenueIndexLoaded = useCallback(
+    (index: VenueEntry[]) => setVenueIndex(index),
+    [],
   );
-
-  const venueIndex = useMemo(() => {
-    type VenueEntry = {
-      name: string;
-      address: string;
-      count: number;
-      lastDate: string;
-      // Carried forward from the most-recent prior request at this
-      // venue so picking a repeat venue can auto-fill distributor +
-      // activation type on the new request.
-      distributorId: string | null;
-      requestTypeId: string | null;
-    };
-    const seen = new Map<string, VenueEntry>();
-    const edges = recentRequestsData?.requests?.edges ?? [];
-    for (const e of edges) {
-      const n = e?.node;
-      if (!n) continue;
-      const name = n.retailer?.name ?? n.name ?? "";
-      if (!name) continue;
-      const addr = n.address ?? "";
-      const key = `${name.toLowerCase()}|${addr.toLowerCase()}`;
-      const existing = seen.get(key);
-      const date = n.date ?? "";
-      const distId = n.distributor?.id ? String(n.distributor.id) : null;
-      const typeId = n.requestType?.id ? String(n.requestType.id) : null;
-      if (!existing) {
-        seen.set(key, {
-          name,
-          address: addr,
-          count: 1,
-          lastDate: date,
-          distributorId: distId,
-          requestTypeId: typeId,
-        });
-      } else {
-        existing.count += 1;
-        if (date > existing.lastDate) {
-          existing.lastDate = date;
-          // Prefer the FK ids from the most-recent prior request.
-          if (distId) existing.distributorId = distId;
-          if (typeId) existing.requestTypeId = typeId;
-        }
-      }
-    }
-    return Array.from(seen.values()).sort((a, b) => b.count - a.count);
-  }, [recentRequestsData]);
 
   const requestTypes = useMemo(
     () =>
@@ -177,22 +219,48 @@ const SparkRequestInner: React.FC = () => {
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [],
     [requestTypesData],
   );
-  const timezones = useMemo(() => {
-    const nodes =
+  // Full timezone list (every STD + DST row). matchTimezoneOption and
+  // resolveTimezoneIdByDate need both siblings of a region to pick the
+  // DST-correct one for a date, so we keep them all here and only dedupe
+  // for *display* below.
+  const timezones = useMemo(
+    () =>
       timezonesData?.timezones?.edges
         ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
-    // Guard against duplicate DB rows so the dropdown never doubles. The
-    // root cause is duplicate timezone rows (fixed separately in the data);
-    // here we dedup by name+code+offset, keeping the first occurrence.
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [],
+    [timezonesData],
+  );
+
+  // Dropdown options — ONE per region. The backend ships two rows per
+  // zone (e.g. Pacific-PST and Pacific-PDT), both with the same display
+  // `name` ("Pacific"), which made the <select> list every zone twice.
+  // Dedupe by display name, keeping the first row as the region's
+  // representative <option> value. The DST-correct sibling is resolved
+  // from this pick at submit time (see resolveTimezoneIdByDate below), so
+  // collapsing to one visible option never loses DST accuracy.
+  const timezoneOptions = useMemo(() => {
     const seen = new Set<string>();
-    return nodes.filter((tz) => {
-      const key = `${tz.name}|${tz.code}|${tz.offset}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
+    return timezones.filter((tz) => {
+      const label = tz.name ?? "";
+      if (seen.has(label)) return false;
+      seen.add(label);
       return true;
     });
-  }, [timezonesData]);
+  }, [timezones]);
+
+  // Map any timezone id (either sibling) → the region's representative
+  // option id, so the <select> highlights the right row no matter which
+  // sibling autofill/duplicate-prefill stored.
+  const representativeTimezoneId = useMemo(() => {
+    const byName = new Map<string, string>();
+    for (const opt of timezoneOptions) byName.set(opt.name ?? "", String(opt.id));
+    const map = new Map<string, string>();
+    for (const tz of timezones) {
+      const rep = byName.get(tz.name ?? "");
+      if (rep) map.set(String(tz.id), rep);
+    }
+    return map;
+  }, [timezones, timezoneOptions]);
   const rmms = useMemo(
     () => (rmmData?.rmmClients ?? []).filter(Boolean),
     [rmmData],
@@ -242,6 +310,13 @@ const SparkRequestInner: React.FC = () => {
   );
   const [requestTypeId, setRequestTypeId] = useState(qpRequestTypeId);
   const [timezoneId, setTimezoneId] = useState(qpTimezoneId);
+  // Value the de-duplicated Time Zone <select> renders: normalize
+  // whatever sibling is stored (autofill may pick PDT, a duplicate
+  // prefill may carry PST) to its region representative option id, so the
+  // right single option stays highlighted. Empty when unset/unknown.
+  const displayTimezoneId =
+    representativeTimezoneId.get(String(timezoneId)) ??
+    (timezoneId ? String(timezoneId) : "");
   // Required scheduling choice. "already_scheduled" = the account
   // already has this visit booked; "needs_scheduling" = Ignite still
   // needs to book it. Plain metadata, no approval-flow impact.
@@ -520,6 +595,13 @@ const SparkRequestInner: React.FC = () => {
         allDates.length > 1
           ? `${venue} · ${d} (${allDates.indexOf(d) + 1}/${allDates.length})`
           : `${venue} · ${d}`;
+      // The Time Zone dropdown shows one option per region; that option's
+      // value is whichever sibling row (STD or DST) happens to be first.
+      // Re-resolve to the correct STD/DST sibling FOR THIS DATE so a
+      // summer visit stores the DST row and a winter visit the STD row —
+      // and a bulk batch straddling the DST boundary gets each row right.
+      const resolvedTimezoneId =
+        resolveTimezoneIdByDate(timezones, d, timezoneId) ?? timezoneId;
       // We fan out N parallel mutations one after another so the user gets
       // a clean per-date error message if any fails. A batch mutation
       // would be cleaner — tracked in BACKEND-PATCH.md.
@@ -543,7 +625,7 @@ const SparkRequestInner: React.FC = () => {
               date: `${d}T${(startTime || "12:00").padEnd(5, "0")}:00`,
               startTime: `${d}T${(startTime || "12:00").padEnd(5, "0")}:00`,
               endTime: `${d}T${(endTime || "16:00").padEnd(5, "0")}:00`,
-              timezoneId,
+              timezoneId: resolvedTimezoneId,
               requestTypeId,
               schedulingStatus: schedulingStatus || undefined,
               rmmAsignedId: rmmId || undefined,
@@ -619,6 +701,16 @@ const SparkRequestInner: React.FC = () => {
       onSubmit={onSubmit}
       className="space-y-6 max-w-3xl mx-auto px-1 sm:px-0"
     >
+      {/* Repeat-venue suggestions load in the background — their own
+          Suspense boundary keeps the heavy request scan off the critical
+          path so the form paints immediately. */}
+      <Suspense fallback={null}>
+        <VenueIndexLoader
+          tenantId={tenantId ?? null}
+          onLoaded={handleVenueIndexLoaded}
+        />
+      </Suspense>
+
       {/* Header */}
       <div>
         <p
@@ -842,12 +934,12 @@ const SparkRequestInner: React.FC = () => {
               <label className="label-mini block mb-1.5">Time zone *</label>
               <select
                 style={inputStyle}
-                value={timezoneId}
+                value={displayTimezoneId}
                 onChange={(e) => setTimezoneId(e.target.value)}
                 required
               >
                 <option value="">Select timezone</option>
-                {timezones.map((tz) => (
+                {timezoneOptions.map((tz) => (
                   <option key={tz.id} value={tz.id}>
                     {tz.name}
                   </option>
