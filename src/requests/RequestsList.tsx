@@ -49,10 +49,12 @@ import {
 import { ChevronDown, Funnel, FunnelXIcon } from "lucide-react";
 import FormAutocomplete from "@/shared/FormAutocomplete";
 import type { DeclineRequestMutation as DeclineRequestMutationType } from "@api/mutations/__generated__/DeclineRequestMutation.graphql";
+import type { ApproveRequestMutation as ApproveRequestMutationType } from "@api/mutations/__generated__/ApproveRequestMutation.graphql";
 import ConfirmationModal from "@/shared/ConfirmationModal";
 import { useAlertStore } from "@/store/alertStore";
 import { useAuthStore } from "@/store/authStore";
 import { DeclineRequestMutation } from "@/api/mutations/DeclineRequestMutation";
+import { ApproveRequestMutation } from "@/api/mutations/ApproveRequestMutation";
 import FormDatePicker from "@/shared/FormDatePicker";
 import { cn } from "@/lib/utils";
 
@@ -153,6 +155,11 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
   const showAlert = useAlertStore((state) => state.showAlert);
   const [commitDecline, isDeclineInFlight] =
     useMutation<DeclineRequestMutationType>(DeclineRequestMutation);
+  // approveRequest is idempotent: for an already-approved request it
+  // (re)creates the approved Event server-side and returns it, so it
+  // doubles as our escape hatch for approved-but-eventless rows.
+  const [commitApprove, isApproveInFlight] =
+    useMutation<ApproveRequestMutationType>(ApproveRequestMutation);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [requestToDecline, setRequestToDecline] = useState<RequestRow | null>(
     null,
@@ -201,6 +208,39 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
       navigate(`/event/create/${request.uuid}`);
     },
     [navigate],
+  );
+
+  // Escape hatch for approved-but-eventless rows: a backend bug used to
+  // auto-approve client-created requests without ever creating the event,
+  // leaving the row a dead-end (can't re-approve, can't open the create
+  // form). approveRequest is idempotent and (re)creates the approved Event
+  // server-side, so we replay it here and refresh the row to surface the
+  // freshly-created event (and its recap surfaces).
+  const handleCreateMissingEvent = useCallback(
+    (request: RequestRow) => {
+      if (!request.id) {
+        console.error("Request ID is missing");
+        return;
+      }
+      commitApprove({
+        variables: { input: { id: request.id } },
+        onCompleted: (response) => {
+          if (response.approveRequest?.success) {
+            showAlert("Missing event created", "success");
+            refresh();
+          } else {
+            showAlert(
+              `Error: ${response.approveRequest?.message ?? "Could not create the event"}`,
+              "error",
+            );
+          }
+        },
+        onError: (error) => {
+          showAlert(`Error creating event: ${error.message}`, "error");
+        },
+      });
+    },
+    [commitApprove, showAlert, refresh],
   );
 
   const handleEditRequest = useCallback(
@@ -256,7 +296,15 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
       const isApproved = statusName === "approved";
       const isDeclined = statusSlug === "declined";
       const hasEvent = Boolean(request.event?.id);
-      const canCreateEvent = !hasEvent && !isApproved && !isDeclined;
+      // An approved request with no event is a dead-end the admin must be
+      // able to recover from (legacy auto-approve bug). Treat it as its own
+      // case so the Create-Event control fires the idempotent approveRequest
+      // replay instead of the create form.
+      const isApprovedEventless = isApproved && !hasEvent;
+      // Enabled for normal pending rows AND the approved-but-eventless
+      // recovery case; still blocked once an event exists or it's declined.
+      const canCreateEvent =
+        (!hasEvent && !isApproved && !isDeclined) || isApprovedEventless;
 
       return (
         <div className="flex gap-2">
@@ -284,14 +332,18 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
             data-tip={
               hasEvent
                 ? "Event already created"
-                : isApproved
-                  ? "Cannot create event from approved request"
+                : isApprovedEventless
+                  ? "Create the missing event"
                   : isDeclined
                     ? "Cannot create event from declined request"
                     : "Create Event from Request"
             }
-            onClick={() => handleCreateEvent(request)}
-            disabled={!canCreateEvent}
+            onClick={() =>
+              isApprovedEventless
+                ? handleCreateMissingEvent(request)
+                : handleCreateEvent(request)
+            }
+            disabled={!canCreateEvent || isApproveInFlight}
           >
             <CalendarDaysIcon className="w-5 h-5" />
           </button>
@@ -322,9 +374,11 @@ const RequestsListInner = ({ filters }: RequestsListInnerProps) => {
       handleApproveRequest,
       handleViewRequest,
       handleCreateEvent,
+      handleCreateMissingEvent,
       handleEditRequest,
       handleDeclineClick,
       isDeclineInFlight,
+      isApproveInFlight,
     ],
   );
 
