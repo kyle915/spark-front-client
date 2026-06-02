@@ -1,12 +1,16 @@
-import { Suspense, useMemo } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import { Link } from "react-router";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/RecapsQuery.graphql";
 import { GetCustomRecapsQuery } from "@/api/queries/CustomRecapsQuery";
 import type { CustomRecapsQuery as CustomRecapsQueryType } from "@api/queries/__generated__/CustomRecapsQuery.graphql";
+import { ApproveRecapMutation } from "@/api/mutations/ApproveRecapMutation";
+import type { ApproveRecapMutation as ApproveRecapMutationType } from "@api/mutations/__generated__/ApproveRecapMutation.graphql";
+import { ApproveCustomRecapMutation } from "@/api/mutations/ApproveCustomRecapMutation";
+import type { ApproveCustomRecapMutation as ApproveCustomRecapMutationType } from "@api/mutations/__generated__/ApproveCustomRecapMutation.graphql";
 
 /**
  * Spark v2 — Client Approvals (/my-approvals).
@@ -28,15 +32,16 @@ import type { CustomRecapsQuery as CustomRecapsQueryType } from "@api/queries/__
  * recaps. We additionally pass `approved: false` to fetch only the
  * pending pile.
  *
- * LIST-ONLY (no approve action). The recap-approval mutations
- * (`approveRecap` / `approveCustomRecap`) are gated only by
- * `StrictIsAuthenticated` on the backend and load the recap by raw PK
- * with NO tenant check (recaps/mutations.py RecapMutationService.
- * approve_recap / approve_custom_recap) — i.e. recap approval is NOT
- * tenant-scoped. Until that backend gap is closed we deliberately do
- * not surface an approve button here; the row's "Review" link points
- * at the recap detail (where the existing Approve action lives) so the
- * sign-off path is unchanged, just not duplicated on this list.
+ * ONE-CLICK SIGN-OFF (safe as of the recap-IDOR sweep). approveRecap /
+ * approveCustomRecap are now tenant-scoped on the backend: they authorize
+ * the caller against the recap's owning tenant (#708) and a cross-tenant
+ * id is denied with a non-existence-leaking "not found" (#247). So a
+ * client can sign off their OWN recap straight from this list, and a
+ * guessed cross-tenant id can neither be approved nor probed. Each row
+ * keeps its "Review" link to the detail view; the inline "Approve" adds a
+ * two-step confirm so a sign-off (which emails the requestor + mapped RMM
+ * the PDF) is never a single stray click. On success the row drops off
+ * immediately (the approved=false query also prunes it on its next fetch).
  */
 
 type PendingRecap = {
@@ -81,11 +86,53 @@ const joinWhere = (venue: string | null, city: string | null, st: string | null)
 
 /* ─────────────────── row ─────────────────── */
 
-const ApprovalRow: React.FC<{ row: PendingRecap }> = ({ row }) => {
+const ApprovalRow: React.FC<{
+  row: PendingRecap;
+  onApproved: (key: string) => void;
+}> = ({ row, onApproved }) => {
   const reviewTo =
     row.kind === "custom"
       ? `/recap/view-custom/${row.uuid}`
       : `/recap/view/${row.uuid}`;
+
+  // Both hooks are created unconditionally (rules of hooks); we fire the one
+  // matching this row's kind. Approval is tenant-scoped server-side (#708)
+  // and cross-tenant ids read as "not found" (#247), so this is safe.
+  const [commitLegacy, legacyInFlight] =
+    useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
+  const [commitCustom, customInFlight] =
+    useMutation<ApproveCustomRecapMutationType>(ApproveCustomRecapMutation);
+
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inFlight = legacyInFlight || customInFlight;
+
+  const approve = useCallback(() => {
+    setError(null);
+    const key = `${row.kind}:${row.id}`;
+    const fail = (msg?: string | null) =>
+      setError(msg ?? "Couldn't sign off this recap. Please try again.");
+    if (row.kind === "custom") {
+      commitCustom({
+        variables: { input: { id: row.id, approved: true } },
+        onCompleted: (res) =>
+          res.approveCustomRecap?.success
+            ? onApproved(key)
+            : fail(res.approveCustomRecap?.message),
+        onError: () => fail(),
+      });
+    } else {
+      commitLegacy({
+        variables: { input: { id: row.id, approved: true } },
+        onCompleted: (res) =>
+          res.approveRecap?.success
+            ? onApproved(key)
+            : fail(res.approveRecap?.message),
+        onError: () => fail(),
+      });
+    }
+  }, [row.kind, row.id, commitCustom, commitLegacy, onApproved]);
+
   return (
     <li
       className="spark-card p-4 flex items-center justify-between gap-4 flex-wrap"
@@ -117,20 +164,83 @@ const ApprovalRow: React.FC<{ row: PendingRecap }> = ({ row }) => {
           <span style={{ opacity: 0.5 }}> · </span>
           {fmtDate(row.date)}
         </p>
+        {error && (
+          <p
+            className="text-[12px] mt-1.5"
+            style={{ color: "var(--spark-danger, #ff7a7a)" }}
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
       </div>
-      <Link
-        to={reviewTo}
-        className="px-4 py-2 rounded-xl text-sm font-semibold transition shrink-0"
-        style={{
-          background: "var(--spark-lime)",
-          color: "#0a0d09",
-          textDecoration: "none",
-          boxShadow: "0 0 14px rgba(197,245,70,0.25)",
-        }}
-        title="Open this recap to review and sign off"
-      >
-        Review →
-      </Link>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <Link
+          to={reviewTo}
+          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+          style={{
+            background: "rgba(255,255,255,0.06)",
+            color: "var(--spark-text)",
+            textDecoration: "none",
+            border: "1px solid rgba(255,255,255,0.14)",
+          }}
+          title="Open this recap to review the details"
+        >
+          Review →
+        </Link>
+
+        {confirming ? (
+          <>
+            <button
+              type="button"
+              onClick={approve}
+              disabled={inFlight}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{
+                background: "var(--spark-lime)",
+                color: "#0a0d09",
+                border: "none",
+                boxShadow: "0 0 14px rgba(197,245,70,0.25)",
+                opacity: inFlight ? 0.6 : 1,
+                cursor: inFlight ? "default" : "pointer",
+              }}
+              title="Confirm — this signs off the recap and emails the requestor + RMM"
+            >
+              {inFlight ? "Signing off…" : "Confirm sign-off"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={inFlight}
+              className="px-3 py-2 rounded-xl text-sm font-semibold transition"
+              style={{
+                background: "transparent",
+                color: "rgba(255,255,255,0.6)",
+                border: "1px solid rgba(255,255,255,0.14)",
+                cursor: inFlight ? "default" : "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirming(true)}
+            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+            style={{
+              background: "transparent",
+              color: "var(--spark-lime)",
+              border: "1px solid var(--spark-lime)",
+              cursor: "pointer",
+            }}
+            title="Sign off on this recap"
+          >
+            Approve ✓
+          </button>
+        )}
+      </div>
     </li>
   );
 };
@@ -139,6 +249,20 @@ const ApprovalRow: React.FC<{ row: PendingRecap }> = ({ row }) => {
 
 const ClientApprovalsInner: React.FC = () => {
   const { tenantId } = useAuthStore();
+
+  // Rows the client just signed off — hidden immediately for snappy feedback.
+  // The approved=false queries also prune them on their next network refresh
+  // (store-and-network), so this is belt-and-suspenders, not the only path.
+  const [approvedKeys, setApprovedKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const handleApproved = useCallback((key: string) => {
+    setApprovedKeys((prev) => {
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+  }, []);
 
   // Pending legacy recaps — tenant-scoped (event__tenant_id) + approved=false.
   // store-and-network so a recap that just got approved elsewhere drops off
@@ -222,7 +346,12 @@ const ClientApprovalsInner: React.FC = () => {
     return [...legacy, ...custom].sort((a, b) => b.sortMs - a.sortMs);
   }, [data, customData]);
 
-  if (rows.length === 0) {
+  const visibleRows = useMemo(
+    () => rows.filter((r) => !approvedKeys.has(`${r.kind}:${r.id}`)),
+    [rows, approvedKeys],
+  );
+
+  if (visibleRows.length === 0) {
     return (
       <div
         className="spark-card p-10 text-center"
@@ -240,8 +369,12 @@ const ClientApprovalsInner: React.FC = () => {
 
   return (
     <ul className="space-y-2">
-      {rows.map((r) => (
-        <ApprovalRow key={`${r.kind}:${r.id}`} row={r} />
+      {visibleRows.map((r) => (
+        <ApprovalRow
+          key={`${r.kind}:${r.id}`}
+          row={r}
+          onApproved={handleApproved}
+        />
       ))}
     </ul>
   );
