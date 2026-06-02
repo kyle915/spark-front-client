@@ -26,6 +26,7 @@ import { useAlertStore } from "@/store/alertStore";
 import HeicImage from "./HeicImage";
 import RecapUploader from "./RecapUploader";
 import ReassignRecapModal from "./ReassignRecapModal";
+import RecapQualityPanel from "./RecapQualityPanel";
 
 /**
  * Spark v2 — Recap Detail.
@@ -837,6 +838,22 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           </div>
         </div>
       </div>
+
+      {/* Quality check — server-computed review aid for the approver. Legacy
+          recap → isCustom={false}. Self-degrades to nothing on failure;
+          wrapped in Suspense for the initial load. */}
+      <Suspense
+        fallback={
+          <div
+            className="spark-card p-6 text-sm"
+            style={{ color: "rgba(255,255,255,0.5)" }}
+          >
+            Checking recap quality…
+          </div>
+        }
+      >
+        <RecapQualityPanel recapId={recap.id} isCustom={false} />
+      </Suspense>
 
       {/* Admin number editor panel */}
       {isAdmin && editingNumbers && (
