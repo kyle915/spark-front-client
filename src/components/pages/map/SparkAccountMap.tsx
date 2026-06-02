@@ -11,6 +11,7 @@ import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import useSparkRole from "@/hooks/useSparkRole";
 import {
   loadUploadedAccounts,
   type UploadedAccount,
@@ -106,6 +107,13 @@ const DARK_MAP_STYLE: MapStyleRule[] = [
 const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
+  // Client view gets own-tenant framing in the header copy. The data
+  // itself is already client-tenant-scoped server-side (RequestsQuery →
+  // resolve_tenant_id forces a client to their membership tenant), so
+  // there are no admin-only controls to hide here — the status/state/
+  // retailer filters, the per-tenant client-side uploader, and the
+  // "schedule a visit" CTA are all appropriate for a client too.
+  const { isClient } = useSparkRole();
   const [filter, setFilter] = useState<"all" | Status>("all");
   const [search, setSearch] = useState("");
   const [stateFilter, setStateFilter] = useState<string>("all");
@@ -273,7 +281,8 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
               color: "rgba(255,255,255,0.45)",
             }}
           >
-            ACCOUNT MAP · {counts.all} VENUES
+            {isClient ? "YOUR ACCOUNTS · " : "ACCOUNT MAP · "}
+            {counts.all} VENUES
           </p>
           <h1
             className="display text-4xl font-bold mt-2"

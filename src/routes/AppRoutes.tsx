@@ -581,12 +581,12 @@ const RequestsLinks = {
       isPublic: false,
     },
     {
+      // Client-visible: the page only reads the tenant-scoped
+      // RequestsQuery and the backend forces clients to their own
+      // tenant, so no AdminOnly gate is needed (mirrors /today,
+      // /upcoming which are likewise tenant-scoped client surfaces).
       path: "/account-map",
-      component: (
-        <AdminOnly>
-          <SparkAccountMap />
-        </AdminOnly>
-      ),
+      component: <SparkAccountMap />,
       isPublic: false,
     },
     { path: "/today", component: <SparkToday />, isPublic: false },
