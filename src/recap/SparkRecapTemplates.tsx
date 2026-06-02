@@ -12,6 +12,10 @@ import { CreateCustomFieldMutation } from "@/api/mutations/CreateCustomFieldMuta
 import type { CreateCustomFieldMutation as CreateCustomFieldMutationType } from "@api/mutations/__generated__/CreateCustomFieldMutation.graphql";
 import { UpdateCustomRecapTemplateMutation } from "@/api/mutations/UpdateCustomRecapTemplateMutation";
 import type { UpdateCustomRecapTemplateMutation as UpdateCustomRecapTemplateMutationType } from "@api/mutations/__generated__/UpdateCustomRecapTemplateMutation.graphql";
+import { MoveCustomFieldToSectionMutation } from "@/api/mutations/MoveCustomFieldToSectionMutation";
+import type { MoveCustomFieldToSectionMutation as MoveCustomFieldToSectionMutationType } from "@api/mutations/__generated__/MoveCustomFieldToSectionMutation.graphql";
+import { DeleteRecapSectionMutation } from "@/api/mutations/DeleteRecapSectionMutation";
+import type { DeleteRecapSectionMutation as DeleteRecapSectionMutationType } from "@api/mutations/__generated__/DeleteRecapSectionMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 
@@ -356,6 +360,10 @@ const Inner: React.FC = () => {
               name: f.name ?? "(unnamed)",
               required: Boolean(f.required),
               typeName: f.customFieldType?.name ?? null,
+              // The section this field currently lives in — drives the
+              // per-row "Move to section" select's default value and the
+              // per-section field-count guard for delete.
+              sectionId: String(f.recapSectionId ?? f.recapSection?.id ?? ""),
             }))}
           // Sections this template already uses, derived from its fields.
           // De-duped by id, preserving first-seen order. Falls back to all
@@ -388,6 +396,7 @@ const ManageFieldsModal: React.FC<{
     name: string;
     required: boolean;
     typeName: string | null;
+    sectionId: string;
   }[];
   sections: { id: string; name: string }[];
   fieldTypes: { id: string; name: string }[];
@@ -413,6 +422,12 @@ const ManageFieldsModal: React.FC<{
     useMutation<UpdateCustomRecapTemplateMutationType>(
       UpdateCustomRecapTemplateMutation,
     );
+  const [commitMove, isMoving] =
+    useMutation<MoveCustomFieldToSectionMutationType>(
+      MoveCustomFieldToSectionMutation,
+    );
+  const [commitDeleteSection, isDeletingSection] =
+    useMutation<DeleteRecapSectionMutationType>(DeleteRecapSectionMutation);
 
   // Local mirror of the template's productSamples flag so the checkbox
   // reflects intent immediately; reverted in onError if the mutation
@@ -465,6 +480,68 @@ const ManageFieldsModal: React.FC<{
   // sure" UX without a system dialog (system dialogs eat focus on
   // mobile and feel disconnected from the page state).
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  // Same inline-confirm pattern, but for deleting a whole section.
+  const [confirmingSectionId, setConfirmingSectionId] = useState<
+    string | null
+  >(null);
+
+  // How many of THIS template's fields currently live in each section.
+  // Drives the delete-section guard: a section that still holds fields
+  // here can't be deleted (the backend refuses it too), so we disable
+  // the button and explain why.
+  const fieldCountBySection = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const f of fields) {
+      if (!f.sectionId) continue;
+      counts.set(f.sectionId, (counts.get(f.sectionId) ?? 0) + 1);
+    }
+    return counts;
+  }, [fields]);
+
+  // Move a field to a different section. The destination must be one of
+  // this template's own sections (the backend only allows moving into a
+  // section that already holds a field from the same template); if it
+  // refuses, we surface its message rather than crashing.
+  const moveField = (fieldId: string, sectionId: string) => {
+    commitMove({
+      variables: { input: { fieldId, sectionId } },
+      onCompleted: (res) => {
+        const payload = res.moveCustomFieldToSection;
+        if (payload?.success) {
+          showAlert("Field moved.", "success");
+          onChanged();
+        } else {
+          showAlert(payload?.message ?? "Couldn't move field.", "error");
+        }
+      },
+      onError: (err) => showAlert(`Move failed: ${err.message}`, "error"),
+    });
+  };
+
+  // Delete a section. Sections are tenant-global, so this removes the
+  // section from EVERY template this client has — the confirm copy says
+  // so. The backend independently refuses a non-empty section; if it
+  // does, we show its message.
+  const deleteSection = (sectionId: string, sectionName: string) => {
+    commitDeleteSection({
+      variables: { input: { sectionId } },
+      onCompleted: (res) => {
+        const payload = res.deleteRecapSection;
+        if (payload?.success) {
+          showAlert(`Deleted section "${sectionName}".`, "success");
+          setConfirmingSectionId(null);
+          onChanged();
+        } else {
+          showAlert(
+            payload?.message ?? "Couldn't delete section.",
+            "error",
+          );
+        }
+      },
+      onError: (err) =>
+        showAlert(`Delete failed: ${err.message}`, "error"),
+    });
+  };
 
   // ---- "Add a field" form state ---------------------------------------
   // If the template only uses a single section we default to it and hide
@@ -659,6 +736,30 @@ const ManageFieldsModal: React.FC<{
                     {f.id.slice(-6)}
                   </p>
                 </div>
+                {/* Move this field to another section. Hidden when the
+                    template has a single section — there's nowhere to
+                    move it. Defaults to the field's current section; on
+                    change we fire the move (no-op if it didn't change). */}
+                {sections.length > 1 && (
+                  <select
+                    aria-label={`Move "${f.name}" to a different section`}
+                    title="Move this field to another section"
+                    value={f.sectionId}
+                    disabled={isMoving}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      if (next && next !== f.sectionId) moveField(f.id, next);
+                    }}
+                    className="shrink-0 disabled:opacity-50"
+                    style={{ ...fieldInputStyle, width: "auto", maxWidth: 150 }}
+                  >
+                    {sections.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 {confirmingId === f.id ? (
                   <div className="flex items-center gap-2 shrink-0">
                     <button
@@ -702,6 +803,132 @@ const ManageFieldsModal: React.FC<{
             ))
           )}
         </div>
+
+        {/* Sections — delete a section. Sections are tenant-global
+            (shared across all of this client's templates), so deleting
+            one removes it everywhere for the client, not just here. A
+            section that still holds fields in THIS template can't be
+            deleted (button disabled + tooltip); the backend refuses
+            non-empty sections too and we surface its message if so. */}
+        {sections.length > 0 && (
+          <div
+            className="rounded-xl p-3 space-y-2"
+            style={{
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-lime)",
+              }}
+            >
+              SECTIONS
+            </p>
+            <p
+              className="text-[11px]"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Sections are shared across this client's templates —
+              deleting one removes it everywhere.
+            </p>
+            {sections.map((s) => {
+              const count = fieldCountBySection.get(s.id) ?? 0;
+              const hasFields = count > 0;
+              return (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg"
+                  style={{
+                    background: "var(--spark-card-bg, rgba(255,255,255,0.02))",
+                    border: "1px solid var(--spark-border)",
+                  }}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{s.name}</p>
+                    <p
+                      className="mono text-[10px] uppercase"
+                      style={{
+                        letterSpacing: "0.12em",
+                        color: "rgba(255,255,255,0.4)",
+                      }}
+                    >
+                      {hasFields
+                        ? `${count} field${count === 1 ? "" : "s"} here`
+                        : "Empty in this template"}
+                    </p>
+                  </div>
+                  {confirmingSectionId === s.id ? (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => setConfirmingSectionId(null)}
+                        disabled={isDeletingSection}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                        style={{
+                          background: "transparent",
+                          color: "var(--spark-text)",
+                          border: "1px solid var(--spark-border)",
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => deleteSection(s.id, s.name)}
+                        disabled={isDeletingSection}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                        style={{
+                          background: "var(--spark-orange, #ef5a2a)",
+                          color: "#0a0d09",
+                        }}
+                      >
+                        {isDeletingSection ? "Deleting…" : "Confirm delete"}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmingSectionId(s.id)}
+                      disabled={hasFields}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
+                      style={{
+                        background: "transparent",
+                        color: hasFields
+                          ? "rgba(255,255,255,0.35)"
+                          : "rgba(239,90,42,0.9)",
+                        border: hasFields
+                          ? "1px solid var(--spark-border)"
+                          : "1px solid rgba(239,90,42,0.4)",
+                        cursor: hasFields ? "not-allowed" : "pointer",
+                      }}
+                      title={
+                        hasFields
+                          ? "Move or remove this section's fields first."
+                          : `Delete section "${s.name}"`
+                      }
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {/* When confirming, spell out that the delete hits the whole
+                client — sections aren't template-scoped. */}
+            {confirmingSectionId && (
+              <p
+                className="text-[11px]"
+                style={{ color: "rgba(239,90,42,0.9)" }}
+              >
+                Delete section &ldquo;
+                {sections.find((s) => s.id === confirmingSectionId)?.name ??
+                  "section"}
+                &rdquo;? It&apos;ll be removed from this client&apos;s
+                templates.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Add a field */}
         <div
