@@ -16,6 +16,13 @@ import { UpdateJobMutation } from "@/api/mutations/UpdateJobMutation";
 import type { UpdateJobMutation as UpdateJobMutationType } from "@api/mutations/__generated__/UpdateJobMutation.graphql";
 import { AcademyModulesAdminQuery } from "@/api/queries/AcademyModulesAdminQuery";
 import type { AcademyModulesAdminQuery as AcademyModulesAdminQueryType } from "@api/queries/__generated__/AcademyModulesAdminQuery.graphql";
+import { OpenChatThreadMutation } from "@/api/mutations/OpenChatThreadMutation";
+import type { OpenChatThreadMutation as OpenChatThreadMutationType } from "@api/mutations/__generated__/OpenChatThreadMutation.graphql";
+import { BriefingTemplatesQuery } from "@/api/queries/BriefingTemplatesQuery";
+import type { BriefingTemplatesQuery as BriefingTemplatesQueryType } from "@api/queries/__generated__/BriefingTemplatesQuery.graphql";
+import { SaveJobBriefingAsTemplateMutation } from "@/api/mutations/SaveJobBriefingAsTemplateMutation";
+import type { SaveJobBriefingAsTemplateMutation as SaveJobBriefingAsTemplateMutationType } from "@api/mutations/__generated__/SaveJobBriefingAsTemplateMutation.graphql";
+import BAProfileModal from "@/components/pages/talent/BAProfileModal";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -129,9 +136,11 @@ const fmtApplied = (raw: string | null | undefined): string => {
  */
 const ApplicantsCard: React.FC<{
   jobId: string;
+  jobUuid: string;
   isAdmin: boolean;
   jobFilled: boolean;
-}> = ({ jobId, isAdmin, jobFilled }) => {
+}> = ({ jobId, jobUuid, isAdmin, jobFilled }) => {
+  const navigate = useNavigate();
   const showAlert = useAlertStore((s) => s.showAlert);
   const data = useLazyLoadQuery<JobApplicationsQueryType>(
     JobApplicationsQuery,
@@ -141,6 +150,17 @@ const ApplicantsCard: React.FC<{
   const apps = useMemo(() => data.jobApplications ?? [], [data]);
   const [commit, inFlight] = useMutation<AssignAmbassadorToJobMutationType>(
     AssignAmbassadorToJobMutation,
+  );
+  // DM: open/get-or-create a JOB-scoped thread for this applicant, then
+  // route to the admin Chat page with that thread pre-selected. Same
+  // openChatThread mutation the BA profile modal uses — here we also pass
+  // jobUuid so the thread is tied to this job.
+  const [commitOpenThread, openingThread] =
+    useMutation<OpenChatThreadMutationType>(OpenChatThreadMutation);
+  const [dmBusyUuid, setDmBusyUuid] = useState<string | null>(null);
+  // Which applicant's BA profile is open (by ambassadorUuid).
+  const [profile, setProfile] = useState<{ uuid: string; name: string } | null>(
+    null,
   );
 
   const counts = useMemo(() => {
@@ -168,6 +188,29 @@ const ApplicantsCard: React.FC<{
         }
       },
       onError: (e) => showAlert(`Accept failed: ${e.message}`, "error"),
+    });
+  };
+
+  // Open (or get) the job-scoped DM thread, then navigate to /chat with
+  // the thread pre-selected so the admin lands in the conversation.
+  const messageApplicant = (ambassadorUuid: string) => {
+    if (openingThread) return;
+    setDmBusyUuid(ambassadorUuid);
+    commitOpenThread({
+      variables: { input: { ambassadorUuid, jobUuid } },
+      onCompleted: (res) => {
+        setDmBusyUuid(null);
+        const uuid = res?.openChatThread?.uuid;
+        if (uuid) {
+          navigate(`/chat?thread=${encodeURIComponent(String(uuid))}`);
+        } else {
+          showAlert("Couldn't open the conversation.", "error");
+        }
+      },
+      onError: (err) => {
+        setDmBusyUuid(null);
+        showAlert(`Couldn't open the conversation: ${err.message}`, "error");
+      },
     });
   };
 
@@ -204,6 +247,10 @@ const ApplicantsCard: React.FC<{
               "Ambassador";
             const canAccept =
               isAdmin && !jobFilled && a.status === "applied";
+            const contact = [a.ambassadorEmail, a.ambassadorPhone]
+              .filter(Boolean)
+              .join(" · ");
+            const dmBusy = openingThread && dmBusyUuid === a.ambassadorUuid;
             return (
               <li
                 key={a.uuid}
@@ -214,12 +261,54 @@ const ApplicantsCard: React.FC<{
                 }}
               >
                 <div className="flex items-center gap-3">
-                  <span className="spark-avatar">
-                    {initialsOf(a.ambassadorFirstName, a.ambassadorLastName)}
-                  </span>
+                  {a.ambassadorImage ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProfile({ uuid: a.ambassadorUuid, name })
+                      }
+                      title={`View ${name}'s profile`}
+                      style={{ padding: 0, border: "none", background: "none" }}
+                    >
+                      <img
+                        src={a.ambassadorImage}
+                        alt={name}
+                        className="spark-avatar"
+                        style={{ objectFit: "cover", cursor: "pointer" }}
+                      />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setProfile({ uuid: a.ambassadorUuid, name })
+                      }
+                      title={`View ${name}'s profile`}
+                      className="spark-avatar"
+                      style={{ cursor: "pointer", border: "none" }}
+                    >
+                      {initialsOf(a.ambassadorFirstName, a.ambassadorLastName)}
+                    </button>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-sm">{name}</p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setProfile({ uuid: a.ambassadorUuid, name })
+                        }
+                        className="font-semibold text-sm text-left"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          color: "var(--spark-text)",
+                          cursor: "pointer",
+                        }}
+                        title={`View ${name}'s profile`}
+                      >
+                        {name}
+                      </button>
                       <span className={STATUS_CHIP[a.status] ?? "chip chip-muted"}>
                         {a.status.toUpperCase()}
                       </span>
@@ -228,7 +317,7 @@ const ApplicantsCard: React.FC<{
                       className="mono text-[10px] uppercase mt-0.5 truncate"
                       style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
                     >
-                      {a.ambassadorEmail}
+                      {contact}
                       {a.appliedAt ? ` · applied ${fmtApplied(a.appliedAt)}` : ""}
                     </p>
                     {a.note ? (
@@ -236,6 +325,34 @@ const ApplicantsCard: React.FC<{
                         “{a.note}”
                       </p>
                     ) : null}
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setProfile({ uuid: a.ambassadorUuid, name })
+                        }
+                        className="mono text-[10px]"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "var(--spark-sky)",
+                        }}
+                      >
+                        VIEW PROFILE
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => messageApplicant(a.ambassadorUuid)}
+                        disabled={dmBusy}
+                        className="mono text-[10px]"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "var(--spark-lime)",
+                          opacity: dmBusy ? 0.5 : 1,
+                        }}
+                      >
+                        {dmBusy ? "OPENING…" : "💬 MESSAGE"}
+                      </button>
+                    </div>
                   </div>
                   {canAccept ? (
                     <button
@@ -257,31 +374,110 @@ const ApplicantsCard: React.FC<{
           })}
         </ul>
       )}
+
+      {profile ? (
+        <BAProfileModal
+          ambassadorUuid={profile.uuid}
+          fallbackName={profile.name}
+          onClose={() => setProfile(null)}
+        />
+      ) : null}
     </div>
   );
 };
 
 /**
- * BA Briefing editor (#191). The real, backend-backed pre-shift
+ * "Use a template…" picker for the pre-shift briefing editor (#253).
+ * Loads the tenant's saved briefing templates (lazy, own Suspense
+ * boundary) and, on select, hands the chosen template's title + body
+ * up so the editor prefills them — the admin can then tweak + save.
+ * Matches the Post Job modal's template-picker pattern.
+ */
+const BriefingTemplatePicker: React.FC<{
+  tenantId: string | null;
+  refreshKey: number;
+  onPick: (title: string, body: string) => void;
+}> = ({ tenantId, refreshKey, onPick }) => {
+  const data = useLazyLoadQuery<BriefingTemplatesQueryType>(
+    BriefingTemplatesQuery,
+    { tenantId, includeArchived: false },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+  );
+  const templates = useMemo(
+    () => (data.briefingTemplates ?? []).filter((t) => !t.isArchived),
+    [data],
+  );
+
+  if (templates.length === 0) {
+    return (
+      <span
+        className="mono text-[10px]"
+        style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.4)" }}
+      >
+        NO SAVED TEMPLATES YET
+      </span>
+    );
+  }
+
+  return (
+    <select
+      onChange={(e) => {
+        const t = templates.find((x) => x.uuid === e.target.value);
+        if (t) onPick(t.title, t.body);
+        e.target.value = "";
+      }}
+      defaultValue=""
+      className="rounded-xl text-xs"
+      style={{
+        padding: "0.45rem 0.9rem",
+        background: "var(--spark-bg)",
+        border: "1px solid var(--spark-border)",
+        color: "var(--spark-text)",
+        maxWidth: 240,
+        outline: "none",
+      }}
+    >
+      <option value="">Use a template…</option>
+      {templates.map((t) => (
+        <option key={t.uuid} value={t.uuid}>
+          {t.name}
+        </option>
+      ))}
+    </select>
+  );
+};
+
+/**
+ * BA Briefing editor (#191, #253). The real, backend-backed pre-shift
  * briefing the mobile app reads via job.briefing / jobBriefingForEvent.
  * Loads the current title+body off the JobsQuery node and saves via
  * setJobBriefing. Distinct from the localStorage "Job brief" card
  * above (which holds the structured what-to-do / academy links until a
  * model lands).
+ *
+ * Admins can prefill from a saved tenant template (#253) and save the
+ * current briefing back as a reusable template.
  */
 const BABriefingCard: React.FC<{
   jobId: string;
   initialTitle: string;
   initialBody: string;
   isAdmin: boolean;
-}> = ({ jobId, initialTitle, initialBody, isAdmin }) => {
+  tenantId: string | null;
+}> = ({ jobId, initialTitle, initialBody, isAdmin, tenantId }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(initialTitle);
   const [body, setBody] = useState(initialBody);
+  // Bump to refetch the template picker after saving a new template.
+  const [templatesRefreshKey, setTemplatesRefreshKey] = useState(0);
   const [commit, inFlight] = useMutation<SetJobBriefingMutationType>(
     SetJobBriefingMutation,
   );
+  const [commitSaveTemplate, savingTemplate] =
+    useMutation<SaveJobBriefingAsTemplateMutationType>(
+      SaveJobBriefingAsTemplateMutation,
+    );
 
   // Keep local draft in sync if the loaded job changes underneath us.
   useEffect(() => {
@@ -290,6 +486,7 @@ const BABriefingCard: React.FC<{
   }, [initialTitle, initialBody]);
 
   const dirty = title !== initialTitle || body !== initialBody;
+  const hasContent = title.trim() !== "" || body.trim() !== "";
 
   const save = () => {
     if (inFlight) return;
@@ -310,6 +507,52 @@ const BABriefingCard: React.FC<{
         }
       },
       onError: (e) => showAlert(`Save failed: ${e.message}`, "error"),
+    });
+  };
+
+  // Snapshot the job's saved briefing into a named, reusable tenant
+  // template. The backend reads the persisted briefing, so unsaved edits
+  // must be saved first.
+  const saveAsTemplate = () => {
+    if (savingTemplate) return;
+    if (dirty) {
+      showAlert("Save the briefing first, then save it as a template.", "warning");
+      return;
+    }
+    if (!hasContent) {
+      showAlert("Add a title or body before saving a template.", "warning");
+      return;
+    }
+    const name = window.prompt(
+      "Name this briefing template (e.g. “Liquid Death sampling — standard”):",
+      title || "",
+    );
+    if (name == null) return; // cancelled
+    const trimmed = name.trim();
+    if (!trimmed) {
+      showAlert("A template name is required.", "warning");
+      return;
+    }
+    commitSaveTemplate({
+      variables: { input: { jobId, name: trimmed } },
+      onCompleted: (res) => {
+        if (res.saveJobBriefingAsTemplate?.success) {
+          showAlert(
+            res.saveJobBriefingAsTemplate.message ||
+              `Saved “${trimmed}” as a template.`,
+            "success",
+          );
+          // Refresh the picker so the new template is selectable.
+          setTemplatesRefreshKey((k) => k + 1);
+        } else {
+          showAlert(
+            res.saveJobBriefingAsTemplate?.message ??
+              "Couldn't save the template.",
+            "error",
+          );
+        }
+      },
+      onError: (e) => showAlert(`Save template failed: ${e.message}`, "error"),
     });
   };
 
@@ -346,6 +589,35 @@ const BABriefingCard: React.FC<{
 
       {open && isAdmin ? (
         <div className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <label className="label-mini block">START FROM A TEMPLATE</label>
+            <Suspense
+              fallback={
+                <span
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "rgba(255,255,255,0.4)",
+                  }}
+                >
+                  LOADING TEMPLATES…
+                </span>
+              }
+            >
+              <BriefingTemplatePicker
+                tenantId={tenantId}
+                refreshKey={templatesRefreshKey}
+                onPick={(t, b) => {
+                  setTitle(t);
+                  setBody(b);
+                  showAlert(
+                    "Template loaded — edit as needed, then save.",
+                    "success",
+                  );
+                }}
+              />
+            </Suspense>
+          </div>
           <div>
             <label className="label-mini block mb-1.5">TITLE</label>
             <input
@@ -387,7 +659,7 @@ const BABriefingCard: React.FC<{
               }}
             />
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={save}
               disabled={inFlight || !dirty}
@@ -400,6 +672,24 @@ const BABriefingCard: React.FC<{
               }}
             >
               {inFlight ? "Saving…" : "Save briefing"}
+            </button>
+            <button
+              onClick={saveAsTemplate}
+              disabled={savingTemplate || dirty || !hasContent}
+              title={
+                dirty
+                  ? "Save the briefing first, then save it as a template."
+                  : "Save this briefing as a reusable template"
+              }
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+                opacity: savingTemplate || dirty || !hasContent ? 0.5 : 1,
+              }}
+            >
+              {savingTemplate ? "Saving…" : "Save as template"}
             </button>
             {dirty && !inFlight && (
               <span
@@ -1196,6 +1486,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
         initialTitle={node.briefing?.title ?? ""}
         initialBody={node.briefing?.body ?? ""}
         isAdmin={isAdmin}
+        tenantId={tenantId ?? null}
       />
 
       {/* Job brief — what to do, expect, bring + linked academy modules */}
@@ -1479,6 +1770,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
         >
           <ApplicantsCard
             jobId={node.id}
+            jobUuid={String(node.uuid)}
             isAdmin={isAdmin}
             jobFilled={status === "confirmed"}
           />
