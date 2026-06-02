@@ -13,6 +13,8 @@ import { GetCustomRecapsQuery } from "@/api/queries/CustomRecapsQuery";
 import type { CustomRecapsQuery as CustomRecapsQueryType } from "@api/queries/__generated__/CustomRecapsQuery.graphql";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
+import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
+import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import { GenerateCampaignReportPdfMutation } from "@/api/mutations/GenerateCampaignReportPdfMutation";
 import type { GenerateCampaignReportPdfMutation as GenerateCampaignReportPdfMutationType } from "@api/mutations/__generated__/GenerateCampaignReportPdfMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -71,6 +73,11 @@ type Recap = {
   // Empty string when neither is set.
   baName: string;
   isExternalBa: boolean;
+  // Relay global id of the recap's PRIMARY ambassador (Recap.ambassador /
+  // CustomRecap.ambassador), or null for external/unlinked BAs. Used by the
+  // client-side BA filter mirror for instant feedback; the server-side
+  // `ambassadorId` filter is the source of truth.
+  ambassadorId: string | null;
   // Deep-link back to the parent request on the Master Tracker so
   // ops can pivot from "what happened in the field" to "who asked
   // for this activation" in one click.
@@ -401,6 +408,11 @@ const RecapsListInner: React.FC<{
   retailerFilter: string;
   stateFilter: string;
   rmmFilter: string;
+  // Filter by the recap's PRIMARY Ambassador (Recap.ambassador) — the BA
+  // shown on the card/PDF. "all" = no filter; otherwise the Ambassador's
+  // Relay global id, pushed server-side as `ambassadorId` (the resolver
+  // decodes it). Mirrors rmmFilter end-to-end.
+  baFilter: string;
   statusFilter: StatusKey;
   // Inclusive ISO yyyy-mm-dd bounds; empty string = no bound on that
   // side. Filter strips at the day level — recap dates are stored as
@@ -419,7 +431,7 @@ const RecapsListInner: React.FC<{
   // checkboxes against it and reports toggles back up.
   selectedIds: Set<string>;
   onToggleSelected: (id: string) => void;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected }) => {
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
@@ -460,6 +472,9 @@ const RecapsListInner: React.FC<{
         ? {
             tenantId,
             rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
+            // Filters by the recap's PRIMARY ambassador (Recap.ambassador_id);
+            // the resolver decodes the Relay global id. "all" → no filter.
+            ambassadorId: baFilter === "all" ? null : baFilter,
             // Client view → approved-only; admin/RMM view → drafts too.
             approved: approvedOnly,
             startDate,
@@ -487,7 +502,15 @@ const RecapsListInner: React.FC<{
       // Client view → approved-only; admin/RMM view → drafts too. Date
       // bounds pushed server-side for the same reason as the legacy query.
       filters: tenantId
-        ? { tenantId, approved: approvedOnly, startDate, endDate }
+        ? {
+            tenantId,
+            // Same primary-ambassador filter as the legacy query above —
+            // CustomRecapFiltersInput inherits ambassadorId. "all" → no filter.
+            ambassadorId: baFilter === "all" ? null : baFilter,
+            approved: approvedOnly,
+            startDate,
+            endDate,
+          }
         : null,
     },
     // Always refetch on mount — same reason as the legacy query above. A
@@ -555,6 +578,7 @@ const RecapsListInner: React.FC<{
             accountSpendAmount: n.accountSpendAmount ?? null,
             baName,
             isExternalBa: !linkedBaName && Boolean(n.externalBaName),
+            ambassadorId: n.ambassador?.id ? String(n.ambassador.id) : null,
             requestUuid: requestUuid ? String(requestUuid) : null,
             requestShortId: requestUuid
               ? `R-${String(requestUuid).slice(-4).toUpperCase()}`
@@ -618,6 +642,7 @@ const RecapsListInner: React.FC<{
               .join(" ")
               .trim(),
             isExternalBa: false,
+            ambassadorId: n.ambassador?.id ? String(n.ambassador.id) : null,
             requestUuid: null,
             requestShortId: null,
             requestType: n.customRecapTemplate?.name ?? null,
@@ -660,6 +685,12 @@ const RecapsListInner: React.FC<{
       const matchR =
         retailerFilter === "all" || r.retailerName === retailerFilter;
       const matchS = stateFilter === "all" || r.stateCode === stateFilter;
+      // Mirror the server-side `ambassadorId` filter on the loaded rows so
+      // the grid updates instantly when the BA dropdown changes (Relay also
+      // re-fetches; the server result is the source of truth). Keyed on the
+      // row's PRIMARY ambassador id — external/unlinked BAs (ambassadorId
+      // null) drop out of a narrowed BA filter.
+      const matchBa = baFilter === "all" || r.ambassadorId === baFilter;
       const matchStatus =
         statusFilter === "all" ||
         (statusFilter === "approved" ? r.approved : !r.approved);
@@ -676,7 +707,7 @@ const RecapsListInner: React.FC<{
         (recapDay !== "" &&
           (!dateFrom || recapDay >= dateFrom) &&
           (!dateTo || recapDay <= dateTo));
-      return matchQ && matchR && matchS && matchStatus && matchDate;
+      return matchQ && matchR && matchS && matchBa && matchStatus && matchDate;
     });
 
     // Sort in-place on the copy.
@@ -693,7 +724,7 @@ const RecapsListInner: React.FC<{
           return (b.date || "").localeCompare(a.date || "");
       }
     });
-  }, [recaps, search, retailerFilter, stateFilter, statusFilter, dateFrom, dateTo, sortKey]);
+  }, [recaps, search, retailerFilter, stateFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey]);
 
   // We paint every loaded row that matches the client-side filters.
   // Pagination now lives at the FETCH layer (`limit` / "Load more"), so
@@ -824,6 +855,58 @@ const RmmFilterDropdown: React.FC<{
   );
 };
 
+// Brand Ambassador filter — mirrors RmmFilterDropdown. Populated from the
+// tenant-scoped `ambassadors` resolver (active BAs only). The dropdown
+// `value` is the Ambassador's Relay global id, which is exactly what the
+// `ambassadorId` recap filter expects (the resolver decodes it). Filters by
+// the recap's PRIMARY ambassador (the BA shown on the card/PDF).
+const BaFilterDropdown: React.FC<{
+  tenantId: string;
+  value: string;
+  onChange: (v: string) => void;
+}> = ({ tenantId, value, onChange }) => {
+  const data = useLazyLoadQuery<AmbassadorsListQueryType>(
+    AmbassadorsListQuery,
+    { filters: { tenantId, isActive: true }, first: 500 },
+    { fetchPolicy: "store-or-network" },
+  );
+  const ambassadors = (data?.ambassadors?.edges ?? []).filter(Boolean);
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="rounded-xl text-sm"
+      style={{
+        padding: "0.75rem 0.95rem",
+        background: "var(--spark-bg)",
+        border: "1px solid var(--spark-border)",
+        color: "var(--spark-text)",
+        maxWidth: 200,
+        outline: "none",
+      }}
+      title="Filter by Brand Ambassador"
+    >
+      <option value="all">All ambassadors</option>
+      {ambassadors.map((edge) => {
+        const node = edge?.node;
+        if (!node) return null;
+        const label =
+          [node.user?.firstName, node.user?.lastName]
+            .filter(Boolean)
+            .join(" ")
+            .trim() ||
+          node.user?.email ||
+          String(node.uuid);
+        return (
+          <option key={node.id} value={String(node.id)}>
+            {label}
+          </option>
+        );
+      })}
+    </select>
+  );
+};
+
 export default function SparkRecapsList() {
   const { tenantId } = useAuthStore();
   const { isClient } = useSparkRole();
@@ -831,6 +914,9 @@ export default function SparkRecapsList() {
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
   const [rmmFilter, setRmmFilter] = useState("all");
+  // Brand Ambassador filter. "all" = no filter; otherwise the Ambassador's
+  // Relay global id (pushed server-side as `ambassadorId`). Mirrors rmmFilter.
+  const [baFilter, setBaFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusKey>("all");
   // Inclusive date range for the budget-reconciliation filter
   // Myriant asked for. Empty string = unbounded on that side, so the
@@ -848,7 +934,7 @@ export default function SparkRecapsList() {
   const [limit, setLimit] = useState(INITIAL_LIMIT);
   useEffect(() => {
     setLimit(INITIAL_LIMIT);
-  }, [rmmFilter, dateFrom, dateTo]);
+  }, [rmmFilter, baFilter, dateFrom, dateTo]);
   const [meta, setMeta] = useState<Meta>({
     retailers: [],
     states: [],
@@ -1305,6 +1391,15 @@ export default function SparkRecapsList() {
               />
             </Suspense>
           )}
+          {tenantId && (
+            <Suspense fallback={null}>
+              <BaFilterDropdown
+                tenantId={tenantId}
+                value={baFilter}
+                onChange={setBaFilter}
+              />
+            </Suspense>
+          )}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusKey)}
@@ -1419,6 +1514,7 @@ export default function SparkRecapsList() {
             retailerFilter={retailerFilter}
             stateFilter={stateFilter}
             rmmFilter={rmmFilter}
+            baFilter={baFilter}
             statusFilter={statusFilter}
             dateFrom={dateFrom}
             dateTo={dateTo}
