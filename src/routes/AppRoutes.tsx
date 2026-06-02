@@ -190,6 +190,12 @@ const SparkRecapTemplateCreate = lazyDefault(
 const RecapCustomList = lazyDefault(() => import("@/recap/RecapCustomList"));
 const RecapView = lazyDefault(() => import("@/recap/RecapView"));
 const RecapCustomView = lazyDefault(() => import("@/recap/RecapCustomView"));
+// Client-facing recap sign-off list (/my-approvals). The clean counterpart
+// to the admin /approvals ops queue — see SparkClientApprovals for why it's
+// list-only and how it's tenant-scoped.
+const SparkClientApprovals = lazyDefault(
+  () => import("@/components/pages/approvals/SparkClientApprovals"),
+);
 
 // Calendar / Scheduling
 const SparkCalendar = lazyDefault(
@@ -522,6 +528,17 @@ const RequestsLinks = {
           <SparkApprovals />
         </AdminOnly>
       ),
+      isPublic: false,
+    },
+    {
+      // Client-facing recap sign-off list. NOT AdminOnly — clients land
+      // here from the sidebar "Approvals" item (clientTo: /my-approvals)
+      // while admins keep the /approvals ops queue. Auth-gated; the page
+      // reads only the tenant-scoped recaps/customRecaps queries and the
+      // backend forces a client to their own tenant, so it's safe to
+      // expose (mirrors /account-map, /today).
+      path: "/my-approvals",
+      component: <SparkClientApprovals />,
       isPublic: false,
     },
     {
