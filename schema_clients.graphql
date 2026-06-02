@@ -2101,6 +2101,13 @@ type DeleteRecapResponse {
   deletedRecapUuid: String
 }
 
+type DeleteRecapSectionResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  deletedRecapSectionUuid: String
+}
+
 """
 CustomRecapFieldType(id, uuid, name, created_by, updated_by, created_at, updated_at)
 """
@@ -2429,6 +2436,11 @@ input DeleteCustomRecapInput {
 input DeleteCustomRecapFileInput {
   clientMutationId: ID = null
   id: ID!
+}
+
+input DeleteRecapSectionInput {
+  clientMutationId: ID = null
+  sectionId: ID!
 }
 
 input DeleteSkillInput {
@@ -3805,10 +3817,12 @@ type Mutation {
   markChatThreadRead(input: MarkChatThreadReadInput!): Int!
   archiveChatThread(input: ArchiveChatThreadInput!): ChatThread!
   removeCustomField(input: RemoveCustomFieldInput!): CustomFieldDetailResponse!
+  moveCustomFieldToSection(input: MoveCustomFieldToSectionInput!): CustomFieldDetailResponse!
   createCustomRecapFieldType(input: CreateCustomRecapFieldTypeInput!): CustomRecapFieldTypeDetailResponse!
   updateCustomRecapFieldType(input: UpdateCustomRecapFieldTypeInput!): CustomRecapFieldTypeDetailResponse!
   createRecapSection(input: CreateRecapSectionInput!): RecapSectionDetailResponse!
   updateRecapSection(input: UpdateRecapSectionInput!): RecapSectionDetailResponse!
+  deleteRecapSection(input: DeleteRecapSectionInput!): DeleteRecapSectionResponse!
   deleteRecap(input: DeleteRecapInput!): DeleteRecapResponse!
   deleteCustomRecap(input: DeleteCustomRecapInput!): DeleteCustomRecapResponse!
   addRecapFile(input: AddRecapFileInput!): RecapDetailResponse!
@@ -5586,6 +5600,12 @@ input MarkReceiptPaidInput {
   id: ID!
   amount: Float
   payoutHandle: String
+}
+
+input MoveCustomFieldToSectionInput {
+  clientMutationId: ID = null
+  fieldId: ID!
+  sectionId: ID!
 }
 
 type ReceiptCampaignResponse {
