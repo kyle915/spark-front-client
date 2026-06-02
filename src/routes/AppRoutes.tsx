@@ -609,12 +609,14 @@ const RequestsLinks = {
     { path: "/today", component: <SparkToday />, isPublic: false },
     { path: "/upcoming", component: <SparkUpcomingEvents />, isPublic: false },
     {
+      // Client-visible: SparkRecentSubmissions only reads the
+      // tenant-scoped RequestsQuery and the backend forces clients to
+      // their own tenant, so no AdminOnly gate is needed (mirrors
+      // /account-map, /today, /upcoming). The nav flag was dropped in the
+      // F8 fix; this removes the leftover route-level guard that still
+      // showed clients "ADMIN VIEW REQUIRED".
       path: "/recent",
-      component: (
-        <AdminOnly>
-          <SparkRecentSubmissions />
-        </AdminOnly>
-      ),
+      component: <SparkRecentSubmissions />,
       isPublic: false,
     },
     {
