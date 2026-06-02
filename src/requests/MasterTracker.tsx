@@ -705,7 +705,11 @@ const MasterTrackerInner: React.FC<{
               ? "none"
               : recapCount > 0
                 ? "submitted"
-                : isRecapDue(n.date)
+                : // Per-row status chip reflects ALL history (the table can
+                  // show events of any age, default date range "all"), so keep
+                  // this unbounded — Infinity disables the 30-day lower bound
+                  // that the sidebar badge uses to match /recaps/missing.
+                  isRecapDue(n.date, Infinity)
                   ? "due"
                   : "none";
           return {
