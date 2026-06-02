@@ -96,17 +96,20 @@ const SECTIONS: NavSection[] = [
         label: "Recent submissions",
         Icon: Inbox,
         to: "/recent",
-        clientLabel: "Recent Activity",
+        clientLabel: "Recent Submissions",
       },
       // Chat lives in WORKSPACE (moved up from COMMUNICATION) — it's a
       // day-to-day BA-messaging surface, not a broadcast channel. Route,
       // badge (wired by route below), and icon are unchanged.
-      { label: "Chat", Icon: MessageCircle, to: "/chat" },
+      // Admin-only: clients don't get the Chat surface.
+      { label: "Chat", Icon: MessageCircle, to: "/chat", adminOnly: true },
       {
         label: "Master Tracker",
         Icon: ListChecks,
         to: "/requests/list",
-        clientLabel: "My Requests",
+        // Clients see the Master Tracker under its real name (tenant-scoped
+        // by the backend to their own requests).
+        clientLabel: "Master Tracker",
       },
       {
         label: "Recaps",
