@@ -377,6 +377,8 @@ type JobApplication {
   ambassadorFirstName: String!
   ambassadorLastName: String!
   ambassadorEmail: String!
+  ambassadorPhone: String
+  ambassadorImage: String
   ambassadorUuid: String!
 }
 
@@ -3142,6 +3144,70 @@ type JobBriefingResponse {
   title: String
 }
 
+type BriefingTemplate implements Node {
+  id: ID!
+  uuid: String!
+  name: String!
+  title: String!
+  body: String!
+  isArchived: Boolean!
+  tenantId: ID!
+  createdAt: String!
+  updatedAt: String!
+  attachments: [BriefingTemplateAttachment!]!
+}
+
+type BriefingTemplateAttachment {
+  uuid: String!
+  name: String!
+  url: String!
+  contentType: String!
+  size: Int
+  createdAt: String!
+}
+
+input CreateBriefingTemplateInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  title: String = null
+  body: String = null
+  attachments: [BriefingTemplateAttachmentInput!] = null
+}
+
+input UpdateBriefingTemplateInput {
+  clientMutationId: ID = null
+  templateId: ID!
+  name: String = null
+  title: String = null
+  body: String = null
+  attachments: [BriefingTemplateAttachmentInput!] = null
+}
+
+input ArchiveBriefingTemplateInput {
+  clientMutationId: ID = null
+  templateId: ID!
+}
+
+input ApplyBriefingTemplateInput {
+  clientMutationId: ID = null
+  jobId: ID!
+  templateId: ID!
+}
+
+input SaveJobBriefingAsTemplateInput {
+  clientMutationId: ID = null
+  jobId: ID!
+  name: String!
+}
+
+type BriefingTemplateResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  briefingTemplate: BriefingTemplate
+}
+
 type Job implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
@@ -3660,6 +3726,11 @@ input ArchiveChatThreadInput {
 }
 
 type Mutation {
+  createBriefingTemplate(input: CreateBriefingTemplateInput!): BriefingTemplateResponse!
+  updateBriefingTemplate(input: UpdateBriefingTemplateInput!): BriefingTemplateResponse!
+  archiveBriefingTemplate(input: ArchiveBriefingTemplateInput!): BriefingTemplateResponse!
+  applyBriefingTemplate(input: ApplyBriefingTemplateInput!): JobBriefingResponse!
+  saveJobBriefingAsTemplate(input: SaveJobBriefingAsTemplateInput!): BriefingTemplateResponse!
   createAcademyModule(input: CreateAcademyModuleInput!): AcademyModuleResponse!
   updateAcademyModule(input: UpdateAcademyModuleInput!): AcademyModuleResponse!
   deleteAcademyModule(input: DeleteAcademyModuleInput!): AcademyModuleResponse!
@@ -4212,6 +4283,8 @@ type WingspanPayment {
 }
 
 type Query {
+  briefingTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [BriefingTemplate!]!
+  jobBriefing(jobId: ID!): JobBriefingPayload
   jobApplications(jobId: ID!): [JobApplication!]!
   chatThreads(includeArchived: Boolean! = false): [ChatThread!]!
   chatThread(uuid: ID!): ChatThread

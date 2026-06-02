@@ -1,5 +1,6 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { useSearchParams } from "react-router";
 import { fetchQuery } from "relay-runtime";
 import Layout from "@/layout/Layout";
 import environment from "@/api/relay/environment";
@@ -197,9 +198,25 @@ const ThreadList: React.FC<{
 /* ─── Page shell ─── */
 
 const SparkChatPage: React.FC = () => {
-  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Deep-link support: `/chat?thread=<uuid>` pre-selects that conversation
+  // (used when the admin opens a DM from a job applicant). Seed the
+  // selection once from the URL, then strip the param so it doesn't stick.
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(
+    () => searchParams.get("thread"),
+  );
   const [refreshKey, setRefreshKey] = useState(0);
   const [composerOpen, setComposerOpen] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.has("thread")) {
+      const next = new URLSearchParams(searchParams);
+      next.delete("thread");
+      setSearchParams(next, { replace: true });
+    }
+    // Only on mount — we just want to clear the seed param once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Poll the thread list every 30s so new conversations + unread
   // counts stay current without manual refresh.
