@@ -15,6 +15,7 @@ import { GenerateCustomRecapPdfMutation } from "@/api/mutations/GenerateCustomRe
 import type { GenerateCustomRecapPdfMutation as GenerateCustomRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateCustomRecapPdfMutation.graphql";
 import { RecapUploader } from "./RecapUploader";
 import RecapQualityPanel from "./RecapQualityPanel";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { AmbassadorPicker } from "./SparkRecapCreate";
 import { buildCustomFieldValuesPayload } from "./customRecapSave";
 import { useAuthStore } from "@/store/authStore";
@@ -1069,7 +1070,14 @@ const RecapCustomView = () => {
                       </span>
                     </label>
                     {editedFillingForAmbassador && (
-                      <Suspense
+                      /* Local boundary so a picker query error (a permission/
+                         network hiccup loading the roster) shows a contained
+                         message instead of unmounting the whole edit form and
+                         losing the admin's in-progress edits. The route also
+                         has a boundary; this keeps the rest of the edit
+                         intact. */
+                      <ErrorBoundary>
+                        <Suspense
                         fallback={
                           <div className="text-sm text-base-content/60">
                             Loading ambassadors…
@@ -1097,7 +1105,8 @@ const RecapCustomView = () => {
                             setEditedExternalBaName("");
                           }}
                         />
-                      </Suspense>
+                        </Suspense>
+                      </ErrorBoundary>
                     )}
                   </div>
                 ) : (
