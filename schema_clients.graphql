@@ -3220,6 +3220,57 @@ type BriefingTemplateResponse {
   briefingTemplate: BriefingTemplate
 }
 
+type GigTemplate {
+  uuid: String!
+  name: String!
+  hourlyRate: Float
+  totalHours: Float
+  uniformNotes: String!
+  defaultOpenToAll: Boolean!
+  isArchived: Boolean!
+  tenantId: ID!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type GigTemplateResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  gigTemplate: GigTemplate
+}
+
+input CreateGigTemplateInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  hourlyRate: Float = null
+  totalHours: Float = null
+  uniformNotes: String = null
+  defaultOpenToAll: Boolean = null
+}
+
+input UpdateGigTemplateInput {
+  clientMutationId: ID = null
+  templateId: ID!
+  name: String = null
+  hourlyRate: Float = null
+  totalHours: Float = null
+  uniformNotes: String = null
+  defaultOpenToAll: Boolean = null
+}
+
+input ArchiveGigTemplateInput {
+  clientMutationId: ID = null
+  templateId: ID!
+}
+
+input SaveJobPostAsGigTemplateInput {
+  clientMutationId: ID = null
+  jobId: ID!
+  name: String!
+}
+
 type Job implements Node {
   """The Globally Unique ID of this object"""
   id: ID!
@@ -3743,6 +3794,10 @@ type Mutation {
   archiveBriefingTemplate(input: ArchiveBriefingTemplateInput!): BriefingTemplateResponse!
   applyBriefingTemplate(input: ApplyBriefingTemplateInput!): JobBriefingResponse!
   saveJobBriefingAsTemplate(input: SaveJobBriefingAsTemplateInput!): BriefingTemplateResponse!
+  createGigTemplate(input: CreateGigTemplateInput!): GigTemplateResponse!
+  updateGigTemplate(input: UpdateGigTemplateInput!): GigTemplateResponse!
+  archiveGigTemplate(input: ArchiveGigTemplateInput!): GigTemplateResponse!
+  saveJobPostAsGigTemplate(input: SaveJobPostAsGigTemplateInput!): GigTemplateResponse!
   createAcademyModule(input: CreateAcademyModuleInput!): AcademyModuleResponse!
   updateAcademyModule(input: UpdateAcademyModuleInput!): AcademyModuleResponse!
   deleteAcademyModule(input: DeleteAcademyModuleInput!): AcademyModuleResponse!
@@ -4298,6 +4353,7 @@ type WingspanPayment {
 
 type Query {
   briefingTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [BriefingTemplate!]!
+  gigTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [GigTemplate!]!
   jobBriefing(jobId: ID!): JobBriefingPayload
   jobApplications(jobId: ID!): [JobApplication!]!
   chatThreads(includeArchived: Boolean! = false): [ChatThread!]!

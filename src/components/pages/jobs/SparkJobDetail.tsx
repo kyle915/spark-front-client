@@ -22,6 +22,19 @@ import { BriefingTemplatesQuery } from "@/api/queries/BriefingTemplatesQuery";
 import type { BriefingTemplatesQuery as BriefingTemplatesQueryType } from "@api/queries/__generated__/BriefingTemplatesQuery.graphql";
 import { SaveJobBriefingAsTemplateMutation } from "@/api/mutations/SaveJobBriefingAsTemplateMutation";
 import type { SaveJobBriefingAsTemplateMutation as SaveJobBriefingAsTemplateMutationType } from "@api/mutations/__generated__/SaveJobBriefingAsTemplateMutation.graphql";
+import { GigTemplatesQuery } from "@/api/queries/GigTemplatesQuery";
+import type { GigTemplatesQuery as GigTemplatesQueryType } from "@api/queries/__generated__/GigTemplatesQuery.graphql";
+import { CreateGigTemplateMutation } from "@/api/mutations/CreateGigTemplateMutation";
+import type { CreateGigTemplateMutation as CreateGigTemplateMutationType } from "@api/mutations/__generated__/CreateGigTemplateMutation.graphql";
+import { UpdateGigTemplateMutation } from "@/api/mutations/UpdateGigTemplateMutation";
+import type { UpdateGigTemplateMutation as UpdateGigTemplateMutationType } from "@api/mutations/__generated__/UpdateGigTemplateMutation.graphql";
+import { ArchiveGigTemplateMutation } from "@/api/mutations/ArchiveGigTemplateMutation";
+import type { ArchiveGigTemplateMutation as ArchiveGigTemplateMutationType } from "@api/mutations/__generated__/ArchiveGigTemplateMutation.graphql";
+// NOTE: saveJobPostAsGigTemplate (SaveJobPostAsGigTemplateMutation) is also
+// wired/available in src/api/mutations for snapshotting an already-POSTED
+// job into a template. The Post Job modal here deliberately uses
+// createGigTemplate instead, because it seeds from the CURRENT (unsaved)
+// modal fields before the job is posted.
 import BAProfileModal from "@/components/pages/talent/BAProfileModal";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
@@ -750,20 +763,313 @@ const fieldStyle: React.CSSProperties = {
   width: "100%",
 };
 
+/** A saved gig template as the Post Job modal reads it off GigTemplatesQuery. */
+type GigTemplate =
+  GigTemplatesQueryType["response"]["gigTemplates"][number];
+
+/**
+ * "Use a template…" picker for the Post Job modal (#265). Loads the
+ * tenant's saved gig templates (lazy, own Suspense boundary) and, on
+ * select, hands the chosen template object up so the modal prefills the
+ * pay/hours/uniform/visibility fields — the admin can then tweak + post.
+ * Mirrors BriefingTemplatePicker.
+ */
+const GigTemplatePicker: React.FC<{
+  tenantId: string | null;
+  refreshKey: number;
+  onPick: (template: GigTemplate) => void;
+}> = ({ tenantId, refreshKey, onPick }) => {
+  const data = useLazyLoadQuery<GigTemplatesQueryType>(
+    GigTemplatesQuery,
+    { tenantId, includeArchived: false },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+  );
+  const templates = useMemo(
+    () => (data.gigTemplates ?? []).filter((t) => !t.isArchived),
+    [data],
+  );
+
+  if (templates.length === 0) {
+    return (
+      <span
+        className="mono text-[10px]"
+        style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.4)" }}
+      >
+        NO SAVED TEMPLATES YET
+      </span>
+    );
+  }
+
+  return (
+    <select
+      onChange={(e) => {
+        const t = templates.find((x) => x.uuid === e.target.value);
+        if (t) onPick(t);
+        e.target.value = "";
+      }}
+      defaultValue=""
+      className="rounded-xl text-xs"
+      style={{
+        padding: "0.45rem 0.9rem",
+        background: "var(--spark-bg)",
+        border: "1px solid var(--spark-border)",
+        color: "var(--spark-text)",
+        maxWidth: 240,
+        outline: "none",
+      }}
+    >
+      <option value="">Use a template…</option>
+      {templates.map((t) => (
+        <option key={t.uuid} value={t.uuid}>
+          {t.name}
+        </option>
+      ))}
+    </select>
+  );
+};
+
+/**
+ * One editable row in the Manage templates panel (#265). Holds its own
+ * draft of the template's fields; "Save" commits updateGigTemplate and
+ * "Archive" commits archiveGigTemplate. Both bump the parent refreshKey
+ * (via onChanged) so the picker + list reflect the change.
+ */
+const GigTemplateRow: React.FC<{
+  template: GigTemplate;
+  onChanged: () => void;
+}> = ({ template, onChanged }) => {
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [name, setName] = useState(template.name);
+  const [rate, setRate] = useState(
+    template.hourlyRate != null ? String(template.hourlyRate) : "",
+  );
+  const [hours, setHours] = useState(
+    template.totalHours != null ? String(template.totalHours) : "",
+  );
+  const [uniformNotes, setUniformNotes] = useState(template.uniformNotes ?? "");
+  const [openToAll, setOpenToAll] = useState(Boolean(template.defaultOpenToAll));
+  const [commitUpdate, updating] =
+    useMutation<UpdateGigTemplateMutationType>(UpdateGigTemplateMutation);
+  const [commitArchive, archiving] =
+    useMutation<ArchiveGigTemplateMutationType>(ArchiveGigTemplateMutation);
+
+  const save = () => {
+    if (updating) return;
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      showAlert("A template name is required.", "warning");
+      return;
+    }
+    commitUpdate({
+      variables: {
+        input: {
+          templateId: template.uuid,
+          name: trimmedName,
+          hourlyRate: rate.trim() === "" ? null : Number(rate),
+          totalHours: hours.trim() === "" ? null : Number(hours),
+          uniformNotes: uniformNotes.trim(),
+          defaultOpenToAll: openToAll,
+        },
+      },
+      onCompleted: (res) => {
+        if (res.updateGigTemplate?.success) {
+          showAlert(
+            res.updateGigTemplate.message || "Template updated.",
+            "success",
+          );
+          onChanged();
+        } else {
+          showAlert(
+            res.updateGigTemplate?.message ?? "Couldn't update the template.",
+            "error",
+          );
+        }
+      },
+      onError: (e) => showAlert(`Update failed: ${e.message}`, "error"),
+    });
+  };
+
+  const archive = () => {
+    if (archiving) return;
+    if (!window.confirm(`Archive “${template.name}”? It’ll drop out of the picker.`))
+      return;
+    commitArchive({
+      variables: { input: { templateId: template.uuid } },
+      onCompleted: (res) => {
+        if (res.archiveGigTemplate?.success) {
+          showAlert(
+            res.archiveGigTemplate.message || "Template archived.",
+            "success",
+          );
+          onChanged();
+        } else {
+          showAlert(
+            res.archiveGigTemplate?.message ?? "Couldn't archive the template.",
+            "error",
+          );
+        }
+      },
+      onError: (e) => showAlert(`Archive failed: ${e.message}`, "error"),
+    });
+  };
+
+  const busy = updating || archiving;
+
+  return (
+    <div
+      className="space-y-2.5"
+      style={{
+        padding: "0.85rem",
+        borderRadius: 14,
+        border: "1px solid var(--spark-border)",
+        background: "var(--spark-bg)",
+      }}
+    >
+      <div>
+        <label className="label-mini block mb-1">NAME</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          style={fieldStyle}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2.5">
+        <div>
+          <label className="label-mini block mb-1">HOURLY RATE ($)</label>
+          <input
+            type="number"
+            min="0"
+            step="0.5"
+            value={rate}
+            onChange={(e) => setRate(e.target.value)}
+            placeholder="—"
+            style={fieldStyle}
+          />
+        </div>
+        <div>
+          <label className="label-mini block mb-1">TOTAL HOURS</label>
+          <input
+            type="number"
+            min="0"
+            step="0.5"
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+            placeholder="—"
+            style={fieldStyle}
+          />
+        </div>
+      </div>
+      <div>
+        <label className="label-mini block mb-1">UNIFORM NOTES</label>
+        <textarea
+          value={uniformNotes}
+          onChange={(e) => setUniformNotes(e.target.value)}
+          rows={2}
+          placeholder="Black tee + black pants, closed-toe shoes."
+          style={{ ...fieldStyle, resize: "vertical", minHeight: 52 }}
+        />
+      </div>
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={openToAll}
+          onChange={(e) => setOpenToAll(e.target.checked)}
+          style={{ width: 16, height: 16, accentColor: "var(--spark-lime)" }}
+        />
+        <span className="text-[12px]" style={{ color: "rgba(255,255,255,0.8)" }}>
+          Open to all BAs by default
+        </span>
+      </label>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={save}
+          disabled={busy}
+          className="px-3 py-1.5 rounded-xl text-xs font-semibold"
+          style={{
+            background: "var(--spark-lime)",
+            color: "#0a0d09",
+            opacity: busy ? 0.5 : 1,
+          }}
+        >
+          {updating ? "Saving…" : "Save"}
+        </button>
+        <button
+          onClick={archive}
+          disabled={busy}
+          className="px-3 py-1.5 rounded-xl text-xs font-semibold"
+          style={{
+            background: "transparent",
+            color: "var(--spark-orange, #ef5a2a)",
+            border: "1px solid var(--spark-border)",
+            opacity: busy ? 0.5 : 1,
+          }}
+        >
+          {archiving ? "Archiving…" : "Archive"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * Manage templates panel (#265) — the one net-new surface beyond the
+ * briefing pattern. Lists the tenant's gig templates with inline edit
+ * (updateGigTemplate) + archive (archiveGigTemplate). Lazy-loaded behind
+ * its own Suspense; keyed on refreshKey so it (and the picker) refetch
+ * after any change.
+ */
+const GigTemplateManager: React.FC<{
+  tenantId: string | null;
+  refreshKey: number;
+  onChanged: () => void;
+}> = ({ tenantId, refreshKey, onChanged }) => {
+  const data = useLazyLoadQuery<GigTemplatesQueryType>(
+    GigTemplatesQuery,
+    { tenantId, includeArchived: false },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+  );
+  const templates = useMemo(
+    () => (data.gigTemplates ?? []).filter((t) => !t.isArchived),
+    [data],
+  );
+
+  if (templates.length === 0) {
+    return (
+      <p className="text-[12px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+        No templates yet. Fill the fields above and hit “Save as template”.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {templates.map((t) => (
+        <GigTemplateRow key={t.uuid} template={t} onChanged={onChanged} />
+      ))}
+    </div>
+  );
+};
+
 /**
  * "Post job" modal (#headline). Collects the pay/hours + visibility the
  * backend's postJob mutation needs, then sends the job live to BAs
  * (lifecycle_status -> "posted"). Hours/rate pre-fill from the job when
  * available. On success the parent refetches so the header flips to a
  * "● Live to BAs" indicator.
+ *
+ * Gig templates (#265): admins can prefill the form from a saved tenant
+ * template, save the current fields as a new template, and edit/archive
+ * existing templates via the Manage panel.
  */
 const PostJobModal: React.FC<{
   node: JobNode;
   defaultHours: number | null;
   defaultRate: number | null;
+  tenantId: string | null;
   onClose: () => void;
   onPosted: () => void;
-}> = ({ node, defaultHours, defaultRate, onClose, onPosted }) => {
+}> = ({ node, defaultHours, defaultRate, tenantId, onClose, onPosted }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
   const [totalHours, setTotalHours] = useState(
     defaultHours != null ? String(defaultHours) : "",
@@ -775,12 +1081,72 @@ const PostJobModal: React.FC<{
   const [openToAll, setOpenToAll] = useState(false);
   const [attempted, setAttempted] = useState(false);
   const [commit, posting] = useMutation<PostJobMutationType>(PostJobMutation);
+  // Bump to refetch the template picker + manager after a create/edit/archive.
+  const [templatesRefreshKey, setTemplatesRefreshKey] = useState(0);
+  const [manageOpen, setManageOpen] = useState(false);
+  const [commitCreateTemplate, savingTemplate] =
+    useMutation<CreateGigTemplateMutationType>(CreateGigTemplateMutation);
 
   const hoursNum = Number(totalHours);
   const rateNum = Number(hourlyRate);
   const hoursValid = totalHours.trim() !== "" && hoursNum > 0;
   const rateValid = hourlyRate.trim() !== "" && rateNum > 0;
   const valid = hoursValid && rateValid;
+
+  // Prefill the form from a chosen template (#265). defaultOpenToAll maps
+  // directly onto the "Open to all BAs now" toggle — no inversion.
+  const applyTemplate = (t: GigTemplate) => {
+    if (t.totalHours != null) setTotalHours(String(t.totalHours));
+    if (t.hourlyRate != null) setHourlyRate(String(t.hourlyRate));
+    setUniformNotes(t.uniformNotes ?? "");
+    setOpenToAll(Boolean(t.defaultOpenToAll));
+    showAlert("Template loaded — edit as needed, then post.", "success");
+  };
+
+  // Save the CURRENT modal fields as a new tenant template (#265). Seeds
+  // createGigTemplate (NOT saveJobPostAsGigTemplate) because the values are
+  // in local state and the job isn't posted yet.
+  const saveAsTemplate = () => {
+    if (savingTemplate) return;
+    const name = window.prompt(
+      "Name this gig template (e.g. “LD sampling — 6h @ $28”):",
+      node.jobTitle?.name ?? "",
+    );
+    if (name == null) return; // cancelled
+    const trimmed = name.trim();
+    if (!trimmed) {
+      showAlert("A template name is required.", "warning");
+      return;
+    }
+    commitCreateTemplate({
+      variables: {
+        input: {
+          tenantId,
+          name: trimmed,
+          hourlyRate: rateValid ? rateNum : null,
+          totalHours: hoursValid ? hoursNum : null,
+          uniformNotes: uniformNotes.trim(),
+          defaultOpenToAll: openToAll,
+        },
+      },
+      onCompleted: (res) => {
+        if (res.createGigTemplate?.success) {
+          showAlert(
+            res.createGigTemplate.message || `Saved “${trimmed}” as a template.`,
+            "success",
+          );
+          // Refresh the picker + manager so the new template is selectable.
+          setTemplatesRefreshKey((k) => k + 1);
+        } else {
+          showAlert(
+            res.createGigTemplate?.message ?? "Couldn't save the template.",
+            "error",
+          );
+        }
+      },
+      onError: (e) => showAlert(`Save template failed: ${e.message}`, "error"),
+    });
+  };
 
   const submit = () => {
     setAttempted(true);
@@ -841,6 +1207,77 @@ const PostJobModal: React.FC<{
         </div>
 
         <div className="p-5 space-y-4">
+          {/* Gig templates (#265) — prefill / save / manage. */}
+          <div
+            className="space-y-3"
+            style={{
+              padding: "0.85rem",
+              borderRadius: 14,
+              border: "1px solid var(--spark-border)",
+              background: "rgba(255,255,255,0.02)",
+            }}
+          >
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <label className="label-mini block">START FROM A TEMPLATE</label>
+              <div className="flex items-center gap-3">
+                <Suspense
+                  fallback={
+                    <span
+                      className="mono text-[10px]"
+                      style={{
+                        letterSpacing: "0.14em",
+                        color: "rgba(255,255,255,0.4)",
+                      }}
+                    >
+                      LOADING TEMPLATES…
+                    </span>
+                  }
+                >
+                  <GigTemplatePicker
+                    tenantId={tenantId}
+                    refreshKey={templatesRefreshKey}
+                    onPick={applyTemplate}
+                  />
+                </Suspense>
+                <button
+                  type="button"
+                  onClick={() => setManageOpen((v) => !v)}
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: manageOpen
+                      ? "var(--spark-orange, #ef5a2a)"
+                      : "var(--spark-lime)",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {manageOpen ? "× CLOSE" : "⚙ MANAGE"}
+                </button>
+              </div>
+            </div>
+            {manageOpen ? (
+              <Suspense
+                fallback={
+                  <span
+                    className="mono text-[10px]"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "rgba(255,255,255,0.4)",
+                    }}
+                  >
+                    LOADING…
+                  </span>
+                }
+              >
+                <GigTemplateManager
+                  tenantId={tenantId}
+                  refreshKey={templatesRefreshKey}
+                  onChanged={() => setTemplatesRefreshKey((k) => k + 1)}
+                />
+              </Suspense>
+            ) : null}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label-mini block mb-1.5">TOTAL HOURS *</label>
@@ -924,34 +1361,50 @@ const PostJobModal: React.FC<{
         </div>
 
         <div
-          className="p-4 flex items-center justify-end gap-2"
+          className="p-4 flex items-center justify-between gap-2 flex-wrap"
           style={{ borderTop: "1px solid var(--spark-border)" }}
         >
           <button
-            onClick={onClose}
-            disabled={posting}
-            className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+            onClick={saveAsTemplate}
+            disabled={posting || savingTemplate}
+            title="Save the current fields as a reusable gig template"
+            className="px-3 py-2 rounded-xl text-xs font-semibold disabled:opacity-50"
             style={{
               background: "transparent",
               color: "var(--spark-text)",
               border: "1px solid var(--spark-border)",
+              whiteSpace: "nowrap",
             }}
           >
-            Cancel
+            {savingTemplate ? "Saving…" : "💾 Save as template"}
           </button>
-          <button
-            onClick={submit}
-            disabled={posting || !valid}
-            className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
-            style={{
-              background: "var(--spark-lime)",
-              color: "#0a0d09",
-              boxShadow:
-                valid && !posting ? "0 0 16px rgba(197,245,70,0.35)" : "none",
-            }}
-          >
-            {posting ? "Posting…" : "📣 Post job"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              disabled={posting}
+              className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={submit}
+              disabled={posting || !valid}
+              className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+              style={{
+                background: "var(--spark-lime)",
+                color: "#0a0d09",
+                boxShadow:
+                  valid && !posting ? "0 0 16px rgba(197,245,70,0.35)" : "none",
+              }}
+            >
+              {posting ? "Posting…" : "📣 Post job"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1782,6 +2235,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           node={node}
           defaultHours={defaultHours}
           defaultRate={defaultRate}
+          tenantId={tenantId ?? null}
           onClose={() => setShowPost(false)}
           onPosted={handlePosted}
         />
