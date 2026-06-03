@@ -224,6 +224,22 @@ const FormInputTime = <T extends FieldValues>({
               )}
             </div>
 
+            {/* Overnight-time guardrail: this picker defaults to AM and lets
+                you pick any hour, so "3 + 00" with the period left on AM
+                silently yields 3:00 AM. Activations are essentially never
+                overnight, so a 12am–5:59am selection is almost always an
+                AM/PM mix-up (the REQ-1072 "3:00 AM" report). Soft, inline,
+                non-blocking — nudges the user to re-check AM vs PM. */}
+            {field.value && period === "AM" && (hour === 12 || hour <= 5) && (
+              <label className="label py-1">
+                <span className="label-text-alt text-warning">
+                  ⚠ {formatDisplay(hour, minute, period, field.value)} is an
+                  overnight time — most activations run during the day.
+                  Double-check AM vs PM.
+                </span>
+              </label>
+            )}
+
             {error && (
               <label className="label">
                 <span className="label-text-alt text-error">
