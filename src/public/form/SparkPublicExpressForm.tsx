@@ -52,6 +52,15 @@ export default function SparkPublicExpressForm() {
   // Form state
   const [venue, setVenue] = useState(searchParams.get("venue") ?? "");
   const [address, setAddress] = useState(searchParams.get("address") ?? "");
+  // Real lat/lng captured when the requestor picks a Google place for the
+  // venue or address. Null until a place resolves — we never fabricate a
+  // coordinate. Mirrors the wizard form's `latitude`/`longitude` form
+  // values (set by FormAddressSearch.onSelect in Step1Basic), which
+  // `buildPayload` turns into `coordinates`. Without this the Event lands
+  // at [0,0] and the "new gig nearby" distance push fails its haversine
+  // gate.
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [date, setDate] = useState("");
   const [extraDates, setExtraDates] = useState<string[]>([]);
   const [startTime, setStartTime] = useState("12:00");
@@ -136,6 +145,30 @@ export default function SparkPublicExpressForm() {
       .filter(Boolean)
       .join("\n");
 
+    // Build the request coordinates from the geocode captured when the
+    // requestor picked a venue/address (see the GooglePlacesInput
+    // onResolved handlers). Mirrors the wizard form's buildPayload, which
+    // emits `[Number(values.latitude), Number(values.longitude)]`.
+    //
+    // GUARD: only send real coordinates. If no place ever resolved
+    // (latitude/longitude null), or the captured pair is non-finite, or it
+    // degenerates to the [0,0] null-island, fall back to [0, 0] — the
+    // sentinel the backend already accepts for an unknown geocode (it's
+    // what this form sent unconditionally before). The win: when the
+    // requestor picked an address (the common case) the real coordinates
+    // now flow through instead of being overwritten with [0,0], so the
+    // Event geocodes correctly and the "new gig nearby" haversine push
+    // works.
+    const hasRealGeocode =
+      latitude != null &&
+      longitude != null &&
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      !(latitude === 0 && longitude === 0);
+    const coordinates: [number, number] = hasRealGeocode
+      ? [Number(latitude), Number(longitude)]
+      : [0, 0];
+
     let successes = 0;
     let lastRouted: string | null = null;
     const failures: string[] = [];
@@ -166,7 +199,7 @@ export default function SparkPublicExpressForm() {
         startTime: dateTimes.startTime,
         endTime: dateTimes.endTime,
         address,
-        coordinates: [0, 0],
+        coordinates,
         requestorEmail,
         clientName: requestorName || requestorEmail,
         clientEmail: requestorEmail,
@@ -212,6 +245,8 @@ export default function SparkPublicExpressForm() {
       });
       setVenue("");
       setAddress("");
+      setLatitude(null);
+      setLongitude(null);
       setDate("");
       setExtraDates([]);
       setProductIds([]);
@@ -269,6 +304,14 @@ export default function SparkPublicExpressForm() {
                 // The full address goes into the Address field.
                 setVenue(p.retailerName || p.placeName || "");
                 if (!address) setAddress(p.formattedAddress);
+                // Capture the resolved establishment's coordinates so the
+                // request carries a real geocode even if the requestor
+                // never touches the Address field. The Address picker (the
+                // more precise locator) overwrites these if used after.
+                if (Number.isFinite(p.lat) && Number.isFinite(p.lng)) {
+                  setLatitude(p.lat);
+                  setLongitude(p.lng);
+                }
                 if (p.timezoneId) {
                   const match = matchTimezoneOption(p.timezoneId, timeZones);
                   if (match) setTimezoneId(String(match.id));
@@ -284,6 +327,12 @@ export default function SparkPublicExpressForm() {
               onChange={setAddress}
               onResolved={(p) => {
                 setAddress(p.formattedAddress);
+                // The address is the precise visit location — prefer its
+                // geocode for the request's coordinates.
+                if (Number.isFinite(p.lat) && Number.isFinite(p.lng)) {
+                  setLatitude(p.lat);
+                  setLongitude(p.lng);
+                }
                 if (p.timezoneId) {
                   const match = matchTimezoneOption(p.timezoneId, timeZones);
                   if (match) setTimezoneId(String(match.id));
@@ -877,9 +926,13 @@ export default function SparkPublicExpressForm() {
                     // Different venue. Clear venue-specific data but
                     // keep requestor name/email + distributor since
                     // those typically span multiple venues for one
-                    // submitter.
+                    // submitter. Drop the captured geocode too so the
+                    // next venue starts unknown rather than inheriting
+                    // this venue's coordinates.
                     setVenue("");
                     setAddress("");
+                    setLatitude(null);
+                    setLongitude(null);
                     setDate("");
                     setExtraDates([]);
                     setStoreContact("");
