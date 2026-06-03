@@ -260,13 +260,18 @@ const Inner: React.FC = () => {
                     }}
                     onClick={() => {
                       // Admin view: keep the deep-links (ops queue / edit).
-                      // Client view: those pages are admin-only, so don't
-                      // route clients into the "admin view required" wall —
-                      // the inline Approve below is their action.
-                      if (!isAdmin) return;
-                      navigate(
-                        r.isPending ? "/approvals" : `/request/edit/${r.uuid}`,
-                      );
+                      if (isAdmin) {
+                        navigate(
+                          r.isPending
+                            ? "/approvals"
+                            : `/request/edit/${r.uuid}`,
+                        );
+                        return;
+                      }
+                      // Client view: open the read-only request detail
+                      // (tenant-scoped, client-safe). Pending requests show
+                      // the inline Approve there too — no admin-only wall.
+                      navigate(`/request/view/${r.uuid}`);
                     }}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.background =

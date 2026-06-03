@@ -338,7 +338,12 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
     .filter(Boolean)
     .join(" ") || "—";
 
-  const canDecide = !role.isClient && slug === "pending";
+  // Approve is available to clients too — the backend `approveRequest`
+  // enforces tenant membership + blocks BAs (exactly like the emailed
+  // approval link), so it's safe to expose. Decline stays admin-only: it
+  // sends a decline-reason email to the requestor (an RMM/ops action).
+  const canApprove = slug === "pending";
+  const canDecline = !role.isClient && slug === "pending";
 
   const confirmApprove = async () => {
     setBusy(true);
@@ -482,35 +487,35 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           the common pattern: "schedule another visit at the same
           venue". Edit always available too (legacy edit form). */}
       <div className="flex flex-wrap gap-2">
-        {canDecide && (
-          <>
-            <button
-              onClick={() => setApproveOpen(true)}
-              disabled={busy}
-              className="px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{
-                background: "var(--spark-lime)",
-                color: "#0a0d09",
-                boxShadow: "0 0 18px rgba(197,245,70,0.35)",
-                opacity: busy ? 0.5 : 1,
-              }}
-            >
-              ✓ Approve
-            </button>
-            <button
-              onClick={() => setDecliningOpen(true)}
-              disabled={busy}
-              className="px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{
-                background: "transparent",
-                color: "var(--spark-orange)",
-                border: "1px solid rgba(239,90,42,0.4)",
-                opacity: busy ? 0.5 : 1,
-              }}
-            >
-              ✗ Decline
-            </button>
-          </>
+        {canApprove && (
+          <button
+            onClick={() => setApproveOpen(true)}
+            disabled={busy}
+            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+              opacity: busy ? 0.5 : 1,
+            }}
+          >
+            ✓ Approve
+          </button>
+        )}
+        {canDecline && (
+          <button
+            onClick={() => setDecliningOpen(true)}
+            disabled={busy}
+            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{
+              background: "transparent",
+              color: "var(--spark-orange)",
+              border: "1px solid rgba(239,90,42,0.4)",
+              opacity: busy ? 0.5 : 1,
+            }}
+          >
+            ✗ Decline
+          </button>
         )}
         <button
           onClick={() => {

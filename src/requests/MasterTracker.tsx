@@ -112,6 +112,7 @@ const FilterSelect: React.FC<{
 
 type Row = {
   uuid: string;
+  id: string;
   date: string;
   dateLabel: string;
   timeLabel: string;
@@ -263,6 +264,44 @@ const TrackerTable: React.FC<{
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+
+  // Inline request approval from the Tracker (clients + admins). Backend
+  // `approveRequest` enforces tenant membership + blocks BAs (same as the
+  // emailed link), so it's safe for clients. Raw authenticated fetch (same
+  // pattern as the approvals queue / request view) — no Relay artifact.
+  const approveRow = async (row: Row) => {
+    setApprovingId(row.uuid);
+    try {
+      const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+        },
+        body: JSON.stringify({
+          query:
+            "mutation Approve($input: ApproveRequestInput!) { approveRequest(input: $input) { success message } }",
+          variables: { input: { id: row.id } },
+        }),
+      });
+      const json = await res.json();
+      if (!json.errors?.length && json?.data?.approveRequest?.success) {
+        setApprovedIds((prev) => new Set(prev).add(row.uuid));
+      } else {
+        window.alert(
+          json.errors?.[0]?.message ||
+            json?.data?.approveRequest?.message ||
+            "Couldn't approve — please try again.",
+        );
+      }
+    } catch {
+      window.alert("Couldn't approve — please try again.");
+    } finally {
+      setApprovingId(null);
+    }
+  };
   return (
     <div
       className="spark-card overflow-hidden"
@@ -429,6 +468,35 @@ const TrackerTable: React.FC<{
                           {r.confirmedBa >= r.assignedBa ? " ✓" : ""}
                         </span>
                       ) : null}
+                      {(r.statusSlug === "pending" ||
+                        r.statusSlug === "queue") &&
+                        (approvedIds.has(r.uuid) ? (
+                          <span className="chip chip-purple chip-sm">
+                            APPROVED
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={approvingId === r.uuid}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              approveRow(r);
+                            }}
+                            title="Approve this request"
+                            className="mono text-[10px] px-2 py-0.5 rounded-full"
+                            style={{
+                              letterSpacing: "0.1em",
+                              border: "1px solid var(--spark-lime)",
+                              color: "var(--spark-lime)",
+                              background: "transparent",
+                              cursor:
+                                approvingId === r.uuid ? "default" : "pointer",
+                              opacity: approvingId === r.uuid ? 0.6 : 1,
+                            }}
+                          >
+                            {approvingId === r.uuid ? "APPROVING…" : "APPROVE"}
+                          </button>
+                        ))}
                     </div>
                   </td>
                   <td className="px-4 py-3">{r.market}</td>
@@ -714,6 +782,7 @@ const MasterTrackerInner: React.FC<{
                   : "none";
           return {
             uuid: String(n.uuid),
+            id: String(n.id),
             date: n.date ?? "",
             dateLabel: fmtDateLabel(n.date),
             timeLabel: fmtTimeRange(n.startTime, n.endTime),
