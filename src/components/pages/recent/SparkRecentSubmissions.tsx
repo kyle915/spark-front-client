@@ -1,10 +1,11 @@
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import useSparkRole from "@/hooks/useSparkRole";
 
 /**
  * "Recent submissions" — requests created in the last 7 days. Helps
@@ -13,6 +14,7 @@ import { useAuthStore } from "@/store/authStore";
 
 type Row = {
   uuid: string;
+  id: string;
   reqId: string;
   venue: string;
   market: string;
@@ -66,6 +68,47 @@ const STATUS_CHIP: Record<string, string> = {
 const Inner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
+  const { isAdmin } = useSparkRole();
+  const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Inline request approval. Clients (and admins) can approve a PENDING
+  // request straight from this list — the backend `approveRequest` enforces
+  // tenant membership + blocks BAs, so it's safe to expose to clients
+  // (mirrors the client recap sign-off on /my-approvals). Raw authenticated
+  // fetch (same as the admin approvals queue) so no Relay artifact is needed.
+  const approveRequestRow = async (row: Row) => {
+    setBusyId(row.uuid);
+    try {
+      const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+        },
+        body: JSON.stringify({
+          query:
+            "mutation Approve($input: ApproveRequestInput!) { approveRequest(input: $input) { success message } }",
+          variables: { input: { id: row.id } },
+        }),
+      });
+      const json = await res.json();
+      const ok = !json.errors?.length && json?.data?.approveRequest?.success;
+      if (ok) {
+        setApprovedIds((prev) => new Set(prev).add(row.uuid));
+      } else {
+        window.alert(
+          json.errors?.[0]?.message ||
+            json?.data?.approveRequest?.message ||
+            "Couldn't approve — please try again.",
+        );
+      }
+    } catch {
+      window.alert("Couldn't approve — please try again.");
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
@@ -97,6 +140,7 @@ const Inner: React.FC = () => {
             .join(", ");
           return {
             uuid: String(n.uuid),
+            id: String(n.id),
             reqId: `REQ-${String(n.id).slice(-4).toUpperCase()}`,
             venue: n.retailer?.name ?? n.name ?? "—",
             market: market || "—",
@@ -214,13 +258,16 @@ const Inner: React.FC = () => {
                     style={{
                       borderBottom: "1px solid var(--spark-border)",
                     }}
-                    onClick={() =>
+                    onClick={() => {
+                      // Admin view: keep the deep-links (ops queue / edit).
+                      // Client view: those pages are admin-only, so don't
+                      // route clients into the "admin view required" wall —
+                      // the inline Approve below is their action.
+                      if (!isAdmin) return;
                       navigate(
-                        r.isPending
-                          ? "/approvals"
-                          : `/request/edit/${r.uuid}`,
-                      )
-                    }
+                        r.isPending ? "/approvals" : `/request/edit/${r.uuid}`,
+                      );
+                    }}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.background =
                         "rgba(255,255,255,0.02)")
@@ -245,9 +292,38 @@ const Inner: React.FC = () => {
                       {r.reqId}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={chipClass}>
-                        {r.status.toUpperCase()}
-                      </span>
+                      {approvedIds.has(r.uuid) ? (
+                        <span className="chip chip-purple">APPROVED</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-2">
+                          <span className={chipClass}>
+                            {r.status.toUpperCase()}
+                          </span>
+                          {r.isPending && (
+                            <button
+                              type="button"
+                              disabled={busyId === r.uuid}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                approveRequestRow(r);
+                              }}
+                              title="Approve this request"
+                              className="mono text-[10px] px-2 py-1 rounded-full"
+                              style={{
+                                letterSpacing: "0.1em",
+                                border: "1px solid var(--spark-lime)",
+                                color: "var(--spark-lime)",
+                                background: "transparent",
+                                cursor:
+                                  busyId === r.uuid ? "default" : "pointer",
+                                opacity: busyId === r.uuid ? 0.6 : 1,
+                              }}
+                            >
+                              {busyId === r.uuid ? "APPROVING…" : "APPROVE"}
+                            </button>
+                          )}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 font-medium">{r.venue}</td>
                     <td className="px-4 py-3">{r.market}</td>
@@ -286,7 +362,7 @@ export default function SparkRecentSubmissions() {
           </h1>
           <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
             Every request that came in this week, sorted by submission
-            time. Pending rows route straight to approvals on click.
+            time. Approve pending requests inline — no admin access needed.
           </p>
         </div>
         <Suspense
