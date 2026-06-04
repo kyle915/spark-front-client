@@ -1236,7 +1236,12 @@ export default function RequestForm({
                 control={control}
                 label="Date"
                 placeholder="MM/DD/YYYY"
-                minDaysFromToday={2}
+                // Create enforces a 2-day lead time. Edit (admin-only) must NOT:
+                // admins need to fix the date/state/market on past or
+                // <24h-away requests (e.g. external-form rows that came in
+                // without a state), which the lead-time guard otherwise blocks
+                // with "Date cannot be earlier than allowed".
+                minDaysFromToday={mode === "edit" ? undefined : 2}
                 rules={{ required: "Date is required" }}
               />
 
