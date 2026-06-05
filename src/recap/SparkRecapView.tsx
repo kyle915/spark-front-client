@@ -1,9 +1,11 @@
 import { Suspense, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { useNavigate, useParams } from "react-router";
+import { Navigate, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapQuery } from "@/api/queries/RecapQuery";
 import type { RecapQuery as RecapQueryType } from "@api/queries/__generated__/RecapQuery.graphql";
+import { GetCustomRecapQuery } from "@/api/queries/CustomRecapsQuery";
+import type { CustomRecapsQueryDetailsQuery as CustomRecapsQueryDetailsQueryType } from "@api/queries/__generated__/CustomRecapsQueryDetailsQuery.graphql";
 import { GenerateRecapPdfMutation } from "@/api/mutations/GenerateRecapPdfMutation";
 import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateRecapPdfMutation.graphql";
 import { AddRecapFileMutation } from "@/api/mutations/AddRecapFileMutation";
@@ -275,13 +277,24 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const recap = data?.recap;
 
   if (!recap) {
+    // The uuid may belong to a custom-template recap (a separate model the
+    // legacy `recap` query can't see) reached via a legacy /recap/view link
+    // — e.g. an LD custom recap an admin opened from the recaps list or an
+    // email. Probe the custom recap and redirect to its dedicated view
+    // before dead-ending on "Recap not found."
     return (
-      <div
-        className="spark-card p-8 text-center text-sm"
-        style={{ color: "rgba(255,255,255,0.55)" }}
+      <Suspense
+        fallback={
+          <div
+            className="spark-card p-8 text-center text-sm"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            Loading recap…
+          </div>
+        }
       >
-        Recap not found.
-      </div>
+        <CustomRecapFallback uuid={uuid} />
+      </Suspense>
     );
   }
 
@@ -2036,6 +2049,35 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
 };
 
 /* ─────────────────── page ─────────────────── */
+
+/**
+ * Custom-recap fallback for the legacy detail route. The default
+ * /recap/view/:uuid route renders SparkRecapInner, which queries the LEGACY
+ * `recap` only. A custom-template recap (separate model) returns null there,
+ * so an admin opening one via a legacy link saw "Recap not found." (Myriant
+ * on an LD custom recap). Probe `customRecap(uuid)`: if it exists, redirect
+ * to the dedicated custom view (which renders the template fields, photos,
+ * approve, etc.); otherwise it's a genuine miss. `replace` so Back doesn't
+ * bounce between the two routes.
+ */
+const CustomRecapFallback: React.FC<{ uuid: string }> = ({ uuid }) => {
+  const data = useLazyLoadQuery<CustomRecapsQueryDetailsQueryType>(
+    GetCustomRecapQuery,
+    { uuid },
+    { fetchPolicy: "store-or-network" },
+  );
+  if (data?.customRecap) {
+    return <Navigate to={`/recap/view-custom/${uuid}`} replace />;
+  }
+  return (
+    <div
+      className="spark-card p-8 text-center text-sm"
+      style={{ color: "rgba(255,255,255,0.55)" }}
+    >
+      Recap not found.
+    </div>
+  );
+};
 
 export default function SparkRecapView() {
   const { uuid } = useParams<{ uuid: string }>();
