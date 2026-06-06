@@ -121,6 +121,9 @@ type Row = {
   venue: string;
   address: string;
   type: string;
+  // Selected SKUs/products on the request (distinct names), shown as a
+  // muted sub-line under the activation type. Empty when none selected.
+  skus: string[];
   eventUuid: string | null;
   eventId: string | null;
   eventDate: string | null;
@@ -531,6 +534,15 @@ const TrackerTable: React.FC<{
                     style={{ color: "rgba(255,255,255,0.7)" }}
                   >
                     {r.type}
+                    {r.skus.length > 0 ? (
+                      <span
+                        className="block mt-1 text-[11px] line-clamp-2"
+                        style={{ color: "rgba(255,255,255,0.45)" }}
+                        title={r.skus.join(", ")}
+                      >
+                        {r.skus.join(", ")}
+                      </span>
+                    ) : null}
                   </td>
                   <td
                     className="px-4 py-3 text-right tab-num"
@@ -793,6 +805,13 @@ const MasterTrackerInner: React.FC<{
             venue: n.retailer?.name ?? n.name ?? "—",
             address: n.address ?? "",
             type: n.requestType?.name ?? "—",
+            skus: Array.from(
+              new Set(
+                (n.products ?? [])
+                  .map((p) => (p?.name ?? "").trim())
+                  .filter((s) => s.length > 0),
+              ),
+            ),
             eventUuid: n.event?.uuid ? String(n.event.uuid) : null,
             eventId: n.event?.id ? String(n.event.id) : null,
             eventDate: (n.startTime ?? n.date) ? String(n.startTime ?? n.date) : null,
@@ -1079,6 +1098,7 @@ export default function MasterTracker() {
       "Venue",
       "Address",
       "Type",
+      "SKUs",
       "Time",
       "Scheduling",
       "Recap",
@@ -1101,6 +1121,7 @@ export default function MasterTracker() {
           r.venue,
           r.address,
           r.type,
+          r.skus.join("; "),
           r.timeLabel,
           r.schedulingStatus
             ? (SCHEDULING_LABEL[r.schedulingStatus] ?? r.schedulingStatus)
@@ -1146,6 +1167,7 @@ export default function MasterTracker() {
       "Venue",
       "Address",
       "Type",
+      "SKUs",
       "Time",
       "Scheduling",
       "Recap",
@@ -1165,6 +1187,7 @@ export default function MasterTracker() {
           r.venue,
           r.address,
           r.type,
+          r.skus.join("; "),
           r.timeLabel,
           r.schedulingStatus
             ? (SCHEDULING_LABEL[r.schedulingStatus] ?? r.schedulingStatus)
