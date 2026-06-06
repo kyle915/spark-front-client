@@ -86,6 +86,16 @@ export const RequestsQuery = graphql`
             id
             name
           }
+          # Shift-swap activity: dropped slots that reopened for self-serve
+          # claim. Powers the Master Tracker "needs coverage" chip + tooltip.
+          # Prefetched server-side (event_set__open_shifts), so no N+1.
+          openShifts {
+            uuid
+            eventName
+            releasedByName
+            claimedByName
+            status
+          }
           status {
             __typename
             id

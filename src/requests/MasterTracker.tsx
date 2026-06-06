@@ -124,6 +124,11 @@ type Row = {
   // Selected SKUs/products on the request (distinct names), shown as a
   // muted sub-line under the activation type. Empty when none selected.
   skus: string[];
+  // Shift-swap activity: count of still-open (unclaimed) dropped slots, and
+  // a human tooltip of who dropped / who grabbed each.
+  openShiftsOpen: number;
+  openShiftsTotal: number;
+  openShiftsTooltip: string;
   eventUuid: string | null;
   eventId: string | null;
   eventDate: string | null;
@@ -522,6 +527,23 @@ const TrackerTable: React.FC<{
                         ✓ SCHEDULED
                       </span>
                     ) : null}
+                    {r.openShiftsOpen > 0 ? (
+                      <span
+                        className="chip chip-gold chip-sm mt-1"
+                        style={{ display: "inline-flex" }}
+                        title={r.openShiftsTooltip || "A booked shift was dropped and is open to claim"}
+                      >
+                        ⚡ {r.openShiftsOpen} OPEN SHIFT{r.openShiftsOpen > 1 ? "S" : ""}
+                      </span>
+                    ) : r.openShiftsTotal > 0 ? (
+                      <span
+                        className="chip chip-muted chip-sm mt-1"
+                        style={{ display: "inline-flex" }}
+                        title={r.openShiftsTooltip}
+                      >
+                        ⇄ SWAPPED
+                      </span>
+                    ) : null}
                   </td>
                   <td
                     className="px-4 py-3 text-[13px] max-w-[280px]"
@@ -812,6 +834,20 @@ const MasterTrackerInner: React.FC<{
                   .filter((s) => s.length > 0),
               ),
             ),
+            openShiftsOpen: (n.openShifts ?? []).filter(
+              (s) => s?.status === "open",
+            ).length,
+            openShiftsTotal: (n.openShifts ?? []).length,
+            openShiftsTooltip: (n.openShifts ?? [])
+              .map((s) => {
+                const who = s?.releasedByName || "A BA";
+                return s?.status === "claimed"
+                  ? `${who} dropped${
+                      s?.claimedByName ? ` → claimed by ${s.claimedByName}` : " → claimed"
+                    }`
+                  : `${who} dropped — still open`;
+              })
+              .join(" · "),
             eventUuid: n.event?.uuid ? String(n.event.uuid) : null,
             eventId: n.event?.id ? String(n.event.id) : null,
             eventDate: (n.startTime ?? n.date) ? String(n.startTime ?? n.date) : null,
