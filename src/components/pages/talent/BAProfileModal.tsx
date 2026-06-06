@@ -205,6 +205,37 @@ const ProfileInner: React.FC<{
         <StatBlock value={stats.onTime} label="ON-TIME" />
       </div>
 
+      {/* Reliability — completed vs dropped (+ claimed). Same dependability
+          signal that orders open-shift alerts most-reliable-first. */}
+      <div className="mt-2 spark-card p-3">
+        <div className="flex items-center justify-between gap-2">
+          <span style={labelMini}>RELIABILITY</span>
+          <span
+            className="text-sm font-bold"
+            style={{
+              color:
+                p.reliabilityScore == null
+                  ? "rgba(255,255,255,0.45)"
+                  : p.reliabilityScore >= 70
+                    ? "var(--spark-lime)"
+                    : p.reliabilityScore >= 40
+                      ? "#fbbf24"
+                      : "#f87171",
+            }}
+          >
+            {p.reliabilityScore == null
+              ? "New — no history yet"
+              : `${p.reliabilityScore}% · ${p.reliabilityLabel}`}
+          </span>
+        </div>
+        {p.completedShifts + p.claimedShifts + p.droppedShifts > 0 && (
+          <p style={{ ...labelMini, letterSpacing: "0.04em", marginTop: 6 }}>
+            ✓ {p.completedShifts} COMPLETED · ⚡ {p.claimedShifts} CLAIMED · ↩{" "}
+            {p.droppedShifts} DROPPED
+          </p>
+        )}
+      </div>
+
       {/* Contact */}
       <div className="mt-5 grid sm:grid-cols-2 gap-2">
         {p.email && (

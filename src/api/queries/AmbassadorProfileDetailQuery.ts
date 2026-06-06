@@ -24,6 +24,11 @@ export const AmbassadorProfileDetailQuery = graphql`
       ratingCount
       jobsCount
       onTimeRate
+      reliabilityScore
+      reliabilityLabel
+      completedShifts
+      droppedShifts
+      claimedShifts
       photos {
         uuid
         imageUrl

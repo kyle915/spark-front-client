@@ -133,6 +133,11 @@ type AmbassadorProfileDetail {
   ratingCount: Int!
   jobsCount: Int!
   onTimeRate: Float
+  reliabilityScore: Int
+  reliabilityLabel: String!
+  completedShifts: Int!
+  droppedShifts: Int!
+  claimedShifts: Int!
 }
 
 type AmbassadorCountableConnection {
