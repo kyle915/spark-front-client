@@ -79,6 +79,13 @@ export const RequestsQuery = graphql`
             uuid
             name
           }
+          # Selected SKUs/products on the request — shown as a compact
+          # cell on the Master Tracker. Prefetched server-side
+          # (request_product__product), so no N+1 across the table.
+          products {
+            id
+            name
+          }
           status {
             __typename
             id
