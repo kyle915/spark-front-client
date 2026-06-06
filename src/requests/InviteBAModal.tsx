@@ -1,5 +1,7 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { fetchQuery } from "relay-runtime";
+import environment from "@/api/relay/environment";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import { AmbassadorsBookedOnDateQuery } from "@/api/queries/AmbassadorsBookedOnDateQuery";
@@ -314,22 +316,43 @@ const Inner: React.FC<{
   const [search, setSearch] = useState("");
 
   // Cross-reference: BAs already booked on the same date (any
-  // AmbassadorEvent, approved or pending). If we don't have a date
-  // we skip the query and treat conflict as "unknown" (no chip).
-  const bookedData = useLazyLoadQuery<AmbassadorsBookedOnDateQueryType>(
-    AmbassadorsBookedOnDateQuery,
-    eventDate
-      ? { onDate: eventDate, tenantId: tenantId ?? null }
-      : // Query is non-nullable but we still want to gate via a
-        // sentinel value so Suspense doesn't tear. Pass yesterday
-        // when there's no date — returns empty, costs nothing.
-        { onDate: new Date(0).toISOString(), tenantId: tenantId ?? null },
-    { fetchPolicy: "store-or-network" },
-  );
-  const conflictSet = useMemo(
-    () => new Set<string>((bookedData?.ambassadorsBookedOnDate ?? []).map(String)),
-    [bookedData],
-  );
+  // AmbassadorEvent, approved or pending) → drives the "⚠ already on
+  // another shift that day" chip. This is DECORATION, not a gate, so we
+  // load it BEST-EFFORT with fetchQuery instead of useLazyLoadQuery: a
+  // failure on this query (e.g. a transient backend blip) degrades to "no
+  // chips" rather than throwing to the section error boundary and blocking
+  // the entire assign list. No date → empty set, no request.
+  const [conflictSet, setConflictSet] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!eventDate) {
+      setConflictSet(new Set());
+      return;
+    }
+    let cancelled = false;
+    const sub = fetchQuery<AmbassadorsBookedOnDateQueryType>(
+      environment,
+      AmbassadorsBookedOnDateQuery,
+      { onDate: eventDate, tenantId: tenantId ?? null },
+      { fetchPolicy: "store-or-network" },
+    ).subscribe({
+      next: (resp) => {
+        if (cancelled) return;
+        setConflictSet(
+          new Set<string>(
+            (resp?.ambassadorsBookedOnDate ?? []).map(String),
+          ),
+        );
+      },
+      error: () => {
+        // Best-effort: never block BA assignment on the warning chip.
+        if (!cancelled) setConflictSet(new Set());
+      },
+    });
+    return () => {
+      cancelled = true;
+      sub.unsubscribe();
+    };
+  }, [eventDate, tenantId]);
 
   // Pre-extract a state code / city token from the event address so
   // the per-BA locality score can run in O(N) without re-parsing on
