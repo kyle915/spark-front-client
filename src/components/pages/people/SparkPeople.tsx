@@ -12,6 +12,8 @@ import { SetTenantRecapRecipientEmailsMutation } from "@/api/mutations/SetTenant
 import type { SetTenantRecapRecipientEmailsMutation as SetTenantRecapRecipientEmailsMutationType } from "@api/mutations/__generated__/SetTenantRecapRecipientEmailsMutation.graphql";
 import { SetScheduledReportEnabledMutation } from "@/api/mutations/SetScheduledReportEnabledMutation";
 import type { SetScheduledReportEnabledMutation as SetScheduledReportEnabledMutationType } from "@api/mutations/__generated__/SetScheduledReportEnabledMutation.graphql";
+import { SetClientWeeklyDigestEnabledMutation } from "@/api/mutations/SetClientWeeklyDigestEnabledMutation";
+import type { SetClientWeeklyDigestEnabledMutation as SetClientWeeklyDigestEnabledMutationType } from "@api/mutations/__generated__/SetClientWeeklyDigestEnabledMutation.graphql";
 import { SendTestClientReportMutation } from "@/api/mutations/SendTestClientReportMutation";
 import type { SendTestClientReportMutation as SendTestClientReportMutationType } from "@api/mutations/__generated__/SendTestClientReportMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -284,6 +286,63 @@ const Inner: React.FC<{
       },
       onError: (err) => {
         setReportEnabled(prev); // roll back
+        showAlert(`Update failed: ${err.message}`, "error");
+      },
+    });
+  };
+
+  // Weekly client digest — Monday email rollup (this week at a glance /
+  // coming up / needs your approval) to the same recap recipients. Its
+  // OWN flag (clientWeeklyDigestEnabled), independent from the monthly
+  // report toggle above, so each rolls out per tenant separately.
+  const currentDigestEnabled = activeTenant?.clientWeeklyDigestEnabled ?? false;
+  const [digestEnabled, setDigestEnabled] = useState<boolean>(
+    currentDigestEnabled,
+  );
+  useEffect(() => {
+    setDigestEnabled(currentDigestEnabled);
+  }, [currentDigestEnabled]);
+
+  const [commitDigestEnabled, digestEnabledInFlight] =
+    useMutation<SetClientWeeklyDigestEnabledMutationType>(
+      SetClientWeeklyDigestEnabledMutation,
+    );
+
+  const handleToggleDigest = (next: boolean) => {
+    if (digestEnabledInFlight) return;
+    if (!tenantId) {
+      showAlert("No tenant in scope.", "error");
+      return;
+    }
+    // Turning it ON with no recipients would email a digest into the void.
+    if (next && !hasRecapRecipients) {
+      showAlert(
+        "Add at least one recap recipient above before enabling the weekly digest.",
+        "error",
+      );
+      return;
+    }
+    const prev = digestEnabled;
+    setDigestEnabled(next); // optimistic
+    commitDigestEnabled({
+      variables: { input: { tenantId, enabled: next } },
+      onCompleted: (res) => {
+        const r = res.setClientWeeklyDigestEnabled;
+        if (r?.success) {
+          setDigestEnabled(r.enabled); // reflect server's resolved state
+          showAlert(
+            r.enabled
+              ? "Weekly client digest turned on."
+              : "Weekly client digest turned off.",
+            "success",
+          );
+        } else {
+          setDigestEnabled(prev); // roll back
+          showAlert(r?.message || "Could not update the weekly digest.", "error");
+        }
+      },
+      onError: (err) => {
+        setDigestEnabled(prev); // roll back
         showAlert(`Update failed: ${err.message}`, "error");
       },
     });
@@ -657,6 +716,73 @@ const Inner: React.FC<{
             </span>
           )}
         </div>
+      </div>
+
+      {/* Weekly client digest — Monday rollup email to the same recap
+          recipients. Independent toggle (clientWeeklyDigestEnabled) so the
+          digest and the monthly report roll out per tenant separately. */}
+      <div className="spark-card p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+            <p className="label-mini">WEEKLY CLIENT DIGEST</p>
+            <p
+              className="text-xs mt-1"
+              style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+            >
+              When on, this client gets a Monday email rollup — this week at
+              a glance, what's coming up, and anything awaiting their
+              approval — sent to the recap recipients above. Quiet weeks are
+              skipped automatically.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={digestEnabled}
+            aria-label="Toggle weekly client digest"
+            disabled={digestEnabledInFlight}
+            onClick={() => handleToggleDigest(!digestEnabled)}
+            className="rounded-full shrink-0"
+            style={{
+              position: "relative",
+              width: 46,
+              height: 26,
+              padding: 0,
+              border: "1px solid var(--spark-border)",
+              background: digestEnabled
+                ? "var(--spark-lime)"
+                : "var(--spark-surface-2)",
+              boxShadow: digestEnabled
+                ? "0 0 14px rgba(197,245,70,0.35)"
+                : "none",
+              cursor: digestEnabledInFlight ? "default" : "pointer",
+              opacity: digestEnabledInFlight ? 0.6 : 1,
+              transition: "background 0.15s ease, box-shadow 0.15s ease",
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                top: 2,
+                left: digestEnabled ? 22 : 2,
+                width: 20,
+                height: 20,
+                borderRadius: "9999px",
+                background: digestEnabled ? "#0a0d09" : "var(--spark-text)",
+                transition: "left 0.15s ease",
+              }}
+            />
+          </button>
+        </div>
+        {!hasRecapRecipients && (
+          <p
+            className="text-xs mt-3"
+            style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}
+          >
+            Add at least one recap recipient above first — the digest has
+            nowhere to send otherwise.
+          </p>
+        )}
       </div>
 
       <div

@@ -205,7 +205,11 @@ const SuggestionsInner: React.FC<{
                   </span>
                 )}
               </p>
-              {/* Reasons rendered as small chips. */}
+              {/* Reasons rendered as small chips. High reliability arrives as
+                  a server reason ("96% reliable"); the NEW chip below covers
+                  the other end — no shift history yet — so an admin can tell
+                  unproven from proven at a glance. Mid scores stay silent by
+                  design (they weigh into the ranking without a shaming tag). */}
               <div className="flex items-center gap-1.5 flex-wrap mt-1">
                 {s.reasons.map((reason, ri) => (
                   <span
@@ -223,6 +227,22 @@ const SuggestionsInner: React.FC<{
                     {reason}
                   </span>
                 ))}
+                {s.reliabilityScore == null && s.reliabilityLabel === "New" && (
+                  <span
+                    className="mono text-[9px] shrink-0"
+                    style={{
+                      letterSpacing: "0.12em",
+                      color: "var(--spark-gold)",
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid var(--spark-border)",
+                      padding: "1px 6px",
+                      borderRadius: 999,
+                    }}
+                    title="No completed or dropped shifts yet — reliability unknown"
+                  >
+                    NEW
+                  </span>
+                )}
               </div>
             </div>
             {/* Score indicator — number over a small bar. */}
