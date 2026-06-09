@@ -142,3 +142,6 @@ vite.config.ts.timestamp-*
 src/api/queries/__generated__/
 
 TASKS.md
+
+# Local tool artifacts
+.claude/
