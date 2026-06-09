@@ -25,6 +25,7 @@ export const TenantsQuery = graphql`
           requestUrlName
           recapRecipientEmails
           scheduledReportEnabled
+          clientWeeklyDigestEnabled
           defaultExternalRmm {
             id
             uuid
