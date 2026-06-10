@@ -7,6 +7,7 @@ import {
   useMap,
   useMapEvents,
 } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import type { LatLngExpression, Map as LeafletMap } from "leaflet";
 import * as L from "leaflet";
 import markerIconUrl from "leaflet/dist/images/marker-icon.png?url";

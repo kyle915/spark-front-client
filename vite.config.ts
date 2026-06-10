@@ -27,7 +27,35 @@ export default defineConfig({
         // into separate chunks). Maps + parsers + icons are
         // self-contained or already lazy-loaded, so it's safe.
         manualChunks: (id) => {
+          // Vite's virtual CJS-interop helper (getDefaultExportFromCjs) has a
+          // \0-prefixed id with NO node_modules segment, so it must be matched
+          // BEFORE the early-return below. Rollup parks it wherever convenient
+          // — when that's a heavy lazy chunk (xlsx/papaparse are CJS), the
+          // ENTRY grows a static edge to that whole chunk just to reach the
+          // 3-line helper. Pin it into the always-preloaded core chunk.
+          if (id.includes("commonjsHelpers")) return "vendor-react";
           if (!id.includes("node_modules")) return undefined;
+          // react + react-dom + scheduler pinned together in ONE chunk that
+          // everything else imports INTO (it imports nothing app-side, so no
+          // cross-chunk init cycle — unlike the react/relay/router three-way
+          // split that TDZ-crashed). Without this pin, Rollup stashed the
+          // base react-dom module inside vendor-maps (its only static
+          // importers were the map libs), which made the ENTRY statically
+          // import the whole 340KB maps chunk just to reach createPortal —
+          // putting leaflet in every first paint including the login page.
+          if (
+            id.includes("/node_modules/react/") ||
+            id.includes("/node_modules/react-dom/") ||
+            id.includes("/node_modules/scheduler/") ||
+            // fast-deep-equal is shared by @vis.gl AND eager form libs;
+            // left unpinned, Rollup stashes it in vendor-maps and the entry
+            // re-grows a static edge to the whole maps chunk (same trap as
+            // react-dom above). It's a React-free 1KB util — riding in the
+            // always-preloaded core chunk is the cheap, safe home.
+            id.includes("/node_modules/fast-deep-equal/")
+          ) {
+            return "vendor-react";
+          }
           if (id.includes("/@vis.gl/") || id.includes("/leaflet/") || id.includes("/react-leaflet/")) {
             return "vendor-maps";
           }
