@@ -310,6 +310,29 @@ const TrackerTable: React.FC<{
       setApprovingId(null);
     }
   };
+  // Progressive row rendering — large tenants can hit 1,000+ tracker rows
+  // and mounting them all at once janks the tab for seconds. Render the
+  // first viewport-plus chunk immediately, then grow during idle frames
+  // until everything is in the DOM. Filter/sort changes swap the `rows`
+  // array identity, which resets the window. Everything BELOW the table
+  // (counts, export) still reads the full `rows`.
+  const [visibleCount, setVisibleCount] = useState(120);
+  useEffect(() => {
+    setVisibleCount(120);
+  }, [rows]);
+  useEffect(() => {
+    if (visibleCount >= rows.length) return;
+    const grow = () => setVisibleCount((c) => Math.min(rows.length, c + 240));
+    if ("requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(grow, { timeout: 200 });
+      return () => window.cancelIdleCallback(id);
+    } else {
+      const id = setTimeout(grow, 40);
+      return () => clearTimeout(id);
+    }
+  }, [visibleCount, rows]);
+  const visibleRows = rows.slice(0, visibleCount);
+
   return (
     <div
       className="spark-card overflow-hidden"
@@ -359,11 +382,11 @@ const TrackerTable: React.FC<{
                 </td>
               </tr>
             )}
-            {rows.map((r, rowIdx) => {
+            {visibleRows.map((r, rowIdx) => {
               // Date-group headers — insert when the date changes vs the
               // previous row. Rows are already in DB order; for date grouping
               // we rely on that ordering being date-sorted (descending).
-              const prevDate = rowIdx > 0 ? rows[rowIdx - 1].date.slice(0, 10) : "";
+              const prevDate = rowIdx > 0 ? visibleRows[rowIdx - 1].date.slice(0, 10) : "";
               const thisDate = r.date.slice(0, 10);
               const showGroupHeader =
                 groupBy === "date" && thisDate !== prevDate;

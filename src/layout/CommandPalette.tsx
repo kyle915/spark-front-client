@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { fetchQuery } from "relay-runtime";
+import environment from "@/api/relay/environment";
+import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
+import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import {
   LayoutDashboard,
   ListChecks,
@@ -100,13 +104,63 @@ export const CommandPalette: React.FC = () => {
     }
   }, [open]);
 
+  // Live ambassador search — fires for 2+ chars, debounced, best-effort
+  // (a failed fetch just means no BA rows; page entries still work).
+  // Results become ordinary CommandEntry rows appended after the page
+  // matches, so the existing keyboard navigation needs no changes.
+  const [baEntries, setBaEntries] = useState<CommandEntry[]>([]);
+  useEffect(() => {
+    const q = query.trim();
+    if (!open || q.length < 2) {
+      setBaEntries([]);
+      return;
+    }
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      fetchQuery<AmbassadorsListQueryType>(
+        environment,
+        AmbassadorsListQuery,
+        { filters: { name: q }, first: 6 },
+      )
+        .toPromise()
+        .then((data) => {
+          if (cancelled) return;
+          const rows = (data?.ambassadors?.edges ?? [])
+            .map((e) => e?.node)
+            .filter((n): n is NonNullable<typeof n> => Boolean(n))
+            .map((n) => {
+              const name = [n.user?.firstName, n.user?.lastName]
+                .filter(Boolean)
+                .join(" ")
+                .trim();
+              return {
+                id: `ba-${n.uuid}`,
+                label: name || n.user?.email || "Ambassador",
+                hint: `Ambassador · ${n.user?.email ?? ""}`,
+                to: `/ba/${n.uuid}`,
+                Icon: Users,
+              } as CommandEntry;
+            });
+          setBaEntries(rows);
+        })
+        .catch(() => {
+          if (!cancelled) setBaEntries([]);
+        });
+    }, 220);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [open, query]);
+
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
-    return ENTRIES.map((e) => ({ entry: e, s: score(e, q) }))
+    const pages = ENTRIES.map((e) => ({ entry: e, s: score(e, q) }))
       .filter((x) => x.s > 0)
       .sort((a, b) => b.s - a.s)
       .map((x) => x.entry);
-  }, [query]);
+    return [...pages, ...baEntries];
+  }, [query, baEntries]);
 
   const select = (entry: CommandEntry) => {
     navigate(entry.to);
