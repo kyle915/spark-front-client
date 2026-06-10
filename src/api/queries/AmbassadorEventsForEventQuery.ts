@@ -17,6 +17,8 @@ export const AmbassadorEventsForEventQuery = graphql`
           id
           uuid
           isApproved
+          confirmationRequestedAt
+          confirmedAt
           createdAt
           ambassador {
             id
