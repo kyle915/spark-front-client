@@ -1,6 +1,7 @@
 import type { FC, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import type { LatLngExpression, Map as LeafletMap } from "leaflet";
 import { themes } from "@utils/index";
 import MapSearchControl from "./MapSearchControl";

@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 import type { LatLngExpression, Map as LeafletMap } from "leaflet";
 import * as L from "leaflet";
 import markerIconUrl from "leaflet/dist/images/marker-icon.png?url";

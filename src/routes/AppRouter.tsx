@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -10,7 +10,7 @@ import { useAuthStore } from "@store/authStore";
 import type { ReactNode } from "react";
 import Login from "@/auth/Login";
 import PrivateRoute from "@routes/PrivateRoute";
-import { appRoutes } from "@/routes/AppRoutes";
+import { appRoutes, prefetchHotRoutes } from "@/routes/AppRoutes";
 import TenantRoute from "@/layout/TenantGuard";
 import GoogleCalendarCallback from "@/auth/GoogleCalendarCallback";
 import VerifyAccount from "@/auth/VerifyAccount";
@@ -37,7 +37,15 @@ const RouteFallback = () => (
   </div>
 );
 
-const AppRouter = () => (
+const AppRouter = () => {
+  // Warm the hot-path chunks (tracker / dashboard / request views) during
+  // browser idle — typically while the user is still on the login screen —
+  // so the first click after sign-in hits cached modules, not the network.
+  useEffect(() => {
+    prefetchHotRoutes();
+  }, []);
+
+  return (
   <BrowserRouter>
     <Suspense fallback={<RouteFallback />}>
       <Routes>
@@ -77,7 +85,8 @@ const AppRouter = () => (
       </Routes>
     </Suspense>
   </BrowserRouter>
-);
+  );
+};
 
 const AuthRoute = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated } = useAuthStore();
