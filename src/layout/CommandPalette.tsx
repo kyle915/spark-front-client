@@ -4,6 +4,8 @@ import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
+import { RequestSearchQuery } from "@/api/queries/RequestSearchQuery";
+import type { RequestSearchQuery as RequestSearchQueryType } from "@api/queries/__generated__/RequestSearchQuery.graphql";
 import {
   LayoutDashboard,
   ListChecks,
@@ -153,14 +155,64 @@ export const CommandPalette: React.FC = () => {
     };
   }, [open, query]);
 
+  // Live request search — same debounce contract as the BA search above.
+  // filters.name matches the request's name OR its retailer server-side.
+  const [requestEntries, setRequestEntries] = useState<CommandEntry[]>([]);
+  useEffect(() => {
+    const q = query.trim();
+    if (!open || q.length < 2) {
+      setRequestEntries([]);
+      return;
+    }
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      fetchQuery<RequestSearchQueryType>(environment, RequestSearchQuery, {
+        filters: { name: q },
+        first: 6,
+      })
+        .toPromise()
+        .then((data) => {
+          if (cancelled) return;
+          const rows = (data?.requests?.edges ?? [])
+            .map((e) => e?.node)
+            .filter((n): n is NonNullable<typeof n> => Boolean(n))
+            .map((n) => {
+              const when = n.date
+                ? new Date(n.date).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "";
+              return {
+                id: `req-${n.uuid}`,
+                label: n.name || "Request",
+                hint: ["Request", n.retailer?.name, when]
+                  .filter(Boolean)
+                  .join(" · "),
+                to: `/request/view/${n.uuid}`,
+                Icon: FileText,
+              } as CommandEntry;
+            });
+          setRequestEntries(rows);
+        })
+        .catch(() => {
+          if (!cancelled) setRequestEntries([]);
+        });
+    }, 220);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [open, query]);
+
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
     const pages = ENTRIES.map((e) => ({ entry: e, s: score(e, q) }))
       .filter((x) => x.s > 0)
       .sort((a, b) => b.s - a.s)
       .map((x) => x.entry);
-    return [...pages, ...baEntries];
-  }, [query, baEntries]);
+    return [...pages, ...requestEntries, ...baEntries];
+  }, [query, baEntries, requestEntries]);
 
   const select = (entry: CommandEntry) => {
     navigate(entry.to);

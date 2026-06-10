@@ -5163,6 +5163,7 @@ input RequestFiltersInput {
   retailerStateId: ID = null
   distributorStateId: ID = null
   storeNumber: String = null
+  name: String = null
   date: String = null
   startDate: String = null
   endDate: String = null
