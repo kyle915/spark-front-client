@@ -3161,8 +3161,7 @@ type JobBriefingResponse {
   title: String
 }
 
-type BriefingTemplate implements Node {
-  id: ID!
+type BriefingTemplate {
   uuid: String!
   name: String!
   title: String!
