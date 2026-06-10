@@ -3,6 +3,7 @@ import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
+import { thumbUrl } from "@/utils/thumb";
 import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/RecapsQuery.graphql";
 // Pulled in so the unified /recaps view can list CustomRecap rows
 // alongside the legacy Recap rows. Without this, custom-template
@@ -538,8 +539,10 @@ const RecapsListInner: React.FC<{
           // browser-renderable image (jpg/png/webp/gif), recapFilesCount
           // is the COUNT(*) of all files. Client just prepends the
           // GCS bucket via recapFileUrl().
+          // List cards render at ~256px wide, so the 400px thumb is
+          // plenty — the endpoint 302s to the original on any failure.
           const hero = n.heroFile?.file
-            ? recapFileUrl(n.heroFile.file)
+            ? thumbUrl(recapFileUrl(n.heroFile.file), 400)
             : null;
           const fileCount = n.recapFilesCount ?? 0;
           const requestUuid = n.event?.request?.uuid ?? null;

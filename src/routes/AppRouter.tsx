@@ -19,21 +19,35 @@ const rootPath = "/";
 
 // Single Suspense boundary at the router level so every lazy() route
 // in AppRoutes can resolve without each route having to wrap itself.
-// Fallback intentionally minimal — most pages also render Layout which
-// has its own page-level Suspense for the data fetch.
+// The fallback is a SKELETON page shell (shimmering header + content
+// blocks — see .skeleton-block in index.css) rather than a "LOADING…"
+// string: the page reads as already-arriving instead of stalled, which
+// is most visible during the brief chunk fetch on uncached routes.
 const RouteFallback = () => (
   <div
+    aria-busy="true"
+    aria-label="Loading page"
     style={{
-      display: "grid",
-      placeItems: "center",
-      height: "60vh",
-      color: "rgba(255,255,255,0.55)",
-      fontFamily: "JetBrains Mono, monospace",
-      fontSize: 11,
-      letterSpacing: "0.18em",
+      maxWidth: 1100,
+      margin: "0 auto",
+      padding: "48px 24px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 16,
     }}
   >
-    LOADING…
+    <div className="skeleton-block" style={{ height: 32, width: "32%" }} />
+    <div className="skeleton-block" style={{ height: 14, width: "55%" }} />
+    <div style={{ display: "flex", gap: 16, marginTop: 16 }}>
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="skeleton-block"
+          style={{ height: 96, flex: 1 }}
+        />
+      ))}
+    </div>
+    <div className="skeleton-block" style={{ height: 320, marginTop: 8 }} />
   </div>
 );
 
