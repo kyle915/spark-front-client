@@ -5,11 +5,13 @@ import { graphql } from "react-relay";
  * server-side. Used by the pre-shift briefing editor on the admin job
  * detail page to power the "Use a template…" picker, which prefills the
  * briefing title + body so the admin can edit before saving.
+ *
+ * Keyed on `uuid` — the server type exposes no relay `id` (selecting one
+ * fails validation in prod), and every caller already matches on uuid.
  */
 export const BriefingTemplatesQuery = graphql`
   query BriefingTemplatesQuery($tenantId: ID, $includeArchived: Boolean!) {
     briefingTemplates(tenantId: $tenantId, includeArchived: $includeArchived) {
-      id
       uuid
       name
       title

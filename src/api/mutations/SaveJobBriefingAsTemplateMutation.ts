@@ -6,6 +6,9 @@ import { graphql } from "react-relay";
  * job's briefing into a BriefingTemplate the whole tenant can apply to
  * future jobs. Refetch `briefingTemplates` after success so the new
  * template shows up in the "Use a template…" picker.
+ *
+ * Keyed on `uuid` — the server type exposes no relay `id` (selecting one
+ * fails validation in prod).
  */
 export const SaveJobBriefingAsTemplateMutation = graphql`
   mutation SaveJobBriefingAsTemplateMutation(
@@ -15,7 +18,6 @@ export const SaveJobBriefingAsTemplateMutation = graphql`
       success
       message
       briefingTemplate {
-        id
         uuid
         name
         title
