@@ -6,6 +6,8 @@ import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import { RequestSearchQuery } from "@/api/queries/RequestSearchQuery";
 import type { RequestSearchQuery as RequestSearchQueryType } from "@api/queries/__generated__/RequestSearchQuery.graphql";
+import { RecapsSearchQuery } from "@/api/queries/RecapsSearchQuery";
+import type { RecapsSearchQuery as RecapsSearchQueryType } from "@api/queries/__generated__/RecapsSearchQuery.graphql";
 import {
   LayoutDashboard,
   ListChecks,
@@ -205,14 +207,91 @@ export const CommandPalette: React.FC = () => {
     };
   }, [open, query]);
 
+  // Live recap search — covers BOTH recap families (legacy fixed-form
+  // and per-tenant custom templates) in one round trip, so a Borjomi
+  // custom recap is as findable as a Liquid Death legacy one. Same
+  // debounce/best-effort contract as the searches above.
+  const [recapEntries, setRecapEntries] = useState<CommandEntry[]>([]);
+  useEffect(() => {
+    const q = query.trim();
+    if (!open || q.length < 2) {
+      setRecapEntries([]);
+      return;
+    }
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      fetchQuery<RecapsSearchQueryType>(environment, RecapsSearchQuery, {
+        q,
+        first: 4,
+      })
+        .toPromise()
+        .then((data) => {
+          if (cancelled) return;
+          const fmt = (d: string | null | undefined) =>
+            d
+              ? new Date(d).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                })
+              : "";
+          const legacy = (data?.recaps?.edges ?? [])
+            .map((e) => e?.node)
+            .filter((n): n is NonNullable<typeof n> => Boolean(n))
+            .map(
+              (n) =>
+                ({
+                  id: `recap-${n.uuid}`,
+                  label: n.name || "Recap",
+                  hint: [
+                    "Recap",
+                    n.approved ? "Approved" : "Pending",
+                    fmt(n.event?.date),
+                  ]
+                    .filter(Boolean)
+                    .join(" · "),
+                  to: `/recap/view/${n.uuid}`,
+                  Icon: CheckCircle2,
+                }) as CommandEntry,
+            );
+          const custom = (data?.customRecaps?.edges ?? [])
+            .map((e) => e?.node)
+            .filter((n): n is NonNullable<typeof n> => Boolean(n))
+            .map(
+              (n) =>
+                ({
+                  id: `crecap-${n.uuid}`,
+                  label: n.name || "Recap",
+                  hint: [
+                    "Recap",
+                    n.approved ? "Approved" : "Pending",
+                    fmt(n.event?.date),
+                  ]
+                    .filter(Boolean)
+                    .join(" · "),
+                  to: `/recap/view-custom/${n.uuid}`,
+                  Icon: CheckCircle2,
+                }) as CommandEntry,
+            );
+          setRecapEntries([...legacy, ...custom]);
+        })
+        .catch(() => {
+          if (!cancelled) setRecapEntries([]);
+        });
+    }, 220);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [open, query]);
+
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
     const pages = ENTRIES.map((e) => ({ entry: e, s: score(e, q) }))
       .filter((x) => x.s > 0)
       .sort((a, b) => b.s - a.s)
       .map((x) => x.entry);
-    return [...pages, ...requestEntries, ...baEntries];
-  }, [query, baEntries, requestEntries]);
+    return [...pages, ...requestEntries, ...recapEntries, ...baEntries];
+  }, [query, baEntries, requestEntries, recapEntries]);
 
   const select = (entry: CommandEntry) => {
     navigate(entry.to);

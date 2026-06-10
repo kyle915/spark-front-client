@@ -3,7 +3,10 @@
  * their accept state and clock-in / recap progress for the shift.
  *
  * What it surfaces:
- *   - ACCEPTED — invite is_approved=True. BA is committed.
+ *   - ACCEPTED — invite is_approved=True. BA is committed. Once the
+ *     day-before confirmation push has gone out, the chip upgrades to
+ *     ✓ CONFIRMED (BA tapped confirm / arrived) or ⏳ NO RESPONSE
+ *     (asked, silent — grab a backup before doors open).
  *   - PENDING — invite is_approved=False. Push has been sent; no
  *     response yet.
  *
@@ -54,6 +57,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
 
   const accepted = rows.filter((r) => r.isApproved);
   const pending = rows.filter((r) => !r.isApproved);
+  const confirmedCount = accepted.filter((r) => Boolean(r.confirmedAt)).length;
 
   if (rows.length === 0) {
     return (
@@ -87,8 +91,23 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
     row: AmbassadorEventNode;
     tone: "lime" | "gold";
   }> = ({ row, tone }) => {
+    // Accepted rows escalate by confirmation state; pending stays gold.
+    const confirmed = Boolean(row.confirmedAt);
+    const asked = Boolean(row.confirmationRequestedAt);
+    const chipText =
+      tone !== "lime"
+        ? "PENDING"
+        : confirmed
+          ? "✓ CONFIRMED"
+          : asked
+            ? "⏳ NO RESPONSE"
+            : "ACCEPTED";
     const color =
-      tone === "lime" ? "var(--spark-lime)" : "var(--spark-gold)";
+      tone !== "lime"
+        ? "var(--spark-gold)"
+        : asked && !confirmed
+          ? "var(--spark-gold)"
+          : "var(--spark-lime)";
     const baId = row.ambassador?.id ?? "";
     return (
       <div
@@ -120,7 +139,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
               borderRadius: 999,
             }}
           >
-            {tone === "lime" ? "ACCEPTED" : "PENDING"}
+            {chipText}
           </span>
         </div>
         {/* Rate accepted BAs inline — click a star to save. The dense
@@ -171,6 +190,17 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
           >
             ● {accepted.length} ACCEPTED
           </span>
+          {confirmedCount > 0 && (
+            <span
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.16em",
+                color: "var(--spark-lime)",
+              }}
+            >
+              ✓ {confirmedCount} CONFIRMED
+            </span>
+          )}
           {pending.length > 0 && (
             <span
               className="mono text-[10px]"
