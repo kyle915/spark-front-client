@@ -3925,6 +3925,7 @@ type Mutation {
   setTenantRecapRecipientEmails(tenantId: ID!, emails: String!): TenantType
   setScheduledReportEnabled(input: SetScheduledReportEnabledInput!): SetScheduledReportEnabledResponse!
   setClientWeeklyDigestEnabled(input: SetClientWeeklyDigestEnabledInput!): SetClientWeeklyDigestEnabledResponse!
+  exportExpenseReceipts(input: ExportExpenseReceiptsInput!): ExportExpenseReceiptsResponse!
   sendTestClientReport(input: SendTestClientReportInput!): SendTestClientReportResponse!
   setTenantGoals(tenantId: ID!, year: Int!, targetConsumersReached: Int, targetSamplesDistributed: Int, targetProductsSold: Int, targetTotalEngagements: Int): TenantGoals!
 
@@ -5915,6 +5916,24 @@ type SetClientWeeklyDigestEnabledResponse {
   message: String!
   enabled: Boolean!
   clientMutationId: ID
+}
+
+input ExportExpenseReceiptsInput {
+  startDate: String!
+  endDate: String!
+  tenantId: ID = null
+  clientMutationId: ID = null
+}
+
+type ExportExpenseReceiptsResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  csvText: String
+  pdfUrl: String
+  recapCount: Int!
+  receiptCount: Int!
+  totalSpend: Float!
 }
 
 input SetScheduledReportEnabledInput {
