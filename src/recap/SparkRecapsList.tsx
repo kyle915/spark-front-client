@@ -25,6 +25,7 @@ import { recapFileUrl } from "@/utils/recapFileUrl";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import EmailCampaignReportModal from "./EmailCampaignReportModal";
 import ImportConnecteamButton from "./ImportConnecteamButton";
+import ExportReceiptsButton from "./ExportReceiptsButton";
 
 // Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
 // keeps the sticky action bar's button disabled with a friendly
@@ -1200,6 +1201,7 @@ export default function SparkRecapsList() {
           </div>
           <div className="flex gap-2 flex-wrap items-center">
             <LinkedSheetChip />
+            <ExportReceiptsButton variant="ghost" />
             <ImportConnecteamButton variant="ghost" />
             <button
               onClick={copyForSheets}
