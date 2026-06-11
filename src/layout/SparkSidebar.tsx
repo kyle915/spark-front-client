@@ -186,6 +186,8 @@ const SECTIONS: NavSection[] = [
     title: "Outputs",
     items: [
       { label: "Reports", Icon: BarChart3, to: "/reports" },
+      // Ignite-internal cost lens — labor + spend per event.
+      { label: "P&L", Icon: DollarSign, to: "/pnl", adminOnly: true },
     ],
   },
   {

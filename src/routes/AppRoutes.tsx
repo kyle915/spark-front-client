@@ -322,6 +322,7 @@ const SparkPayments = lazyDefault(
 const SparkBilling = lazyDefault(
   () => import("@/components/pages/billing/SparkBilling"),
 );
+const SparkPnl = lazyDefault(() => import("@/components/pages/pnl/SparkPnl"));
 const SparkReceipts = lazyDefault(
   () => import("@/components/pages/receipts/SparkReceipts"),
 );
@@ -653,6 +654,17 @@ const RequestsLinks = {
       // showed clients "ADMIN VIEW REQUIRED".
       path: "/recent",
       component: <SparkRecentSubmissions />,
+      isPublic: false,
+    },
+    {
+      // Cost lens: labor (clock pairs × booked rates) + receipt spend
+      // per event. Ignite-internal.
+      path: "/pnl",
+      component: (
+        <AdminOnly>
+          <SparkPnl />
+        </AdminOnly>
+      ),
       isPublic: false,
     },
     {
