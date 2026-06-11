@@ -88,6 +88,12 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [fileBase64, setFileBase64] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  // Optional recap title. Pre-filled from the picked event so imports
+  // aren't all named the backend default ("Imported from Connecteam ·
+  // <date>") — Kyle's report: a recap list of identical titles is messy.
+  // Sent as `name`; left blank falls back to the backend's event-based
+  // default. The admin can still rename later from the recap view.
+  const [title, setTitle] = useState("");
   // Result state lives in the modal so the admin can review match
   // quality before closing. The recap is already saved by this point.
   const [result, setResult] = useState<{
@@ -296,6 +302,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
         const label = `${cName.trim()} · ${when}`;
         setEventId(String(r.event.id));
         setEventLabel(label);
+        setTitle((t) => (t.trim() ? t : label));
         setSearch(label);
         setShowCreate(false);
         showAlert("Event created and selected.", "success");
@@ -339,6 +346,8 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
           eventId,
           customRecapTemplateId: templateId,
           pdfBase64: fileBase64,
+          // Blank falls back to the backend's event-based default name.
+          name: title.trim() || null,
         },
       },
       onCompleted: (res) => {
@@ -504,6 +513,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                             onClick={() => {
                               setEventId(id);
                               setEventLabel(picked);
+                              setTitle((t) => (t.trim() ? t : picked));
                               setSearch(picked);
                             }}
                             className="w-full text-left px-3 py-2 text-sm flex items-center justify-between gap-2 transition hover:bg-white/5"
@@ -830,6 +840,32 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                     {fileName} · ready to upload
                   </p>
                 )}
+              </div>
+
+              {/* Optional recap title. Pre-filled from the picked event so
+                  the recap list isn't a wall of identical "Imported from
+                  Connecteam" names. Blank → backend default (event name ·
+                  date). Renamable later from the recap view too. */}
+              <div>
+                <label className="label-mini block mb-1.5">
+                  Recap title{" "}
+                  <span style={{ color: "rgba(255,255,255,0.4)" }}>
+                    · optional
+                  </span>
+                </label>
+                <input
+                  className="w-full"
+                  placeholder="e.g. Albertsons Laguna Niguel · May 22"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  style={{
+                    padding: "8px 10px",
+                    borderRadius: 8,
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: "#fff",
+                  }}
+                />
               </div>
             </>
           )}

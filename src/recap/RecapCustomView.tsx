@@ -1,6 +1,8 @@
 import Layout from "@/layout/Layout";
 import { GetCustomRecapQuery } from "@/api/queries/CustomRecapsQuery";
 import type { CustomRecapsQueryDetailsQuery as CustomRecapsQueryDetailsQueryType } from "@/api/queries/__generated__/CustomRecapsQueryDetailsQuery.graphql";
+import { ProductsQuery } from "@/api/queries/ProductsQuery";
+import type { ProductsQuery as ProductsQueryType } from "@/api/queries/__generated__/ProductsQuery.graphql";
 import { UpdateCustomRecapMutation } from "@/api/mutations/UpdateCustomRecapMutation";
 import type { UpdateCustomRecapMutation as UpdateCustomRecapMutationType } from "@/api/mutations/__generated__/UpdateCustomRecapMutation.graphql";
 import { ApproveCustomRecapMutation } from "@/api/mutations/ApproveCustomRecapMutation";
@@ -22,7 +24,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router";
 import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
-import { formatDate } from "@/utils";
+import { formatDate, parseLocaleNumber } from "@/utils";
 import {
   ArrowLeftIcon,
   Calendar,
@@ -140,6 +142,108 @@ const KpiCardContainer = ({
 //   </div>
 // );
 
+// Edit-mode editor for "Products Sampled" units on the custom-recap view.
+// Loads the recap tenant's product catalog (same ProductsQuery the create
+// form's picker + the read-only Product Samples card use) and renders one
+// numeric units-sampled input per SKU. The parent owns the quantities map
+// (keyed by Product global id) and turns it into the productSamples payload
+// on save. This is what lets an admin record sampled products + units on a
+// Connecteam-imported recap — the import never creates sample rows, so the
+// section was simply absent there before. Suspends on first open (the
+// caller wraps it in <Suspense>).
+const ProductSamplesEditor = ({
+  tenantId,
+  quantities,
+  onChange,
+}: {
+  tenantId: string | null;
+  quantities: Record<string, string>;
+  onChange: (productId: string, v: string) => void;
+}) => {
+  const data = useLazyLoadQuery<ProductsQueryType>(
+    ProductsQuery,
+    { first: 100, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+  const products = useMemo(
+    () =>
+      (data.products?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n)),
+    [data],
+  );
+  const totalUnits = useMemo(
+    () =>
+      products.reduce((sum, p) => {
+        const n = parseLocaleNumber(quantities[String(p.id)] ?? "");
+        return (
+          sum + (n != null && Number.isFinite(n) && n > 0 ? Math.round(n) : 0)
+        );
+      }, 0),
+    [products, quantities],
+  );
+
+  if (products.length === 0) {
+    return (
+      <p className="text-sm text-base-content/60">
+        No products are set up for this client yet — add SKUs under Products
+        to track units sampled.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {products.map((p) => {
+          const id = String(p.id);
+          return (
+            <div
+              key={id}
+              className="border border-base-100/30 rounded-xl p-4 flex items-center gap-3 bg-base-200/20 shadow-sm transition hover:border-primary/20"
+            >
+              <div className="w-12 h-12 bg-white rounded-lg p-1 shrink-0 grid place-items-center overflow-hidden">
+                {p.image ? (
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <span className="text-[9px] font-bold tracking-wider text-base-300">
+                    SKU
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold truncate" title={p.name}>
+                  {p.name}
+                </p>
+                {p.productType?.name && (
+                  <p className="text-[11px] uppercase tracking-wider text-base-content/50 mt-0.5 truncate">
+                    {p.productType.name}
+                  </p>
+                )}
+              </div>
+              <input
+                value={quantities[id] ?? ""}
+                onChange={(e) => onChange(id, e.target.value)}
+                inputMode="numeric"
+                placeholder="0"
+                aria-label={`Units sampled — ${p.name}`}
+                className="input input-bordered input-sm w-20 text-right shrink-0"
+              />
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-xs font-bold uppercase tracking-wider text-primary mt-3">
+        {totalUnits} unit{totalUnits === 1 ? "" : "s"} sampled
+      </p>
+    </>
+  );
+};
+
 const RecapCustomView = () => {
   const { uuid } = useParams();
   const navigate = useNavigate();
@@ -177,6 +281,20 @@ const RecapCustomView = () => {
   // from the recap on enter-edit so the user starts with what's
   // already there.
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
+  // Working copy of the recap TITLE — editable inline in edit mode so an
+  // admin can rename a recap (e.g. clear the generic "Imported from
+  // Connecteam" default) without re-doing it. Seeded from recap.name.
+  const [editedName, setEditedName] = useState("");
+  // Working copy of per-SKU sampled units, keyed by Product global id.
+  // Seeded from the recap's existing CustomRecapProductSample rows on
+  // enter-edit; the Product Samples editor writes into it and saveValues
+  // turns it into the productSamples payload. This is what lets an admin
+  // mark which products were sampled + how many units on a Connecteam-
+  // imported recap — imports never create sample rows, so the section was
+  // simply absent before.
+  const [editedSampleQtys, setEditedSampleQtys] = useState<
+    Record<string, string>
+  >({});
   // "Corporate Card Used" is a typed boolean on CustomRecap (not a custom
   // field), so it needs its own working-copy state to be editable.
   const [editedUsedCorpoCard, setEditedUsedCorpoCard] = useState(false);
@@ -223,6 +341,15 @@ const RecapCustomView = () => {
       seed[String(field.id)] = field.value ?? "";
     });
     setEditedValues(seed);
+    setEditedName(recap?.name ?? "");
+    // Seed sampled-units from existing samples (product global id → qty).
+    const sampleSeed: Record<string, string> = {};
+    (recap?.customRecapProductSample ?? []).forEach((s) => {
+      if (s?.product?.id != null && s?.quantity != null) {
+        sampleSeed[String(s.product.id)] = String(s.quantity);
+      }
+    });
+    setEditedSampleQtys(sampleSeed);
     setEditedUsedCorpoCard(!!recap?.usedCorpoCard);
     // Seed the ambassador controls from the recap. A linked Ambassador
     // (FK) seeds the picked id + display name; otherwise seed the
@@ -239,6 +366,8 @@ const RecapCustomView = () => {
     setIsEditingValues(true);
   }, [
     recap?.customField,
+    recap?.name,
+    recap?.customRecapProductSample,
     recap?.usedCorpoCard,
     recap?.ambassador?.id,
     recap?.ambassador?.user?.firstName,
@@ -250,6 +379,8 @@ const RecapCustomView = () => {
   const exitEditMode = useCallback(() => {
     setIsEditingValues(false);
     setEditedValues({});
+    setEditedName("");
+    setEditedSampleQtys({});
     setEditedAmbassadorId("");
     setEditedAmbassadorName("");
     setEditedExternalBaName("");
@@ -325,14 +456,37 @@ const RecapCustomView = () => {
       ? null
       : editedExternalBaName.trim() || null;
 
+    // Sampled products → one ProductSampleInput per SKU with a positive
+    // quantity. Seeded from the recap's current samples on enter-edit so an
+    // untouched save round-trips; the resolver replaces the whole set when
+    // productSamples is provided (delete-then-recreate). A current sample
+    // whose product isn't on the editor's page still survives — its seeded
+    // qty stays in editedSampleQtys and is re-sent here.
+    const productSamples = Object.entries(editedSampleQtys)
+      .map(([productId, raw]) => {
+        const n = parseLocaleNumber(raw ?? "");
+        return n != null && Number.isFinite(n) && Math.round(n) > 0
+          ? { productId, quantity: Math.round(n) }
+          : null;
+      })
+      .filter(
+        (s): s is { productId: string; quantity: number } => s !== null,
+      );
+
+    // Never persist a blank title — fall back to the existing name.
+    const nextName = editedName.trim() || recap.name || "Recap";
+
     commitUpdateCustomRecap({
       variables: {
         input: {
           id: recap.id as string,
-          name: recap.name ?? "",
+          name: nextName,
           eventId: eventId as string,
           customRecapTemplateId: templateId as string,
           customFieldValues,
+          // Full sampled-products set — the resolver replaces all existing
+          // CustomRecapProductSample rows with this list (delete-recreate).
+          productSamples,
           // Typed boolean on CustomRecap — now editable from the view.
           usedCorpoCard: editedUsedCorpoCard,
           // Adding/clearing the BA on an existing recap. A resolved
@@ -362,6 +516,8 @@ const RecapCustomView = () => {
     recap?.customRecapTemplate?.id,
     customFieldsBySection,
     editedValues,
+    editedName,
+    editedSampleQtys,
     editedUsedCorpoCard,
     editedAmbassadorId,
     editedExternalBaName,
@@ -935,10 +1091,10 @@ const RecapCustomView = () => {
                 <button
                   onClick={enterEditMode}
                   className="btn btn-sm btn-outline gap-2"
-                  title="Edit submitted field values"
+                  title="Edit the recap title, field values, and sampled products"
                 >
                   <Pencil className="w-4 h-4" />
-                  Edit values
+                  Edit recap
                 </button>
                 <button
                   onClick={handleDelete}
@@ -978,7 +1134,17 @@ const RecapCustomView = () => {
             <div className="card-body">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
                 <div className="space-y-2">
-                  <h1 className="text-3xl font-bold">{recap.name}</h1>
+                  {isEditingValues ? (
+                    <input
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      placeholder="Recap title"
+                      aria-label="Recap title"
+                      className="input input-bordered w-full max-w-xl text-2xl font-bold"
+                    />
+                  ) : (
+                    <h1 className="text-3xl font-bold">{recap.name}</h1>
+                  )}
                   <p className="text-sm text-base-content/60">
                     Custom Recap Summary
                   </p>
@@ -1304,7 +1470,38 @@ const RecapCustomView = () => {
                 </KpiCardContainer>
               )}
 
-            {recap.customRecapProductSample &&
+            {isEditingValues ? (
+              <KpiCardContainer
+                title="Product Samples"
+                className="md:col-span-2"
+                icon={<Package className="text-primary" />}
+              >
+                <p className="text-sm text-base-content/60 mb-3">
+                  Mark which products were sampled and how many units went
+                  out. Leave a product at 0 if none did. Saved when you hit
+                  “Save changes”.
+                </p>
+                <Suspense
+                  fallback={
+                    <p className="text-sm text-base-content/40 italic">
+                      Loading products…
+                    </p>
+                  }
+                >
+                  <ProductSamplesEditor
+                    tenantId={tenantId}
+                    quantities={editedSampleQtys}
+                    onChange={(productId, v) =>
+                      setEditedSampleQtys((prev) => ({
+                        ...prev,
+                        [productId]: v,
+                      }))
+                    }
+                  />
+                </Suspense>
+              </KpiCardContainer>
+            ) : (
+              recap.customRecapProductSample &&
               recap.customRecapProductSample.length > 0 && (
                 <KpiCardContainer
                   title="Product Samples"
@@ -1343,7 +1540,8 @@ const RecapCustomView = () => {
                     ))}
                   </div>
                 </KpiCardContainer>
-              )}
+              )
+            )}
 
             {customFieldsBySection.map((section) => (
               <KpiCardContainer

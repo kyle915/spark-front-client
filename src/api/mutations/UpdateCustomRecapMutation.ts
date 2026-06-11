@@ -10,9 +10,15 @@ import { graphql } from "react-relay";
  * deleted. The mobile callers (and now the inline editor) need to
  * send the full list of values, not just the changed ones.
  *
- * Product samples + sales performance are NOT included here so the
- * resolver leaves them untouched (only acts when those keys are
- * explicitly passed).
+ * productSamples behaves the same way: when the key is provided the
+ * resolver deletes-and-recreates the whole set (so the inline editor
+ * sends the full list, seeded from the current samples). When the key
+ * is OMITTED the resolver leaves samples untouched. The response echoes
+ * customRecapProductSample so the read-only "Product Samples" card
+ * reflects the saved truth without a hard reload — this is what lets an
+ * admin mark sampled products + units on a Connecteam-imported recap
+ * (which never had any) and see them stick. Sales performance is still
+ * omitted, so it's left untouched.
  */
 export const UpdateCustomRecapMutation = graphql`
   mutation UpdateCustomRecapMutation($input: UpdateCustomRecapInput!) {
@@ -54,6 +60,18 @@ export const UpdateCustomRecapMutation = graphql`
           recapSection {
             id
             name
+          }
+        }
+        # Echo the product samples so the read-only "Product Samples"
+        # card on RecapCustomView reflects what was just saved (added,
+        # edited, or cleared) without waiting for a page reload.
+        customRecapProductSample {
+          id
+          quantity
+          product {
+            id
+            name
+            image
           }
         }
       }
