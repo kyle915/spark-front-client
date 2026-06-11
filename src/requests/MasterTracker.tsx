@@ -1,4 +1,5 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
+import DuplicateEventsButton from "./DuplicateEventsButton";
 import TrackerSavedViews, {
   type TrackerViewSnapshot,
 } from "./TrackerSavedViews";
@@ -1557,6 +1558,7 @@ export default function MasterTracker() {
             </button>
           </div>
           <TrackerSavedViews snapshot={viewSnapshot} onApply={applyView} />
+          <DuplicateEventsButton />
           {tenantId && (
             <Suspense fallback={null}>
               <RmmFilterInner

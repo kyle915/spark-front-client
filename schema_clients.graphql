@@ -2603,6 +2603,38 @@ type EventAmbassador {
   confirmedAt: String
 }
 
+type DuplicateEventEntry {
+  id: ID!
+  uuid: String!
+  name: String!
+  date: String
+  address: String!
+  recapsFiled: Int!
+  rosterCount: Int!
+}
+
+type DuplicateEventCluster {
+  key: String!
+  events: [DuplicateEventEntry!]!
+}
+
+input MergeEventsInput {
+  tenantId: ID!
+  keepEventId: ID!
+  mergeEventIds: [ID!]!
+  clientMutationId: ID = null
+}
+
+type MergeEventsResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  deletedEvents: Int!
+  deletedRequests: Int!
+  movedSummary: String!
+  warnings: [String!]!
+}
+
 type EventCountableConnection {
   pageInfo: PageInfo!
   edges: [EventCountableEdge!]!
@@ -3813,6 +3845,7 @@ type Mutation {
   createAnnouncement(input: CreateAnnouncementInput!): AnnouncementResponse!
   deleteAnnouncement(input: DeleteAnnouncementInput!): AnnouncementResponse!
   createEvent(input: CreateEventInput!): EventDetailResponse!
+  mergeEvents(input: MergeEventsInput!): MergeEventsResponse!
   createEventWithRequest(input: CreateEventWithRequestInput!): EventWithRequestDetailResponse!
   updateEventWithRequest(input: UpdateEventWithRequestInput!): EventWithRequestDetailResponse!
   updateEvent(input: UpdateEventInput!): EventDetailResponse!
@@ -4446,6 +4479,7 @@ type Query {
   recap(uuid: ID!): Recap
   missingRecapEvents(tenantId: ID = null, lookbackDays: Int! = 30): [MissingRecapEventType!]!
   recapEventOptions(tenantId: ID = null, tenantUuid: ID = null, q: String = null, first: Int = null, after: String = null, last: Int = null, before: String = null): EventCountableConnection!
+  duplicateEventClusters(tenantId: ID!): [DuplicateEventCluster!]!
   executiveSummary(tenantId: ID = null, windowDays: Int! = 7): ExecutiveSummaryType
   ambassadorsBookedOnDate(onDate: String!, tenantId: ID = null): [ID!]!
   favoriteAmbassadors(tenantId: ID = null): [TenantFavoriteAmbassador!]!
