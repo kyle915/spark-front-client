@@ -1,4 +1,7 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
+import TrackerSavedViews, {
+  type TrackerViewSnapshot,
+} from "./TrackerSavedViews";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
@@ -1122,6 +1125,50 @@ export default function MasterTracker() {
   // Scheduling-status filter — "all" | "already_scheduled" |
   // "needs_scheduling". Applied client-side to the loaded rows.
   const [schedulingFilter, setSchedulingFilter] = useState<string>("all");
+
+  // Saved views — everything a "view" captures, and how to re-apply one.
+  // Unknown/missing keys fall back to each filter's default so an old
+  // saved view survives future filter additions.
+  const viewSnapshot = useMemo<TrackerViewSnapshot>(
+    () => ({
+      activeStatus,
+      groupBy,
+      search,
+      rmmFilter,
+      dateRange,
+      sortMode,
+      marketFilter,
+      schedulingFilter,
+    }),
+    [
+      activeStatus,
+      groupBy,
+      search,
+      rmmFilter,
+      dateRange,
+      sortMode,
+      marketFilter,
+      schedulingFilter,
+    ],
+  );
+  const applyView = (v: TrackerViewSnapshot) => {
+    setActiveStatus(v.activeStatus ?? "active");
+    setGroupBy(v.groupBy === "date" ? "date" : "none");
+    setSearch(v.search ?? "");
+    setRmmFilter(v.rmmFilter ?? "all");
+    setDateRange(
+      (["all", "next7", "next30", "past7", "past30", "month"] as const).find(
+        (d) => d === v.dateRange,
+      ) ?? "all",
+    );
+    setSortMode(
+      (["date-desc", "date-asc", "venue", "status"] as const).find(
+        (m) => m === v.sortMode,
+      ) ?? "date-desc",
+    );
+    setMarketFilter(v.marketFilter ?? "all");
+    setSchedulingFilter(v.schedulingFilter ?? "all");
+  };
   // Source row for the "⎘ Clone ×N" modal. null = closed.
   const [cloneSource, setCloneSource] = useState<{
     id: string;
@@ -1509,6 +1556,7 @@ export default function MasterTracker() {
               By date
             </button>
           </div>
+          <TrackerSavedViews snapshot={viewSnapshot} onApply={applyView} />
           {tenantId && (
             <Suspense fallback={null}>
               <RmmFilterInner
