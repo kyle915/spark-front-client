@@ -2649,6 +2649,17 @@ type MergeEventsResponse {
   warnings: [String!]!
 }
 
+type EventAttendanceRow {
+  ambassadorUuid: ID!
+  ambassadorName: String!
+  arrivedAt: String
+  clockInAt: String
+  clockOutAt: String
+  clockInCoordinates: [Float!]
+  clockOutCoordinates: [Float!]
+  hoursOnSite: Float
+}
+
 type EventCountableConnection {
   pageInfo: PageInfo!
   edges: [EventCountableEdge!]!
@@ -4449,6 +4460,7 @@ type Query {
   todayEventsCoordinates(coordinates: [Float!]!, range: Float!, unit: DistanceUnit! = KILOMETERS, first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
   recentLocationPings(withinMinutes: Int! = 30, tenantId: ID = null): [LocationPingType!]!
   eventLocationTrail(eventUuid: ID!): [LocationPingType!]!
+  eventAttendance(eventUuid: ID!): [EventAttendanceRow!]!
   eventTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventTypeFiltersInput = null): EventTypeCountableConnection!
   eventType(id: ID = null, uuid: ID = null): EventType
   eventStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: EventStatusFiltersInput = null): EventStatusCountableConnection!

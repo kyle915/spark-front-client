@@ -24,6 +24,7 @@ import useSparkRole from "@/hooks/useSparkRole";
 import { EventUuidQuery } from "@/api/queries/EventUuidQuery";
 import type { EventUuidQuery as EventUuidQueryType } from "@api/queries/__generated__/EventUuidQuery.graphql";
 import ShiftReplayPanel from "@/requests/ShiftReplayPanel";
+import EventAttendanceTable from "@/requests/EventAttendanceTable";
 import InviteBAModal from "@/requests/InviteBAModal";
 import { pickHeroImage } from "@/utils/recapFileUrl";
 
@@ -760,6 +761,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
 
       {/* GPS trail */}
       <ShiftReplayPanel eventUuid={String(event.uuid)} />
+      <EventAttendanceTable eventUuid={String(event.uuid)} />
 
       {/* Audit footer */}
       <div className="spark-card p-5">
