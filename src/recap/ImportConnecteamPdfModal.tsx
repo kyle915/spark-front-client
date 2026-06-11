@@ -9,6 +9,13 @@ import { ImportConnecteamRecapPdfMutation } from "@/api/mutations/ImportConnecte
 import type { ImportConnecteamRecapPdfMutation as ImportConnecteamRecapPdfMutationType } from "@api/mutations/__generated__/ImportConnecteamRecapPdfMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
 import { useAuthStore } from "@/store/authStore";
+import { CreateEventMutation } from "@/api/mutations/CreateEventMutation";
+import type { CreateEventMutation as CreateEventMutationType } from "@api/mutations/__generated__/CreateEventMutation.graphql";
+import { EventTypeQuery } from "@/api/queries/EventTypeQuery";
+import type { EventTypeQuery as EventTypeQueryType } from "@api/queries/__generated__/EventTypeQuery.graphql";
+import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
+import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
+import { buildDateTimeWithOffset } from "@/utils";
 
 /**
  * Drop a Connecteam-exported recap PDF onto a Spark event and turn it
@@ -28,6 +35,32 @@ import { useAuthStore } from "@/store/authStore";
  * Receipt photo is intentionally NOT handled here — the admin uploads
  * that on the recap edit page afterward.
  */
+
+// The backend serializes event date/start/end with the VENUE's wall
+// clock baked into the ISO string (DST-aware). Parse the clock straight
+// out of the string instead of round-tripping through Date — which
+// would re-shift into the browser's timezone (the exact bug class the
+// venue-tz serializers exist to prevent).
+const wallDate = (iso: string | null | undefined): string => {
+  if (!iso || iso.length < 10) return "";
+  const [y, m, d] = iso.slice(0, 10).split("-").map((n) => parseInt(n, 10));
+  if (!y || !m || !d) return "";
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const wallTime = (iso: string | null | undefined): string => {
+  if (!iso || iso.length < 16 || iso[10] !== "T") return "";
+  const hh = parseInt(iso.slice(11, 13), 10);
+  const mm = iso.slice(14, 16);
+  if (Number.isNaN(hh)) return "";
+  const h12 = ((hh + 11) % 12) + 1;
+  const ampm = hh >= 12 ? "PM" : "AM";
+  return mm === "00" ? `${h12} ${ampm}` : `${h12}:${mm} ${ampm}`;
+};
 
 type Stat = {
   pdfLabel: string;
@@ -114,6 +147,65 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
     [templatesData],
   );
 
+  // Inline "create event" support — event types + timezones are tiny
+  // lookup tables; loading them up front keeps the create form instant.
+  const eventTypesData = useLazyLoadQuery<EventTypeQueryType>(
+    EventTypeQuery,
+    { filters: { tenantId: tenantId ?? "" }, first: 25 },
+    { fetchPolicy: "store-or-network" },
+  );
+  const timezonesData = useLazyLoadQuery<TimezonesQueryType>(
+    TimezonesQuery,
+    {},
+    { fetchPolicy: "store-or-network" },
+  );
+  const eventTypes = useMemo(
+    () =>
+      (eventTypesData?.eventTypes?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n)),
+    [eventTypesData],
+  );
+  const timezones = useMemo(
+    () =>
+      (timezonesData?.timezones?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n)),
+    [timezonesData],
+  );
+
+  // Inline create form state. Times default to the common 4-hour
+  // sampling window; timezone defaults to Pacific (most GB/LD venues).
+  const [showCreate, setShowCreate] = useState(false);
+  const [cName, setCName] = useState("");
+  const [cDate, setCDate] = useState("");
+  const [cStart, setCStart] = useState("11:00");
+  const [cEnd, setCEnd] = useState("15:00");
+  const [cAddress, setCAddress] = useState("");
+  const [cEventTypeId, setCEventTypeId] = useState<string | null>(null);
+  const [cTimezoneId, setCTimezoneId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!cEventTypeId && eventTypes.length > 0) {
+      const def = eventTypes.find((t) => t.isDefault) ?? eventTypes[0];
+      setCEventTypeId(String(def.id));
+    }
+  }, [eventTypes, cEventTypeId]);
+
+  useEffect(() => {
+    if (!cTimezoneId && timezones.length > 0) {
+      const pacific =
+        timezones.find((t) =>
+          `${t.name} ${t.code ?? ""}`.toLowerCase().includes("pacific"),
+        ) ??
+        timezones.find((t) =>
+          (t.name ?? "").toLowerCase().includes("los_angeles"),
+        ) ??
+        timezones[0];
+      setCTimezoneId(String(pacific.id));
+    }
+  }, [timezones, cTimezoneId]);
+
   // Default + guard the template selection against the ACTIVE tenant's
   // templates. This is the structure the imported recap is built from, so
   // picking the wrong client's template is exactly how Girl Beer PDFs end
@@ -152,6 +244,65 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
     useMutation<ImportConnecteamRecapPdfMutationType>(
       ImportConnecteamRecapPdfMutation,
     );
+
+  const [commitCreateEvent, isCreatingEvent] =
+    useMutation<CreateEventMutationType>(CreateEventMutation);
+
+  const onCreateEvent = () => {
+    if (!tenantId) {
+      showAlert("Pick a tenant first (top-left switcher).", "warning");
+      return;
+    }
+    if (!cName.trim() || !cDate || !cStart || !cEnd || !cAddress.trim()) {
+      showAlert("Name, date, times, and address are required.", "warning");
+      return;
+    }
+    if (!cEventTypeId) {
+      showAlert(
+        "This tenant has no event types — create one in Catalogs first.",
+        "warning",
+      );
+      return;
+    }
+    if (isCreatingEvent) return;
+    const tz = timezones.find((t) => String(t.id) === cTimezoneId) ?? null;
+    const offset = tz?.offset ?? null;
+    commitCreateEvent({
+      variables: {
+        input: {
+          name: cName.trim(),
+          eventTypeId: cEventTypeId,
+          tenantId,
+          address: cAddress.trim(),
+          notes: "Created during Connecteam PDF import",
+          timezoneId: cTimezoneId,
+          date: buildDateTimeWithOffset(cDate, "00:00", offset),
+          startTime: buildDateTimeWithOffset(cDate, cStart, offset),
+          endTime: buildDateTimeWithOffset(cDate, cEnd, offset),
+        },
+      },
+      onCompleted: (res) => {
+        const r = res.createEvent;
+        if (!r?.success || !r.event?.id) {
+          showAlert(r?.message ?? "Couldn't create the event.", "error");
+          return;
+        }
+        // Select the fresh event for the import in one motion.
+        const [y, m, d] = cDate.split("-").map((n) => parseInt(n, 10));
+        const when = new Date(y, m - 1, d).toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        });
+        const label = `${cName.trim()} · ${when}`;
+        setEventId(String(r.event.id));
+        setEventLabel(label);
+        setSearch(label);
+        setShowCreate(false);
+        showAlert("Event created and selected.", "success");
+      },
+      onError: (err) => showAlert(err.message, "error"),
+    });
+  };
 
   const onPickFile = (file: File) => {
     if (!file.name.toLowerCase().endsWith(".pdf")) {
@@ -309,6 +460,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                   )}
                 </div>
                 {!eventId && (
+                  <>
                   <div
                     className="mt-2 rounded-lg overflow-y-auto"
                     style={{
@@ -321,7 +473,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                         className="text-xs px-3 py-2"
                         style={{ color: "rgba(255,255,255,0.5)" }}
                       >
-                        No matching events. Try a different search.
+                        No matching events — create one below.
                       </div>
                     ) : (
                       events.map((ev) => {
@@ -330,14 +482,28 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           ev.request?.retailer?.name ??
                           ev.name ??
                           "Untitled event";
+                        // Disambiguation line — five "Albertsons" rows are
+                        // indistinguishable without the when + where.
+                        const day = wallDate(ev.date ?? ev.startTime);
+                        const start = wallTime(ev.startTime);
+                        const end = wallTime(ev.endTime);
+                        const when = [
+                          day,
+                          start && end
+                            ? `${start}–${end}`
+                            : start || null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ");
+                        const picked = day ? `${label} · ${day}` : label;
                         return (
                           <button
                             key={id}
                             type="button"
                             onClick={() => {
                               setEventId(id);
-                              setEventLabel(label);
-                              setSearch(label);
+                              setEventLabel(picked);
+                              setSearch(picked);
                             }}
                             className="w-full text-left px-3 py-2 text-sm flex items-center justify-between gap-2 transition hover:bg-white/5"
                             style={{
@@ -345,7 +511,22 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                               borderBottom: "1px solid rgba(255,255,255,0.04)",
                             }}
                           >
-                            <span className="min-w-0 truncate">{label}</span>
+                            <span className="min-w-0">
+                              <span className="block truncate">{label}</span>
+                              {(when || ev.address) && (
+                                <span
+                                  className="block truncate mono text-[10px] mt-0.5"
+                                  style={{
+                                    color: "rgba(255,255,255,0.5)",
+                                    letterSpacing: "0.04em",
+                                  }}
+                                >
+                                  {[when, ev.address]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </span>
+                              )}
+                            </span>
                             {/* Client/brand label so it's always clear
                                 which client an event belongs to before
                                 importing a PDF against it. */}
@@ -362,6 +543,189 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                       })
                     )}
                   </div>
+                  {/* Inline event creation — no leaving the import flow.
+                      The PDF often arrives before anyone logged the event
+                      (bulk uploads miss a store, ad-hoc visits, …). */}
+                  {!showCreate ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCreate(true);
+                        if (!cName) setCName(search.trim());
+                      }}
+                      className="mt-2 w-full text-left px-3 py-2 rounded-lg text-sm transition hover:bg-white/5"
+                      style={{
+                        border: "1px dashed rgba(197,245,70,0.4)",
+                        color: "var(--spark-lime, #c5f546)",
+                        background: "rgba(197,245,70,0.04)",
+                      }}
+                    >
+                      + New event
+                      {search.trim()
+                        ? ` “${search.trim().slice(0, 32)}”`
+                        : ""}{" "}
+                      <span style={{ color: "rgba(255,255,255,0.45)" }}>
+                        — create it right here and import against it
+                      </span>
+                    </button>
+                  ) : (
+                    <div
+                      className="mt-2 rounded-lg p-3 space-y-2"
+                      style={{
+                        border: "1px dashed rgba(197,245,70,0.4)",
+                        background: "rgba(197,245,70,0.04)",
+                      }}
+                    >
+                      <p className="label-mini">New event</p>
+                      <input
+                        className="w-full"
+                        placeholder="Event name (e.g. Albertsons Laguna Niguel)"
+                        value={cName}
+                        onChange={(e) => setCName(e.target.value)}
+                        style={{
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          color: "#fff",
+                        }}
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="date"
+                          value={cDate}
+                          onChange={(e) => setCDate(e.target.value)}
+                          style={{
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            color: "#fff",
+                            colorScheme: "dark",
+                          }}
+                        />
+                        <input
+                          placeholder="Address"
+                          value={cAddress}
+                          onChange={(e) => setCAddress(e.target.value)}
+                          style={{
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            color: "#fff",
+                          }}
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <input
+                          type="time"
+                          value={cStart}
+                          onChange={(e) => setCStart(e.target.value)}
+                          style={{
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            color: "#fff",
+                            colorScheme: "dark",
+                          }}
+                        />
+                        <input
+                          type="time"
+                          value={cEnd}
+                          onChange={(e) => setCEnd(e.target.value)}
+                          style={{
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            color: "#fff",
+                            colorScheme: "dark",
+                          }}
+                        />
+                        <select
+                          value={cTimezoneId ?? ""}
+                          onChange={(e) =>
+                            setCTimezoneId(e.target.value || null)
+                          }
+                          style={{
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            color: "#fff",
+                          }}
+                        >
+                          {timezones.map((t) => (
+                            <option key={String(t.id)} value={String(t.id)}>
+                              {t.code || t.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {eventTypes.length > 1 && (
+                        <select
+                          value={cEventTypeId ?? ""}
+                          onChange={(e) =>
+                            setCEventTypeId(e.target.value || null)
+                          }
+                          className="w-full"
+                          style={{
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            color: "#fff",
+                          }}
+                        >
+                          {eventTypes.map((t) => (
+                            <option key={String(t.id)} value={String(t.id)}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {eventTypes.length === 0 && (
+                        <p
+                          className="text-xs"
+                          style={{ color: "rgba(255,200,80,0.85)" }}
+                        >
+                          No event types for this tenant — create one in
+                          Catalogs first.
+                        </p>
+                      )}
+                      <div className="flex items-center justify-end gap-2 pt-1">
+                        <button
+                          type="button"
+                          className="px-3 py-1.5 rounded-lg text-xs"
+                          style={{
+                            background: "transparent",
+                            border: "1px solid rgba(255,255,255,0.18)",
+                            color: "rgba(255,255,255,0.8)",
+                          }}
+                          onClick={() => setShowCreate(false)}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isCreatingEvent}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+                          style={{
+                            background: "var(--spark-lime, #c5f546)",
+                            color: "#0a0d09",
+                          }}
+                          onClick={onCreateEvent}
+                        >
+                          {isCreatingEvent
+                            ? "Creating…"
+                            : "Create & select"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  </>
                 )}
               </div>
 
