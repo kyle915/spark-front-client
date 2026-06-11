@@ -2603,6 +2603,20 @@ type EventAmbassador {
   confirmedAt: String
 }
 
+type EventPnlRow {
+  eventId: ID!
+  uuid: String!
+  name: String!
+  date: String
+  baCount: Int!
+  hours: Float!
+  laborCost: Float!
+  spend: Float!
+  totalCost: Float!
+  estimated: Boolean!
+  missingRates: Int!
+}
+
 type DuplicateEventEntry {
   id: ID!
   uuid: String!
@@ -4479,6 +4493,7 @@ type Query {
   recap(uuid: ID!): Recap
   missingRecapEvents(tenantId: ID = null, lookbackDays: Int! = 30): [MissingRecapEventType!]!
   recapEventOptions(tenantId: ID = null, tenantUuid: ID = null, q: String = null, first: Int = null, after: String = null, last: Int = null, before: String = null): EventCountableConnection!
+  eventPnl(tenantId: ID!, startDate: String!, endDate: String!): [EventPnlRow!]!
   duplicateEventClusters(tenantId: ID!): [DuplicateEventCluster!]!
   executiveSummary(tenantId: ID = null, windowDays: Int! = 7): ExecutiveSummaryType
   ambassadorsBookedOnDate(onDate: String!, tenantId: ID = null): [ID!]!
