@@ -2647,8 +2647,8 @@ input EventDashboardFiltersInput {
 type EventDashboardMetrics {
   totalEvents: Int!
   consumersSampled: Int!
-  brandAwareness: Float!
-  purchaseIntent: Float!
+  brandAwareness: Float
+  purchaseIntent: Float
   comparisonPeriod: String
   comparisonValues: ComparisonValues
 }
@@ -4128,9 +4128,9 @@ type PayTimingDetailResponse {
 
 type PerformanceInsights {
   knewAboutBrand: Int!
-  knewAboutBrandPercentage: Float!
+  knewAboutBrandPercentage: Float
   willingToPurchase: Int!
-  willingToPurchasePercentage: Float!
+  willingToPurchasePercentage: Float
   bestMonth: BestMonth
   growthRate: Float!
 }
@@ -4907,6 +4907,7 @@ type RecapGlobalKPIs {
   singleCansSold: Int!
   multiPacksSold: Int!
   byRmm: [RecapGlobalKPIByRMM!]!
+  packCansEquivalent: Int!
 }
 
 type RecapMonthlyDataPoint {

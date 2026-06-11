@@ -6,6 +6,7 @@ export const EventDashboardQuery = graphql`
       globalKpis {
         singleCansSold
         multiPacksSold
+        packCansEquivalent
         byRmm {
           rmmId
           rmmName

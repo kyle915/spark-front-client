@@ -684,9 +684,16 @@ export default function DashboardIndex() {
             tab-num value in the middle, lime/orange delta underneath.
             Half the height of the legacy hero. */}
         {(() => {
-          const cans = m.consumersSampled ?? 0; // total samples poured
           const single = dashboard.globalKpis?.singleCansSold ?? 0;
           const multi = dashboard.globalKpis?.multiPacksSold ?? 0;
+          // Cans-equivalent of the packs with the pack size parsed from
+          // each field label server-side ("6-packs Sold" → ×6). The old
+          // client-side ×12 overstated 6-pack brands (Girl Beer) by 2× —
+          // and folding consumersSampled into "cans" conflated people
+          // with units. Falls back to ×12 only if the field is missing
+          // (stale schema cache).
+          const packCans =
+            dashboard.globalKpis?.packCansEquivalent ?? multi * 12;
           const ins = dashboard.performanceInsights;
           const willingPct = ins?.willingToPurchasePercentage ?? m.purchaseIntent ?? null;
           const knewPct = ins?.knewAboutBrandPercentage ?? m.brandAwareness ?? null;
@@ -704,8 +711,8 @@ export default function DashboardIndex() {
               delta: consumerDelta,
             },
             {
-              label: "Cans sampled",
-              value: fmtNum(cans + single + multi * 12),
+              label: "Cans sold",
+              value: fmtNum(single + packCans),
               tone: "lime",
               sub: `${fmtNum(single)} single · ${fmtNum(multi)} packs`,
             },
@@ -725,7 +732,7 @@ export default function DashboardIndex() {
               label: "Multi-packs sold",
               value: fmtNum(multi),
               tone: "gold",
-              sub: multi ? `≈ ${fmtNum(multi * 12)} cans` : null,
+              sub: multi ? `≈ ${fmtNum(packCans)} cans` : null,
             },
             {
               label: "Events run",
