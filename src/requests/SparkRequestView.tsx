@@ -12,6 +12,7 @@ import { UsersQuery } from "@api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
 import InternalNotesPanel from "./InternalNotesPanel";
 import ShiftReplayPanel from "./ShiftReplayPanel";
+import EventAttendanceTable from "./EventAttendanceTable";
 import InviteBAModal from "./InviteBAModal";
 import EventRosterPanel from "./EventRosterPanel";
 import SmartStaffingPanel from "./SmartStaffingPanel";
@@ -892,7 +893,10 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
       {(request.events ?? [])
         .filter((e): e is NonNullable<typeof e> => Boolean(e))
         .map((ev) => (
-          <ShiftReplayPanel key={String(ev.uuid)} eventUuid={String(ev.uuid)} />
+          <div key={String(ev.uuid)} className="space-y-4">
+            <ShiftReplayPanel eventUuid={String(ev.uuid)} />
+            <EventAttendanceTable eventUuid={String(ev.uuid)} />
+          </div>
         ))}
 
       {/* Audit footer */}
