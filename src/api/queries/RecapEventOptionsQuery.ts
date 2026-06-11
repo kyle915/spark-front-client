@@ -50,6 +50,7 @@ export const RecapEventOptionsQuery = graphql`
           startTime
           endTime
           address
+          recapsFiledCount
           tenantId
           tenant {
             __typename

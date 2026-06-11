@@ -496,6 +496,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           .filter(Boolean)
                           .join(" · ");
                         const picked = day ? `${label} · ${day}` : label;
+                        const filed = (ev.recapsFiledCount ?? 0) > 0;
                         return (
                           <button
                             key={id}
@@ -527,17 +528,36 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                                 </span>
                               )}
                             </span>
-                            {/* Client/brand label so it's always clear
-                                which client an event belongs to before
-                                importing a PDF against it. */}
-                            {ev.tenant?.name && (
-                              <span
-                                className="chip chip-muted shrink-0"
-                                style={{ display: "inline-flex" }}
-                              >
-                                {ev.tenant.name}
-                              </span>
-                            )}
+                            <span className="shrink-0 flex items-center gap-1.5">
+                              {/* Already-filed badge — the usual reason to
+                                  skip an event here. Selection stays allowed
+                                  (re-imports after a bad parse are legit). */}
+                              {filed && (
+                                <span
+                                  className="chip shrink-0 mono text-[9px]"
+                                  style={{
+                                    display: "inline-flex",
+                                    color: "var(--spark-lime, #c5f546)",
+                                    border:
+                                      "1px solid rgba(197,245,70,0.45)",
+                                    letterSpacing: "0.1em",
+                                  }}
+                                >
+                                  ✓ RECAP FILED
+                                </span>
+                              )}
+                              {/* Client/brand label so it's always clear
+                                  which client an event belongs to before
+                                  importing a PDF against it. */}
+                              {ev.tenant?.name && (
+                                <span
+                                  className="chip chip-muted shrink-0"
+                                  style={{ display: "inline-flex" }}
+                                >
+                                  {ev.tenant.name}
+                                </span>
+                              )}
+                            </span>
                           </button>
                         );
                       })
