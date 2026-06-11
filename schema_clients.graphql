@@ -2587,6 +2587,7 @@ type Event implements Node {
   startTime: String
   endTime: String
   recaps: [Recap!]!
+  recapsFiledCount: Int!
   customRecaps: [CustomRecap!]!
   assignedAmbassadorsCount: Int!
   confirmedAmbassadorsCount: Int!
