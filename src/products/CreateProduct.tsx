@@ -52,12 +52,9 @@ const ProductTypeSelect = ({ tenantId, control }: ProductTypeSelectProps) => {
     <FormAutocomplete
       control={control}
       name="productTypeId"
-      label="Product Type"
-      placeholder="Search product type..."
+      label="Product Type (optional)"
+      placeholder="Leave blank to use the default"
       options={productTypeOptions}
-      rules={{
-        required: "Product type is required",
-      }}
     />
   );
 };
@@ -157,7 +154,9 @@ const ProductForm = () => {
         input: {
           name: formData.name,
           tenantId: tenantId || "",
-          productTypeId: formData.productTypeId,
+          // Optional — blank falls back to the tenant's default product type
+          // (resolved server-side), so a product can be added with just a name.
+          productTypeId: formData.productTypeId || null,
           image: uploadedBlobName,
         },
       },
