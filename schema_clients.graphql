@@ -1742,7 +1742,7 @@ input CreateProductInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
-  productTypeId: ID!
+  productTypeId: ID = null
   image: String = null
 }
 
@@ -6546,7 +6546,7 @@ input UpdateProductInput {
   clientMutationId: ID = null
   tenantId: ID = null
   name: String!
-  productTypeId: ID!
+  productTypeId: ID = null
   image: String = null
   id: ID!
 }
