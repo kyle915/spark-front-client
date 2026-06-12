@@ -113,9 +113,17 @@ export default function SparkPublicExpressForm() {
     [date, extraDates],
   );
 
+  // Require a FULL address — street, city, state, ZIP — not just a street
+  // line. Google Places' formattedAddress always carries a 5-digit ZIP; a
+  // free-typed "1608 Broadway St" (REQ-925) doesn't. Requiring a ZIP is a
+  // cheap, robust "is this the full address?" gate so the request + the RMM
+  // approval email carry the complete address instead of a bare street.
+  const addressComplete = /\b\d{5}\b/.test(address || "");
+
   const canSubmit =
     !!venue &&
     !!address &&
+    addressComplete &&
     !!date &&
     !!startTime &&
     !!endTime &&

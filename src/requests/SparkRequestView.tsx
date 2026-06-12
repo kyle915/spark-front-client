@@ -326,6 +326,22 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
     const state = request.retailer?.location?.state?.code ?? "";
     return [city, state].filter(Boolean).join(", ") || "—";
   })();
+  // The fullest address we can show. New requests store a complete
+  // Google-formatted address (street, city, state, ZIP) in `address` — shown
+  // verbatim. For older/partial ones (a bare street like REQ-925), append
+  // city/state/ZIP from the linked retailer location when we have it.
+  const fullAddress = (() => {
+    const street = (request.address ?? "").trim();
+    if (street && /\b\d{5}\b/.test(street)) return street;
+    const city = request.retailer?.location?.name ?? "";
+    const st = request.retailer?.location?.state?.code ?? "";
+    const zip = request.retailer?.location?.zip ?? "";
+    const region = [st, zip].filter(Boolean).join(" ");
+    const tail = [city, region].filter(
+      (p) => p && !street.toLowerCase().includes(p.toLowerCase()),
+    );
+    return [street, ...tail].filter(Boolean).join(", ") || "—";
+  })();
   const requestorName = [
     request.createdBy?.firstName,
     request.createdBy?.lastName,
@@ -654,7 +670,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="VENUE">{venue}</Field>
           <Field label="MARKET">{market}</Field>
-          <Field label="ADDRESS">{request.address || "—"}</Field>
+          <Field label="ADDRESS">{fullAddress}</Field>
           <Field label="REQUEST TYPE">
             {request.requestType?.name ?? "—"}
           </Field>
