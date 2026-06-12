@@ -20,6 +20,10 @@ import { DeleteRecapMutation } from "@/api/mutations/DeleteRecapMutation";
 import type { DeleteRecapMutation as DeleteRecapMutationType } from "@/api/mutations/__generated__/DeleteRecapMutation.graphql";
 import { AmbassadorSearchQuery } from "@/api/queries/AmbassadorSearchQuery";
 import type { AmbassadorSearchQuery as AmbassadorSearchQueryType } from "@/api/queries/__generated__/AmbassadorSearchQuery.graphql";
+import { ProductsQuery } from "@/api/queries/ProductsQuery";
+import type { ProductsQuery as ProductsQueryType } from "@/api/queries/__generated__/ProductsQuery.graphql";
+import { CreateProductMutation } from "@/api/mutations/CreateProductMutation";
+import type { CreateProductMutation as CreateProductMutationType } from "@/api/mutations/__generated__/CreateProductMutation.graphql";
 import useSparkRole from "@/hooks/useSparkRole";
 import RateBaControl from "@/components/RateBaControl";
 import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
@@ -104,6 +108,164 @@ const KpiTile: React.FC<{
 // `ambassadorId`. Kept as a string so the existing pickedBa state shape
 // (id + name) doesn't have to fork into a discriminated union.
 const EXTERNAL_BA_ID_PREFIX = "external:";
+
+type SampleRow = { productId: string; quantity: string };
+
+/**
+ * Editor for "products sampled" on a recap: pick products from the client's
+ * catalog and enter the units sampled for each. Admin can also add a brand-new
+ * product inline (name only — the backend files it under the tenant's default
+ * type, no product-type setup required). Mirrors the BaSearch pattern: runs its
+ * own tenant-scoped ProductsQuery, so the caller wraps it in <Suspense>.
+ */
+const ProductSampleEditor: React.FC<{
+  tenantId: string;
+  rows: SampleRow[];
+  onChange: (rows: SampleRow[]) => void;
+}> = ({ tenantId, rows, onChange }) => {
+  const showAlert = useAlertStore((s) => s.showAlert);
+  const [catalogKey, setCatalogKey] = useState(0);
+  const data = useLazyLoadQuery<ProductsQueryType>(
+    ProductsQuery,
+    { filters: { tenantId }, first: 200 },
+    { fetchPolicy: "store-and-network", fetchKey: catalogKey },
+  );
+  const [commitCreate, creating] =
+    useMutation<CreateProductMutationType>(CreateProductMutation);
+  const [newName, setNewName] = useState("");
+
+  const catalog = (data?.products?.edges ?? [])
+    .map((e) => e?.node)
+    .filter((n): n is NonNullable<typeof n> => Boolean(n))
+    .map((n) => ({ id: String(n.id), name: n.name ?? "Product" }));
+
+  const setRow = (i: number, patch: Partial<SampleRow>) =>
+    onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const addRow = () => onChange([...rows, { productId: "", quantity: "" }]);
+  const removeRow = (i: number) => onChange(rows.filter((_, j) => j !== i));
+
+  const addNewProduct = () => {
+    const name = newName.trim();
+    if (!name || creating) return;
+    commitCreate({
+      variables: { input: { name, tenantId } },
+      onCompleted: (res) => {
+        const p = res.createProduct?.product;
+        if (res.createProduct?.success && p) {
+          setNewName("");
+          setCatalogKey((k) => k + 1); // refresh the dropdown options
+          onChange([...rows, { productId: String(p.id), quantity: "" }]);
+        } else {
+          showAlert(
+            res.createProduct?.message ?? "Couldn't add product.",
+            "error",
+          );
+        }
+      },
+      onError: (err) =>
+        showAlert(`Add product failed: ${err.message}`, "error"),
+    });
+  };
+
+  const inputStyle = {
+    background: "var(--spark-bg)",
+    border: "1px solid var(--spark-border)",
+    color: "var(--spark-text)",
+  } as const;
+
+  return (
+    <div className="mt-5">
+      <label
+        className="mono text-[10px] block mb-2"
+        style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+      >
+        PRODUCTS SAMPLED
+      </label>
+      <div className="space-y-2">
+        {rows.length === 0 && (
+          <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+            No products added yet — add a line below.
+          </p>
+        )}
+        {rows.map((r, i) => (
+          <div key={i} className="flex gap-2 items-center">
+            <select
+              value={r.productId}
+              onChange={(e) => setRow(i, { productId: e.target.value })}
+              className="flex-1 rounded-lg px-3 py-2 text-[15px]"
+              style={inputStyle}
+            >
+              <option value="">Select product…</option>
+              {catalog.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+              {r.productId &&
+                !catalog.some((p) => p.id === r.productId) && (
+                  <option value={r.productId}>(selected product)</option>
+                )}
+            </select>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              placeholder="Units"
+              value={r.quantity}
+              onChange={(e) => setRow(i, { quantity: e.target.value })}
+              className="w-24 rounded-lg px-3 py-2 text-[15px]"
+              style={inputStyle}
+            />
+            <button
+              type="button"
+              onClick={() => removeRow(i)}
+              className="mono text-[10px]"
+              style={{ color: "var(--spark-orange)" }}
+            >
+              REMOVE
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={addRow}
+        className="mono text-[10px] mt-2"
+        style={{ color: "var(--spark-lime)" }}
+      >
+        + ADD PRODUCT LINE
+      </button>
+
+      {/* Inline add-a-product (admin): name only; the backend files it under
+          the tenant's default product type. */}
+      <div
+        className="flex gap-2 items-center mt-3 pt-3"
+        style={{ borderTop: "1px solid var(--spark-border)" }}
+      >
+        <input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="New product name…"
+          className="flex-1 rounded-lg px-3 py-2 text-[15px]"
+          style={inputStyle}
+        />
+        <button
+          type="button"
+          onClick={addNewProduct}
+          disabled={creating || !newName.trim()}
+          className="mono text-[10px] px-3 py-2 rounded-lg"
+          style={{
+            color: "var(--spark-bg)",
+            background: "var(--spark-lime)",
+            opacity: creating || !newName.trim() ? 0.5 : 1,
+          }}
+        >
+          {creating ? "ADDING…" : "+ ADD NEW PRODUCT"}
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const BaSearch: React.FC<{
   onPick: (id: string, name: string) => void;
@@ -247,6 +409,9 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   // so the editor showed it blank even though Cans was filled; this makes
   // it auto-fill on open and as the numbers are corrected.
   const [productsSoldManual, setProductsSoldManual] = useState(false);
+  // Products sampled (product + units) the admin is editing in the panel.
+  // Seeded from the recap's existing samples on edit; sent on save.
+  const [sampleRows, setSampleRows] = useState<SampleRow[]>([]);
   // BA the admin newly picked in the editor. Null = leave the recap's
   // current ambassador unchanged (updateRecap's ambassador_id is guarded
   // server-side, so a null is a no-op, not a clear).
@@ -375,6 +540,16 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       afCorpoCard: accountFeedback?.corpoCard ?? "",
     });
     setProductsSoldManual(hasStoredProductsSold);
+    // Seed the products-sampled editor from the recap's existing samples.
+    setSampleRows(
+      (recap.productSamples ?? [])
+        .filter((s): s is NonNullable<typeof s> => Boolean(s))
+        .map((s) => ({
+          productId: s.product?.id ? String(s.product.id) : "",
+          quantity: s.quantity != null ? String(s.quantity) : "",
+        }))
+        .filter((r) => r.productId),
+    );
     setPickedBa(null);
     setEditingNumbers(true);
   };
@@ -447,6 +622,19 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           productsSold: numOrNull(draft.productsSold),
           totalCansSold: numOrNull(draft.totalCansSold),
           totalPacksSold: numOrNull(draft.totalPacksSold),
+          // Products sampled (product + units). Sending the array REPLACES the
+          // recap's samples server-side (delete + recreate), so we always send
+          // the current rows — removing a row clears it. Incomplete rows (no
+          // product or no units) are dropped.
+          productSamples: sampleRows
+            .map((r) => ({
+              productId: r.productId,
+              quantity: numOrNull(r.quantity),
+            }))
+            .filter(
+              (r): r is { productId: string; quantity: number } =>
+                Boolean(r.productId) && r.quantity != null,
+            ),
           accountSpendAmount: numOrNull(draft.accountSpendAmount),
           // Preserve totalEarnings; the editor doesn't touch it.
           totalEarnings: recap.totalEarnings ?? null,
@@ -868,6 +1056,38 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         <RecapQualityPanel recapId={recap.id} isCustom={false} />
       </Suspense>
 
+      {/* Products sampled — read view (everyone). Hidden while the admin is
+          editing, since the editor panel below shows the same data. */}
+      {!editingNumbers &&
+        (recap.productSamples ?? []).filter(Boolean).length > 0 && (
+          <div className="spark-card p-6">
+            <p
+              className="mono text-[10px]"
+              style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}
+            >
+              PRODUCTS SAMPLED
+            </p>
+            <div className="mt-3 space-y-1.5">
+              {(recap.productSamples ?? [])
+                .filter((s): s is NonNullable<typeof s> => Boolean(s))
+                .map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between text-sm"
+                    style={{ color: "rgba(255,255,255,0.8)" }}
+                  >
+                    <span>{s.product?.name ?? "Product"}</span>
+                    <span className="mono" style={{ color: "var(--spark-lime)" }}>
+                      {s.quantity != null
+                        ? `${s.quantity.toLocaleString()} units`
+                        : "—"}
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
       {/* Admin number editor panel */}
       {isAdmin && editingNumbers && (
         <div
@@ -932,6 +1152,28 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             * Products sold auto-fills from Cans + Packs. Type a value to
             override.
           </p>
+
+          {/* Products sampled editor — pick from the client's catalog +
+              units, or add a new product inline. Tenant-scoped, suspends on
+              its own products query. */}
+          {recap.event?.tenantId ? (
+            <Suspense
+              fallback={
+                <p
+                  className="text-xs mt-5"
+                  style={{ color: "rgba(255,255,255,0.4)" }}
+                >
+                  Loading products…
+                </p>
+              }
+            >
+              <ProductSampleEditor
+                tenantId={String(recap.event.tenantId)}
+                rows={sampleRows}
+                onChange={setSampleRows}
+              />
+            </Suspense>
+          ) : null}
 
           {/* BA assignment. Nevena: "I cant add BA for that recap
               anywhere." Shows the current BA and lets the admin search +
