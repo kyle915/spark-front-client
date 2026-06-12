@@ -24,6 +24,7 @@ export const ProductsQuery = graphql`
           id
           uuid
           name
+          description
           image
           tenantId
           productType {

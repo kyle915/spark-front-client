@@ -1743,6 +1743,7 @@ input CreateProductInput {
   tenantId: ID = null
   name: String!
   productTypeId: ID = null
+  description: String = null
   image: String = null
 }
 
@@ -4203,6 +4204,7 @@ type Product implements Node {
   id: ID!
   uuid: String!
   name: String!
+  description: String
   productType: ProductType
   tenantId: ID!
   createdAt: String!
@@ -6547,6 +6549,7 @@ input UpdateProductInput {
   tenantId: ID = null
   name: String!
   productTypeId: ID = null
+  description: String = null
   image: String = null
   id: ID!
 }
