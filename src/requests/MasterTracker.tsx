@@ -537,6 +537,13 @@ const TrackerTable: React.FC<{
                   <td className="px-4 py-3">{r.market}</td>
                   <td className="px-4 py-3">
                     <span className="font-semibold text-[15px]">{r.venue}</span>
+                    <span
+                      className="block text-[11px] mt-0.5 opacity-60 tracking-wide"
+                      style={{ fontVariantNumeric: "tabular-nums" }}
+                      title="Request number — search the tracker by this (e.g. REQ-925)"
+                    >
+                      REQ-{reqCodeOf(r.id)}
+                    </span>
                     {r.schedulingStatus === "needs_scheduling" ? (
                       <span
                         className="chip chip-gold chip-sm mt-1"
@@ -749,6 +756,14 @@ const TrackerTable: React.FC<{
 
 /* ─────────────────────────── INNER (queries) ────────────────────── */
 
+/**
+ * The human-facing request number shown in the request view + approval
+ * emails: "REQ-" + the last 4 chars of the request id, uppercased. Kept in
+ * one place so the tracker's search + row label match SparkRequestView
+ * (`REQ-${String(request.id).slice(-4).toUpperCase()}`) exactly.
+ */
+const reqCodeOf = (id: string): string => id.slice(-4).toUpperCase();
+
 const MasterTrackerInner: React.FC<{
   activeStatus: string;
   search: string;
@@ -784,14 +799,27 @@ const MasterTrackerInner: React.FC<{
 }) => {
   const { tenantId } = useAuthStore();
 
+  // Detect a "search by REQ number" query — what the user sees in the
+  // request view + approval emails (e.g. "REQ-925", "req 925", "REQ925").
+  // Normalize to the bare code; null for ordinary text search. The anchored
+  // pattern (REQ + up to 4 alphanumerics, whole string) keeps a venue named
+  // "Req…" from being mistaken for a req-number lookup.
+  const reqNeedle = useMemo(() => {
+    const m = search.trim().match(/^req[-\s]*([a-z0-9]{1,4})$/i);
+    return m ? m[1].toUpperCase() : null;
+  }, [search]);
+
   // Fetch a large page so all current requests render. Real pagination
   // with cursor-based "Load more" comes in v2.
   // Tenant scoping is REQUIRED — without it the query returns nothing.
+  // For a REQ-number lookup we send q=null so the full set loads and the
+  // match happens client-side — the backend `q` only searches venue/address/
+  // etc. and would exclude the row before we could match its id.
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
     {
       first: 1000,
-      q: search || null,
+      q: reqNeedle ? null : search || null,
       filters: tenantId
         ? { tenantId, rmmAsigned: rmmFilter === "all" ? null : rmmFilter }
         : null,
@@ -952,7 +980,13 @@ const MasterTrackerInner: React.FC<{
 
   // Sort applied last so it operates on the post-filter set.
   const rows = useMemo(() => {
-    const out = [...schedulingFiltered];
+    // A REQ-number search jumps straight to that request and ignores the
+    // status/date/market/scheduling chips, so it's found no matter which tab
+    // or date range is active. Ordinary search keeps the full filter chain.
+    const base = reqNeedle
+      ? allRows.filter((r) => reqCodeOf(r.id).includes(reqNeedle))
+      : schedulingFiltered;
+    const out = [...base];
     switch (sortMode) {
       case "date-desc":
         out.sort(
@@ -993,7 +1027,7 @@ const MasterTrackerInner: React.FC<{
       }
     }
     return out;
-  }, [schedulingFiltered, sortMode]);
+  }, [schedulingFiltered, sortMode, reqNeedle, allRows]);
 
   // Bubble the unique market codes up so the page chrome can render
   // a dropdown with just the markets actually present in the data.
@@ -1572,7 +1606,7 @@ export default function MasterTracker() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search venue, address, market…"
+            placeholder="Search venue, address, market, or REQ-…"
             className="rounded-xl text-xs"
             style={{
               padding: "0.45rem 0.9rem",
