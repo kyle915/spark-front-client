@@ -21,6 +21,7 @@ import { Edit, ImageOff, Trash2Icon } from "lucide-react";
 type ProductNode = {
   id: string;
   name: string;
+  description?: string | null;
   image?: string | null;
   productType?: {
     id: string;
@@ -136,6 +137,7 @@ const DeleteProductButton = ({
 type EditProductFormValues = {
   name: string;
   productTypeId: string;
+  description: string;
 };
 
 type GetUploadUrlQueryType = {
@@ -191,6 +193,7 @@ const EditProductModal = ({
     defaultValues: {
       name: product.name,
       productTypeId: product.productType?.id ?? "",
+      description: product.description ?? "",
     },
   });
 
@@ -261,6 +264,7 @@ const EditProductModal = ({
               id: product.id,
               name: values.name,
               productTypeId: values.productTypeId,
+              description: values.description.trim() || null,
               tenantId,
               image: imageBlob,
             },
@@ -346,6 +350,18 @@ const EditProductModal = ({
                 </span>
               </label>
             )}
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Description</span>
+            </label>
+            <textarea
+              rows={3}
+              className="textarea textarea-bordered w-full"
+              placeholder="Short description shown with this product…"
+              {...register("description")}
+            />
           </div>
 
           <ImageUpload
@@ -633,6 +649,16 @@ const TenantProductsGrid = ({
                   <div className="mt-3 font-semibold text-base leading-snug line-clamp-2">
                     {product.name}
                   </div>
+                  {product.productType?.name ? (
+                    <div className="mt-1 text-[11px] uppercase tracking-wide text-base-content/50">
+                      {product.productType.name}
+                    </div>
+                  ) : null}
+                  {product.description ? (
+                    <p className="mt-1 text-sm text-base-content/70 line-clamp-3">
+                      {product.description}
+                    </p>
+                  ) : null}
 
                   <div className="mt-auto pt-4 border-t border-base-300/50 flex justify-between">
                     <button

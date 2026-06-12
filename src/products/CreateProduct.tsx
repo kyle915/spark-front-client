@@ -13,6 +13,7 @@ import { Link } from "react-router";
 import { useForm } from "react-hook-form";
 import type { Control } from "react-hook-form";
 import FormInputText from "@shared/FormInputText";
+import FormTextarea from "@shared/FormTextarea";
 import FormAutocomplete from "@shared/FormAutocomplete";
 import ImageUpload from "@shared/ImageUpload";
 import Loading from "@shared/Loading";
@@ -25,6 +26,7 @@ type ProductFormValues = {
   name: string;
   tenantId: string;
   productTypeId: string;
+  description: string;
 };
 
 type ProductTypeSelectProps = {
@@ -73,6 +75,7 @@ const ProductForm = () => {
       name: "",
       tenantId: tenantId || "",
       productTypeId: "",
+      description: "",
     },
   });
 
@@ -157,6 +160,7 @@ const ProductForm = () => {
           // Optional — blank falls back to the tenant's default product type
           // (resolved server-side), so a product can be added with just a name.
           productTypeId: formData.productTypeId || null,
+          description: formData.description.trim() || null,
           image: uploadedBlobName,
         },
       },
@@ -169,6 +173,7 @@ const ProductForm = () => {
             name: "",
             tenantId: formData.tenantId,
             productTypeId: "",
+            description: "",
           });
           setSelectedImageFile(null);
           setImageResetKey((prev) => prev + 1);
@@ -261,6 +266,14 @@ const ProductForm = () => {
                   />
                 )}
               </div>
+
+              <FormTextarea
+                control={control}
+                name="description"
+                label="Description (optional)"
+                rows={3}
+                placeholder="Short description shown with this product…"
+              />
             </section>
 
             <section className="space-y-6 rounded-2xl bg-base-300/60 border border-base-100/20 p-6">
