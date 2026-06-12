@@ -555,6 +555,18 @@ const SparkRequestInner: React.FC = () => {
       );
       return;
     }
+    if (!/\b\d{5}\b/.test(address)) {
+      // A bare street like "1608 Broadway St" (REQ-925) routes nowhere and
+      // shows up half-blank in the request view + RMM email. Require the
+      // FULL address — easiest path is picking the Google suggestion, which
+      // fills street/city/state/ZIP. The 5-digit ZIP is the completeness
+      // signal (same gate as the public form).
+      showAlert(
+        "Enter the full address — street, city, state, and ZIP. Start typing and pick a Google suggestion.",
+        "warning",
+      );
+      return;
+    }
     // Store number is optional — it's helpful metadata (prepended to notes)
     // but never blocks submit. Tenants like Borjomi don't track it.
     if (!schedulingStatus) {
