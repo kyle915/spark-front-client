@@ -1481,6 +1481,7 @@ input CreateCustomFieldInput {
   customFieldTypeId: ID!
   recapSectionId: ID!
   required: Boolean = null
+  order: Int = null
 }
 
 input CreateCustomRecapFieldTypeInput {
@@ -1823,6 +1824,7 @@ input CreateRecapSectionInput {
   clientMutationId: ID = null
   name: String!
   tenantId: ID!
+  order: Int = null
 }
 
 input CreateRequestDetailInput {
@@ -2000,6 +2002,7 @@ type CustomField implements Node {
   uuid: String!
   name: String!
   required: Boolean!
+  order: Int!
   customRecapTemplateId: ID!
   customFieldTypeId: ID!
   customFieldType: CustomRecapFieldType!
@@ -2269,6 +2272,7 @@ input CustomRecapTemplateFieldInput {
   recapSectionId: ID!
   id: ID = null
   required: Boolean = null
+  order: Int = null
 }
 
 input CustomRecapTemplateFiltersInput {
@@ -5010,6 +5014,7 @@ type RecapSection implements Node {
   id: ID!
   uuid: String!
   name: String!
+  order: Int!
   tenantId: ID!
   createdAt: String!
   updatedAt: String!

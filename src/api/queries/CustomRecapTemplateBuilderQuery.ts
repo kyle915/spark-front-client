@@ -39,6 +39,7 @@ export const CustomRecapTemplateBuilderQuery = graphql`
           id
           uuid
           name
+          order
         }
       }
     }
@@ -49,6 +50,7 @@ export const CustomRecapTemplateBuilderQuery = graphql`
           uuid
           name
           productSamples
+          salesPerformance
           eventType {
             id
             name
@@ -57,6 +59,7 @@ export const CustomRecapTemplateBuilderQuery = graphql`
             id
             name
             required
+            order
             recapSectionId
             recapSection {
               id
