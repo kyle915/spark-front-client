@@ -487,6 +487,15 @@ export default function SparkRecapCreate() {
       ...photoBlobs.map((blob) => ({ file: blob, fileTypeId: "1", fileRecapCategoryId: "1" })),
       ...receiptBlobs.map((blob) => ({ file: blob, fileTypeId: "1", fileRecapCategoryId: "2" })),
     ];
+    // Per-SKU samples (product + units), same shape as the custom flow.
+    // Sent only when at least one product got a positive quantity.
+    const productSamples = Object.entries(sampleQtys)
+      .map(([productId, raw]) => ({ productId, quantity: parseLocaleNumber(raw) }))
+      .filter(
+        (s): s is { productId: string; quantity: number } =>
+          s.quantity != null && Number.isFinite(s.quantity) && s.quantity > 0,
+      )
+      .map((s) => ({ productId: s.productId, quantity: Math.round(s.quantity) }));
     commit({
       variables: {
         input: {
@@ -524,6 +533,7 @@ export default function SparkRecapCreate() {
             wasCorpoCardUsed: corpoCardUsed,
           },
           files,
+          ...(productSamples.length > 0 ? { productSamples } : {}),
         },
       },
       onCompleted: (res) => {
@@ -855,6 +865,27 @@ export default function SparkRecapCreate() {
       {/* ─── Legacy fixed grid (template-less tenants only) ─── */}
       {!useCustomFlow && (
         <>
+          {/* Per-SKU products sampled — also offered on plain (template-less)
+              recaps so any client's products + units can be recorded. Same
+              card + payload as the custom flow; flows into productSamples on
+              submit. Hidden until a tenant context is known. */}
+          {tenantId && (
+            <Suspense
+              fallback={
+                <Card title="PRODUCTS SAMPLED">
+                  <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+                    Loading products…
+                  </p>
+                </Card>
+              }
+            >
+              <ProductSamplesSection
+                tenantId={tenantId}
+                quantities={sampleQtys}
+                onChange={setSampleQty}
+              />
+            </Suspense>
+          )}
           {/* Numbers */}
           <Card title="NUMBERS">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
