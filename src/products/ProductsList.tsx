@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router";
 import Layout from "@/layout/Layout";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { ProductTypesQuery } from "@api/queries/ProductTypesQuery";
 import type { ProductTypesQuery as ProductTypesQueryType } from "@api/queries/__generated__/ProductTypesQuery.graphql";
 import TenantProductsGrid from "@/products/TenantProductsGrid";
 import { useAuthStore } from "@/store/authStore";
-import { ShoppingCartIcon } from "@heroicons/react/24/solid";
+import { ShoppingCartIcon, PlusIcon } from "@heroicons/react/24/solid";
 import { FilterIcon, FunnelXIcon } from "lucide-react";
 
 type ProductTypeFilterProps = {
@@ -63,16 +64,24 @@ const ProductsList = () => {
 
   return (
     <Layout>
-      <div className="mb-4 flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
-          <div className="p-2 rounded-xl bg-primary/10 text-primary">
-            <ShoppingCartIcon className="w-8 h-8 text-primary" />
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-3xl font-bold text-primary text-shadow-2xs text-shadow-primary-100">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <ShoppingCartIcon className="w-8 h-8 text-primary" />
+            </div>
+            <h1>All Products</h1>
           </div>
-          <h1>All Products</h1>
+          <p className="text-base-content/70">
+            Manage and browse all products in the system.
+          </p>
         </div>
-        <p className="text-base-content/70">
-          Manage and browse all products in the system.
-        </p>
+        <Link
+          to="/products/create-product"
+          className="btn btn-primary rounded-full gap-1 whitespace-nowrap self-start sm:self-auto"
+        >
+          <PlusIcon className="w-4 h-4" /> Add product
+        </Link>
       </div>
 
       <div className="flex flex-col gap-4">
