@@ -37,6 +37,7 @@ import {
   Plus,
   GraduationCap,
   Receipt,
+  Package,
 } from "lucide-react";
 
 /**
@@ -214,6 +215,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Form Builder", Icon: Wrench, to: "/forms/builder" },
       { label: "Recap Templates", Icon: Star, to: "/recaps/templates" },
+      { label: "Products", Icon: Package, to: "/products/products-list" },
       { label: "Clients", Icon: Building2, to: "/clients" },
       { label: "Team", Icon: UsersRound, to: "/team" },
       { label: "New Client", Icon: Plus, to: "/clients/new" },
