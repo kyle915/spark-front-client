@@ -223,6 +223,12 @@ const SparkRecapTemplateCreate = lazyDefault(
       "@/components/pages/recap-templates/SparkRecapTemplateCreate"
     ),
 );
+const SparkRecapTemplateEdit = lazyDefault(
+  () =>
+    import(
+      "@/components/pages/recap-templates/SparkRecapTemplateEdit"
+    ),
+);
 const RecapCustomList = lazyDefault(() => import("@/recap/RecapCustomList"));
 const RecapView = lazyDefault(() => import("@/recap/RecapView"));
 const RecapCustomView = lazyDefault(() => import("@/recap/RecapCustomView"));
@@ -932,6 +938,15 @@ const RecapLinks = {
       component: (
         <AdminOnly>
           <SparkRecapTemplateCreate />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/recap-templates/:uuid/edit",
+      component: (
+        <AdminOnly>
+          <SparkRecapTemplateEdit />
         </AdminOnly>
       ),
       isPublic: false,

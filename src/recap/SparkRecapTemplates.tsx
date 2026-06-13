@@ -31,6 +31,7 @@ import { useAlertStore } from "@/store/alertStore";
 
 type Template = {
   id: string;
+  uuid: string;
   name: string;
   usage: number;
   lastUsed: string | null;
@@ -174,6 +175,7 @@ const Inner: React.FC = () => {
         const stats = usageById.get(id);
         return {
           id,
+          uuid: String(t.uuid),
           name: t.name ?? "Untitled template",
           usage: stats?.usage ?? 0,
           lastUsed: stats?.lastUsed ?? null,
@@ -331,6 +333,20 @@ const Inner: React.FC = () => {
                     }
                   >
                     Manage fields
+                  </button>
+                  <button
+                    onClick={() =>
+                      navigate(`/recap-templates/${t.uuid}/edit`)
+                    }
+                    className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold"
+                    style={{
+                      background: "var(--spark-lime)",
+                      color: "#0a0d09",
+                      border: "1px solid var(--spark-lime)",
+                    }}
+                    title="Add, rename, reorder, or delete fields + sections"
+                  >
+                    Edit template
                   </button>
                 </div>
               </div>
