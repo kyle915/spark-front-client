@@ -13,6 +13,8 @@ import { DeleteCustomRecapMutation } from "@/api/mutations/DeleteCustomRecapMuta
 import type { DeleteCustomRecapMutation as DeleteCustomRecapMutationType } from "@/api/mutations/__generated__/DeleteCustomRecapMutation.graphql";
 import { DeleteCustomRecapFileMutation } from "@/api/mutations/DeleteCustomRecapFileMutation";
 import type { DeleteCustomRecapFileMutation as DeleteCustomRecapFileMutationType } from "@/api/mutations/__generated__/DeleteCustomRecapFileMutation.graphql";
+import { SetCustomRecapFileCategoryMutation } from "@/api/mutations/SetCustomRecapFileCategoryMutation";
+import type { SetCustomRecapFileCategoryMutation as SetCustomRecapFileCategoryMutationType } from "@/api/mutations/__generated__/SetCustomRecapFileCategoryMutation.graphql";
 import { GenerateCustomRecapPdfMutation } from "@/api/mutations/GenerateCustomRecapPdfMutation";
 import type { GenerateCustomRecapPdfMutation as GenerateCustomRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateCustomRecapPdfMutation.graphql";
 import { RecapUploader } from "./RecapUploader";
@@ -331,6 +333,10 @@ const RecapCustomView = () => {
     useMutation<DeleteCustomRecapFileMutationType>(
       DeleteCustomRecapFileMutation,
     );
+  const [commitSetFileCategory, isSettingCategory] =
+    useMutation<SetCustomRecapFileCategoryMutationType>(
+      SetCustomRecapFileCategoryMutation,
+    );
 
   const enterEditMode = useCallback(() => {
     const seed: Record<string, string> = {};
@@ -644,6 +650,33 @@ const RecapCustomView = () => {
       });
     },
     [commitDeleteFile, showAlert],
+  );
+
+  // Move a file into a different section (FileRecapCategory) so receipts
+  // don't clump in with the sampling photos. "1" = Sampling photos, "2" =
+  // Receipts (the server resolves these sentinels to THIS tenant's own
+  // categories); "" → null = Uncategorized. Bumps refreshKey so the gallery
+  // re-groups without a reload.
+  const handleSetFileCategory = useCallback(
+    (fileId: string, sentinel: string) => {
+      commitSetFileCategory({
+        variables: {
+          input: { id: fileId, fileRecapCategoryId: sentinel || null },
+        },
+        onCompleted: (res) => {
+          const payload = res.setCustomRecapFileCategory;
+          if (payload?.success) {
+            showAlert("File moved.", "success");
+            setRefreshKey((k) => k + 1);
+          } else {
+            showAlert(payload?.message ?? "Couldn't move file.", "error");
+          }
+        },
+        onError: (err) =>
+          showAlert(`Couldn't move file: ${err.message}`, "error"),
+      });
+    },
+    [commitSetFileCategory, showAlert],
   );
 
   // Delete this custom recap (admin-only on the backend; tenant-scoped).
@@ -1896,6 +1929,34 @@ const RecapCustomView = () => {
                                   >
                                     {statusLabel}
                                   </span>
+                                  {/* Move this file to a section so receipts
+                                      don't clump in with sampling photos.
+                                      Sentinels resolve server-side to this
+                                      tenant's own categories; stopPropagation
+                                      keeps the click off the preview opener. */}
+                                  <select
+                                    value=""
+                                    onClick={(e) => e.stopPropagation()}
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      const v = e.target.value;
+                                      if (!v) return;
+                                      handleSetFileCategory(
+                                        file.id,
+                                        v === "__none__" ? "" : v,
+                                      );
+                                    }}
+                                    disabled={isSettingCategory}
+                                    title="Move this file to a section"
+                                    className="mt-0.5 w-full rounded border border-base-300 bg-base-100 px-1 py-0.5 text-[10px] text-base-content/70"
+                                  >
+                                    <option value="">Move to…</option>
+                                    <option value="2">Receipts</option>
+                                    <option value="1">Sampling photos</option>
+                                    <option value="__none__">
+                                      Uncategorized
+                                    </option>
+                                  </select>
                                 </div>
                               </div>
                             );

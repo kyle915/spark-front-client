@@ -2450,6 +2450,12 @@ input DeleteCustomRecapFileInput {
   id: ID!
 }
 
+input SetCustomRecapFileCategoryInput {
+  clientMutationId: ID = null
+  id: ID!
+  fileRecapCategoryId: ID = null
+}
+
 input DeleteRecapSectionInput {
   clientMutationId: ID = null
   sectionId: ID!
@@ -3956,6 +3962,7 @@ type Mutation {
   addCustomRecapFile(input: AddCustomRecapFileInput!): CustomRecapDetailResponse!
   removeRecapFile(input: RemoveRecapFileInput!): RecapDetailResponse!
   deleteCustomRecapFile(input: DeleteCustomRecapFileInput!): CustomRecapDetailResponse!
+  setCustomRecapFileCategory(input: SetCustomRecapFileCategoryInput!): CustomRecapDetailResponse!
   rateAmbassador(input: RateAmbassadorInput!): RateAmbassadorResponse!
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
