@@ -259,6 +259,11 @@ const RecapCustomView = () => {
   // (approve) so the query refetches and the view reflects the new state —
   // mirrors the legacy SparkRecapView refreshKey pattern.
   const [refreshKey, setRefreshKey] = useState(0);
+  // Section a new Evidences upload lands in. Sentinel "1" = Sampling photos
+  // (the common case, so manual photo uploads group sensibly instead of
+  // clumping in Uncategorized), "2" = Receipts, "" = Uncategorized. Resolved
+  // server-side to the tenant's own categories by add_custom_recap_file.
+  const [uploadCategory, setUploadCategory] = useState("1");
 
   const data = useLazyLoadQuery<CustomRecapsQueryDetailsQueryType>(
     GetCustomRecapQuery,
@@ -597,7 +602,11 @@ const RecapCustomView = () => {
       if (!recap?.id) return;
       commitAddFile({
         variables: {
-          input: { customRecapId: recap.id as string, file: blobName },
+          input: {
+            customRecapId: recap.id as string,
+            file: blobName,
+            fileRecapCategoryId: uploadCategory || null,
+          },
         },
         onCompleted: (res) => {
           const payload = res.addCustomRecapFile;
@@ -609,7 +618,7 @@ const RecapCustomView = () => {
           showAlert(`Couldn't attach photo: ${err.message}`, "error"),
       });
     },
-    [recap?.id, commitAddFile, showAlert],
+    [recap?.id, commitAddFile, showAlert, uploadCategory],
   );
 
   // Delete a single file from the Evidences & Attachments gallery (e.g. a
@@ -1751,11 +1760,25 @@ const RecapCustomView = () => {
                 </div>
               </div>
               {recap.uuid && (
-                <RecapUploader
-                  recapUuid={recap.uuid}
-                  category="photo"
-                  onUploaded={handlePhotoUploaded}
-                />
+                <div className="flex items-center gap-2">
+                  {/* Pick the section a new upload lands in, so receipts go
+                      straight to Receipts instead of clumping with photos. */}
+                  <select
+                    value={uploadCategory}
+                    onChange={(e) => setUploadCategory(e.target.value)}
+                    title="Section for new uploads"
+                    className="select select-bordered select-sm rounded-full"
+                  >
+                    <option value="1">Sampling photos</option>
+                    <option value="2">Receipts</option>
+                    <option value="">Uncategorized</option>
+                  </select>
+                  <RecapUploader
+                    recapUuid={recap.uuid}
+                    category={uploadCategory === "2" ? "receipt" : "photo"}
+                    onUploaded={handlePhotoUploaded}
+                  />
+                </div>
               )}
             </div>
 
