@@ -629,6 +629,10 @@ const RecapCustomView = () => {
           const payload = res.deleteCustomRecapFile;
           if (payload?.success) {
             showAlert("File removed.", "success");
+            // Force a refetch so the removed file disappears from the
+            // gallery immediately — without this the card lingers until a
+            // manual reload (same refreshKey pattern the approve flow uses).
+            setRefreshKey((k) => k + 1);
           } else {
             showAlert(payload?.message ?? "Couldn't remove file.", "error");
           }
