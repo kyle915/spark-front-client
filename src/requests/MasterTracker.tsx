@@ -1209,6 +1209,32 @@ const RmmFilterInner: React.FC<{
   );
 };
 
+/**
+ * Consumers-sampled KPI, isolated in its OWN query boundary.
+ *
+ * `eventDashboard` is the heaviest query on this page and scales with tenant
+ * size (worst on big tenants like Liquid Death). It used to be fetched in the
+ * MasterTracker body — and because the app has a single router-level Suspense
+ * boundary, that suspension BLOCKED THE WHOLE PAGE (the rows included) on every
+ * cold load / hard refresh, purely to fill this one number. Isolated here it
+ * suspends only this stat: the table + the rest of the totals strip paint
+ * immediately and this figure streams in behind a "…" placeholder.
+ */
+const ConsumersStat: React.FC<{ tenantId: string }> = ({ tenantId }) => {
+  const dashFilters: DashboardFilters = useMemo(
+    () => ({
+      distributorIds: [],
+      rmmAsignedId: null,
+      quarter: null,
+      startDate: null,
+      endDate: null,
+    }),
+    [],
+  );
+  const { dashboard } = useEventDashboardData(tenantId, dashFilters, 0);
+  return <>{fmtNum(dashboard.metrics.consumersSampled)}</>;
+};
+
 export default function MasterTracker() {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
@@ -1453,18 +1479,10 @@ export default function MasterTracker() {
     [],
   );
 
-  const dashFilters: DashboardFilters = useMemo(
-    () => ({
-      distributorIds: [],
-      rmmAsignedId: null,
-      quarter: null,
-      startDate: null,
-      endDate: null,
-    }),
-    [],
-  );
-  const { dashboard } = useEventDashboardData(tenantId || "", dashFilters, 0);
-  const m = dashboard.metrics;
+  // NOTE: the heavy `eventDashboard` aggregation (consumers-sampled KPI) is no
+  // longer fetched here — it moved into <ConsumersStat>, isolated in its own
+  // Suspense boundary, so it can't block the whole page on a cold load. See the
+  // component's docstring.
 
   // Per-tenant linked Google Sheet — kyle's brief: "Link the master
   // tracker to a living breathing google sheet file. Per-client."
@@ -1802,7 +1820,15 @@ export default function MasterTracker() {
           <div className="spark-card p-4">
             <p className="label-mini">CONSUMERS</p>
             <p className="tab-num text-3xl font-bold mt-1">
-              {fmtNum(m.consumersSampled)}
+              {tenantId ? (
+                <Suspense
+                  fallback={<span style={{ opacity: 0.4 }}>…</span>}
+                >
+                  <ConsumersStat tenantId={tenantId} />
+                </Suspense>
+              ) : (
+                "—"
+              )}
             </p>
           </div>
           <div className="spark-card p-4">
