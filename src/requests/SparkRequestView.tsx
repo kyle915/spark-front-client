@@ -13,6 +13,7 @@ import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/Us
 import InternalNotesPanel from "./InternalNotesPanel";
 import ShiftReplayPanel from "./ShiftReplayPanel";
 import EventAttendanceTable from "./EventAttendanceTable";
+import EventMileagePanel from "./EventMileagePanel";
 import InviteBAModal from "./InviteBAModal";
 import EventRosterPanel from "./EventRosterPanel";
 import SmartStaffingPanel from "./SmartStaffingPanel";
@@ -912,6 +913,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           <div key={String(ev.uuid)} className="space-y-4">
             <ShiftReplayPanel eventUuid={String(ev.uuid)} />
             <EventAttendanceTable eventUuid={String(ev.uuid)} />
+            {role.isAdmin && <EventMileagePanel eventUuid={String(ev.uuid)} />}
           </div>
         ))}
 
