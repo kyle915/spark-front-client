@@ -1,4 +1,10 @@
-import React, { Suspense, useEffect, useMemo, useState } from "react";
+import React, {
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import DuplicateEventsButton from "./DuplicateEventsButton";
 import TrackerSavedViews, {
   type TrackerViewSnapshot,
@@ -847,8 +853,36 @@ const MasterTrackerInner: React.FC<{
     return m ? m[1].toUpperCase() : null;
   }, [search]);
 
-  // Fetch a large page so all current requests render. Real pagination
-  // with cursor-based "Load more" comes in v2.
+  // Progressive ("streamed") load. The tracker pages the WHOLE tenant in one
+  // query — it buckets by status, tallies counts and groups by date entirely
+  // client-side — which for a big tenant is ~1,000 rows and several seconds of
+  // backend time. Suspending the whole page until all of them arrive is what
+  // made the tab feel frozen (and sometimes unclickable) for ~1 min.
+  //
+  // Instead: fetch a small first page so the table paints almost immediately,
+  // then widen to the full page inside a React transition. startTransition
+  // keeps the first-page rows committed on screen (no Suspense fallback / no
+  // blank table) while the rest stream in behind them. The full set still
+  // arrives — search, counts and date grouping operate on it once loaded —
+  // it just no longer blocks first paint.
+  const FIRST_PAINT_ROWS = 250;
+  const FULL_PAGE_ROWS = 1000;
+  const [pageSize, setPageSize] = useState(FIRST_PAINT_ROWS);
+  const [isStreamingRest, startStreamingRest] = useTransition();
+  useEffect(() => {
+    if (pageSize >= FULL_PAGE_ROWS) return;
+    const widen = () => startStreamingRest(() => setPageSize(FULL_PAGE_ROWS));
+    // Wait for an idle frame so the first paint commits before we kick off
+    // the (heavier) full fetch; fall back to a short timer where rIC is absent.
+    if ("requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(widen, { timeout: 800 });
+      return () => window.cancelIdleCallback(id);
+    } else {
+      const id = setTimeout(widen, 120);
+      return () => clearTimeout(id);
+    }
+  }, [pageSize]);
+
   // Tenant scoping is REQUIRED — without it the query returns nothing.
   // For a REQ-number lookup we send q=null so the full set loads and the
   // match happens client-side — the backend `q` only searches venue/address/
@@ -856,7 +890,7 @@ const MasterTrackerInner: React.FC<{
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
     {
-      first: 1000,
+      first: pageSize,
       q: reqNeedle ? null : search || null,
       filters: tenantId
         ? { tenantId, rmmAsigned: rmmFilter === "all" ? null : rmmFilter }
@@ -1089,15 +1123,32 @@ const MasterTrackerInner: React.FC<{
   }, [rows, onVisibleRowsChange]);
 
   return (
-    <TrackerTable
-      rows={rows}
-      mentionables={mentionables}
-      groupBy={groupBy}
-      onClone={onClone}
-      onAssignBa={onAssignBa}
-      onPostBoard={onPostBoard}
-      onDelete={onDelete}
-    />
+    <div className="space-y-2">
+      <TrackerTable
+        rows={rows}
+        mentionables={mentionables}
+        groupBy={groupBy}
+        onClone={onClone}
+        onAssignBa={onAssignBa}
+        onPostBoard={onPostBoard}
+        onDelete={onDelete}
+      />
+      {/* Thin "rest is loading" hint while the full-tenant page streams in
+          behind the first paint. Only shown once the first page is on screen
+          so it reads as "loading more", never as the initial empty state. */}
+      {isStreamingRest && rows.length > 0 && (
+        <p
+          className="mono text-[10px] flex items-center gap-2"
+          style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.4)" }}
+        >
+          <span
+            className="inline-block w-2 h-2 rounded-full animate-pulse"
+            style={{ background: "var(--spark-lime)" }}
+          />
+          LOADING THE REST OF THE TENANT…
+        </p>
+      )}
+    </div>
   );
 };
 
