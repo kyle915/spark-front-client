@@ -131,10 +131,14 @@ const Inner: React.FC<{
   // to the territory rules. Reads the active tenant out of the same
   // tenant list the InviteModal already pulls so we don't add a second
   // round-trip, then matches on the active tenantId from authStore.
+  // Bumped after a tenant-scalar mutation (e.g. the weekly-digest toggle) so
+  // activeTenant re-syncs from the server instead of serving the stale cached
+  // tenant — keeps the toggle correct across a remount, no manual reload.
+  const [tenantsFetchKey, setTenantsFetchKey] = useState(0);
   const tenantsData = useLazyLoadQuery<TenantsQueryType>(
     TenantsQuery,
     {},
-    { fetchPolicy: "store-or-network" },
+    { fetchPolicy: "store-or-network", fetchKey: tenantsFetchKey },
   );
   const activeTenant = useMemo(() => {
     const nodes = (tenantsData?.tenants?.edges ?? [])
@@ -330,6 +334,7 @@ const Inner: React.FC<{
         const r = res.setClientWeeklyDigestEnabled;
         if (r?.success) {
           setDigestEnabled(r.enabled); // reflect server's resolved state
+          setTenantsFetchKey((k) => k + 1); // re-sync the cached tenant
           showAlert(
             r.enabled
               ? "Weekly client digest turned on."
