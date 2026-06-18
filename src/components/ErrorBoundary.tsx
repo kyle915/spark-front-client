@@ -2,6 +2,10 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 
 interface Props {
   children: ReactNode;
+  // Optional replacement UI rendered on error instead of the default
+  // full-page card. Used e.g. to keep the sidebar nav usable (without
+  // badge counts) if the counts query fails, rather than blanking it.
+  fallback?: ReactNode;
 }
 
 interface State {
@@ -38,6 +42,9 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     const { error } = this.state;
     if (!error) return this.props.children;
+
+    // Caller-supplied degraded UI (e.g. sidebar nav without counts).
+    if (this.props.fallback !== undefined) return this.props.fallback;
 
     const message = error.message || "Unknown error";
     const isPermission = /permission/i.test(message);
