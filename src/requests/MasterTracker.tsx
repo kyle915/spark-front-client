@@ -450,19 +450,21 @@ const TrackerTable: React.FC<{
               //                      the edit form — kyle wants to
               //                      see context first, then edit
               //                      via the Edit button there).
+              // Every navigation off the Master Tracker stamps
+              // `from: "/requests/list"` so the destination's Back link
+              // returns HERE, not the legacy "All Events" view.
+              const fromTracker = { state: { from: "/requests/list" } };
               const onClick = () => {
                 if (r.recapEventUuid) {
-                  navigate(`/event/view/${r.recapEventUuid}`);
+                  navigate(`/event/view/${r.recapEventUuid}`, fromTracker);
                 } else if (isDone && r.eventUuid) {
-                  navigate(`/event/view/${r.eventUuid}`);
+                  navigate(`/event/view/${r.eventUuid}`, fromTracker);
                 } else if (isDone) {
                   navigate("/recap/list");
                 } else if (r.eventUuid) {
-                  navigate(`/event/view/${r.eventUuid}`);
+                  navigate(`/event/view/${r.eventUuid}`, fromTracker);
                 } else {
-                  navigate(`/request/view/${r.uuid}`, {
-                    state: { from: "/requests/list" },
-                  });
+                  navigate(`/request/view/${r.uuid}`, fromTracker);
                 }
               };
               return (

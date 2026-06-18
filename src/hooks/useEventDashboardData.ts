@@ -16,9 +16,13 @@ export function useEventDashboardData(
     EventDashboardQuery,
     { filters: tenantFilter },
     {
+      // store-or-network (not network-only): the KPI cards paint instantly
+      // from cache on every Master Tracker / Dashboard visit and revalidate
+      // in the background, instead of blocking on a fresh heavy aggregation
+      // query each load. Bumping `fetchKey` (the Reload button) still forces
+      // a network refetch when the user explicitly wants fresh numbers.
       fetchKey,
-      fetchPolicy: "network-only",
-      networkCacheConfig: { force: true },
+      fetchPolicy: "store-or-network",
     },
   );
 
