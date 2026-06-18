@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
-import { RequestsQuery } from "@/api/queries/RequestsQuery";
-import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { SidebarCountsQuery } from "@/api/queries/SidebarCountsQuery";
+import type { SidebarCountsQuery as SidebarCountsQueryType } from "@api/queries/__generated__/SidebarCountsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { isRecapDue } from "@/lib/recapDue";
 
@@ -40,8 +40,8 @@ function loadReadKeys(): Set<string> {
 
 export function useSidebarCounts(): SidebarCounts {
   const { tenantId } = useAuthStore();
-  const data = useLazyLoadQuery<RequestsQueryType>(
-    RequestsQuery,
+  const data = useLazyLoadQuery<SidebarCountsQueryType>(
+    SidebarCountsQuery,
     { first: 1000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
