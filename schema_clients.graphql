@@ -2671,6 +2671,30 @@ type EventAttendanceRow {
   hoursOnSite: Float
 }
 
+type MileageSessionType {
+  uuid: String!
+  status: String!
+  startedAt: String
+  endedAt: String
+  totalMiles: Float
+  ratePerMile: Float
+  reimbursementAmount: Float
+  breadcrumbCount: Int!
+  ambassadorName: String
+  ambassadorUuid: String
+  eventUuid: String
+}
+
+type EventMileageSummary {
+  eventUuid: String!
+  totalMiles: Float!
+  totalReimbursement: Float!
+  sessionCount: Int!
+  sessions: [MileageSessionType!]!
+  trackMileage: Boolean!
+  mileageRate: Float
+}
+
 type EventCountableConnection {
   pageInfo: PageInfo!
   edges: [EventCountableEdge!]!
@@ -3885,6 +3909,7 @@ type Mutation {
   createEventWithRequest(input: CreateEventWithRequestInput!): EventWithRequestDetailResponse!
   updateEventWithRequest(input: UpdateEventWithRequestInput!): EventWithRequestDetailResponse!
   updateEvent(input: UpdateEventInput!): EventDetailResponse!
+  setEventMileageTracking(eventId: ID!, trackMileage: Boolean!, mileageRate: Float = null): EventDetailResponse!
   suspendEvent(input: SuspendEventInput!): EventDetailResponse!
   archiveEvent(input: ArchiveEventInput!): EventDetailResponse!
   approveEvent(input: ApproveEventInput!): EventDetailResponse!
@@ -4474,6 +4499,7 @@ type Query {
   recentLocationPings(withinMinutes: Int! = 30, tenantId: ID = null): [LocationPingType!]!
   eventLocationTrail(eventUuid: ID!): [LocationPingType!]!
   eventAttendance(eventUuid: ID!): [EventAttendanceRow!]!
+  eventMileageSummary(eventId: ID!): EventMileageSummary
   eventTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventTypeFiltersInput = null): EventTypeCountableConnection!
   eventType(id: ID = null, uuid: ID = null): EventType
   eventStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: EventStatusFiltersInput = null): EventStatusCountableConnection!
