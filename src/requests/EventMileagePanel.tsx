@@ -23,10 +23,14 @@ const miles = (v: number | null | undefined): string =>
 
 const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
+  // Bump on save so the summary (rate / config / sessions) re-syncs with the
+  // server's resolved state without a manual reload. store-and-network keeps
+  // the cached data on screen while it revalidates, so there's no flash.
+  const [fetchKey, setFetchKey] = useState(0);
   const data = useLazyLoadQuery<EventMileageSummaryQueryType>(
     EventMileageSummaryQuery,
     { eventId: eventUuid },
-    { fetchPolicy: "store-and-network" },
+    { fetchPolicy: "store-and-network", fetchKey },
   );
   const summary = data.eventMileageSummary;
   const [commit, saving] = useMutation<SetEventMileageTrackingMutationType>(
@@ -62,6 +66,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
           return;
         }
         setEnabled(nextEnabled);
+        setFetchKey((k) => k + 1);
         showAlert(r.message, "success");
       },
       onError: (err) => showAlert(err.message, "error"),
