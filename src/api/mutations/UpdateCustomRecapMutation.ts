@@ -35,6 +35,7 @@ export const UpdateCustomRecapMutation = graphql`
         # fillingForAmbassador, so the store kept the stale pre-save values
         # (the "Corporate Card reverts to No" bug) until the page reloaded.
         usedCorpoCard
+        totalEngagements
         fillingForAmbassador
         externalBaName
         ambassador {

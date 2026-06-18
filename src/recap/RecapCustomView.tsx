@@ -305,6 +305,12 @@ const RecapCustomView = () => {
   // "Corporate Card Used" is a typed boolean on CustomRecap (not a custom
   // field), so it needs its own working-copy state to be editable.
   const [editedUsedCorpoCard, setEditedUsedCorpoCard] = useState(false);
+  // "Total Engagements" is a typed int on CustomRecap. It previously had NO
+  // editor here, so every edit-values save omitted it and the backend nulled
+  // the saved number (that's why a manually-entered total vanished after a
+  // later edit/approve). Now editable; raw string for a controlled input,
+  // coerced to int on save and ALWAYS sent so an unrelated edit can't drop it.
+  const [editedTotalEngagements, setEditedTotalEngagements] = useState("");
   // ----- Ambassador / "filling for BA" inline edit -----
   // Mirrors SparkRecapCreate's filling-for flow. editedAmbassadorId holds
   // the picked/inline-created Ambassador's Relay global id (sent as
@@ -362,6 +368,9 @@ const RecapCustomView = () => {
     });
     setEditedSampleQtys(sampleSeed);
     setEditedUsedCorpoCard(!!recap?.usedCorpoCard);
+    setEditedTotalEngagements(
+      recap?.totalEngagements != null ? String(recap.totalEngagements) : "",
+    );
     // Seed the ambassador controls from the recap. A linked Ambassador
     // (FK) seeds the picked id + display name; otherwise seed the
     // free-text write-in. fillingForAmbassador is the typed boolean.
@@ -380,6 +389,7 @@ const RecapCustomView = () => {
     recap?.name,
     recap?.customRecapProductSample,
     recap?.usedCorpoCard,
+    recap?.totalEngagements,
     recap?.ambassador?.id,
     recap?.ambassador?.user?.firstName,
     recap?.ambassador?.user?.lastName,
@@ -500,6 +510,15 @@ const RecapCustomView = () => {
           productSamples,
           // Typed boolean on CustomRecap — now editable from the view.
           usedCorpoCard: editedUsedCorpoCard,
+          // Typed int on CustomRecap — now editable, and ALWAYS sent so an
+          // unrelated edit can't drop it. Blank → null, and the resolver keeps
+          // the existing value on null, so blanking is a safe no-op.
+          totalEngagements: (() => {
+            const t = editedTotalEngagements.trim();
+            if (!t) return null;
+            const n = Number(t);
+            return Number.isFinite(n) ? Math.round(n) : null;
+          })(),
           // Adding/clearing the BA on an existing recap. A resolved
           // ambassador FK wins over any write-in server-side; passing null
           // for both clears the link.
@@ -530,6 +549,7 @@ const RecapCustomView = () => {
     editedName,
     editedSampleQtys,
     editedUsedCorpoCard,
+    editedTotalEngagements,
     editedAmbassadorId,
     editedExternalBaName,
     editedFillingForAmbassador,
@@ -1436,9 +1456,23 @@ const RecapCustomView = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center bg-base-200 rounded-lg p-3">
                   <span className="text-sm">Total Engagements</span>
-                  <span className="text-xl font-bold">
-                    {recap.totalEngagements}
-                  </span>
+                  {isEditingValues ? (
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      className="input input-sm input-bordered w-24 text-right"
+                      value={editedTotalEngagements}
+                      onChange={(e) =>
+                        setEditedTotalEngagements(e.target.value)
+                      }
+                      aria-label="Total engagements"
+                    />
+                  ) : (
+                    <span className="text-xl font-bold">
+                      {recap.totalEngagements ?? "—"}
+                    </span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center p-3 border border-base-100/30 rounded-lg">
                   <span className="text-sm">Corporate Card Used</span>
