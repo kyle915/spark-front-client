@@ -111,24 +111,15 @@ export const RequestsQuery = graphql`
             assignedAmbassadorsCount
             confirmedAmbassadorsCount
           }
-          # Used by the sidebar recap-due badge + the Master Tracker
-          # RECAP chip. Just enough event/recap data — id + uuid + the
-          # recap counts — so the per-row payload stays tiny. The uuid
-          # lets a "N RECAP" row click navigate to the specific event
-          # that actually holds the recap, not just the first event.
-          events {
-            id
-            uuid
-            recaps {
-              id
-            }
-            # Custom-template recaps count toward the RECAP chip too — an
-            # event is "filed" when EITHER list is non-empty (matches
-            # /recaps/missing). Prefetched server-side, so no N+1.
-            customRecaps {
-              id
-            }
-          }
+          # Recap rollups for the Master Tracker RECAP chip + the sidebar
+          # recap-due badge, as flat server-computed scalars instead of the
+          # full per-event recaps/customRecaps arrays — keeps the per-row
+          # payload tiny for big tenants. recapEventUuid points a "N RECAP"
+          # click at the event that actually holds a recap; eventsCount
+          # distinguishes "no events" from "events but no recap yet".
+          recapsFiledCount
+          recapEventUuid
+          eventsCount
           tenantId
           createdAt
           updatedAt

@@ -5,6 +5,7 @@ import useSparkRole from "@/hooks/useSparkRole";
 import TenantPicker from "./TenantPicker";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import useSidebarCounts from "@/hooks/useSidebarCounts";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import useChatUnreadCount from "@/hooks/useChatUnreadCount";
 import {
   LayoutDashboard,
@@ -466,6 +467,32 @@ export const SparkSidebar: React.FC = () => {
     .toUpperCase();
   const tenantDisplay = slugToName(tenantMeta?.requestUrlName);
 
+  // The nav rendered WITHOUT badge counts. Used both as the Suspense
+  // fallback (while the counts query loads) AND as the ErrorBoundary
+  // fallback below — so if the counts query ever throws, the nav stays
+  // fully usable (just no badge numbers) instead of blanking the app.
+  const navFallback = (
+    <nav className="flex-1 overflow-y-auto px-2 py-2 hide-scroll">
+      {visibleSections.map((section) => {
+        const activeInSection = section.items.some(
+          (it) => it.to && isActive(it.to, pathname),
+        );
+        return (
+          <CollapsibleNavSection
+            key={section.title}
+            section={section}
+            pathname={pathname}
+            defaultOpen={
+              isClient || section.title === "Workspace" || activeInSection
+            }
+            onStub={onStub}
+            isClient={isClient}
+          />
+        );
+      })}
+    </nav>
+  );
+
   return (
     <aside
       className="w-64 shrink-0 flex flex-col h-screen min-h-0"
@@ -533,38 +560,20 @@ export const SparkSidebar: React.FC = () => {
       {/* Nav — collapsed by default except Workspace and the section
           containing the active route. Counts on chip badges come from
           useSidebarCounts (suspends on first load). */}
-      <Suspense
-        fallback={
-          <nav className="flex-1 overflow-y-auto px-2 py-2 hide-scroll">
-            {visibleSections.map((section) => {
-              const activeInSection = section.items.some(
-                (it) => it.to && isActive(it.to, pathname),
-              );
-              return (
-                <CollapsibleNavSection
-                  key={section.title}
-                  section={section}
-                  pathname={pathname}
-                  defaultOpen={
-                    isClient ||
-                    section.title === "Workspace" ||
-                    activeInSection
-                  }
-                  onStub={onStub}
-                  isClient={isClient}
-                />
-              );
-            })}
-          </nav>
-        }
-      >
-        <SidebarNav
-          sections={visibleSections}
-          pathname={pathname}
-          isClient={isClient}
-          onStub={onStub}
-        />
-      </Suspense>
+      {/* ErrorBoundary OUTSIDE Suspense: if the counts query throws (not
+          just suspends), fall back to the same count-less nav instead of
+          letting the throw blank the whole app (the sidebar is chrome,
+          above the page-content boundary in Layout). */}
+      <ErrorBoundary fallback={navFallback}>
+        <Suspense fallback={navFallback}>
+          <SidebarNav
+            sections={visibleSections}
+            pathname={pathname}
+            isClient={isClient}
+            onStub={onStub}
+          />
+        </Suspense>
+      </ErrorBoundary>
 
       {/* Footer */}
       <div
