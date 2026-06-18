@@ -663,7 +663,15 @@ const TrackerTable: React.FC<{
                         —
                       </span>
                     ) : (
-                      <div className="flex items-center gap-3">
+                      // Cap the action cluster's width + allow wrapping so a
+                      // full row of actions (incl. 🗑 DELETE) never pushes the
+                      // table wider than the viewport — otherwise the last
+                      // action lands in the horizontal-scroll region and you
+                      // have to scroll sideways to reach it.
+                      <div
+                        className="flex flex-wrap items-center gap-x-3 gap-y-1.5"
+                        style={{ maxWidth: 300 }}
+                      >
                         <button
                           onClick={toggleExpand}
                           className="mono text-[10px] transition"
