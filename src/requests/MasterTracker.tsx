@@ -879,15 +879,29 @@ const MasterTrackerInner: React.FC<{
           const stateCode = n.retailer?.location?.state?.code ?? n.state?.code;
           const cityish = n.retailer?.location?.name ?? n.location?.name ?? "";
           const market = [cityish, stateCode].filter(Boolean).join(", ");
-          // Recap rollups now arrive as flat server-computed scalars
-          // (recapsFiledCount / recapEventUuid / eventsCount) instead of the
-          // full per-event recaps/customRecaps arrays — same semantics, a
-          // fraction of the payload. recapsFiledCount counts BOTH legacy and
-          // custom-template recaps; recapEventUuid is the event that actually
-          // holds one (n.event is the lowest-id event, which may be recap-less).
-          const recapCount = n.recapsFiledCount ?? 0;
+          const events = (n.events ?? []).filter(
+            (e): e is NonNullable<typeof e> => Boolean(e),
+          );
+          const recapCount = events.reduce(
+            // Count BOTH legacy recaps and custom-template recaps — a filed
+            // customRecap must clear the DUE chip (it already clears
+            // /recaps/missing). Was counting only e.recaps, so a custom
+            // recap left the chip stuck on DUE.
+            (sum, e) =>
+              sum + (e.recaps?.length ?? 0) + (e.customRecaps?.length ?? 0),
+            0,
+          );
+          // The specific event holding a recap (legacy OR custom). The
+          // chip counts across all events, but `n.event` is the lowest-id
+          // event, which may be recap-less — so a "N RECAP" row click
+          // would dead-end on a page with no recaps. Target the first
+          // event that actually has one instead.
+          const recapEvent = events.find(
+            (e) =>
+              (e.recaps?.length ?? 0) + (e.customRecaps?.length ?? 0) > 0,
+          );
           const recapStatus: RecapStatus =
-            (n.eventsCount ?? 0) === 0
+            events.length === 0
               ? "none"
               : recapCount > 0
                 ? "submitted"
@@ -936,7 +950,7 @@ const MasterTrackerInner: React.FC<{
             eventId: n.event?.id ? String(n.event.id) : null,
             eventDate: (n.startTime ?? n.date) ? String(n.startTime ?? n.date) : null,
             eventAddress: n.address ? String(n.address) : null,
-            recapEventUuid: n.recapEventUuid ? String(n.recapEventUuid) : null,
+            recapEventUuid: recapEvent?.uuid ? String(recapEvent.uuid) : null,
             recapStatus,
             recapCount,
             schedulingStatus: n.schedulingStatus ?? "",

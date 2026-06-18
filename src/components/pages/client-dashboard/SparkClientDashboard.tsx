@@ -229,9 +229,10 @@ const ClientInner: React.FC = () => {
       const ms = new Date(y, mo - 1, d).getTime();
       if (!Number.isFinite(ms) || ms > now) continue;
       pastEvents += 1;
-      // Filed = any recap (legacy OR custom) across the request's events,
-      // read from the flat server scalar instead of the per-event arrays.
-      if ((r.recapsFiledCount ?? 0) > 0) withRecaps += 1;
+      const anyRecap = (r.events ?? []).some(
+        (ev) => (ev?.recaps?.length ?? 0) > 0,
+      );
+      if (anyRecap) withRecaps += 1;
     }
     if (pastEvents === 0) return null;
     return Math.round((withRecaps / pastEvents) * 100);
