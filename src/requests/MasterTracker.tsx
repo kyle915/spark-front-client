@@ -860,7 +860,12 @@ const MasterTrackerInner: React.FC<{
         ? { tenantId, rmmAsigned: rmmFilter === "all" ? null : rmmFilter }
         : null,
     },
-    { fetchPolicy: "store-or-network" },
+    // store-and-network (not store-or-network): after a delete / clone / post
+    // the parent bumps `refetchTick`, which remounts this component. With
+    // store-or-network the remount just replayed the cached list (so a deleted
+    // gig lingered until a hard refresh); store-and-network always re-hits the
+    // network on mount, so the row drops off on its own.
+    { fetchPolicy: "store-and-network" },
   );
 
   const allRows: Row[] = useMemo(() => {
