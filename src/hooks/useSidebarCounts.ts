@@ -106,19 +106,17 @@ export function useSidebarCounts(): SidebarCounts {
         if (isDone && t > now - days(30) && t < now) done30d += 1;
       }
       // Recap due = events scheduled, no recap filed across any of them.
-      // Matches /recaps/missing: an event is "filed" when it has EITHER a
-      // legacy recap OR a custom-template recap, and only past events within
-      // the last 30 days (isRecapDue's default lower bound) count — so the
-      // badge stops ratcheting up on ancient un-recapped events.
-      const events = (r.events ?? []).filter(
-        (e): e is NonNullable<typeof e> => Boolean(e),
-      );
-      if (events.length > 0) {
-        const anyRecap = events.some(
-          (e) =>
-            (e.recaps?.length ?? 0) > 0 || (e.customRecaps?.length ?? 0) > 0,
-        );
-        if (!anyRecap && isRecapDue(r.date)) recapsDue += 1;
+      // Matches /recaps/missing: "filed" = a legacy OR custom-template recap
+      // exists, and only past events within the last 30 days (isRecapDue's
+      // default lower bound) count — so the badge stops ratcheting up on
+      // ancient un-recapped events. Reads the flat server scalars
+      // (eventsCount / recapsFiledCount) instead of the per-event arrays.
+      if (
+        (r.eventsCount ?? 0) > 0 &&
+        (r.recapsFiledCount ?? 0) === 0 &&
+        isRecapDue(r.date)
+      ) {
+        recapsDue += 1;
       }
     }
     return {
