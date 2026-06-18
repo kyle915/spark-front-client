@@ -204,6 +204,7 @@ import InternalNotesPanel from "./InternalNotesPanel";
 import BulkCloneModal from "./BulkCloneModal";
 import InviteBAModal from "./InviteBAModal";
 import PostToBoardModal from "./PostToBoardModal";
+import DeleteRequestModal from "./DeleteRequestModal";
 import { isRecapDue } from "../lib/recapDue";
 
 type Mentionable = { id: string; name: string; email: string };
@@ -272,7 +273,16 @@ const TrackerTable: React.FC<{
   onClone?: (row: Row) => void;
   onAssignBa?: (row: Row) => void;
   onPostBoard?: (row: Row) => void;
-}> = ({ rows, mentionables, groupBy, onClone, onAssignBa, onPostBoard }) => {
+  onDelete?: (row: Row) => void;
+}> = ({
+  rows,
+  mentionables,
+  groupBy,
+  onClone,
+  onAssignBa,
+  onPostBoard,
+  onDelete,
+}) => {
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -729,6 +739,22 @@ const TrackerTable: React.FC<{
                             📣 POST TO BOARD
                           </button>
                         )}
+                        {onDelete && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(r);
+                            }}
+                            className="mono text-[10px] transition"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: "var(--spark-orange)",
+                            }}
+                            title="Delete this gig — removes it from the tracker (recoverable)"
+                          >
+                            🗑 DELETE
+                          </button>
+                        )}
                       </div>
                     )}
                   </td>
@@ -780,6 +806,7 @@ const MasterTrackerInner: React.FC<{
   onClone?: (row: Row) => void;
   onAssignBa?: (row: Row) => void;
   onPostBoard?: (row: Row) => void;
+  onDelete?: (row: Row) => void;
 }> = ({
   activeStatus,
   search,
@@ -796,6 +823,7 @@ const MasterTrackerInner: React.FC<{
   onClone,
   onAssignBa,
   onPostBoard,
+  onDelete,
 }) => {
   const { tenantId } = useAuthStore();
 
@@ -1067,6 +1095,7 @@ const MasterTrackerInner: React.FC<{
       onClone={onClone}
       onAssignBa={onAssignBa}
       onPostBoard={onPostBoard}
+      onDelete={onDelete}
     />
   );
 };
@@ -1219,6 +1248,13 @@ export default function MasterTracker() {
   const [postBoardSource, setPostBoardSource] = useState<{
     eventId: string;
     eventName: string | null;
+  } | null>(null);
+  // Source request for the "🗑 Delete" confirm modal (DeleteRequestModal).
+  // Holds the request's Relay id (deleteRequest resolves it to a PK) + a
+  // friendly label for the confirm copy. null = closed.
+  const [deleteSource, setDeleteSource] = useState<{
+    id: string;
+    label: string;
   } | null>(null);
   // Bump to force MasterTrackerInner to refetch after a successful
   // clone so the new requests show up immediately.
@@ -1798,6 +1834,12 @@ export default function MasterTracker() {
                   eventName: row.venue ?? null,
                 });
             }}
+            onDelete={(row) =>
+              setDeleteSource({
+                id: row.id,
+                label: `${row.venue || "Request"} · ${row.dateLabel}`,
+              })
+            }
           />
         </Suspense>
       </div>
@@ -1861,6 +1903,21 @@ export default function MasterTracker() {
           eventName={postBoardSource.eventName}
           onClose={() => setPostBoardSource(null)}
           onPosted={() => setPostBoardSource(null)}
+        />
+      )}
+
+      {/* Delete-gig confirm modal — triggered by the 🗑 DELETE row action.
+          Soft-deletes the request via deleteRequest, then refetches so the
+          row drops off the tracker immediately. */}
+      {deleteSource && (
+        <DeleteRequestModal
+          requestId={deleteSource.id}
+          label={deleteSource.label}
+          onClose={() => setDeleteSource(null)}
+          onDeleted={() => {
+            setDeleteSource(null);
+            setRefetchTick((t) => t + 1);
+          }}
         />
       )}
 
