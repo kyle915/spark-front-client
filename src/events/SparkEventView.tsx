@@ -12,7 +12,7 @@
  *   - Roster panel (admin-only) appears below details, surfacing
  *     invited + accepted BAs for this event
  *   - Shift Replay panel — GPS trail if any pings exist
- *   - Back link respects history state, falls back to /events/list
+ *   - Back link respects history state, falls back to the Master Tracker
  */
 
 import React, { Suspense, useState } from "react";
@@ -838,8 +838,11 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
 export default function SparkEventView() {
   const { uuid } = useParams<{ uuid: string }>();
   const location = useLocation();
+  // Honor an explicit origin (e.g. Master Tracker stamps
+  // from: "/requests/list"); otherwise fall back to the Master Tracker — NOT
+  // the legacy "/events/list" all-events view, which is dead v1 surface.
   const backTo =
-    (location.state as { from?: string } | null)?.from ?? "/events/list";
+    (location.state as { from?: string } | null)?.from ?? "/requests/list";
 
   if (!uuid) {
     return (
