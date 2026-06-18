@@ -36,7 +36,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
   // Local source of truth for the toggle + rate, seeded from the server.
   const [enabled, setEnabled] = useState<boolean>(!!summary?.trackMileage);
   const [rate, setRate] = useState<string>(
-    summary?.mileageRate != null ? String(summary.mileageRate) : "0.70",
+    summary?.mileageRate != null ? String(summary.mileageRate) : "0.725",
   );
 
   // Non-admins (or an unresolved event) get null — render nothing so this
@@ -103,7 +103,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
           <input
             type="number"
             inputMode="decimal"
-            step="0.01"
+            step="0.005"
             min="0"
             value={rate}
             onChange={(e) => setRate(e.target.value)}
