@@ -39,20 +39,61 @@ import { Palette, PencilIcon, TagIcon, Archive } from "lucide-react";
 import { lazy, type ComponentType } from "react";
 import { Navigate } from "react-router";
 
+// A failed dynamic import almost always means a STALE CHUNK: the tab is still
+// running an older index.html (in memory) whose hashed chunk filenames were
+// replaced by a newer deploy, so the old file now 404s. That surfaced as the
+// Master Tracker (and other routes) "just not loading sometimes" after a deploy
+// while the app was open. Recover by reloading once — that pulls the fresh
+// index.html + current chunk hashes (index.html is served no-cache). A
+// sessionStorage guard prevents a reload LOOP on a genuine (non-stale) failure;
+// any successful import clears it so a later deploy can self-heal again.
+const CHUNK_RELOAD_KEY = "spark.chunkReloaded";
+const importWithReload = async <T,>(loader: () => Promise<T>): Promise<T> => {
+  try {
+    const mod = await loader();
+    try {
+      sessionStorage.removeItem(CHUNK_RELOAD_KEY);
+    } catch {
+      /* sessionStorage unavailable (private mode) — ignore */
+    }
+    return mod;
+  } catch (err) {
+    let alreadyReloaded = false;
+    try {
+      alreadyReloaded = Boolean(sessionStorage.getItem(CHUNK_RELOAD_KEY));
+    } catch {
+      /* ignore */
+    }
+    if (!alreadyReloaded) {
+      try {
+        sessionStorage.setItem(CHUNK_RELOAD_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+      window.location.reload();
+      // Never resolve — keep the route fallback up until the reload swaps the
+      // document, instead of flashing an error for a chunk we're abandoning.
+      return new Promise<T>(() => {});
+    }
+    // Already retried once this session — surface the real error.
+    throw err;
+  }
+};
+
 // Preserve the underlying component's prop types through React.lazy.
 // Without the explicit C generic the wrapped component would type-check
 // as `ComponentType<{}>` and any call site that passes props (e.g.
 // `<RequestsList fixedFilters={...} />`) would TS-error.
 const lazyDefault = <P,>(
   loader: () => Promise<{ default: ComponentType<P> }>,
-) => lazy(loader);
+) => lazy(() => importWithReload(loader));
 
 const lazyNamed = <T, K extends keyof T>(
   loader: () => Promise<T>,
   name: K,
 ) =>
   lazy(async () => {
-    const mod = await loader();
+    const mod = await importWithReload(loader);
     return { default: mod[name] as unknown as ComponentType<unknown> };
   });
 
