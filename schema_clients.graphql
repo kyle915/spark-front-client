@@ -2047,6 +2047,8 @@ type CustomRecap implements Node {
   consumersSampled: Int
   heroImageUrl: String
   customRecapFilesCount: Int!
+  accountSpend: Float
+  baDisplayName: String
   timezoneId: ID
   eventId: ID!
   event: Event!

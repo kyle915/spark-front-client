@@ -77,6 +77,12 @@ export const GetCustomRecapsQuery = graphql`
           consumersSampled
           heroImageUrl
           customRecapFilesCount
+          # Export-only scalars (Copy-for-Sheets / CSV). accountSpend sums
+          # the recap's account/corporate-card spend field(s); baDisplayName
+          # is the typed external BA name or a BA-naming custom field, used
+          # only when there's no LINKED ambassador (preferred above).
+          accountSpend
+          baDisplayName
         }
       }
     }
