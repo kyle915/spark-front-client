@@ -230,8 +230,14 @@ const slugToName = (slug: string | null | undefined): string => {
   if (!slug) return "—";
   const parts = slug.split("-").filter(Boolean);
   const drop = new Set(["ighn", "ig", "ign"]);
+  // A leading tenant-code token (e.g. "c3jw") is a random alphanumeric prefix,
+  // not part of the brand — strip it. We only drop a token that mixes letters
+  // AND digits (a code), so pure-word brands ("stone") and pure-number brands
+  // ("7" in 7-eleven) are kept. Plus the known ig/ign vanity prefixes.
+  const isCode = (t: string) => /[a-z]/i.test(t) && /[0-9]/.test(t);
   const brand =
-    parts.length > 1 && drop.has(parts[0].toLowerCase())
+    parts.length > 1 &&
+    (drop.has(parts[0].toLowerCase()) || isCode(parts[0]))
       ? parts.slice(1)
       : parts;
   return brand
