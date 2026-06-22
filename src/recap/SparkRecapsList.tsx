@@ -663,15 +663,22 @@ const RecapsListInner: React.FC<{
             // fields when templates name them clearly.
             cansSold: null,
             packsSold: null,
-            accountSpendAmount: null,
-            baName: [
-              n.ambassador?.user?.firstName,
-              n.ambassador?.user?.lastName,
-            ]
-              .filter(Boolean)
-              .join(" ")
-              .trim(),
-            isExternalBa: false,
+            // Account / corporate-card spend now comes from a server scalar
+            // (sum of the recap's spend field), not a hard-coded null — so
+            // the export's "Account Spend" column populates for custom
+            // recaps that log it. Null (blank cell) when none.
+            accountSpendAmount: n.accountSpend ?? null,
+            // Prefer the LINKED Spark ambassador's name; fall back to the
+            // server's baDisplayName (typed external BA name, else a
+            // BA-naming custom field) so external / imported recaps aren't
+            // blank in the export. Mirrors the legacy external fallback.
+            baName:
+              [n.ambassador?.user?.firstName, n.ambassador?.user?.lastName]
+                .filter(Boolean)
+                .join(" ")
+                .trim() || (n.baDisplayName ?? "").trim(),
+            isExternalBa:
+              !n.ambassador?.id && Boolean((n.baDisplayName ?? "").trim()),
             ambassadorId: n.ambassador?.id ? String(n.ambassador.id) : null,
             requestUuid: null,
             requestShortId: null,
@@ -1078,6 +1085,7 @@ export default function SparkRecapsList() {
       "BA Type",
       "Status",
       "Engagements",
+      "Consumers Sampled",
       "Products Sold",
       "Cans Sold",
       "Packs Sold",
@@ -1101,6 +1109,7 @@ export default function SparkRecapsList() {
           r.isExternalBa ? "external" : (r.baName ? "spark" : ""),
           r.approved ? "approved" : "draft",
           r.engagements ?? "",
+          r.consumersSampled ?? "",
           r.productsSold ?? "",
           r.cansSold ?? "",
           r.packsSold ?? "",
@@ -1146,6 +1155,7 @@ export default function SparkRecapsList() {
       "BA Type",
       "Status",
       "Engagements",
+      "Consumers Sampled",
       "Products Sold",
       "Cans Sold",
       "Packs Sold",
@@ -1171,6 +1181,7 @@ export default function SparkRecapsList() {
           r.isExternalBa ? "external" : (r.baName ? "spark" : ""),
           r.approved ? "approved" : "draft",
           r.engagements ?? "",
+          r.consumersSampled ?? "",
           r.productsSold ?? "",
           r.cansSold ?? "",
           r.packsSold ?? "",
