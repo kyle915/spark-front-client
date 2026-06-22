@@ -730,18 +730,30 @@ export default function DashboardIndex() {
                   value: fmtNum(productsSold),
                   tone: "lime",
                 },
-            {
-              label: "Brand awareness",
-              value: fmtPct(knewPct),
-              tone: "sky",
-              delta: computeDelta(m.brandAwareness, cmp.brandAwareness),
-            },
-            {
-              label: "Purchase intent",
-              value: fmtPct(willingPct),
-              tone: "sky",
-              delta: computeDelta(m.purchaseIntent, cmp.purchaseIntent),
-            },
+            // Brand awareness / purchase intent only appear when the tenant's
+            // recap template actually asks about them. A bread tenant (Stone
+            // House Bread) that never collects awareness gets null here, so we
+            // drop the tile entirely rather than show a meaningless "—".
+            ...(knewPct != null
+              ? [
+                  {
+                    label: "Brand awareness",
+                    value: fmtPct(knewPct),
+                    tone: "sky" as const,
+                    delta: computeDelta(m.brandAwareness, cmp.brandAwareness),
+                  },
+                ]
+              : []),
+            ...(willingPct != null
+              ? [
+                  {
+                    label: "Purchase intent",
+                    value: fmtPct(willingPct),
+                    tone: "sky" as const,
+                    delta: computeDelta(m.purchaseIntent, cmp.purchaseIntent),
+                  },
+                ]
+              : []),
             // Multi-packs tile only when the tenant actually breaks sales into
             // packs — otherwise it's a permanently-empty tile for bread/etc.
             ...(hasUnitBreakdown
