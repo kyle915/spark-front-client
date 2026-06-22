@@ -60,6 +60,11 @@ type Recap = {
   heroImage: string | null;
   fileCount: number;
   engagements: number | null;
+  // Consumers SAMPLED — the conversion base (sold ÷ sampled). Distinct from
+  // engagements: a custom recap can carry both a typed total_engagements (286)
+  // and a "consumers sampled" field (278), and conversion must use the latter.
+  // Null on legacy recaps that don't track a separate sampled count.
+  consumersSampled: number | null;
   productsSold: number | null;
   // Granular sale + spend numbers. Kept separate from productsSold so
   // exports can break out "Cans Sold" vs "Packs Sold" — clients
@@ -104,6 +109,23 @@ type Recap = {
 //
 // We only render the chip when score < 3 — full recaps don't need a
 // gold star, they just need to not get flagged.
+// CONV = products sold ÷ consumers SAMPLED (a sampling program's conversion is
+// sold-per-person-sampled, NOT sold-per-engagement). Falls back to engagements
+// for legacy recaps with no separate sampled count. `empty` is what to show
+// when there's no base/sold (— for the card, "" for CSV/TSV cells).
+const conversionStr = (
+  r: {
+    productsSold: number | null;
+    consumersSampled: number | null;
+    engagements: number | null;
+  },
+  empty: string,
+): string => {
+  const base = r.consumersSampled ?? r.engagements;
+  if (!base || base <= 0 || !r.productsSold) return empty;
+  return `${Math.round((r.productsSold / base) * 100)}%`;
+};
+
 type QualityTier = "sparse" | "thin" | null;
 
 const recapQualityTier = (recap: {
@@ -356,9 +378,7 @@ const RecapCard: React.FC<{
             className="tab-num text-base font-bold"
             style={{ color: "var(--spark-lime)" }}
           >
-            {recap.engagements && recap.productsSold && recap.engagements > 0
-              ? `${Math.round((recap.productsSold / recap.engagements) * 100)}%`
-              : "—"}
+            {conversionStr(recap, "—")}
           </p>
           <p className="label-mini">CONV</p>
         </div>
@@ -576,6 +596,9 @@ const RecapsListInner: React.FC<{
             heroImage: hero,
             fileCount,
             engagements: n.totalEngagements ?? null,
+            // Legacy recaps don't expose a separate sampled count; conversion
+            // falls back to engagements (unchanged behavior).
+            consumersSampled: null,
             productsSold: n.productsSold ?? null,
             cansSold: n.totalCansSold ?? null,
             packsSold: n.totalPacksSold ?? null,
@@ -630,6 +653,9 @@ const RecapsListInner: React.FC<{
             heroImage: n.heroImageUrl ?? null,
             fileCount: n.customRecapFilesCount ?? 0,
             engagements: n.totalEngagements ?? n.consumersSampled ?? null,
+            // Conversion base: the consumers-SAMPLED count (278), distinct from
+            // total_engagements (286). soldUnits ÷ this is the real conversion.
+            consumersSampled: n.consumersSampled ?? null,
             productsSold: n.soldUnits ?? null,
             // CustomRecap doesn't carry these scalar fields; leave
             // blank in the row so the export shows empty cells rather
@@ -1062,10 +1088,7 @@ export default function SparkRecapsList() {
     ];
     const lines = [header.join(",")];
     for (const r of visibleRecaps) {
-      const conv =
-        r.engagements && r.productsSold && r.engagements > 0
-          ? Math.round((r.productsSold / r.engagements) * 100) + "%"
-          : "";
+      const conv = conversionStr(r, "");
       lines.push(
         [
           `R-${r.uuid.slice(-4).toUpperCase()}`,
@@ -1135,10 +1158,7 @@ export default function SparkRecapsList() {
       (raw ?? "").toString().replace(/\t/g, " ").replace(/\r?\n/g, " ");
     const rows = [headers.join("\t")];
     for (const r of visibleRecaps) {
-      const conv =
-        r.engagements && r.productsSold && r.engagements > 0
-          ? Math.round((r.productsSold / r.engagements) * 100) + "%"
-          : "";
+      const conv = conversionStr(r, "");
       rows.push(
         [
           `R-${r.uuid.slice(-4).toUpperCase()}`,
