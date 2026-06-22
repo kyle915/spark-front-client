@@ -5010,6 +5010,7 @@ type RecapGlobalKPIs {
   multiPacksSold: Int!
   byRmm: [RecapGlobalKPIByRMM!]!
   packCansEquivalent: Int!
+  productsSold: Int!
 }
 
 type RecapMonthlyDataPoint {

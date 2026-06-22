@@ -7,6 +7,7 @@ export const EventDashboardQuery = graphql`
         singleCansSold
         multiPacksSold
         packCansEquivalent
+        productsSold
         byRmm {
           rmmId
           rmmName

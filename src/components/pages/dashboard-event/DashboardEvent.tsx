@@ -694,6 +694,14 @@ export default function DashboardIndex() {
           // (stale schema cache).
           const packCans =
             dashboard.globalKpis?.packCansEquivalent ?? multi * 12;
+          const productsSold = dashboard.globalKpis?.productsSold ?? 0;
+          // Drink/unit tenants (Girl Beer, Total Wireless, Liquid Death) break
+          // sales into cans + multi-packs. Non-drink tenants (Stone House Bread)
+          // track a single "products sold" count instead — so when there's no
+          // can/pack breakdown, collapse the two drink tiles into one
+          // "Products sold" tile (fed by the same two-tier matcher the recap
+          // list uses) rather than showing two permanently-empty drink tiles.
+          const hasUnitBreakdown = single + multi + packCans > 0;
           const ins = dashboard.performanceInsights;
           const willingPct = ins?.willingToPurchasePercentage ?? m.purchaseIntent ?? null;
           const knewPct = ins?.knewAboutBrandPercentage ?? m.brandAwareness ?? null;
@@ -710,12 +718,18 @@ export default function DashboardIndex() {
               tone: "lime",
               delta: consumerDelta,
             },
-            {
-              label: "Cans sold",
-              value: fmtNum(single + packCans),
-              tone: "lime",
-              sub: `${fmtNum(single)} single · ${fmtNum(multi)} packs`,
-            },
+            hasUnitBreakdown
+              ? {
+                  label: "Cans sold",
+                  value: fmtNum(single + packCans),
+                  tone: "lime",
+                  sub: `${fmtNum(single)} single · ${fmtNum(multi)} packs`,
+                }
+              : {
+                  label: "Products sold",
+                  value: fmtNum(productsSold),
+                  tone: "lime",
+                },
             {
               label: "Brand awareness",
               value: fmtPct(knewPct),
@@ -728,12 +742,18 @@ export default function DashboardIndex() {
               tone: "sky",
               delta: computeDelta(m.purchaseIntent, cmp.purchaseIntent),
             },
-            {
-              label: "Multi-packs sold",
-              value: fmtNum(multi),
-              tone: "gold",
-              sub: multi ? `≈ ${fmtNum(packCans)} cans` : null,
-            },
+            // Multi-packs tile only when the tenant actually breaks sales into
+            // packs — otherwise it's a permanently-empty tile for bread/etc.
+            ...(hasUnitBreakdown
+              ? [
+                  {
+                    label: "Multi-packs sold",
+                    value: fmtNum(multi),
+                    tone: "gold" as const,
+                    sub: multi ? `≈ ${fmtNum(packCans)} cans` : null,
+                  },
+                ]
+              : []),
             {
               label: "Events run",
               value: fmtNum(m.totalEvents),
