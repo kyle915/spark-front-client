@@ -229,15 +229,25 @@ const TenantKpiCharts: React.FC<{ tenantId: string }> = ({ tenantId }) => {
 
   const tiles = useMemo(() => {
     if (!kpis) return [];
-    return [
+    // Core metrics every tenant tracks — always shown, even at 0 (a real 0 is
+    // meaningful here). The consumer-signal metrics below are template-
+    // dependent: a bread tenant (Stone House Bread) never collects brand
+    // awareness / first-time, so those come back 0 — hide them rather than
+    // show empty tiles (per kyle's "if we're not tracking it, delete it").
+    const core = [
       { label: "Consumers reached", value: fmt(kpis.consumersReached), tone: "lime" as const },
       { label: "Samples distributed", value: fmt(kpis.samplesDistributed), tone: "lime" as const },
       { label: "Products sold", value: fmt(kpis.productsSold), tone: "gold" as const },
       { label: "Total engagements", value: fmt(kpis.totalEngagements), tone: "sky" as const },
-      { label: "First-time consumers", value: fmt(kpis.firstTimeConsumers), tone: "purple" as const },
-      { label: "Brand-aware", value: fmt(kpis.brandAwareConsumers), tone: "sky" as const },
-      { label: "Willing to purchase", value: fmt(kpis.willingToPurchase), tone: "gold" as const },
     ];
+    const optional = [
+      { label: "First-time consumers", value: kpis.firstTimeConsumers, tone: "purple" as const },
+      { label: "Brand-aware", value: kpis.brandAwareConsumers, tone: "sky" as const },
+      { label: "Willing to purchase", value: kpis.willingToPurchase, tone: "gold" as const },
+    ]
+      .filter((t) => t.value > 0)
+      .map((t) => ({ label: t.label, value: fmt(t.value), tone: t.tone }));
+    return [...core, ...optional];
   }, [kpis]);
 
   if (!kpis) return null;
