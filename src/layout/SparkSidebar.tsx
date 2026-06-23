@@ -39,6 +39,10 @@ import {
   GraduationCap,
   Receipt,
   Package,
+  Store,
+  Truck,
+  Tags,
+  ClipboardList,
 } from "lucide-react";
 
 /**
@@ -220,6 +224,22 @@ const SECTIONS: NavSection[] = [
       { label: "Clients", Icon: Building2, to: "/clients" },
       { label: "Team", Icon: UsersRound, to: "/team" },
       { label: "New Client", Icon: Plus, to: "/clients/new" },
+    ],
+  },
+  {
+    // The /catalogs/* admin pages (towns, retailers, distributors, and the
+    // type lists) exist + are routed but lost their nav links in the v2
+    // sidebar — so "where do I add a new town?" had no answer. Each links to
+    // the list page, which has the + Create button.
+    title: "Catalogs",
+    adminOnly: true,
+    items: [
+      { label: "Locations (Towns)", Icon: MapPin, to: "/catalogs/locations/list" },
+      { label: "Retailers", Icon: Store, to: "/catalogs/retailers/list" },
+      { label: "Distributors", Icon: Truck, to: "/catalogs/distributors/list" },
+      { label: "Event Types", Icon: CalendarRange, to: "/catalogs/event-types/list" },
+      { label: "Product Types", Icon: Tags, to: "/catalogs/product-types/list" },
+      { label: "Request Types", Icon: ClipboardList, to: "/catalogs/request-types/list" },
     ],
   },
   {
