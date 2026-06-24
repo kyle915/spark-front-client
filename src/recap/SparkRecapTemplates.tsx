@@ -566,15 +566,31 @@ const ManageFieldsModal: React.FC<{
   const [newName, setNewName] = useState("");
   const [newSectionId, setNewSectionId] = useState(soleSectionId);
   const [newTypeId, setNewTypeId] = useState("");
+  // For "select" / "multiselect" types: the admin's allowed options, one per
+  // line.
+  const [newOptions, setNewOptions] = useState("");
   // New fields default to Required ON, matching how existing template
   // fields are typically created.
   const [newRequired, setNewRequired] = useState(true);
+
+  // Whether the chosen type is a choice field (dropdown / multi-select),
+  // which needs an option list. Matched by the backend type name.
+  const newTypeName = (
+    fieldTypes.find((ft) => ft.id === newTypeId)?.name ?? ""
+  ).toLowerCase();
+  const isChoiceType =
+    newTypeName === "select" || newTypeName === "multiselect";
+  const newOptionList = newOptions
+    .split("\n")
+    .map((o) => o.trim())
+    .filter(Boolean);
 
   const addDisabled =
     isCreating ||
     !newName.trim() ||
     !newSectionId ||
-    !newTypeId;
+    !newTypeId ||
+    (isChoiceType && newOptionList.length === 0);
 
   const addField = () => {
     if (addDisabled) return;
@@ -587,6 +603,7 @@ const ManageFieldsModal: React.FC<{
           recapSectionId: newSectionId,
           customFieldTypeId: newTypeId,
           required: newRequired,
+          options: isChoiceType ? newOptionList : [],
         },
       },
       onCompleted: (res) => {
@@ -598,6 +615,7 @@ const ManageFieldsModal: React.FC<{
           // to re-pick it each time.
           setNewName("");
           setNewTypeId("");
+          setNewOptions("");
           setNewRequired(true);
           // Pull the fresh field list so the new row shows immediately.
           onChanged();
@@ -995,13 +1013,43 @@ const ManageFieldsModal: React.FC<{
               style={fieldInputStyle}
             >
               <option value="">Field type…</option>
-              {fieldTypes.map((ft) => (
-                <option key={ft.id} value={ft.id}>
-                  {ft.name}
-                </option>
-              ))}
+              {fieldTypes.map((ft) => {
+                const n = (ft.name || "").toLowerCase();
+                const label =
+                  n === "select"
+                    ? "Dropdown (choose one)"
+                    : n === "multiselect"
+                      ? "Multi-select (choose any)"
+                      : ft.name;
+                return (
+                  <option key={ft.id} value={ft.id}>
+                    {label}
+                  </option>
+                );
+              })}
             </select>
           </div>
+          {isChoiceType && (
+            <div>
+              <textarea
+                value={newOptions}
+                onChange={(e) => setNewOptions(e.target.value)}
+                placeholder={"Options — one per line\nDetroit\nGrand Rapids\nLansing"}
+                rows={4}
+                style={fieldInputStyle}
+              />
+              <p
+                className="text-[10px] mt-1"
+                style={{ color: "rgba(255,255,255,0.45)" }}
+              >
+                One option per line · BAs will{" "}
+                {newTypeName === "multiselect"
+                  ? "tick any that apply"
+                  : "pick one"}
+                .
+              </p>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-3">
             <label
               className="flex items-center gap-1.5 text-[11px] cursor-pointer"
