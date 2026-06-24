@@ -192,6 +192,10 @@ export const GetCustomRecapQuery = graphql`
         id
         name
         value
+        # Admin-defined allowed choices for select / multiselect fields
+        # (empty for every other field type). RecapCustomView renders the
+        # submitted value against these (single string vs JSON array).
+        options
         # Field type (text / number / longtext / image) so the view can
         # render the right control. IMAGE fields get an upload/replace
         # control in inline-edit mode instead of a text input — see

@@ -1482,6 +1482,7 @@ input CreateCustomFieldInput {
   recapSectionId: ID!
   required: Boolean = null
   order: Int = null
+  options: [String!] = null
 }
 
 input CreateCustomRecapFieldTypeInput {
@@ -2012,6 +2013,7 @@ type CustomField implements Node {
   updatedAt: String!
   value: String
   customFieldValueId: ID
+  options: [String!]!
 }
 
 type CustomFieldDetailResponse {

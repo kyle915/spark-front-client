@@ -48,14 +48,34 @@ import { useAlertStore } from "@/store/alertStore";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 
 // Custom-field type → control kind. Field-type names are lowercase by
-// convention (text / number / image / longtext); match case-insensitively
-// and treat anything unknown as text. Mirrors SparkRecapCreate.fieldKind so
-// the view and the create form agree on what an "image" field is.
-function customFieldKind(typeName: string | null | undefined): "image" | "other" {
+// convention (text / number / image / longtext / select / multiselect);
+// match case-insensitively and treat anything unknown as text. Mirrors
+// SparkRecapCreate.fieldKind so the view and the create form agree on what
+// an "image" / "choice" field is.
+function customFieldKind(
+  typeName: string | null | undefined,
+): "image" | "select" | "multiselect" | "other" {
   const name = (typeName ?? "").toLowerCase();
   if (name.includes("image") || name.includes("photo") || name.includes("img"))
     return "image";
+  if (name === "multiselect" || name.includes("multi")) return "multiselect";
+  if (name === "select" || name.includes("dropdown")) return "select";
   return "other";
+}
+
+// A multiselect answer is persisted as a JSON array of the chosen option
+// strings; a single-select answer is the plain option string. Parse either
+// shape into a string[] for rendering (and tolerate a legacy plain string
+// landing in a multiselect field).
+function parseChoiceList(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.map((v) => String(v));
+  } catch {
+    // not JSON — fall through and treat as a single plain value
+  }
+  return [value];
 }
 
 type HeifDecodedImage = {
@@ -1710,6 +1730,88 @@ const RecapCustomView = () => {
                                 </button>
                               )}
                             </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    // ── SELECT / MULTISELECT (choice) field ────────
+                    // Options live on field.options (admin-defined). A
+                    // single-select stores the chosen option string; a
+                    // multiselect stores a JSON array of strings. Read mode
+                    // shows the choice(s) as chips; edit mode offers the same
+                    // control as the fill form (native <select> / toggle
+                    // chips) so the value round-trips through saveValues.
+                    if (kind === "select" || kind === "multiselect") {
+                      const options = field.options ?? [];
+                      const selected = parseChoiceList(displayValue);
+                      return (
+                        <div
+                          key={field.id}
+                          className="border border-base-100/30 rounded-xl p-4 space-y-2 bg-base-200/20 shadow-sm transition hover:border-primary/20"
+                        >
+                          <p className="text-[11px] uppercase font-bold text-base-content/50 tracking-wider">
+                            {field.name}
+                          </p>
+                          {isEditingValues ? (
+                            kind === "select" ? (
+                              <select
+                                value={selected[0] ?? ""}
+                                onChange={(e) =>
+                                  setEditedValues((prev) => ({
+                                    ...prev,
+                                    [fieldId]: e.target.value,
+                                  }))
+                                }
+                                className="select select-bordered w-full text-sm md:text-base"
+                              >
+                                <option value="">— Select —</option>
+                                {options.map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <div className="flex flex-wrap gap-2">
+                                {options.map((opt) => {
+                                  const isOn = selected.includes(opt);
+                                  return (
+                                    <button
+                                      key={opt}
+                                      type="button"
+                                      onClick={() => {
+                                        const next = isOn
+                                          ? selected.filter((s) => s !== opt)
+                                          : [...selected, opt];
+                                        setEditedValues((prev) => ({
+                                          ...prev,
+                                          [fieldId]: JSON.stringify(next),
+                                        }));
+                                      }}
+                                      className={`btn btn-sm ${isOn ? "btn-primary" : "btn-ghost border border-base-100/40"}`}
+                                    >
+                                      {opt}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )
+                          ) : selected.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {selected.map((v) => (
+                                <span
+                                  key={v}
+                                  className="badge badge-primary badge-outline text-sm font-medium"
+                                >
+                                  {v}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm md:text-base text-base-content/40">
+                              —
+                            </p>
                           )}
                         </div>
                       );

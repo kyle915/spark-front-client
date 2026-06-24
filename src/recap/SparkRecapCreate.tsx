@@ -97,8 +97,10 @@ type TemplateField = NonNullable<TemplateNode["customField"]>[number];
 
 function fieldKind(
   field: TemplateField,
-): "text" | "number" | "longtext" | "image" {
+): "text" | "number" | "longtext" | "image" | "select" | "multiselect" {
   const name = (field?.customFieldType?.name ?? "").toLowerCase();
+  if (name === "multiselect" || name.includes("multiselect")) return "multiselect";
+  if (name === "select" || name.includes("dropdown")) return "select";
   if (name.includes("image") || name.includes("photo") || name.includes("img"))
     return "image";
   if (name.includes("number") || name.includes("numeric") || name === "int")
@@ -1231,6 +1233,72 @@ const CustomTemplateFields: React.FC<{
                         className={inputCls}
                         rows={3}
                       />
+                    </Field>
+                  </div>
+                );
+              }
+              if (kind === "select") {
+                const opts = (f.options ?? []) as readonly string[];
+                return (
+                  <Field key={id} label={label}>
+                    <select
+                      value={values[id] ?? ""}
+                      onChange={(e) => onChange(id, e.target.value)}
+                      className={inputCls}
+                    >
+                      <option value="">Select…</option>
+                      {opts.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                );
+              }
+              if (kind === "multiselect") {
+                const opts = (f.options ?? []) as readonly string[];
+                // Multi-select values ride as a JSON array string in values[id].
+                let selected: string[] = [];
+                try {
+                  const parsed = JSON.parse(values[id] ?? "[]");
+                  if (Array.isArray(parsed)) selected = parsed.map(String);
+                } catch {
+                  selected = [];
+                }
+                const toggle = (o: string) => {
+                  const next = selected.includes(o)
+                    ? selected.filter((x) => x !== o)
+                    : [...selected, o];
+                  onChange(id, JSON.stringify(next));
+                };
+                return (
+                  <div key={id} className="sm:col-span-2">
+                    <Field label={label}>
+                      <div className="flex flex-wrap gap-2">
+                        {opts.map((o) => {
+                          const on = selected.includes(o);
+                          return (
+                            <button
+                              type="button"
+                              key={o}
+                              onClick={() => toggle(o)}
+                              className="px-3 py-1.5 rounded-lg text-xs border transition-colors"
+                              style={{
+                                borderColor: on
+                                  ? "var(--spark-lime)"
+                                  : "rgba(255,255,255,0.15)",
+                                background: on
+                                  ? "var(--spark-lime)"
+                                  : "transparent",
+                                color: on ? "#0a0d09" : "rgba(255,255,255,0.8)",
+                              }}
+                            >
+                              {o}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </Field>
                   </div>
                 );
