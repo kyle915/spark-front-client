@@ -9,10 +9,12 @@ import { ImportConnecteamRecapPdfMutation } from "@/api/mutations/ImportConnecte
 import type { ImportConnecteamRecapPdfMutation as ImportConnecteamRecapPdfMutationType } from "@api/mutations/__generated__/ImportConnecteamRecapPdfMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
 import { useAuthStore } from "@/store/authStore";
-import { CreateEventMutation } from "@/api/mutations/CreateEventMutation";
-import type { CreateEventMutation as CreateEventMutationType } from "@api/mutations/__generated__/CreateEventMutation.graphql";
+import { CreateEventWithRequestMutation } from "@/api/mutations/CreateEventWithRequestMutation";
+import type { CreateEventWithRequestMutation as CreateEventWithRequestMutationType } from "@api/mutations/__generated__/CreateEventWithRequestMutation.graphql";
 import { EventTypeQuery } from "@/api/queries/EventTypeQuery";
 import type { EventTypeQuery as EventTypeQueryType } from "@api/queries/__generated__/EventTypeQuery.graphql";
+import { RequestTypesQuery } from "@/api/queries/RequestTypesQuery";
+import type { RequestTypesQuery as RequestTypesQueryType } from "@api/queries/__generated__/RequestTypesQuery.graphql";
 import { TimezonesQuery } from "@/api/queries/TimezonesQuery";
 import type { TimezonesQuery as TimezonesQueryType } from "@api/queries/__generated__/TimezonesQuery.graphql";
 import { buildDateTimeWithOffset } from "@/utils";
@@ -165,12 +167,27 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
     {},
     { fetchPolicy: "store-or-network" },
   );
+  // Request types back the parent Request we now create alongside the
+  // event — required by the backend (Request.request_type is NOT NULL).
+  // Tenant-scoped, same shape as the event-type lookup above.
+  const requestTypesData = useLazyLoadQuery<RequestTypesQueryType>(
+    RequestTypesQuery,
+    { filters: { tenantId: tenantId ?? "" }, first: 25 },
+    { fetchPolicy: "store-or-network" },
+  );
   const eventTypes = useMemo(
     () =>
       (eventTypesData?.eventTypes?.edges ?? [])
         .map((e) => e?.node)
         .filter((n): n is NonNullable<typeof n> => Boolean(n)),
     [eventTypesData],
+  );
+  const requestTypes = useMemo(
+    () =>
+      (requestTypesData?.requestTypes?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n)),
+    [requestTypesData],
   );
   const timezones = useMemo(
     () =>
@@ -189,6 +206,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
   const [cEnd, setCEnd] = useState("15:00");
   const [cAddress, setCAddress] = useState("");
   const [cEventTypeId, setCEventTypeId] = useState<string | null>(null);
+  const [cRequestTypeId, setCRequestTypeId] = useState<string | null>(null);
   const [cTimezoneId, setCTimezoneId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -197,6 +215,12 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
       setCEventTypeId(String(def.id));
     }
   }, [eventTypes, cEventTypeId]);
+
+  useEffect(() => {
+    if (!cRequestTypeId && requestTypes.length > 0) {
+      setCRequestTypeId(String(requestTypes[0].id));
+    }
+  }, [requestTypes, cRequestTypeId]);
 
   useEffect(() => {
     if (!cTimezoneId && timezones.length > 0) {
@@ -252,7 +276,9 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
     );
 
   const [commitCreateEvent, isCreatingEvent] =
-    useMutation<CreateEventMutationType>(CreateEventMutation);
+    useMutation<CreateEventWithRequestMutationType>(
+      CreateEventWithRequestMutation,
+    );
 
   const onCreateEvent = () => {
     if (!tenantId) {
@@ -270,25 +296,61 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
       );
       return;
     }
+    if (!cRequestTypeId) {
+      showAlert(
+        "This tenant has no request types — create one in Catalogs first.",
+        "warning",
+      );
+      return;
+    }
+    if (!cTimezoneId) {
+      showAlert("Pick a timezone.", "warning");
+      return;
+    }
     if (isCreatingEvent) return;
     const tz = timezones.find((t) => String(t.id) === cTimezoneId) ?? null;
     const offset = tz?.offset ?? null;
+    const date = buildDateTimeWithOffset(cDate, "00:00", offset);
+    const startTime = buildDateTimeWithOffset(cDate, cStart, offset);
+    const endTime = buildDateTimeWithOffset(cDate, cEnd, offset);
+    // Create the parent Request AND the Event in one call, both forced
+    // to "approved" server-side with NO client notification. The Request
+    // is what the Master Tracker lists — creating a bare event (old
+    // behavior) left the imported recap invisible there.
     commitCreateEvent({
       variables: {
         input: {
-          name: cName.trim(),
-          eventTypeId: cEventTypeId,
-          tenantId,
-          address: cAddress.trim(),
-          notes: "Created during Connecteam PDF import",
-          timezoneId: cTimezoneId,
-          date: buildDateTimeWithOffset(cDate, "00:00", offset),
-          startTime: buildDateTimeWithOffset(cDate, cStart, offset),
-          endTime: buildDateTimeWithOffset(cDate, cEnd, offset),
+          // Event tenant is inherited from the request on the server, so
+          // it's intentionally omitted here (passing a mismatched tenant
+          // is rejected by createEventWithRequest).
+          event: {
+            name: cName.trim(),
+            eventTypeId: cEventTypeId,
+            address: cAddress.trim(),
+            notes: "Created during Connecteam PDF import",
+            timezoneId: cTimezoneId,
+            date,
+            startTime,
+            endTime,
+          },
+          request: {
+            name: cName.trim(),
+            tenantId,
+            requestTypeId: cRequestTypeId,
+            address: cAddress.trim(),
+            notes: "Created during Connecteam PDF import",
+            timezoneId: cTimezoneId,
+            coordinates: [],
+            date,
+            startTime,
+            endTime,
+            details: [],
+            products: [],
+          },
         },
       },
       onCompleted: (res) => {
-        const r = res.createEvent;
+        const r = res.createEventWithRequest;
         if (!r?.success || !r.event?.id) {
           showAlert(r?.message ?? "Couldn't create the event.", "error");
           return;
@@ -722,6 +784,37 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           style={{ color: "rgba(255,200,80,0.85)" }}
                         >
                           No event types for this tenant — create one in
+                          Catalogs first.
+                        </p>
+                      )}
+                      {requestTypes.length > 1 && (
+                        <select
+                          value={cRequestTypeId ?? ""}
+                          onChange={(e) =>
+                            setCRequestTypeId(e.target.value || null)
+                          }
+                          className="w-full"
+                          style={{
+                            padding: "8px 10px",
+                            borderRadius: 8,
+                            background: "rgba(255,255,255,0.04)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            color: "#fff",
+                          }}
+                        >
+                          {requestTypes.map((t) => (
+                            <option key={String(t.id)} value={String(t.id)}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {requestTypes.length === 0 && (
+                        <p
+                          className="text-xs"
+                          style={{ color: "rgba(255,200,80,0.85)" }}
+                        >
+                          No request types for this tenant — create one in
                           Catalogs first.
                         </p>
                       )}
