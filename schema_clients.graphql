@@ -2277,6 +2277,7 @@ input CustomRecapTemplateFieldInput {
   id: ID = null
   required: Boolean = null
   order: Int = null
+  options: [String!] = null
 }
 
 input CustomRecapTemplateFiltersInput {
