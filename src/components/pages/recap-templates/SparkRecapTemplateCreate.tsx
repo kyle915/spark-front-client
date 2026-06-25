@@ -44,6 +44,8 @@ type DraftField = {
   fieldTypeId: string;
   sectionId: string;
   required: boolean;
+  // Allowed choices (one per line) for dropdown / multi-select fields.
+  options: string;
 };
 
 let _rowCounter = 0;
@@ -98,6 +100,32 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
     [data],
   );
 
+  // Lowercased type-name by id, so we can tell which fields are choice
+  // (dropdown / multi-select) types that need an admin-defined option list.
+  const typeNameById = useMemo(() => {
+    const m: Record<string, string> = {};
+    fieldTypes.forEach((ft) => {
+      m[String(ft.id)] = (ft.name ?? "").toLowerCase();
+    });
+    return m;
+  }, [fieldTypes]);
+  const isChoiceType = (fieldTypeId: string) => {
+    const n = typeNameById[String(fieldTypeId)] ?? "";
+    return n === "select" || n === "multiselect";
+  };
+  const parseOptions = (raw: string) =>
+    raw
+      .split("\n")
+      .map((o) => o.trim())
+      .filter(Boolean);
+  // Friendlier labels for the choice types in the Type dropdown.
+  const typeLabel = (name: string) => {
+    const n = (name ?? "").toLowerCase();
+    if (n === "multiselect") return "Multi-select (choose any)";
+    if (n === "select") return "Dropdown (choose one)";
+    return name;
+  };
+
   // Section list is server-side + anything the admin creates inline.
   const [localSections, setLocalSections] = useState<
     { id: string; name: string }[]
@@ -122,6 +150,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
       fieldTypeId: "",
       sectionId: "",
       required: false,
+      options: "",
     },
   ]);
 
@@ -153,6 +182,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         fieldTypeId: rows.at(-1)?.fieldTypeId ?? "",
         sectionId: rows.at(-1)?.sectionId ?? "",
         required: false,
+        options: "",
       },
     ]);
   };
@@ -201,6 +231,8 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
       if (!f.name.trim()) return "Every field needs a name.";
       if (!f.fieldTypeId) return "Pick a type for every field.";
       if (!f.sectionId) return "Pick a section for every field.";
+      if (isChoiceType(f.fieldTypeId) && parseOptions(f.options).length === 0)
+        return `Add at least one option for "${f.name.trim() || "the multi-select field"}".`;
     }
     return null;
   };
@@ -224,6 +256,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             customFieldTypeId: f.fieldTypeId,
             recapSectionId: f.sectionId,
             required: f.required,
+            options: isChoiceType(f.fieldTypeId) ? parseOptions(f.options) : [],
           })),
         },
       },
@@ -519,7 +552,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                   <option value="">Type…</option>
                   {fieldTypes.map((ft) => (
                     <option key={String(ft.id)} value={String(ft.id)}>
-                      {ft.name}
+                      {typeLabel(ft.name)}
                     </option>
                   ))}
                 </select>
@@ -566,6 +599,31 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 >
                   ×
                 </button>
+                {isChoiceType(f.fieldTypeId) && (
+                  <div style={{ gridColumn: "2 / -1" }}>
+                    <textarea
+                      value={f.options}
+                      onChange={(e) =>
+                        updateField(f.key, { options: e.target.value })
+                      }
+                      placeholder={"Options — one per line\nDetroit\nGrand Rapids\nLansing"}
+                      rows={3}
+                      style={{
+                        ...inputStyle,
+                        width: "100%",
+                        minHeight: 64,
+                        resize: "vertical",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                    <div
+                      className="text-[11px] mt-1"
+                      style={{ color: "rgba(255,255,255,0.4)" }}
+                    >
+                      One choice per line — BAs pick from these when filling the recap.
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
