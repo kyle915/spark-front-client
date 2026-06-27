@@ -6,7 +6,7 @@ import { JobsQuery } from "@/api/queries/JobsQuery";
 import type { JobsQuery as JobsQueryType } from "@api/queries/__generated__/JobsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
-import DeleteRequestModal from "@/requests/DeleteRequestModal";
+import DeleteJobModal from "./DeleteJobModal";
 
 /**
  * Spark v2 — Jobs board.
@@ -21,8 +21,8 @@ type JobRow = {
   role: string;
   status: "open" | "filling" | "confirmed";
   urgent: boolean;
-  /** Underlying request Relay id (for delete); null if the job has none. */
-  requestId: string | null;
+  /** Job Relay id — used by the delete mutation. */
+  relayId: string;
 };
 
 const fmtDate = (raw: string | null | undefined) => {
@@ -47,7 +47,7 @@ const JobsInner: React.FC = () => {
   // The job pending deletion (its request id + a friendly label) → drives
   // the shared DeleteRequestModal.
   const [deleteTarget, setDeleteTarget] = useState<{
-    requestId: string;
+    jobId: string;
     label: string;
   } | null>(null);
 
@@ -79,7 +79,7 @@ const JobsInner: React.FC = () => {
             role: n.jobTitle?.name ?? "Brand Ambassador",
             status,
             urgent: !n.closed && !n.ongoing,
-            requestId: n.event?.request?.id ?? null,
+            relayId: String(n.id),
           };
         }) ?? []
     );
@@ -165,12 +165,12 @@ const JobsInner: React.FC = () => {
                   —
                 </p>
               </div>
-              {isAdmin && j.requestId && (
+              {isAdmin && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setDeleteTarget({
-                      requestId: j.requestId as string,
+                      jobId: j.relayId,
                       label: [j.venue, j.when].filter(Boolean).join(" · "),
                     });
                   }}
@@ -205,8 +205,8 @@ const JobsInner: React.FC = () => {
       ))}
 
       {deleteTarget && (
-        <DeleteRequestModal
-          requestId={deleteTarget.requestId}
+        <DeleteJobModal
+          jobId={deleteTarget.jobId}
           label={deleteTarget.label}
           onClose={() => setDeleteTarget(null)}
           onDeleted={() => {
