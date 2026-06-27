@@ -8,6 +8,8 @@ import { JobApplicationsQuery } from "@/api/queries/JobApplicationsQuery";
 import type { JobApplicationsQuery as JobApplicationsQueryType } from "@api/queries/__generated__/JobApplicationsQuery.graphql";
 import { AssignAmbassadorToJobMutation } from "@/api/mutations/AssignAmbassadorToJobMutation";
 import type { AssignAmbassadorToJobMutation as AssignAmbassadorToJobMutationType } from "@api/mutations/__generated__/AssignAmbassadorToJobMutation.graphql";
+import { BulkCloneRequestMutation } from "@/api/mutations/BulkCloneRequestMutation";
+import type { BulkCloneRequestMutation as BulkCloneRequestMutationType } from "@api/mutations/__generated__/BulkCloneRequestMutation.graphql";
 import { SetJobBriefingMutation } from "@/api/mutations/SetJobBriefingMutation";
 import type { SetJobBriefingMutation as SetJobBriefingMutationType } from "@api/mutations/__generated__/SetJobBriefingMutation.graphql";
 import { PostJobMutation } from "@/api/mutations/PostJobMutation";
@@ -1687,6 +1689,11 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   // canonical lifecycleStatus / postedAt land (postJob returns only a
   // lifecycle response, not a full Job).
   const [refetchKey, setRefetchKey] = useState(0);
+  const showAlert = useAlertStore((s) => s.showAlert);
+  // Duplicate clones the underlying request (one copy) via the same
+  // bulkCloneRequest the Master Tracker uses; the admin picks the new date.
+  const [commitClone, cloning] =
+    useMutation<BulkCloneRequestMutationType>(BulkCloneRequestMutation);
 
   useEffect(() => {
     setBrief(loadBrief(uuid));
@@ -1758,6 +1765,69 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const dateLabel = fmtDate(node.startDate);
   const startTime = "—"; // not on the list query
   const code = `JOB-${(node.code ?? String(node.id)).toString().slice(-4).toUpperCase()}`;
+
+  // Copy a shareable link to this job to the clipboard. This is the admin
+  // job page (teammates/RMMs can open it); BAs see posted jobs in the app.
+  const shareJobLink = async () => {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      showAlert("Job link copied to clipboard.", "success");
+    } catch {
+      // Clipboard blocked (e.g. insecure context) — fall back to a prompt.
+      window.prompt("Copy this job link:", url);
+    }
+  };
+
+  // Duplicate this gig: clone the underlying request to a new date the admin
+  // picks. The copy lands as a fresh request/event/job the admin can tweak.
+  const sourceRequestId = node.event?.request?.id ?? null;
+  const duplicate = () => {
+    if (cloning) return;
+    if (!sourceRequestId) {
+      showAlert(
+        "This job isn't linked to a request, so it can't be duplicated automatically. Use Create Request instead.",
+        "error",
+      );
+      return;
+    }
+    const sourceDate = (node.startDate ?? "").slice(0, 10);
+    const fallback = sourceDate || new Date().toISOString().slice(0, 10);
+    const picked = window.prompt(
+      "Duplicate this gig to which date? (YYYY-MM-DD)",
+      fallback,
+    );
+    if (picked == null) return; // cancelled
+    const dateIso = picked.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) {
+      showAlert("Enter the date as YYYY-MM-DD (e.g. 2026-07-15).", "warning");
+      return;
+    }
+    commitClone({
+      variables: {
+        input: {
+          sourceRequestId,
+          copies: [{ dateIso, address: node.address ?? undefined }],
+        },
+      },
+      onCompleted: (res) => {
+        if (res.bulkCloneRequest?.success) {
+          showAlert(
+            res.bulkCloneRequest.message ||
+              "Gig duplicated — find the copy on the Jobs list.",
+            "success",
+          );
+          navigate("/jobs");
+        } else {
+          showAlert(
+            res.bulkCloneRequest?.message ?? "Couldn't duplicate the gig.",
+            "error",
+          );
+        }
+      },
+      onError: (e) => showAlert(`Duplicate failed: ${e.message}`, "error"),
+    });
+  };
 
   // A job is live to BAs exactly when lifecycle_status == "posted" — that's
   // what the BA job board filters on (NOT the `public` flag).
@@ -1875,16 +1945,21 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               ✎ Edit
             </button>
             <button
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              onClick={duplicate}
+              disabled={cloning}
+              title="Duplicate this gig to a new date"
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition disabled:opacity-50"
               style={{
                 background: "transparent",
                 color: "var(--spark-text)",
                 border: "1px solid var(--spark-border)",
               }}
             >
-              ⎘ Duplicate
+              {cloning ? "Duplicating…" : "⎘ Duplicate"}
             </button>
             <button
+              onClick={shareJobLink}
+              title="Copy a link to this job"
               className="px-4 py-2 rounded-xl text-sm font-semibold"
               style={{
                 background: "var(--spark-lime)",
@@ -1923,12 +1998,23 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           </div>
           <div>
             <p className="label-mini">APPLICANTS</p>
-            <p
-              className="font-bold mt-1"
-              style={{ color: "var(--spark-lime)" }}
+            <button
+              onClick={() =>
+                document
+                  .getElementById("job-applicants")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
+              className="font-bold mt-1 text-left"
+              style={{
+                color: "var(--spark-lime)",
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+              }}
             >
               See list →
-            </p>
+            </button>
           </div>
         </div>
       </div>
@@ -2221,12 +2307,14 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
             </div>
           }
         >
-          <ApplicantsCard
-            jobId={node.id}
-            jobUuid={String(node.uuid)}
-            isAdmin={isAdmin}
-            jobFilled={status === "confirmed"}
-          />
+          <div id="job-applicants" style={{ scrollMarginTop: 24 }}>
+            <ApplicantsCard
+              jobId={node.id}
+              jobUuid={String(node.uuid)}
+              isAdmin={isAdmin}
+              jobFilled={status === "confirmed"}
+            />
+          </div>
         </Suspense>
       </div>
 

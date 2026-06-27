@@ -54,6 +54,9 @@ export const JobsQuery = graphql`
             id
             uuid
             name
+            request {
+              id
+            }
           }
           rate {
             __typename
