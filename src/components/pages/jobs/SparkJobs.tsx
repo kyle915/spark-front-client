@@ -1,10 +1,12 @@
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { JobsQuery } from "@/api/queries/JobsQuery";
 import type { JobsQuery as JobsQueryType } from "@api/queries/__generated__/JobsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import useSparkRole from "@/hooks/useSparkRole";
+import DeleteRequestModal from "@/requests/DeleteRequestModal";
 
 /**
  * Spark v2 — Jobs board.
@@ -19,6 +21,8 @@ type JobRow = {
   role: string;
   status: "open" | "filling" | "confirmed";
   urgent: boolean;
+  /** Underlying request Relay id (for delete); null if the job has none. */
+  requestId: string | null;
 };
 
 const fmtDate = (raw: string | null | undefined) => {
@@ -37,11 +41,20 @@ const fmtDate = (raw: string | null | undefined) => {
 const JobsInner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
+  const { isAdmin } = useSparkRole();
+  // Bumped after a delete to refetch the board so the removed job drops off.
+  const [fetchKey, setFetchKey] = useState(0);
+  // The job pending deletion (its request id + a friendly label) → drives
+  // the shared DeleteRequestModal.
+  const [deleteTarget, setDeleteTarget] = useState<{
+    requestId: string;
+    label: string;
+  } | null>(null);
 
   const data = useLazyLoadQuery<JobsQueryType>(
     JobsQuery,
     { first: 50, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
+    { fetchPolicy: "store-and-network", fetchKey },
   );
 
   const jobs: JobRow[] = useMemo(() => {
@@ -66,6 +79,7 @@ const JobsInner: React.FC = () => {
             role: n.jobTitle?.name ?? "Brand Ambassador",
             status,
             urgent: !n.closed && !n.ongoing,
+            requestId: n.event?.request?.id ?? null,
           };
         }) ?? []
     );
@@ -151,6 +165,26 @@ const JobsInner: React.FC = () => {
                   —
                 </p>
               </div>
+              {isAdmin && j.requestId && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteTarget({
+                      requestId: j.requestId as string,
+                      label: [j.venue, j.when].filter(Boolean).join(" · "),
+                    });
+                  }}
+                  title="Delete this gig — removes it from the board + tracker (recoverable)"
+                  className="px-3 py-2 rounded-xl text-xs font-semibold"
+                  style={{
+                    background: "transparent",
+                    color: "var(--spark-orange, #ef5a2a)",
+                    border: "1px solid var(--spark-border)",
+                  }}
+                >
+                  🗑 Delete
+                </button>
+              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -169,6 +203,18 @@ const JobsInner: React.FC = () => {
           </div>
         </div>
       ))}
+
+      {deleteTarget && (
+        <DeleteRequestModal
+          requestId={deleteTarget.requestId}
+          label={deleteTarget.label}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={() => {
+            setDeleteTarget(null);
+            setFetchKey((k) => k + 1);
+          }}
+        />
+      )}
     </div>
   );
 };
