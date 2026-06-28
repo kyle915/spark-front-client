@@ -87,6 +87,13 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  // Which pending row is being confirmed (+ which decision) and the required
+  // reason note. Approve/Decline first reveal the note field — you can't
+  // resolve without writing a reason (it's sent to the BA).
+  const [confirm, setConfirm] = useState<
+    { uuid: string; decision: "approve" | "decline" } | null
+  >(null);
+  const [reasonText, setReasonText] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
   const refreshCount = useCallback(async () => {
@@ -146,16 +153,28 @@ export default function NotificationBell() {
     if (next) load();
   };
 
-  const resolve = async (uuid: string, decision: "approve" | "decline") => {
+  const resolve = async (
+    uuid: string,
+    decision: "approve" | "decline",
+    reason: string,
+  ) => {
     if (busy) return;
+    if (!reason.trim()) {
+      setErr("Add a quick note for the BA first.");
+      return;
+    }
     setBusy(uuid);
     setErr(null);
     try {
       const d = await postGql<{
         resolveShiftExtension: { success: boolean; message: string };
-      }>(RESOLVE_M, { input: { extensionUuid: uuid, decision } });
+      }>(RESOLVE_M, {
+        input: { extensionUuid: uuid, decision, reason: reason.trim() },
+      });
       if (d.resolveShiftExtension?.success) {
         setPending((p) => p.filter((x) => x.uuid !== uuid));
+        setConfirm(null);
+        setReasonText("");
       } else {
         setErr(d.resolveShiftExtension?.message || "Couldn't update that.");
       }
@@ -245,28 +264,92 @@ export default function NotificationBell() {
                         “{p.reason}”
                       </p>
                     ) : null}
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        disabled={busy === p.uuid}
-                        onClick={() => resolve(p.uuid, "approve")}
-                        className="flex-1 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
-                        style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
-                      >
-                        {busy === p.uuid ? "…" : `Approve +${p.minutesRequested}m`}
-                      </button>
-                      <button
-                        disabled={busy === p.uuid}
-                        onClick={() => resolve(p.uuid, "decline")}
-                        className="flex-1 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
-                        style={{
-                          background: "transparent",
-                          color: "var(--spark-orange)",
-                          border: "1px solid var(--spark-border)",
-                        }}
-                      >
-                        Decline
-                      </button>
-                    </div>
+                    {confirm?.uuid === p.uuid ? (
+                      <div className="mt-2">
+                        <textarea
+                          autoFocus
+                          rows={2}
+                          value={reasonText}
+                          onChange={(e) => setReasonText(e.target.value)}
+                          placeholder={
+                            confirm.decision === "approve"
+                              ? "Note to the BA (required) — e.g. Approved, finish the demo."
+                              : "Note to the BA (required) — e.g. Can't extend, store closes at 8."
+                          }
+                          className="w-full text-xs rounded-lg p-2"
+                          style={{
+                            background: "var(--spark-surface, #11140e)",
+                            border: "1px solid var(--spark-border)",
+                            color: "var(--spark-text)",
+                          }}
+                        />
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            disabled={busy === p.uuid || !reasonText.trim()}
+                            onClick={() =>
+                              resolve(p.uuid, confirm.decision, reasonText)
+                            }
+                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
+                            style={
+                              confirm.decision === "approve"
+                                ? { background: "var(--spark-lime)", color: "#0a0d09" }
+                                : { background: "var(--spark-orange)", color: "#0a0d09" }
+                            }
+                          >
+                            {busy === p.uuid
+                              ? "…"
+                              : confirm.decision === "approve"
+                                ? `Confirm approve +${p.minutesRequested}m`
+                                : "Confirm decline"}
+                          </button>
+                          <button
+                            disabled={busy === p.uuid}
+                            onClick={() => {
+                              setConfirm(null);
+                              setReasonText("");
+                              setErr(null);
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                            style={{
+                              background: "transparent",
+                              color: "rgba(255,255,255,0.6)",
+                              border: "1px solid var(--spark-border)",
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => {
+                            setConfirm({ uuid: p.uuid, decision: "approve" });
+                            setReasonText("");
+                            setErr(null);
+                          }}
+                          className="flex-1 py-1.5 rounded-lg text-xs font-semibold"
+                          style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+                        >
+                          {`Approve +${p.minutesRequested}m`}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setConfirm({ uuid: p.uuid, decision: "decline" });
+                            setReasonText("");
+                            setErr(null);
+                          }}
+                          className="flex-1 py-1.5 rounded-lg text-xs font-semibold"
+                          style={{
+                            background: "transparent",
+                            color: "var(--spark-orange)",
+                            border: "1px solid var(--spark-border)",
+                          }}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
