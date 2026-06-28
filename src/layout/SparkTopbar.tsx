@@ -8,6 +8,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import NotificationBell from "./NotificationBell";
 
 /**
  * Spark v2 topbar — wireframe-faithful version of spark-demo/index.html
@@ -200,6 +201,8 @@ export const SparkTopbar: React.FC = () => {
             { value: "client", label: "Client", icon: "◐" },
           ]}
         />
+
+        <NotificationBell />
 
         <div className="w-8 h-8 rounded-full bg-primary text-primary-content text-xs font-bold flex items-center justify-center">
           {initial}
