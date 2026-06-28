@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
@@ -17,6 +17,9 @@ import { ArrowPathIcon } from "@heroicons/react/24/outline";
 import { useAuthStore } from "@/store/authStore";
 import { ArrowLeftIcon, MapPinIcon } from "@heroicons/react/24/solid";
 import FormInputText from "@/shared/FormInputText";
+import FormAutocomplete from "@shared/FormAutocomplete";
+import { StatesQuery } from "@api/queries/StatesQuery";
+import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/StatesQuery.graphql";
 import { PlusCircle } from "lucide-react";
 import { useRelayPagination } from "@/hooks/useRelayPagination";
 import Loading from "@/shared/Loading";
@@ -27,6 +30,7 @@ type LocationFormValues = {
   name: string;
   code: string;
   zip: string;
+  stateId: string;
 };
 
 type LocationFormProps = {
@@ -49,6 +53,23 @@ const LocationForm = ({
   });
 
   const isEdit = mode === "edit";
+
+  // States power the required State selector. Without a linked state, a
+  // location never appears in the event form's city picker (which filters
+  // by state) — the gap this field closes. ~50 rows, so one page covers it.
+  const statesData = useLazyLoadQuery<StatesQueryType>(StatesQuery, {
+    first: 100,
+  });
+  const stateOptions = useMemo(
+    () =>
+      (statesData.states?.edges ?? [])
+        .flatMap((e) => (e?.node ? [e.node] : []))
+        .map((s) => ({
+          value: s.id,
+          label: s.code ? `${s.name} (${s.code})` : s.name,
+        })),
+    [statesData],
+  );
 
   useEffect(() => {
     reset(defaultValues);
@@ -129,6 +150,15 @@ const LocationForm = ({
                 rules={{
                   required: "ZIP is required",
                 }}
+              />
+
+              <FormAutocomplete<LocationFormValues>
+                control={control}
+                name="stateId"
+                label="State"
+                placeholder="Select state..."
+                options={stateOptions}
+                rules={{ required: "State is required" }}
               />
             </div>
           </section>
@@ -298,7 +328,14 @@ export const CreateLocation = () => {
 
   const handleSubmit = (values: LocationFormValues) => {
     commitCreate({
-      variables: { input: values },
+      variables: {
+        input: {
+          name: values.name,
+          code: values.code,
+          zip: values.zip,
+          stateId: values.stateId || null,
+        },
+      },
       onCompleted: (response) => {
         const payload = response.createLocation;
         if (payload?.success) {
@@ -321,6 +358,7 @@ export const CreateLocation = () => {
           name: "",
           code: "",
           zip: "",
+          stateId: "",
         }}
         onSubmit={handleSubmit}
         submitLabel="Create"
@@ -355,6 +393,7 @@ export const EditLocation = () => {
           name: values.name,
           code: values.code,
           zip: values.zip,
+          stateId: values.stateId || null,
         },
       },
       onCompleted: (response) => {
@@ -389,6 +428,7 @@ export const EditLocation = () => {
           name: location.name,
           code: location.code,
           zip: location.zip,
+          stateId: location.state?.id ?? "",
         }}
         onSubmit={handleSubmit}
         submitLabel="Update"
