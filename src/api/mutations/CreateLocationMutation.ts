@@ -12,6 +12,12 @@ export const CreateLocationMutation = graphql`
         name
         code
         zip
+        state {
+          id
+          uuid
+          name
+          code
+        }
       }
     }
   }
