@@ -56,6 +56,7 @@ const FEED_Q = `query {
   myNotifications(limit: 30) { uuid title body kind createdAt read }
 }`;
 const MARK_READ_M = `mutation { markNotificationsRead }`;
+const DISMISS_M = `mutation Dismiss($uuids: [ID!]) { dismissNotifications(uuids: $uuids) }`;
 const RESOLVE_M = `mutation Resolve($input: ResolveShiftExtensionInput!) {
   resolveShiftExtension(input: $input) { success message extension { id status approvedMinutes } }
 }`;
@@ -185,6 +186,19 @@ export default function NotificationBell() {
     }
   };
 
+  // Clear (delete) notifications — one uuid, or all (undefined). Optimistic.
+  const clear = async (uuid?: string) => {
+    const prev = feed;
+    setFeed((f) => (uuid ? f.filter((n) => n.uuid !== uuid) : []));
+    try {
+      await postGql(DISMISS_M, { uuids: uuid ? [uuid] : null });
+      refreshCount();
+    } catch (e) {
+      setFeed(prev); // roll back on failure
+      setErr((e as Error).message);
+    }
+  };
+
   if (!isAdmin) return null;
 
   return (
@@ -225,12 +239,22 @@ export default function NotificationBell() {
             >
               NOTIFICATIONS
             </span>
-            <button
-              onClick={load}
-              className="text-[11px] text-base-content/50 hover:text-primary"
-            >
-              Refresh
-            </button>
+            <div className="flex items-center gap-3">
+              {feed.length > 0 && (
+                <button
+                  onClick={() => clear()}
+                  className="text-[11px] text-base-content/50 hover:text-error"
+                >
+                  Clear all
+                </button>
+              )}
+              <button
+                onClick={load}
+                className="text-[11px] text-base-content/50 hover:text-primary"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
 
           <div className="max-h-[60vh] overflow-y-auto">
@@ -368,7 +392,7 @@ export default function NotificationBell() {
                 feed.map((n) => (
                   <div
                     key={n.uuid}
-                    className="flex gap-2.5 px-1 py-2"
+                    className="group flex gap-2.5 px-1 py-2"
                     style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
                   >
                     <span className="text-base leading-none mt-0.5">{kindEmoji(n.kind)}</span>
@@ -381,6 +405,14 @@ export default function NotificationBell() {
                       ) : null}
                       <p className="text-[10px] mt-0.5 text-base-content/40">{ago(n.createdAt)}</p>
                     </div>
+                    <button
+                      onClick={() => clear(n.uuid)}
+                      title="Clear this notification"
+                      aria-label="Clear notification"
+                      className="shrink-0 self-start w-5 h-5 rounded-full text-base-content/40 hover:text-error hover:bg-base-300/40 flex items-center justify-center leading-none"
+                    >
+                      ×
+                    </button>
                   </div>
                 ))
               )}
