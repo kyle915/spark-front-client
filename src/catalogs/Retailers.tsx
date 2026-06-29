@@ -26,6 +26,7 @@ import {
 } from "@heroicons/react/24/solid";
 import FormAutocomplete from "@/shared/FormAutocomplete";
 import FormInputText from "@/shared/FormInputText";
+import { useLocationsByState } from "@/requests/hooks/useLocationsByState";
 import { PlusCircle } from "lucide-react";
 import { useRelayPagination } from "@/hooks/useRelayPagination";
 import Loading from "@/shared/Loading";
@@ -44,28 +45,46 @@ type RetailerFormValues = {
 type TenantLocationSelectProps = {
   control: Control<RetailerFormValues>;
   stateId?: string;
+  // The retailer's current location (on edit), so its label renders before
+  // any search and survives the server-search result swaps below.
+  defaultLocation?: { id: string; name: string } | null;
 };
 
 const TenantLocationSelect = ({
   control,
   stateId,
+  defaultLocation,
 }: TenantLocationSelectProps) => {
-  const data = useLazyLoadQuery<LocationsQueryType>(
-    LocationsQuery,
-    {
-      filters: stateId ? { stateId } : undefined,
-    },
-    { fetchPolicy: "store-and-network" },
-  );
+  // Search locations SERVER-SIDE as the user types (same hook the event
+  // form uses). The old approach loaded only the first page for the state
+  // and filtered it client-side, so any city past that page (e.g.
+  // Jacksonville — ~380th of 946 FL cities) could never be found even
+  // though it exists and is correctly linked to the state.
+  const { items, setSearchTerm, isLoading } = useLocationsByState<
+    { id: string; name: string },
+    LocationsQueryType
+  >({
+    stateId: stateId ?? null,
+    queryDocument: LocationsQuery,
+    extractNodes: (data) =>
+      data.locations?.edges?.flatMap((edge) =>
+        edge?.node ? [{ id: edge.node.id, name: edge.node.name }] : [],
+      ) ?? [],
+    initialItems: defaultLocation ? [defaultLocation] : undefined,
+  });
 
-  const locationOptions = useMemo(
-    () =>
-      data.locations.edges.map((edge) => ({
-        label: edge.node.name,
-        value: edge.node.id,
-      })),
-    [data],
-  );
+  const locationOptions = useMemo(() => {
+    const opts = items.map((l) => ({ label: l.name, value: l.id }));
+    // Keep the currently-selected location selectable/visible even when
+    // it isn't part of the latest search results.
+    if (
+      defaultLocation &&
+      !opts.some((o) => String(o.value) === String(defaultLocation.id))
+    ) {
+      opts.unshift({ label: defaultLocation.name, value: defaultLocation.id });
+    }
+    return opts;
+  }, [items, defaultLocation]);
 
   return (
     <FormAutocomplete
@@ -74,6 +93,9 @@ const TenantLocationSelect = ({
       label="Location"
       placeholder="Select a location"
       options={locationOptions}
+      onSearch={setSearchTerm}
+      loading={isLoading}
+      disabled={!stateId}
       rules={{
         required: "Location is required",
       }}
@@ -89,6 +111,7 @@ type RetailerFormProps = {
   submitLabel: string;
   isSubmitting?: boolean;
   mode?: "create" | "edit";
+  defaultLocation?: { id: string; name: string } | null;
 };
 
 const RetailerForm = ({
@@ -97,6 +120,7 @@ const RetailerForm = ({
   submitLabel,
   isSubmitting,
   mode = "create",
+  defaultLocation,
 }: RetailerFormProps) => {
   const { tenantSlug } = useAuthStore();
   const { handleSubmit, watch, reset, setValue, control } =
@@ -267,7 +291,11 @@ const RetailerForm = ({
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <TenantLocationSelect control={control} stateId={stateId} />
+              <TenantLocationSelect
+                control={control}
+                stateId={stateId}
+                defaultLocation={defaultLocation}
+              />
             </div>
           </section>
 
@@ -566,6 +594,11 @@ export const EditRetailer = () => {
         submitLabel="Update"
         isSubmitting={isUpdating}
         mode="edit"
+        defaultLocation={
+          retailer.location
+            ? { id: retailer.location.id, name: retailer.location.name }
+            : null
+        }
       />
     </Layout>
   );
