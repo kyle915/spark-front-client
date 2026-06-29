@@ -1,5 +1,7 @@
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { fetchQuery } from "react-relay";
+import environment from "@api/relay/environment";
 import { useForm, type Control } from "react-hook-form";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
@@ -36,31 +38,89 @@ type DistributorFormValues = {
 type TenantLocationSelectProps = {
   control: Control<DistributorFormValues>;
   name?: string;
+  // The distributor's current location (on edit), so its label renders
+  // before any search and survives result swaps.
+  defaultLocation?: { id: string; name: string } | null;
 };
 
-const TenantLocationSelect = ({ control }: TenantLocationSelectProps) => {
-  const data = useLazyLoadQuery<LocationsQueryType>(
-    LocationsQuery,
-    {},
-    { fetchPolicy: "store-and-network" },
-  );
+const TenantLocationSelect = ({
+  control,
+  defaultLocation,
+}: TenantLocationSelectProps) => {
+  // Search locations SERVER-SIDE as the user types. The old version loaded
+  // only the first page of ALL locations and filtered it client-side, so
+  // any city past that page was unfindable. The distributor form has no
+  // State field, so we search across every state and show the state code
+  // in the label to disambiguate same-named cities (e.g. Jacksonville
+  // exists in 14 states).
+  const [items, setItems] = useState<
+    { id: string; name: string; code: string | null }[]
+  >([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const reqIdRef = useRef(0);
 
-  const options = useMemo(
-    () =>
-      data.locations.edges.map((edge) => ({
-        label: edge.node.name,
-        value: edge.node.id,
-      })),
-    [data],
-  );
+  useEffect(() => {
+    const trimmed = searchTerm.trim();
+    const reqId = ++reqIdRef.current;
+    const timeout = setTimeout(() => {
+      setIsLoading(true);
+      fetchQuery<LocationsQueryType>(
+        environment,
+        LocationsQuery,
+        { q: trimmed || null, first: 25 },
+        { fetchPolicy: "network-only" },
+      )
+        .toPromise()
+        .then((data) => {
+          if (reqId !== reqIdRef.current) return;
+          setItems(
+            data?.locations?.edges?.flatMap((edge) =>
+              edge?.node
+                ? [
+                    {
+                      id: edge.node.id,
+                      name: edge.node.name,
+                      code: edge.node.code ?? null,
+                    },
+                  ]
+                : [],
+            ) ?? [],
+          );
+        })
+        .catch(() => {
+          if (reqId === reqIdRef.current) setItems([]);
+        })
+        .finally(() => {
+          if (reqId === reqIdRef.current) setIsLoading(false);
+        });
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [searchTerm]);
+
+  const options = useMemo(() => {
+    const opts = items.map((l) => ({
+      label: l.code ? `${l.name} (${l.code})` : l.name,
+      value: l.id,
+    }));
+    if (
+      defaultLocation &&
+      !opts.some((o) => String(o.value) === String(defaultLocation.id))
+    ) {
+      opts.unshift({ label: defaultLocation.name, value: defaultLocation.id });
+    }
+    return opts;
+  }, [items, defaultLocation]);
 
   return (
     <FormAutocomplete
       control={control}
       name="locationId"
       label="Location"
-      placeholder="Select a location"
+      placeholder="Search a location"
       options={options}
+      onSearch={setSearchTerm}
+      loading={isLoading}
       rules={{ required: "Location is required" }}
     />
   );
@@ -72,6 +132,7 @@ type DistributorFormProps = {
   submitLabel: string;
   isSubmitting?: boolean;
   mode?: "create" | "edit";
+  defaultLocation?: { id: string; name: string } | null;
 };
 
 const DistributorForm = ({
@@ -80,6 +141,7 @@ const DistributorForm = ({
   submitLabel,
   isSubmitting,
   mode = "create",
+  defaultLocation,
 }: DistributorFormProps) => {
   const { control, handleSubmit, reset, watch, setValue } =
     useForm<DistributorFormValues>({
@@ -170,6 +232,7 @@ const DistributorForm = ({
               <TenantLocationSelect
                 control={control}
                 name="locationId"
+                defaultLocation={defaultLocation}
               />
             </div>
           </section>
@@ -439,6 +502,11 @@ export const EditDistributor = () => {
         submitLabel="Update"
         mode="edit"
         isSubmitting={isUpdating}
+        defaultLocation={
+          distributor.location
+            ? { id: distributor.location.id, name: distributor.location.name }
+            : null
+        }
       />
     </Layout>
   );
