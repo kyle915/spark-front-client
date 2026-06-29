@@ -40,7 +40,20 @@ const ROLE_TONE: Record<string, string> = {
 };
 
 const Inner: React.FC = () => {
-  const { tenantId } = useAuthStore();
+  const { tenantId, user: currentUser } = useAuthStore();
+  const currentEmail = (currentUser?.email ?? "").toLowerCase() || null;
+
+  // Optimistic removal: deleteUser deactivates the user server-side (and the
+  // tenant queryset filters on is_active), but useLazyLoadQuery won't refetch
+  // on its own — so hide removed cards locally too.
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+  const onRemoved = (id: string) =>
+    setRemovedIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+
   const data = useLazyLoadQuery<UsersQueryType>(
     UsersQuery,
     { filters: tenantId ? { tenantId } : null, first: 500 },
@@ -50,8 +63,9 @@ const Inner: React.FC = () => {
   const allUsers = useMemo(() => {
     return (data?.users?.edges ?? [])
       .map((e) => e?.node)
-      .filter((n): n is UserNode => Boolean(n));
-  }, [data]);
+      .filter((n): n is UserNode => Boolean(n))
+      .filter((n) => !removedIds.has(n.id));
+  }, [data, removedIds]);
 
   const adminUsers = useMemo(() => {
     return allUsers.filter((u) => {
@@ -115,6 +129,8 @@ const Inner: React.FC = () => {
         title="Admins"
         subtitle="Full access to this workspace."
         users={adminUsers}
+        onRemoved={onRemoved}
+        currentEmail={currentEmail}
       />
 
       {/* Clients */}
@@ -122,6 +138,8 @@ const Inner: React.FC = () => {
         title="Client users"
         subtitle="Brand stakeholders with limited access (their requests + recaps)."
         users={clientUsers}
+        onRemoved={onRemoved}
+        currentEmail={currentEmail}
       />
     </div>
   );
@@ -131,7 +149,9 @@ const Section: React.FC<{
   title: string;
   subtitle: string;
   users: UserNode[];
-}> = ({ title, subtitle, users }) => {
+  onRemoved: (id: string) => void;
+  currentEmail: string | null;
+}> = ({ title, subtitle, users, onRemoved, currentEmail }) => {
   return (
     <div>
       <div className="flex items-baseline gap-3 mb-3">
@@ -158,7 +178,12 @@ const Section: React.FC<{
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {users.map((u) => (
-            <MemberCard key={u.id} user={u} />
+            <MemberCard
+              key={u.id}
+              user={u}
+              onRemoved={onRemoved}
+              currentEmail={currentEmail}
+            />
           ))}
         </div>
       )}
@@ -188,12 +213,64 @@ const inputStyle: React.CSSProperties = {
  * Role is intentionally not editable here — it's a permission level, not
  * a display title.
  */
-const MemberCard: React.FC<{ user: UserNode }> = ({ user }) => {
+const MemberCard: React.FC<{
+  user: UserNode;
+  onRemoved: (id: string) => void;
+  currentEmail: string | null;
+}> = ({ user, onRemoved, currentEmail }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
   const [commit, isInFlight] =
     useMutation<UpdateUserMutationType>(UpdateUserMutation);
 
   const [editing, setEditing] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [removeBusy, setRemoveBusy] = useState(false);
+  // Hide Remove on your own card — the backend also blocks self-removal.
+  const isSelf =
+    !!currentEmail && (user.email ?? "").toLowerCase() === currentEmail;
+
+  // Soft-remove: deleteUser deactivates the user + their tenant links (and the
+  // BA profile, if any) server-side; history is preserved and they can be
+  // re-invited later. Raw POST mirrors the People page's remove flow.
+  const remove = async () => {
+    setRemoveBusy(true);
+    try {
+      const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+        },
+        body: JSON.stringify({
+          query: `
+            mutation DeleteUser($input: DeleteUserInput!) {
+              deleteUser(input: $input) { success message }
+            }
+          `,
+          variables: { input: { userId: user.id } },
+        }),
+      });
+      const json = await res.json();
+      const r = json?.data?.deleteUser;
+      if (json.errors?.length || !r?.success) {
+        showAlert(
+          `Couldn't remove ${displayName(user)}: ${
+            r?.message ?? json.errors?.[0]?.message ?? "unknown error"
+          }`,
+          "error",
+        );
+        return;
+      }
+      showAlert(`${displayName(user)} removed from the workspace.`, "success");
+      setConfirming(false);
+      onRemoved(user.id);
+    } catch (e) {
+      showAlert(`Remove failed: ${(e as Error).message}`, "error");
+    } finally {
+      setRemoveBusy(false);
+    }
+  };
+
   const [firstName, setFirstName] = useState(user.firstName ?? "");
   const [lastName, setLastName] = useState(user.lastName ?? "");
   const [email, setEmail] = useState(user.email ?? "");
@@ -391,20 +468,119 @@ const MemberCard: React.FC<{ user: UserNode }> = ({ user }) => {
             </button>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={startEdit}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-            style={{
-              background: "transparent",
-              color: "var(--spark-text)",
-              border: "1px solid var(--spark-border)",
-            }}
-          >
-            Edit
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={startEdit}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              Edit
+            </button>
+            {!isSelf && (
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-orange)",
+                  border: "1px solid rgba(239,90,42,0.4)",
+                }}
+              >
+                Remove
+              </button>
+            )}
+          </div>
         )}
       </div>
+
+      {confirming && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          style={{
+            background: "rgba(10,11,13,0.7)",
+            backdropFilter: "blur(8px)",
+          }}
+          onClick={() => !removeBusy && setConfirming(false)}
+        >
+          <div
+            className="spark-card p-5 w-full"
+            style={{ maxWidth: 420, borderRadius: 20 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-orange)",
+              }}
+            >
+              REMOVE FROM WORKSPACE
+            </p>
+            <h3
+              className="display text-xl font-bold mt-2"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              Remove {displayName(user)}?
+            </h3>
+            <p
+              className="text-sm mt-1"
+              style={{ color: "rgba(255,255,255,0.6)" }}
+            >
+              {user.email ?? "—"} · {(user.role?.name ?? "—").toUpperCase()}
+            </p>
+            <div
+              className="mt-4 p-3 text-xs leading-relaxed"
+              style={{
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                borderRadius: 12,
+                color: "rgba(255,255,255,0.7)",
+              }}
+            >
+              They lose access immediately. Their past recaps, requests, and
+              events stay for the record. You can re-invite them later with the
+              same email and they'll keep their history.
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirming(false)}
+                disabled={removeBusy}
+                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                  opacity: removeBusy ? 0.5 : 1,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={remove}
+                disabled={removeBusy}
+                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "var(--spark-orange)",
+                  color: "#0a0d09",
+                  border: "none",
+                  opacity: removeBusy ? 0.6 : 1,
+                  cursor: removeBusy ? "not-allowed" : "pointer",
+                }}
+              >
+                {removeBusy ? "Removing…" : "Remove from workspace"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
