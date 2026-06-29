@@ -163,7 +163,10 @@ const Inner: React.FC<{
     const prevId = defaultRmmId;
     setDefaultRmmId(nextId); // optimistic
     commitDefaultRmm({
-      variables: { input: { userId: nextId || null } },
+      // Pass the active tenant explicitly — without it the backend falls back
+      // to user.get_tenant(), which throws for Ignite admins who belong to many
+      // tenants. (Every other settings mutation here already sends tenantId.)
+      variables: { input: { tenantId, userId: nextId || null } },
       onCompleted: (res) => {
         const r = res.setDefaultExternalRmm;
         if (r?.success) {
