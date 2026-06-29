@@ -147,7 +147,18 @@ const Inner: React.FC<{
     return nodes.find((t) => String(t.id) === String(tenantId)) ?? nodes[0] ?? null;
   }, [tenantsData, tenantId]);
 
-  const currentDefaultRmmId = activeTenant?.defaultExternalRmm?.id ?? "";
+  // The <option> values are the users' CustomUserType global ids (from
+  // UsersQuery). The tenant's defaultExternalRmm, though, comes back as a
+  // SparkUserType — a DIFFERENT GraphQL type whose Relay global id is a
+  // different string for the same person — so the saved id never matches an
+  // option and the select snaps back to "None" (looks like it didn't save,
+  // even though the DB did). Match on uuid (stable across both types) and
+  // resolve to the option's own id so the select can actually display it.
+  const currentDefaultRmmUuid = activeTenant?.defaultExternalRmm?.uuid ?? "";
+  const currentDefaultRmmId = useMemo(
+    () => rows.find((r) => r.uuid === currentDefaultRmmUuid)?.id ?? "",
+    [rows, currentDefaultRmmUuid],
+  );
   const [defaultRmmId, setDefaultRmmId] = useState<string>(currentDefaultRmmId);
   // Keep the select in sync once the tenant payload resolves (or the
   // active tenant changes) — server is the source of truth.
@@ -170,11 +181,14 @@ const Inner: React.FC<{
       onCompleted: (res) => {
         const r = res.setDefaultExternalRmm;
         if (r?.success) {
-          const resolvedId = r.tenant?.defaultExternalRmm?.id ?? "";
-          setDefaultRmmId(resolvedId);
-          const person = rows.find((p) => p.id === resolvedId);
+          // Resolve the server's SparkUserType back to the matching option by
+          // uuid (see note above) and bind the option's own id, so the select
+          // keeps showing the saved person instead of snapping to "None".
+          const resolvedUuid = r.tenant?.defaultExternalRmm?.uuid ?? "";
+          const person = rows.find((p) => p.uuid === resolvedUuid);
+          setDefaultRmmId(person?.id ?? "");
           showAlert(
-            resolvedId
+            resolvedUuid
               ? `External requests now route to ${person?.name ?? "the selected person"}.`
               : "External requests now use territory routing.",
             "success",
