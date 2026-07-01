@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
+import useTenantPublic from "@/public/form/hooks/useTenantPublic";
+import useTenantThemePublic from "@/public/form/hooks/useTenantThemePublic";
 
 /**
  * Public, no-auth consumer rebate upload page.
@@ -17,13 +19,24 @@ import { useParams } from "react-router";
  * validates it and pays the reward via Venmo.
  *
  * Mobile-first: a single photo picker (camera-capture friendly), a required
- * Venmo handle, and a few optional fields. Light, branded-neutral theme so
- * it reads on a phone in a store aisle. Mirrors ReceiptUpload.tsx.
+ * Venmo handle, and a few optional fields.
+ *
+ * Branded per client: once the campaign resolves we have its tenant's
+ * `request_url_name` (piggybacked on the REST payload — see
+ * `_campaign_display_payload` in receipts/views.py) and reuse the SAME
+ * no-auth tenantPublic / tenantThemePublic GraphQL queries the external
+ * request form already uses for its logo + DaisyUI CSS-variable theme.
+ * Unlike that form (Spark chrome + tenant accent), this page goes fully
+ * tenant-colored — a shopper scanning a QR in a store aisle should see the
+ * BRAND's page, not Spark's. `var(--color-x, <spark-fallback>)` throughout
+ * means it still renders sanely before the theme fetch resolves (or for a
+ * tenant with no custom theme — buildThemeDefaults already covers that).
  */
 
 type CampaignInfo = {
   name?: string;
   brandName?: string;
+  tenantRequestUrlName?: string;
   headline?: string;
   description?: string;
   product?: string;
@@ -141,6 +154,14 @@ const CampaignUpload: React.FC = () => {
     };
   }, [infoEndpoint]);
 
+  // Brand theming — only fires once the campaign resolves and we know its
+  // tenant's request_url_name. Applies the tenant's logo + DaisyUI CSS
+  // variables globally (same hooks the external request form uses), so the
+  // page below reads as the CLIENT's page rather than Spark's.
+  const tenantSlug = campaign?.tenantRequestUrlName || undefined;
+  const { tenant, hasImage } = useTenantPublic({ slug: tenantSlug });
+  useTenantThemePublic({ slug: tenantSlug, colorScheme: "dark" });
+
   // Build / revoke an object URL for the chosen photo preview.
   const onPickFile = useCallback((f: File | null) => {
     setFile(f);
@@ -239,10 +260,13 @@ const CampaignUpload: React.FC = () => {
 
   if (done) {
     return (
-      <Shell>
+      <Shell
+        logoUrl={hasImage ? tenant?.image : null}
+        brand={campaign?.brandName}
+      >
         <p
           className="text-xs uppercase tracking-[0.2em] mb-2"
-          style={{ color: "#3a7e2f" }}
+          style={{ color: "var(--color-success, #3a7e2f)" }}
         >
           Receipt received
         </p>
@@ -272,8 +296,11 @@ const CampaignUpload: React.FC = () => {
         : "Upload your receipt");
 
   return (
-    <Shell>
-      <p className="text-xs uppercase tracking-[0.2em] text-stone-500 mb-1">
+    <Shell logoUrl={hasImage ? tenant?.image : null} brand={brand}>
+      <p
+        className="text-xs uppercase tracking-[0.2em] mb-1"
+        style={{ color: "var(--color-base-content, #78716c)", opacity: 0.65 }}
+      >
         {brand ? `${brand} · ` : ""}REBATE
       </p>
       <h1
@@ -283,13 +310,18 @@ const CampaignUpload: React.FC = () => {
         {headline}
       </h1>
       {campaign?.description && (
-        <p className="text-sm text-stone-600 mb-2">{campaign.description}</p>
+        <p className="text-sm mb-2" style={{ opacity: 0.75 }}>
+          {campaign.description}
+        </p>
       )}
 
       {reward && (
         <div
           className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 mb-4 text-sm font-bold"
-          style={{ background: "#eef9d4", color: "#3a7e2f" }}
+          style={{
+            background: "var(--color-primary, #eef9d4)",
+            color: "var(--color-primary-content, #3a7e2f)",
+          }}
         >
           <span aria-hidden>💸</span>
           {reward} reward
@@ -437,8 +469,8 @@ const CampaignUpload: React.FC = () => {
           disabled={submitting || !file || !payoutHandle.trim()}
           className="w-full px-6 py-3.5 rounded-2xl text-base font-bold transition"
           style={{
-            background: "#c5f546",
-            color: "#0a0d09",
+            background: "var(--color-primary, #c5f546)",
+            color: "var(--color-primary-content, #0a0d09)",
             opacity: submitting || !file || !payoutHandle.trim() ? 0.5 : 1,
             fontFamily: "Georgia, serif",
           }}
@@ -450,11 +482,6 @@ const CampaignUpload: React.FC = () => {
               : "Submit receipt →"}
         </button>
       </form>
-
-      <p className="mt-8 text-xs text-stone-400">
-        Spark by Ignite · We'll only use this to verify your purchase and send
-        your reward.
-      </p>
     </Shell>
   );
 };
@@ -511,19 +538,59 @@ const TextField: React.FC<{
   </Field>
 );
 
-// Light, warm chrome — readable on a phone, branded-neutral. Mirrors the
-// per-event receipt upload page so the two no-login surfaces feel related.
-const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="min-h-screen" style={{ background: "#faf7f1" }}>
+// Branded per client — background + card read the tenant's DaisyUI CSS
+// variables (applied globally by useTenantThemePublic above), falling back
+// to Spark's own neutral cream/white before the theme fetch resolves (or for
+// a tenant with no logo/theme at all, which still renders coherently thanks
+// to buildThemeDefaults' dark-theme fallback). A shopper scanning a QR in a
+// store aisle should see the BRAND's page — Spark only gets a small footer
+// credit, mirroring how the per-event receipt upload page stays neutral.
+const Shell: React.FC<{
+  children: React.ReactNode;
+  logoUrl?: string | null;
+  brand?: string;
+}> = ({ children, logoUrl, brand }) => (
+  <div
+    className="min-h-screen"
+    style={{ background: "var(--color-base-200, #faf7f1)" }}
+  >
     <div className="max-w-xl mx-auto px-5 py-10">
-      <div className="mb-6">
-        <p className="text-xs uppercase tracking-[0.22em] text-stone-500">
-          Spark by Ignite
-        </p>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt={brand || "Brand logo"}
+            className="h-9 w-auto object-contain"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        ) : (
+          <p
+            className="text-xs uppercase tracking-[0.22em] font-semibold"
+            style={{ color: "var(--color-base-content, #78716c)" }}
+          >
+            {brand || ""}
+          </p>
+        )}
       </div>
-      <div className="bg-white rounded-3xl border border-stone-200 p-6 sm:p-8 shadow-sm">
+      <div
+        className="rounded-3xl p-6 sm:p-8 shadow-sm"
+        style={{
+          background: "var(--color-base-100, #ffffff)",
+          border: "1px solid var(--color-neutral, #e7e5e4)",
+          color: "var(--color-base-content, #1c1917)",
+        }}
+      >
         {children}
       </div>
+      <p
+        className="mt-6 text-xs text-center"
+        style={{ color: "var(--color-base-content, #a8a29e)", opacity: 0.55 }}
+      >
+        Spark by Ignite · We'll only use this to verify your purchase and
+        send your reward.
+      </p>
     </div>
   </div>
 );
