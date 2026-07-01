@@ -463,7 +463,7 @@ const PublicRoutes = {
     // Public, no-login consumer rebate upload page. The :slug identifies an
     // always-on per-client receipt campaign (no token, no tenant guard — a
     // missing or inactive campaign 404s server-side). Consumers upload a
-    // receipt + their Venmo handle; submissions land in the per-campaign
+    // receipt + their PayPal handle; submissions land in the per-campaign
     // queue on the admin Receipts dashboard.
     {
       path: "/c/:slug",

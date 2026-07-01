@@ -36,9 +36,9 @@ import { useAlertStore } from "@/store/alertStore";
  *
  * Replaces the old per-event receipt-upload flow with always-on per-client
  * campaigns. A brand runs a campaign; consumers upload a purchase receipt
- * via the public no-login page (/c/<slug>) along with their Venmo handle;
- * an admin validates it, then pays a fixed reward via Venmo and marks it
- * paid. Spark itself never moves money — the pay button opens Venmo, then
+ * via the public no-login page (/c/<slug>) along with their PayPal handle;
+ * an admin validates it, then pays a fixed reward via PayPal and marks it
+ * paid. Spark itself never moves money — the pay button opens PayPal, then
  * the admin confirms with "Mark paid".
  *
  * The dashboard lists campaigns (share link + reward + active toggle +
@@ -843,7 +843,7 @@ const CampaignFormModal: React.FC<{
               type="text"
               value={payoutNote}
               onChange={(e) => setPayoutNote(e.target.value)}
-              placeholder="Internal note attached to Venmo payouts (optional)."
+              placeholder="Internal note for this campaign's payouts (optional)."
               className="w-full rounded-xl text-sm"
               style={inputStyle}
             />
@@ -956,7 +956,7 @@ const ReceiptCard: React.FC<{
   const isPending = receipt.status === "pending";
   const awaitingPayout = receipt.status === "validated" && !isPaid;
   const reward = formatMoney(receipt.rewardAmount);
-  const handle = receipt.payoutHandle?.trim().replace(/^@+/, "") ?? "";
+  const handle = receipt.payoutHandle?.trim() ?? "";
   const ocrLine = ocrSummary(receipt);
   const ocrRan = Boolean(receipt.ocrRanAt) || ocrLine != null;
 
@@ -1093,7 +1093,7 @@ const ReceiptCard: React.FC<{
             </button>
           </div>
 
-          {/* Venmo handle */}
+          {/* PayPal handle */}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span
               className="mono inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px]"
@@ -1103,9 +1103,9 @@ const ReceiptCard: React.FC<{
                 border: "1px solid rgba(95,184,239,0.30)",
                 color: "var(--spark-sky)",
               }}
-              title="Consumer's Venmo handle"
+              title="Consumer's PayPal handle"
             >
-              Venmo @{handle || "—"}
+              PayPal: {handle || "—"}
             </span>
             {reward && (
               <span
@@ -1174,8 +1174,8 @@ const ReceiptCard: React.FC<{
                 className="text-[11px]"
                 style={{ color: "rgba(255,255,255,0.5)" }}
               >
-                Spark doesn't move money. Open Venmo to pay{" "}
-                {reward ? `${reward} ` : ""}to @{handle || "the consumer"}, then
+                Spark doesn't move money. Open PayPal to pay{" "}
+                {reward ? `${reward} ` : ""}to {handle || "the consumer"}, then
                 mark it paid.
               </p>
               <div className="flex flex-wrap gap-2 justify-end">
@@ -1187,7 +1187,7 @@ const ReceiptCard: React.FC<{
                     className="px-4 py-2 rounded-xl text-sm font-semibold"
                     style={limeButton}
                   >
-                    Pay {reward || "$"} via Venmo ↗
+                    Pay {reward || "$"} via PayPal ↗
                   </a>
                 ) : (
                   <span
@@ -1195,7 +1195,7 @@ const ReceiptCard: React.FC<{
                     style={limeButton}
                     title="No payout link available"
                   >
-                    Pay via Venmo
+                    Pay via PayPal
                   </span>
                 )}
                 <button
@@ -1708,7 +1708,7 @@ export default function SparkReceipts() {
             </h1>
             <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
               Always-on rebates. Share a campaign link, consumers upload a
-              receipt + their Venmo, you validate it and pay the reward.
+              receipt + their PayPal, you validate it and pay the reward.
             </p>
           </div>
           <button

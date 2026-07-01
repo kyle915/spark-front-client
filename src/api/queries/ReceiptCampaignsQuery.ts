@@ -5,7 +5,7 @@ import { graphql } from "react-relay";
  *
  * Backs the admin Receipts dashboard. Each campaign is always-on: a brand
  * runs it, consumers upload a purchase receipt via the public no-login page
- * (/c/<slug>), an admin validates it, then pays a fixed reward via Venmo.
+ * (/c/<slug>), an admin validates it, then pays a fixed reward via PayPal.
  * Filters are tenant / active scoped on the server. Counts roll up the
  * campaign's submissions by state for the dashboard tiles.
  */

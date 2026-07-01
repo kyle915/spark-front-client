@@ -32,7 +32,7 @@ import { useAlertStore } from "@/store/alertStore";
  * no-login twin of an invoice lives at /invoice/:token (PublicInvoice).
  *
  * Spark itself never moves money — "Mark paid" just records that a
- * payment landed out-of-band, mirroring how Receipts records Venmo
+ * payment landed out-of-band, mirroring how Receipts records PayPal
  * payouts. Visual style mirrors SparkReceipts (spark-card / chip / mono
  * tokens) — dark theme, lime accent.
  */

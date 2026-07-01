@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import useTenantPublic from "@/public/form/hooks/useTenantPublic";
-import useTenantThemePublic from "@/public/form/hooks/useTenantThemePublic";
+import { gqlRequest } from "@/public/api/graphqlClient";
+import { QUERY_PUBLIC_TENANT_THEME } from "@/public/api/queries/PublicThemeTenant.query";
 
 /**
  * Public, no-auth consumer rebate upload page.
@@ -15,22 +16,29 @@ import useTenantThemePublic from "@/public/form/hooks/useTenantThemePublic";
  *   POST {API_ORIGIN}/api/public/campaigns/:slug/submit  -> multipart upload
  *
  * Flow: brand runs a campaign ("Get $5 back"), a consumer photographs a
- * purchase receipt, drops their Venmo handle, and submits. An admin later
- * validates it and pays the reward via Venmo.
+ * purchase receipt, drops their PayPal handle, and submits. An admin later
+ * validates it and pays the reward via PayPal.
  *
  * Mobile-first: a single photo picker (camera-capture friendly), a required
- * Venmo handle, and a few optional fields.
+ * PayPal handle, and a few optional fields.
  *
  * Branded per client: once the campaign resolves we have its tenant's
  * `request_url_name` (piggybacked on the REST payload — see
- * `_campaign_display_payload` in receipts/views.py) and reuse the SAME
+ * `_campaign_display_payload` in receipts/views.py). We query the same
  * no-auth tenantPublic / tenantThemePublic GraphQL queries the external
- * request form already uses for its logo + DaisyUI CSS-variable theme.
- * Unlike that form (Spark chrome + tenant accent), this page goes fully
- * tenant-colored — a shopper scanning a QR in a store aisle should see the
- * BRAND's page, not Spark's. `var(--color-x, <spark-fallback>)` throughout
- * means it still renders sanely before the theme fetch resolves (or for a
- * tenant with no custom theme — buildThemeDefaults already covers that).
+ * request form uses, but deliberately do NOT route through the shared
+ * useTenantThemePublic hook or CSS var(--color-x, <fallback>) syntax at all.
+ * Two reasons: (1) that hook applies its result globally via
+ * document.documentElement.style, which would leak into other routes; (2)
+ * more fundamentally, src/index.css ships a site-wide default DaisyUI theme
+ * ("spark-v2", near-black) that unconditionally defines --color-base-200 etc.
+ * at :root, so a var(--color-x, <literal>) fallback never actually triggers
+ * — it silently resolves to Spark's own admin-console theme instead of this
+ * page's neutral cream/white default. Fetched theme values are kept in
+ * `brandVars` (below) and resolved to real literal colors via the `pick()`
+ * helper at the bottom of this file, bypassing CSS custom properties
+ * entirely. We try the `dark` scheme first, then `light`, since the
+ * /customize-theme editor defaults to creating a light-scheme row.
  */
 
 type CampaignInfo = {
@@ -104,6 +112,9 @@ const CampaignUpload: React.FC = () => {
   // Form state.
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [brandVars, setBrandVars] = useState<Record<string, string> | null>(
+    null,
+  );
   const [payoutHandle, setPayoutHandle] = useState("");
   const [storeName, setStoreName] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
@@ -155,12 +166,43 @@ const CampaignUpload: React.FC = () => {
   }, [infoEndpoint]);
 
   // Brand theming — only fires once the campaign resolves and we know its
-  // tenant's request_url_name. Applies the tenant's logo + DaisyUI CSS
-  // variables globally (same hooks the external request form uses), so the
-  // page below reads as the CLIENT's page rather than Spark's.
+  // tenant's request_url_name. See the module docstring for why this fetch
+  // is local (into `brandVars`, applied on the Shell's own root node) rather
+  // than routed through the shared useTenantThemePublic hook.
   const tenantSlug = campaign?.tenantRequestUrlName || undefined;
   const { tenant, hasImage } = useTenantPublic({ slug: tenantSlug });
-  useTenantThemePublic({ slug: tenantSlug, colorScheme: "dark" });
+
+  useEffect(() => {
+    if (!tenantSlug) {
+      setBrandVars(null);
+      return;
+    }
+    let cancelled = false;
+    async function loadTheme() {
+      for (const scheme of ["DARK", "LIGHT"]) {
+        try {
+          const result = await gqlRequest<{
+            tenantThemePublic: { cssVariables: Record<string, string> } | null;
+          }>(QUERY_PUBLIC_TENANT_THEME, {
+            requestUrlName: tenantSlug,
+            colorScheme: scheme,
+          });
+          const vars = result?.tenantThemePublic?.cssVariables;
+          if (vars && Object.keys(vars).length > 0) {
+            if (!cancelled) setBrandVars(vars);
+            return;
+          }
+        } catch {
+          // Try the next scheme.
+        }
+      }
+      if (!cancelled) setBrandVars(null);
+    }
+    void loadTheme();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantSlug]);
 
   // Build / revoke an object URL for the chosen photo preview.
   const onPickFile = useCallback((f: File | null) => {
@@ -183,7 +225,7 @@ const CampaignUpload: React.FC = () => {
       return;
     }
     if (!payoutHandle.trim()) {
-      setSubmitErr("Please enter your Venmo username so we can pay you.");
+      setSubmitErr("Please enter your PayPal email so we can pay you.");
       return;
     }
     setSubmitting(true);
@@ -263,10 +305,11 @@ const CampaignUpload: React.FC = () => {
       <Shell
         logoUrl={hasImage ? tenant?.image : null}
         brand={campaign?.brandName}
+        brandVars={brandVars}
       >
         <p
           className="text-xs uppercase tracking-[0.2em] mb-2"
-          style={{ color: "var(--color-success, #3a7e2f)" }}
+          style={{ color: pick(brandVars, "--color-success", "#3a7e2f") }}
         >
           Receipt received
         </p>
@@ -278,7 +321,7 @@ const CampaignUpload: React.FC = () => {
         </h1>
         <p className="text-sm text-stone-600">
           We've got your receipt. Once it's verified we'll send your reward
-          {payoutHandle.trim() ? ` to ${formatHandle(payoutHandle)} on Venmo` : ""}.
+          {payoutHandle.trim() ? ` to ${payoutHandle.trim()} via PayPal` : ""}.
           You can safely close this tab.
         </p>
       </Shell>
@@ -296,10 +339,17 @@ const CampaignUpload: React.FC = () => {
         : "Upload your receipt");
 
   return (
-    <Shell logoUrl={hasImage ? tenant?.image : null} brand={brand}>
+    <Shell
+      logoUrl={hasImage ? tenant?.image : null}
+      brand={brand}
+      brandVars={brandVars}
+    >
       <p
         className="text-xs uppercase tracking-[0.2em] mb-1"
-        style={{ color: "var(--color-base-content, #78716c)", opacity: 0.65 }}
+        style={{
+          color: pick(brandVars, "--color-base-content", "#78716c"),
+          opacity: 0.65,
+        }}
       >
         {brand ? `${brand} · ` : ""}REBATE
       </p>
@@ -319,8 +369,8 @@ const CampaignUpload: React.FC = () => {
         <div
           className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 mb-4 text-sm font-bold"
           style={{
-            background: "var(--color-primary, #eef9d4)",
-            color: "var(--color-primary-content, #3a7e2f)",
+            background: pick(brandVars, "--color-primary", "#c5f546"),
+            color: pick(brandVars, "--color-primary-content", "#0a0d09"),
           }}
         >
           <span aria-hidden>💸</span>
@@ -375,23 +425,18 @@ const CampaignUpload: React.FC = () => {
           )}
         </div>
 
-        {/* Venmo handle — required, this is how the consumer gets paid. */}
-        <Field label="Venmo username">
-          <div className="flex items-stretch rounded-xl border border-stone-300 focus-within:border-stone-500 overflow-hidden">
-            <span className="px-3 flex items-center text-base text-stone-500 bg-stone-50 border-r border-stone-200">
-              @
-            </span>
-            <input
-              type="text"
-              value={payoutHandle}
-              onChange={(e) => setPayoutHandle(e.target.value)}
-              placeholder="your-venmo"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              className="flex-1 p-3 text-base focus:outline-none"
-            />
-          </div>
+        {/* PayPal email — required, this is how the consumer gets paid. */}
+        <Field label="PayPal email">
+          <input
+            type="email"
+            value={payoutHandle}
+            onChange={(e) => setPayoutHandle(e.target.value)}
+            placeholder="you@email.com"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            className={CONTROL_CLS}
+          />
           <p className="text-xs text-stone-400 mt-1">
             We'll send your reward here once your receipt is verified.
           </p>
@@ -469,8 +514,8 @@ const CampaignUpload: React.FC = () => {
           disabled={submitting || !file || !payoutHandle.trim()}
           className="w-full px-6 py-3.5 rounded-2xl text-base font-bold transition"
           style={{
-            background: "var(--color-primary, #c5f546)",
-            color: "var(--color-primary-content, #0a0d09)",
+            background: pick(brandVars, "--color-primary", "#c5f546"),
+            color: pick(brandVars, "--color-primary-content", "#0a0d09"),
             opacity: submitting || !file || !payoutHandle.trim() ? 0.5 : 1,
             fontFamily: "Georgia, serif",
           }}
@@ -486,12 +531,6 @@ const CampaignUpload: React.FC = () => {
   );
 };
 
-// Strip a leading @ for display so "@me" and "me" both read as "@me".
-function formatHandle(raw: string): string {
-  const v = raw.trim().replace(/^@+/, "");
-  return v ? `@${v}` : "";
-}
-
 // Fallback reward label when the backend doesn't send a preformatted one.
 // rewardAmount arrives as a numeric string like "5.00".
 function formatReward(raw: string | null | undefined): string {
@@ -504,6 +543,19 @@ function formatReward(raw: string | null | undefined): string {
     return `$${n.toFixed(2)}`;
   }
   return trimmed;
+}
+
+// Resolve a brand color as a real value, never a CSS var() fallback: the app
+// ships a site-wide DaisyUI default theme (src/index.css, near-black) that
+// always defines --color-base-200 etc. at :root, so var(--color-x, <literal>)
+// never actually falls through — it silently resolves to Spark's own dark
+// admin-console theme instead of this page's intended neutral cream/white.
+function pick(
+  vars: Record<string, string> | null | undefined,
+  key: string,
+  fallback: string,
+): string {
+  return vars?.[key] || fallback;
 }
 
 const LABEL_CLS =
@@ -539,20 +591,21 @@ const TextField: React.FC<{
 );
 
 // Branded per client — background + card read the tenant's DaisyUI CSS
-// variables (applied globally by useTenantThemePublic above), falling back
-// to Spark's own neutral cream/white before the theme fetch resolves (or for
-// a tenant with no logo/theme at all, which still renders coherently thanks
-// to buildThemeDefaults' dark-theme fallback). A shopper scanning a QR in a
-// store aisle should see the BRAND's page — Spark only gets a small footer
-// credit, mirroring how the per-event receipt upload page stays neutral.
+// variables, defined on THIS div (not document.documentElement — see the
+// module docstring) via brandVars, falling back to Spark's own neutral
+// cream/white when brandVars is null (no theme fetch yet, or the tenant has
+// configured neither color scheme). A shopper scanning a QR in a store aisle
+// should see the BRAND's page — Spark only gets a small footer credit,
+// mirroring how the per-event receipt upload page stays neutral.
 const Shell: React.FC<{
   children: React.ReactNode;
   logoUrl?: string | null;
   brand?: string;
-}> = ({ children, logoUrl, brand }) => (
+  brandVars?: Record<string, string> | null;
+}> = ({ children, logoUrl, brand, brandVars }) => (
   <div
     className="min-h-screen"
-    style={{ background: "var(--color-base-200, #faf7f1)" }}
+    style={{ background: pick(brandVars, "--color-base-200", "#faf7f1") }}
   >
     <div className="max-w-xl mx-auto px-5 py-10">
       <div className="mb-6 flex items-center justify-between gap-3">
@@ -568,7 +621,7 @@ const Shell: React.FC<{
         ) : (
           <p
             className="text-xs uppercase tracking-[0.22em] font-semibold"
-            style={{ color: "var(--color-base-content, #78716c)" }}
+            style={{ color: pick(brandVars, "--color-base-content", "#78716c") }}
           >
             {brand || ""}
           </p>
@@ -577,16 +630,19 @@ const Shell: React.FC<{
       <div
         className="rounded-3xl p-6 sm:p-8 shadow-sm"
         style={{
-          background: "var(--color-base-100, #ffffff)",
-          border: "1px solid var(--color-neutral, #e7e5e4)",
-          color: "var(--color-base-content, #1c1917)",
+          background: pick(brandVars, "--color-base-100", "#ffffff"),
+          border: `1px solid ${pick(brandVars, "--color-neutral", "#e7e5e4")}`,
+          color: pick(brandVars, "--color-base-content", "#1c1917"),
         }}
       >
         {children}
       </div>
       <p
         className="mt-6 text-xs text-center"
-        style={{ color: "var(--color-base-content, #a8a29e)", opacity: 0.55 }}
+        style={{
+          color: pick(brandVars, "--color-base-content", "#a8a29e"),
+          opacity: 0.55,
+        }}
       >
         Spark by Ignite · We'll only use this to verify your purchase and
         send your reward.

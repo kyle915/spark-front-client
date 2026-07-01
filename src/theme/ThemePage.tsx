@@ -39,6 +39,172 @@ function applyCssVariablesToRoot(vars: CssVariablesMap) {
   });
 }
 
+// GraphQL calls below use raw fetch(), not Relay: updateTenant/getUploadUrl
+// already work server-side but aren't in the local hand-patched
+// schema_clients.graphql, and this app never does a full schema re-export
+// (see spark-front-client conventions) — Relay codegen would fail on them.
+function LogoUploadIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      className="w-4 h-4"
+    >
+      <path
+        d="M4 16.5V18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1.5M7 9l5-5 5 5M12 4v12"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function TenantLogoCard({ tenantId }: { tenantId?: string }) {
+  const { showAlert } = useAlertStore();
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (!tenantId) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+          },
+          body: JSON.stringify({
+            query: `query TenantLogo($id: ID!) { tenant(id: $id) { id image } }`,
+            variables: { id: tenantId },
+          }),
+        });
+        const json = await res.json();
+        if (!cancelled) setImageUrl(json?.data?.tenant?.image ?? null);
+      } catch {
+        // Leave imageUrl null — the card just shows the empty state.
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId]);
+
+  const onPickFile = async (file: File | null) => {
+    if (!file || !tenantId) return;
+    setUploading(true);
+    try {
+      const filePath = `tenant-logos/${tenantId}/${Date.now()}_${file.name}`;
+      const uploadRes = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: `query GetUploadUrl($filePath: String!, $contentType: String!) {
+            getUploadUrl(filePath: $filePath, contentType: $contentType) { uploadUrl blobName }
+          }`,
+          variables: { filePath, contentType: file.type },
+        }),
+      });
+      const uploadJson = await uploadRes.json();
+      const uploadUrl = uploadJson?.data?.getUploadUrl?.uploadUrl;
+      const blobName = uploadJson?.data?.getUploadUrl?.blobName;
+      if (!uploadUrl || !blobName) {
+        throw new Error(
+          uploadJson?.errors?.[0]?.message ?? "Unable to get an upload URL."
+        );
+      }
+
+      const putRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!putRes.ok) throw new Error("Failed to upload the logo to storage.");
+
+      const updateRes = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+        },
+        body: JSON.stringify({
+          query: `mutation UpdateTenantLogo($input: UpdateTenantInput!) {
+            updateTenant(input: $input) { success message tenant { id image } }
+          }`,
+          variables: { input: { id: tenantId, image: blobName } },
+        }),
+      });
+      const updateJson = await updateRes.json();
+      const result = updateJson?.data?.updateTenant;
+      if (updateJson.errors?.length || !result?.success) {
+        throw new Error(
+          result?.message ?? updateJson.errors?.[0]?.message ?? "Unknown error"
+        );
+      }
+      setImageUrl(result.tenant?.image ?? null);
+      showAlert("Logo updated.", "success");
+    } catch (e) {
+      showAlert(`Logo upload failed: ${(e as Error).message}`, "error");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-base-300 bg-base-100 p-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <div className="font-semibold text-base-content">Brand Logo</div>
+          <div className="text-xs opacity-70">
+            Shown on your public receipt/rebate pages and request forms.
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          {loading ? (
+            <span className="text-xs opacity-60">Loading…</span>
+          ) : imageUrl ? (
+            <img
+              src={imageUrl}
+              alt="Current logo"
+              className="h-10 w-auto max-w-[160px] object-contain rounded border border-base-300 bg-white p-1"
+            />
+          ) : (
+            <span className="text-xs opacity-60">No logo uploaded yet</span>
+          )}
+          <label className="btn btn-sm btn-ghost border border-base-300 gap-2">
+            <LogoUploadIcon />
+            {uploading
+              ? "Uploading…"
+              : imageUrl
+                ? "Replace logo"
+                : "Upload logo"}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                e.target.value = "";
+                void onPickFile(file);
+              }}
+            />
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type ThemeEditorContentProps = {
   tenantId?: string;
 };
@@ -191,6 +357,8 @@ function ThemeEditorContent({ tenantId }: ThemeEditorContentProps) {
           </button>
         </div>
       </div>
+
+      <TenantLogoCard tenantId={tenantId} />
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_0.5fr] gap-6 items-start">
         {/* Editor */}
