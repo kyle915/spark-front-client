@@ -51,6 +51,8 @@ type CampaignInfo = {
   rewardAmount?: string;
   rewardLabel?: string;
   isActive?: boolean;
+  heroImage?: string | null;
+  productImage?: string | null;
 };
 
 type ApiError = {
@@ -306,6 +308,7 @@ const CampaignUpload: React.FC = () => {
         logoUrl={hasImage ? tenant?.image : null}
         brand={campaign?.brandName}
         brandVars={brandVars}
+        heroImageUrl={campaign?.heroImage}
       >
         <p
           className="text-xs uppercase tracking-[0.2em] mb-2"
@@ -343,41 +346,58 @@ const CampaignUpload: React.FC = () => {
       logoUrl={hasImage ? tenant?.image : null}
       brand={brand}
       brandVars={brandVars}
+      heroImageUrl={campaign?.heroImage}
     >
-      <p
-        className="text-xs uppercase tracking-[0.2em] mb-1"
-        style={{
-          color: pick(brandVars, "--color-base-content", "#78716c"),
-          opacity: 0.65,
-        }}
-      >
-        {brand ? `${brand} · ` : ""}REBATE
-      </p>
-      <h1
-        className="text-2xl font-bold mb-1"
-        style={{ fontFamily: "Georgia, serif" }}
-      >
-        {headline}
-      </h1>
-      {campaign?.description && (
-        <p className="text-sm mb-2" style={{ opacity: 0.75 }}>
-          {campaign.description}
-        </p>
-      )}
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex-1">
+          <p
+            className="text-xs uppercase tracking-[0.2em] mb-1"
+            style={{
+              color: pick(brandVars, "--color-base-content", "#78716c"),
+              opacity: 0.65,
+            }}
+          >
+            {brand ? `${brand} · ` : ""}REBATE
+          </p>
+          <h1
+            className="text-2xl font-bold mb-1"
+            style={{ fontFamily: "Georgia, serif" }}
+          >
+            {headline}
+          </h1>
+          {campaign?.description && (
+            <p className="text-sm mb-2" style={{ opacity: 0.75 }}>
+              {campaign.description}
+            </p>
+          )}
 
-      {reward && (
-        <div
-          className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 mb-4 text-sm font-bold"
-          style={{
-            background: pick(brandVars, "--color-primary", "#c5f546"),
-            color: pick(brandVars, "--color-primary-content", "#0a0d09"),
-          }}
-        >
-          <span aria-hidden>💸</span>
-          {reward} reward
-          {campaign?.product ? ` on ${campaign.product}` : ""}
+          {reward && (
+            <div
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-bold"
+              style={{
+                background: pick(brandVars, "--color-primary", "#c5f546"),
+                color: pick(brandVars, "--color-primary-content", "#0a0d09"),
+              }}
+            >
+              <span aria-hidden>💸</span>
+              {reward} reward
+              {campaign?.product ? ` on ${campaign.product}` : ""}
+            </div>
+          )}
         </div>
-      )}
+
+        {campaign?.productImage && (
+          <img
+            src={campaign.productImage}
+            alt={campaign?.product || "Product"}
+            className="w-20 h-20 rounded-2xl object-contain flex-shrink-0"
+            style={{
+              background: pick(brandVars, "--color-base-100", "#ffffff"),
+              border: `1px solid ${pick(brandVars, "--color-neutral", "#e7e5e4")}`,
+            }}
+          />
+        )}
+      </div>
 
       <form
         onSubmit={(e) => {
@@ -602,12 +622,23 @@ const Shell: React.FC<{
   logoUrl?: string | null;
   brand?: string;
   brandVars?: Record<string, string> | null;
-}> = ({ children, logoUrl, brand, brandVars }) => (
+  heroImageUrl?: string | null;
+}> = ({ children, logoUrl, brand, brandVars, heroImageUrl }) => (
   <div
     className="min-h-screen"
     style={{ background: pick(brandVars, "--color-base-200", "#faf7f1") }}
   >
     <div className="max-w-xl mx-auto px-5 py-10">
+      {heroImageUrl && (
+        <img
+          src={heroImageUrl}
+          alt=""
+          className="w-full h-40 sm:h-52 object-cover rounded-3xl mb-6"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
+      )}
       <div className="mb-6 flex items-center justify-between gap-3">
         {logoUrl ? (
           <img

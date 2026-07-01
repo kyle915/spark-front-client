@@ -5728,7 +5728,7 @@ type ReviewReceiptResponse {
 ReceiptCampaign — a per-client (tenant), always-on consumer rebate
 campaign. Consumers upload a purchase receipt via the public no-login
 page (/c/<slug>); an admin validates it, then pays a fixed reward via
-Venmo. Counts roll up the campaign's submissions by state.
+PayPal. Counts roll up the campaign's submissions by state.
 """
 type ReceiptCampaign implements Node {
   id: ID!
@@ -5751,6 +5751,8 @@ type ReceiptCampaign implements Node {
   totalPaid: String!
   totalCommitted: String!
   budgetRemaining: String
+  heroImage: String
+  productImage: String
 }
 
 input ReceiptCampaignFiltersInput {
@@ -5770,6 +5772,8 @@ input CreateReceiptCampaignInput {
   isActive: Boolean
   slug: String
   budgetCap: Float
+  heroImage: String
+  productImage: String
 }
 
 input UpdateReceiptCampaignInput {
@@ -5784,6 +5788,8 @@ input UpdateReceiptCampaignInput {
   isActive: Boolean
   slug: String
   budgetCap: Float
+  heroImage: String
+  productImage: String
 }
 
 input MarkReceiptPaidInput {

@@ -34,6 +34,8 @@ export const CreateReceiptCampaignMutation = graphql`
         totalPaid
         totalCommitted
         budgetRemaining
+        heroImage
+        productImage
       }
     }
   }

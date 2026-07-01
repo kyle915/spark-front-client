@@ -32,6 +32,8 @@ export const ReceiptCampaignsQuery = graphql`
       totalPaid
       totalCommitted
       budgetRemaining
+      heroImage
+      productImage
     }
   }
 `;

@@ -28,8 +28,45 @@ import { DeleteReceiptCampaignMutation } from "@/api/mutations/DeleteReceiptCamp
 import type { DeleteReceiptCampaignMutation as DeleteReceiptCampaignMutationType } from "@api/mutations/__generated__/DeleteReceiptCampaignMutation.graphql";
 import { RunReceiptOcrMutation } from "@/api/mutations/RunReceiptOcrMutation";
 import type { RunReceiptOcrMutation as RunReceiptOcrMutationType } from "@api/mutations/__generated__/RunReceiptOcrMutation.graphql";
+import { fetchQuery } from "react-relay";
+import environment from "@/api/relay/environment";
+import { UploadUrlQuery } from "@/api/queries/UploadUrlQuery";
+import type { UploadUrlQuery as UploadUrlQueryType } from "@/api/queries/__generated__/UploadUrlQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+
+/**
+ * Upload a single File to GCS and return its blob name, or throw. Mirrors
+ * chatAttachments.ts's uploadChatAttachment — same getUploadUrl → signed
+ * PUT flow, scoped under receipt-campaign-images/ instead of chat_attachments/.
+ */
+async function uploadCampaignImage(
+  file: File,
+  kind: "hero" | "product",
+): Promise<string> {
+  const contentType = file.type || "application/octet-stream";
+  const stamp = Date.now();
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
+  const path = `receipt-campaign-images/${kind}/${stamp}-${safeName}`;
+
+  const data = await fetchQuery<UploadUrlQueryType>(environment, UploadUrlQuery, {
+    filePath: path,
+    contentType,
+  }).toPromise();
+
+  const url = data?.getUploadUrl?.uploadUrl;
+  const blobName = data?.getUploadUrl?.blobName ?? path;
+  if (!url) throw new Error("No signed upload URL returned");
+
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": contentType },
+    body: file,
+  });
+  if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+
+  return blobName;
+}
 
 /**
  * Spark v2 — Consumer rebate campaigns (GoToAisle / Vizer style).
@@ -647,6 +684,42 @@ const CampaignFormModal: React.FC<{
   const [budgetCap, setBudgetCap] = useState(
     existing ? stripMoney(existing.budgetCap) : "",
   );
+  // Blob name once uploaded; undefined = leave unchanged (edit) / none (create).
+  // Preview URL shows the just-picked file immediately, or the campaign's
+  // existing image while nothing new has been picked yet.
+  const [heroImage, setHeroImage] = useState<string | undefined>(undefined);
+  const [heroImagePreview, setHeroImagePreview] = useState(
+    existing?.heroImage ?? "",
+  );
+  const [productImage, setProductImage] = useState<string | undefined>(
+    undefined,
+  );
+  const [productImagePreview, setProductImagePreview] = useState(
+    existing?.productImage ?? "",
+  );
+  const [uploadingHero, setUploadingHero] = useState(false);
+  const [uploadingProduct, setUploadingProduct] = useState(false);
+
+  const onPickImage = async (
+    file: File | null,
+    kind: "hero" | "product",
+  ) => {
+    if (!file) return;
+    const setBusy = kind === "hero" ? setUploadingHero : setUploadingProduct;
+    const setBlob = kind === "hero" ? setHeroImage : setProductImage;
+    const setPreview =
+      kind === "hero" ? setHeroImagePreview : setProductImagePreview;
+    setBusy(true);
+    setPreview(URL.createObjectURL(file));
+    try {
+      const blobName = await uploadCampaignImage(file, kind);
+      setBlob(blobName);
+    } catch (e) {
+      showAlert(`Image upload failed: ${(e as Error).message}`, "error");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const [createCommit, creating] = useMutation<CreateReceiptCampaignMutationType>(
     CreateReceiptCampaignMutation,
@@ -654,7 +727,7 @@ const CampaignFormModal: React.FC<{
   const [updateCommit, updating] = useMutation<UpdateReceiptCampaignMutationType>(
     UpdateReceiptCampaignMutation,
   );
-  const inFlight = creating || updating;
+  const inFlight = creating || updating || uploadingHero || uploadingProduct;
 
   const save = () => {
     if (inFlight) return;
@@ -692,6 +765,8 @@ const CampaignFormModal: React.FC<{
             slug: slug.trim() || null,
             isActive,
             budgetCap: budgetNum ?? null,
+            heroImage: heroImage ?? null,
+            productImage: productImage ?? null,
           },
         },
         onCompleted: (res) => {
@@ -720,6 +795,8 @@ const CampaignFormModal: React.FC<{
             slug: slug.trim() || null,
             isActive,
             budgetCap: budgetNum ?? null,
+            heroImage: heroImage ?? null,
+            productImage: productImage ?? null,
           },
         },
         onCompleted: (res) => {
@@ -837,6 +914,31 @@ const CampaignFormModal: React.FC<{
               style={inputStyle}
             />
           </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Hero image">
+              <ImagePickerField
+                previewUrl={heroImagePreview}
+                uploading={uploadingHero}
+                onPick={(f) => onPickImage(f, "hero")}
+                emptyLabel="Upload banner"
+              />
+              <p className="text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                Wide lifestyle/brand photo shown above the fold.
+              </p>
+            </Field>
+            <Field label="Product image">
+              <ImagePickerField
+                previewUrl={productImagePreview}
+                uploading={uploadingProduct}
+                onPick={(f) => onPickImage(f, "product")}
+                emptyLabel="Upload product shot"
+              />
+              <p className="text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                Smaller decorative product/can photo.
+              </p>
+            </Field>
+          </div>
 
           <Field label="Payout note">
             <input
@@ -1644,6 +1746,50 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({
     <label className="label-mini block mb-1.5">{label}</label>
     {children}
   </div>
+);
+
+// Small file-picker with an inline preview thumbnail. Upload itself happens
+// in the parent's onPick (async, blob-name state lives there) — this
+// component is presentation-only.
+const ImagePickerField: React.FC<{
+  previewUrl: string;
+  uploading: boolean;
+  onPick: (file: File | null) => void;
+  emptyLabel: string;
+}> = ({ previewUrl, uploading, onPick, emptyLabel }) => (
+  <label
+    className="flex items-center gap-3 rounded-xl border border-dashed cursor-pointer p-2"
+    style={{ borderColor: "var(--spark-border)" }}
+  >
+    {previewUrl ? (
+      <img
+        src={previewUrl}
+        alt=""
+        className="h-10 w-16 rounded-lg object-cover flex-shrink-0"
+      />
+    ) : (
+      <div
+        className="h-10 w-16 rounded-lg flex-shrink-0 flex items-center justify-center text-[10px]"
+        style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.35)" }}
+      >
+        none
+      </div>
+    )}
+    <span className="text-xs" style={{ color: "rgba(255,255,255,0.7)" }}>
+      {uploading ? "Uploading…" : previewUrl ? "Replace" : emptyLabel}
+    </span>
+    <input
+      type="file"
+      accept="image/*"
+      className="hidden"
+      disabled={uploading}
+      onChange={(e) => {
+        const file = e.target.files?.[0] ?? null;
+        e.target.value = "";
+        onPick(file);
+      }}
+    />
+  </label>
 );
 
 // Strip a leading "$" for editing the numeric reward in the form.
