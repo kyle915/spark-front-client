@@ -337,7 +337,18 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                 shift first.
                 <button
                   type="button"
-                  onClick={() => navigate(`/recap/create?event=${row.eventUuid}`)}
+                  onClick={() =>
+                    navigate(
+                      // Seed the recap picker's search (`q`) with the event
+                      // name alongside the uuid. The create page pre-selects
+                      // by finding the uuid within the loaded page (~30
+                      // events), so for tenants with many events the target
+                      // fell outside the page and wasn't auto-selected.
+                      // Seeding the name-search guarantees the event is in the
+                      // results so the uuid match lands.
+                      `/recap/create?event=${row.eventUuid}&q=${encodeURIComponent(row.eventName)}`,
+                    )
+                  }
                   className="mono text-[10px] ml-3"
                   style={{
                     letterSpacing: "0.14em",
@@ -412,7 +423,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                         type="button"
                         onClick={() =>
                           navigate(
-                            `/recap/create?event=${row.eventUuid}&ambassador=${ba.ambassadorUuid}`,
+                            `/recap/create?event=${row.eventUuid}&ambassador=${ba.ambassadorUuid}&q=${encodeURIComponent(row.eventName)}`,
                           )
                         }
                         className="px-3 py-1.5 rounded-lg text-xs font-semibold"

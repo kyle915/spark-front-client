@@ -126,7 +126,11 @@ export default function SparkRecapCreate() {
   const [params] = useSearchParams();
   const presetEventUuid = params.get("event");
 
-  const [eventQ, setEventQ] = useState("");
+  // When arriving from a deep link (e.g. Missing Recap → "File now"), the
+  // caller seeds `q` with the event name so the target event is in the
+  // loaded page and the uuid pre-select below can find it — even for
+  // tenants whose event list exceeds the page size.
+  const [eventQ, setEventQ] = useState(params.get("q") ?? "");
   // Defer the value that drives the query so the <input> updates on every
   // keystroke while the (suspending) events refetch runs as a transition.
   // Without this, each keystroke changed the query var → useLazyLoadQuery
