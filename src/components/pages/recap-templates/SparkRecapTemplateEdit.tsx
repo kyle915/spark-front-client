@@ -91,6 +91,15 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
         .find((n) => n && String(n.uuid) === uuid) ?? null,
     [data, uuid],
   );
+  // Event types for the (now editable) type selector — same source the
+  // create form uses.
+  const eventTypes = useMemo(
+    () =>
+      (data.eventTypes?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n)),
+    [data],
+  );
 
   const [localSections, setLocalSections] = useState<
     { id: string; name: string }[]
@@ -129,6 +138,9 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
 
   // ---- form state, seeded once from the loaded template ---------------
   const [name, setName] = useState(template?.name ?? "");
+  const [eventTypeId, setEventTypeId] = useState(
+    String(template?.eventType?.id ?? ""),
+  );
   const [productSamples, setProductSamples] = useState(
     Boolean(template?.productSamples),
   );
@@ -212,6 +224,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
 
   const validate = (): string | null => {
     if (!name.trim()) return "Give the template a name.";
+    if (!eventTypeId) return "Pick an event type.";
     if (fields.length === 0) return "A template needs at least one field.";
     for (const f of fields) {
       if (!f.name.trim()) return "Every field needs a name.";
@@ -236,8 +249,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
         input: {
           id: String(template.id),
           name: name.trim(),
-          // eventType can't change here — preserve the template's current one.
-          eventTypeId: String(template.eventType?.id ?? ""),
+          eventTypeId,
           productSamples,
           salesPerformance,
           // order = row index → the form renders fields top-to-bottom in this
@@ -331,6 +343,32 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
                   : "var(--spark-border)",
             }}
           />
+        </label>
+        <label className="block">
+          <span
+            className="label-mini block mb-1"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            Event type
+          </span>
+          <select
+            value={eventTypeId}
+            onChange={(e) => setEventTypeId(e.target.value)}
+            style={{
+              ...inputStyle,
+              borderColor:
+                submitAttempted && !eventTypeId
+                  ? "var(--spark-orange, #ef5a2a)"
+                  : "var(--spark-border)",
+            }}
+          >
+            <option value="">Select…</option>
+            {eventTypes.map((et) => (
+              <option key={String(et.id)} value={String(et.id)}>
+                {et.name}
+              </option>
+            ))}
+          </select>
         </label>
         <div className="space-y-2">
           <span
