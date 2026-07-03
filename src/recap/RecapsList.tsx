@@ -44,7 +44,7 @@ import {
   // XCircleIcon,
 } from "@heroicons/react/24/outline";
 
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { Funnel, FunnelXIcon } from "lucide-react";
 import { useAlertStore } from "@/store/alertStore";
@@ -103,7 +103,6 @@ const RecapsTableContent = ({
 // targetApproval,
 // isApproving,
 RecapsTableContentProps) => {
-  const navigate = useNavigate();
   const data = usePreloadedQuery<RecapsQueryType>(RecapsQuery, queryReference);
   const connection = data.recaps;
 
@@ -130,20 +129,20 @@ RecapsTableContentProps) => {
         headerLabel: "Actions",
         render: (row) => (
           <div className="flex gap-2">
-            <button
-              type="button"
-              className="btn btn-xs btn-outline"
-              onClick={() => {
+            {/* Real link so right-click → "Open in new tab", ⌘/Ctrl-click,
+                and middle-click work; plain left-click still does SPA nav. */}
+            <Link
+              to={(() => {
                 const params = new URLSearchParams();
                 params.set("fromPage", String(returnPage));
                 if (returnAfter) params.set("fromAfter", returnAfter);
-
-                navigate(`/recap/view/${row.uuid}?${params.toString()}`);
-              }}
+                return `/recap/view/${row.uuid}?${params.toString()}`;
+              })()}
+              className="btn btn-xs btn-outline"
             >
               <EyeIcon className="w-5 h-5" />
               View
-            </button>
+            </Link>
 
             <button
               type="button"

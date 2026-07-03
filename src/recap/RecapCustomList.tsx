@@ -29,7 +29,7 @@ import { createCustomRecapColumns } from "@/utils/columns";
 import { ArrowPathIcon, CameraIcon } from "@heroicons/react/24/solid";
 import { EyeIcon } from "@heroicons/react/24/outline";
 
-import { useNavigate, useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { FilterIcon, FunnelXIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -72,7 +72,6 @@ const CustomRecapsTableContent = ({
   returnPage,
   returnAfter,
 }: CustomRecapsTableContentProps) => {
-  const navigate = useNavigate();
   const data = usePreloadedQuery<CustomRecapsQueryType>(
     GetCustomRecapsQuery,
     queryReference,
@@ -102,20 +101,20 @@ const CustomRecapsTableContent = ({
         headerLabel: "Actions",
         render: (row) => (
           <div className="flex gap-2">
-            <button
-              type="button"
-              className="btn btn-xs btn-outline"
-              onClick={() => {
+            {/* Real link so right-click → "Open in new tab", ⌘/Ctrl-click,
+                and middle-click work; plain left-click still does SPA nav. */}
+            <Link
+              to={(() => {
                 const params = new URLSearchParams();
                 params.set("fromPage", String(returnPage));
                 if (returnAfter) params.set("fromAfter", returnAfter);
-
-                navigate(`/recap/view-custom/${row.uuid}?${params.toString()}`);
-              }}
+                return `/recap/view-custom/${row.uuid}?${params.toString()}`;
+              })()}
+              className="btn btn-xs btn-outline"
             >
               <EyeIcon className="w-5 h-5" />
               View
-            </button>
+            </Link>
           </div>
         ),
       }}

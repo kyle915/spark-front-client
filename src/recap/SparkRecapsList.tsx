@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import { thumbUrl } from "@/utils/thumb";
@@ -157,7 +157,11 @@ const formatDate = (raw: string | null | undefined) => {
 
 const RecapCard: React.FC<{
   recap: Recap;
-  onOpen: () => void;
+  // Destination URL for this recap. Rendered as a real <a href> (see the
+  // stretched-link overlay below) so right-click → "Open in new tab",
+  // ⌘/Ctrl-click, and middle-click all work; a plain left-click still does
+  // in-app SPA navigation.
+  href: string;
   onOpenRequest: ((uuid: string) => void) | null;
   // Multi-select for the campaign-report builder. When `selected` is
   // non-null the card shows a checkbox in the top-left and toggling
@@ -165,16 +169,8 @@ const RecapCard: React.FC<{
   // parent owns the selected-set state; the card is dumb.
   selected: boolean;
   onToggleSelect: () => void;
-}> = ({ recap, onOpen, onOpenRequest, selected, onToggleSelect }) => (
+}> = ({ recap, href, onOpenRequest, selected, onToggleSelect }) => (
   <div
-    onClick={(e) => {
-      // Clicking the card's chrome (anywhere outside the explicit
-      // checkbox) opens the recap. Clicking the checkbox itself
-      // bubbles to its own handler and stops propagation before this
-      // fires — see the input below.
-      onOpen();
-      void e;
-    }}
     className="spark-card hov overflow-hidden cursor-pointer relative"
     style={
       selected
@@ -185,6 +181,16 @@ const RecapCard: React.FC<{
         : undefined
     }
   >
+    {/* Stretched-link overlay — a real <a href> covering the whole card.
+        Left-click navigates in-app (react-router intercepts); right-click /
+        ⌘-click / middle-click get the browser's native "open in new tab".
+        The checkbox and request button sit at a higher z-index (below) so
+        they still receive their own clicks instead of the overlay. */}
+    <Link
+      to={href}
+      aria-label={`Open recap ${recap.name}`}
+      className="absolute inset-0 z-[1]"
+    />
     {/* Checkbox sits above the hero so it's reachable without
         depending on row-level hover; tapping it doesn't open the
         recap. Lime when on so it pairs with the brand. */}
@@ -337,7 +343,7 @@ const RecapCard: React.FC<{
             e.stopPropagation();
             onOpenRequest(recap.requestUuid!);
           }}
-          className="mono inline-flex items-center gap-1 mt-2 px-2 py-1 rounded-full text-[10px]"
+          className="relative z-10 mono inline-flex items-center gap-1 mt-2 px-2 py-1 rounded-full text-[10px]"
           style={{
             letterSpacing: "0.14em",
             background: "rgba(197,245,70,0.10)",
@@ -836,12 +842,10 @@ const RecapsListInner: React.FC<{
           recap={r}
           selected={selectedIds.has(r.id)}
           onToggleSelect={() => onToggleSelected(r.id)}
-          onOpen={() =>
-            navigate(
-              r.kind === "custom"
-                ? `/recap/view-custom/${r.uuid}`
-                : `/recap/view/${r.uuid}`,
-            )
+          href={
+            r.kind === "custom"
+              ? `/recap/view-custom/${r.uuid}`
+              : `/recap/view/${r.uuid}`
           }
           onOpenRequest={(reqUuid) =>
             navigate(`/request/view/${reqUuid}`, {
