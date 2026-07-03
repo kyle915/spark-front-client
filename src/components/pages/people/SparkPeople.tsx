@@ -18,6 +18,7 @@ import { SendTestClientReportMutation } from "@/api/mutations/SendTestClientRepo
 import type { SendTestClientReportMutation as SendTestClientReportMutationType } from "@api/mutations/__generated__/SendTestClientReportMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import BaActivationPanel from "./BaActivationPanel";
 
 /**
  * Spark v2 — People (user management).
@@ -1013,6 +1014,11 @@ const Inner: React.FC<{
           + Invite ambassador
         </button>
       </div>
+
+      {/* Booked-BA activation status + resend-welcome. Renders nothing when
+          the workspace has no booked BAs (or for non-admins — the server
+          answers them with an empty list). */}
+      <BaActivationPanel />
 
       {/* Remove confirmation — in Spark chrome, not browser-native confirm().
           Spells out exactly what removing them does (and doesn't do) so kyle
