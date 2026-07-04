@@ -36,6 +36,14 @@ type ErrorRow = {
   firstSeen: string;
   lastSeen: string;
 };
+type CronRow = {
+  name: string;
+  lastRunAt: string | null;
+  lastOk: boolean;
+  lastStatus: number;
+  runCount: number;
+  hoursSince: number | null;
+};
 type Health = {
   serverTime: string;
   gitSha: string;
@@ -45,6 +53,7 @@ type Health = {
   errors7d: number;
   distinctSignatures: number;
   recentErrors: ErrorRow[];
+  cronRuns: CronRow[];
 };
 
 const QUERY = `query SystemHealth {
@@ -52,6 +61,7 @@ const QUERY = `query SystemHealth {
     serverTime gitSha revision databaseOk
     errors24h errors7d distinctSignatures
     recentErrors { signature message location count firstSeen lastSeen }
+    cronRuns { name lastRunAt lastOk lastStatus runCount hoursSince }
   }
 }`;
 
@@ -63,6 +73,13 @@ const fmt = (iso: string): string => {
     : d.toLocaleString(undefined, {
         month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
       });
+};
+
+const fmtAgo = (hours: number | null): string => {
+  if (hours == null) return "never run";
+  if (hours < 1) return "just now";
+  if (hours < 24) return `${Math.round(hours)}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
 };
 
 const Stat: React.FC<{ label: string; value: string; tone?: string }> = ({
@@ -168,6 +185,72 @@ const Inner: React.FC = () => {
             <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
               <span className="mono">{health.gitSha}</span> · {health.revision} · as of {fmt(health.serverTime)}
             </p>
+          </div>
+
+          <div>
+            <div className="flex items-baseline gap-3 mb-3">
+              <h2 className="display text-xl font-bold" style={{ letterSpacing: "-0.02em" }}>
+                Automations
+              </h2>
+              <span className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+                Every internal cron stamps a heartbeat when it fires — this is
+                the thing that was invisible when the scheduler silently died.
+              </span>
+            </div>
+            <div className="spark-card overflow-hidden" style={{ borderRadius: 20 }}>
+              {health.cronRuns.length === 0 ? (
+                <div className="p-6 text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+                  No cron has fired yet. Heartbeats appear here the first time
+                  each scheduled job runs.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" style={{ minWidth: 640 }}>
+                    <thead style={{ background: "var(--spark-surface-2)", borderBottom: "1px solid var(--spark-border)" }}>
+                      <tr className="text-left mono" style={{ fontSize: 10, letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}>
+                        <th className="px-4 py-3">AUTOMATION</th>
+                        <th className="px-4 py-3">STATUS</th>
+                        <th className="px-4 py-3">LAST RUN</th>
+                        <th className="px-4 py-3">RUNS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...health.cronRuns]
+                        .sort((a, b) => (b.hoursSince ?? 1e9) - (a.hoursSince ?? 1e9))
+                        .map((c) => (
+                          <tr key={c.name} style={{ borderBottom: "1px solid var(--spark-border)" }}>
+                            <td className="px-4 py-3 mono text-xs">{c.name}</td>
+                            <td className="px-4 py-3">
+                              <span
+                                className="inline-flex items-center gap-1.5 text-xs font-semibold"
+                                style={{ color: c.lastOk ? "var(--spark-lime)" : "var(--spark-orange)" }}
+                              >
+                                <span
+                                  style={{
+                                    width: 8, height: 8, borderRadius: "50%",
+                                    background: c.lastOk ? "var(--spark-lime)" : "var(--spark-orange)",
+                                    display: "inline-block",
+                                  }}
+                                />
+                                {c.lastOk ? "OK" : `HTTP ${c.lastStatus}`}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              {fmtAgo(c.hoursSince)}
+                              <span className="text-[10px] ml-2" style={{ color: "rgba(255,255,255,0.4)" }}>
+                                {c.lastRunAt ? fmt(c.lastRunAt) : ""}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="chip">{c.runCount}</span>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
