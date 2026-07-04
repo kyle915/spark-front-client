@@ -323,6 +323,9 @@ const SparkRecentSubmissions = lazyDefault(
 const SparkPeople = lazyDefault(
   () => import("@/components/pages/people/SparkPeople"),
 );
+const SparkSystemHealth = lazyDefault(
+  () => import("@/components/pages/system-health/SparkSystemHealth"),
+);
 const SparkPendingAmbassadors = lazyDefault(
   () => import("@/components/pages/people/SparkPendingAmbassadors"),
 );
@@ -722,6 +725,15 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkReceipts />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      path: "/system-health",
+      component: (
+        <AdminOnly>
+          <SparkSystemHealth />
         </AdminOnly>
       ),
       isPublic: false,

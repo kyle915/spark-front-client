@@ -1,3 +1,5 @@
+import { useState } from "react";
+import type { DateRange } from "react-day-picker";
 import Layout from "@/layout/Layout";
 import { MetricCard } from "../../cards/metric-card";
 import FiltersPanel from "../../filters/FiltersPanel";
@@ -32,7 +34,40 @@ import type { RequestRow, NamedEntity } from "@/types/columnsTypes";
 export default function DashboardIndex() {
   const { metrics: gqlMetrics, events, requests } = useDashboardData();
 
-  const eventsAnalytics = useEventsAnalytics(events);
+  // Date-range filter from the FiltersPanel. Filters the already-loaded
+  // events/requests client-side (all analytics derive from these arrays);
+  // undefined = no filter, show everything loaded.
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const fromMs = dateRange?.from
+    ? new Date(
+        dateRange.from.getFullYear(),
+        dateRange.from.getMonth(),
+        dateRange.from.getDate(),
+      ).getTime()
+    : null;
+  const toMs = dateRange?.to
+    ? new Date(
+        dateRange.to.getFullYear(),
+        dateRange.to.getMonth(),
+        dateRange.to.getDate(),
+        23, 59, 59, 999,
+      ).getTime()
+    : null;
+  const rangeActive = fromMs !== null || toMs !== null;
+  const inRange = (dateStr?: string | null): boolean => {
+    if (!rangeActive) return true;
+    if (!dateStr) return false;
+    const t = new Date(dateStr).getTime();
+    if (Number.isNaN(t)) return false;
+    if (fromMs !== null && t < fromMs) return false;
+    if (toMs !== null && t > toMs) return false;
+    return true;
+  };
+
+  const filteredEvents = (events ?? []).filter((e) =>
+    inRange((e as { date?: string | null }).date),
+  );
+  const eventsAnalytics = useEventsAnalytics(filteredEvents);
   const mapEntity = (
     entity?: { id?: string; uuid?: string | null; name?: string | null } | null
   ): NamedEntity | null => {
@@ -62,7 +97,19 @@ export default function DashboardIndex() {
       address: req.address ?? null,
     };
   });
-  const requestsAnalytics = useRequestsAnalytics(requestRows);
+  const filteredRequestRows = requestRows.filter((r) => inRange(r.date));
+  const requestsAnalytics = useRequestsAnalytics(filteredRequestRows);
+
+  // When a range is active the top-line cards reflect the filtered set;
+  // otherwise the server's all-time totals.
+  const displayMetrics = rangeActive
+    ? {
+        totalEvents: filteredEvents.length,
+        totalRequests: filteredRequestRows.length,
+      }
+    : gqlMetrics;
+  const fmtDay = (d?: Date) =>
+    d ? d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "…";
 
   return (
     <Layout>
@@ -76,12 +123,38 @@ export default function DashboardIndex() {
 
         {/* FILTERS */}
         <FiltersPanel
-          onApplyFilters={(filters) => console.log("Applied filters:", filters)}
+          onApplyFilters={(filters) => {
+            // FiltersPanel emits yyyy-MM-dd strings; parse as LOCAL dates
+            // (new Date("yyyy-MM-dd") is UTC midnight → off-by-one in the US).
+            const parse = (s?: string | null): Date | undefined => {
+              if (!s) return undefined;
+              const [y, m, d] = s.split("-").map(Number);
+              return new Date(y, m - 1, d);
+            };
+            const from = parse(filters.startDate);
+            const to = parse(filters.endDate);
+            setDateRange(from || to ? { from, to } : undefined);
+          }}
         />
+
+        {rangeActive && (
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <span className="text-sm text-gray-600 dark:text-gray-300">
+              Showing {fmtDay(dateRange?.from)} – {fmtDay(dateRange?.to)} ·{" "}
+              {filteredEvents.length} events, {filteredRequestRows.length} requests
+            </span>
+            <button
+              onClick={() => setDateRange(undefined)}
+              className="text-sm font-semibold text-blue-600 dark:text-blue-400 underline"
+            >
+              Clear dates
+            </button>
+          </div>
+        )}
 
         {/* METRICS */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10">
-          {Object.entries(gqlMetrics).map(([key, value]) => (
+          {Object.entries(displayMetrics).map(([key, value]) => (
             <MetricCard
               key={key}
               metricKey={key}

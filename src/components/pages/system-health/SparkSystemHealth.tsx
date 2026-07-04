@@ -1,0 +1,236 @@
+import { useCallback, useEffect, useState } from "react";
+import Layout from "@/layout/Layout";
+
+/**
+ * System Health — Ignite-admin observability. Surfaces the backend error
+ * monitor (digest.BackendErrorEvent, which also captures silent email/push
+ * delivery failures) + the running revision, so problems are visible in the
+ * app instead of only in the throttled alert email.
+ *
+ * Backed by the Spark schema `systemHealth` query (admin-gated server-side;
+ * non-admins get null). Raw postGql — same pattern as NotificationBell /
+ * BaActivationPanel, no Relay codegen.
+ */
+
+async function postGql<T>(query: string): Promise<T> {
+  const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+    },
+    body: JSON.stringify({ query }),
+  });
+  const json = await res.json();
+  if (json.errors?.length) {
+    throw new Error(json.errors.map((e: { message: string }) => e.message).join("; "));
+  }
+  return json.data as T;
+}
+
+type ErrorRow = {
+  signature: string;
+  message: string;
+  location: string;
+  count: number;
+  firstSeen: string;
+  lastSeen: string;
+};
+type Health = {
+  serverTime: string;
+  gitSha: string;
+  revision: string;
+  databaseOk: boolean;
+  errors24h: number;
+  errors7d: number;
+  distinctSignatures: number;
+  recentErrors: ErrorRow[];
+};
+
+const QUERY = `query SystemHealth {
+  systemHealth {
+    serverTime gitSha revision databaseOk
+    errors24h errors7d distinctSignatures
+    recentErrors { signature message location count firstSeen lastSeen }
+  }
+}`;
+
+const fmt = (iso: string): string => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleString(undefined, {
+        month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+      });
+};
+
+const Stat: React.FC<{ label: string; value: string; tone?: string }> = ({
+  label, value, tone,
+}) => (
+  <div className="spark-card p-4">
+    <p
+      className="mono text-[10px]"
+      style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+    >
+      {label}
+    </p>
+    <p
+      className="display text-3xl font-bold mt-1"
+      style={{ color: tone ?? "var(--spark-text)", letterSpacing: "-0.03em" }}
+    >
+      {value}
+    </p>
+  </div>
+);
+
+const Inner: React.FC = () => {
+  const [health, setHealth] = useState<Health | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await postGql<{ systemHealth: Health | null }>(QUERY);
+      setHealth(data.systemHealth);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const errTone = (n: number) =>
+    n > 0 ? "var(--spark-orange)" : "var(--spark-lime)";
+
+  return (
+    <div className="space-y-6 max-w-7xl">
+      <div className="flex items-end justify-between flex-wrap gap-3">
+        <div>
+          <p
+            className="mono text-[10px]"
+            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+          >
+            SYSTEM
+          </p>
+          <h1 className="display text-4xl font-bold mt-2" style={{ letterSpacing: "-0.04em" }}>
+            System health.
+          </h1>
+          <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+            Backend errors, delivery failures, and the running build. Problems
+            show here the moment they happen — no waiting on an alert email.
+          </p>
+        </div>
+        <button
+          onClick={() => void load()}
+          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+          style={{ background: "var(--spark-surface-2)", border: "1px solid var(--spark-border)" }}
+        >
+          ↻ Refresh
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="spark-card p-6 text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+          Loading system health…
+        </div>
+      ) : error ? (
+        <div className="spark-card p-6 text-sm" style={{ color: "var(--spark-gold)" }}>
+          Couldn't load system health: {error}
+        </div>
+      ) : !health ? (
+        <div className="spark-card p-6 text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+          Not available for this account.
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Stat label="ERRORS · 24H" value={String(health.errors24h)} tone={errTone(health.errors24h)} />
+            <Stat label="ERRORS · 7D" value={String(health.errors7d)} tone={errTone(health.errors7d)} />
+            <Stat label="DISTINCT SIGNATURES" value={String(health.distinctSignatures)} />
+            <Stat
+              label="DATABASE"
+              value={health.databaseOk ? "OK" : "DOWN"}
+              tone={health.databaseOk ? "var(--spark-lime)" : "var(--spark-orange)"}
+            />
+          </div>
+
+          <div className="spark-card p-4">
+            <p className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}>
+              RUNNING BUILD
+            </p>
+            <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+              <span className="mono">{health.gitSha}</span> · {health.revision} · as of {fmt(health.serverTime)}
+            </p>
+          </div>
+
+          <div>
+            <div className="flex items-baseline gap-3 mb-3">
+              <h2 className="display text-xl font-bold" style={{ letterSpacing: "-0.02em" }}>
+                Recent errors
+              </h2>
+              <span className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+                Most recent 25 signatures · throttled to one alert email per signature per hour.
+              </span>
+            </div>
+            <div className="spark-card overflow-hidden" style={{ borderRadius: 20 }}>
+              {health.recentErrors.length === 0 ? (
+                <div className="p-6 text-sm" style={{ color: "var(--spark-lime)" }}>
+                  ✅ No backend errors recorded. All clear.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm" style={{ minWidth: 800 }}>
+                    <thead style={{ background: "var(--spark-surface-2)", borderBottom: "1px solid var(--spark-border)" }}>
+                      <tr className="text-left mono" style={{ fontSize: 10, letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}>
+                        <th className="px-4 py-3">SIGNATURE</th>
+                        <th className="px-4 py-3">COUNT</th>
+                        <th className="px-4 py-3">LAST SEEN</th>
+                        <th className="px-4 py-3">MESSAGE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {health.recentErrors.map((r) => (
+                        <tr key={r.signature} style={{ borderBottom: "1px solid var(--spark-border)" }}>
+                          <td className="px-4 py-3">
+                            <div className="mono text-xs">{r.signature}</div>
+                            <div className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+                              {r.location}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="chip chip-gold">×{r.count}</span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">{fmt(r.lastSeen)}</td>
+                          <td className="px-4 py-3">
+                            <div className="text-xs" style={{ color: "rgba(255,255,255,0.7)", maxWidth: 420 }}>
+                              {r.message}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+const SparkSystemHealth: React.FC = () => (
+  <Layout>
+    <Inner />
+  </Layout>
+);
+
+export default SparkSystemHealth;

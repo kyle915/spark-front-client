@@ -8,6 +8,7 @@ import useSidebarCounts from "@/hooks/useSidebarCounts";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import useChatUnreadCount from "@/hooks/useChatUnreadCount";
 import {
+  Activity,
   LayoutDashboard,
   ListChecks,
   Calendar,
@@ -246,6 +247,7 @@ const SECTIONS: NavSection[] = [
     title: "System",
     adminOnly: true,
     items: [
+      { label: "System Health", Icon: Activity, to: "/system-health" },
       { label: "Settings", Icon: Settings, to: "/settings" },
       { label: "Calendar Sync", Icon: CalendarClock, to: "/settings/calendar" },
       { label: "Billing", Icon: DollarSign, to: "/billing" },
