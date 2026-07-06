@@ -404,7 +404,16 @@ const UsersList = () => {
 
   const onSubmitEdit = async (values: EditUserFormValues) => {
     if (!editingUser?.id) return;
-    const roleToSend: RoleValue = "CLIENT";
+    // Preserve the user's EXISTING role — a name/email/photo edit must never
+    // change it. The old code hardcoded "CLIENT", which the backend applies
+    // (tenants/mutations.py update_user), silently demoting any edited SPARK
+    // admin or ambassador to a client (and rebinding their tenant). Derive the
+    // current role from the row; only client users need a tenantId (backend
+    // requires it when the resolved role is CLIENT), and the edit form already
+    // prefills tenantId with the active tenant for clients.
+    const roleToSend: RoleValue | null = normalizeRoleName(
+      editingUser.role?.name,
+    );
     const tenantId =
       roleToSend === "CLIENT" ? values.tenantId || undefined : undefined;
 
@@ -431,7 +440,8 @@ const UsersList = () => {
           firstName: values.firstName,
           lastName: values.lastName,
           email: values.email,
-          role: roleToSend,
+          // Omit role when unknown so the backend preserves it; never force one.
+          ...(roleToSend ? { role: roleToSend } : {}),
           tenantId,
           image: imageBlob,
         },
@@ -461,8 +471,11 @@ const UsersList = () => {
   const onSubmitPassword = async (values: ChangePasswordFormValues) => {
     if (!passwordUser?.id) return;
 
-    // for loading submission state
-    return new Promise<void>(() => {
+    // Return a Promise that SETTLES so react-hook-form clears isSubmitting
+    // (which disables both modal buttons). The old executor never called
+    // resolve, so on a failed mutation the modal latched disabled forever —
+    // the user couldn't retry or cancel. Resolve in both handlers.
+    return new Promise<void>((resolve) => {
       commitChangePassword({
         variables: {
           input: {
@@ -479,9 +492,11 @@ const UsersList = () => {
           } else {
             showAlert(payload?.message ?? "Error updating password", "error");
           }
+          resolve();
         },
         onError: (error) => {
           showAlert(error.message, "error");
+          resolve();
         },
       });
     });
