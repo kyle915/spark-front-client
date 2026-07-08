@@ -722,14 +722,13 @@ const RequestsLinks = {
     },
     {
       // Consolidated samples/hour + SKU + locations + upcoming + call-outs
-      // rollup for guerrilla field-sampling programs (Feel Free). Ignite-
-      // internal — same posture as /pnl.
+      // rollup for guerrilla field-sampling programs (Feel Free). Client-
+      // visible (mirrors /account-map, /today, /upcoming, /recent): the
+      // backend resolves the tenant server-side for non-admins, so a
+      // client can only ever see their own tenant's data — no AdminOnly
+      // gate needed.
       path: "/field-sampling-report",
-      component: (
-        <AdminOnly>
-          <SparkFieldSamplingReport />
-        </AdminOnly>
-      ),
+      component: <SparkFieldSamplingReport />,
       isPublic: false,
     },
     {

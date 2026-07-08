@@ -197,12 +197,15 @@ const SECTIONS: NavSection[] = [
       // Ignite-internal cost lens — labor + spend per event.
       { label: "P&L", Icon: DollarSign, to: "/pnl", adminOnly: true },
       // Consolidated samples/hour + SKU + locations + upcoming + call-outs
-      // rollup for guerrilla field-sampling programs (Feel Free).
+      // rollup for guerrilla field-sampling programs (Feel Free). Client-
+      // visible: tenantFieldSamplingReport/generateFieldSamplingCalloutSummary
+      // both resolve the tenant server-side for non-admins (same
+      // resolve_target_tenant_id every other tenant chart in this file
+      // uses), so a client can only ever see their own tenant's data.
       {
         label: "Field Sampling Report",
         Icon: Route,
         to: "/field-sampling-report",
-        adminOnly: true,
       },
     ],
   },
