@@ -62,10 +62,10 @@ export function Step4Details({
         <p className="font-semibold text-lg">Notes</p>
         <span
           className={`text-xs ${
-            notesValue.length > 280 ? "text-error" : "text-base-content/60"
+            notesValue.length > 480 ? "text-error" : "text-base-content/60"
           }`}
         >
-          {notesValue.length}/300
+          {notesValue.length}/500
         </span>
       </div>
 
@@ -77,8 +77,8 @@ export function Step4Details({
         placeholder="Enter any additional details or instructions..."
         rules={{
           maxLength: {
-            value: 300,
-            message: "Notes cannot exceed 300 characters",
+            value: 500,
+            message: "Notes cannot exceed 500 characters",
           },
         }}
       />
