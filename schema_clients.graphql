@@ -4495,6 +4495,7 @@ type Query {
   tenantKpiComparison(tenantId: ID!, period: String! = "month"): TenantKpiComparison
   tenantGoals(tenantId: ID!, year: Int): TenantGoals!
   tenantMarketPerformance(tenantId: ID!, year: Int): [MarketPerformance!]!
+  tenantMetroBreakdown(tenantId: ID!, startDate: String!, endDate: String!, eventTypeId: ID = null): TenantMetroBreakdown!
   tenantBaLeaderboard(tenantId: ID!, year: Int): [BaLeaderboardEntry!]!
   eventStaffing(eventId: ID!, limit: Int): EventStaffing
   staffingSuggestions(eventId: ID!, limit: Int = 20): [StaffingSuggestion!]!
@@ -6947,6 +6948,9 @@ type TenantKpiComparison { period: String!  currentLabel: String!  previousLabel
 type TenantGoalItem { metric: String!  label: String!  target: Int!  current: Int!  pacePct: Float! }
 type TenantGoals { year: Int!  items: [TenantGoalItem!]! }
 type MarketPerformance { state: String!  eventCount: Int!  recapCount: Int!  consumersReached: Int!  samplesDistributed: Int!  productsSold: Int!  totalEngagements: Int! }
+type MetroWeekCell { metro: String!  eventCount: Int!  recapCount: Int!  consumersReached: Int!  samplesDistributed: Int!  productsSold: Int!  totalEngagements: Int! }
+type MetroWeek { isoYear: Int!  isoWeek: Int!  weekStart: String!  cells: [MetroWeekCell!]! }
+type TenantMetroBreakdown { metros: [String!]!  weeks: [MetroWeek!]! }
 type BaLeaderboardEntry { baId: ID!  name: String!  shiftsWorked: Int!  recapsFiled: Int!  avgRating: Float  ratingsCount: Int!  reliabilityPct: Int }
 
 type InvoiceLineItem { id: ID!  description: String!  quantity: String!  unitPrice: String!  amount: String!  eventId: ID  sortOrder: Int! }

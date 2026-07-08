@@ -1,4 +1,11 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import { RecapEventOptionsQuery } from "@/api/queries/RecapEventOptionsQuery";
@@ -85,6 +92,20 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
 
   const [search, setSearch] = useState("");
+  // useLazyLoadQuery SUSPENDS the component on every variable change — with
+  // only one Suspense boundary around the whole modal, wiring `search`
+  // straight into the query meant every keystroke blanked the entire modal
+  // to the "Loading…" fallback (and dropped input focus with it). Debounce
+  // what actually drives the query, then useDeferredValue it: React keeps
+  // showing the last good result list instead of re-suspending while the
+  // debounced value catches up.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+  const deferredSearch = useDeferredValue(debouncedSearch);
+  const isSearchStale = deferredSearch !== search;
   const [eventId, setEventId] = useState<string | null>(null);
   const [eventLabel, setEventLabel] = useState<string>("");
   const [templateId, setTemplateId] = useState<string | null>(null);
@@ -124,7 +145,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
     RecapEventOptionsQuery,
     {
       first: 25,
-      q: search || null,
+      q: deferredSearch || null,
       tenantId: tenantId || null,
     },
     { fetchPolicy: "store-or-network" },
@@ -533,10 +554,11 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                 {!eventId && (
                   <>
                   <div
-                    className="mt-2 rounded-lg overflow-y-auto"
+                    className="mt-2 rounded-lg overflow-y-auto transition-opacity"
                     style={{
                       maxHeight: 220,
                       border: "1px solid rgba(255,255,255,0.08)",
+                      opacity: isSearchStale ? 0.5 : 1,
                     }}
                   >
                     {events.length === 0 ? (

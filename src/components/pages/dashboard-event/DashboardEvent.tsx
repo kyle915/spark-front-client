@@ -17,6 +17,7 @@ import TenantInsightsPanel from "@/components/ai/TenantInsightsPanel";
 import TenantSentimentCard from "@/components/ai/TenantSentimentCard";
 import TenantGeoHeatmap from "@/components/ai/TenantGeoHeatmap";
 import TenantBaLeaderboard from "@/components/ai/TenantBaLeaderboard";
+import MetroBreakdownCard from "./MetroBreakdownCard";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useNavigate } from "react-router";
 
@@ -980,6 +981,26 @@ export default function DashboardIndex() {
             }
           >
             <TenantBaLeaderboard tenantId={tenantId} />
+          </Suspense>
+        )}
+
+        {/* Week-by-metro-market breakdown — only renders for tenants whose
+            events follow the "<Market> — <Corridor> · <date>" naming
+            convention (Feel Free's Guerrilla Field Sampling program); every
+            other tenant's card resolves to null. Own date-range control,
+            independent of the YTD range pill above. */}
+        {tenantId && (
+          <Suspense
+            fallback={
+              <div
+                className="spark-card p-6 text-center text-sm"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
+                Loading metro breakdown…
+              </div>
+            }
+          >
+            <MetroBreakdownCard tenantId={tenantId} />
           </Suspense>
         )}
 
