@@ -4028,6 +4028,7 @@ type Mutation {
   exportExpenseReceipts(input: ExportExpenseReceiptsInput!): ExportExpenseReceiptsResponse!
   sendTestClientReport(input: SendTestClientReportInput!): SendTestClientReportResponse!
   setTenantGoals(tenantId: ID!, year: Int!, targetConsumersReached: Int, targetSamplesDistributed: Int, targetProductsSold: Int, targetTotalEngagements: Int): TenantGoals!
+  generateFieldSamplingCalloutSummary(tenantId: ID!, startDate: String!, endDate: String!, eventTypeId: ID = null, market: String = null): FieldSamplingCalloutSummary!
 
   "### Checks if a token is not expired and correct.\n\n*Note that this is not for refresh tokens.*\n"
   verifyToken(input: VerifyTokenInput!): VerifyTokenType!
@@ -4496,6 +4497,7 @@ type Query {
   tenantGoals(tenantId: ID!, year: Int): TenantGoals!
   tenantMarketPerformance(tenantId: ID!, year: Int): [MarketPerformance!]!
   tenantMetroBreakdown(tenantId: ID!, startDate: String!, endDate: String!, eventTypeId: ID = null): TenantMetroBreakdown!
+  tenantFieldSamplingReport(tenantId: ID!, startDate: String!, endDate: String!, eventTypeId: ID = null, market: String = null): FieldSamplingReport!
   tenantBaLeaderboard(tenantId: ID!, year: Int): [BaLeaderboardEntry!]!
   eventStaffing(eventId: ID!, limit: Int): EventStaffing
   staffingSuggestions(eventId: ID!, limit: Int = 20): [StaffingSuggestion!]!
@@ -6950,6 +6952,15 @@ type TenantGoals { year: Int!  items: [TenantGoalItem!]! }
 type MarketPerformance { state: String!  eventCount: Int!  recapCount: Int!  consumersReached: Int!  samplesDistributed: Int!  productsSold: Int!  totalEngagements: Int! }
 type MetroWeekCell { metro: String!  eventCount: Int!  recapCount: Int!  consumersReached: Int!  samplesDistributed: Int!  productsSold: Int!  totalEngagements: Int! }
 type MetroWeek { isoYear: Int!  isoWeek: Int!  weekStart: String!  cells: [MetroWeekCell!]! }
+type SkuTotal { product: String!  total: Int! }
+type SkuBreakdown { mode: String!  items: [SkuTotal!]! }
+type SamplesPerHour { samples: Int!  hours: Float!  perHour: Float  estimated: Boolean! }
+type LocationVisit { market: String  corridor: String  date: String  address: String }
+type UpcomingShift { market: String  corridor: String  name: String  startTime: String  address: String }
+type UpcomingShifts { total: Int!  items: [UpcomingShift!]! }
+type FieldCallout { market: String  corridor: String  date: String  text: String! }
+type FieldSamplingReport { samplesPerHour: SamplesPerHour!  ytdSkuBreakdown: SkuBreakdown!  weekSkuBreakdown: SkuBreakdown!  locationsHit: [LocationVisit!]!  upcoming: UpcomingShifts!  callouts: [FieldCallout!]! }
+type FieldSamplingCalloutSummary { summary: String }
 type TenantMetroBreakdown { metros: [String!]!  weeks: [MetroWeek!]! }
 type BaLeaderboardEntry { baId: ID!  name: String!  shiftsWorked: Int!  recapsFiled: Int!  avgRating: Float  ratingsCount: Int!  reliabilityPct: Int }
 

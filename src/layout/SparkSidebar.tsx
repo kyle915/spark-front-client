@@ -44,6 +44,7 @@ import {
   Truck,
   Tags,
   ClipboardList,
+  Route,
 } from "lucide-react";
 
 /**
@@ -195,6 +196,14 @@ const SECTIONS: NavSection[] = [
       { label: "Reports", Icon: BarChart3, to: "/reports" },
       // Ignite-internal cost lens — labor + spend per event.
       { label: "P&L", Icon: DollarSign, to: "/pnl", adminOnly: true },
+      // Consolidated samples/hour + SKU + locations + upcoming + call-outs
+      // rollup for guerrilla field-sampling programs (Feel Free).
+      {
+        label: "Field Sampling Report",
+        Icon: Route,
+        to: "/field-sampling-report",
+        adminOnly: true,
+      },
     ],
   },
   {

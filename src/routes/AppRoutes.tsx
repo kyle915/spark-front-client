@@ -373,6 +373,9 @@ const SparkBilling = lazyDefault(
   () => import("@/components/pages/billing/SparkBilling"),
 );
 const SparkPnl = lazyDefault(() => import("@/components/pages/pnl/SparkPnl"));
+const SparkFieldSamplingReport = lazyDefault(
+  () => import("@/components/pages/field-sampling-report/SparkFieldSamplingReport"),
+);
 const SparkReceipts = lazyDefault(
   () => import("@/components/pages/receipts/SparkReceipts"),
 );
@@ -713,6 +716,18 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkPnl />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      // Consolidated samples/hour + SKU + locations + upcoming + call-outs
+      // rollup for guerrilla field-sampling programs (Feel Free). Ignite-
+      // internal — same posture as /pnl.
+      path: "/field-sampling-report",
+      component: (
+        <AdminOnly>
+          <SparkFieldSamplingReport />
         </AdminOnly>
       ),
       isPublic: false,
