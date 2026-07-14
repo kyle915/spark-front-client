@@ -71,17 +71,6 @@ const wallTime = (iso: string | null | undefined): string => {
   return mm === "00" ? `${h12} ${ampm}` : `${h12}:${mm} ${ampm}`;
 };
 
-type Stat = {
-  pdfLabel: string;
-  pdfValue: string;
-  // Relay codegen returns nullable fields as `string | null | undefined`,
-  // not `string | null` — match that here so the .map() below compiles
-  // without coercing every field with `?? null`.
-  fieldName: string | null | undefined;
-  score: number | null | undefined;
-  skippedReason: string | null | undefined;
-};
-
 type Props = {
   onClose: () => void;
   onImported?: (recapUuid: string) => void;
@@ -117,15 +106,6 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
   // Sent as `name`; left blank falls back to the backend's event-based
   // default. The admin can still rename later from the recap view.
   const [title, setTitle] = useState("");
-  // Result state lives in the modal so the admin can review match
-  // quality before closing. The recap is already saved by this point.
-  const [result, setResult] = useState<{
-    recapUuid: string;
-    matched: number;
-    unmatched: number;
-    stats: Stat[];
-  } | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Connecteam import writes a CustomRecap tying an event to a template —
@@ -444,22 +424,22 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
           showAlert("Imported but recap UUID missing.", "warning");
           return;
         }
-        setResult({
-          recapUuid: String(uuid),
-          matched: r.matchedCount,
-          unmatched: r.unmatchedCount,
-          stats: (r.stats ?? []).map((s) => ({
-            pdfLabel: s.pdfLabel,
-            pdfValue: s.pdfValue,
-            fieldName: s.fieldName,
-            score: s.score,
-            skippedReason: s.skippedReason,
-          })),
-        });
+        const imagesAttached = r.imagesAttached ?? 0;
         showAlert(
-          `Imported · ${r.matchedCount} field(s) mapped, ${r.unmatchedCount} unmatched.`,
+          `Imported · ${r.matchedCount} mapped, ${r.unmatchedCount} unmatched` +
+            (imagesAttached
+              ? `, ${imagesAttached} photo(s)`
+              : " · no photos found in PDF") +
+            ".",
           "success",
         );
+        // Open the freshly-drafted recap so the admin can review, edit, and
+        // approve it right away instead of landing back on the recap list.
+        // When the PDF carried no photos, flag it so the recap view drops
+        // them straight into the photo-upload workflow.
+        const query = imagesAttached === 0 ? "?needPhotos=1" : "";
+        navigate(`/recap/view-custom/${uuid}${query}`);
+        // Refresh the list behind us so it's current if they navigate back.
         onImported?.(String(uuid));
       },
       onError: (err) => showAlert(err.message, "error"),
@@ -491,15 +471,13 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
         >
           <h2 className="text-lg font-semibold">Import Connecteam PDF</h2>
           <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
-            We'll parse the PDF and draft a recap. Upload the receipt photo
-            on the next page.
+            We'll parse the PDF, draft the recap, and open it so you can
+            review, add any missing photos, and approve.
           </p>
         </div>
 
         <div className="p-4 space-y-4 overflow-y-auto">
-          {!result && (
-            <>
-              {/* Event picker. Once an event is selected the input
+          {/* Event picker. Once an event is selected the input
                   reads back the picked name and the suggestions list
                   collapses (re-opens the moment the user starts to
                   edit the search again). Nevena's report: clicking
@@ -982,96 +960,6 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                   }}
                 />
               </div>
-            </>
-          )}
-
-          {/* Result panel */}
-          {result && (
-            <div className="space-y-3">
-              <div
-                className="rounded-xl px-3 py-2 text-sm"
-                style={{
-                  background: "rgba(197,245,70,0.08)",
-                  border: "1px solid rgba(197,245,70,0.3)",
-                }}
-              >
-                Imported · <b>{result.matched}</b> matched ·{" "}
-                <b>{result.unmatched}</b> unmatched
-              </div>
-              <div
-                className="rounded-lg overflow-y-auto text-xs"
-                style={{
-                  maxHeight: 280,
-                  border: "1px solid rgba(255,255,255,0.08)",
-                }}
-              >
-                <table className="w-full">
-                  <thead>
-                    <tr
-                      style={{
-                        background: "rgba(255,255,255,0.04)",
-                        color: "rgba(255,255,255,0.6)",
-                      }}
-                    >
-                      <th className="text-left px-2 py-1 font-normal">
-                        PDF label
-                      </th>
-                      <th className="text-left px-2 py-1 font-normal">
-                        Mapped to
-                      </th>
-                      <th className="text-left px-2 py-1 font-normal">
-                        Value
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.stats.map((s, i) => (
-                      <tr
-                        key={i}
-                        style={{
-                          borderTop: "1px solid rgba(255,255,255,0.05)",
-                          background: !s.fieldName
-                            ? "rgba(255,100,80,0.06)"
-                            : undefined,
-                        }}
-                      >
-                        <td className="px-2 py-1">{s.pdfLabel}</td>
-                        <td className="px-2 py-1">
-                          {s.fieldName ? (
-                            <>
-                              {s.fieldName}
-                              {s.score != null && (
-                                <span
-                                  className="ml-1"
-                                  style={{ color: "rgba(255,255,255,0.4)" }}
-                                >
-                                  · fuzzy {s.score.toFixed(2)}
-                                </span>
-                              )}
-                            </>
-                          ) : (
-                            <span style={{ color: "rgba(255,100,80,0.85)" }}>
-                              unmatched
-                            </span>
-                          )}
-                        </td>
-                        <td
-                          className="px-2 py-1 truncate"
-                          style={{ maxWidth: 200 }}
-                        >
-                          {s.pdfValue || (
-                            <span style={{ color: "rgba(255,255,255,0.35)" }}>
-                              (blank)
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer actions */}
@@ -1079,74 +967,34 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
           className="p-4 border-t flex items-center justify-end gap-2"
           style={{ borderColor: "var(--spark-border, #1f2418)" }}
         >
-          {result ? (
-            <>
-              <button
-                type="button"
-                className="px-4 py-2 rounded-lg text-sm"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  color: "#fff",
-                }}
-                onClick={() => {
-                  // Reset to do another import.
-                  setResult(null);
-                  setFileBase64(null);
-                  setFileName(null);
-                }}
-              >
-                Import another
-              </button>
-              <button
-                type="button"
-                className="px-4 py-2 rounded-lg text-sm font-semibold"
-                style={{
-                  background: "var(--spark-lime, #c5f546)",
-                  color: "#0a0d09",
-                }}
-                onClick={() => {
-                  onClose();
-                  navigate(`/recap/view-custom/${result.recapUuid}`);
-                }}
-              >
-                View recap →
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                className="px-4 py-2 rounded-lg text-sm"
-                style={{
-                  background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.18)",
-                  color: "rgba(255,255,255,0.8)",
-                }}
-                onClick={onClose}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
-                disabled={
-                  isImporting || !eventId || !templateId || !fileBase64
-                }
-                style={{
-                  background: "var(--spark-lime, #c5f546)",
-                  color: "#0a0d09",
-                }}
-                onClick={onSubmit}
-              >
-                {isImporting
-                  ? "Importing…"
-                  : eventLabel
-                    ? `Import → ${eventLabel.slice(0, 28)}${eventLabel.length > 28 ? "…" : ""}`
-                    : "Import PDF"}
-              </button>
-            </>
-          )}
+          <button
+            type="button"
+            className="px-4 py-2 rounded-lg text-sm"
+            style={{
+              background: "transparent",
+              border: "1px solid rgba(255,255,255,0.18)",
+              color: "rgba(255,255,255,0.8)",
+            }}
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
+            disabled={isImporting || !eventId || !templateId || !fileBase64}
+            style={{
+              background: "var(--spark-lime, #c5f546)",
+              color: "#0a0d09",
+            }}
+            onClick={onSubmit}
+          >
+            {isImporting
+              ? "Importing…"
+              : eventLabel
+                ? `Import → ${eventLabel.slice(0, 28)}${eventLabel.length > 28 ? "…" : ""}`
+                : "Import PDF"}
+          </button>
         </div>
       </div>
     </div>

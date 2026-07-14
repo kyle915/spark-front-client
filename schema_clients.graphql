@@ -1548,6 +1548,7 @@ type ImportConnecteamRecapPdfResponse {
   customRecap: CustomRecap
   matchedCount: Int!
   unmatchedCount: Int!
+  imagesAttached: Int!
   stats: [ImportConnecteamRecapPdfStat!]!
 }
 

@@ -25,7 +25,14 @@ import { buildCustomFieldValuesPayload } from "./customRecapSave";
 import { useAuthStore } from "@/store/authStore";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router";
-import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  Suspense,
+} from "react";
 import { formatDate, parseLocaleNumber } from "@/utils";
 import {
   ArrowLeftIcon,
@@ -284,6 +291,26 @@ const RecapCustomView = () => {
   // clumping in Uncategorized), "2" = Receipts, "" = Uncategorized. Resolved
   // server-side to the tenant's own categories by add_custom_recap_file.
   const [uploadCategory, setUploadCategory] = useState("1");
+
+  // A Connecteam import routes here with ?needPhotos=1 when the PDF carried
+  // no usable photos — so the admin lands directly in the photo-upload
+  // workflow instead of discovering the gap later. We surface a prompt in
+  // the Evidences section and scroll it into view. Dismissible per-view.
+  const needPhotos = searchParams.get("needPhotos") === "1";
+  const [photoPromptDismissed, setPhotoPromptDismissed] = useState(false);
+  const showPhotoPrompt = needPhotos && !photoPromptDismissed;
+  const evidenceRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!needPhotos) return;
+    // Defer past first paint so the Evidences section is mounted.
+    const t = setTimeout(() => {
+      evidenceRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [needPhotos]);
 
   const data = useLazyLoadQuery<CustomRecapsQueryDetailsQueryType>(
     GetCustomRecapQuery,
@@ -1876,7 +1903,35 @@ const RecapCustomView = () => {
           </div>
 
           {/* Evidence & Attachments Section */}
-          <div className="mt-8 border-t border-base-200 pt-8">
+          <div
+            ref={evidenceRef}
+            className="mt-8 border-t border-base-200 pt-8 scroll-mt-24"
+          >
+            {showPhotoPrompt && (
+              <div className="mb-6 rounded-2xl border border-warning/40 bg-warning/10 p-4 flex items-start gap-3">
+                <div className="p-2 bg-warning/20 rounded-lg shrink-0">
+                  <ImageIcon className="h-5 w-5 text-warning" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm">
+                    No photos came through from the PDF
+                  </p>
+                  <p className="text-xs text-base-content/70 mt-0.5">
+                    The imported Connecteam PDF didn't include any usable event
+                    photos. Upload them here before approving — use the{" "}
+                    <b>Upload</b> button on the right (pick the right section
+                    first: Sampling photos or Receipts).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPhotoPromptDismissed(true)}
+                  className="btn btn-ghost btn-xs shrink-0"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
             <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
