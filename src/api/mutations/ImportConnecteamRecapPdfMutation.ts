@@ -5,11 +5,11 @@ import { graphql } from "react-relay";
  *
  * Backend parses Label:: Value pairs, fuzzy-matches them against the
  * CustomRecapTemplate's CustomField rows, and creates a CustomRecap +
- * CustomFieldValue rows for every matched non-empty value. The stats
- * array tells us which labels mapped where (and which fell on the
- * floor) so the UI can surface anything the admin needs to enter by
- * hand. Receipt photos are uploaded separately via the existing
- * CustomRecapFile flow.
+ * CustomFieldValue rows for every matched non-empty value. It also
+ * extracts embedded PDF photos and reports how many it attached
+ * (`imagesAttached`) — the UI opens the drafted recap for review/edit/
+ * approve, and routes the admin into the manual photo-upload workflow
+ * when `imagesAttached` is 0.
  */
 export const ImportConnecteamRecapPdfMutation = graphql`
   mutation ImportConnecteamRecapPdfMutation(
@@ -20,14 +20,7 @@ export const ImportConnecteamRecapPdfMutation = graphql`
       message
       matchedCount
       unmatchedCount
-      stats {
-        pdfLabel
-        pdfValue
-        fieldName
-        fieldId
-        score
-        skippedReason
-      }
+      imagesAttached
       customRecap {
         id
         uuid
