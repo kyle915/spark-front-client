@@ -40,6 +40,13 @@ export const GetCustomRecapsQuery = graphql`
             id
             name
             date
+            # Needed for the state filter: custom-recap tenants (Feel Free)
+            # file address-only events with no State FK, so we parse the
+            # 2-letter code out of the address client-side (toStateCode).
+            address
+            state {
+              code
+            }
           }
           ambassador {
             id

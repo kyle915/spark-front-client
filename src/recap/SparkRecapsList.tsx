@@ -38,6 +38,53 @@ const CAMPAIGN_REPORT_MAX = 50;
  * Wireframe: spark-demo/index.html lines 1183-1224 + realRecapCard.
  */
 
+// ── US state resolution for the state filter ─────────────────────────
+// The dropdown is built from each recap's stateCode. Custom-recap tenants
+// that run guerrilla street sampling (Feel Free) file events with a full
+// ADDRESS but no State FK, so the server-resolved `eventState` (which walks
+// FKs only) is null and legacy `event.state.code` is empty — that's why
+// FL/TX never appeared. This mirrors the backend's
+// events.routing.extract_state_code: accept a state NAME, or pull the
+// trailing 2-letter code out of an address string.
+const US_STATES: Record<string, string> = {
+  alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA",
+  colorado: "CO", connecticut: "CT", delaware: "DE",
+  "district of columbia": "DC", florida: "FL", georgia: "GA", hawaii: "HI",
+  idaho: "ID", illinois: "IL", indiana: "IN", iowa: "IA", kansas: "KS",
+  kentucky: "KY", louisiana: "LA", maine: "ME", maryland: "MD",
+  massachusetts: "MA", michigan: "MI", minnesota: "MN", mississippi: "MS",
+  missouri: "MO", montana: "MT", nebraska: "NE", nevada: "NV",
+  "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM",
+  "new york": "NY", "north carolina": "NC", "north dakota": "ND", ohio: "OH",
+  oklahoma: "OK", oregon: "OR", pennsylvania: "PA", "rhode island": "RI",
+  "south carolina": "SC", "south dakota": "SD", tennessee: "TN", texas: "TX",
+  utah: "UT", vermont: "VT", virginia: "VA", washington: "WA",
+  "west virginia": "WV", wisconsin: "WI", wyoming: "WY",
+};
+const US_CODES = new Set(Object.values(US_STATES));
+// Longest first so "West Virginia" wins over "Virginia".
+const US_STATE_NAMES = Object.keys(US_STATES).sort((a, b) => b.length - a.length);
+
+function toStateCode(input: string | null | undefined): string | null {
+  if (!input) return null;
+  const raw = input.trim();
+  if (!raw) return null;
+  // 1. Already a bare 2-letter code (legacy event.state.code, or "TX").
+  if (raw.length === 2 && US_CODES.has(raw.toUpperCase())) return raw.toUpperCase();
+  // 2. Trailing 2-letter code before an optional ZIP (address form), after
+  //    dropping a "USA"/"United States" suffix. Most authoritative, so it
+  //    beats a state-named city ("Indiana, PA" → PA).
+  const norm = raw.replace(/\b(?:usa|united states)\b\.?\s*$/i, "").trim();
+  const m = norm.match(/(?:^|[,\s])([A-Za-z]{2})(?:[,\s]+\d{5}(?:-\d{4})?)?[,\s]*$/);
+  if (m && US_CODES.has(m[1].toUpperCase())) return m[1].toUpperCase();
+  // 3. Full state name anywhere in the string.
+  const low = norm.toLowerCase();
+  for (const name of US_STATE_NAMES) {
+    if (new RegExp(`\\b${name}\\b`).test(low)) return US_STATES[name];
+  }
+  return null;
+}
+
 type Recap = {
   // Discriminator. "legacy" rows come from the Recap model + the
   // `recaps` GraphQL resolver. "custom" rows come from the CustomRecap
@@ -561,6 +608,10 @@ const RecapsListInner: React.FC<{
             n.event?.state?.code ??
             n.event?.retailer?.location?.state?.code ??
             n.state?.code ??
+            // Fall back to parsing the event address ("…, TX 78205") when no
+            // State FK is set — otherwise address-only events never surface
+            // in the state filter.
+            toStateCode(n.event?.address) ??
             null;
           // Server-side resolvers do the work: heroFile is the first
           // browser-renderable image (jpg/png/webp/gif), recapFilesCount
@@ -654,7 +705,14 @@ const RecapsListInner: React.FC<{
               n.name ?? n.event?.name ?? n.customRecapTemplate?.name ?? "Custom recap",
             date: n.event?.date ?? n.createdAt ?? "",
             retailerName: n.retailer?.name ?? "—",
-            stateCode: null,
+            // Event State FK first, then the recap's own state, then parse
+            // the event address ("San Antonio, TX 78205") — so address-only
+            // custom recaps (Feel Free) surface FL/TX in the state filter
+            // instead of contributing nothing (was hardcoded null).
+            stateCode:
+              n.event?.state?.code ??
+              toStateCode(n.state?.name) ??
+              toStateCode(n.event?.address),
             approved: Boolean(n.approved),
             heroImage: n.heroImageUrl ?? null,
             fileCount: n.customRecapFilesCount ?? 0,
