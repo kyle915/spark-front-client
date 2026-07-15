@@ -1241,6 +1241,7 @@ input InviteAmbassadorToShiftInput {
   clientMutationId: ID = null
   ambassadorId: ID!
   eventId: ID!
+  approved: Boolean = false
 }
 
 type InviteAmbassadorToShiftResponse {
@@ -6979,7 +6980,7 @@ type EventStaffing { eventId: ID!  assigned: Int!  confirmed: Int!  needed: Int 
 type StaffingSuggestion { baId: ID!  name: String!  score: Int!  avgRating: Float  gigsForBrand: Int!  isFavorited: Boolean!  isAvailable: Boolean  distanceMi: Float  reliabilityScore: Int  reliabilityLabel: String  reasons: [String!]! }
 type RecapQualityFlag { code: String!  label: String!  severity: String! }
 type RecapQualityResult { score: Int!  flags: [RecapQualityFlag!]! }
-input BulkInviteToShiftInput { clientMutationId: ID  eventId: ID!  ambassadorIds: [ID!]! }
+input BulkInviteToShiftInput { clientMutationId: ID  eventId: ID!  ambassadorIds: [ID!]!  approved: Boolean = false }
 type BulkInviteResponse { success: Boolean!  message: String!  clientMutationId: ID  invited: Int!  skipped: Int! }
 
 input CreateSupportTicketInput { clientMutationId: ID = null  subject: String!  body: String!  category: String = null }

@@ -83,7 +83,7 @@ type Suggestion =
  * Clicking a row invites that BA immediately via the SAME single-BA
  * invite path the rest of the modal uses (matched by `baId` →
  * ambassadorId). Rows already on the shift (already-invited or just
- * invited this session) are disabled + labelled "✓ INVITED" — the
+ * invited this session) are disabled + labelled "✓ ON SHIFT" — the
  * `done` set is the union the parent already tracks, so a BA invited
  * from the list below also flips here and vice-versa.
  *
@@ -96,7 +96,8 @@ const SuggestionsInner: React.FC<{
   done: Set<string>;
   pendingIds: Set<string>;
   onInvite: (baId: string, name: string) => void;
-}> = ({ eventId, done, pendingIds, onInvite }) => {
+  verb: string;
+}> = ({ eventId, done, pendingIds, onInvite, verb }) => {
   const data = useLazyLoadQuery<StaffingSuggestionsQueryType>(
     StaffingSuggestionsQuery,
     { eventId, limit: 20 },
@@ -131,7 +132,7 @@ const SuggestionsInner: React.FC<{
             color: "rgba(255,255,255,0.35)",
           }}
         >
-          TAP TO INVITE
+          TAP TO {verb.toUpperCase()}
         </span>
       </div>
       {suggestions.map((s, i) => {
@@ -255,7 +256,7 @@ const SuggestionsInner: React.FC<{
                     color: "var(--spark-lime)",
                   }}
                 >
-                  ✓ INVITED
+                  ✓ ON SHIFT
                 </span>
               ) : busy ? (
                 <span
@@ -304,6 +305,7 @@ const SuggestionsSection: React.FC<{
   done: Set<string>;
   pendingIds: Set<string>;
   onInvite: (baId: string, name: string) => void;
+  verb: string;
 }> = (props) => (
   <Suspense
     fallback={
@@ -334,6 +336,16 @@ const Inner: React.FC<{
   const { tenantId } = useAuthStore();
   const showAlert = useAlertStore((s) => s.showAlert);
   const [search, setSearch] = useState("");
+
+  // Assign vs Invite. Assign (directAssign=true) books the BA on the
+  // shift IMMEDIATELY (approved AmbassadorEvent → shows on their phone
+  // + "You're booked" push). Invite (false) sends an offer they must
+  // accept first. Default to Assign — the reliable path Kyle asked for:
+  // no more shifts sitting un-accepted / invisible to the BA.
+  const [directAssign, setDirectAssign] = useState(true);
+  const verb = directAssign ? "Assign" : "Invite";
+  const verbing = directAssign ? "Assigning" : "Inviting";
+  const verbed = directAssign ? "Assigned" : "Invited";
 
   // Cross-reference: BAs already booked on the same date (any
   // AmbassadorEvent, approved or pending) → drives the "⚠ already on
@@ -507,7 +519,7 @@ const Inner: React.FC<{
   // Shared by both the batch "Invite N" footer flow AND the
   // "Suggested for this gig" rows so there's a single code path that
   // touches the InviteAmbassadorToShift mutation. Marks the row done
-  // in optimisticDone (so it flips to "✓ INVITED" in every list that
+  // in optimisticDone (so it flips to "✓ ON SHIFT" in every list that
   // matches the id) and threads the new AmbassadorEvent uuid up to
   // onInvited. `silent` suppresses the per-row error toast so the
   // batch flow can roll its failures up into one summary toast.
@@ -523,7 +535,7 @@ const Inner: React.FC<{
     });
     return new Promise<boolean>((resolve) => {
       commitInvite({
-        variables: { input: { ambassadorId: baId, eventId } },
+        variables: { input: { ambassadorId: baId, eventId, approved: directAssign } },
         onCompleted: (resp) => {
           const r = resp.inviteAmbassadorToShift;
           let ok = false;
@@ -589,13 +601,13 @@ const Inner: React.FC<{
     if (okCount > 0) {
       showAlert(
         failCount > 0
-          ? `Invited ${okCount} BA${okCount === 1 ? "" : "s"} (${failCount} failed).`
-          : `Invited ${okCount} BA${okCount === 1 ? "" : "s"}.`,
+          ? `${verbed} ${okCount} BA${okCount === 1 ? "" : "s"} (${failCount} failed).`
+          : `${verbed} ${okCount} BA${okCount === 1 ? "" : "s"}.`,
         failCount > 0 ? "warning" : "success",
       );
     } else if (failCount > 0) {
       showAlert(
-        `Couldn't invite ${failCount} BA${failCount === 1 ? "" : "s"}.`,
+        `Couldn't ${verb.toLowerCase()} ${failCount} BA${failCount === 1 ? "" : "s"}.`,
         "error",
       );
     }
@@ -607,7 +619,7 @@ const Inner: React.FC<{
   // BAs already on the shift — the union the parent passed plus
   // anything invited this session (from either the suggestions strip
   // or the list below). Shared with the suggestions section so its
-  // rows flip to "✓ INVITED" in lockstep with the list.
+  // rows flip to "✓ ON SHIFT" in lockstep with the list.
   const doneIds = useMemo(
     () => new Set<string>([...alreadyInvited, ...optimisticDone]),
     [alreadyInvited, optimisticDone],
@@ -620,7 +632,7 @@ const Inner: React.FC<{
   const inviteFromSuggestion = (baId: string, name: string) => {
     if (doneIds.has(baId) || pendingIds.has(baId)) return;
     void inviteOne(baId, name).then((ok) => {
-      if (ok) showAlert(`Invited ${name}.`, "success");
+      if (ok) showAlert(`${verbed} ${name}.`, "success");
     });
   };
 
@@ -649,9 +661,54 @@ const Inner: React.FC<{
               color: "rgba(255,255,255,0.45)",
             }}
           >
-            INVITE A BRAND AMBASSADOR
+            ADD A BRAND AMBASSADOR
           </p>
           <h2 className="display text-xl font-bold">Who do you want on this shift?</h2>
+
+          {/* Assign now (book instantly) vs Send invite (offer to accept).
+              Default is Assign — the reliable path so shifts don't sit
+              un-accepted and invisible to the BA. */}
+          <div
+            className="flex items-center gap-1 mt-3 p-1 rounded-xl"
+            style={{
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            {([
+              { key: true, label: "Assign now", hint: "Books them instantly" },
+              { key: false, label: "Send invite", hint: "They accept first" },
+            ] as const).map((opt) => {
+              const active = directAssign === opt.key;
+              return (
+                <button
+                  key={String(opt.key)}
+                  type="button"
+                  onClick={() => setDirectAssign(opt.key)}
+                  className="flex-1 rounded-lg text-center"
+                  style={{
+                    padding: "0.5rem 0.4rem",
+                    background: active ? "var(--spark-lime)" : "transparent",
+                    color: active ? "#0a0d09" : "var(--spark-text)",
+                  }}
+                >
+                  <span className="block text-sm font-semibold">{opt.label}</span>
+                  <span
+                    className="block mono text-[9px] mt-0.5"
+                    style={{
+                      letterSpacing: "0.1em",
+                      color: active
+                        ? "rgba(10,13,9,0.7)"
+                        : "rgba(255,255,255,0.4)",
+                    }}
+                  >
+                    {opt.hint.toUpperCase()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -678,6 +735,7 @@ const Inner: React.FC<{
             done={doneIds}
             pendingIds={pendingIds}
             onInvite={inviteFromSuggestion}
+            verb={verb}
           />
           {filtered.length === 0 && (
             <p
@@ -810,7 +868,7 @@ const Inner: React.FC<{
                       paddingRight: 4,
                     }}
                   >
-                    ✓ INVITED
+                    ✓ ON SHIFT
                   </span>
                 )}
                 {busy && !row.alreadyInvited && (
@@ -877,10 +935,10 @@ const Inner: React.FC<{
               }}
             >
               {isInviting
-                ? `Inviting ${pendingIds.size}…`
+                ? `${verbing} ${pendingIds.size}…`
                 : selectedIds.size === 1
-                  ? "Invite 1 BA"
-                  : `Invite ${selectedIds.size} BAs`}
+                  ? `${verb} 1 BA`
+                  : `${verb} ${selectedIds.size} BAs`}
             </button>
           </div>
         </div>
