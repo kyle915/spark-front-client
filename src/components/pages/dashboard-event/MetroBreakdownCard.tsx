@@ -81,7 +81,11 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
   const initial = weeksAgoRange(8);
   const [startDate, setStartDate] = useState(initial.start);
   const [endDate, setEndDate] = useState(initial.end);
-  const [metric, setMetric] = useState<MetricKey>("consumersReached");
+  // undefined = "no explicit choice yet, use the smart default (first metric
+  // with data)"; set = the user picked this metric and it sticks.
+  const [metricOverride, setMetricOverride] = useState<MetricKey | undefined>(
+    undefined,
+  );
   // undefined = "no user override yet, use the auto-detected Field Sampling
   // type"; null = "user explicitly chose All event types."
   const [eventTypeOverride, setEventTypeOverride] = useState<
@@ -124,6 +128,31 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
   const metros = breakdown?.metros ?? [];
   const weeks = breakdown?.weeks ?? [];
 
+  // Smart default: keep the historical "Consumers reached" default when it
+  // actually has data, but fall through to the first KPI that does — so a
+  // samples-only program (Feel Free tracks structured samples, not per-metro
+  // consumers) opens on "Samples distributed" instead of an all-zero table.
+  // A user's explicit pick (metricOverride) always wins.
+  const smartDefaultMetric = useMemo<MetricKey>(() => {
+    const sumOf = (key: MetricKey) =>
+      weeks.reduce(
+        (wsum, week) =>
+          wsum + week.cells.reduce((csum, c) => csum + (c[key] ?? 0), 0),
+        0,
+      );
+    const preference: MetricKey[] = [
+      "consumersReached",
+      "samplesDistributed",
+      "productsSold",
+      "totalEngagements",
+    ];
+    for (const key of preference) {
+      if (sumOf(key) > 0) return key;
+    }
+    return "consumersReached";
+  }, [weeks]);
+  const metric = metricOverride ?? smartDefaultMetric;
+
   // No metros in-window -> this tenant's events don't follow the naming
   // convention this feature depends on. Render nothing rather than an
   // empty/confusing table.
@@ -149,7 +178,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
         </div>
         <select
           value={metric}
-          onChange={(e) => setMetric(e.target.value as MetricKey)}
+          onChange={(e) => setMetricOverride(e.target.value as MetricKey)}
           className="text-xs"
           style={{
             padding: "6px 8px",
