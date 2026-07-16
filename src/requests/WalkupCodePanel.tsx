@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { useMutation } from "react-relay/hooks";
 import {
   GenerateWalkupCodeMutation,
@@ -72,9 +73,6 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
     }
   };
 
-  // A self-contained QR of the code (no external lib) via a public QR image
-  // service would violate CSP; instead we show the big code + let the BA type
-  // it. (QR image generation is a Phase-4 nicety.)
   return (
     <div
       className="spark-card p-5"
@@ -97,13 +95,19 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
       {code ? (
         <>
           <div
-            className="flex items-center justify-center rounded-xl mb-2"
+            className="flex items-center justify-center gap-4 rounded-xl mb-2 flex-wrap"
             style={{
               background: "var(--spark-bg)",
               border: "1px solid var(--spark-border)",
               padding: "1rem",
             }}
           >
+            {/* Scannable QR (white quiet-zone so phone cameras lock on) —
+                encodes the plain code the BA types under "Clock in with a
+                code." */}
+            <div style={{ background: "#fff", padding: 8, borderRadius: 8 }}>
+              <QRCodeSVG value={code} size={104} level="M" />
+            </div>
             <span
               className="mono font-bold"
               style={{ fontSize: 34, letterSpacing: 8, color: "var(--spark-text)" }}
