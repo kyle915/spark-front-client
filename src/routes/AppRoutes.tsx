@@ -379,6 +379,9 @@ const SparkFieldSamplingReport = lazyDefault(
 const SparkReceipts = lazyDefault(
   () => import("@/components/pages/receipts/SparkReceipts"),
 );
+const SparkWalkups = lazyDefault(
+  () => import("@/components/pages/walkups/SparkWalkups"),
+);
 // Authenticated campaign report view (per-request). Linked from the Master
 // Tracker "Report" row action. Public twin is /report/:token below.
 const CampaignReportAdminView = lazyDefault(
@@ -739,6 +742,17 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkReceipts />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      // Walk-up self-serve clock-ins queue. Admin-only — ops confirm/reject
+      // clock-ins created from an event code (no prior assignment).
+      path: "/walkups",
+      component: (
+        <AdminOnly>
+          <SparkWalkups />
         </AdminOnly>
       ),
       isPublic: false,

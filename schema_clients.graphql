@@ -4103,6 +4103,10 @@ type Mutation {
   acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
   inviteAmbassadorToShift(input: InviteAmbassadorToShiftInput!): InviteAmbassadorToShiftResponse!
+  generateWalkupCode(input: GenerateWalkupCodeInput!): WalkupCodeResponse!
+  revokeWalkupCode(input: GenerateWalkupCodeInput!): WalkupActionResponse!
+  confirmWalkupShift(input: ConfirmWalkupShiftInput!): WalkupActionResponse!
+  rejectWalkupShift(input: RejectWalkupShiftInput!): WalkupActionResponse!
   addFavoriteAmbassador(input: AddFavoriteAmbassadorInput!): FavoriteAmbassadorResponse!
   removeFavoriteAmbassador(input: RemoveFavoriteAmbassadorInput!): FavoriteAmbassadorResponse!
   bulkInviteAmbassadorsToShift(input: BulkInviteToShiftInput!): BulkInviteResponse!
@@ -4466,7 +4470,55 @@ type WingspanPayment {
   memo: String
 }
 
+type WalkupShiftType {
+  ambassadorEventUuid: String!
+  eventUuid: String!
+  eventName: String!
+  brandName: String!
+  ambassadorName: String!
+  ambassadorEmail: String
+  ambassadorPhone: String
+  isNewAccount: Boolean!
+  isApproved: Boolean!
+  clockInAt: String
+  clockOutAt: String
+  distanceFromVenueMi: Float
+  hasRecap: Boolean!
+  createdAt: String
+}
+
+type WalkupCodeResponse {
+  success: Boolean!
+  message: String!
+  code: String
+  expiresAt: String
+  clientMutationId: ID
+}
+
+type WalkupActionResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+}
+
+input GenerateWalkupCodeInput {
+  eventUuid: ID!
+  clientMutationId: ID = null
+}
+
+input ConfirmWalkupShiftInput {
+  ambassadorEventUuid: ID!
+  reassignEventUuid: ID = null
+  clientMutationId: ID = null
+}
+
+input RejectWalkupShiftInput {
+  ambassadorEventUuid: ID!
+  clientMutationId: ID = null
+}
+
 type Query {
+  walkupShifts(status: String = null, tenantId: ID = null): [WalkupShiftType!]!
   briefingTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [BriefingTemplate!]!
   gigTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [GigTemplate!]!
   jobBriefing(jobId: ID!): JobBriefingPayload

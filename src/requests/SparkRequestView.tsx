@@ -14,6 +14,7 @@ import InternalNotesPanel from "./InternalNotesPanel";
 import ShiftReplayPanel from "./ShiftReplayPanel";
 import EventAttendanceTable from "./EventAttendanceTable";
 import EventMileagePanel from "./EventMileagePanel";
+import WalkupCodePanel from "./WalkupCodePanel";
 import InviteBAModal from "./InviteBAModal";
 import EventRosterPanel from "./EventRosterPanel";
 import SmartStaffingPanel from "./SmartStaffingPanel";
@@ -914,6 +915,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             <ShiftReplayPanel eventUuid={String(ev.uuid)} />
             <EventAttendanceTable eventUuid={String(ev.uuid)} />
             {role.isAdmin && <EventMileagePanel eventUuid={String(ev.uuid)} />}
+            {role.isAdmin && <WalkupCodePanel eventUuid={String(ev.uuid)} />}
           </div>
         ))}
 

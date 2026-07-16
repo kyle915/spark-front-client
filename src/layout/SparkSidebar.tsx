@@ -45,6 +45,7 @@ import {
   Tags,
   ClipboardList,
   Route,
+  QrCode,
 } from "lucide-react";
 
 /**
@@ -140,6 +141,12 @@ const SECTIONS: NavSection[] = [
         label: "Receipts",
         Icon: Receipt,
         to: "/receipts",
+        adminOnly: true,
+      },
+      {
+        label: "Walk-ups",
+        Icon: QrCode,
+        to: "/walkups",
         adminOnly: true,
       },
       {
