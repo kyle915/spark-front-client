@@ -1,7 +1,11 @@
 import { Suspense, useMemo, useState } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { StaffingBoardQuery } from "@/api/queries/StaffingBoardQuery";
 import type { StaffingBoardQuery as StaffingBoardQueryType } from "@api/queries/__generated__/StaffingBoardQuery.graphql";
+import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
+import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
+import { BulkAssignAmbassadorMutation } from "@/api/mutations/BulkAssignAmbassadorMutation";
+import type { BulkAssignAmbassadorMutation as BulkAssignAmbassadorMutationType } from "@api/mutations/__generated__/BulkAssignAmbassadorMutation.graphql";
 import InviteBAModal from "@/requests/InviteBAModal";
 
 /**
@@ -10,6 +14,9 @@ import InviteBAModal from "@/requests/InviteBAModal";
  * columns = the 7 days in view. An empty/under-staffed cell opens the existing
  * assign flow (InviteBAModal, which defaults to "Assign now"). Unstaffed shifts
  * are counted + highlighted so gaps can't hide.
+ *
+ * Bulk mode: flip "Bulk assign" on, tap every slot you want to fill, then pick
+ * ONE BA to book onto all of them at once (bulkAssignAmbassadorToEvents).
  */
 type Shift = StaffingBoardQueryType["response"]["staffingBoard"][number];
 
@@ -53,6 +60,143 @@ type AssignTarget = {
   alreadyIds: string[];
 };
 
+/**
+ * A compact "pick one BA" modal for bulk assignment — lists the tenant's
+ * active BAs (searchable) and hands the chosen ambassador global-id back.
+ * Loads its own query lazily so the board isn't slowed by it until opened.
+ */
+const BulkBaPicker: React.FC<{
+  count: number;
+  busy: boolean;
+  onPick: (ambassadorId: string, name: string) => void;
+  onClose: () => void;
+}> = ({ count, busy, onPick, onClose }) => {
+  const [q, setQ] = useState("");
+  const data = useLazyLoadQuery<AmbassadorsListQueryType>(
+    AmbassadorsListQuery,
+    { first: 200 },
+    { fetchPolicy: "store-or-network" },
+  );
+
+  const people = useMemo(() => {
+    const rows = (data?.ambassadors?.edges ?? [])
+      .map((e) => e?.node)
+      .filter(Boolean)
+      .map((n) => {
+        const first = n?.user?.firstName ?? "";
+        const last = n?.user?.lastName ?? "";
+        const name = `${first} ${last}`.trim() || n?.user?.email || "BA";
+        return { id: n!.id as string, name, isActive: !!n?.isActive };
+      })
+      .filter((p) => p.isActive);
+    const needle = q.trim().toLowerCase();
+    const filtered = needle
+      ? rows.filter((p) => p.name.toLowerCase().includes(needle))
+      : rows;
+    return filtered.sort((a, b) => a.name.localeCompare(b.name));
+  }, [data, q]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.6)" }}
+      onClick={busy ? undefined : onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl overflow-hidden flex flex-col"
+        style={{
+          background: "var(--spark-panel, #14181a)",
+          border: "1px solid var(--spark-border)",
+          maxHeight: "80vh",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className="px-5 py-4"
+          style={{ borderBottom: "1px solid var(--spark-border)" }}
+        >
+          <h3 className="text-base font-bold">Assign a BA</h3>
+          <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
+            Books this BA onto the {count} selected shift
+            {count === 1 ? "" : "s"}.
+          </p>
+        </div>
+        <div className="px-5 pt-3 pb-2">
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search BAs…"
+            disabled={busy}
+            className="w-full rounded-lg px-3 py-2 text-sm"
+            style={{
+              background: "var(--spark-bg, #0d0f10)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+            }}
+          />
+        </div>
+        <div className="overflow-y-auto px-3 pb-3" style={{ minHeight: 80 }}>
+          {people.length === 0 ? (
+            <p
+              className="p-6 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.5)" }}
+            >
+              No active BAs match.
+            </p>
+          ) : (
+            people.map((p) => (
+              <button
+                key={p.id}
+                disabled={busy}
+                onClick={() => onPick(p.id, p.name)}
+                className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left"
+                style={{ opacity: busy ? 0.5 : 1 }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = "rgba(255,255,255,0.05)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
+              >
+                <span
+                  className="grid place-items-center rounded-full text-[10px] font-bold shrink-0"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    background: "rgba(197,245,70,0.15)",
+                    color: "var(--spark-lime)",
+                  }}
+                >
+                  {initials(p.name)}
+                </span>
+                <span className="text-sm">{p.name}</span>
+              </button>
+            ))
+          )}
+        </div>
+        <div
+          className="px-5 py-3 flex justify-end"
+          style={{ borderTop: "1px solid var(--spark-border)" }}
+        >
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Inner: React.FC<{
   weekStart: Date;
   refreshKey: number;
@@ -78,6 +222,56 @@ const Inner: React.FC<{
   const shifts: Shift[] = (data?.staffingBoard ?? []).filter(Boolean) as Shift[];
 
   const [assign, setAssign] = useState<AssignTarget | null>(null);
+
+  // Bulk assign
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [banner, setBanner] = useState<{ ok: boolean; text: string } | null>(
+    null,
+  );
+  const [commitBulk, isAssigning] = useMutation<BulkAssignAmbassadorMutationType>(
+    BulkAssignAmbassadorMutation,
+  );
+
+  const toggleSelect = (eventId: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(eventId)) next.delete(eventId);
+      else next.add(eventId);
+      return next;
+    });
+
+  const exitBulk = () => {
+    setBulkMode(false);
+    setSelected(new Set());
+    setPickerOpen(false);
+  };
+
+  const runBulkAssign = (ambassadorId: string, name: string) => {
+    const eventIds = [...selected];
+    if (eventIds.length === 0) return;
+    commitBulk({
+      variables: { input: { ambassadorId, eventIds } },
+      onCompleted: (res) => {
+        const r = res?.bulkAssignAmbassadorToEvents;
+        setPickerOpen(false);
+        setSelected(new Set());
+        setBanner({
+          ok: !!r?.success,
+          text:
+            r?.message ||
+            `Assigned ${name} to ${eventIds.length} shift${eventIds.length === 1 ? "" : "s"}.`,
+        });
+        onAssigned();
+        window.setTimeout(() => setBanner(null), 6000);
+      },
+      onError: (err) => {
+        setPickerOpen(false);
+        setBanner({ ok: false, text: err?.message || "Bulk assign failed." });
+      },
+    });
+  };
 
   // Group into rows by venue (store || event name), keep the brand for the
   // row label, and index each shift by its day so cell lookup is O(1).
@@ -123,8 +317,7 @@ const Inner: React.FC<{
           className="mono text-[11px]"
           style={{
             letterSpacing: "0.14em",
-            color:
-              unstaffed > 0 ? "var(--spark-orange)" : "var(--spark-lime)",
+            color: unstaffed > 0 ? "var(--spark-orange)" : "var(--spark-lime)",
             background:
               unstaffed > 0 ? "rgba(239,90,42,0.12)" : "rgba(197,245,70,0.1)",
             border: `1px solid ${unstaffed > 0 ? "rgba(239,90,42,0.35)" : "rgba(197,245,70,0.3)"}`,
@@ -142,7 +335,42 @@ const Inner: React.FC<{
         >
           {shifts.length} SHIFT{shifts.length === 1 ? "" : "S"} THIS WEEK
         </span>
+        <button
+          onClick={() => (bulkMode ? exitBulk() : setBulkMode(true))}
+          className="mono text-[11px] ml-auto rounded-full"
+          style={{
+            letterSpacing: "0.1em",
+            padding: "4px 12px",
+            color: bulkMode ? "#0a0d09" : "var(--spark-lime)",
+            background: bulkMode ? "var(--spark-lime)" : "transparent",
+            border: `1px solid ${bulkMode ? "var(--spark-lime)" : "rgba(197,245,70,0.35)"}`,
+          }}
+        >
+          {bulkMode ? "✕ EXIT BULK" : "⊕ BULK ASSIGN"}
+        </button>
       </div>
+
+      {banner && (
+        <div
+          className="mb-4 px-4 py-2.5 rounded-xl text-sm"
+          style={{
+            color: banner.ok ? "var(--spark-lime)" : "var(--spark-orange)",
+            background: banner.ok
+              ? "rgba(197,245,70,0.1)"
+              : "rgba(239,90,42,0.1)",
+            border: `1px solid ${banner.ok ? "rgba(197,245,70,0.3)" : "rgba(239,90,42,0.3)"}`,
+          }}
+        >
+          {banner.text}
+        </div>
+      )}
+
+      {bulkMode && (
+        <p className="text-xs mb-3" style={{ color: "rgba(255,255,255,0.55)" }}>
+          Tap the shifts you want to fill, then choose one BA to book onto all
+          of them.
+        </p>
+      )}
 
       {rows.length === 0 ? (
         <p
@@ -153,7 +381,7 @@ const Inner: React.FC<{
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <div style={{ minWidth: 900 }}>
+          <div style={{ minWidth: 900, paddingBottom: bulkMode ? 72 : 0 }}>
             {/* Header row: venue + 7 days */}
             <div
               className="grid"
@@ -213,77 +441,111 @@ const Inner: React.FC<{
                   </p>
                 </div>
                 {days.map((d) => {
-                  const cellShifts =
-                    byRowDay.get(`${row.key}|${ymd(d)}`) ?? [];
+                  const cellShifts = byRowDay.get(`${row.key}|${ymd(d)}`) ?? [];
                   return (
                     <div
                       key={ymd(d)}
                       className="px-1.5 py-1.5 flex flex-col gap-1.5"
                       style={{ borderLeft: "1px solid var(--spark-border)" }}
                     >
-                      {cellShifts.map((s) => (
-                        <div
-                          key={s.eventUuid}
-                          className="rounded-lg p-1.5"
-                          style={{
-                            background: s.isStaffed
-                              ? "rgba(197,245,70,0.06)"
-                              : "rgba(239,90,42,0.06)",
-                            border: `1px solid ${s.isStaffed ? "rgba(197,245,70,0.2)" : "rgba(239,90,42,0.25)"}`,
-                          }}
-                        >
-                          {s.startTime ? (
-                            <p
-                              className="mono text-[9px] mb-1"
-                              style={{ color: "rgba(255,255,255,0.5)" }}
-                            >
-                              {fmtTime(s.startTime)}
-                              {s.endTime ? `–${fmtTime(s.endTime)}` : ""}
-                            </p>
-                          ) : null}
-                          <div className="flex flex-wrap gap-1 mb-1">
-                            {s.assigned.map((a) => (
-                              <span
-                                key={a.ambassadorUuid}
-                                title={`${a.name}${a.isApproved ? "" : " (pending)"}`}
-                                className="grid place-items-center rounded-full text-[9px] font-bold"
-                                style={{
-                                  width: 20,
-                                  height: 20,
-                                  background: a.isApproved
-                                    ? "var(--spark-lime)"
-                                    : "rgba(255,196,0,0.2)",
-                                  color: a.isApproved
-                                    ? "#0a0d09"
-                                    : "var(--spark-gold)",
-                                  border: a.isApproved
-                                    ? "none"
-                                    : "1px solid var(--spark-gold)",
-                                }}
-                              >
-                                {initials(a.name)}
-                              </span>
-                            ))}
-                          </div>
-                          <button
-                            onClick={() => openAssign(s)}
-                            className="mono text-[9px] w-full rounded"
+                      {cellShifts.map((s) => {
+                        const isSel = selected.has(s.eventId);
+                        return (
+                          <div
+                            key={s.eventUuid}
+                            className="rounded-lg p-1.5"
                             style={{
-                              letterSpacing: "0.08em",
-                              padding: "3px 0",
-                              color: s.isStaffed
-                                ? "rgba(255,255,255,0.55)"
-                                : "var(--spark-lime)",
-                              background: s.isStaffed
-                                ? "transparent"
-                                : "rgba(197,245,70,0.1)",
-                              border: `1px solid ${s.isStaffed ? "var(--spark-border)" : "rgba(197,245,70,0.3)"}`,
+                              background: isSel
+                                ? "rgba(197,245,70,0.18)"
+                                : s.isStaffed
+                                  ? "rgba(197,245,70,0.06)"
+                                  : "rgba(239,90,42,0.06)",
+                              border: `1px solid ${
+                                isSel
+                                  ? "var(--spark-lime)"
+                                  : s.isStaffed
+                                    ? "rgba(197,245,70,0.2)"
+                                    : "rgba(239,90,42,0.25)"
+                              }`,
                             }}
                           >
-                            {s.assigned.length === 0 ? "+ ASSIGN" : "+ ADD"}
-                          </button>
-                        </div>
-                      ))}
+                            {s.startTime ? (
+                              <p
+                                className="mono text-[9px] mb-1"
+                                style={{ color: "rgba(255,255,255,0.5)" }}
+                              >
+                                {fmtTime(s.startTime)}
+                                {s.endTime ? `–${fmtTime(s.endTime)}` : ""}
+                              </p>
+                            ) : null}
+                            <div className="flex flex-wrap gap-1 mb-1">
+                              {s.assigned.map((a) => (
+                                <span
+                                  key={a.ambassadorUuid}
+                                  title={`${a.name}${a.isApproved ? "" : " (pending)"}`}
+                                  className="grid place-items-center rounded-full text-[9px] font-bold"
+                                  style={{
+                                    width: 20,
+                                    height: 20,
+                                    background: a.isApproved
+                                      ? "var(--spark-lime)"
+                                      : "rgba(255,196,0,0.2)",
+                                    color: a.isApproved
+                                      ? "#0a0d09"
+                                      : "var(--spark-gold)",
+                                    border: a.isApproved
+                                      ? "none"
+                                      : "1px solid var(--spark-gold)",
+                                  }}
+                                >
+                                  {initials(a.name)}
+                                </span>
+                              ))}
+                            </div>
+                            <button
+                              onClick={() =>
+                                bulkMode
+                                  ? toggleSelect(s.eventId)
+                                  : openAssign(s)
+                              }
+                              className="mono text-[9px] w-full rounded"
+                              style={{
+                                letterSpacing: "0.08em",
+                                padding: "3px 0",
+                                color: bulkMode
+                                  ? isSel
+                                    ? "#0a0d09"
+                                    : "var(--spark-lime)"
+                                  : s.isStaffed
+                                    ? "rgba(255,255,255,0.55)"
+                                    : "var(--spark-lime)",
+                                background: bulkMode
+                                  ? isSel
+                                    ? "var(--spark-lime)"
+                                    : "rgba(197,245,70,0.1)"
+                                  : s.isStaffed
+                                    ? "transparent"
+                                    : "rgba(197,245,70,0.1)",
+                                border: `1px solid ${
+                                  bulkMode
+                                    ? "rgba(197,245,70,0.4)"
+                                    : s.isStaffed
+                                      ? "var(--spark-border)"
+                                      : "rgba(197,245,70,0.3)"
+                                }`,
+                              }}
+                            >
+                              {bulkMode
+                                ? isSel
+                                  ? "✓ SELECTED"
+                                  : "SELECT"
+                                : s.assigned.length === 0
+                                  ? "+ ASSIGN"
+                                  : "+ ADD"}
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
@@ -291,6 +553,55 @@ const Inner: React.FC<{
             ))}
           </div>
         </div>
+      )}
+
+      {/* Bulk action bar */}
+      {bulkMode && (
+        <div
+          className="fixed left-0 right-0 bottom-0 z-40 px-5 py-3 flex items-center gap-3 flex-wrap"
+          style={{
+            background: "var(--spark-panel, #14181a)",
+            borderTop: "1px solid var(--spark-border)",
+          }}
+        >
+          <span className="text-sm font-semibold">
+            {selected.size} shift{selected.size === 1 ? "" : "s"} selected
+          </span>
+          {selected.size > 0 && (
+            <button
+              onClick={() => setSelected(new Set())}
+              className="mono text-[11px]"
+              style={{ color: "rgba(255,255,255,0.5)", letterSpacing: "0.08em" }}
+            >
+              CLEAR
+            </button>
+          )}
+          <button
+            onClick={() => setPickerOpen(true)}
+            disabled={selected.size === 0 || isAssigning}
+            className="ml-auto px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{
+              background:
+                selected.size === 0 ? "rgba(255,255,255,0.08)" : "var(--spark-lime)",
+              color: selected.size === 0 ? "rgba(255,255,255,0.4)" : "#0a0d09",
+              border: "none",
+              cursor: selected.size === 0 ? "default" : "pointer",
+            }}
+          >
+            {isAssigning ? "Assigning…" : "Assign a BA →"}
+          </button>
+        </div>
+      )}
+
+      {pickerOpen && (
+        <Suspense fallback={null}>
+          <BulkBaPicker
+            count={selected.size}
+            busy={isAssigning}
+            onPick={runBulkAssign}
+            onClose={() => setPickerOpen(false)}
+          />
+        </Suspense>
       )}
 
       {assign && (

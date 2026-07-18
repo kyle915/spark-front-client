@@ -1251,6 +1251,20 @@ type InviteAmbassadorToShiftResponse {
   ambassadorEventUuid: ID
 }
 
+input BulkAssignAmbassadorInput {
+  ambassadorId: ID!
+  eventIds: [ID!]!
+  clientMutationId: ID = null
+}
+
+type BulkAssignAmbassadorResponse {
+  success: Boolean!
+  message: String!
+  assignedCount: Int!
+  failedCount: Int!
+  clientMutationId: ID
+}
+
 """
 A tenant-scoped favorite row: the admin's starred BAs, denormalized
 with the BA's display fields so the Favorites page can render without
@@ -4103,6 +4117,7 @@ type Mutation {
   acceptByToken(input: AcceptByTokenInput!): AcceptInvitationResponse!
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
   inviteAmbassadorToShift(input: InviteAmbassadorToShiftInput!): InviteAmbassadorToShiftResponse!
+  bulkAssignAmbassadorToEvents(input: BulkAssignAmbassadorInput!): BulkAssignAmbassadorResponse!
   generateWalkupCode(input: GenerateWalkupCodeInput!): WalkupCodeResponse!
   revokeWalkupCode(input: GenerateWalkupCodeInput!): WalkupActionResponse!
   confirmWalkupShift(input: ConfirmWalkupShiftInput!): WalkupActionResponse!
