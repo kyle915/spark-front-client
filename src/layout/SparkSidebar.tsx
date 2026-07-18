@@ -102,6 +102,18 @@ const SECTIONS: NavSection[] = [
         to: "/schedule",
         adminOnly: true,
       },
+      {
+        label: "On the Clock",
+        Icon: Clock,
+        to: "/live-board",
+        adminOnly: true,
+      },
+      {
+        label: "Timesheet",
+        Icon: Receipt,
+        to: "/timesheet",
+        adminOnly: true,
+      },
       // Jobs moved up from TALENT — it's a primary day-to-day staffing
       // workflow, not a back-office talent tool. Same /jobs route + icon.
       { label: "Jobs", Icon: Hammer, to: "/jobs", adminOnly: true },

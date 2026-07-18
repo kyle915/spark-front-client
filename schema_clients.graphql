@@ -4555,7 +4555,52 @@ type StaffingBoardShift {
   isStaffed: Boolean!
 }
 
+type LiveBoardBA {
+  ambassadorUuid: String!
+  name: String!
+  status: String!
+  clockInAt: String
+  clockOutAt: String
+  workedHours: Float
+}
+
+type LiveBoardShift {
+  eventUuid: String!
+  eventName: String!
+  brandName: String!
+  date: String
+  startTime: String
+  endTime: String
+  address: String
+  store: String
+  requestUuid: String
+  assigned: [LiveBoardBA!]!
+  onClock: Int!
+  noShows: Int!
+}
+
+type PayrollTimesheetRow {
+  ambassadorUuid: String!
+  name: String!
+  email: String
+  shifts: Int!
+  hours: Float!
+  estimatedShifts: Int!
+  estimatedPay: Float
+  shiftsMissingRate: Int!
+}
+
+type PayrollTimesheet {
+  startDate: String!
+  endDate: String!
+  rows: [PayrollTimesheetRow!]!
+  totalHours: Float!
+  totalEstimatedPay: Float
+}
+
 type Query {
+  liveShiftBoard(date: String = null, tenantId: ID = null): [LiveBoardShift!]!
+  payrollTimesheet(startDate: String!, endDate: String!, tenantId: ID = null): PayrollTimesheet!
   staffingBoard(startDate: String!, endDate: String!, tenantId: ID = null): [StaffingBoardShift!]!
   walkupShifts(status: String = null, tenantId: ID = null): [WalkupShiftType!]!
   briefingTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [BriefingTemplate!]!

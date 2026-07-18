@@ -385,6 +385,12 @@ const SparkWalkups = lazyDefault(
 const SparkStaffingBoard = lazyDefault(
   () => import("@/components/pages/staffing/SparkStaffingBoard"),
 );
+const SparkLiveBoard = lazyDefault(
+  () => import("@/components/pages/staffing/SparkLiveBoard"),
+);
+const SparkTimesheet = lazyDefault(
+  () => import("@/components/pages/staffing/SparkPayroll"),
+);
 // Authenticated campaign report view (per-request). Linked from the Master
 // Tracker "Report" row action. Public twin is /report/:token below.
 const CampaignReportAdminView = lazyDefault(
@@ -766,6 +772,26 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkStaffingBoard />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      // Live "on the clock" board — today's shifts + who's working now.
+      path: "/live-board",
+      component: (
+        <AdminOnly>
+          <SparkLiveBoard />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      // Payroll timesheet — per-BA worked hours + est pay + CSV.
+      path: "/timesheet",
+      component: (
+        <AdminOnly>
+          <SparkTimesheet />
         </AdminOnly>
       ),
       isPublic: false,
