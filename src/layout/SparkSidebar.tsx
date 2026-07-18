@@ -46,6 +46,7 @@ import {
   ClipboardList,
   Route,
   QrCode,
+  LayoutGrid,
 } from "lucide-react";
 
 /**
@@ -95,6 +96,12 @@ const SECTIONS: NavSection[] = [
       },
       { label: "Today", Icon: Radio, to: "/today" },
       { label: "Upcoming", Icon: CalendarRange, to: "/upcoming" },
+      {
+        label: "Staffing Board",
+        Icon: LayoutGrid,
+        to: "/schedule",
+        adminOnly: true,
+      },
       // Jobs moved up from TALENT — it's a primary day-to-day staffing
       // workflow, not a back-office talent tool. Same /jobs route + icon.
       { label: "Jobs", Icon: Hammer, to: "/jobs", adminOnly: true },

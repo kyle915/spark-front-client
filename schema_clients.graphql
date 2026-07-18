@@ -4517,7 +4517,31 @@ input RejectWalkupShiftInput {
   clientMutationId: ID = null
 }
 
+type StaffingBoardBA {
+  ambassadorUuid: String!
+  ambassadorId: String!
+  name: String!
+  isApproved: Boolean!
+}
+
+type StaffingBoardShift {
+  eventUuid: String!
+  eventId: String!
+  eventName: String!
+  brandName: String!
+  date: String
+  startTime: String
+  endTime: String
+  address: String
+  store: String
+  requestUuid: String
+  tenantId: String
+  assigned: [StaffingBoardBA!]!
+  isStaffed: Boolean!
+}
+
 type Query {
+  staffingBoard(startDate: String!, endDate: String!, tenantId: ID = null): [StaffingBoardShift!]!
   walkupShifts(status: String = null, tenantId: ID = null): [WalkupShiftType!]!
   briefingTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [BriefingTemplate!]!
   gigTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [GigTemplate!]!

@@ -382,6 +382,9 @@ const SparkReceipts = lazyDefault(
 const SparkWalkups = lazyDefault(
   () => import("@/components/pages/walkups/SparkWalkups"),
 );
+const SparkStaffingBoard = lazyDefault(
+  () => import("@/components/pages/staffing/SparkStaffingBoard"),
+);
 // Authenticated campaign report view (per-request). Linked from the Master
 // Tracker "Report" row action. Public twin is /report/:token below.
 const CampaignReportAdminView = lazyDefault(
@@ -753,6 +756,16 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkWalkups />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      // Staffing Board — week grid of shifts × dates; assign gaps in a click.
+      path: "/schedule",
+      component: (
+        <AdminOnly>
+          <SparkStaffingBoard />
         </AdminOnly>
       ),
       isPublic: false,
