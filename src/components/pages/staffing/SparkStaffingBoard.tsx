@@ -6,6 +6,8 @@ import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import { BulkAssignAmbassadorMutation } from "@/api/mutations/BulkAssignAmbassadorMutation";
 import type { BulkAssignAmbassadorMutation as BulkAssignAmbassadorMutationType } from "@api/mutations/__generated__/BulkAssignAmbassadorMutation.graphql";
+import { RebookLastCrewMutation } from "@/api/mutations/RebookLastCrewMutation";
+import type { RebookLastCrewMutation as RebookLastCrewMutationType } from "@api/mutations/__generated__/RebookLastCrewMutation.graphql";
 import InviteBAModal from "@/requests/InviteBAModal";
 
 /**
@@ -233,6 +235,27 @@ const Inner: React.FC<{
   const [commitBulk, isAssigning] = useMutation<BulkAssignAmbassadorMutationType>(
     BulkAssignAmbassadorMutation,
   );
+  const [commitRebook, isRebooking] =
+    useMutation<RebookLastCrewMutationType>(RebookLastCrewMutation);
+  const [rebookingId, setRebookingId] = useState<string | null>(null);
+
+  const runRebook = (eventId: string) => {
+    setRebookingId(eventId);
+    commitRebook({
+      variables: { input: { eventId } },
+      onCompleted: (res) => {
+        setRebookingId(null);
+        const r = res?.rebookLastCrew;
+        setBanner({ ok: !!r?.success, text: r?.message || "Re-booked." });
+        if (r?.success) onAssigned();
+        window.setTimeout(() => setBanner(null), 6000);
+      },
+      onError: (err) => {
+        setRebookingId(null);
+        setBanner({ ok: false, text: err?.message || "Re-book failed." });
+      },
+    });
+  };
 
   const toggleSelect = (eventId: string) =>
     setSelected((prev) => {
@@ -543,6 +566,24 @@ const Inner: React.FC<{
                                   ? "+ ASSIGN"
                                   : "+ ADD"}
                             </button>
+                            {!bulkMode && s.assigned.length === 0 ? (
+                              <button
+                                onClick={() => runRebook(s.eventId)}
+                                disabled={isRebooking}
+                                className="mono text-[9px] w-full rounded mt-1"
+                                style={{
+                                  letterSpacing: "0.06em",
+                                  padding: "3px 0",
+                                  color: "rgba(255,255,255,0.6)",
+                                  background: "transparent",
+                                  border: "1px solid var(--spark-border)",
+                                  opacity: isRebooking && rebookingId === s.eventId ? 0.5 : 1,
+                                }}
+                                title="Book the crew who worked this venue last time"
+                              >
+                                {rebookingId === s.eventId ? "…" : "↻ LAST CREW"}
+                              </button>
+                            ) : null}
                           </div>
                         );
                       })}

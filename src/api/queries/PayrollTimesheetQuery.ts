@@ -11,6 +11,7 @@ export const PayrollTimesheetQuery = graphql`
       endDate
       totalHours
       totalEstimatedPay
+      flaggedRows
       rows {
         ambassadorUuid
         name
@@ -20,6 +21,8 @@ export const PayrollTimesheetQuery = graphql`
         estimatedShifts
         estimatedPay
         shiftsMissingRate
+        flags
+        needsReview
       }
     }
   }

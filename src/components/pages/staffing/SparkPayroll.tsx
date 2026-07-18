@@ -71,6 +71,8 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
   );
   const sheet = data?.payrollTimesheet;
   const rows: Row[] = (sheet?.rows ?? []) as Row[];
+  const [reviewOnly, setReviewOnly] = useState(false);
+  const shown = reviewOnly ? rows.filter((r) => r.needsReview) : rows;
 
   if (!sheet || rows.length === 0) {
     return (
@@ -95,6 +97,22 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
             ? ` · ${money(sheet.totalEstimatedPay)} est.`
             : ""}
         </span>
+        {sheet.flaggedRows > 0 ? (
+          <button
+            onClick={() => setReviewOnly((v) => !v)}
+            className="mono text-[11px] rounded-full"
+            style={{
+              letterSpacing: "0.08em",
+              padding: "4px 12px",
+              color: reviewOnly ? "#0a0d09" : "var(--spark-orange)",
+              background: reviewOnly ? "var(--spark-orange)" : "rgba(239,90,42,0.12)",
+              border: "1px solid rgba(239,90,42,0.4)",
+            }}
+          >
+            ⚑ {sheet.flaggedRows} NEED{sheet.flaggedRows === 1 ? "S" : ""} REVIEW
+            {reviewOnly ? " ✓" : ""}
+          </button>
+        ) : null}
         <button
           onClick={() => downloadCsv(sheet)}
           className="ml-auto px-4 py-2 rounded-xl text-sm font-semibold"
@@ -124,13 +142,30 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {shown.map((r) => (
               <tr
                 key={r.ambassadorUuid}
                 style={{ borderBottom: "1px solid var(--spark-border)" }}
               >
                 <td className="px-3 py-2">
-                  <p className="font-medium">{r.name}</p>
+                  <p className="font-medium">
+                    {r.name}
+                    {r.needsReview ? (
+                      <span
+                        className="mono text-[9px] ml-2"
+                        style={{
+                          letterSpacing: "0.06em",
+                          color: "var(--spark-orange)",
+                          background: "rgba(239,90,42,0.12)",
+                          border: "1px solid rgba(239,90,42,0.35)",
+                          borderRadius: 999,
+                          padding: "1px 6px",
+                        }}
+                      >
+                        ⚑ REVIEW
+                      </span>
+                    ) : null}
+                  </p>
                   {r.email ? (
                     <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.4)" }}>
                       {r.email}
@@ -158,9 +193,16 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
                   {money(r.estimatedPay)}
                 </td>
                 <td className="px-3 py-2 text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>
-                  {r.shiftsMissingRate > 0
-                    ? `${r.shiftsMissingRate} shift(s) no rate`
-                    : ""}
+                  {[
+                    r.shiftsMissingRate > 0
+                      ? `${r.shiftsMissingRate} no rate`
+                      : null,
+                    r.estimatedShifts > 0
+                      ? `${r.estimatedShifts} unverified`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </td>
               </tr>
             ))}

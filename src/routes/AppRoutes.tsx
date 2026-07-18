@@ -391,6 +391,12 @@ const SparkLiveBoard = lazyDefault(
 const SparkTimesheet = lazyDefault(
   () => import("@/components/pages/staffing/SparkPayroll"),
 );
+const SparkCampaignCost = lazyDefault(
+  () => import("@/components/pages/staffing/SparkCampaignCost"),
+);
+const SparkClientLive = lazyDefault(
+  () => import("@/components/pages/staffing/SparkClientLive"),
+);
 // Authenticated campaign report view (per-request). Linked from the Master
 // Tracker "Report" row action. Public twin is /report/:token below.
 const CampaignReportAdminView = lazyDefault(
@@ -795,6 +801,22 @@ const RequestsLinks = {
         </AdminOnly>
       ),
       isPublic: false,
+    },
+    {
+      // Campaign cost & margin — per-brand labor + spend, + admin-entered revenue.
+      path: "/campaign-cost",
+      component: (
+        <AdminOnly>
+          <SparkCampaignCost />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      // Public, no-login branded client-live page (signed token = auth).
+      path: "/live/:token",
+      component: <SparkClientLive />,
+      isPublic: true,
     },
     {
       path: "/system-health",

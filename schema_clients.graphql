@@ -4118,6 +4118,7 @@ type Mutation {
   approveAmbassador(input: ApproveAmbassadorInput!): ApproveAmbassadorResponse!
   inviteAmbassadorToShift(input: InviteAmbassadorToShiftInput!): InviteAmbassadorToShiftResponse!
   bulkAssignAmbassadorToEvents(input: BulkAssignAmbassadorInput!): BulkAssignAmbassadorResponse!
+  rebookLastCrew(input: RebookLastCrewInput!): BulkAssignAmbassadorResponse!
   generateWalkupCode(input: GenerateWalkupCodeInput!): WalkupCodeResponse!
   revokeWalkupCode(input: GenerateWalkupCodeInput!): WalkupActionResponse!
   confirmWalkupShift(input: ConfirmWalkupShiftInput!): WalkupActionResponse!
@@ -4588,6 +4589,8 @@ type PayrollTimesheetRow {
   estimatedShifts: Int!
   estimatedPay: Float
   shiftsMissingRate: Int!
+  flags: [String!]!
+  needsReview: Boolean!
 }
 
 type PayrollTimesheet {
@@ -4596,11 +4599,40 @@ type PayrollTimesheet {
   rows: [PayrollTimesheetRow!]!
   totalHours: Float!
   totalEstimatedPay: Float
+  flaggedRows: Int!
+}
+
+type CampaignCostRow {
+  tenantId: String!
+  tenantName: String!
+  events: Int!
+  shifts: Int!
+  hours: Float!
+  laborCost: Float!
+  spend: Float!
+  totalCost: Float!
+  eventsMissingRates: Int!
+}
+
+type CampaignCostReport {
+  startDate: String!
+  endDate: String!
+  rows: [CampaignCostRow!]!
+  totalLabor: Float!
+  totalSpend: Float!
+  totalCost: Float!
+}
+
+input RebookLastCrewInput {
+  eventId: ID!
+  clientMutationId: ID = null
 }
 
 type Query {
   liveShiftBoard(date: String = null, tenantId: ID = null): [LiveBoardShift!]!
+  clientLiveToken(tenantId: ID!): String!
   payrollTimesheet(startDate: String!, endDate: String!, tenantId: ID = null): PayrollTimesheet!
+  campaignCost(startDate: String!, endDate: String!, tenantId: ID = null): CampaignCostReport!
   staffingBoard(startDate: String!, endDate: String!, tenantId: ID = null): [StaffingBoardShift!]!
   walkupShifts(status: String = null, tenantId: ID = null): [WalkupShiftType!]!
   briefingTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [BriefingTemplate!]!
