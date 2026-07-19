@@ -73,6 +73,18 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
     }
   };
 
+  // Shareable no-login web link — the BA opens it, clocks in/out, and files the
+  // full recap right in their browser (no app). Same code, web door.
+  const checkinUrl = code ? `${window.location.origin}/checkin/${code}` : null;
+  const copyLink = () => {
+    if (checkinUrl) {
+      navigator.clipboard?.writeText(checkinUrl).then(
+        () => showAlert("Check-in link copied.", "success"),
+        () => {},
+      );
+    }
+  };
+
   return (
     <div
       className="spark-card p-5"
@@ -87,9 +99,10 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
         </p>
       </div>
       <p className="text-sm mb-3" style={{ color: "rgba(255,255,255,0.55)" }}>
-        Give this code to anyone working the event so they can clock in + file a
-        recap without being assigned. They enter it in the app under “Clock in
-        with a code.” You review each walk-up in Walk-ups.
+        Give this to anyone working the event so they can clock in + file a recap
+        without being assigned. They can enter the code in the app under “Clock in
+        with a code,” or open the check-in link below to do it all in a browser —
+        no app needed. You review each walk-up in Walk-ups.
       </p>
 
       {code ? (
@@ -122,6 +135,48 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
             >
               Valid through {new Date(expiresAt).toLocaleDateString()}
             </p>
+          ) : null}
+          {/* Shareable no-login web check-in link (+ scannable QR that opens
+              it directly). The BA clocks in/out and files the full recap in a
+              browser — no app required. */}
+          {checkinUrl ? (
+            <div
+              className="flex items-center gap-3 rounded-xl mb-3 flex-wrap"
+              style={{
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                padding: "0.75rem",
+              }}
+            >
+              <div style={{ background: "#fff", padding: 6, borderRadius: 8 }}>
+                <QRCodeSVG value={checkinUrl} size={72} level="M" />
+              </div>
+              <div className="flex-1" style={{ minWidth: 160 }}>
+                <p
+                  className="mono text-[10px] mb-1"
+                  style={{ letterSpacing: "0.14em", color: "var(--spark-lime)" }}
+                >
+                  CHECK-IN LINK (NO APP)
+                </p>
+                <p
+                  className="text-xs break-all"
+                  style={{ color: "rgba(255,255,255,0.6)" }}
+                >
+                  {checkinUrl}
+                </p>
+                <button
+                  onClick={copyLink}
+                  className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{
+                    background: "transparent",
+                    color: "var(--spark-text)",
+                    border: "1px solid var(--spark-border)",
+                  }}
+                >
+                  Copy link
+                </button>
+              </div>
+            </div>
           ) : null}
           <div className="flex items-center gap-2">
             <button

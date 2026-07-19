@@ -397,6 +397,11 @@ const SparkCampaignCost = lazyDefault(
 const SparkClientLive = lazyDefault(
   () => import("@/components/pages/staffing/SparkClientLive"),
 );
+// Public, no-login web check-in — a BA clocks in/out + files the full recap for
+// one event via a shareable link carrying the event's walk-up code.
+const SparkCheckin = lazyDefault(
+  () => import("@/components/pages/checkin/SparkCheckin"),
+);
 // Authenticated campaign report view (per-request). Linked from the Master
 // Tracker "Report" row action. Public twin is /report/:token below.
 const CampaignReportAdminView = lazyDefault(
@@ -816,6 +821,12 @@ const RequestsLinks = {
       // Public, no-login branded client-live page (signed token = auth).
       path: "/live/:token",
       component: <SparkClientLive />,
+      isPublic: true,
+    },
+    {
+      // Public, no-login BA web check-in for one event (walk-up code = link).
+      path: "/checkin/:code",
+      component: <SparkCheckin />,
       isPublic: true,
     },
     {
