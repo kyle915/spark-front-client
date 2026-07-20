@@ -30,5 +30,8 @@ export const SidebarCountsQuery = graphql`
         }
       }
     }
+    # Walk-ups awaiting review — a light scalar for the sidebar badge (returns 0
+    # for callers with no accessible tenants, so it's safe on this shared query).
+    pendingWalkupCount
   }
 `;

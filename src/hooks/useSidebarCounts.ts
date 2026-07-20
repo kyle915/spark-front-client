@@ -23,6 +23,8 @@ export type SidebarCounts = {
   // Surfaces the "this needs a recap" pile on the Tracker nav so ops
   // can see it before drilling into the table.
   recapsDue: number;
+  // Walk-ups awaiting review (self-serve + web check-ins). Server scalar.
+  pendingWalkups: number;
 };
 
 const ALERTS_READ_KEY = "@spark.alerts.readKeys.v1";
@@ -127,6 +129,7 @@ export function useSidebarCounts(): SidebarCounts {
       done30d,
       alertsUnread,
       recapsDue,
+      pendingWalkups: data?.pendingWalkupCount ?? 0,
     };
   }, [data]);
 }

@@ -488,6 +488,14 @@ const SidebarNav: React.FC<{
         };
       if (it.to === "/recaps/list" && counts.done30d > 0)
         chip = { text: String(counts.done30d), tone: "lime" };
+      if (it.to === "/walkups" && counts.pendingWalkups > 0)
+        chip = {
+          // Walk-ups awaiting confirmation — gold (a review queue, not an
+          // alarm); pulse only when the pile grows past a handful.
+          text: String(counts.pendingWalkups),
+          tone: "gold",
+          blink: counts.pendingWalkups > 5,
+        };
       if (it.to === "/alerts" && counts.alertsUnread > 0)
         chip = { text: String(counts.alertsUnread), tone: "orange" };
       return chip ? { ...it, chip } : it;
