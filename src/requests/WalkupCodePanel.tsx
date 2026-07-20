@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { useMutation } from "react-relay/hooks";
 import {
   GenerateWalkupCodeMutation,
@@ -108,19 +107,13 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
       {code ? (
         <>
           <div
-            className="flex items-center justify-center gap-4 rounded-xl mb-2 flex-wrap"
+            className="flex items-center justify-center rounded-xl mb-2"
             style={{
               background: "var(--spark-bg)",
               border: "1px solid var(--spark-border)",
               padding: "1rem",
             }}
           >
-            {/* Scannable QR (white quiet-zone so phone cameras lock on) —
-                encodes the plain code the BA types under "Clock in with a
-                code." */}
-            <div style={{ background: "#fff", padding: 8, borderRadius: 8 }}>
-              <QRCodeSVG value={code} size={104} level="M" />
-            </div>
             <span
               className="mono font-bold"
               style={{ fontSize: 34, letterSpacing: 8, color: "var(--spark-text)" }}
@@ -136,46 +129,41 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
               Valid through {new Date(expiresAt).toLocaleDateString()}
             </p>
           ) : null}
-          {/* Shareable no-login web check-in link (+ scannable QR that opens
-              it directly). The BA clocks in/out and files the full recap in a
-              browser — no app required. */}
+          {/* Shareable no-login web check-in link. Text it to whoever's working
+              the event — they clock in/out and file the full recap in a browser,
+              no app required. */}
           {checkinUrl ? (
             <div
-              className="flex items-center gap-3 rounded-xl mb-3 flex-wrap"
+              className="rounded-xl mb-3"
               style={{
                 background: "var(--spark-bg)",
                 border: "1px solid var(--spark-border)",
                 padding: "0.75rem",
               }}
             >
-              <div style={{ background: "#fff", padding: 6, borderRadius: 8 }}>
-                <QRCodeSVG value={checkinUrl} size={72} level="M" />
-              </div>
-              <div className="flex-1" style={{ minWidth: 160 }}>
-                <p
-                  className="mono text-[10px] mb-1"
-                  style={{ letterSpacing: "0.14em", color: "var(--spark-lime)" }}
-                >
-                  CHECK-IN LINK (NO APP)
-                </p>
-                <p
-                  className="text-xs break-all"
-                  style={{ color: "rgba(255,255,255,0.6)" }}
-                >
-                  {checkinUrl}
-                </p>
-                <button
-                  onClick={copyLink}
-                  className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold"
-                  style={{
-                    background: "transparent",
-                    color: "var(--spark-text)",
-                    border: "1px solid var(--spark-border)",
-                  }}
-                >
-                  Copy link
-                </button>
-              </div>
+              <p
+                className="mono text-[10px] mb-1"
+                style={{ letterSpacing: "0.14em", color: "var(--spark-lime)" }}
+              >
+                CHECK-IN LINK (NO APP)
+              </p>
+              <p
+                className="text-xs break-all"
+                style={{ color: "rgba(255,255,255,0.6)" }}
+              >
+                {checkinUrl}
+              </p>
+              <button
+                onClick={copyLink}
+                className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                Copy link
+              </button>
             </div>
           ) : null}
           <div className="flex items-center gap-2">
