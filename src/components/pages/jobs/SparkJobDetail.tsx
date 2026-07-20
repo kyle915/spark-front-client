@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
+import WalkupCodePanel from "@/requests/WalkupCodePanel";
 import { JobsQuery } from "@/api/queries/JobsQuery";
 import type { JobsQuery as JobsQueryType } from "@api/queries/__generated__/JobsQuery.graphql";
 import { JobApplicationsQuery } from "@/api/queries/JobApplicationsQuery";
@@ -2018,6 +2019,14 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           </div>
         </div>
       </div>
+
+      {/* Walk-up / web check-in access — generate the per-event code + a
+          no-login /checkin link an admin hands to whoever works the event
+          (clock in/out + file the recap in a browser). Same panel as the
+          Request view; surfaced here so it's one click from the job. */}
+      {isAdmin && node.event?.uuid ? (
+        <WalkupCodePanel eventUuid={String(node.event.uuid)} />
+      ) : null}
 
       {/* BA Briefing — real backend-backed pre-shift briefing (#191) */}
       <BABriefingCard
