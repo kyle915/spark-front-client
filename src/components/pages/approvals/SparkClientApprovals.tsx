@@ -11,6 +11,12 @@ import { ApproveRecapMutation } from "@/api/mutations/ApproveRecapMutation";
 import type { ApproveRecapMutation as ApproveRecapMutationType } from "@api/mutations/__generated__/ApproveRecapMutation.graphql";
 import { ApproveCustomRecapMutation } from "@/api/mutations/ApproveCustomRecapMutation";
 import type { ApproveCustomRecapMutation as ApproveCustomRecapMutationType } from "@api/mutations/__generated__/ApproveCustomRecapMutation.graphql";
+import { RequestsQuery } from "@/api/queries/RequestsQuery";
+import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { ApproveRequestMutation } from "@/api/mutations/ApproveRequestMutation";
+import type { ApproveRequestMutation as ApproveRequestMutationType } from "@api/mutations/__generated__/ApproveRequestMutation.graphql";
+import { DeclineRequestMutation } from "@/api/mutations/DeclineRequestMutation";
+import type { DeclineRequestMutation as DeclineRequestMutationType } from "@api/mutations/__generated__/DeclineRequestMutation.graphql";
 
 /**
  * Spark v2 — Client Approvals (/my-approvals).
@@ -380,6 +386,365 @@ const ClientApprovalsInner: React.FC = () => {
   );
 };
 
+/* ═══════════════ requests: pending-approval queue ═══════════════ */
+/*
+ * The request twin of the recap queue above. This is the surface that was
+ * missing: a client RMM had NO in-app list of incoming requests awaiting
+ * their approve/decline — the Master Tracker sorts by event date and buries
+ * a fresh submission, so the confirmation email was the only reliable path
+ * (the REQ-1481 / Liquid Death report). These rows are the same pending
+ * requests the sidebar "Approvals" badge already counts, sorted NEWEST-
+ * SUBMISSION-FIRST so a just-arrived request is always at the top.
+ *
+ * SAFE: `requests` is tenant-scoped server-side (resolve_tenant_id forces a
+ * client to their own tenant), and approveRequest/declineRequest authorize
+ * the caller against the request's tenant (a member may decide, an
+ * ambassador may not) — so a client can only ever see + act on their own
+ * tenant's requests.
+ */
+
+type PendingRequest = {
+  id: string;
+  uuid: string;
+  reqLabel: string; // "REQ-1481"
+  venue: string;
+  where: string; // "Market, ST"
+  date: string; // formatted event date, or ""
+  requester: string;
+  typeLabel: string;
+  createdMs: number; // submission time — the sort key
+  pendingHours: number | null;
+};
+
+// Relay global ids are base64("TypeName:pk"); decode to the human REQ number
+// so the row reads "REQ-1481" (matching the confirmation email). Falls back
+// to a short slice when the id isn't a decodable global id.
+const reqLabelFromGlobalId = (globalId: string): string => {
+  try {
+    const decoded = atob(globalId);
+    const m = decoded.match(/:(\d+)$/);
+    if (m) return `REQ-${m[1]}`;
+  } catch {
+    /* not base64 — fall through */
+  }
+  return `REQ-${String(globalId).slice(-4).toUpperCase()}`;
+};
+
+const ageLabel = (h: number | null): string | null => {
+  if (h === null) return null;
+  if (h < 1) return "JUST IN";
+  if (h < 24) return `${h}h OLD`;
+  const d = Math.floor(h / 24);
+  return h >= 72 ? `${d}d OLD · SLA` : `${d}d OLD`;
+};
+
+const RequestApprovalRow: React.FC<{
+  row: PendingRequest;
+  onDecided: (id: string) => void;
+}> = ({ row, onDecided }) => {
+  const [commitApprove, approving] =
+    useMutation<ApproveRequestMutationType>(ApproveRequestMutation);
+  const [commitDecline, declining] =
+    useMutation<DeclineRequestMutationType>(DeclineRequestMutation);
+  const inFlight = approving || declining;
+
+  const [mode, setMode] = useState<null | "approve" | "decline">(null);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const fail = (msg?: string | null) =>
+    setError(msg ?? "Something went wrong. Please try again.");
+
+  const approve = useCallback(() => {
+    setError(null);
+    commitApprove({
+      variables: { input: { id: row.id } },
+      onCompleted: (res) =>
+        res.approveRequest?.success
+          ? onDecided(row.id)
+          : fail(res.approveRequest?.message),
+      onError: () => fail(),
+    });
+  }, [commitApprove, row.id, onDecided]);
+
+  const decline = useCallback(() => {
+    setError(null);
+    commitDecline({
+      variables: {
+        input: { id: row.id, declineReason: reason.trim() || null },
+      },
+      onCompleted: (res) =>
+        res.declineRequest?.success
+          ? onDecided(row.id)
+          : fail(res.declineRequest?.message),
+      onError: () => fail(),
+    });
+  }, [commitDecline, row.id, reason, onDecided]);
+
+  const age = ageLabel(row.pendingHours);
+  const breached = (row.pendingHours ?? 0) >= 72;
+
+  return (
+    <li
+      className="spark-card p-4"
+      style={{
+        background: "var(--spark-card-bg, rgba(255,255,255,0.02))",
+        borderRadius: 14,
+      }}
+    >
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className="mono text-[10px]"
+              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.55)" }}
+            >
+              {row.reqLabel}
+            </span>
+            <span className="chip chip-sky">NEEDS YOUR APPROVAL</span>
+            {age && (
+              <span
+                className="mono text-[10px] px-2 py-0.5 rounded-md"
+                style={{
+                  letterSpacing: "0.14em",
+                  background: breached
+                    ? "rgba(239,90,42,0.16)"
+                    : "rgba(255,255,255,0.05)",
+                  border: `1px solid ${
+                    breached ? "rgba(239,90,42,0.45)" : "rgba(255,255,255,0.12)"
+                  }`,
+                  color: breached ? "var(--spark-orange)" : "rgba(255,255,255,0.6)",
+                }}
+              >
+                {age}
+              </span>
+            )}
+          </div>
+          <p className="text-sm font-semibold mt-1 truncate">{row.venue}</p>
+          <p className="text-[13px]" style={{ color: "rgba(255,255,255,0.55)" }}>
+            {[row.where, row.date].filter(Boolean).join(" · ") || "—"}
+          </p>
+          <p
+            className="text-[12px] mt-0.5"
+            style={{ color: "rgba(255,255,255,0.45)" }}
+          >
+            {[row.typeLabel, row.requester].filter(Boolean).join(" · ")}
+          </p>
+          {error && (
+            <p
+              className="text-[12px] mt-1.5"
+              style={{ color: "var(--spark-danger, #ff7a7a)" }}
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2 shrink-0" style={{ minWidth: 150 }}>
+          {mode === null && (
+            <>
+              <button
+                type="button"
+                onClick={() => setMode("approve")}
+                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "#0a0d09",
+                  border: "none",
+                  boxShadow: "0 0 14px rgba(197,245,70,0.25)",
+                }}
+              >
+                ✓ Approve
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("decline")}
+                className="px-4 py-2 rounded-xl text-sm"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-orange)",
+                  border: "1px solid rgba(239,90,42,0.4)",
+                }}
+              >
+                ✗ Decline
+              </button>
+              <Link
+                to={`/request/view/${row.uuid}`}
+                className="px-4 py-2 rounded-xl text-sm text-center"
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  color: "var(--spark-text)",
+                  textDecoration: "none",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                }}
+              >
+                View →
+              </Link>
+            </>
+          )}
+          {mode === "approve" && (
+            <>
+              <button
+                type="button"
+                onClick={approve}
+                disabled={inFlight}
+                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "#0a0d09",
+                  border: "none",
+                  opacity: inFlight ? 0.6 : 1,
+                }}
+                title="Confirm — approving moves this into scheduling and notifies the team"
+              >
+                {inFlight ? "Approving…" : "Confirm approve"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode(null)}
+                disabled={inFlight}
+                className="px-3 py-2 rounded-xl text-sm"
+                style={{
+                  background: "transparent",
+                  color: "rgba(255,255,255,0.6)",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                }}
+              >
+                Cancel
+              </button>
+            </>
+          )}
+          {mode === "decline" && (
+            <>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Reason (optional — emailed to the requestor)"
+                rows={2}
+                className="text-sm rounded-lg p-2"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  color: "var(--spark-text)",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                  width: 220,
+                }}
+              />
+              <button
+                type="button"
+                onClick={decline}
+                disabled={inFlight}
+                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "var(--spark-orange)",
+                  color: "#0a0d09",
+                  border: "none",
+                  opacity: inFlight ? 0.6 : 1,
+                }}
+              >
+                {inFlight ? "Declining…" : "Confirm decline"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode(null)}
+                disabled={inFlight}
+                className="px-3 py-2 rounded-xl text-sm"
+                style={{
+                  background: "transparent",
+                  color: "rgba(255,255,255,0.6)",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                }}
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+};
+
+const ClientRequestApprovalsInner: React.FC = () => {
+  const { tenantId } = useAuthStore();
+  const [decidedIds, setDecidedIds] = useState<Set<string>>(() => new Set());
+  const handleDecided = useCallback((id: string) => {
+    setDecidedIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
+  const data = useLazyLoadQuery<RequestsQueryType>(
+    RequestsQuery,
+    { first: 300, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-and-network" },
+  );
+
+  const rows: PendingRequest[] = useMemo(() => {
+    const nodes =
+      data?.requests?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+    return nodes
+      .filter(
+        (n) =>
+          (n.status?.slug ?? n.status?.name ?? "").toLowerCase() === "pending",
+      )
+      .map((n) => {
+        const market = n.retailer?.location?.name ?? n.location?.name ?? "";
+        const st = n.retailer?.location?.state?.code ?? n.state?.code ?? "";
+        const createdMs = n.createdAt ? new Date(n.createdAt).getTime() : 0;
+        const pendingHours = createdMs
+          ? Math.max(0, Math.round((Date.now() - createdMs) / 3_600_000))
+          : null;
+        return {
+          id: String(n.id),
+          uuid: String(n.uuid),
+          reqLabel: reqLabelFromGlobalId(String(n.id)),
+          venue: n.retailer?.name ?? n.name ?? "—",
+          where: [market, st].filter(Boolean).join(", "),
+          date: n.date ? fmtDate(n.date) : "",
+          requester: n.client?.name ?? n.distributor?.name ?? "",
+          typeLabel: n.requestType?.name ?? "Activation",
+          createdMs,
+          pendingHours,
+        };
+      })
+      .sort((a, b) => b.createdMs - a.createdMs); // newest submission first
+  }, [data]);
+
+  const visible = useMemo(
+    () => rows.filter((r) => !decidedIds.has(r.id)),
+    [rows, decidedIds],
+  );
+
+  if (visible.length === 0) {
+    return (
+      <div className="spark-card p-10 text-center" style={{ borderRadius: 16 }}>
+        <p
+          className="display text-2xl font-bold"
+          style={{ letterSpacing: "-0.02em" }}
+        >
+          You&rsquo;re all caught up.
+        </p>
+        <p className="mt-2 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          No requests awaiting your approval.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <ul className="space-y-2">
+      {visible.map((r) => (
+        <RequestApprovalRow key={r.id} row={r} onDecided={handleDecided} />
+      ))}
+    </ul>
+  );
+};
+
 /* ─────────────────── page ─────────────────── */
 
 /**
@@ -389,6 +754,13 @@ const ClientApprovalsInner: React.FC = () => {
  * for the standalone `/my-approvals` route.
  */
 export const ClientApprovalsBody: React.FC = () => {
+  // Two approval stages for a brand stakeholder:
+  //  • Requests — incoming activation requests awaiting approve/decline.
+  //    This is the front of the funnel and the surface that was missing
+  //    (the REQ-1481 report) — so it's the DEFAULT tab.
+  //  • Recaps — post-event reports awaiting sign-off (the original page).
+  const [tab, setTab] = useState<"requests" | "recaps">("requests");
+
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header — brand-voice, not SEO keyword stuffing. */}
@@ -403,12 +775,40 @@ export const ClientApprovalsBody: React.FC = () => {
           className="display text-4xl font-bold mt-2"
           style={{ letterSpacing: "-0.04em" }}
         >
-          Recaps to review.
+          Awaiting your approval.
         </h1>
         <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
-          Recaps from your events that are waiting on your sign-off. Open one
-          to review the details and approve it.
+          {tab === "requests"
+            ? "New activation requests submitted for your brand. Approve to move one into scheduling, or decline with a note."
+            : "Recaps from your events that are waiting on your sign-off. Open one to review the details and approve it."}
         </p>
+      </div>
+
+      {/* Stage toggle. */}
+      <div className="flex gap-2">
+        {(
+          [
+            ["requests", "Requests"],
+            ["recaps", "Recaps"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+            style={{
+              background: tab === key ? "var(--spark-lime)" : "transparent",
+              color: tab === key ? "#0a0d09" : "var(--spark-text)",
+              border:
+                tab === key
+                  ? "none"
+                  : "1px solid var(--spark-border, rgba(255,255,255,0.14))",
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <Suspense
@@ -421,7 +821,11 @@ export const ClientApprovalsBody: React.FC = () => {
           </div>
         }
       >
-        <ClientApprovalsInner />
+        {tab === "requests" ? (
+          <ClientRequestApprovalsInner />
+        ) : (
+          <ClientApprovalsInner />
+        )}
       </Suspense>
     </div>
   );
