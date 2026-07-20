@@ -4125,6 +4125,9 @@ type Mutation {
   rejectWalkupShift(input: RejectWalkupShiftInput!): WalkupActionResponse!
   bulkConfirmWalkupShifts(input: BulkWalkupShiftsInput!): BulkWalkupActionResponse!
   bulkRejectWalkupShifts(input: BulkWalkupShiftsInput!): BulkWalkupActionResponse!
+  approvePayrollHours(input: ApprovePayrollInput!): PayrollActionResponse!
+  markPayrollPaid(input: ApprovePayrollInput!): PayrollActionResponse!
+  unapprovePayrollHours(input: ApprovePayrollInput!): PayrollActionResponse!
   addFavoriteAmbassador(input: AddFavoriteAmbassadorInput!): FavoriteAmbassadorResponse!
   removeFavoriteAmbassador(input: RemoveFavoriteAmbassadorInput!): FavoriteAmbassadorResponse!
   bulkInviteAmbassadorsToShift(input: BulkInviteToShiftInput!): BulkInviteResponse!
@@ -4605,6 +4608,24 @@ type PayrollTimesheetRow {
   shiftsMissingRate: Int!
   flags: [String!]!
   needsReview: Boolean!
+  approved: Boolean!
+  approvedAt: String
+  paidAt: String
+}
+
+input ApprovePayrollInput {
+  startDate: String!
+  endDate: String!
+  tenantId: ID!
+  ambassadorUuids: [ID!]!
+  clientMutationId: ID = null
+}
+
+type PayrollActionResponse {
+  success: Boolean!
+  message: String!
+  count: Int!
+  clientMutationId: ID
 }
 
 type PayrollTimesheet {

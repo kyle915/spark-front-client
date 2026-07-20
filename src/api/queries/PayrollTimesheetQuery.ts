@@ -23,6 +23,9 @@ export const PayrollTimesheetQuery = graphql`
         shiftsMissingRate
         flags
         needsReview
+        approved
+        approvedAt
+        paidAt
       }
     }
   }
