@@ -4123,6 +4123,8 @@ type Mutation {
   revokeWalkupCode(input: GenerateWalkupCodeInput!): WalkupActionResponse!
   confirmWalkupShift(input: ConfirmWalkupShiftInput!): WalkupActionResponse!
   rejectWalkupShift(input: RejectWalkupShiftInput!): WalkupActionResponse!
+  bulkConfirmWalkupShifts(input: BulkWalkupShiftsInput!): BulkWalkupActionResponse!
+  bulkRejectWalkupShifts(input: BulkWalkupShiftsInput!): BulkWalkupActionResponse!
   addFavoriteAmbassador(input: AddFavoriteAmbassadorInput!): FavoriteAmbassadorResponse!
   removeFavoriteAmbassador(input: RemoveFavoriteAmbassadorInput!): FavoriteAmbassadorResponse!
   bulkInviteAmbassadorsToShift(input: BulkInviteToShiftInput!): BulkInviteResponse!
@@ -4517,6 +4519,18 @@ type WalkupActionResponse {
   clientMutationId: ID
 }
 
+type BulkWalkupActionResponse {
+  success: Boolean!
+  message: String!
+  count: Int!
+  clientMutationId: ID
+}
+
+input BulkWalkupShiftsInput {
+  ambassadorEventUuids: [ID!]!
+  clientMutationId: ID = null
+}
+
 input GenerateWalkupCodeInput {
   eventUuid: ID!
   clientMutationId: ID = null
@@ -4635,6 +4649,7 @@ type Query {
   campaignCost(startDate: String!, endDate: String!, tenantId: ID = null): CampaignCostReport!
   staffingBoard(startDate: String!, endDate: String!, tenantId: ID = null): [StaffingBoardShift!]!
   walkupShifts(status: String = null, tenantId: ID = null): [WalkupShiftType!]!
+  pendingWalkupCount(tenantId: ID = null): Int!
   briefingTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [BriefingTemplate!]!
   gigTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [GigTemplate!]!
   jobBriefing(jobId: ID!): JobBriefingPayload

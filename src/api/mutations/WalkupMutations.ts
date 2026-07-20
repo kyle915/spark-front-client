@@ -43,3 +43,23 @@ export const RejectWalkupShiftMutation = graphql`
     }
   }
 `;
+
+export const BulkConfirmWalkupShiftsMutation = graphql`
+  mutation WalkupMutationsBulkConfirmMutation($input: BulkWalkupShiftsInput!) {
+    bulkConfirmWalkupShifts(input: $input) {
+      success
+      message
+      count
+    }
+  }
+`;
+
+export const BulkRejectWalkupShiftsMutation = graphql`
+  mutation WalkupMutationsBulkRejectMutation($input: BulkWalkupShiftsInput!) {
+    bulkRejectWalkupShifts(input: $input) {
+      success
+      message
+      count
+    }
+  }
+`;
