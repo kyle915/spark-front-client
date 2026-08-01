@@ -13,6 +13,7 @@ import type { WalkupMutationsRejectMutation as RejectType } from "@api/mutations
 import type { WalkupMutationsBulkConfirmMutation as BulkConfirmType } from "@api/mutations/__generated__/WalkupMutationsBulkConfirmMutation.graphql";
 import type { WalkupMutationsBulkRejectMutation as BulkRejectType } from "@api/mutations/__generated__/WalkupMutationsBulkRejectMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
+import StandingCheckinLink from "./StandingCheckinLink";
 
 /**
  * Walk-ups queue — tenant-wide review of self-serve clock-ins created from an
@@ -351,9 +352,15 @@ export default function SparkWalkups() {
       </p>
       <h1 className="display text-2xl font-bold mb-1">Walk-ups</h1>
       <p className="text-sm mb-5" style={{ color: "rgba(255,255,255,0.55)" }}>
-        Self-serve clock-ins from an event code. Confirm to count their hours
-        (and activate a new BA), or reject.
+        Self-serve clock-ins from a check-in link or event code. Confirm to
+        count their hours (and activate a new BA), or reject.
       </p>
+
+      {/* Own Suspense with no fallback: the standing link is a nicety, so it
+          streams in silently rather than holding up the review queue. */}
+      <Suspense fallback={null}>
+        <StandingCheckinLink />
+      </Suspense>
 
       <div className="flex items-center gap-1 mb-5">
         {(["pending", "all"] as const).map((f) => (
