@@ -38,11 +38,20 @@ type Clock = {
   clockInAt: string | null;
   clockOutAt: string | null;
 };
+type StoreOption = { name: string; address: string };
 type Context = {
-  event: { uuid: string; name: string; address: string | null; startTime: string | null; endTime: string | null };
+  // OPTIONAL on a standing tenant link: until the BA picks a store + date there
+  // is no event yet, so nothing here may be dereferenced unguarded.
+  event?: { uuid: string; name: string; address: string | null; startTime: string | null; endTime: string | null };
   brand: { name: string; primaryColor: string | null };
-  template: Template | null;
+  template?: Template | null;
   session?: { ambassadorName: string; clock: Clock; hasRecap: boolean; pendingReview: boolean };
+  // Tenant-link mode — ONE durable link shared across every activation, so BAs
+  // never type an event code. `needsEventDetails` means ask for store + date on
+  // the identify step; the API then finds-or-creates the event.
+  mode?: "tenant";
+  needsEventDetails?: boolean;
+  recentLocations?: StoreOption[];
   error?: string;
   message?: string;
 };
@@ -64,6 +73,15 @@ const choiceKind = (t: string): "select" | "multiselect" | null => {
   if (t === "multiselect" || t.includes("multi")) return "multiselect";
   if (t === "select" || t.includes("dropdown")) return "select";
   return null;
+};
+
+// Local calendar date as YYYY-MM-DD for the date input. Uses the LOCAL parts,
+// never toISOString() — that converts to UTC first, so a BA checking in after
+// ~5pm Pacific would be handed tomorrow's date.
+const todayISO = (): string => {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
 
 const fmtTime = (iso: string | null): string => {
@@ -140,7 +158,14 @@ export default function SparkCheckin() {
       <div style={{ width: "100%", maxWidth: 560 }}>
         <Header ctx={ctx} accent={accent} />
         {!identified ? (
-          <IdentifyStep code={code} accent={accent} storeKey={storeKey} onDone={setToken} />
+          <IdentifyStep
+            code={code}
+            accent={accent}
+            storeKey={storeKey}
+            onDone={setToken}
+            needsEventDetails={Boolean(ctx.needsEventDetails)}
+            recentLocations={ctx.recentLocations || []}
+          />
         ) : (
           <CheckedInFlow
             code={code}
@@ -162,22 +187,37 @@ export default function SparkCheckin() {
 
 // ── Header ────────────────────────────────────────────────────────────────
 function Header({ ctx, accent }: { ctx: Context; accent: string }) {
-  const when = ctx.event.startTime
-    ? new Date(ctx.event.startTime).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
+  const ev = ctx.event;
+  // A standing tenant link has no event until the BA picks a store, so the
+  // header leads with the brand and says what's about to happen instead of
+  // rendering an empty title block.
+  if (!ev) {
+    return (
+      <div style={{ marginBottom: 18 }}>
+        <div style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", color: accent, fontWeight: 700 }}>
+          {ctx.brand.name || "Check in"}
+        </div>
+        <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>Start your shift</h1>
+        <div style={{ fontSize: 13, opacity: 0.6 }}>Clock in, work, then file your recap — all from this page.</div>
+      </div>
+    );
+  }
+  const when = ev.startTime
+    ? new Date(ev.startTime).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
     : "";
   return (
     <div style={{ marginBottom: 18 }}>
       <div style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", color: accent, fontWeight: 700 }}>
         {ctx.brand.name || "Check in"}
       </div>
-      <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>{ctx.event.name}</h1>
+      <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>{ev.name}</h1>
       <div style={{ fontSize: 13, opacity: 0.6 }}>
         {when}
-        {when && (ctx.event.startTime || ctx.event.endTime) ? " · " : ""}
-        {fmtTime(ctx.event.startTime)}
-        {ctx.event.endTime ? `–${fmtTime(ctx.event.endTime)}` : ""}
+        {when && (ev.startTime || ev.endTime) ? " · " : ""}
+        {fmtTime(ev.startTime)}
+        {ev.endTime ? `–${fmtTime(ev.endTime)}` : ""}
       </div>
-      {ctx.event.address ? <div style={{ fontSize: 13, opacity: 0.55, marginTop: 2 }}>{ctx.event.address}</div> : null}
+      {ev.address ? <div style={{ fontSize: 13, opacity: 0.55, marginTop: 2 }}>{ev.address}</div> : null}
     </div>
   );
 }
@@ -188,29 +228,54 @@ function IdentifyStep({
   accent,
   storeKey,
   onDone,
+  needsEventDetails = false,
+  recentLocations = [],
 }: {
   code: string;
   accent: string;
   storeKey: string;
   onDone: (t: string) => void;
+  needsEventDetails?: boolean;
+  recentLocations?: StoreOption[];
 }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [storeName, setStoreName] = useState("");
+  const [address, setAddress] = useState("");
+  // Default to today — the overwhelmingly common case is a BA checking in for
+  // the shift they're standing in.
+  const [eventDate, setEventDate] = useState(() => todayISO());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // Picking a known store fills BOTH fields, so the address matches an existing
+  // event's exactly and this BA joins it rather than forking a near-duplicate.
+  const pickStore = (value: string) => {
+    setAddress(value);
+    const hit = recentLocations.find((l) => l.address === value);
+    if (hit && hit.name && !storeName.trim()) setStoreName(hit.name);
+  };
 
   const submit = async () => {
     setErr(null);
     if (!firstName.trim()) return setErr("Enter your name.");
     if (!phone.trim()) return setErr("Enter a phone number.");
+    if (needsEventDetails) {
+      if (!address.trim()) return setErr("Enter the store address.");
+      if (!eventDate) return setErr("Pick the date you're working.");
+    }
     setBusy(true);
     try {
       const res = await fetch(`${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/identify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, phone, email }),
+        body: JSON.stringify(
+          needsEventDetails
+            ? { firstName, lastName, phone, email, storeName, address, eventDate }
+            : { firstName, lastName, phone, email },
+        ),
       });
       const json = await res.json();
       if (!res.ok || !json.sessionToken) {
@@ -242,6 +307,49 @@ function IdentifyStep({
       </div>
       <input style={input} placeholder="Mobile phone" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
       <input style={input} placeholder="Email (optional)" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+
+      {needsEventDetails ? (
+        <>
+          <h2 style={{ ...h2, marginTop: 22 }}>Where are you working?</h2>
+          <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
+            Pick your store from the list if it's there — that keeps you on the
+            same event as anyone else working with you today.
+          </p>
+          <input
+            style={input}
+            placeholder="Store address"
+            list="spark-checkin-stores"
+            autoComplete="off"
+            value={address}
+            onChange={(e) => pickStore(e.target.value)}
+          />
+          {/* Native datalist: real autocomplete on iOS and Android with no
+              dependency and no custom dropdown to fight with on a phone. */}
+          <datalist id="spark-checkin-stores">
+            {recentLocations.map((l) => (
+              <option key={l.address} value={l.address}>
+                {l.name || l.address}
+              </option>
+            ))}
+          </datalist>
+          <input
+            style={input}
+            placeholder="Store name (optional)"
+            value={storeName}
+            onChange={(e) => setStoreName(e.target.value)}
+          />
+          <label style={{ fontSize: 12, opacity: 0.6, display: "block", margin: "10px 0 4px" }}>
+            Date you're working
+          </label>
+          <input
+            style={input}
+            type="date"
+            value={eventDate}
+            onChange={(e) => setEventDate(e.target.value)}
+          />
+        </>
+      ) : null}
+
       {err ? <p style={errText}>{err}</p> : null}
       <button style={{ ...primaryBtn(accent), marginTop: 6 }} disabled={busy} onClick={submit}>
         {busy ? "Starting…" : "Start check-in"}
@@ -324,7 +432,7 @@ function CheckedInFlow({
       <RecapForm
         code={code}
         token={token}
-        template={ctx.template}
+        template={ctx.template ?? null}
         accent={accent}
         onCancel={() => setShowRecap(false)}
         onSubmitted={async () => {
