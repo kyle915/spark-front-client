@@ -109,7 +109,13 @@ export const TenantPicker: React.FC = () => {
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-md border border-base-300 bg-base-100 shadow-lg max-h-80 overflow-y-auto p-1 hide-scroll">
+        // max-h-80 (320px) fits ~8 rows, and `hide-scroll` removed the
+        // scrollbar — so past 8 clients the list scrolled with NO visual hint
+        // that anything was below. At 15 tenants the newest ones looked simply
+        // absent; a client created minutes earlier appeared not to exist.
+        // Taller, capped against the viewport so it can't overflow a laptop
+        // screen, and the scrollbar stays visible as the affordance.
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-md border border-base-300 bg-base-100 shadow-lg max-h-[min(70vh,34rem)] overflow-y-auto p-1">
           {tenants.length === 0 && (
             <div className="px-3 py-2 text-xs text-base-content/55">
               No tenants
