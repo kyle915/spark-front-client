@@ -42,7 +42,7 @@ type StoreOption = { name: string; address: string };
 type Context = {
   // OPTIONAL on a standing tenant link: until the BA picks a store + date there
   // is no event yet, so nothing here may be dereferenced unguarded.
-  event?: { uuid: string; name: string; address: string | null; startTime: string | null; endTime: string | null };
+  event?: { uuid: string; name: string; address: string | null; startTime: string | null; endTime: string | null; date?: string | null };
   brand: { name: string; primaryColor: string | null };
   template?: Template | null;
   session?: { ambassadorName: string; clock: Clock; hasRecap: boolean; pendingReview: boolean };
@@ -98,6 +98,45 @@ const normalizePlace = (value: string): string =>
     .replace(/\s+/g, " ")
     .trim();
 
+/**
+ * Who this phone said they were last time, per link.
+ *
+ * A standing link is worked by the same handful of BAs all season, so making
+ * them retype their name and cell for every event is the difference between a
+ * tool they use and one they avoid. Stored per code, on their own device.
+ *
+ * Name and cell only — deliberately nothing that could identify a store, a
+ * client or a shift, so a shared or borrowed phone leaks nothing about the
+ * work.
+ */
+type Identity = { firstName: string; lastName: string; phone: string; email: string };
+const IDENTITY_KEY = (code: string) => `@spark.checkin.who/${code}`;
+
+const readIdentity = (code: string): Identity => {
+  const empty: Identity = { firstName: "", lastName: "", phone: "", email: "" };
+  try {
+    const raw = window.localStorage.getItem(IDENTITY_KEY(code));
+    if (!raw) return empty;
+    const p = JSON.parse(raw) as Partial<Identity>;
+    return {
+      firstName: p.firstName || "",
+      lastName: p.lastName || "",
+      phone: p.phone || "",
+      email: p.email || "",
+    };
+  } catch {
+    return empty;
+  }
+};
+
+const writeIdentity = (code: string, who: Identity): void => {
+  try {
+    window.localStorage.setItem(IDENTITY_KEY(code), JSON.stringify(who));
+  } catch {
+    /* private mode / quota — prefill is a convenience, never required */
+  }
+};
+
 const fmtTime = (iso: string | null): string => {
   if (!iso) return "";
   const d = new Date(iso);
@@ -145,6 +184,21 @@ export default function SparkCheckin() {
     void refresh();
   }, [refresh]);
 
+  // Same crew works these stores week after week, so the link has to be
+  // reusable. Dropping the session token returns them to the store + date
+  // step for a fresh event; their NAME is kept (see IDENTITY_KEY) so a repeat
+  // BA only answers "which store, what day".
+  const startAnother = useCallback(() => {
+    try {
+      window.localStorage.removeItem(storeKey);
+    } catch {
+      /* private mode — clearing state below is enough for this session */
+    }
+    setToken(null);
+    setCtx(null);
+    setLoadErr(null);
+  }, [storeKey]);
+
   const accent = ctx?.brand.primaryColor || FALLBACK_ACCENT;
   const clockState = ctx?.session?.clock.state ?? "not_started";
   const identified = Boolean(token && ctx?.session);
@@ -189,6 +243,7 @@ export default function SparkCheckin() {
             clockState={clockState}
             hasRecap={hasRecap}
             onRefresh={refresh}
+            onStartAnother={startAnother}
           />
         )}
         <p style={{ fontSize: 11, opacity: 0.4, marginTop: 22, textAlign: "center" }}>
@@ -216,8 +271,22 @@ function Header({ ctx, accent }: { ctx: Context; accent: string }) {
       </div>
     );
   }
-  const when = ev.startTime
-    ? new Date(ev.startTime).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
+  // Date from `date`, time ONLY from a real `startTime`. A walk-in event has
+  // no scheduled start, and its date is stored at noon UTC — coalescing the
+  // two used to render "Sat, Aug 1 · 5 AM" for a shift with no start time.
+  const dayISO = ev.date || ev.startTime;
+  const when = dayISO
+    ? new Date(dayISO).toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        // The date is a UTC-noon marker; read it back in UTC so it can't slip
+        // a day for a BA west of Greenwich.
+        timeZone: ev.date && !ev.startTime ? "UTC" : undefined,
+      })
+    : "";
+  const window_ = ev.startTime
+    ? `${fmtTime(ev.startTime)}${ev.endTime ? `–${fmtTime(ev.endTime)}` : ""}`
     : "";
   return (
     <div style={{ marginBottom: 18 }}>
@@ -227,9 +296,8 @@ function Header({ ctx, accent }: { ctx: Context; accent: string }) {
       <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>{ev.name}</h1>
       <div style={{ fontSize: 13, opacity: 0.6 }}>
         {when}
-        {when && (ev.startTime || ev.endTime) ? " · " : ""}
-        {fmtTime(ev.startTime)}
-        {ev.endTime ? `–${fmtTime(ev.endTime)}` : ""}
+        {when && window_ ? " · " : ""}
+        {window_}
       </div>
       {ev.address ? <div style={{ fontSize: 13, opacity: 0.55, marginTop: 2 }}>{ev.address}</div> : null}
     </div>
@@ -252,10 +320,14 @@ function IdentifyStep({
   needsEventDetails?: boolean;
   recentLocations?: StoreOption[];
 }) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+  // Repeat BAs are the norm on a standing link — the same crew works these
+  // stores week after week. Remember who they said they were so the second
+  // and twentieth check-ins are just "which store, what day".
+  const saved = readIdentity(code);
+  const [firstName, setFirstName] = useState(saved.firstName);
+  const [lastName, setLastName] = useState(saved.lastName);
+  const [phone, setPhone] = useState(saved.phone);
+  const [email, setEmail] = useState(saved.email);
   const [storeName, setStoreName] = useState("");
   const [address, setAddress] = useState("");
   // Default to today — the overwhelmingly common case is a BA checking in for
@@ -356,6 +428,8 @@ function IdentifyStep({
       } catch {
         /* private mode — token still held in memory for this session */
       }
+      // Remember them for the next event on this same link.
+      writeIdentity(code, { firstName, lastName, phone, email });
       onDone(json.sessionToken);
     } catch {
       setErr("Network error. Try again.");
@@ -455,12 +529,14 @@ function CheckedInFlow({
   clockState,
   hasRecap,
   onRefresh,
+  onStartAnother,
 }: {
   code: string;
   token: string;
   ctx: Context;
   accent: string;
   clockState: Clock["state"];
+  onStartAnother: () => void;
   hasRecap: boolean;
   onRefresh: () => Promise<void>;
 }) {
@@ -557,6 +633,18 @@ function CheckedInFlow({
         <p style={{ fontSize: 14, opacity: 0.7 }}>
           Your recap is in{pending ? " and is pending your lead's confirmation" : ""}. Thanks for the great work!
         </p>
+        {/* Without this the page is a dead end: the session sticks, so a BA
+            coming back for their next event would just see this screen again.
+            Only on the standing link — an event code covers one event, so
+            there is no "another" to log. */}
+        {ctx.mode === "tenant" ? (
+          <button
+            onClick={onStartAnother}
+            style={{ ...primaryBtn(accent), marginTop: 18, width: "100%" }}
+          >
+            Log another event
+          </button>
+        ) : null}
       </div>
     );
   }
