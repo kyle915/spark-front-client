@@ -725,15 +725,48 @@ function CheckedInFlow({
           ) : null}
 
           {/* Clocked out with no recap — an older shift, or the auto-clock-out
-              cron closed them. Still let them file it. */}
+              cron closed them. Still let them file it, but this must NOT be
+              the only way out: a BA whose last shift ended without a recap
+              would otherwise be trapped on that dead event forever, unable to
+              start today's. Hence the escape hatch below. */}
           {clockState === "clocked_out" && !hasRecap ? (
-            <button style={primaryBtn(accent)} onClick={() => setShowRecap(true)}>
-              File recap
-            </button>
+            <>
+              <button style={primaryBtn(accent)} onClick={() => setShowRecap(true)}>
+                File recap
+              </button>
+              {ctx.mode === "tenant" ? (
+                <button style={secondaryBtn} onClick={onStartAnother}>
+                  Log another event
+                </button>
+              ) : null}
+            </>
           ) : null}
         </div>
         {msg ? <p style={errText}>{msg}</p> : null}
       </div>
+
+      {/* Wrong store or wrong day is easy to do on a shared link, and the
+          BA can't fix it themselves once the session is minted. A quiet way
+          back beats an admin having to merge two events later. Not offered
+          mid-shift on a per-event link, where there is no other event to
+          move to. */}
+      {ctx.mode === "tenant" && clockState === "clocked_in" ? (
+        <button
+          onClick={onStartAnother}
+          style={{
+            background: "none",
+            border: "none",
+            padding: 4,
+            fontSize: 12,
+            opacity: 0.55,
+            textDecoration: "underline",
+            cursor: "pointer",
+            alignSelf: "center",
+          }}
+        >
+          Wrong store or date? Start over
+        </button>
+      ) : null}
 
       {clockState === "not_started" ? (
         <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>Clock in when you arrive to start your shift.</p>
