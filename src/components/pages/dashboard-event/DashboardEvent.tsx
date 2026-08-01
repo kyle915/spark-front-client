@@ -10,6 +10,7 @@ import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generate
 import AttentionEngine from "./AttentionEngine";
 import PaceWidget from "./PaceWidget";
 import AskAiButton from "@/components/ai/AskAiButton";
+import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
 import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
 import TenantKpiComparison from "@/components/ai/TenantKpiComparison";
 import TenantGoalsPanel from "@/components/ai/TenantGoalsPanel";
@@ -676,6 +677,15 @@ export default function DashboardIndex() {
             to block the hero metrics rendering. */}
         <Suspense fallback={null}>
           <TodaysSnapshot />
+        </Suspense>
+
+        {/* Time clock — who's working now (Today) and hours for the current
+            pay week. Sits with the action-oriented widgets rather than the
+            KPI hero: this is an ops question ("is my team out there, and
+            what do I owe them"), not a campaign-performance one. Its own
+            Suspense so the live-board fetch can't hold up the page. */}
+        <Suspense fallback={null}>
+          <ClockSummaryCard />
         </Suspense>
 
         {/* PACE widget — last 7 days at a glance, with delta chips.
