@@ -656,6 +656,7 @@ function CheckedInFlow({
         token={token}
         template={ctx.template ?? null}
         accent={accent}
+        brandName={ctx.brand.name || ""}
         onCancel={() => setShowRecap(false)}
         onSubmitted={async () => {
           setShowRecap(false);
@@ -692,20 +693,42 @@ function CheckedInFlow({
             }}
           />
         </div>
+        {/* ONE action at a time, in order: clock in → file recap → clock out.
+            Clock-out is deliberately withheld until the recap is in. A BA who
+            can clock out first files the recap from the car, or not at all —
+            gating it keeps the write-up happening on site while the shift is
+            still fresh, and makes the clock reflect the real end of work.
+            Nobody can get stranded on the clock: the auto-clock-out cron
+            closes anything left open. */}
         <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
           {clockState === "not_started" ? (
             <button style={primaryBtn(accent)} disabled={busy !== ""} onClick={() => clock("in")}>
               {busy === "in" ? "Clocking in…" : "Clock in"}
             </button>
           ) : null}
-          {clockState === "clocked_in" ? (
-            <button style={secondaryBtn} disabled={busy !== ""} onClick={() => clock("out")}>
-              {busy === "out" ? "Clocking out…" : "Clock out"}
+
+          {clockState === "clocked_in" && !hasRecap ? (
+            <button style={primaryBtn(accent)} onClick={() => setShowRecap(true)}>
+              File recap
             </button>
           ) : null}
-          {clockState !== "not_started" ? (
+
+          {clockState === "clocked_in" && hasRecap ? (
+            <>
+              <button style={primaryBtn(accent)} disabled={busy !== ""} onClick={() => clock("out")}>
+                {busy === "out" ? "Clocking out…" : "Clock out"}
+              </button>
+              <button style={secondaryBtn} onClick={() => setShowRecap(true)}>
+                Edit recap
+              </button>
+            </>
+          ) : null}
+
+          {/* Clocked out with no recap — an older shift, or the auto-clock-out
+              cron closed them. Still let them file it. */}
+          {clockState === "clocked_out" && !hasRecap ? (
             <button style={primaryBtn(accent)} onClick={() => setShowRecap(true)}>
-              {hasRecap ? "Edit recap" : "File recap"}
+              File recap
             </button>
           ) : null}
         </div>
@@ -714,6 +737,16 @@ function CheckedInFlow({
 
       {clockState === "not_started" ? (
         <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>Clock in when you arrive to start your shift.</p>
+      ) : null}
+      {clockState === "clocked_in" && !hasRecap ? (
+        <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>
+          You're on the clock. File your recap when you're done — then you can clock out.
+        </p>
+      ) : null}
+      {clockState === "clocked_in" && hasRecap ? (
+        <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>
+          Recap's in. Clock out to finish your shift.
+        </p>
       ) : null}
     </div>
   );
@@ -725,6 +758,7 @@ function RecapForm({
   token,
   template,
   accent,
+  brandName,
   onCancel,
   onSubmitted,
 }: {
@@ -732,10 +766,31 @@ function RecapForm({
   token: string;
   template: Template | null;
   accent: string;
+  brandName: string;
   onCancel: () => void;
   onSubmitted: () => Promise<void>;
 }) {
-  const [values, setValues] = useState<Record<string, string | string[]>>({});
+  // Prefill the brand into an "Event Name" field. Spark already knows the
+  // brand, and every Total Wireless recap wants the same answer — making the
+  // BA type it on a phone keyboard is pure friction, and hand-typing is how
+  // you end up with "total wirless" in a client report. Still editable.
+  //
+  // Matched on the field NAME, so a template using different wording simply
+  // doesn't prefill and the BA types it exactly as before — the same
+  // name-matching approach the recap metrics use, but here a miss is
+  // harmless rather than a wrong number.
+  const [values, setValues] = useState<Record<string, string | string[]>>(() => {
+    const seed: Record<string, string | string[]> = {};
+    if (!brandName) return seed;
+    for (const section of template?.sections ?? []) {
+      for (const f of section.fields) {
+        if (f.name.trim().toLowerCase() === "event name" && !isPhotoType(f.type)) {
+          seed[f.id] = brandName;
+        }
+      }
+    }
+    return seed;
+  });
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [samples, setSamples] = useState<Record<string, string>>({});
   const [engagements, setEngagements] = useState("");
