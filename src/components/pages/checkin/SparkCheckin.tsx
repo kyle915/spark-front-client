@@ -84,6 +84,20 @@ const todayISO = (): string => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
 
+/**
+ * TS twin of the backend's `normalize_place` (ambassadors/checkin_web.py).
+ * Must stay in step with it: the server keys find-or-create on this shape, so
+ * this is how the page decides a GPS-derived address is "the same store" as
+ * one already on the list rather than a new one.
+ */
+const normalizePlace = (value: string): string =>
+  (value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 const fmtTime = (iso: string | null): string => {
   if (!iso) return "";
   const d = new Date(iso);
@@ -249,6 +263,7 @@ function IdentifyStep({
   const [eventDate, setEventDate] = useState(() => todayISO());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
 
   // Picking a known store fills BOTH fields, so the address matches an existing
   // event's exactly and this BA joins it rather than forking a near-duplicate.
@@ -256,6 +271,59 @@ function IdentifyStep({
     setAddress(value);
     const hit = recentLocations.find((l) => l.address === value);
     if (hit && hit.name && !storeName.trim()) setStoreName(hit.name);
+  };
+
+  // "Use my current location" — the phone knows where it is, so the BA
+  // shouldn't have to type a street address one-handed in a parking lot.
+  //
+  // If the resolved address is within a hair of a store we already know, snap
+  // to the KNOWN one instead. The backend keys find-or-create on the
+  // normalized address, so a GPS-derived string that differs by a word from
+  // the spelling the first BA used would fork a second event for the same
+  // activation — the exact thing this flow exists to prevent.
+  const useMyLocation = () => {
+    setErr(null);
+    if (!navigator.geolocation) {
+      setErr("This phone won't share its location. Type the address instead.");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(
+            `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/where`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+              }),
+            },
+          );
+          const json = await res.json();
+          if (json.address) {
+            const known = recentLocations.find(
+              (l) => normalizePlace(l.address) === normalizePlace(json.address),
+            );
+            if (known) pickStore(known.address);
+            else setAddress(json.address);
+          } else {
+            setErr("Couldn't name that spot — type the address instead.");
+          }
+        } catch {
+          setErr("Couldn't look that up. Type the address instead.");
+        } finally {
+          setLocating(false);
+        }
+      },
+      () => {
+        setLocating(false);
+        setErr("Location is off for this site. Type the address instead.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+    );
   };
 
   const submit = async () => {
@@ -323,6 +391,26 @@ function IdentifyStep({
             value={address}
             onChange={(e) => pickStore(e.target.value)}
           />
+          {/* The phone already knows where it is — typing a street address
+              one-handed in a parking lot is the worst part of this form. */}
+          <button
+            type="button"
+            onClick={useMyLocation}
+            disabled={locating}
+            style={{
+              background: "transparent",
+              border: "1px solid rgba(0,0,0,0.15)",
+              borderRadius: 10,
+              padding: "9px 12px",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: locating ? "default" : "pointer",
+              opacity: locating ? 0.6 : 1,
+              marginBottom: 10,
+            }}
+          >
+            {locating ? "Finding you…" : "📍 Use my current location"}
+          </button>
           {/* Native datalist: real autocomplete on iOS and Android with no
               dependency and no custom dropdown to fight with on a phone. */}
           <datalist id="spark-checkin-stores">
@@ -386,6 +474,52 @@ function CheckedInFlow({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ session: token, ...body }),
     });
+
+  // While the BA is ON THE CLOCK and this page is open, drop a location pin
+  // every few minutes so ops can see they're on site rather than only having
+  // the two clock punches.
+  //
+  // HONEST LIMIT: mobile browsers suspend timers when the tab is backgrounded
+  // or the screen locks, so this is a trail for as long as the page is in
+  // front of them — NOT continuous background tracking. Only the native app
+  // can do that. Don't sell this to a client as full-shift tracking.
+  //
+  // The server independently refuses any ping when the BA isn't clocked in,
+  // so a page left open in a pocket after clock-out records nothing.
+  useEffect(() => {
+    if (clockState !== "clocked_in") return;
+    if (!navigator.geolocation) return;
+
+    let stopped = false;
+    const sendPing = () => {
+      if (stopped || document.visibilityState !== "visible") return;
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (stopped) return;
+          void post("ping", {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          }).catch(() => {
+            /* a dropped pin is never worth interrupting the BA */
+          });
+        },
+        () => {
+          /* denied or unavailable — clocking still works, just no trail */
+        },
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 120000 },
+      );
+    };
+
+    sendPing();
+    const id = window.setInterval(sendPing, 3 * 60 * 1000);
+    return () => {
+      stopped = true;
+      window.clearInterval(id);
+    };
+    // `post` is recreated each render but closes only over code+token, which
+    // are stable for the life of this component.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clockState, code, token]);
 
   const clock = async (kind: "in" | "out") => {
     setMsg(null);
