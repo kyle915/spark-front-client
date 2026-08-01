@@ -138,7 +138,9 @@ const Inner: React.FC<{
   const [tenantsFetchKey, setTenantsFetchKey] = useState(0);
   const tenantsData = useLazyLoadQuery<TenantsQueryType>(
     TenantsQuery,
-    {},
+    // Explicit page size: the resolver's connection defaults to 10, so an
+    // empty variables object silently returned 10 of 15 clients.
+    { first: 100 },
     { fetchPolicy: "store-or-network", fetchKey: tenantsFetchKey },
   );
   const activeTenant = useMemo(() => {
@@ -1143,7 +1145,9 @@ const InviteModal: React.FC<{
   // that actually needs scoping per Kyle's spec.
   const tenantsData = useLazyLoadQuery<TenantsQueryType>(
     TenantsQuery,
-    {},
+    // Explicit page size: the resolver's connection defaults to 10, so an
+    // empty variables object silently returned 10 of 15 clients.
+    { first: 100 },
     { fetchPolicy: "store-or-network" },
   );
   const tenants = useMemo(
