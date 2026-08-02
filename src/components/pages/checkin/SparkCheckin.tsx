@@ -58,6 +58,14 @@ type Mileage = {
   totalMiles: number;
   totalAmount: number;
 };
+type SamplingStop = {
+  uuid: string;
+  name: string;
+  address: string;
+  lat: number | null;
+  lng: number | null;
+  recordedAt: string | null;
+};
 type StoreOption = { name: string; address: string };
 type Context = {
   // OPTIONAL on a standing tenant link: until the BA picks a store + date there
@@ -71,6 +79,7 @@ type Context = {
     hasRecap: boolean;
     pendingReview: boolean;
     mileage?: Mileage;
+    stops?: SamplingStop[];
   };
   // Tenant-link mode — ONE durable link shared across every activation, so BAs
   // never type an event code. `needsEventDetails` means ask for store + date on
@@ -78,6 +87,11 @@ type Context = {
   mode?: "tenant";
   needsEventDetails?: boolean;
   recentLocations?: StoreOption[];
+  // Roaming brands (Feel Free) pick a MARKET instead of typing a store
+  // address: the event is keyed on the market so a whole crew shares one, and
+  // the individual spots are logged as stops during the shift.
+  locationMode?: "address" | "market";
+  markets?: string[];
   error?: string;
   message?: string;
 };
@@ -342,6 +356,8 @@ export default function SparkCheckin() {
             onDone={setToken}
             needsEventDetails={Boolean(ctx.needsEventDetails)}
             recentLocations={ctx.recentLocations || []}
+            locationMode={ctx.locationMode || "address"}
+            markets={ctx.markets || []}
           />
         ) : (
           <CheckedInFlow
@@ -421,6 +437,8 @@ function IdentifyStep({
   onDone,
   needsEventDetails = false,
   recentLocations = [],
+  locationMode = "address",
+  markets = [],
 }: {
   code: string;
   accent: string;
@@ -428,10 +446,15 @@ function IdentifyStep({
   onDone: (t: string) => void;
   needsEventDetails?: boolean;
   recentLocations?: StoreOption[];
+  locationMode?: "address" | "market";
+  markets?: string[];
 }) {
   // Repeat BAs are the norm on a standing link — the same crew works these
   // stores week after week. Remember who they said they were so the second
   // and twentieth check-ins are just "which store, what day".
+  const isMarket = locationMode === "market" && markets.length > 0;
+  const [market, setMarket] = useState("");
+
   const saved = readIdentity(code);
   const [firstName, setFirstName] = useState(saved.firstName);
   const [lastName, setLastName] = useState(saved.lastName);
@@ -512,7 +535,11 @@ function IdentifyStep({
     if (!firstName.trim()) return setErr("Enter your name.");
     if (!phone.trim()) return setErr("Enter a phone number.");
     if (needsEventDetails) {
-      if (!address.trim()) return setErr("Enter the store address.");
+      if (isMarket) {
+        if (!market) return setErr("Pick your market.");
+      } else if (!address.trim()) {
+        return setErr("Enter the store address.");
+      }
       if (!eventDate) return setErr("Pick the date you're working.");
     }
     setBusy(true);
@@ -522,7 +549,9 @@ function IdentifyStep({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           needsEventDetails
-            ? { firstName, lastName, phone, email, storeName, address, eventDate }
+            ? isMarket
+              ? { firstName, lastName, phone, email, market, eventDate }
+              : { firstName, lastName, phone, email, storeName, address, eventDate }
             : { firstName, lastName, phone, email },
         ),
       });
@@ -562,6 +591,31 @@ function IdentifyStep({
       {needsEventDetails ? (
         <>
           <h2 style={{ ...h2, marginTop: 22 }}>Where are you working?</h2>
+
+          {/* ROAMING crews pick a market. Their whole day lands on ONE event
+              per market, and the individual spots get logged as stops while
+              they work — far better data than a store address they'd have to
+              pick before they know where they'll end up. */}
+          {isMarket ? (
+            <>
+              <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
+                Pick your market. You'll log each spot you sample as you go.
+              </p>
+              <select
+                style={{ ...input, appearance: "none" }}
+                value={market}
+                onChange={(e) => setMarket(e.target.value)}
+              >
+                <option value="">Select your market…</option>
+                {markets.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <>
           <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
             Pick your store from the list if it's there — that keeps you on the
             same event as anyone else working with you today.
@@ -609,6 +663,9 @@ function IdentifyStep({
             value={storeName}
             onChange={(e) => setStoreName(e.target.value)}
           />
+            </>
+          )}
+
           <label style={{ fontSize: 12, opacity: 0.6, display: "block", margin: "10px 0 4px" }}>
             Date you're working
           </label>
@@ -781,6 +838,45 @@ function CheckedInFlow({
     );
   };
 
+  // ── Sampling stops ────────────────────────────────────────────────────
+  // A roaming crew's event is the MARKET, so the individual spots need their
+  // own record — and it has to be captured here, in the moment, not recalled
+  // into the recap hours later.
+  const stops = ctx.session?.stops ?? [];
+  const [stopBusy, setStopBusy] = useState(false);
+  const [stopName, setStopName] = useState("");
+
+  const logStop = () => {
+    setMsg(null);
+    setStopBusy(true);
+    const send = (coords: { latitude?: number; longitude?: number }) =>
+      post("sampling-stop", { ...coords, name: stopName })
+        .then(async (res) => {
+          const json = await res.json();
+          if (!res.ok) setMsg(json.message || "Couldn't log that stop.");
+          else setStopName("");
+        })
+        .catch(() => setMsg("Network error. Try again."))
+        .finally(async () => {
+          setStopBusy(false);
+          await onRefresh();
+        });
+    if (!navigator.geolocation) {
+      // No GPS is survivable — a typed name still records where they were.
+      void send({});
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        void send({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        }),
+      () => void send({}),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+    );
+  };
+
   const pending = ctx.session?.pendingReview;
 
   if (hasRecap && clockState !== "clocked_in") {
@@ -935,6 +1031,66 @@ function CheckedInFlow({
         >
           Wrong store or date? Start over
         </button>
+      ) : null}
+
+      {/* Where they sampled. Only while on the clock — a stop before clock-in
+          or after clock-out isn't work. */}
+      {clockState === "clocked_in" ? (
+        <div style={card}>
+          <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>
+            Where are you sampling?
+          </p>
+          <p style={{ fontSize: 12, opacity: 0.55, margin: "4px 0 10px" }}>
+            Tap this at each spot. We grab the location for you — the name is
+            just so you recognise it later.
+          </p>
+          <input
+            style={input}
+            placeholder="Spot name (optional) — e.g. Whole Foods patio"
+            value={stopName}
+            onChange={(e) => setStopName(e.target.value)}
+          />
+          <button
+            style={{ ...secondaryBtn, width: "100%", margin: "8px 0 0" }}
+            disabled={stopBusy}
+            onClick={logStop}
+          >
+            {stopBusy ? "Logging…" : "📍 Log this stop"}
+          </button>
+
+          {stops.length > 0 ? (
+            <div style={{ marginTop: 12 }}>
+              <p className="mono" style={{ fontSize: 11, opacity: 0.5, margin: "0 0 6px", letterSpacing: "0.1em" }}>
+                {stops.length} STOP{stops.length === 1 ? "" : "S"} TODAY
+              </p>
+              {stops.map((st, i) => (
+                <div
+                  key={st.uuid}
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    fontSize: 13,
+                    padding: "6px 0",
+                    borderTop: i === 0 ? "none" : "1px solid rgba(0,0,0,0.06)",
+                  }}
+                >
+                  <span style={{ opacity: 0.45, minWidth: 18 }}>{i + 1}.</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    {st.name || st.address || "Logged stop"}
+                    {st.name && st.address ? (
+                      <span style={{ display: "block", fontSize: 11, opacity: 0.55 }}>
+                        {st.address}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span style={{ opacity: 0.55, whiteSpace: "nowrap" }}>
+                    {fmtTime(st.recordedAt)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       {/* Mileage — only for gigs with track_mileage on, and only once the BA
