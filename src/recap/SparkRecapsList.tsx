@@ -379,7 +379,14 @@ const RecapCard: React.FC<{
           color: "rgba(255,255,255,0.45)",
         }}
       >
-        {recap.retailerName}
+        {/* BA FIRST. "Who filed this" is the first thing ops asks of a
+            recap, and on a walk-in event there's no retailer, so the line
+            used to open with a bare em-dash. Retailer is kept but only when
+            it's real. */}
+        {recap.baName || "Unattributed"}
+        {recap.retailerName && recap.retailerName !== "—"
+          ? ` · ${recap.retailerName}`
+          : ""}
         {recap.stateCode ? ` · ${recap.stateCode}` : ""}
         {recap.date ? ` · ${formatDate(recap.date)}` : ""}
       </p>
