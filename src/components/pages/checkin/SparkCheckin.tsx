@@ -38,6 +38,26 @@ type Clock = {
   clockInAt: string | null;
   clockOutAt: string | null;
 };
+type MileageLeg = {
+  uuid: string;
+  status: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  miles: number | null;
+  amount: number | null;
+};
+/**
+ * Odometer state for this BA on this event. `enabled` mirrors the gig's
+ * track_mileage toggle, so the control is absent entirely for brands that
+ * don't reimburse driving.
+ */
+type Mileage = {
+  enabled: boolean;
+  active: MileageLeg | null;
+  legs: MileageLeg[];
+  totalMiles: number;
+  totalAmount: number;
+};
 type StoreOption = { name: string; address: string };
 type Context = {
   // OPTIONAL on a standing tenant link: until the BA picks a store + date there
@@ -45,7 +65,13 @@ type Context = {
   event?: { uuid: string; name: string; address: string | null; startTime: string | null; endTime: string | null; date?: string | null };
   brand: { name: string; primaryColor: string | null };
   template?: Template | null;
-  session?: { ambassadorName: string; clock: Clock; hasRecap: boolean; pendingReview: boolean };
+  session?: {
+    ambassadorName: string;
+    clock: Clock;
+    hasRecap: boolean;
+    pendingReview: boolean;
+    mileage?: Mileage;
+  };
   // Tenant-link mode — ONE durable link shared across every activation, so BAs
   // never type an event code. `needsEventDetails` means ask for store + date on
   // the identify step; the API then finds-or-creates the event.
@@ -706,6 +732,55 @@ function CheckedInFlow({
     }
   };
 
+  // ── Drive (odometer) ──────────────────────────────────────────────────
+  // One GPS fix on Start, one on Stop; the server routes between them over
+  // real roads. NOT a live trail — mobile Safari stops giving us positions the
+  // moment the screen locks, so a breadcrumb loop here would under-report the
+  // drive while looking precise. The app is the only true tracker.
+  const mileage = ctx.session?.mileage;
+  const [driveBusy, setDriveBusy] = useState(false);
+
+  const drive = (action: "start" | "stop") => {
+    setMsg(null);
+    setDriveBusy(true);
+    const send = (coords: { latitude?: number; longitude?: number }) =>
+      post(`mileage/${action}`, coords)
+        .then(async (res) => {
+          const json = await res.json();
+          if (!res.ok) setMsg(json.message || "Couldn't update the drive.");
+          else if (json.warning) setMsg(json.warning);
+        })
+        .catch(() => setMsg("Network error. Try again."))
+        .finally(async () => {
+          setDriveBusy(false);
+          await onRefresh();
+        });
+    if (!navigator.geolocation) {
+      setDriveBusy(false);
+      setMsg("This phone can't share location, so we can't log the drive.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        void send({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        }),
+      () => {
+        // A Start with no fix is useless — refuse it rather than open a leg
+        // that can never produce a distance. A Stop still goes through so the
+        // BA is never stuck with a running timer.
+        if (action === "start") {
+          setDriveBusy(false);
+          setMsg("Turn on location to log your drive.");
+        } else {
+          void send({});
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+    );
+  };
+
   const pending = ctx.session?.pendingReview;
 
   if (hasRecap && clockState !== "clocked_in") {
@@ -860,6 +935,45 @@ function CheckedInFlow({
         >
           Wrong store or date? Start over
         </button>
+      ) : null}
+
+      {/* Mileage — only for gigs with track_mileage on, and only once the BA
+          is actually on the clock (no logging drives before a shift). */}
+      {mileage?.enabled && clockState === "clocked_in" ? (
+        <div style={card}>
+          <div className="row" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>
+              {mileage.active ? "Drive in progress" : "Driving for this event?"}
+            </span>
+            <button
+              style={mileage.active ? secondaryBtn : primaryBtn(accent)}
+              disabled={driveBusy}
+              onClick={() => drive(mileage.active ? "stop" : "start")}
+            >
+              {driveBusy
+                ? "One sec…"
+                : mileage.active
+                  ? "Stop drive"
+                  : "Start drive"}
+            </button>
+          </div>
+
+          {mileage.legs.length > 0 ? (
+            <p style={{ fontSize: 13, marginTop: 10 }}>
+              {mileage.legs.length} trip{mileage.legs.length === 1 ? "" : "s"} ·{" "}
+              <strong>{mileage.totalMiles} mi</strong>
+              {mileage.totalAmount > 0 ? (
+                <> · <strong>${mileage.totalAmount.toFixed(2)}</strong></>
+              ) : null}
+            </p>
+          ) : null}
+
+          <p style={{ fontSize: 12, opacity: 0.55, marginTop: 8 }}>
+            {mileage.active
+              ? "Tap Stop when you park. We measure the driving distance between where you started and where you stopped."
+              : "Tap Start before you pull away, Stop when you park. Log each leg separately."}
+          </p>
+        </div>
       ) : null}
 
       {clockState === "not_started" ? (
