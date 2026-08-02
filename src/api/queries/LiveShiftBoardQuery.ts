@@ -18,6 +18,7 @@ export const LiveShiftBoardQuery = graphql`
       requestUuid
       onClock
       noShows
+      pendingApproval
       assigned {
         ambassadorUuid
         name
@@ -25,6 +26,11 @@ export const LiveShiftBoardQuery = graphql`
         clockInAt
         clockOutAt
         workedHours
+        lat
+        lng
+        locationAt
+        locationSource
+        pendingApproval
       }
     }
   }

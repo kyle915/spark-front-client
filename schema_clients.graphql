@@ -4580,6 +4580,12 @@ type LiveBoardBA {
   clockInAt: String
   clockOutAt: String
   workedHours: Float
+  lat: Float
+  lng: Float
+  locationAt: String
+  locationSource: String
+  accuracyMeters: Float
+  pendingApproval: Boolean!
 }
 
 type LiveBoardShift {
@@ -4595,6 +4601,7 @@ type LiveBoardShift {
   assigned: [LiveBoardBA!]!
   onClock: Int!
   noShows: Int!
+  pendingApproval: Int!
 }
 
 type PayrollTimesheetRow {

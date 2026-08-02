@@ -2,12 +2,18 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { LiveShiftBoardQuery } from "@/api/queries/LiveShiftBoardQuery";
 import type { LiveShiftBoardQuery as LiveShiftBoardQueryType } from "@api/queries/__generated__/LiveShiftBoardQuery.graphql";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Live "on the clock" board — today's shifts and who's actually working right
- * now. Each BA is a status-colored chip: green = on the clock, blue = done,
- * red = no-show, amber = not clocked in yet, grey = upcoming. The read-side
- * companion to the no-show radar. Auto-refreshes every 60s.
+ * now. One row per BA: status dot (green = on the clock, blue = done, red =
+ * no-show, amber = not clocked in yet, grey = upcoming), clock times, worked
+ * hours, and their last GPS fix. The read-side companion to the no-show
+ * radar. Auto-refreshes every 60s.
+ *
+ * Scoped to the tenant you're currently viewing. It used to pass no tenantId
+ * at all, which for an Ignite admin meant "every client" — so the Total
+ * Wireless tab showed Feel Free shifts.
  */
 type Shift = LiveShiftBoardQueryType["response"]["liveShiftBoard"][number];
 type BA = Shift["assigned"][number];
@@ -33,56 +39,145 @@ const fmtTime = (iso: string | null | undefined): string => {
     .replace(":00", "");
 };
 
-const BAChip: React.FC<{ ba: BA }> = ({ ba }) => {
+/** "just now" / "12m ago" / "3h ago" — how stale the GPS fix is. */
+const fmtAgo = (iso: string | null | undefined): string => {
+  if (!iso) return "";
+  const t = new Date(iso).getTime();
+  if (isNaN(t)) return "";
+  const mins = Math.floor((Date.now() - t) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+};
+
+/** Clock times as one readable span: "3:55p → 7:02p" / "in at 3:55p". */
+const clockLabel = (ba: BA): string => {
+  const inAt = fmtTime(ba.clockInAt);
+  const outAt = fmtTime(ba.clockOutAt);
+  if (inAt && outAt) return `${inAt} → ${outAt}`;
+  if (inAt) return `in at ${inAt}`;
+  return "";
+};
+
+const BARow: React.FC<{ ba: BA }> = ({ ba }) => {
   const s = STATUS[ba.status] ?? STATUS.upcoming;
-  const clock =
-    ba.status === "clocked_in" && ba.clockInAt
-      ? ` · in ${fmtTime(ba.clockInAt)}`
-      : ba.status === "clocked_out" && ba.workedHours != null
-        ? ` · ${ba.workedHours}h`
-        : "";
+  const times = clockLabel(ba);
+  const hasFix = ba.lat != null && ba.lng != null;
   return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full text-[12px]"
-      style={{
-        padding: "4px 10px",
-        color: s.fg,
-        background: s.bg,
-        border: `1px solid ${s.border}`,
-      }}
-      title={`${ba.name} — ${s.label}`}
+    <div
+      className="flex items-center gap-3 flex-wrap py-1.5"
+      style={{ borderTop: "1px solid var(--spark-border)" }}
     >
       <span
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: 999,
-          background: s.fg,
-          opacity: ba.status === "clocked_in" ? 1 : 0.8,
-        }}
-      />
-      {ba.name}
-      <span style={{ opacity: 0.7 }}>{clock}</span>
-    </span>
+        className="inline-flex items-center gap-1.5 text-[13px] min-w-0"
+        style={{ flex: "1 1 11rem" }}
+      >
+        <span
+          style={{
+            width: 7,
+            height: 7,
+            borderRadius: 999,
+            background: s.fg,
+            flexShrink: 0,
+            opacity: ba.status === "clocked_in" ? 1 : 0.75,
+          }}
+        />
+        <span className="truncate">{ba.name}</span>
+      </span>
+
+      <span
+        className="mono text-[10px] whitespace-nowrap"
+        style={{ letterSpacing: "0.1em", color: s.fg }}
+      >
+        {s.label.toUpperCase()}
+      </span>
+
+      {times && (
+        <span
+          className="mono text-[11px] whitespace-nowrap tabular-nums"
+          style={{ color: "rgba(255,255,255,0.75)" }}
+        >
+          {times}
+        </span>
+      )}
+
+      {ba.workedHours != null && (
+        <span
+          className="mono text-[11px] whitespace-nowrap tabular-nums"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+        >
+          {ba.workedHours}h
+        </span>
+      )}
+
+      {hasFix ? (
+        <a
+          href={`https://www.google.com/maps?q=${ba.lat},${ba.lng}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mono text-[11px] whitespace-nowrap"
+          style={{ color: "var(--spark-lime)", textDecoration: "underline" }}
+          title={`${ba.lat}, ${ba.lng}${
+            ba.locationSource ? ` · ${ba.locationSource}` : ""
+          }`}
+        >
+          📍 Map
+          {ba.locationAt ? (
+            <span style={{ opacity: 0.65 }}> · {fmtAgo(ba.locationAt)}</span>
+          ) : null}
+        </a>
+      ) : (
+        <span
+          className="mono text-[11px] whitespace-nowrap"
+          style={{ color: "rgba(255,255,255,0.3)" }}
+          title="No GPS fix — the BA declined location or the browser never got one"
+        >
+          no GPS
+        </span>
+      )}
+
+      {ba.pendingApproval && (
+        <span
+          className="mono text-[9px] whitespace-nowrap"
+          style={{
+            letterSpacing: "0.12em",
+            color: "var(--spark-gold)",
+            border: "1px solid rgba(255,196,0,0.4)",
+            borderRadius: 999,
+            padding: "2px 7px",
+          }}
+          title="Walk-up — hours log when you approve their recap"
+        >
+          PENDING RECAP
+        </span>
+      )}
+    </div>
   );
 };
 
-const Inner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
+const Inner: React.FC<{ refreshKey: number; tenantId: string }> = ({
+  refreshKey,
+  tenantId,
+}) => {
   const data = useLazyLoadQuery<LiveShiftBoardQueryType>(
     LiveShiftBoardQuery,
-    {},
+    { tenantId },
     { fetchKey: refreshKey, fetchPolicy: "store-and-network" },
   );
   const shifts: Shift[] = (data?.liveShiftBoard ?? []).filter(Boolean) as Shift[];
 
-  const { onClock, noShows } = useMemo(() => {
+  const { onClock, noShows, pending } = useMemo(() => {
     let oc = 0;
     let ns = 0;
+    let pa = 0;
     for (const s of shifts) {
       oc += s.onClock;
       ns += s.noShows;
+      pa += s.pendingApproval;
     }
-    return { onClock: oc, noShows: ns };
+    return { onClock: oc, noShows: ns, pending: pa };
   }, [shifts]);
 
   return (
@@ -114,6 +209,22 @@ const Inner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
         >
           {noShows} NO-SHOW{noShows === 1 ? "" : "S"}
         </span>
+        {pending > 0 && (
+          <span
+            className="mono text-[11px]"
+            style={{
+              letterSpacing: "0.12em",
+              color: "var(--spark-gold)",
+              background: "rgba(255,196,0,0.1)",
+              border: "1px solid rgba(255,196,0,0.35)",
+              padding: "4px 12px",
+              borderRadius: 999,
+            }}
+            title="Walk-ups from the check-in link — hours log when you approve their recap"
+          >
+            {pending} AWAITING RECAP
+          </span>
+        )}
       </div>
 
       {shifts.length === 0 ? (
@@ -149,9 +260,9 @@ const Inner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
                   </p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col">
                 {s.assigned.map((ba) => (
-                  <BAChip key={ba.ambassadorUuid} ba={ba} />
+                  <BARow key={ba.ambassadorUuid} ba={ba} />
                 ))}
               </div>
             </div>
@@ -164,6 +275,7 @@ const Inner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
 
 export default function SparkLiveBoard() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const { tenantId } = useAuthStore();
 
   // Live board: auto-refresh every 60s so it stays current without a reload.
   useEffect(() => {
@@ -209,18 +321,27 @@ export default function SparkLiveBoard() {
         </button>
       </div>
 
-      <Suspense
-        fallback={
-          <p
-            className="p-10 text-center text-sm"
-            style={{ color: "rgba(255,255,255,0.45)" }}
-          >
-            Loading today…
-          </p>
-        }
-      >
-        <Inner refreshKey={refreshKey} />
-      </Suspense>
+      {!tenantId ? (
+        <p
+          className="p-10 text-center text-sm"
+          style={{ color: "rgba(255,255,255,0.5)" }}
+        >
+          Pick a client to see who's on the clock.
+        </p>
+      ) : (
+        <Suspense
+          fallback={
+            <p
+              className="p-10 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.45)" }}
+            >
+              Loading today…
+            </p>
+          }
+        >
+          <Inner refreshKey={refreshKey} tenantId={tenantId} />
+        </Suspense>
+      )}
     </div>
   );
 }
