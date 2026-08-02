@@ -56,9 +56,92 @@ type Context = {
   message?: string;
 };
 
-type Photo = { blobName: string | null; previewUrl: string; state: "uploading" | "done" | "failed" };
+// `id` is what upload results are keyed on. It used to be the array index
+// captured before the loop — which meant picking N photos at once wrote every
+// result to the SAME slot, leaving the other N-1 stuck on "uploading" forever
+// and permanently wedging the Submit button. Never key async results by index.
+type Photo = {
+  id: string;
+  file: File;
+  blobName: string | null;
+  previewUrl: string;
+  state: "uploading" | "done" | "failed";
+};
 
 const FALLBACK_ACCENT = "#C4D82E";
+
+// A BA on store LTE uploading 20 straight-off-the-camera iPhone photos is
+// pushing ~80MB. Downscaling to a long edge of 1600px at JPEG 0.82 lands each
+// one around 200-400KB with no visible loss in the recap PDF or the gallery.
+const MAX_IMAGE_EDGE = 1600;
+const JPEG_QUALITY = 0.82;
+// Below this, re-encoding costs more than it saves.
+const COMPRESS_MIN_BYTES = 400 * 1024;
+// Enough to use the connection, few enough that one stalled PUT doesn't hold
+// up the rest. Serial uploads were the other half of "photos won't upload".
+const UPLOAD_CONCURRENCY = 3;
+
+/**
+ * Downscale + re-encode an image for upload. Best-effort by design: on ANY
+ * failure — unsupported codec, canvas tainted, out of memory on an old phone —
+ * it returns the original file rather than losing the photo.
+ */
+async function compressImage(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || file.size < COMPRESS_MIN_BYTES) return file;
+
+  let url: string | null = null;
+  try {
+    url = URL.createObjectURL(file);
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error("decode failed"));
+      el.src = url as string;
+    });
+
+    const longest = Math.max(img.naturalWidth, img.naturalHeight);
+    if (!longest) return file;
+    const scale = Math.min(1, MAX_IMAGE_EDGE / longest);
+    const w = Math.round(img.naturalWidth * scale);
+    const h = Math.round(img.naturalHeight * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0, w, h);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY),
+    );
+    // If the re-encode didn't actually help, keep the original.
+    if (!blob || blob.size >= file.size) return file;
+
+    const base = file.name.replace(/\.[^.]+$/, "") || "photo";
+    return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
+  } catch {
+    return file;
+  } finally {
+    if (url) URL.revokeObjectURL(url);
+  }
+}
+
+/** Run `fn` over `items` with at most `limit` in flight. */
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<void>,
+): Promise<void> {
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const item = items[cursor++];
+      await fn(item);
+    }
+  });
+  await Promise.all(workers);
+}
 
 function apiOrigin(): string {
   try {
@@ -707,10 +790,21 @@ function CheckedInFlow({
             </button>
           ) : null}
 
+          {/* Recap first — that's the intended order, so it stays the primary
+              button. But clock out is ALWAYS reachable. BAs reported being
+              unable to "sign out": their recap wouldn't submit (photos), and
+              clock out only appeared after a recap existed, so a failed upload
+              silently kept them on the clock with no way to end the shift.
+              Never gate ending a shift on another action succeeding. */}
           {clockState === "clocked_in" && !hasRecap ? (
-            <button style={primaryBtn(accent)} onClick={() => setShowRecap(true)}>
-              File recap
-            </button>
+            <>
+              <button style={primaryBtn(accent)} onClick={() => setShowRecap(true)}>
+                File recap
+              </button>
+              <button style={secondaryBtn} disabled={busy !== ""} onClick={() => clock("out")}>
+                {busy === "out" ? "Clocking out…" : "Clock out"}
+              </button>
+            </>
           ) : null}
 
           {clockState === "clocked_in" && hasRecap ? (
@@ -773,7 +867,8 @@ function CheckedInFlow({
       ) : null}
       {clockState === "clocked_in" && !hasRecap ? (
         <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>
-          You're on the clock. File your recap when you're done — then you can clock out.
+          You're on the clock. File your recap when you're done. If it won't go
+          through, clock out anyway — you can come back and file it after.
         </p>
       ) : null}
       {clockState === "clocked_in" && hasRecap ? (
@@ -830,6 +925,10 @@ function RecapForm({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const photoSeq = useRef(0);
+
+  const uploadingCount = photos.filter((p) => p.state === "uploading").length;
+  const failedCount = photos.filter((p) => p.state === "failed").length;
 
   const hasPhotoField = useMemo(
     () => (template?.sections ?? []).some((s) => s.fields.some((f) => isPhotoType(f.type))),
@@ -838,31 +937,51 @@ function RecapForm({
 
   const setVal = (id: string, v: string | string[]) => setValues((p) => ({ ...p, [id]: v }));
 
+  // Upload one photo, keyed by its stable id. Compresses first — a raw iPhone
+  // shot is 3-5MB and a BA files 20 of them from a store parking lot.
+  const uploadOne = async (id: string, original: File) => {
+    try {
+      const file = await compressImage(original);
+      const urlRes = await fetch(`${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/upload-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session: token, filename: file.name, contentType: file.type || "image/jpeg" }),
+      });
+      const meta = await urlRes.json();
+      if (!urlRes.ok || !meta.uploadUrl) throw new Error(meta.message || "no url");
+      const put = await fetch(meta.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "image/jpeg" },
+        body: file,
+      });
+      if (!put.ok) throw new Error("upload failed");
+      setPhotos((p) =>
+        p.map((ph) => (ph.id === id ? { ...ph, blobName: meta.blobName, state: "done" } : ph)),
+      );
+    } catch {
+      setPhotos((p) => p.map((ph) => (ph.id === id ? { ...ph, state: "failed" } : ph)));
+    }
+  };
+
   const uploadFiles = async (files: FileList | null) => {
     if (!files || !files.length) return;
-    for (const file of Array.from(files)) {
-      const idx = photos.length;
-      const preview = URL.createObjectURL(file);
-      setPhotos((p) => [...p, { blobName: null, previewUrl: preview, state: "uploading" }]);
-      try {
-        const urlRes = await fetch(`${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/upload-url`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session: token, filename: file.name, contentType: file.type || "image/jpeg" }),
-        });
-        const meta = await urlRes.json();
-        if (!urlRes.ok || !meta.uploadUrl) throw new Error(meta.message || "no url");
-        const put = await fetch(meta.uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": file.type || "image/jpeg" },
-          body: file,
-        });
-        if (!put.ok) throw new Error("upload failed");
-        setPhotos((p) => p.map((ph, i) => (i === idx ? { ...ph, blobName: meta.blobName, state: "done" } : ph)));
-      } catch {
-        setPhotos((p) => p.map((ph, i) => (i === idx ? { ...ph, state: "failed" } : ph)));
-      }
-    }
+    const batch: Photo[] = Array.from(files).map((file) => ({
+      id: `${Date.now()}-${photoSeq.current++}`,
+      file,
+      blobName: null,
+      previewUrl: URL.createObjectURL(file),
+      state: "uploading" as const,
+    }));
+    setPhotos((p) => [...p, ...batch]);
+    await runWithConcurrency(batch, UPLOAD_CONCURRENCY, (ph) => uploadOne(ph.id, ph.file));
+  };
+
+  const retryFailed = async () => {
+    const stuck = photos.filter((p) => p.state === "failed");
+    if (!stuck.length) return;
+    setErr(null);
+    setPhotos((p) => p.map((ph) => (ph.state === "failed" ? { ...ph, state: "uploading" } : ph)));
+    await runWithConcurrency(stuck, UPLOAD_CONCURRENCY, (ph) => uploadOne(ph.id, ph.file));
   };
 
   const removePhoto = (idx: number) => setPhotos((p) => p.filter((_, i) => i !== idx));
@@ -879,8 +998,22 @@ function RecapForm({
       }
     }
     const donePhotos = photos.filter((p) => p.state === "done" && p.blobName);
-    if (photos.some((p) => p.state === "uploading")) return setErr("Hang on — photos are still uploading.");
-    if (donePhotos.length === 0) return setErr("Add at least one photo of your event.");
+    // Only block on uploads genuinely in flight, and say how many. Photos that
+    // FAILED must never block: a BA standing in a parking lot on one bar has
+    // to be able to finish and clock out. The button label tells them exactly
+    // how many they're leaving behind, and Retry is right there.
+    if (uploadingCount > 0) {
+      return setErr(
+        `Still uploading ${uploadingCount} photo${uploadingCount === 1 ? "" : "s"} — one moment.`,
+      );
+    }
+    if (donePhotos.length === 0) {
+      return setErr(
+        failedCount > 0
+          ? "No photos uploaded yet. Tap Retry, or check your signal."
+          : "Add at least one photo of your event.",
+      );
+    }
 
     const fieldValues = Object.entries(values)
       .map(([id, v]) => ({ customFieldId: id, value: Array.isArray(v) ? JSON.stringify(v) : String(v) }))
@@ -986,19 +1119,43 @@ function RecapForm({
               accept="image/*"
               multiple
               style={{ display: "none" }}
-              onChange={(e) => uploadFiles(e.target.files)}
+              onChange={(e) => {
+                void uploadFiles(e.target.files);
+                e.target.value = "";
+              }}
             />
           </>
         ) : null}
       </div>
+
+      {uploadingCount > 0 ? (
+        <p style={{ textAlign: "center", fontSize: 13, opacity: 0.7 }}>
+          Uploading photos… {photos.length - uploadingCount} of {photos.length} done
+        </p>
+      ) : null}
+
+      {failedCount > 0 ? (
+        <div style={{ ...card, borderColor: "#EF5A2A", display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ flex: 1, fontSize: 13 }}>
+            {failedCount} photo{failedCount === 1 ? "" : "s"} didn't upload.
+          </span>
+          <button style={{ ...secondaryBtn, width: "auto", padding: "8px 14px", margin: 0 }} onClick={retryFailed}>
+            Retry
+          </button>
+        </div>
+      ) : null}
 
       {err ? <p style={{ ...errText, textAlign: "center" }}>{err}</p> : null}
       <div style={{ display: "flex", gap: 10 }}>
         <button style={secondaryBtn} onClick={onCancel} disabled={busy}>
           Back
         </button>
-        <button style={primaryBtn(accent)} onClick={submit} disabled={busy}>
-          {busy ? "Submitting…" : "Submit recap"}
+        <button style={primaryBtn(accent)} onClick={submit} disabled={busy || uploadingCount > 0}>
+          {busy
+            ? "Submitting…"
+            : failedCount > 0
+              ? `Submit without ${failedCount} photo${failedCount === 1 ? "" : "s"}`
+              : "Submit recap"}
         </button>
       </div>
     </div>
@@ -1034,7 +1191,10 @@ function FieldInput({
           {req}
         </label>
         <PhotoGrid photos={photos} onAdd={() => localRef.current?.click()} onRemove={onRemovePhoto} accent={accent} />
-        <input ref={localRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => onAddPhotos(e.target.files)} />
+        <input ref={localRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => {
+          onAddPhotos(e.target.files);
+          e.target.value = "";
+        }} />
       </div>
     );
   }
@@ -1134,7 +1294,7 @@ function PhotoGrid({
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
       {photos.map((p, i) => (
-        <div key={i} style={{ position: "relative", width: 72, height: 72 }}>
+        <div key={p.id} style={{ position: "relative", width: 72, height: 72 }}>
           <img
             src={p.previewUrl}
             alt=""
