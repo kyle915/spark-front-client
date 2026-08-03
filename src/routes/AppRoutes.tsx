@@ -418,6 +418,9 @@ const SparkPublicExpressForm = lazyDefault(
   () => import("@/public/form/SparkPublicExpressForm"),
 );
 const PublicApprove = lazyDefault(() => import("@/public/approve/PublicApprove"));
+// Public, no-login BA training hub. A brand's BAs usually aren't Spark users
+// when training matters, so the :code in the link is the only credential.
+const TrainingHub = lazyDefault(() => import("@/public/training/TrainingHub"));
 const ReceiptUpload = lazyDefault(() => import("@/public/receipts/ReceiptUpload"));
 const CampaignUpload = lazyDefault(
   () => import("@/public/receipts/CampaignUpload"),
@@ -827,6 +830,12 @@ const RequestsLinks = {
       // Public, no-login BA web check-in for one event (walk-up code = link).
       path: "/checkin/:code",
       component: <SparkCheckin />,
+      isPublic: true,
+    },
+    {
+      // Public, no-login BA training hub (guide + video + product sheets).
+      path: "/training/:code",
+      component: <TrainingHub />,
       isPublic: true,
     },
     {

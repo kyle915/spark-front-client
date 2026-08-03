@@ -36,6 +36,13 @@
               "value": "public, max-age=31536000, immutable"
             }
           ]
+        },
+        {
+          "//": "BA training assets: the LD field guide is a self-extracting single-file bundle (~4MB) and the video/PDFs are multi-MB. The blanket `**` no-store rule above would re-download all of it on every open, which on store LTE is the difference between instant and unusable. Matched LAST so it wins for these paths only. A week is long enough that a BA re-reading between shifts pays nothing, and short enough that a content fix reaches the field without renaming files — if something urgent changes, ship it under a new filename and update the TrainingResource URL.",
+          "source": "/training/**",
+          "headers": [
+            { "key": "Cache-Control", "value": "public, max-age=604800" }
+          ]
         }
       ]
     },
