@@ -80,6 +80,26 @@ type SamplingStop = {
 type PhotoBucket = { id: string; name: string; helper: string; min: number };
 /** One program on the brand's standing link. `id` is their EventType id. */
 type EventTypeOption = { id: string; name: string };
+/**
+ * One BA-facing reference button under the header.
+ *
+ * `kind` is a RENDERING instruction, not a file type, and `image` is the one
+ * that earns the whole shape: Feel Free's photo release is a QR a CONSUMER
+ * scans off the BA's screen to sign their own release. A hyperlink cannot
+ * serve that — you can't scan a code with the phone displaying it — so an
+ * `image` opens a big inline viewer instead of navigating. `link` and `pdf`
+ * both open a new tab and differ only in the affordance the button shows.
+ *
+ * The backend sanitises these (tenants.models.normalize_checkin_resources),
+ * so `url` is already known to be http(s) or root-relative by the time it is
+ * here.
+ */
+type CheckinResource = {
+  label: string;
+  kind?: "link" | "pdf" | "image";
+  url: string;
+  note?: string;
+};
 type StoreOption = { name: string; address: string };
 type Context = {
   // OPTIONAL on a standing tenant link: until the BA picks a store + date there
@@ -117,9 +137,15 @@ type Context = {
   // worse version of no dropdown, and single-program brands (Total Wireless,
   // Feel Free) have to look exactly as they do today.
   eventTypes?: EventTypeOption[];
-  // The brand's BA reference hub (/training/<code>), if configured. Rendered
-  // on the landing screen AND once clocked in — "what am I supposed to say
-  // about this SKU" is a question a BA has at the table, not at home.
+  // The brand's BA references, in order — training deck, photo-release QR,
+  // the /training/<code> hub. Rendered on the landing screen AND once clocked
+  // in: "what am I supposed to say about this SKU" is a question a BA has at
+  // the table, not at home, and the release QR is needed mid-shift by
+  // definition.
+  resources?: CheckinResource[];
+  // Legacy single-URL twin of `resources`, still sent by the API. Read only as
+  // a fallback (see `checkinResources`) so this page keeps working against an
+  // API that predates the list.
   trainingUrl?: string;
   error?: string;
   message?: string;
@@ -217,42 +243,252 @@ async function runWithConcurrency<T>(
   await Promise.all(workers);
 }
 
-/** The brand's BA reference hub, when the tenant has one configured. */
-function TrainingLink({ url, accent }: { url?: string; accent: string }) {
-  const href = (url || "").trim();
-  if (!href) return null;
+/**
+ * The resources to show, tolerating an API that only sends `trainingUrl`.
+ *
+ * The backend ships both keys during the deploy gap, but this page can also be
+ * loaded against an older API, so the legacy field is folded into the same shape
+ * rather than handled separately. Label and subtitle match what this component
+ * hard-coded before the list existed, so a brand's card never silently rewords.
+ */
+function checkinResources(ctx: Context): CheckinResource[] {
+  if (ctx.resources?.length) return ctx.resources;
+  const legacy = (ctx.trainingUrl || "").trim();
+  if (!legacy) return [];
+  return [
+    {
+      label: "BA reference & training",
+      kind: "link",
+      url: legacy,
+      note: "Field guide, video, product sheets",
+    },
+  ];
+}
+
+/** Shared chrome, so an opens-a-tab button and an opens-a-viewer button match. */
+const resourceCard = (accent: string) =>
+  ({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    width: "100%",
+    padding: "13px 16px",
+    borderRadius: 12,
+    border: `1px solid ${accent}55`,
+    background: `${accent}14`,
+    color: "inherit",
+    textDecoration: "none",
+    textAlign: "left",
+    font: "inherit",
+    cursor: "pointer",
+    minHeight: 44,
+  }) as const;
+
+/**
+ * Full-screen QR viewer.
+ *
+ * Sized and coloured for ONE job: a consumer scanning it off the BA's phone from
+ * a foot or two away. That drives three things worth not "tidying" later —
+ *
+ *  - the code sits on PURE WHITE with its own padding. No scrim, no accent wash
+ *    and no opacity over the image: tinting a QR is how you make it unreadable
+ *    to a camera that's already fighting store glare.
+ *  - it takes essentially the full viewport width. The source PNG is 1230px, so
+ *    even at full width on a 3x phone it's being downscaled, never blown up.
+ *  - the sheet scrolls, so the code never gets shrunk to fit next to the caption
+ *    on a short screen.
+ */
+function QrViewer({
+  resource,
+  onClose,
+}: {
+  resource: CheckinResource;
+  onClose: () => void;
+}) {
+  // Esc to close, and don't let the page behind scroll under the viewer.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={resource.label}
+      onClick={onClose}
       style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        background: "rgba(8,10,14,0.88)",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "space-between",
-        gap: 12,
-        margin: "0 0 14px",
-        padding: "13px 16px",
-        borderRadius: 12,
-        border: `1px solid ${accent}55`,
-        background: `${accent}14`,
-        color: "inherit",
-        textDecoration: "none",
-        minHeight: 44,
+        justifyContent: "flex-start",
+        padding: "18px 12px 28px",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
       }}
     >
-      <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <span style={{ fontSize: 14, fontWeight: 600 }}>
-          BA reference &amp; training
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          width: "100%",
+          maxWidth: 560,
+          gap: 12,
+          marginBottom: 12,
+          flex: "0 0 auto",
+        }}
+      >
+        <span style={{ color: "#fff", fontSize: 15, fontWeight: 600 }}>
+          {resource.label}
         </span>
-        <span style={{ fontSize: 12.5, opacity: 0.7 }}>
-          Field guide, video, product sheets
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            border: "1px solid rgba(255,255,255,0.35)",
+            background: "rgba(255,255,255,0.08)",
+            color: "#fff",
+            borderRadius: 999,
+            width: 40,
+            height: 40,
+            fontSize: 20,
+            lineHeight: 1,
+            cursor: "pointer",
+            flex: "0 0 auto",
+          }}
+        >
+          &times;
+        </button>
+      </div>
+
+      {/* Stop clicks on the code itself from dismissing it — a consumer leaning
+          in to scan will touch the screen, and losing the code mid-scan is the
+          one failure this flow can't afford. */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "#fff",
+          borderRadius: 16,
+          padding: 14,
+          width: "100%",
+          maxWidth: 520,
+          flex: "0 0 auto",
+          boxShadow: "0 18px 50px rgba(0,0,0,0.45)",
+        }}
+      >
+        <img
+          src={resource.url}
+          alt={resource.label}
+          style={{ display: "block", width: "100%", height: "auto" }}
+        />
+      </div>
+
+      <p
+        style={{
+          color: "rgba(255,255,255,0.86)",
+          fontSize: 13.5,
+          lineHeight: 1.45,
+          textAlign: "center",
+          maxWidth: 420,
+          margin: "14px 0 0",
+          flex: "0 0 auto",
+        }}
+      >
+        {resource.note || "Have them scan this with their phone camera."}
+        <br />
+        <span style={{ opacity: 0.65 }}>
+          Turn your screen brightness up if it won&apos;t scan.
         </span>
-      </span>
-      <span style={{ fontSize: 18, opacity: 0.6 }} aria-hidden="true">
-        ↗
-      </span>
-    </a>
+      </p>
+    </div>
+  );
+}
+
+/**
+ * The brand's BA references as buttons, under the header on every screen.
+ *
+ * Renders nothing when the brand has none configured, which is most of them — an
+ * empty bordered box would be worse than the absence.
+ */
+function ResourceButtons({
+  resources,
+  accent,
+}: {
+  resources: CheckinResource[];
+  accent: string;
+}) {
+  const [viewing, setViewing] = useState<CheckinResource | null>(null);
+  if (!resources.length) return null;
+
+  return (
+    <>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          margin: "0 0 14px",
+        }}
+      >
+        {resources.map((r, i) => {
+          const body = (
+            <>
+              <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <span style={{ fontSize: 14, fontWeight: 600 }}>{r.label}</span>
+                {r.note ? (
+                  <span style={{ fontSize: 12.5, opacity: 0.7 }}>{r.note}</span>
+                ) : null}
+              </span>
+              <span style={{ fontSize: 18, opacity: 0.6 }} aria-hidden="true">
+                {r.kind === "image" ? "⤢" : "↗"}
+              </span>
+            </>
+          );
+
+          // An image opens the viewer in place; anything else stays a real
+          // anchor, so long-press, "open in new tab" and copy-link all keep
+          // working for a BA who wants the deck on another device.
+          return r.kind === "image" ? (
+            <button
+              key={`${r.url}-${i}`}
+              type="button"
+              onClick={() => setViewing(r)}
+              style={resourceCard(accent)}
+            >
+              {body}
+            </button>
+          ) : (
+            <a
+              key={`${r.url}-${i}`}
+              href={r.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={resourceCard(accent)}
+            >
+              {body}
+            </a>
+          );
+        })}
+      </div>
+      {viewing ? (
+        <QrViewer resource={viewing} onClose={() => setViewing(null)} />
+      ) : null}
+    </>
   );
 }
 
@@ -423,8 +659,10 @@ export default function SparkCheckin() {
         <Header ctx={ctx} accent={accent} />
         {/* Sits directly under the header so it's present on the landing
             screen AND after clock-in — the BA asks "how do I pitch this?"
-            at the table, not before they leave the house. */}
-        <TrainingLink url={ctx.trainingUrl} accent={accent} />
+            at the table, not before they leave the house, and the
+            photo-release QR is only ever needed with a consumer
+            standing in front of them. */}
+        <ResourceButtons resources={checkinResources(ctx)} accent={accent} />
         {!identified ? (
           <IdentifyStep
             code={code}
