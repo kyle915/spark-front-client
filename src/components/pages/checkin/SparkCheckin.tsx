@@ -92,6 +92,10 @@ type Context = {
   // the individual spots are logged as stops during the shift.
   locationMode?: "address" | "market";
   markets?: string[];
+  // The brand's BA reference hub (/training/<code>), if configured. Rendered
+  // on the landing screen AND once clocked in — "what am I supposed to say
+  // about this SKU" is a question a BA has at the table, not at home.
+  trainingUrl?: string;
   error?: string;
   message?: string;
 };
@@ -181,6 +185,45 @@ async function runWithConcurrency<T>(
     }
   });
   await Promise.all(workers);
+}
+
+/** The brand's BA reference hub, when the tenant has one configured. */
+function TrainingLink({ url, accent }: { url?: string; accent: string }) {
+  const href = (url || "").trim();
+  if (!href) return null;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        margin: "0 0 14px",
+        padding: "13px 16px",
+        borderRadius: 12,
+        border: `1px solid ${accent}55`,
+        background: `${accent}14`,
+        color: "inherit",
+        textDecoration: "none",
+        minHeight: 44,
+      }}
+    >
+      <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <span style={{ fontSize: 14, fontWeight: 600 }}>
+          BA reference &amp; training
+        </span>
+        <span style={{ fontSize: 12.5, opacity: 0.7 }}>
+          Field guide, video, product sheets
+        </span>
+      </span>
+      <span style={{ fontSize: 18, opacity: 0.6 }} aria-hidden="true">
+        ↗
+      </span>
+    </a>
+  );
 }
 
 function apiOrigin(): string {
@@ -348,6 +391,10 @@ export default function SparkCheckin() {
     <Shell>
       <div style={{ width: "100%", maxWidth: 560 }}>
         <Header ctx={ctx} accent={accent} />
+        {/* Sits directly under the header so it's present on the landing
+            screen AND after clock-in — the BA asks "how do I pitch this?"
+            at the table, not before they leave the house. */}
+        <TrainingLink url={ctx.trainingUrl} accent={accent} />
         {!identified ? (
           <IdentifyStep
             code={code}
