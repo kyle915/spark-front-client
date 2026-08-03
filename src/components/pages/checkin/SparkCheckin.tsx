@@ -76,6 +76,8 @@ type SamplingStop = {
  * parking lot on one bar has to be able to finish and clock out.
  */
 type PhotoBucket = { id: string; name: string; helper: string; min: number };
+/** One program on the brand's standing link. `id` is their EventType id. */
+type EventTypeOption = { id: string; name: string };
 type StoreOption = { name: string; address: string };
 type Context = {
   // OPTIONAL on a standing tenant link: until the BA picks a store + date there
@@ -105,6 +107,14 @@ type Context = {
   // the individual spots are logged as stops during the shift.
   locationMode?: "address" | "market";
   markets?: string[];
+  // The programs this brand runs off this ONE link (Liquid Death: Retail
+  // Sampling and Event Activation). The BA's pick is stamped on the event,
+  // which is what decides their recap form and their photo buckets.
+  //
+  // Fewer than two and the page must ask NOTHING: a one-option dropdown is a
+  // worse version of no dropdown, and single-program brands (Total Wireless,
+  // Feel Free) have to look exactly as they do today.
+  eventTypes?: EventTypeOption[];
   // The brand's BA reference hub (/training/<code>), if configured. Rendered
   // on the landing screen AND once clocked in — "what am I supposed to say
   // about this SKU" is a question a BA has at the table, not at home.
@@ -423,6 +433,7 @@ export default function SparkCheckin() {
             recentLocations={ctx.recentLocations || []}
             locationMode={ctx.locationMode || "address"}
             markets={ctx.markets || []}
+            eventTypes={ctx.eventTypes || []}
           />
         ) : (
           <CheckedInFlow
@@ -504,6 +515,7 @@ function IdentifyStep({
   recentLocations = [],
   locationMode = "address",
   markets = [],
+  eventTypes = [],
 }: {
   code: string;
   accent: string;
@@ -513,12 +525,22 @@ function IdentifyStep({
   recentLocations?: StoreOption[];
   locationMode?: "address" | "market";
   markets?: string[];
+  eventTypes?: EventTypeOption[];
 }) {
   // Repeat BAs are the norm on a standing link — the same crew works these
   // stores week after week. Remember who they said they were so the second
   // and twentieth check-ins are just "which store, what day".
   const isMarket = locationMode === "market" && markets.length > 0;
   const [market, setMarket] = useState("");
+  // Two or more programs on this link and the BA has to say which one they're
+  // working — it picks their recap form and their photo buckets. ONE program is
+  // not a question, so nothing renders and nothing is sent: that's every brand
+  // but Liquid Death, and they must look untouched.
+  const hasPrograms = eventTypes.length > 1;
+  // Deliberately NOT pre-selected. The default would be right most of the time
+  // and silently wrong the rest, and a BA scanning a form they've filled twenty
+  // times won't re-read a field that already has an answer.
+  const [eventTypeId, setEventTypeId] = useState("");
 
   const saved = readIdentity(code);
   const [firstName, setFirstName] = useState(saved.firstName);
@@ -600,6 +622,11 @@ function IdentifyStep({
     if (!firstName.trim()) return setErr("Enter your name.");
     if (!phone.trim()) return setErr("Enter a phone number.");
     if (needsEventDetails) {
+      // Required, and asked BEFORE the store, because it decides which form the
+      // BA gets. The backend falls back to the brand's default rather than
+      // rejecting a request with no program, so this check is the only thing
+      // standing between a distracted BA and the wrong recap.
+      if (hasPrograms && !eventTypeId) return setErr("Pick the event you're working.");
       if (isMarket) {
         if (!market) return setErr("Pick your market.");
       } else if (!address.trim()) {
@@ -614,9 +641,15 @@ function IdentifyStep({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           needsEventDetails
-            ? isMarket
-              ? { firstName, lastName, phone, email, market, eventDate }
-              : { firstName, lastName, phone, email, storeName, address, eventDate }
+            ? {
+                firstName,
+                lastName,
+                phone,
+                email,
+                eventDate,
+                ...(hasPrograms ? { eventTypeId } : {}),
+                ...(isMarket ? { market } : { storeName, address }),
+              }
             : { firstName, lastName, phone, email },
         ),
       });
@@ -652,6 +685,31 @@ function IdentifyStep({
       </div>
       <input style={input} placeholder="Mobile phone" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
       <input style={input} placeholder="Email (optional)" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+
+      {needsEventDetails && hasPrograms ? (
+        <>
+          {/* Asked before the store, because this is the answer that picks the
+              BA's recap form and their photo buckets — a retail demo and an
+              activation want different fields and different shots. Same control
+              as the market picker below so the page reads as one form. */}
+          <h2 style={{ ...h2, marginTop: 22 }}>What event are you working?</h2>
+          <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
+            This sets up the right recap for your shift.
+          </p>
+          <select
+            style={{ ...input, appearance: "none" }}
+            value={eventTypeId}
+            onChange={(e) => setEventTypeId(e.target.value)}
+          >
+            <option value="">Select your event…</option>
+            {eventTypes.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </>
+      ) : null}
 
       {needsEventDetails ? (
         <>
