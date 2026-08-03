@@ -388,6 +388,9 @@ const SparkStaffingBoard = lazyDefault(
 const SparkLiveBoard = lazyDefault(
   () => import("@/components/pages/staffing/SparkLiveBoard"),
 );
+const SparkEventConfirmation = lazyDefault(
+  () => import("@/components/pages/staffing/SparkEventConfirmation"),
+);
 const SparkTimesheet = lazyDefault(
   () => import("@/components/pages/staffing/SparkPayroll"),
 );
@@ -796,6 +799,17 @@ const RequestsLinks = {
       component: (
         <AdminOnly>
           <SparkLiveBoard />
+        </AdminOnly>
+      ),
+      isPublic: false,
+    },
+    {
+      // Send a BA their event confirmation from staffing@, plus the
+      // automatic 24h/3h re-sends.
+      path: "/event-confirmation",
+      component: (
+        <AdminOnly>
+          <SparkEventConfirmation />
         </AdminOnly>
       ),
       isPublic: false,

@@ -3911,6 +3911,8 @@ input ArchiveChatThreadInput {
 }
 
 type Mutation {
+  sendEventConfirmation(input: SendEventConfirmationInput!): SendEventConfirmationResponse!
+  cancelEventConfirmationReminders(uuid: ID!, clientMutationId: ID = null): SendEventConfirmationResponse!
   createBriefingTemplate(input: CreateBriefingTemplateInput!): BriefingTemplateResponse!
   updateBriefingTemplate(input: UpdateBriefingTemplateInput!): BriefingTemplateResponse!
   archiveBriefingTemplate(input: ArchiveBriefingTemplateInput!): BriefingTemplateResponse!
@@ -4671,6 +4673,9 @@ input RebookLastCrewInput {
 }
 
 type Query {
+  eventConfirmationFormOptions(tenantId: ID!): EventConfirmationFormOptions!
+  upcomingShiftsForConfirmation(tenantId: ID!): [ConfirmationShiftOption!]!
+  eventConfirmations(tenantId: ID!): [EventConfirmationRow!]!
   liveShiftBoard(date: String = null, tenantId: ID = null): [LiveBoardShift!]!
   clientLiveToken(tenantId: ID!): String!
   payrollTimesheet(startDate: String!, endDate: String!, tenantId: ID = null): PayrollTimesheet!
@@ -7199,3 +7204,86 @@ input CreateSupportTicketInput { clientMutationId: ID = null  subject: String!  
 type CreateSupportTicketResponse { success: Boolean!  message: String!  ticket: SupportTicketType  clientMutationId: ID }
 type SupportTicketType implements Node { id: ID!  uuid: UUID!  subject: String!  body: String!  category: String!  status: String!  createdAt: DateTime!  createdBy: SparkUserType  tenant: TenantType }
 type InvoiceResponse { success: Boolean!  message: String!  clientMutationId: ID  invoice: Invoice }
+type ConfirmationTimezoneOption {
+  id: ID!
+  name: String!
+  code: String!
+}
+
+type EventConfirmationFormOptions {
+  productOptions: [String!]!
+  recapUrl: String!
+  trainingUrl: String!
+  timezones: [ConfirmationTimezoneOption!]!
+  defaultTimezoneName: String!
+  fromEmail: String!
+  hasRecapLink: Boolean!
+  hasTrainingLink: Boolean!
+}
+
+type ConfirmationShiftOption {
+  eventUuid: ID!
+  eventName: String!
+  storeName: String!
+  address: String!
+  eventTypeLabel: String!
+  startsAt: String
+  endsAt: String
+  timezoneId: ID
+  timezoneName: String!
+  products: [String!]!
+  baName: String!
+  baEmail: String!
+  ambassadorEventUuid: ID
+}
+
+type EventConfirmationStageStatus {
+  stage: String!
+  sentAt: String
+  attempts: Int!
+  lastError: String!
+}
+
+type EventConfirmationRow {
+  uuid: ID!
+  baName: String!
+  baEmail: String!
+  storeName: String!
+  address: String!
+  eventTypeLabel: String!
+  startsAt: String
+  endsAt: String
+  dateLabel: String!
+  timeLabel: String!
+  products: [String!]!
+  sendReminders: Boolean!
+  cancelledAt: String
+  createdAt: String
+  sends: [EventConfirmationStageStatus!]!
+}
+
+input SendEventConfirmationInput {
+  tenantId: ID!
+  baName: String!
+  baEmail: String!
+  date: String!
+  startTime: String!
+  endTime: String = null
+  timezoneName: String = null
+  storeName: String! = ""
+  address: String! = ""
+  eventTypeLabel: String! = ""
+  products: [String!] = null
+  sendReminders: Boolean! = true
+  eventUuid: ID = null
+  ambassadorEventUuid: ID = null
+  sendNow: Boolean! = true
+  clientMutationId: ID = null
+}
+
+type SendEventConfirmationResponse {
+  success: Boolean!
+  message: String!
+  confirmation: EventConfirmationRow
+  clientMutationId: ID
+}
