@@ -683,10 +683,16 @@ export default function DashboardIndex() {
             pay week. Sits with the action-oriented widgets rather than the
             KPI hero: this is an ops question ("is my team out there, and
             what do I owe them"), not a campaign-performance one. Its own
-            Suspense so the live-board fetch can't hold up the page. */}
-        <Suspense fallback={null}>
-          <ClockSummaryCard />
-        </Suspense>
+            Suspense so the live-board fetch can't hold up the page.
+
+            Ignite-only. It names individual BAs and calls out who hasn't
+            clocked in yet — staffing execution the agency manages, not
+            something a client should be reading mid-shift. */}
+        {!isClient && (
+          <Suspense fallback={null}>
+            <ClockSummaryCard />
+          </Suspense>
+        )}
 
         {/* PACE widget — last 7 days at a glance, with delta chips.
             Same data the weekly exec-summary email uses, but live so
