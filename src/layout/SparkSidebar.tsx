@@ -47,6 +47,7 @@ import {
   Route,
   QrCode,
   LayoutGrid,
+  MailCheck,
 } from "lucide-react";
 
 /**
@@ -106,6 +107,12 @@ const SECTIONS: NavSection[] = [
         label: "On the Clock",
         Icon: Clock,
         to: "/live-board",
+        adminOnly: true,
+      },
+      {
+        label: "Event Confirmation",
+        Icon: MailCheck,
+        to: "/event-confirmation",
         adminOnly: true,
       },
       {
