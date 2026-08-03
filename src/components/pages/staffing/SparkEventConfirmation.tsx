@@ -370,7 +370,12 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
   const [timezoneName, setTimezoneName] = useState(opts.defaultTimezoneName);
   const [storeName, setStoreName] = useState("");
   const [address, setAddress] = useState("");
-  const [eventTypeLabel, setEventTypeLabel] = useState("");
+  // Pre-filled from the tenant's own default program (Tenant.checkin_event_type
+  // — Retail Sampling for LD) so this isn't retyped on every send. Still
+  // editable, and the datalist offers the tenant's other programs.
+  const [eventTypeLabel, setEventTypeLabel] = useState(
+    opts.defaultEventTypeLabel,
+  );
   const [products, setProducts] = useState<string[]>([]);
   const [sendReminders, setSendReminders] = useState(true);
   const [banner, setBanner] = useState<{ ok: boolean; text: string } | null>(
@@ -605,13 +610,24 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
               style={field}
             />
           </Field>
-          <Field label="Event type" hint="Reads as “a Liquid Death retail sampling”.">
+          <Field
+            label="Event type"
+            hint={`Reads as “a ${[opts.brandName, eventTypeLabel.toLowerCase()].filter(Boolean).join(" ") || "shift"}”.`}
+          >
             <input
               value={eventTypeLabel}
               onChange={(e) => setEventTypeLabel(e.target.value)}
-              placeholder="Retail Sampling"
+              placeholder={opts.defaultEventTypeLabel || "Retail Sampling"}
+              list="event-confirmation-event-types"
               style={field}
             />
+            {opts.eventTypeOptions.length > 1 ? (
+              <datalist id="event-confirmation-event-types">
+                {opts.eventTypeOptions.map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
+            ) : null}
           </Field>
           <div className="md:col-span-2">
             <Field label="Address">

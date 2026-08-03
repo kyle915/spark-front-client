@@ -7217,6 +7217,9 @@ type EventConfirmationFormOptions {
   timezones: [ConfirmationTimezoneOption!]!
   defaultTimezoneName: String!
   fromEmail: String!
+  defaultEventTypeLabel: String!
+  eventTypeOptions: [String!]!
+  brandName: String!
   hasRecapLink: Boolean!
   hasTrainingLink: Boolean!
 }
