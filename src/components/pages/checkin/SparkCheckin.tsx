@@ -558,10 +558,18 @@ function IdentifyStep({
 
   // Picking a known store fills BOTH fields, so the address matches an existing
   // event's exactly and this BA joins it rather than forking a near-duplicate.
+  //
+  // `l.name` is the matched event's TITLE, not a store name — "8/2/2026 - 1155 E
+  // State St · Retail Sampling". Copying one of those into the store-name box
+  // got it appended in parentheses, producing an event called "8/2/2026 - 1155 E
+  // State St (8/2/2026 - 1155 E State St · Retail Sampling)". Only carry a name
+  // that actually names a store: one that doesn't already contain the address.
   const pickStore = (value: string) => {
     setAddress(value);
     const hit = recentLocations.find((l) => l.address === value);
-    if (hit && hit.name && !storeName.trim()) setStoreName(hit.name);
+    const looksLikeATitle =
+      hit && normalizePlace(hit.name).includes(normalizePlace(hit.address));
+    if (hit && hit.name && !looksLikeATitle && !storeName.trim()) setStoreName(hit.name);
   };
 
   // "Use my current location" — the phone knows where it is, so the BA
