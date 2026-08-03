@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
+import { bucketCountHint } from "./photoBuckets";
 
 /**
  * Public, no-login web check-in for a BA working a specific event.
@@ -72,8 +73,9 @@ type SamplingStop = {
  * `id` is the brand's own FileRecapCategory id — sent back with every photo
  * dropped here so the recap PDF can separate the table shot from the shelf
  * shot from the receipt, instead of piling all of them into one category.
- * `min` is a nudge the BA can see ("3 of 8"), never a gate: a BA in a store
- * parking lot on one bar has to be able to finish and clock out.
+ * `min` is a nudge the BA can see ("3 of 8 suggested"), never a gate: a BA in a
+ * store parking lot on one bar has to be able to finish and clock out. Nothing
+ * reads it but the counter in `PhotoBucketZone` — not `submit`, not the API.
  */
 type PhotoBucket = { id: string; name: string; helper: string; min: number };
 /** One program on the brand's standing link. `id` is their EventType id. */
@@ -1723,9 +1725,11 @@ function FieldInput({
  * One labelled dropzone. Its own hidden input and its own slice of `photos`,
  * so a bucket never shows — or removes — another bucket's shots.
  *
- * The count is live and advisory. A BA who's short on consumer shots can see
- * it at a glance ("3 of 8"), but nothing here blocks Submit: failed uploads
- * already don't, and a soft target must not be stricter than a failed upload.
+ * The count is live and advisory. A BA who's short on consumer shots can see it
+ * at a glance ("3 of 8 suggested"), but nothing here blocks Submit: failed
+ * uploads already don't, and a soft target must not be stricter than a failed
+ * upload. What the chip says, and why it must not look like a validation
+ * error, is `bucketCountHint`.
  */
 function PhotoBucketZone({
   bucket,
@@ -1745,24 +1749,28 @@ function PhotoBucketZone({
   // or failed isn't in the client's report yet, so counting it would tell a BA
   // they're done when they aren't.
   const done = photos.filter((p) => p.state === "done").length;
-  const short = bucket.min > 0 && done < bucket.min;
+  const hint = bucketCountHint(done, bucket.min);
 
   return (
     <div>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
         <label style={{ ...label, marginBottom: 0, flex: 1 }}>{bucket.name}</label>
-        {bucket.min > 0 ? (
+        {hint ? (
           <span
             style={{
               fontSize: 12,
               fontWeight: 700,
-              color: short ? "#EF5A2A" : "#2E7D32",
+              // Keep "0 of 8 suggested" on one line; the label beside it is
+              // flex:1 and wraps instead.
+              whiteSpace: "nowrap",
+              // Muted until the target is reached, green once it is. NEVER the
+              // #EF5A2A this page uses for a required field — see
+              // `bucketCountHint`.
+              ...(hint.met ? { color: "#2E7D32" } : { opacity: 0.5 }),
             }}
           >
-            {done} of {bucket.min}
+            {hint.text}
           </span>
-        ) : done > 0 ? (
-          <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.5 }}>{done}</span>
         ) : null}
       </div>
       {bucket.helper ? (
