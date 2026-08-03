@@ -66,6 +66,16 @@ type SamplingStop = {
   lng: number | null;
   recordedAt: string | null;
 };
+/**
+ * One labelled photo dropzone on the recap step.
+ *
+ * `id` is the brand's own FileRecapCategory id — sent back with every photo
+ * dropped here so the recap PDF can separate the table shot from the shelf
+ * shot from the receipt, instead of piling all of them into one category.
+ * `min` is a nudge the BA can see ("3 of 8"), never a gate: a BA in a store
+ * parking lot on one bar has to be able to finish and clock out.
+ */
+type PhotoBucket = { id: string; name: string; helper: string; min: number };
 type StoreOption = { name: string; address: string };
 type Context = {
   // OPTIONAL on a standing tenant link: until the BA picks a store + date there
@@ -73,6 +83,9 @@ type Context = {
   event?: { uuid: string; name: string; address: string | null; startTime: string | null; endTime: string | null; date?: string | null };
   brand: { name: string; primaryColor: string | null };
   template?: Template | null;
+  // Labelled photo dropzones, in render order. Absent/empty for every brand
+  // that hasn't opted in, which is the signal to keep the single generic grid.
+  photoBuckets?: PhotoBucket[];
   session?: {
     ambassadorName: string;
     clock: Clock;
@@ -110,6 +123,11 @@ type Photo = {
   blobName: string | null;
   previewUrl: string;
   state: "uploading" | "done" | "failed";
+  // Which labelled bucket this was dropped into, or null for the generic grid
+  // (every brand without buckets). Sent per file on submit; the backend
+  // validates it against that brand's own buckets and falls back to its
+  // "photos" category for anything it doesn't recognise.
+  category: string | null;
 };
 
 const FALLBACK_ACCENT = "#C4D82E";
@@ -956,6 +974,7 @@ function CheckedInFlow({
         code={code}
         token={token}
         template={ctx.template ?? null}
+        photoBuckets={ctx.photoBuckets}
         accent={accent}
         brandName={ctx.brand.name || ""}
         onCancel={() => setShowRecap(false)}
@@ -1202,6 +1221,7 @@ function RecapForm({
   code,
   token,
   template,
+  photoBuckets,
   accent,
   brandName,
   onCancel,
@@ -1210,6 +1230,7 @@ function RecapForm({
   code: string;
   token: string;
   template: Template | null;
+  photoBuckets?: PhotoBucket[];
   accent: string;
   brandName: string;
   onCancel: () => void;
@@ -1251,6 +1272,15 @@ function RecapForm({
     () => (template?.sections ?? []).some((s) => s.fields.some((f) => isPhotoType(f.type))),
     [template],
   );
+  // Labelled buckets replace the single generic grid outright. They also beat
+  // `hasPhotoField`: that flag HIDES the grid whenever the template carries an
+  // image field, which is how adding template fields produces prompts instead
+  // of buckets. Buckets are explicit brand config, so they win.
+  const buckets = photoBuckets ?? [];
+  // Photos with no bucket. For every brand without buckets that is all of
+  // them, so the generic grid and any image-type template field behave exactly
+  // as they did before buckets existed.
+  const loosePhotos = photos.filter((p) => p.category === null);
 
   const setVal = (id: string, v: string | string[]) => setValues((p) => ({ ...p, [id]: v }));
 
@@ -1280,7 +1310,7 @@ function RecapForm({
     }
   };
 
-  const uploadFiles = async (files: FileList | null) => {
+  const uploadFiles = async (files: FileList | null, category: string | null = null) => {
     if (!files || !files.length) return;
     const batch: Photo[] = Array.from(files).map((file) => ({
       id: `${Date.now()}-${photoSeq.current++}`,
@@ -1288,6 +1318,7 @@ function RecapForm({
       blobName: null,
       previewUrl: URL.createObjectURL(file),
       state: "uploading" as const,
+      category,
     }));
     setPhotos((p) => [...p, ...batch]);
     await runWithConcurrency(batch, UPLOAD_CONCURRENCY, (ph) => uploadOne(ph.id, ph.file));
@@ -1301,7 +1332,10 @@ function RecapForm({
     await runWithConcurrency(stuck, UPLOAD_CONCURRENCY, (ph) => uploadOne(ph.id, ph.file));
   };
 
-  const removePhoto = (idx: number) => setPhotos((p) => p.filter((_, i) => i !== idx));
+  // Keyed by id, never by index. Each bucket renders its OWN filtered slice, so
+  // position 0 of a bucket is some arbitrary position in `photos` — the same
+  // index-vs-id confusion that once wrote every upload result into one slot.
+  const removePhoto = (id: string) => setPhotos((p) => p.filter((ph) => ph.id !== id));
 
   const submit = async () => {
     setErr(null);
@@ -1347,7 +1381,7 @@ function RecapForm({
         body: JSON.stringify({
           session: token,
           fieldValues,
-          files: donePhotos.map((p) => ({ blobName: p.blobName })),
+          files: donePhotos.map((p) => ({ blobName: p.blobName, category: p.category })),
           productSamples,
           totalEngagements: engagements.trim() === "" ? null : Number(engagements),
         }),
@@ -1390,7 +1424,7 @@ function RecapForm({
                 accent={accent}
                 onChange={(v) => setVal(f.id, v)}
                 onAddPhotos={uploadFiles}
-                photos={photos}
+                photos={loosePhotos}
                 onRemovePhoto={removePhoto}
               />
             ))}
@@ -1424,12 +1458,12 @@ function RecapForm({
       <div style={card}>
         <label style={label}>Total engagements</label>
         <input style={input} inputMode="numeric" placeholder="e.g. 120" value={engagements} onChange={(e) => setEngagements(e.target.value)} />
-        {!hasPhotoField ? (
+        {buckets.length === 0 && !hasPhotoField ? (
           <>
             <label style={{ ...label, marginTop: 10 }}>
               Photos <span style={{ color: "#EF5A2A" }}>*</span>
             </label>
-            <PhotoGrid photos={photos} onAdd={() => fileRef.current?.click()} onRemove={removePhoto} accent={accent} />
+            <PhotoGrid photos={loosePhotos} onAdd={() => fileRef.current?.click()} onRemove={removePhoto} accent={accent} />
             <input
               ref={fileRef}
               type="file"
@@ -1444,6 +1478,28 @@ function RecapForm({
           </>
         ) : null}
       </div>
+
+      {buckets.length > 0 ? (
+        <div style={card}>
+          <h2 style={h2}>Photos</h2>
+          <p style={{ fontSize: 13, opacity: 0.6, margin: "6px 0 0" }}>
+            Put each shot in its own group so they land in the right place on
+            the client report.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 14 }}>
+            {buckets.map((b) => (
+              <PhotoBucketZone
+                key={b.id}
+                bucket={b}
+                photos={photos.filter((p) => p.category === b.id)}
+                onAdd={uploadFiles}
+                onRemove={removePhoto}
+                accent={accent}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {uploadingCount > 0 ? (
         <p style={{ textAlign: "center", fontSize: 13, opacity: 0.7 }}>
@@ -1495,7 +1551,7 @@ function FieldInput({
   onChange: (v: string | string[]) => void;
   onAddPhotos: (files: FileList | null) => void;
   photos: Photo[];
-  onRemovePhoto: (idx: number) => void;
+  onRemovePhoto: (id: string) => void;
 }) {
   const localRef = useRef<HTMLInputElement | null>(null);
   const req = field.required ? <span style={{ color: "#EF5A2A" }}> *</span> : null;
@@ -1597,6 +1653,76 @@ function FieldInput({
   );
 }
 
+/**
+ * One labelled dropzone. Its own hidden input and its own slice of `photos`,
+ * so a bucket never shows — or removes — another bucket's shots.
+ *
+ * The count is live and advisory. A BA who's short on consumer shots can see
+ * it at a glance ("3 of 8"), but nothing here blocks Submit: failed uploads
+ * already don't, and a soft target must not be stricter than a failed upload.
+ */
+function PhotoBucketZone({
+  bucket,
+  photos,
+  onAdd,
+  onRemove,
+  accent,
+}: {
+  bucket: PhotoBucket;
+  photos: Photo[];
+  onAdd: (files: FileList | null, category: string | null) => void;
+  onRemove: (id: string) => void;
+  accent: string;
+}) {
+  const ref = useRef<HTMLInputElement | null>(null);
+  // Count what actually landed, not what was picked — a photo still uploading
+  // or failed isn't in the client's report yet, so counting it would tell a BA
+  // they're done when they aren't.
+  const done = photos.filter((p) => p.state === "done").length;
+  const short = bucket.min > 0 && done < bucket.min;
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+        <label style={{ ...label, marginBottom: 0, flex: 1 }}>{bucket.name}</label>
+        {bucket.min > 0 ? (
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: short ? "#EF5A2A" : "#2E7D32",
+            }}
+          >
+            {done} of {bucket.min}
+          </span>
+        ) : done > 0 ? (
+          <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.5 }}>{done}</span>
+        ) : null}
+      </div>
+      {bucket.helper ? (
+        <p style={{ fontSize: 12, opacity: 0.6, margin: "2px 0 0" }}>{bucket.helper}</p>
+      ) : null}
+      <PhotoGrid
+        photos={photos}
+        onAdd={() => ref.current?.click()}
+        onRemove={onRemove}
+        accent={accent}
+      />
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*"
+        multiple
+        style={{ display: "none" }}
+        onChange={(e) => {
+          onAdd(e.target.files, bucket.id);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
 function PhotoGrid({
   photos,
   onAdd,
@@ -1605,12 +1731,12 @@ function PhotoGrid({
 }: {
   photos: Photo[];
   onAdd: () => void;
-  onRemove: (idx: number) => void;
+  onRemove: (id: string) => void;
   accent: string;
 }) {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-      {photos.map((p, i) => (
+      {photos.map((p) => (
         <div key={p.id} style={{ position: "relative", width: 72, height: 72 }}>
           <img
             src={p.previewUrl}
@@ -1629,7 +1755,7 @@ function PhotoGrid({
           ) : p.state === "failed" ? (
             <span style={{ ...photoBadge, color: "#EF5A2A" }}>!</span>
           ) : null}
-          <button onClick={() => onRemove(i)} style={photoRemove} aria-label="Remove photo">
+          <button onClick={() => onRemove(p.id)} style={photoRemove} aria-label="Remove photo">
             ×
           </button>
         </div>
