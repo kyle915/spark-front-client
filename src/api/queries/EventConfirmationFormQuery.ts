@@ -18,6 +18,9 @@ export const EventConfirmationFormQuery = graphql`
       trainingUrl
       defaultTimezoneName
       fromEmail
+      defaultEventTypeLabel
+      eventTypeOptions
+      brandName
       hasRecapLink
       hasTrainingLink
       timezones {
