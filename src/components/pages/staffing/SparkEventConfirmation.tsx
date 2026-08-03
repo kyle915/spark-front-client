@@ -347,10 +347,15 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
   tenantId,
   refreshKey,
 }) => {
+  // Bumped after a send or a cancel. The mutation returns the changed row but
+  // it isn't part of the `eventConfirmations` list the history renders, so
+  // without this the row an admin just sent doesn't appear until they think to
+  // press Refresh — which reads as "did that work?".
+  const [localRefresh, setLocalRefresh] = useState(0);
   const data = useLazyLoadQuery<EventConfirmationFormQueryType>(
     EventConfirmationFormQuery,
     { tenantId },
-    { fetchPolicy: "network-only", fetchKey: refreshKey },
+    { fetchPolicy: "network-only", fetchKey: refreshKey + localRefresh },
   );
 
   const opts = data.eventConfirmationFormOptions;
@@ -449,6 +454,7 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
           setBaName("");
           setBaEmail("");
           setPickedShift("");
+          setLocalRefresh((k) => k + 1);
         }
       },
       onError: (err) =>
@@ -462,6 +468,7 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
       onCompleted: (res) => {
         const r = res?.cancelEventConfirmationReminders;
         setBanner({ ok: !!r?.success, text: r?.message || "Done." });
+        if (r?.success) setLocalRefresh((k) => k + 1);
       },
       onError: (err) =>
         setBanner({ ok: false, text: err.message || "Couldn't cancel." }),
