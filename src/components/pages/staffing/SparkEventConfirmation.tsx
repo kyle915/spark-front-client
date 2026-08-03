@@ -63,11 +63,48 @@ const splitOption = (raw: string): [string, string] => {
   return i === -1 ? ["Other", raw] : [raw.slice(0, i), raw.slice(i + 3)];
 };
 
-/** An ISO instant → the `<input type="date">` / `<input type="time">` pair. */
-const isoToParts = (iso: string | null | undefined): [string, string] => {
+/**
+ * An ISO instant → the `<input type="date">` / `<input type="time">` pair,
+ * rendered in the VENUE's timezone rather than the browser's.
+ *
+ * This has to be explicit. The date and time boxes are submitted as local
+ * wall-clock alongside a timezone field, so formatting a 1pm Chicago shift
+ * with the browser's clock would prefill "11:00" for an admin sitting in
+ * Pacific and then send it back labelled America/Chicago — a two-hour error,
+ * silent, and only in the direction of whoever happens to be staffing.
+ */
+const isoToParts = (
+  iso: string | null | undefined,
+  timeZone?: string | null,
+): [string, string] => {
   if (!iso) return ["", ""];
   const d = new Date(iso);
   if (isNaN(d.getTime())) return ["", ""];
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timeZone || undefined,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(d);
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+    const [y, mo, da, h, mi] = [
+      get("year"),
+      get("month"),
+      get("day"),
+      get("hour"),
+      get("minute"),
+    ];
+    if (y && mo && da && h && mi) {
+      // Intl renders midnight as "24" in some engines under hour12:false.
+      return [`${y}-${mo}-${da}`, `${h === "24" ? "00" : h}:${mi}`];
+    }
+  } catch {
+    /* unknown IANA name — fall through to the browser's clock */
+  }
   const pad = (n: number) => String(n).padStart(2, "0");
   return [
     `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
@@ -348,8 +385,12 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
       (s) => `${s.eventUuid}:${s.ambassadorEventUuid ?? ""}` === key,
     );
     if (!shift) return;
-    const [d, t] = isoToParts(shift.startsAt);
-    const [, endT] = isoToParts(shift.endsAt);
+    // Format in the zone we're about to SUBMIT with, so the boxes and the
+    // timezone field always describe the same instant — see isoToParts. A
+    // shift with no timezone of its own keeps whatever is selected.
+    const zone = shift.timezoneName || timezoneName;
+    const [d, t] = isoToParts(shift.startsAt, zone);
+    const [, endT] = isoToParts(shift.endsAt, zone);
     setBaName(shift.baName);
     setBaEmail(shift.baEmail);
     setDate(d);
@@ -358,7 +399,7 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
     setStoreName(shift.storeName);
     setAddress(shift.address);
     setEventTypeLabel(shift.eventTypeLabel);
-    if (shift.timezoneName) setTimezoneName(shift.timezoneName);
+    setTimezoneName(zone);
     // The picker offers category-prefixed values; a request's SKUs are bare
     // names, so match them back onto the option list rather than dropping them.
     if (shift.products.length > 0) {
@@ -475,7 +516,7 @@ const Inner: React.FC<{ tenantId: string; refreshKey: number }> = ({
             </option>
             {shifts.map((s) => {
               const key = `${s.eventUuid}:${s.ambassadorEventUuid ?? ""}`;
-              const [d] = isoToParts(s.startsAt);
+              const [d] = isoToParts(s.startsAt, s.timezoneName || timezoneName);
               return (
                 <option key={key} value={key}>
                   {[s.storeName || s.eventName, d, s.baName || "unstaffed"]
