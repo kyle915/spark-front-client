@@ -544,6 +544,64 @@ const normalizePlace = (value: string): string =>
 type Identity = { firstName: string; lastName: string; phone: string; email: string };
 const IDENTITY_KEY = (code: string) => `@spark.checkin.who/${code}`;
 
+// Draft of the recap answers, so a BA never retypes a shift's worth of notes.
+//
+// The page already survived a reload for IDENTITY and the session TOKEN, but
+// everything typed into the recap lived in React state alone. On a phone that
+// is not a rare edge: iOS discards a backgrounded tab under memory pressure,
+// so a BA who answers a call mid-recap comes back to an empty form. That is
+// exactly the "deletes content if momentarily idle" the Feel Free team hit.
+//
+// Keyed by code + SESSION TOKEN, not code alone: the token is minted per
+// clock-in, so a reload inside one shift restores the draft while the next
+// shift starts clean instead of inheriting yesterday's answers.
+//
+// Text only. Photos are already uploaded to GCS as they're picked, but a
+// restored photo has no File to preview, and half-rendering one is worse than
+// re-picking it — that stays a separate change.
+type RecapDraft = {
+  v: 1;
+  savedAt: number;
+  values: Record<string, string | string[]>;
+  samples: Record<string, string>;
+  engagements: string;
+};
+
+const DRAFT_KEY = (code: string, token: string) =>
+  `@spark.checkin.draft/${code}/${token.slice(-24)}`;
+
+// Every accessor is guarded: Safari private mode throws on localStorage, and a
+// storage failure must never be the reason a BA can't file their recap.
+const readDraft = (code: string, token: string): RecapDraft | null => {
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY(code, token));
+    if (!raw) return null;
+    const d = JSON.parse(raw) as RecapDraft;
+    if (!d || d.v !== 1) return null;
+    return d;
+  } catch {
+    return null;
+  }
+};
+
+const writeDraft = (code: string, token: string, draft: Omit<RecapDraft, "v" | "savedAt">) => {
+  try {
+    const payload: RecapDraft = { v: 1, savedAt: Date.now(), ...draft };
+    window.localStorage.setItem(DRAFT_KEY(code, token), JSON.stringify(payload));
+    return payload.savedAt;
+  } catch {
+    return null;
+  }
+};
+
+const clearDraft = (code: string, token: string) => {
+  try {
+    window.localStorage.removeItem(DRAFT_KEY(code, token));
+  } catch {
+    /* nothing to do — the draft is disposable by definition */
+  }
+};
+
 const readIdentity = (code: string): Identity => {
   const empty: Identity = { firstName: "", lastName: "", phone: "", email: "" };
   try {
@@ -1551,25 +1609,47 @@ function RecapForm({
   // doesn't prefill and the BA types it exactly as before — the same
   // name-matching approach the recap metrics use, but here a miss is
   // harmless rather than a wrong number.
+  // A restored draft wins over the brand prefill: if the BA edited Event Name
+  // before the tab was discarded, their wording is the answer, not ours.
+  const restored = useRef<RecapDraft | null>(readDraft(code, token));
+
   const [values, setValues] = useState<Record<string, string | string[]>>(() => {
     const seed: Record<string, string | string[]> = {};
-    if (!brandName) return seed;
-    for (const section of template?.sections ?? []) {
-      for (const f of section.fields) {
-        if (f.name.trim().toLowerCase() === "event name" && !isPhotoType(f.type)) {
-          seed[f.id] = brandName;
+    if (brandName) {
+      for (const section of template?.sections ?? []) {
+        for (const f of section.fields) {
+          if (f.name.trim().toLowerCase() === "event name" && !isPhotoType(f.type)) {
+            seed[f.id] = brandName;
+          }
         }
       }
     }
-    return seed;
+    return { ...seed, ...(restored.current?.values ?? {}) };
   });
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [samples, setSamples] = useState<Record<string, string>>({});
-  const [engagements, setEngagements] = useState("");
+  const [samples, setSamples] = useState<Record<string, string>>(
+    () => restored.current?.samples ?? {},
+  );
+  const [engagements, setEngagements] = useState(
+    () => restored.current?.engagements ?? "",
+  );
+  const [savedAt, setSavedAt] = useState<number | null>(
+    () => restored.current?.savedAt ?? null,
+  );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const photoSeq = useRef(0);
+
+  // Debounced so a BA typing a long answer isn't writing to storage per
+  // keystroke, but short enough that "momentarily idle" is already saved.
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      const at = writeDraft(code, token, { values, samples, engagements });
+      if (at) setSavedAt(at);
+    }, 500);
+    return () => window.clearTimeout(t);
+  }, [code, token, values, samples, engagements]);
 
   const uploadingCount = photos.filter((p) => p.state === "uploading").length;
   const failedCount = photos.filter((p) => p.state === "failed").length;
@@ -1698,6 +1778,9 @@ function RecapForm({
         setBusy(false);
         return;
       }
+      // Filed — the draft has served its purpose. Cleared before the parent
+      // unmounts this form so a later shift can't resurrect these answers.
+      clearDraft(code, token);
       await onSubmitted();
     } catch {
       setErr("Network error. Try again.");
@@ -1825,6 +1908,22 @@ function RecapForm({
       ) : null}
 
       {err ? <p style={{ ...errText, textAlign: "center" }}>{err}</p> : null}
+
+      {/* Say it out loud. Half the Feel Free feedback was not knowing whether
+          anything was kept — a BA who doesn't trust the form retypes into
+          Notes first, which is the friction we're removing. */}
+      {savedAt ? (
+        <p
+          style={{
+            fontSize: 12,
+            opacity: 0.55,
+            textAlign: "center",
+            margin: 0,
+          }}
+        >
+          Saved on this device — you can close this and come back.
+        </p>
+      ) : null}
       <div style={{ display: "flex", gap: 10 }}>
         <button style={secondaryBtn} onClick={onCancel} disabled={busy}>
           Back
