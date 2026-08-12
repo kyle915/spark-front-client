@@ -510,6 +510,20 @@ const choiceKind = (t: string): "select" | "multiselect" | null => {
 // Local calendar date as YYYY-MM-DD for the date input. Uses the LOCAL parts,
 // never toISOString() — that converts to UTC first, so a BA checking in after
 // ~5pm Pacific would be handed tomorrow's date.
+// Bounds for the "date you're working" picker, mirroring the server's window
+// (CHECKIN_MAX_PAST_DAYS / CHECKIN_MAX_FUTURE_DAYS in events/checkin_views.py).
+// Kept in the picker as well as on the server so a BA sees the limit in the
+// calendar instead of typing a date and getting an error back.
+const CHECKIN_MAX_PAST_DAYS = 90;
+const CHECKIN_MAX_FUTURE_DAYS = 14;
+
+const shiftedISO = (days: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
 const todayISO = (): string => {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
@@ -1098,9 +1112,14 @@ function IdentifyStep({
           <label style={{ fontSize: 12, opacity: 0.6, display: "block", margin: "10px 0 4px" }}>
             Date you're working
           </label>
+          <p style={{ fontSize: 12, opacity: 0.55, margin: "0 0 6px" }}>
+            Working a past shift? Change this to the day you actually worked.
+          </p>
           <input
             style={input}
             type="date"
+            min={shiftedISO(-CHECKIN_MAX_PAST_DAYS)}
+            max={shiftedISO(CHECKIN_MAX_FUTURE_DAYS)}
             value={eventDate}
             onChange={(e) => setEventDate(e.target.value)}
           />
