@@ -9,8 +9,12 @@ import { useAlertStore } from "@/store/alertStore";
  * enumeration generic success regardless of whether the email is in
  * the DB.
  */
-export default function MagicLinkButton() {
-  const [open, setOpen] = useState(false);
+export default function MagicLinkButton({
+  defaultOpen = false,
+}: {
+  defaultOpen?: boolean;
+} = {}) {
+  const [open, setOpen] = useState(defaultOpen);
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
@@ -86,14 +90,14 @@ export default function MagicLinkButton() {
           fontSize: 11,
         }}
       >
-        ✦ EMAIL ME A SIGN-IN LINK INSTEAD
+        ✦ EMAIL ME A SIGN-IN LINK
       </button>
     );
   }
 
   return (
     <div
-      className="mt-4 rounded-xl p-4"
+      className="rounded-xl p-4"
       style={{
         background: "var(--spark-surface, #11140e)",
         border: "1px solid var(--spark-border, #1f2418)",

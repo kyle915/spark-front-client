@@ -19,10 +19,15 @@ import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import { GenerateCampaignReportPdfMutation } from "@/api/mutations/GenerateCampaignReportPdfMutation";
 import type { GenerateCampaignReportPdfMutation as GenerateCampaignReportPdfMutationType } from "@api/mutations/__generated__/GenerateCampaignReportPdfMutation.graphql";
+import { BulkApproveRecapsMutation } from "@/api/mutations/BulkApproveRecapsMutation";
+import type { BulkApproveRecapsMutation as BulkApproveRecapsMutationType } from "@api/mutations/__generated__/BulkApproveRecapsMutation.graphql";
+import { MarkRecapsSharedMutation } from "@/api/mutations/MarkRecapsSharedMutation";
+import type { MarkRecapsSharedMutation as MarkRecapsSharedMutationType } from "@api/mutations/__generated__/MarkRecapsSharedMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { recapFileUrl } from "@/utils/recapFileUrl";
+import { shareRecapLink } from "@/utils/recapShare";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import EmailCampaignReportModal from "./EmailCampaignReportModal";
 import ImportConnecteamButton from "./ImportConnecteamButton";
@@ -143,6 +148,8 @@ type Recap = {
   // to a request or the request type hasn't been set. Surfaced in
   // the CSV export so client reports can group by activation type.
   requestType: string | null;
+  shareToken: string | null;
+  sharedAt: string | null;
 };
 
 // Compute a 0-3 completeness score from the signals already in the
@@ -203,6 +210,20 @@ const formatDate = (raw: string | null | undefined) => {
   }
 };
 
+const SlaHours: React.FC<{ since: string }> = ({ since }) => {
+  const ms = Date.now() - new Date(since).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  const hours = ms / 3_600_000;
+  const days = hours / 24;
+  const label = hours < 24 ? `${Math.max(1, Math.round(hours))}h since event` : `${Math.round(days)}d since event`;
+  const color = days > 9 ? "var(--spark-orange)" : hours > 3 ? "#f5c042" : "rgba(255,255,255,0.4)";
+  return (
+    <p className="mono text-[10px] mt-1" style={{ letterSpacing: "0.12em", color }} title="Time since the activation — 3h is the sell, not 9 days.">
+      {label}
+    </p>
+  );
+};
+
 const isoLocal = (d: Date) => {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
@@ -241,7 +262,9 @@ const RecapCard: React.FC<{
   // parent owns the selected-set state; the card is dumb.
   selected: boolean;
   onToggleSelect: () => void;
-}> = ({ recap, href, onOpenRequest, selected, onToggleSelect }) => (
+  selectMode: boolean;
+  showSla: boolean;
+}> = ({ recap, href, onOpenRequest, selected, onToggleSelect, selectMode, showSla }) => (
   <div
     className="spark-card hov overflow-hidden cursor-pointer relative"
     style={
@@ -266,16 +289,17 @@ const RecapCard: React.FC<{
     {/* Checkbox sits above the hero so it's reachable without
         depending on row-level hover; tapping it doesn't open the
         recap. Lime when on so it pairs with the brand. */}
+    {(selectMode || selected) && (
     <label
       onClick={(e) => e.stopPropagation()}
-      className="absolute top-2 right-2 z-10 cursor-pointer"
+      className="absolute top-3 left-2 z-10 cursor-pointer"
       style={{
         background: "rgba(0,0,0,0.55)",
         border: "1px solid rgba(255,255,255,0.25)",
         borderRadius: 6,
         padding: "4px 6px",
       }}
-      title={selected ? "Remove from campaign report" : "Add to campaign report"}
+      title={selected ? "Deselect" : "Select"}
     >
       <input
         type="checkbox"
@@ -290,6 +314,7 @@ const RecapCard: React.FC<{
         }}
       />
     </label>
+    )}
     <div
       className="h-32 relative overflow-hidden"
       style={{
@@ -332,65 +357,6 @@ const RecapCard: React.FC<{
       >
         ● {recap.approved ? "APPROVED" : "DRAFT"}
       </span>
-      {(() => {
-        const tier = recapQualityTier(recap);
-        if (!tier) return null;
-        const cfg =
-          tier === "sparse"
-            ? {
-                bg: "rgba(239,90,42,0.18)",
-                fg: "var(--spark-orange)",
-                br: "rgba(239,90,42,0.5)",
-                label: "⚠ SPARSE",
-                title: "Missing 2+ key fields. Needs review before client export.",
-              }
-            : {
-                bg: "rgba(255,200,60,0.14)",
-                fg: "#f5c042",
-                br: "rgba(255,200,60,0.4)",
-                label: "◐ THIN",
-                title: "Missing one key field (numbers, samples, or photos).",
-              };
-        return (
-          <span
-            className="absolute mono"
-            style={{
-              top: 38, // sits just under the APPROVED/DRAFT chip
-              right: 8,
-              fontSize: 9,
-              letterSpacing: "0.16em",
-              padding: "2px 7px",
-              borderRadius: 999,
-              background: cfg.bg,
-              color: cfg.fg,
-              border: `1px solid ${cfg.br}`,
-            }}
-            title={cfg.title}
-          >
-            {cfg.label}
-          </span>
-        );
-      })()}
-      <span
-        className="absolute bottom-2 left-2 mono"
-        style={{
-          fontSize: 9,
-          letterSpacing: "0.14em",
-          padding: "2px 6px",
-          borderRadius: 999,
-          background:
-            recap.fileCount > 0
-              ? "rgba(197,245,70,0.15)"
-              : "rgba(239,90,42,0.15)",
-          color:
-            recap.fileCount > 0
-              ? "var(--spark-lime)"
-              : "var(--spark-orange)",
-          border: `1px solid ${recap.fileCount > 0 ? "rgba(197,245,70,0.35)" : "rgba(239,90,42,0.35)"}`,
-        }}
-      >
-        ◉ {recap.fileCount} FILE{recap.fileCount === 1 ? "" : "S"}
-      </span>
     </div>
 
     <div className="p-4">
@@ -415,25 +381,54 @@ const RecapCard: React.FC<{
         {recap.stateCode ? ` · ${recap.stateCode}` : ""}
         {recap.date ? ` · ${formatDate(recap.date)}` : ""}
       </p>
+      {showSla && recap.date ? <SlaHours since={recap.date} /> : null}
 
-      {recap.requestUuid && onOpenRequest && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenRequest(recap.requestUuid!);
-          }}
-          className="relative z-10 mono inline-flex items-center gap-1 mt-2 px-2 py-1 rounded-full text-[10px]"
-          style={{
-            letterSpacing: "0.14em",
-            background: "rgba(197,245,70,0.10)",
-            border: "1px solid rgba(197,245,70,0.30)",
-            color: "var(--spark-lime)",
-          }}
-          title="View the parent request on the Master Tracker"
-        >
-          ← {recap.requestShortId} REQUEST
-        </button>
-      )}
+      <div className="relative z-10 flex items-center gap-2 mt-2 flex-wrap">
+        {recap.requestUuid && onOpenRequest && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenRequest(recap.requestUuid!);
+            }}
+            className="mono inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              background: "rgba(197,245,70,0.10)",
+              border: "1px solid rgba(197,245,70,0.30)",
+              color: "var(--spark-lime)",
+            }}
+            title="View the parent request on the Master Tracker"
+          >
+            ← {recap.requestShortId} REQUEST
+          </button>
+        )}
+        {recap.shareToken && (
+          <button
+            type="button"
+            onClick={async (e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              const result = await shareRecapLink({
+                token: recap.shareToken!,
+                title: recap.name,
+              });
+              if (result === "copied") {
+                useAlertStore.getState().showAlert("Link copied.", "success");
+              }
+            }}
+            className="mono inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid var(--spark-border)",
+              color: "rgba(255,255,255,0.75)",
+            }}
+            title="Copy public /r/:token link"
+          >
+            ↗ SHARE
+          </button>
+        )}
+      </div>
 
       <div
         className="mt-3 pt-3 grid grid-cols-3 gap-2 text-center"
@@ -494,7 +489,7 @@ type Meta = {
 };
 
 type SortKey = "date-desc" | "date-asc" | "eng-desc" | "sold-desc";
-type StatusKey = "all" | "approved" | "draft";
+type StatusKey = "submitted" | "needs_review" | "approved" | "shared" | "all" | "draft";
 
 // Initial number of rows fetched from EACH list resolver (legacy +
 // custom). "Load more" grows this by LOAD_MORE_STEP, re-fetching both
@@ -538,8 +533,9 @@ const RecapsListInner: React.FC<{
   // checkboxes against it and reports toggles back up.
   selectedIds: Set<string>;
   onToggleSelected: (id: string) => void;
+  selectMode: boolean;
   queueEmpty: boolean;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, queueEmpty }) => {
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
@@ -551,11 +547,12 @@ const RecapsListInner: React.FC<{
   // belt-and-suspenders frontend half for the admin-side "Client view"
   // toggle (which the server can't distinguish from a normal admin).
   const { isClient } = useSparkRole();
+  const pipeline = statusFilter === "draft" ? "needs_review" : statusFilter;
   const approvedFilter = isClient
     ? true
-    : statusFilter === "approved"
+    : pipeline === "approved" || pipeline === "shared"
       ? true
-      : statusFilter === "draft"
+      : pipeline === "needs_review"
         ? false
         : null;
   const retailerName = retailerFilter === "all" ? null : retailerFilter;
@@ -594,6 +591,7 @@ const RecapsListInner: React.FC<{
             // the resolver decodes the Relay global id. "all" → no filter.
             ambassadorId: baFilter === "all" ? null : baFilter,
             approved: approvedFilter,
+            shared: pipeline === "shared" ? true : pipeline === "approved" ? false : null,
             retailerName,
             stateCode,
             startDate,
@@ -625,6 +623,7 @@ const RecapsListInner: React.FC<{
             rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
             ambassadorId: baFilter === "all" ? null : baFilter,
             approved: approvedFilter,
+            shared: pipeline === "shared" ? true : pipeline === "approved" ? false : null,
             retailerName,
             stateCode,
             startDate,
@@ -688,6 +687,8 @@ const RecapsListInner: React.FC<{
               ? `R-${String(requestUuid).slice(-4).toUpperCase()}`
               : null,
             requestType,
+            shareToken: n.shareToken ?? null,
+            sharedAt: n.sharedAt ?? null,
           };
         }) ?? [];
 
@@ -761,6 +762,8 @@ const RecapsListInner: React.FC<{
             requestUuid: null,
             requestShortId: null,
             requestType: n.customRecapTemplate?.name ?? null,
+            shareToken: n.shareToken ?? null,
+            sharedAt: n.sharedAt ?? null,
           };
         }) ?? [];
 
@@ -807,8 +810,11 @@ const RecapsListInner: React.FC<{
       // null) drop out of a narrowed BA filter.
       const matchBa = baFilter === "all" || r.ambassadorId === baFilter;
       const matchStatus =
-        statusFilter === "all" ||
-        (statusFilter === "approved" ? r.approved : !r.approved);
+        pipeline === "all" ||
+        pipeline === "submitted" ||
+        (pipeline === "needs_review" && !r.approved) ||
+        (pipeline === "approved" && r.approved && !r.sharedAt) ||
+        (pipeline === "shared" && Boolean(r.sharedAt));
       // Date range: compare on the yyyy-mm-dd prefix. Each bound is
       // inclusive — `dateFrom` = "2026-05-01" passes recaps from May 1
       // onwards, `dateTo` = "2026-05-31" passes recaps up to and
@@ -908,7 +914,7 @@ const RecapsListInner: React.FC<{
             </p>
             <p className="mt-2">
               No recaps need review in the last 30 days. Switch to{" "}
-              <span className="font-semibold">All published</span> to browse
+              <span className="font-semibold">Submitted</span> to browse
               the full archive.
             </p>
           </>
@@ -927,6 +933,8 @@ const RecapsListInner: React.FC<{
           recap={r}
           selected={selectedIds.has(r.id)}
           onToggleSelect={() => onToggleSelected(r.id)}
+          selectMode={selectMode}
+          showSla={pipeline === "needs_review"}
           href={
             r.kind === "custom"
               ? `/recap/view-custom/${r.uuid}`
@@ -1036,6 +1044,7 @@ const BaFilterDropdown: React.FC<{
 export default function SparkRecapsList() {
   const { tenantId } = useAuthStore();
   const { isClient } = useSparkRole();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
@@ -1044,8 +1053,9 @@ export default function SparkRecapsList() {
   // Relay global id (pushed server-side as `ambassadorId`). Mirrors rmmFilter.
   const [baFilter, setBaFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusKey>(
-    isClient ? "all" : "draft",
+    isClient ? "submitted" : "needs_review",
   );
+  const [selectMode, setSelectMode] = useState(false);
   // Work-queue default: last 30 days. "All published" clears both
   // bounds so the archive (every published recap) is an explicit choice.
   const [dateFrom, setDateFrom] = useState<string>(DAYS_30_ISO);
@@ -1100,6 +1110,10 @@ export default function SparkRecapsList() {
     useMutation<GenerateCampaignReportPdfMutationType>(
       GenerateCampaignReportPdfMutation,
     );
+  const [commitBulkApprove, isBulkApproving] =
+    useMutation<BulkApproveRecapsMutationType>(BulkApproveRecapsMutation);
+  const [commitMarkShared, isMarkingShared] =
+    useMutation<MarkRecapsSharedMutationType>(MarkRecapsSharedMutation);
 
   // The mutation expects ids ordered the way the user picked them on
   // the page (which determines cover-page recap order). We don't
@@ -1146,6 +1160,120 @@ export default function SparkRecapsList() {
       onError: (err) =>
         showAlert(`Campaign report failed: ${err.message}`, "error"),
     });
+  };
+
+  const selectedByKind = useMemo(() => {
+    const recapIds: string[] = [];
+    const customRecapIds: string[] = [];
+    for (const r of visibleRecaps) {
+      if (!selectedIds.has(r.id)) continue;
+      if (r.kind === "custom") customRecapIds.push(r.id);
+      else recapIds.push(r.id);
+    }
+    return { recapIds, customRecapIds };
+  }, [visibleRecaps, selectedIds]);
+
+  const approveSelected = () => {
+    if (selectedIds.size === 0 || isBulkApproving) return;
+    commitBulkApprove({
+      variables: {
+        input: {
+          recapIds: selectedByKind.recapIds,
+          customRecapIds: selectedByKind.customRecapIds,
+          approved: true,
+        },
+      },
+      onCompleted: (res) => {
+        const payload = res.bulkApproveRecaps;
+        if (payload?.success) {
+          showAlert(payload.message ?? "Approved.", "success");
+          clearSelection();
+        } else {
+          showAlert(payload?.message ?? "Bulk approve failed.", "error");
+        }
+      },
+      onError: (err) => showAlert(err.message, "error"),
+    });
+  };
+
+  const shareSelected = async () => {
+    const tokens = visibleRecaps
+      .filter((r) => selectedIds.has(r.id) && r.shareToken)
+      .map((r) => `${window.location.origin}/r/${encodeURIComponent(r.shareToken!)}`);
+    if (tokens.length === 0) {
+      showAlert("No share links on the selected recaps.", "warning");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(tokens.join("\n"));
+      showAlert(`Copied ${tokens.length} share link${tokens.length === 1 ? "" : "s"}.`, "success");
+    } catch {
+      showAlert("Couldn't reach the clipboard.", "error");
+      return;
+    }
+    commitMarkShared({
+      variables: {
+        input: {
+          recapIds: selectedByKind.recapIds,
+          customRecapIds: selectedByKind.customRecapIds,
+        },
+      },
+      onCompleted: (res) => {
+        if (!res.markRecapsShared?.success) {
+          showAlert(res.markRecapsShared?.message ?? "Couldn't mark shared.", "warning");
+        }
+      },
+    });
+  };
+
+  type SavedView = {
+    name: string;
+    search: string;
+    retailerFilter: string;
+    stateFilter: string;
+    baFilter: string;
+    statusFilter: StatusKey;
+    dateFrom: string;
+    dateTo: string;
+  };
+  const viewsKey = `spark.recapFilterViews.${tenantId ?? "none"}`;
+  const [savedViews, setSavedViews] = useState<SavedView[]>(() => {
+    try {
+      const raw = localStorage.getItem(viewsKey);
+      return raw ? (JSON.parse(raw) as SavedView[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const persistViews = (next: SavedView[]) => {
+    setSavedViews(next);
+    localStorage.setItem(viewsKey, JSON.stringify(next));
+  };
+  const pinCurrentView = () => {
+    const name = window.prompt("Name this filter view (e.g. Girl Beer CA this week)");
+    if (!name?.trim()) return;
+    persistViews([
+      ...savedViews.filter((v) => v.name !== name.trim()),
+      {
+        name: name.trim(),
+        search,
+        retailerFilter,
+        stateFilter,
+        baFilter,
+        statusFilter,
+        dateFrom,
+        dateTo,
+      },
+    ]);
+  };
+  const applyView = (v: SavedView) => {
+    setSearch(v.search);
+    setRetailerFilter(v.retailerFilter);
+    setStateFilter(v.stateFilter);
+    setBaFilter(v.baFilter);
+    setStatusFilter(v.statusFilter);
+    setDateFrom(v.dateFrom);
+    setDateTo(v.dateTo);
   };
 
   // CSV export of the currently-visible recaps (respects retailer /
@@ -1293,13 +1421,19 @@ export default function SparkRecapsList() {
     }
   };
 
+  const pipelineKey =
+    statusFilter === "draft" ? "needs_review" : statusFilter;
   const statusWord = isClient
     ? "APPROVED"
-    : statusFilter === "draft"
+    : pipelineKey === "needs_review"
       ? "NEEDS REVIEW"
-      : statusFilter === "approved"
+      : pipelineKey === "approved"
         ? "APPROVED"
-        : "ALL";
+        : pipelineKey === "shared"
+          ? "SHARED"
+          : pipelineKey === "submitted"
+            ? "SUBMITTED"
+            : "ALL";
   const windowLabel =
     !dateFrom && !dateTo
       ? `${statusWord} · ALL TIME`
@@ -1314,7 +1448,7 @@ export default function SparkRecapsList() {
               : `${statusWord} · TO ${dateTo}`;
   const isQueueDefault =
     !isClient &&
-    statusFilter === "draft" &&
+    (statusFilter === "needs_review" || statusFilter === "draft") &&
     dateFrom === DAYS_30_ISO &&
     dateTo === TODAY_ISO &&
     !search.trim() &&
@@ -1383,17 +1517,78 @@ export default function SparkRecapsList() {
             className="rounded-xl text-sm"
             style={{ ...filterStyle, flex: 1, minWidth: 180, maxWidth: 260 }}
           />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as StatusKey)}
-            className="rounded-xl text-sm"
-            style={{ ...filterStyle, maxWidth: 160 }}
-            title="Filter by approval status"
+          <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--spark-border)" }}>
+            {([
+              ["needs_review", "Needs review"],
+              ["approved", "Approved"],
+              ["shared", "Shared"],
+              ["submitted", "Submitted"],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setStatusFilter(key)}
+                className="px-2.5 py-2 text-xs font-semibold"
+                style={{
+                  background:
+                    pipelineKey === key ? "rgba(197,245,70,0.16)" : "transparent",
+                  color:
+                    pipelineKey === key
+                      ? "var(--spark-lime)"
+                      : "rgba(255,255,255,0.65)",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectMode((v) => !v)}
+            className="rounded-xl text-xs px-3 py-2 font-semibold"
+            style={selectMode ? limeBtn : ghostBtn}
           >
-            <option value="draft">Needs review</option>
-            <option value="approved">Approved</option>
-            <option value="all">All status</option>
-          </select>
+            {selectMode ? "Selecting" : "Select"}
+          </button>
+          <button
+            type="button"
+            onClick={pinCurrentView}
+            className="rounded-xl text-xs px-3 py-2 font-semibold"
+            style={ghostBtn}
+            title="Save the current filters as a named view"
+          >
+            Pin view
+          </button>
+          {savedViews.length > 0 && (
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                const v = savedViews.find((x) => x.name === e.target.value);
+                if (v) applyView(v);
+                e.currentTarget.value = "";
+              }}
+              className="rounded-xl text-sm"
+              style={{ ...filterStyle, maxWidth: 180 }}
+            >
+              <option value="">Saved views…</option>
+              {savedViews.map((v) => (
+                <option key={v.name} value={v.name}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {!isClient && (
+            <button
+              type="button"
+              onClick={() => navigate("/recaps/missing")}
+              className="rounded-xl text-xs px-3 py-2 font-semibold"
+              style={ghostBtn}
+              title="Events in the last 30 days with no recap filed"
+            >
+              Missing
+            </button>
+          )}
           <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--spark-border)" }}>
             {(["30d", "90d", "all"] as const).map((p) => (
               <button
@@ -1500,45 +1695,6 @@ export default function SparkRecapsList() {
               + New recap
             </button>
           )}
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="spark-card p-4">
-            <p className="label-mini">RECAPS · {windowLabel}</p>
-            <p
-              className="tab-num text-3xl font-bold mt-1"
-              style={{ color: "var(--spark-lime)" }}
-            >
-              {meta.total}
-            </p>
-          </div>
-          <div className="spark-card p-4">
-            <p className="label-mini">CONSUMERS</p>
-            <p className="tab-num text-3xl font-bold mt-1">
-              {meta.totalConsumers > 0
-                ? meta.totalConsumers.toLocaleString()
-                : "—"}
-            </p>
-          </div>
-          <div className="spark-card p-4">
-            <p className="label-mini">PRODUCTS SOLD</p>
-            <p
-              className="tab-num text-3xl font-bold mt-1"
-              style={{ color: "var(--spark-lime)" }}
-            >
-              {meta.totalProducts > 0
-                ? meta.totalProducts.toLocaleString()
-                : "—"}
-            </p>
-          </div>
-          <div className="spark-card p-4">
-            <p className="label-mini">AVG · CONV</p>
-            <p className="tab-num text-3xl font-bold mt-1">
-              {meta.totalConsumers > 0 && meta.totalProducts > 0
-                ? `${Math.round((meta.totalProducts / meta.totalConsumers) * 100)}%`
-                : "—"}
-            </p>
-          </div>
         </div>
 
         <div className="spark-card p-3 flex flex-wrap gap-2 items-center">
@@ -1693,6 +1849,7 @@ export default function SparkRecapsList() {
             onVisibleRecapsChange={setVisibleRecaps}
             selectedIds={selectedIds}
             onToggleSelected={toggleSelected}
+            selectMode={selectMode}
           />
         </Suspense>
 
@@ -1771,6 +1928,26 @@ export default function SparkRecapsList() {
             }}
           >
             ✕ CLEAR
+          </button>
+          {!isClient && (
+            <button
+              type="button"
+              onClick={approveSelected}
+              disabled={isBulkApproving}
+              className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+              style={limeBtn}
+            >
+              {isBulkApproving ? "Approving…" : "Approve selected"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={shareSelected}
+            disabled={isMarkingShared}
+            className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+            style={ghostBtn}
+          >
+            Share selected
           </button>
           <button
             type="button"

@@ -155,12 +155,15 @@ const Login = () => {
               {isLogin ? "Sign in to Spark." : "Create your account."}
             </h1>
             {isLogin ? (
-              <AuthForm
-                control={control}
-                handleSubmit={handleSubmit}
-                onSubmit={onSubmit}
-                loading={loading}
-              />
+              <>
+                <MagicLinkButton defaultOpen />
+                <AuthForm
+                  control={control}
+                  handleSubmit={handleSubmit}
+                  onSubmit={onSubmit}
+                  loading={loading}
+                />
+              </>
             ) : (
               <RegisterForm
                 control={controlRegister}
@@ -168,8 +171,6 @@ const Login = () => {
                 onSubmit={onRegister}
               />
             )}
-
-            {isLogin && <MagicLinkButton />}
 
             {/* <div className="text-center text-sm mt-6">
               {isLogin ? (

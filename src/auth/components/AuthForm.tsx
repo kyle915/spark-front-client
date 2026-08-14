@@ -1,3 +1,4 @@
+import { useState } from "react";
 import FormInputText from "@shared/FormInputText";
 import LoadingButton from "@/shared/LoadingButton";
 import SocialAuthButtons from "@auth/components/SocialAuthButtons";
@@ -17,8 +18,26 @@ export default function AuthForm({
   onSubmit,
   loading = false,
 }: Props) {
+  const [more, setMore] = useState(false);
+  if (!more) {
+    return (
+      <button
+        type="button"
+        onClick={() => setMore(true)}
+        className="mt-4 w-full text-center text-sm py-2 transition"
+        style={{
+          color: "rgba(245,242,236,0.55)",
+          fontFamily: "var(--font-mono, monospace)",
+          letterSpacing: "0.16em",
+          fontSize: 11,
+        }}
+      >
+        USE PASSWORD OR GOOGLE
+      </button>
+    );
+  }
   return (
-    <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+    <form className="space-y-4 mt-4" onSubmit={handleSubmit(onSubmit)}>
       <SocialAuthButtons />
 
       <div

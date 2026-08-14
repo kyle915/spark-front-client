@@ -535,7 +535,7 @@ const RecapView = () => {
 
   const totalEngagements = recap.totalEngagements ?? 0;
   const accountSpend = recap.accountSpendAmount;
-  const statusLabel = recap.approved ? "Approved" : "Pending";
+  const statusLabel = recap.approved ? "APPROVED" : "DRAFT";
   const tenantSlug = recap.event?.tenant?.slug?.toLowerCase() ?? "";
   const isTotalWirelessTenant = tenantSlug === "total-wireless";
   const canViewMarketContext =

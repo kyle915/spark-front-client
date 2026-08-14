@@ -24,6 +24,9 @@ import {
   Plus,
   Star,
   CalendarClock,
+  Clock,
+  AlertCircle,
+  Sun,
 } from "lucide-react";
 
 /**
@@ -50,8 +53,12 @@ type CommandEntry = {
 };
 
 const ENTRIES: CommandEntry[] = [
-  { id: "dashboard", label: "Dashboard", hint: "Overview · KPIs", to: "/", Icon: LayoutDashboard, keywords: "home overview" },
-  { id: "tracker", label: "Master Tracker", hint: "All events, every status", to: "/requests/list", Icon: ListChecks, keywords: "events list table" },
+  { id: "dashboard", label: "Dashboard", hint: "Today · due recaps · clock", to: "/", Icon: LayoutDashboard, keywords: "home overview work" },
+  { id: "recaps-due", label: "Recaps due", hint: "Needs review · last 30 days", to: "/recaps/list", Icon: FileText, keywords: "due inbox review queue" },
+  { id: "recaps-missing", label: "Missing recaps", hint: "Events with no recap filed", to: "/recaps/missing", Icon: AlertCircle, keywords: "missing due file" },
+  { id: "today", label: "Today", hint: "On the ground", to: "/today", Icon: Sun, keywords: "today map live field" },
+  { id: "clock", label: "On the clock", hint: "Who's working now", to: "/live-board", Icon: Clock, keywords: "clock timesheet live board" },
+  { id: "tracker", label: "Master Tracker", hint: "All events, every status", to: "/requests/list", Icon: ListChecks, keywords: "events list table due" },
   { id: "calendar", label: "Calendar", hint: "Shifts board", to: "/connect-calendar", Icon: Calendar, keywords: "schedule shifts" },
   { id: "map", label: "Account Map", hint: "Venues by status", to: "/account-map", Icon: MapPin, keywords: "map accounts retailers" },
   { id: "approvals", label: "Approvals", hint: "Review pending requests", to: "/approvals", Icon: CheckCircle2, keywords: "pending review approve" },
@@ -244,7 +251,7 @@ export const CommandPalette: React.FC = () => {
                   label: n.name || "Recap",
                   hint: [
                     "Recap",
-                    n.approved ? "Approved" : "Pending",
+                    n.approved ? "APPROVED" : "DRAFT",
                     fmt(n.event?.date),
                   ]
                     .filter(Boolean)
@@ -263,7 +270,7 @@ export const CommandPalette: React.FC = () => {
                   label: n.name || "Recap",
                   hint: [
                     "Recap",
-                    n.approved ? "Approved" : "Pending",
+                    n.approved ? "APPROVED" : "DRAFT",
                     fmt(n.event?.date),
                   ]
                     .filter(Boolean)

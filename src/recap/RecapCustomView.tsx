@@ -55,6 +55,10 @@ import { useAlertStore } from "@/store/alertStore";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 import { shareRecapLink } from "@/utils/recapShare";
 import useSparkRole from "@/hooks/useSparkRole";
+import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
+import { ClientTenantRecapBrand } from "@/recap/TenantBrandedRecap";
+import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
+import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
 
 const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
 
@@ -429,6 +433,8 @@ const RecapCustomViewInner = () => {
     );
   const [commitApprove, isApproving] =
     useMutation<ApproveCustomRecapMutationType>(ApproveCustomRecapMutation);
+  const [commitSignoff, isSigningOff] =
+    useMutation<RecapClientSignoffMutationType>(RecapClientSignoffMutation);
   const [commitAddFile] = useMutation<AddCustomRecapFileMutationType>(
     AddCustomRecapFileMutation,
   );
@@ -1058,7 +1064,7 @@ const RecapCustomViewInner = () => {
     .filter(Boolean)
     .join(" · ");
 
-  return (
+  const inner = (
     <>
       <div className="space-y-6 max-w-7xl">
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -2264,6 +2270,37 @@ const RecapCustomViewInner = () => {
               </div>
             )}
           </div>
+          {isClient && (
+            <RecapClientSignoff
+              existingStatus={recap.clientSignoffStatus}
+              existingComment={recap.clientSignoffComment}
+              existingAt={recap.clientSignoffAt}
+              busy={isSigningOff}
+              onSubmit={(status, comment) => {
+                commitSignoff({
+                  variables: {
+                    input: {
+                      customRecapId: recap.id,
+                      status,
+                      comment,
+                    },
+                  },
+                  onCompleted: (res) => {
+                    if (res.submitRecapClientSignoff?.success) {
+                      showAlert("Sign-off saved.", "success");
+                      setRefreshKey((k) => k + 1);
+                    } else {
+                      showAlert(
+                        res.submitRecapClientSignoff?.message ?? "Couldn't save sign-off.",
+                        "error",
+                      );
+                    }
+                  },
+                  onError: (err) => showAlert(err.message, "error"),
+                });
+              }}
+            />
+          )}
       </div>
 
       {currentPreview && (
@@ -2279,6 +2316,11 @@ const RecapCustomViewInner = () => {
       )}
     </>
   );
+
+  if (isClient) {
+    return <ClientTenantRecapBrand>{inner}</ClientTenantRecapBrand>;
+  }
+  return inner;
 };
 
 export default function RecapCustomView() {

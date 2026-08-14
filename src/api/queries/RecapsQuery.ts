@@ -31,6 +31,8 @@ export const RecapsQuery = graphql`
           uuid
           name
           approved
+          shareToken
+          sharedAt
           createdAt
           submittedAt
           totalEngagements

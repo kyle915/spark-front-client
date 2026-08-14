@@ -34,6 +34,9 @@ import { useAlertStore } from "@/store/alertStore";
 import RecapUploader from "./RecapUploader";
 import ReassignRecapModal from "./ReassignRecapModal";
 import { thumbUrl } from "@/utils/thumb";
+import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
+import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
+import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
 
 const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
 
@@ -394,6 +397,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     useMutation<UpdateRecapMutationType>(UpdateRecapMutation);
   const [commitApprove, isApproving] =
     useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
+  const [commitSignoff, isSigningOff] =
+    useMutation<RecapClientSignoffMutationType>(RecapClientSignoffMutation);
   const [commitRemoveFile] =
     useMutation<RemoveRecapFileMutationType>(RemoveRecapFileMutation);
   const [commitDelete, isDeleting] =
@@ -1080,6 +1085,30 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       <Suspense fallback={null}>
         <RecapQualityPanel recapId={recap.id} isCustom={false} />
       </Suspense>
+      )}
+      {isClient && (
+        <RecapClientSignoff
+          existingStatus={recap.clientSignoffStatus}
+          existingComment={recap.clientSignoffComment}
+          existingAt={recap.clientSignoffAt}
+          busy={isSigningOff}
+          onSubmit={(status, comment) => {
+            commitSignoff({
+              variables: { input: { recapId: recap.id, status, comment } },
+              onCompleted: (res) => {
+                if (res.submitRecapClientSignoff?.success) {
+                  showAlert("Sign-off saved.", "success");
+                } else {
+                  showAlert(
+                    res.submitRecapClientSignoff?.message ?? "Couldn't save sign-off.",
+                    "error",
+                  );
+                }
+              },
+              onError: (err) => showAlert(err.message, "error"),
+            });
+          }}
+        />
       )}
 
       {/* Products sampled — read view (everyone). Hidden while the admin is
