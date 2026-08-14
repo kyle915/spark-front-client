@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Link, useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
+import { RecapsListSkeleton } from "@/layout/PageSkeletons";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import { thumbUrl } from "@/utils/thumb";
 import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/RecapsQuery.graphql";
@@ -1675,16 +1676,7 @@ export default function SparkRecapsList() {
           </select>
         </div>
 
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading recaps…
-            </div>
-          }
-        >
+        <Suspense fallback={<RecapsListSkeleton />}>
           <RecapsListInner
             search={search}
             retailerFilter={retailerFilter}

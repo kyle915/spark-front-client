@@ -1,8 +1,7 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-/* Spark v2 fonts — Space Grotesk for display + body, JetBrains Mono for labels/code */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+/* Spark v2 fonts are self-hosted via index.html → /fonts/fonts.css */
 
 /* ========================================================================
  * Spark v2 theme (new build default)
@@ -436,20 +435,36 @@ h1, h2, h3, h4, h5, h6, .display {
    both of which default to btn-primary blue and a light input. This
    block scopes a Spark v2 dark theme to the login form ONLY so we
    don't touch buttons/inputs across the rest of the app. */
+html:has(.spark-login-page),
+body:has(.spark-login-page) {
+  overflow: hidden;
+  height: 100%;
+}
 .spark-login-form input.input,
 .spark-login-form input.input-bordered {
-  background: rgba(245,242,236,0.04) !important;
-  border: 1px solid rgba(245,242,236,0.15) !important;
+  background: rgba(245,242,236,0.12) !important;
+  border: 1px solid rgba(245,242,236,0.32) !important;
   color: #F5F2EC !important;
+  -webkit-text-fill-color: #F5F2EC !important;
+  caret-color: #F5F2EC !important;
   border-radius: 999px !important;
 }
 .spark-login-form input.input::placeholder {
-  color: rgba(245,242,236,0.4) !important;
+  color: rgba(245,242,236,0.55) !important;
+  -webkit-text-fill-color: rgba(245,242,236,0.55) !important;
 }
 .spark-login-form input.input:focus {
   border-color: #D6F35F !important;
   box-shadow: 0 0 0 3px rgba(214,243,95,0.18) !important;
-  background: rgba(245,242,236,0.06) !important;
+  background: rgba(245,242,236,0.16) !important;
+}
+.spark-login-form input.input:-webkit-autofill,
+.spark-login-form input.input:-webkit-autofill:hover,
+.spark-login-form input.input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #F5F2EC !important;
+  caret-color: #F5F2EC;
+  box-shadow: 0 0 0 1000px #1c1e18 inset !important;
+  transition: background-color 9999s ease-out;
 }
 .spark-login-form .label-text {
   color: rgba(245,242,236,0.65) !important;

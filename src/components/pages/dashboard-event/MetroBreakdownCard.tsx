@@ -153,10 +153,14 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
   }, [weeks]);
   const metric = metricOverride ?? smartDefaultMetric;
 
-  // No metros in-window -> this tenant's events don't follow the naming
-  // convention this feature depends on. Render nothing rather than an
-  // empty/confusing table.
-  if (metros.length === 0) return null;
+  // No metros / a single market / no activity → hide the card. One
+  // market plus 4/8/12-week controls is empty chrome, not a breakdown.
+  const hasAnyValue = weeks.some((week) =>
+    week.cells.some((c) =>
+      METRICS.some((m) => Number(c[m.key] ?? 0) > 0),
+    ),
+  );
+  if (metros.length < 2 || !hasAnyValue) return null;
 
   const applyPreset = (n: number) => {
     const r = weeksAgoRange(n);

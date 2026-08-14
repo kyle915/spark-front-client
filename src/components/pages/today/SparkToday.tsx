@@ -8,6 +8,7 @@ import {
   InfoWindow,
 } from "@vis.gl/react-google-maps";
 import Layout from "@/layout/Layout";
+import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import { EventsQuery } from "@/api/queries/EventsQuery";
 import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
 import { RecentLocationPingsQuery } from "@/api/queries/RecentLocationPingsQuery";
@@ -520,16 +521,7 @@ export default function SparkToday() {
           </p>
         </div>
 
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading today's roster…
-            </div>
-          }
-        >
+        <Suspense fallback={<DashboardSkeleton />}>
           <Inner apiKey={apiKey} />
         </Suspense>
       </div>

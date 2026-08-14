@@ -25,6 +25,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
+import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import { useAuthStore } from "@/store/authStore";
 import { useSidebarCounts } from "@/hooks/useSidebarCounts";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
@@ -391,7 +392,7 @@ const ClientInner: React.FC = () => {
           value={completionPct == null ? "—" : `${completionPct}%`}
           sub={
             counts.recapsDue > 0
-              ? `${counts.recapsDue} still need recaps`
+              ? `File the ${counts.recapsDue} recap${counts.recapsDue === 1 ? "" : "s"} due`
               : "All caught up"
           }
           tone={completionPct != null && completionPct < 80 ? "orange" : "lime"}
@@ -731,16 +732,7 @@ const ClientInner: React.FC = () => {
 export default function SparkClientDashboard() {
   return (
     <Layout>
-      <Suspense
-        fallback={
-          <div
-            className="grid place-items-center text-xs py-12"
-            style={{ color: "rgba(255,255,255,0.45)" }}
-          >
-            Loading your program…
-          </div>
-        }
-      >
+      <Suspense fallback={<DashboardSkeleton />}>
         <ClientInner />
       </Suspense>
     </Layout>

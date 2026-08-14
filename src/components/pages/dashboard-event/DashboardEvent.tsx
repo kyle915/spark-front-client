@@ -21,6 +21,7 @@ import TenantBaLeaderboard from "@/components/ai/TenantBaLeaderboard";
 import MetroBreakdownCard from "./MetroBreakdownCard";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useNavigate } from "react-router";
+import { DashboardSkeleton } from "@/layout/PageSkeletons";
 
 /**
  * Compact priority-glance card: shows pending approvals (with SLA
@@ -60,7 +61,10 @@ const TodaysSnapshot: React.FC = () => {
       // one click per row.
       label: "Recaps due",
       value: counts.recapsDue,
-      sub: counts.recapsDue > 0 ? "Nudge or file" : undefined,
+      sub:
+        counts.recapsDue > 0
+          ? `File the ${counts.recapsDue} recap${counts.recapsDue === 1 ? "" : "s"} due`
+          : undefined,
       tone: counts.recapsDue > 0 ? "orange" : "gold",
       to: "/recaps/missing",
       hide: counts.recapsDue === 0,
@@ -541,7 +545,7 @@ const ActivationBreakdown: React.FC = () => {
 
 /* ───────────────────────────── PAGE ───────────────────────────── */
 
-export default function DashboardIndex() {
+function DashboardInner() {
   const { tenantId, user, tenantMeta } = useAuthStore();
   const { isClient } = useSparkRole();
   const navigate = useNavigate();
@@ -598,7 +602,6 @@ export default function DashboardIndex() {
   const recent = dashboard.recentEvents ?? [];
 
   return (
-    <Layout>
       <div className="space-y-6 lg:space-y-8 max-w-7xl">
         {/* Greeting + period pills */}
         <div className="flex items-end justify-between flex-wrap gap-4">
@@ -1152,6 +1155,15 @@ export default function DashboardIndex() {
           )}
         </div>
       </div>
+  );
+}
+
+export default function DashboardIndex() {
+  return (
+    <Layout>
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardInner />
+      </Suspense>
     </Layout>
   );
 }

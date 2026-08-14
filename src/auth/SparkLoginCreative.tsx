@@ -189,36 +189,31 @@ export default function SparkLoginCreative({
           />
           FIELD MARKETING, FINALLY ↓
         </div>
-        <div style={{ position: "relative", height: 168, overflow: "hidden" }}>
-          {words.map((w, i) => (
-            <div
-              key={w}
-              style={{
-                position: "absolute",
-                inset: 0,
-                fontFamily: "var(--font-display)",
-                fontWeight: 800,
-                fontSize: 62,
-                lineHeight: 1.04,
-                letterSpacing: "-0.04em",
-                color: "#D6F35F",
-                opacity: i === idx ? 1 : 0,
-                transform:
-                  i === idx
-                    ? "translateY(0)"
-                    : i < idx || (idx === 0 && i === words.length - 1)
-                      ? "translateY(-30%)"
-                      : "translateY(30%)",
-                transition:
-                  "opacity 600ms cubic-bezier(0.2,0.7,0.2,1), transform 600ms cubic-bezier(0.2,0.7,0.2,1)",
-                textShadow:
-                  "0 0 60px rgba(214,243,95,0.55), 0 0 18px rgba(214,243,95,0.3)",
-                fontStyle: "italic",
-              }}
-            >
-              {w}
-            </div>
-          ))}
+        <div
+          style={{
+            position: "relative",
+            height: 72,
+            overflow: "hidden",
+          }}
+        >
+          <div
+            key={words[idx]}
+            style={{
+              fontFamily: "var(--font-display)",
+              fontWeight: 800,
+              fontSize: "clamp(28px, 3.4vw, 48px)",
+              lineHeight: 1.15,
+              letterSpacing: "-0.04em",
+              color: "#D6F35F",
+              whiteSpace: "nowrap",
+              textShadow:
+                "0 0 60px rgba(214,243,95,0.55), 0 0 18px rgba(214,243,95,0.3)",
+              fontStyle: "italic",
+              animation: "spk-fade-up 500ms cubic-bezier(0.2,0.7,0.2,1)",
+            }}
+          >
+            {words[idx]}
+          </div>
         </div>
         <h3
           style={{

@@ -96,22 +96,18 @@ const Login = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center bg-cover bg-center bg-no-repeat p-4"
+      className="spark-login-page h-dvh w-full overflow-hidden flex"
       style={{
         background:
-          "radial-gradient(circle at 20% 10%, rgba(197,245,70,0.18), transparent 55%), radial-gradient(circle at 80% 90%, rgba(95,184,239,0.10), transparent 55%), #0a0d09",
+          "radial-gradient(circle at 20% 10%, rgba(197,245,70,0.18), transparent 55%), radial-gradient(circle at 80% 90%, rgba(95,184,239,0.10), transparent 55%), #0A0B0D",
       }}
     >
       <div
-        className="flex flex-col lg:flex-row w-full max-w-5xl rounded-3xl shadow-xl overflow-hidden"
-        style={{
-          background: "#0A0B0D",
-          boxShadow:
-            "0 60px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(214,243,95,0.15), 0 0 80px rgba(214,243,95,0.10)",
-        }}
+        className="flex flex-col lg:flex-row w-full h-full overflow-hidden"
+        style={{ background: "#0A0B0D" }}
       >
         <div
-          className="spark-login-form flex flex-col justify-center items-center w-full lg:w-1/2 px-8 sm:px-12 md:px-16 py-10 transition-all duration-300 ease-in-out"
+          className="spark-login-form flex flex-col justify-center items-center w-full lg:w-1/2 px-8 sm:px-12 md:px-16 py-10 overflow-y-auto transition-all duration-300 ease-in-out"
           style={{
             background: "#0A0B0D",
             color: "#F5F2EC",
@@ -125,11 +121,10 @@ const Login = () => {
             <img
                 src="/legal/spark-logo.png"
                 alt="Spark by Ignite"
+                className="block mx-auto mb-5 lg:hidden"
                 style={{
                   height: 36,
                   width: "auto",
-                  display: "block",
-                  margin: "0 auto 20px",
                   filter: "invert(1) hue-rotate(180deg)",
                 }}
             />
