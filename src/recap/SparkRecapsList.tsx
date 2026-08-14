@@ -152,18 +152,6 @@ type Recap = {
   sharedAt: string | null;
 };
 
-// Compute a 0-3 completeness score from the signals already in the
-// list query so the card can flag thin recaps without an extra
-// round-trip. Skips approval as a signal (admins approve regardless
-// of completeness; that's a separate workflow).
-//
-// Score buckets:
-//   3 → all three present (engagements, products sold, photos)
-//   2 → "thin" but useful (some data + photos OR strong numbers)
-//   ≤1 → "sparse" — needs review before going to a client
-//
-// We only render the chip when score < 3 — full recaps don't need a
-// gold star, they just need to not get flagged.
 // CONV = products sold ÷ consumers SAMPLED (a sampling program's conversion is
 // sold-per-person-sampled, NOT sold-per-engagement). Falls back to engagements
 // for legacy recaps with no separate sampled count. `empty` is what to show
@@ -179,22 +167,6 @@ const conversionStr = (
   const base = r.consumersSampled ?? r.engagements;
   if (!base || base <= 0 || !r.productsSold) return empty;
   return `${Math.round((r.productsSold / base) * 100)}%`;
-};
-
-type QualityTier = "sparse" | "thin" | null;
-
-const recapQualityTier = (recap: {
-  engagements: number | null;
-  productsSold: number | null;
-  fileCount: number;
-}): QualityTier => {
-  let score = 0;
-  if ((recap.engagements ?? 0) > 0) score += 1;
-  if ((recap.productsSold ?? 0) > 0) score += 1;
-  if (recap.fileCount > 0) score += 1;
-  if (score >= 3) return null;
-  if (score <= 1) return "sparse";
-  return "thin";
 };
 
 const formatDate = (raw: string | null | undefined) => {

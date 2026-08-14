@@ -52,6 +52,7 @@ export const GetCustomRecapsQuery = graphql`
             }
           }
           customRecapTemplate {
+            id
             name
           }
           # PERF: the list cards only need four numbers, computed

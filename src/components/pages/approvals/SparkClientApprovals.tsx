@@ -300,26 +300,18 @@ const ClientApprovalsInner: React.FC = () => {
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
         ?.map((n) => {
-          const venue =
-            n.event?.retailer?.name ??
-            n.event?.request?.retailer?.name ??
-            null;
-          const city = venue ? null : (n.event?.address ?? null);
-          const st =
-            n.event?.state?.code ??
-            n.event?.retailer?.location?.state?.code ??
-            n.state?.code ??
-            null;
-          const date = n.event?.date ?? n.createdAt ?? "";
+          const venue = n.eventRetailer || null;
+          const st = n.eventState || null;
+          const date = n.eventDate ?? n.event?.date ?? n.createdAt ?? "";
           return {
             kind: "legacy" as const,
             id: String(n.id),
             uuid: String(n.uuid),
             name: n.name ?? n.event?.name ?? "Untitled recap",
             date,
-            where: joinWhere(venue, city, st),
-            typeLabel: n.event?.request?.requestType?.name ?? null,
-            sortMs: toMs(n.event?.date) || toMs(n.createdAt),
+            where: joinWhere(venue, null, st),
+            typeLabel: n.requestTypeName ?? null,
+            sortMs: toMs(n.eventDate) || toMs(n.event?.date) || toMs(n.createdAt),
           };
         }) ?? [];
 
@@ -339,7 +331,11 @@ const ClientApprovalsInner: React.FC = () => {
               n.customRecapTemplate?.name ??
               "Custom recap",
             date,
-            where: joinWhere(n.retailer?.name ?? null, n.location?.name ?? null, null),
+            where: joinWhere(
+              n.eventRetailer || null,
+              n.eventRetailer ? null : (n.eventAddress ?? null),
+              n.eventState || null,
+            ),
             typeLabel: n.customRecapTemplate?.name ?? null,
             sortMs: toMs(n.event?.date) || toMs(n.createdAt),
           };

@@ -16,6 +16,7 @@ import type {
 import { formatDate, formatTime } from "@/utils";
 
 const getRecapState = (row: RecapRow) =>
+  row.eventState ??
   row.state?.code ??
   row.event?.state?.code ??
   row.event?.retailer?.location?.state?.code ??
@@ -25,6 +26,7 @@ const getRecapState = (row: RecapRow) =>
   "-";
 
 const getRecapLocation = (row: RecapRow) =>
+  row.eventRetailer ??
   row.event?.retailer?.name ??
   row.event?.address ??
   row.location?.name ??
@@ -236,7 +238,7 @@ export const createRecapColumns = (
   {
     key: "eventDate",
     label: "Event Date",
-    render: (_value, row) => formatDate(row.event?.date ?? null),
+    render: (_value, row) => formatDate(row.eventDate ?? row.event?.date ?? null),
   },
 ];
 

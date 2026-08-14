@@ -81,6 +81,10 @@ export interface RecapRow {
   name: string;
   approved?: boolean | null;
   eventId?: string | null;
+  eventDate?: string | null;
+  eventRetailer?: string | null;
+  eventState?: string | null;
+  requestTypeName?: string | null;
   state?: {
     id?: string;
     name?: string | null;
@@ -91,37 +95,39 @@ export interface RecapRow {
     uuid?: string | null;
     name?: string | null;
   } | null;
-  event?:
-    | (NamedEntity & {
-        address?: string | null;
-        state?: {
-          id?: string;
-          name?: string | null;
-          code?: string | null;
-        } | null;
-        location?: {
-          id?: string;
-          uuid?: string | null;
-          name?: string | null;
-        } | null;
-        retailer?: RecapEntityWithLocation | null;
-        distributor?: RecapEntityWithLocation | null;
-        request?: {
-          state?: {
-            id?: string;
-            name?: string | null;
-            code?: string | null;
-          } | null;
-          location?: {
-            id?: string;
-            uuid?: string | null;
-            name?: string | null;
-          } | null;
-          retailer?: RecapEntityWithLocation | null;
-          distributor?: RecapEntityWithLocation | null;
-        } | null;
-      })
-    | null;
+  event?: {
+    id?: string;
+    uuid?: string | null;
+    name: string;
+    date?: string | null;
+    address?: string | null;
+    state?: {
+      id?: string;
+      name?: string | null;
+      code?: string | null;
+    } | null;
+    location?: {
+      id?: string;
+      uuid?: string | null;
+      name?: string | null;
+    } | null;
+    retailer?: RecapEntityWithLocation | null;
+    distributor?: RecapEntityWithLocation | null;
+    request?: {
+      state?: {
+        id?: string;
+        name?: string | null;
+        code?: string | null;
+      } | null;
+      location?: {
+        id?: string;
+        uuid?: string | null;
+        name?: string | null;
+      } | null;
+      retailer?: RecapEntityWithLocation | null;
+      distributor?: RecapEntityWithLocation | null;
+    } | null;
+  } | null;
   createdAt?: string | null;
 }
 

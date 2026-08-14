@@ -194,17 +194,16 @@ const RecapQualityPanel: React.FC<{
   const [ready, setReady] = useState(false);
   useEffect(() => {
     let idleId: number | undefined;
-    let timeoutId: number | undefined;
-    if ("requestIdleCallback" in window) {
-      idleId = window.requestIdleCallback(() => setReady(true), {
-        timeout: 1800,
-      });
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const ric = window.requestIdleCallback;
+    if (typeof ric === "function") {
+      idleId = ric(() => setReady(true), { timeout: 1800 });
     } else {
-      timeoutId = window.setTimeout(() => setReady(true), 350);
+      timeoutId = setTimeout(() => setReady(true), 350);
     }
     return () => {
       if (idleId != null) window.cancelIdleCallback(idleId);
-      if (timeoutId != null) window.clearTimeout(timeoutId);
+      if (timeoutId != null) clearTimeout(timeoutId);
     };
   }, []);
   if (!ready) return null;
