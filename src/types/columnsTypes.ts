@@ -126,6 +126,7 @@ export interface RecapRow {
 }
 
 type RecapEntityWithLocation = {
+  name?: string | null;
   location?: {
     name?: string | null;
     state?: {

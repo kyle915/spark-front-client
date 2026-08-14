@@ -9,8 +9,9 @@ import { graphql } from "react-relay";
  * groups files by `fileRecapCategory.name`, so the file re-groups as soon as
  * the refreshed list comes back.
  *
- * `fileRecapCategoryId` accepts a real id, the positional sentinels "1"
- * (Sampling photos) / "2" (Receipts), or null to clear (back to Uncategorized).
+ * `fileRecapCategoryId` accepts a real id, a category name/slug
+ * ("Sampling photos" / "Receipts"), the legacy positional sentinels
+ * "1"/"2" (mobile), or null to clear (back to Uncategorized).
  *
  * Returns the FULL customRecapFiles list so Relay merges it by custom recap
  * id; selection mirrors GetCustomRecapQuery so the merge is complete.

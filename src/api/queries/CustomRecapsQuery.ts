@@ -7,6 +7,7 @@ export const GetCustomRecapsQuery = graphql`
     $last: Int
     $before: String
     $filters: CustomRecapFiltersInput
+    $q: String
   ) {
     customRecaps(
       first: $first
@@ -14,6 +15,7 @@ export const GetCustomRecapsQuery = graphql`
       last: $last
       before: $before
       filters: $filters
+      q: $q
     ) {
       totalCount
       pageInfo {
@@ -31,23 +33,15 @@ export const GetCustomRecapsQuery = graphql`
           submittedAt
           createdAt
           totalEngagements
-          fillingForAmbassador
-          late
-          incomplete
           approved
-          usedCorpoCard
           event {
-            id
             name
             date
-            # Needed for the state filter: custom-recap tenants (Feel Free)
-            # file address-only events with no State FK, so we parse the
-            # 2-letter code out of the address client-side (toStateCode).
-            address
-            state {
-              code
-            }
           }
+          eventDate
+          eventAddress
+          eventRetailer
+          eventState
           ambassador {
             id
             user {
@@ -55,24 +49,7 @@ export const GetCustomRecapsQuery = graphql`
               lastName
             }
           }
-          job {
-            id
-            name
-          }
-          retailer {
-            id
-            name
-          }
-          location {
-            id
-            name
-          }
-          state {
-            id
-            name
-          }
           customRecapTemplate {
-            id
             name
           }
           # PERF: the list cards only need four numbers, computed
@@ -109,6 +86,7 @@ export const GetCustomRecapQuery = graphql`
       late
       incomplete
       approved
+      shareToken
       usedCorpoCard
       # Linked-event location, walked server-side from the recap's event
       # (and its request/retailer/location/state). The recap's own

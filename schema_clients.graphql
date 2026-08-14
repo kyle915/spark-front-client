@@ -2060,6 +2060,7 @@ type CustomRecap implements Node {
   late: Boolean!
   incomplete: Boolean!
   approved: Boolean!
+  shareToken: String!
   usedCorpoCard: Boolean!
   soldUnits: Int
   consumersSampled: Int
@@ -2215,6 +2216,8 @@ input CustomRecapFiltersInput {
   approved: Boolean = null
   edited: Boolean = null
   customRecapTemplateId: ID = null
+  retailerName: String = null
+  stateCode: String = null
 }
 
 """
@@ -5054,6 +5057,7 @@ type Recap implements Node {
   uuid: String!
   name: String!
   approved: Boolean!
+  shareToken: String!
   fillingForAmbassador: Boolean!
   event: Event!
   eventId: ID!
@@ -5069,6 +5073,7 @@ type Recap implements Node {
   state: State
   createdAt: String!
   updatedAt: String!
+  submittedAt: String
   totalEngagements: Int
   productsSold: Int
   totalCansSold: Int
@@ -5089,6 +5094,11 @@ type Recap implements Node {
   heroFile: RecapFile
   ambassadors: [Ambassador!]! @deprecated(reason: "Use ambassador instead.")
   requestStoreManagers: [RequestStoreManager!]!
+  eventDate: String
+  eventRetailer: String
+  eventState: String
+  requestUuid: String
+  requestTypeName: String
 }
 
 type RecapComparisonValues {
@@ -5222,6 +5232,8 @@ input RecapFiltersInput {
   eventAddress: String = null
   approved: Boolean = null
   edited: Boolean = null
+  retailerName: String = null
+  stateCode: String = null
 }
 
 type RecapGlobalKPIByRMM {

@@ -421,12 +421,12 @@ export default function SparkRecapCreate() {
       ...photoBlobs.map((blob) => ({
         file: blob,
         fileTypeId: "1",
-        fileRecapCategoryId: "1",
+        fileRecapCategoryId: "Sampling photos",
       })),
       ...receiptBlobs.map((blob) => ({
         file: blob,
         fileTypeId: "1",
-        fileRecapCategoryId: "2",
+        fileRecapCategoryId: "Receipts",
       })),
     ];
 
@@ -490,8 +490,8 @@ export default function SparkRecapCreate() {
       return;
     }
     const files = [
-      ...photoBlobs.map((blob) => ({ file: blob, fileTypeId: "1", fileRecapCategoryId: "1" })),
-      ...receiptBlobs.map((blob) => ({ file: blob, fileTypeId: "1", fileRecapCategoryId: "2" })),
+      ...photoBlobs.map((blob) => ({ file: blob, fileTypeId: "1", fileRecapCategoryId: "Sampling photos" })),
+      ...receiptBlobs.map((blob) => ({ file: blob, fileTypeId: "1", fileRecapCategoryId: "Receipts" })),
     ];
     // Per-SKU samples (product + units), same shape as the custom flow.
     // Sent only when at least one product got a positive quantity.

@@ -326,7 +326,6 @@ const TopRetailersChart: React.FC = () => {
       const name =
         r.event?.retailer?.name ??
         r.event?.request?.retailer?.name ??
-        r.location?.name ??
         "Unknown";
       const eng =
         typeof r.totalEngagements === "number" ? r.totalEngagements : 0;

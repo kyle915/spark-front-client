@@ -304,11 +304,7 @@ const ClientApprovalsInner: React.FC = () => {
             n.event?.retailer?.name ??
             n.event?.request?.retailer?.name ??
             null;
-          const city =
-            n.event?.location?.name ??
-            n.event?.retailer?.location?.name ??
-            n.location?.name ??
-            null;
+          const city = venue ? null : (n.event?.address ?? null);
           const st =
             n.event?.state?.code ??
             n.event?.retailer?.location?.state?.code ??

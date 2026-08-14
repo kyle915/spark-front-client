@@ -9,6 +9,7 @@ export const RecapQuery = graphql`
       createdAt
       updatedAt
       approved
+      shareToken
       totalEngagements
       productsSold
       totalCansSold

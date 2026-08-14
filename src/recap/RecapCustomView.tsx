@@ -35,7 +35,6 @@ import {
 } from "react";
 import { formatDate, parseLocaleNumber } from "@/utils";
 import {
-  ArrowLeftIcon,
   Calendar,
   Goal,
   MapPin,
@@ -46,13 +45,14 @@ import {
   Image as ImageIcon,
   FolderOpen,
   FileText,
-  Pencil,
   Trash2,
   X as XIcon,
 } from "lucide-react";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import { useAlertStore } from "@/store/alertStore";
 import { recapFileUrl } from "@/utils/recapFileUrl";
+import { shareRecapLink } from "@/utils/recapShare";
+import useSparkRole from "@/hooks/useSparkRole";
 
 // Custom-field type → control kind. Field-type names are lowercase by
 // convention (text / number / image / longtext / select / multiselect);
@@ -70,10 +70,28 @@ function customFieldKind(
   return "other";
 }
 
+const FILE_CATEGORY_PHOTOS = "Sampling photos";
+const FILE_CATEGORY_RECEIPTS = "Receipts";
+
 // A multiselect answer is persisted as a JSON array of the chosen option
 // strings; a single-select answer is the plain option string. Parse either
 // shape into a string[] for rendering (and tolerate a legacy plain string
 // landing in a multiselect field).
+function customFieldHasDisplayValue(
+  field: {
+    value?: string | null;
+    customFieldType?: { name?: string | null } | null;
+  },
+): boolean {
+  const kind = customFieldKind(field.customFieldType?.name);
+  const value = field.value ?? "";
+  if (kind === "image") return Boolean(value);
+  if (kind === "select" || kind === "multiselect") {
+    return parseChoiceList(value).length > 0;
+  }
+  return Boolean(String(value).trim());
+}
+
 function parseChoiceList(value: string | null | undefined): string[] {
   if (!value) return [];
   try {
@@ -85,20 +103,30 @@ function parseChoiceList(value: string | null | undefined): string[] {
   return [value];
 }
 
-type HeifDecodedImage = {
-  get_width: () => number;
-  get_height: () => number;
-  display: (
-    imageData: ImageData,
-    callback: (displayData: ImageData | null) => void,
-  ) => void;
-  free?: () => void;
+const ghostBtn: React.CSSProperties = {
+  background: "transparent",
+  color: "var(--spark-text)",
+  border: "1px solid var(--spark-border)",
 };
-
-type LibHeifModule = {
-  HeifDecoder: new () => {
-    decode: (data: Uint8Array | ArrayBuffer) => HeifDecodedImage[];
-  };
+const limeBtn: React.CSSProperties = {
+  background: "var(--spark-lime)",
+  color: "#0a0d09",
+  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+};
+const dangerBtn: React.CSSProperties = {
+  background: "transparent",
+  color: "var(--spark-orange)",
+  border: "1px solid rgba(239,90,42,0.4)",
+};
+const muted: React.CSSProperties = { color: "rgba(255,255,255,0.55)" };
+const faint: React.CSSProperties = { color: "rgba(255,255,255,0.4)" };
+const lime: React.CSSProperties = { color: "var(--spark-lime)" };
+const hairline: React.CSSProperties = {
+  borderBottom: "1px solid var(--spark-border)",
+};
+const inset: React.CSSProperties = {
+  border: "1px solid var(--spark-border)",
+  background: "rgba(255,255,255,0.03)",
 };
 
 const KpiCardContainer = ({
@@ -112,14 +140,15 @@ const KpiCardContainer = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={`card bg-base-300/50 ${className}`}>
-    <div className="card-body space-y-4">
-      <div className="flex items-center gap-2">
-        {icon}
-        <h3 className="text-base font-semibold">{title}</h3>
-      </div>
-      {children}
-    </div>
+  <div className={`spark-card p-6 ${className ?? ""}`}>
+    <p
+      className="mono text-[10px] mb-4 flex items-center gap-2"
+      style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}
+    >
+      {icon}
+      {title.toUpperCase()}
+    </p>
+    {children}
   </div>
 );
 
@@ -214,7 +243,7 @@ const ProductSamplesEditor = ({
 
   if (products.length === 0) {
     return (
-      <p className="text-sm text-base-content/60">
+      <p className="text-sm" style={muted}>
         No products are set up for this client yet — add SKUs under Products
         to track units sampled.
       </p>
@@ -229,9 +258,10 @@ const ProductSamplesEditor = ({
           return (
             <div
               key={id}
-              className="border border-base-100/30 rounded-xl p-4 flex items-center gap-3 bg-base-200/20 shadow-sm transition hover:border-primary/20"
+              className="rounded-xl p-4 flex items-center gap-3"
+              style={inset}
             >
-              <div className="w-12 h-12 bg-white rounded-lg p-1 shrink-0 grid place-items-center overflow-hidden">
+              <div className="w-12 h-12 rounded-lg p-1 shrink-0 grid place-items-center overflow-hidden bg-white">
                 {p.image ? (
                   <img
                     src={p.image}
@@ -239,7 +269,10 @@ const ProductSamplesEditor = ({
                     className="w-full h-full object-contain"
                   />
                 ) : (
-                  <span className="text-[9px] font-bold tracking-wider text-base-300">
+                  <span
+                    className="text-[9px] font-bold tracking-wider"
+                    style={faint}
+                  >
                     SKU
                   </span>
                 )}
@@ -249,7 +282,10 @@ const ProductSamplesEditor = ({
                   {p.name}
                 </p>
                 {p.productType?.name && (
-                  <p className="text-[11px] uppercase tracking-wider text-base-content/50 mt-0.5 truncate">
+                  <p
+                    className="text-[11px] uppercase tracking-wider mt-0.5 truncate"
+                    style={muted}
+                  >
                     {p.productType.name}
                   </p>
                 )}
@@ -260,14 +296,14 @@ const ProductSamplesEditor = ({
                 inputMode="numeric"
                 placeholder="0"
                 aria-label={`Units sampled — ${p.name}`}
-                className="input input-bordered input-sm w-20 text-right shrink-0"
+                className="spark-input w-20 text-right shrink-0 text-sm"
               />
             </div>
           );
         })}
       </div>
-      <p className="text-xs font-bold uppercase tracking-wider text-primary mt-3">
-        {totalUnits} unit{totalUnits === 1 ? "" : "s"} sampled
+      <p className="mono text-[10px] mt-3" style={{ ...lime, letterSpacing: "0.14em" }}>
+        {totalUnits} UNIT{totalUnits === 1 ? "" : "S"} SAMPLED
       </p>
     </>
   );
@@ -276,6 +312,7 @@ const ProductSamplesEditor = ({
 const RecapCustomView = () => {
   const { uuid } = useParams();
   const navigate = useNavigate();
+  const { isClient } = useSparkRole();
   const [searchParams] = useSearchParams();
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   // Id of the Evidences file currently being deleted, so only that card's
@@ -286,11 +323,10 @@ const RecapCustomView = () => {
   // (approve) so the query refetches and the view reflects the new state —
   // mirrors the legacy SparkRecapView refreshKey pattern.
   const [refreshKey, setRefreshKey] = useState(0);
-  // Section a new Evidences upload lands in. Sentinel "1" = Sampling photos
-  // (the common case, so manual photo uploads group sensibly instead of
-  // clumping in Uncategorized), "2" = Receipts, "" = Uncategorized. Resolved
-  // server-side to the tenant's own categories by add_custom_recap_file.
-  const [uploadCategory, setUploadCategory] = useState("1");
+  // Section a new Evidences upload lands in. Send the category NAME so
+  // it never collides with a real FileRecapCategory PK (LD "Table Set
+  // Up" is PK 2). "" = Uncategorized.
+  const [uploadCategory, setUploadCategory] = useState(FILE_CATEGORY_PHOTOS);
 
   // A Connecteam import routes here with ?needPhotos=1 when the PDF carried
   // no usable photos — so the admin lands directly in the photo-upload
@@ -729,10 +765,8 @@ const RecapCustomView = () => {
   );
 
   // Move a file into a different section (FileRecapCategory) so receipts
-  // don't clump in with the sampling photos. "1" = Sampling photos, "2" =
-  // Receipts (the server resolves these sentinels to THIS tenant's own
-  // categories); "" → null = Uncategorized. Bumps refreshKey so the gallery
-  // re-groups without a reload.
+  // don't clump in with the sampling photos. Send the category NAME (not
+  // "1"/"2") so a real PK never wins. "" → null = Uncategorized.
   const handleSetFileCategory = useCallback(
     (fileId: string, sentinel: string) => {
       commitSetFileCategory({
@@ -825,18 +859,6 @@ const RecapCustomView = () => {
     [displaySrc],
   );
 
-  // True only for a *still-unconverted* HEIC (no server .jpg sibling yet) —
-  // those are the only files that need the in-browser libheif fallback. A
-  // converted HEIC has displayUrl ending in .jpg, so it's NOT flagged here.
-  const isHeicFile = useCallback(
-    (file: (typeof recapFiles)[number]) => {
-      const url = displaySrc(file).toLowerCase();
-      const cleanUrl = url.split("?")[0]?.split("#")[0] ?? "";
-      return cleanUrl.endsWith(".heic") || cleanUrl.endsWith(".heif");
-    },
-    [displaySrc],
-  );
-
   const categories = useMemo(() => {
     if (recapFiles.length === 0) return [];
     const categoryMap = new Map<
@@ -869,6 +891,17 @@ const RecapCustomView = () => {
     () => categoriesWithImages.flatMap((category) => category.imageFiles),
     [categoriesWithImages],
   );
+
+  const firstEmptyImageFieldId = useMemo(() => {
+    for (const section of customFieldsBySection) {
+      for (const field of section.fields) {
+        if (customFieldKind(field.customFieldType?.name) !== "image") continue;
+        const val = field.value ?? "";
+        if (!val) return String(field.id);
+      }
+    }
+    return null;
+  }, [customFieldsBySection]);
 
   // Download every photo in this recap as a ZIP (mirrors the legacy
   // SparkRecapView "Download photos" button). Uses displaySrc so HEIC
@@ -927,167 +960,6 @@ const RecapCustomView = () => {
     }
   }, [flatImages, displaySrc, showAlert, uuid]);
 
-  const [imageSources, setImageSources] = useState<Record<string, string>>({});
-  const [convertingImageIds, setConvertingImageIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    let isCancelled = false;
-    const objectUrls: string[] = [];
-
-    const resolveImageSources = async () => {
-      const heicFiles = flatImages.filter(isHeicFile);
-      if (heicFiles.length === 0) {
-        // Common path now that HEIC is converted server-side: every image
-        // already has a renderable displayUrl, no in-browser decode needed.
-        setImageSources(
-          Object.fromEntries(flatImages.map((f) => [f.id, displaySrc(f)])),
-        );
-        return;
-      }
-
-      setConvertingImageIds(heicFiles.map((f) => f.id));
-
-      const nextSources = await Promise.all(
-        flatImages.map(async (file) => {
-          const fallbackSrc = displaySrc(file);
-          if (!fallbackSrc || !isHeicFile(file)) {
-            return [file.id, fallbackSrc] as const;
-          }
-
-          try {
-            console.log("[HEIC] Starting conversion", {
-              fileId: file.id,
-              url: fallbackSrc,
-            });
-            const response = await fetch(fallbackSrc);
-            console.log("[HEIC] Fetch response", {
-              fileId: file.id,
-              ok: response.ok,
-              status: response.status,
-              statusText: response.statusText,
-              contentType: response.headers.get("content-type"),
-            });
-            if (!response.ok) {
-              throw new Error(
-                `HEIC fetch failed with status ${response.status} ${response.statusText}`,
-              );
-            }
-            const blob = await response.blob();
-            console.log("[HEIC] Blob loaded", {
-              fileId: file.id,
-              size: blob.size,
-              type: blob.type,
-            });
-            const module = (await import("libheif-js/wasm-bundle")) as
-              | LibHeifModule
-              | { default: LibHeifModule };
-            const libheif =
-              "default" in module ? module.default : module;
-            console.log("[HEIC] libheif module ready", { fileId: file.id });
-
-            const buffer = await blob.arrayBuffer();
-            const decoder = new libheif.HeifDecoder();
-            const images = decoder.decode(new Uint8Array(buffer));
-            console.log("[HEIC] Decode result", {
-              fileId: file.id,
-              frames: images.length,
-            });
-            const image = images[0];
-            if (!image) throw new Error("No HEIC image frames decoded");
-
-            const width = image.get_width();
-            const height = image.get_height();
-            console.log("[HEIC] Frame selected", { fileId: file.id, width, height });
-            const canvas = document.createElement("canvas");
-            canvas.width = width;
-            canvas.height = height;
-
-            const context = canvas.getContext("2d");
-            if (!context) throw new Error("Canvas 2D context unavailable");
-
-            const imageData = context.createImageData(width, height);
-            await new Promise<void>((resolve, reject) => {
-              image.display(imageData, (displayData) => {
-                if (!displayData) {
-                  console.error("[HEIC] display returned null", {
-                    fileId: file.id,
-                  });
-                  reject(new Error("HEIF processing error"));
-                  return;
-                }
-
-                context.putImageData(displayData, 0, 0);
-                console.log("[HEIC] Image drawn to canvas", { fileId: file.id });
-                resolve();
-              });
-            });
-
-            const convertedBlob = await new Promise<Blob>((resolve, reject) => {
-              canvas.toBlob((canvasBlob) => {
-                if (!canvasBlob) {
-                  console.error("[HEIC] canvas.toBlob returned null", {
-                    fileId: file.id,
-                  });
-                  reject(new Error("Failed to create JPEG blob"));
-                  return;
-                }
-                console.log("[HEIC] JPEG blob created", {
-                  fileId: file.id,
-                  size: canvasBlob.size,
-                  type: canvasBlob.type,
-                });
-                resolve(canvasBlob);
-              }, "image/jpeg");
-            });
-            image.free?.();
-            console.log("[HEIC] Converted blob details", {
-              fileId: file.id,
-              size: convertedBlob.size,
-              type: convertedBlob.type,
-            });
-            const objectUrl = URL.createObjectURL(convertedBlob);
-            const objectUrlCheck = await fetch(objectUrl)
-              .then((r) => ({
-                ok: r.ok,
-                status: r.status,
-                type: r.headers.get("content-type"),
-              }))
-              .catch((err) => ({
-                ok: false,
-                status: -1,
-                type: String(err),
-              }));
-            objectUrls.push(objectUrl);
-            console.log("[HEIC] Conversion success", {
-              fileId: file.id,
-              objectUrl,
-              objectUrlCheck,
-            });
-            return [file.id, objectUrl] as const;
-          } catch (error) {
-            console.error("[HEIC] Failed to convert", {
-              fileId: file.id,
-              url: fallbackSrc,
-              error,
-            });
-            return [file.id, fallbackSrc] as const;
-          }
-        }),
-      );
-
-      if (!isCancelled) {
-        setImageSources(Object.fromEntries(nextSources));
-        setConvertingImageIds([]);
-      }
-    };
-
-    void resolveImageSources();
-    return () => {
-      isCancelled = true;
-      objectUrls.forEach((url) => URL.revokeObjectURL(url));
-    };
-  }, [flatImages, isHeicFile, displaySrc]);
-
   const closePreview = useCallback(() => {
     setPreviewIndex(null);
   }, []);
@@ -1136,31 +1008,47 @@ const RecapCustomView = () => {
 
   const currentPreview =
     flatImages && previewIndex !== null ? flatImages[previewIndex] : null;
-  const currentPreviewSrc = currentPreview
-    ? (imageSources[currentPreview.id] ?? displaySrc(currentPreview))
-    : "";
+  const currentPreviewSrc = currentPreview ? displaySrc(currentPreview) : "";
 
   if (!recap) {
     return (
       <Layout>
-        <div className="alert alert-error">Recap not found.</div>
+        <div
+          className="spark-card p-8 text-sm"
+          style={{ color: "rgba(255,255,255,0.7)" }}
+        >
+          Recap not found.
+        </div>
       </Layout>
     );
   }
 
-  const statusLabel = recap.approved ? "Approved" : "Pending";
+  const statusLabel = recap.approved ? "APPROVED" : "DRAFT";
+  const place = [
+    recap.eventRetailer ?? recap.retailer?.name,
+    recap.eventVenue ?? recap.location?.name,
+    recap.eventCity,
+    recap.eventState ?? recap.state?.name,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <Layout>
-      <div className="w-full rounded-3xl bg-base-200/80 text-base-content border border-base-100/30 shadow-2xl backdrop-blur-sm overflow-hidden">
-        <div className="p-4 md:p-10 space-y-8">
+      <div className="space-y-6 max-w-7xl">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <Link
               to={backToListUrl}
-              className="inline-flex items-center gap-2 text-sm opacity-70 hover:opacity-100 transition"
+              className="mono text-[11px] transition"
+              style={{
+                letterSpacing: "0.14em",
+                color: "rgba(255,255,255,0.45)",
+              }}
             >
-              <ArrowLeftIcon className="w-4 h-4" />
-              Back to list
+              ← Recaps
+              {recap.name ? ` / ${recap.name}` : ""}
+              {place ? ` / ${place}` : ""}
+              {` / ${formatDate(recap.event?.date ?? recap.eventDate ?? null)}`}
             </Link>
             {/* Edit-values toolbar. Toggles every custom-field value
                 in the sections below into an editable input, with
@@ -1168,25 +1056,27 @@ const RecapCustomView = () => {
                 view in read mode after a successful save (relay store
                 updated from the mutation's selection set). */}
             {!isEditingValues ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {recap.approved ? (
-                  <span className="badge badge-success gap-1 py-3">
-                    ✓ Approved
-                  </span>
-                ) : (
+                  <span className="chip chip-lime">✓ APPROVED</span>
+                ) : !isClient ? (
                   <button
                     onClick={handleApprove}
                     disabled={isApproving}
-                    className="btn btn-sm btn-success gap-2"
+                    className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                    style={{ ...limeBtn, opacity: isApproving ? 0.5 : 1 }}
                     title="Approve recap and email the requestor + mapped RMM"
                   >
                     {isApproving ? "Approving…" : "✓ Approve recap"}
                   </button>
+                ) : (
+                  <span className="chip chip-orange">DRAFT</span>
                 )}
                 <button
                   onClick={handleGeneratePdf}
                   disabled={isGeneratingPdf}
-                  className="btn btn-sm btn-outline gap-2"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  style={{ ...ghostBtn, opacity: isGeneratingPdf ? 0.5 : 1 }}
                   title="Generate and download this recap as a PDF"
                 >
                   {isGeneratingPdf ? "Generating…" : "⬇ PDF"}
@@ -1194,7 +1084,11 @@ const RecapCustomView = () => {
                 <button
                   onClick={handleDownloadPhotos}
                   disabled={isZipping || flatImages.length === 0}
-                  className="btn btn-sm btn-outline gap-2"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  style={{
+                    ...ghostBtn,
+                    opacity: isZipping || flatImages.length === 0 ? 0.5 : 1,
+                  }}
                   title="Download all photos in this recap as a ZIP"
                 >
                   {isZipping
@@ -1202,37 +1096,60 @@ const RecapCustomView = () => {
                     : `⬇ Photos (${flatImages.length})`}
                 </button>
                 <button
-                  onClick={enterEditMode}
-                  className="btn btn-sm btn-outline gap-2"
-                  title="Edit the recap title, field values, and sampled products"
+                  onClick={async () => {
+                    if (!recap.shareToken) {
+                      showAlert("Share link isn't ready yet.", "warning");
+                      return;
+                    }
+                    const result = await shareRecapLink({
+                      token: recap.shareToken,
+                      title: recap.name ?? "Spark recap",
+                    });
+                    if (result === "copied")
+                      showAlert("Link copied.", "success");
+                  }}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  style={ghostBtn}
                 >
-                  <Pencil className="w-4 h-4" />
-                  Edit recap
+                  ↗ Share
                 </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="btn btn-sm btn-outline btn-error gap-2"
-                  title="Delete this recap and free the event for a new one"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  {isDeleting ? "Deleting…" : "Delete"}
-                </button>
+                {!isClient && (
+                  <button
+                    onClick={enterEditMode}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                    style={ghostBtn}
+                    title="Edit the recap title, field values, and sampled products"
+                  >
+                    ✎ Edit recap
+                  </button>
+                )}
+                {!isClient && (
+                  <button
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                    style={{ ...dangerBtn, opacity: isDeleting ? 0.5 : 1 }}
+                    title="Delete this recap and free the event for a new one"
+                  >
+                    {isDeleting ? "Deleting…" : "Delete"}
+                  </button>
+                )}
               </div>
             ) : (
               <div className="flex items-center gap-2">
                 <button
                   onClick={exitEditMode}
                   disabled={isSavingValues}
-                  className="btn btn-sm btn-ghost gap-2"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  style={ghostBtn}
                 >
-                  <XIcon className="w-4 h-4" />
                   Cancel
                 </button>
                 <button
                   onClick={saveValues}
                   disabled={isSavingValues}
-                  className="btn btn-sm btn-primary"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  style={{ ...limeBtn, opacity: isSavingValues ? 0.5 : 1 }}
                 >
                   {isSavingValues ? "Saving…" : "Save changes"}
                 </button>
@@ -1240,65 +1157,90 @@ const RecapCustomView = () => {
             )}
           </div>
 
-          {/* ======================================================
-          HEADER
-          ====================================================== */}
-          <div className="card bg-base-300/50 border border-base-300 mb-8">
-            <div className="card-body">
-              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-                <div className="space-y-2">
-                  {isEditingValues ? (
-                    <input
-                      value={editedName}
-                      onChange={(e) => setEditedName(e.target.value)}
-                      placeholder="Recap title"
-                      aria-label="Recap title"
-                      className="input input-bordered w-full max-w-xl text-2xl font-bold"
-                    />
-                  ) : (
-                    <h1 className="text-3xl font-bold">{recap.name}</h1>
-                  )}
-                  <p className="text-sm text-base-content/60">
-                    Custom Recap Summary
-                  </p>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-base-content/70">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {formatDate(recap.event?.date ?? null)}
-                    </div>
-                    {recap.location?.name && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        {recap.location.name}, {recap.state?.name}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 pt-2">
-                    <span className="badge badge-outline">
-                      {recap.customRecapTemplate?.name ?? "Custom"}
+          <div
+            className="spark-card p-6 sticky top-0 z-20"
+            style={{
+              background: "rgba(10,13,9,0.92)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <div className="flex items-start justify-between flex-wrap gap-4">
+              <div>
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  <span
+                    className={`chip ${recap.approved ? "chip-lime" : "chip-orange"}`}
+                  >
+                    {statusLabel}
+                  </span>
+                  {recap.customRecapTemplate?.name && (
+                    <span className="chip chip-muted">
+                      {recap.customRecapTemplate.name}
                     </span>
-                    <div className="badge badge-soft badge-success">
-                      {statusLabel}
-                    </div>
-                    {recap.late && (
-                      <span className="badge badge-soft badge-error">Late</span>
-                    )}
-                    {recap.incomplete && (
-                      <span className="badge badge-soft badge-warning">
-                        Incomplete
-                      </span>
-                    )}
-                  </div>
+                  )}
+                  {recap.late && <span className="chip chip-orange">LATE</span>}
+                  {recap.incomplete && (
+                    <span className="chip chip-orange">INCOMPLETE</span>
+                  )}
                 </div>
+                {isEditingValues ? (
+                  <input
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    placeholder="Recap title"
+                    aria-label="Recap title"
+                    className="spark-input w-full max-w-xl text-2xl font-bold"
+                  />
+                ) : (
+                  <h1
+                    className="display text-3xl font-bold"
+                    style={{ letterSpacing: "-0.03em" }}
+                  >
+                    {recap.name}
+                  </h1>
+                )}
+                <p className="mt-1" style={{ color: "rgba(255,255,255,0.65)" }}>
+                  {place || "—"}
+                  {" · "}
+                  {formatDate(recap.event?.date ?? recap.eventDate ?? null)}
+                </p>
               </div>
             </div>
           </div>
+
+          {!isEditingValues && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="kpi kpi-glow">
+                <p className="kpi-value">
+                  {typeof recap.totalEngagements === "number"
+                    ? recap.totalEngagements.toLocaleString()
+                    : "—"}
+                </p>
+                <p className="kpi-label">Engagements</p>
+              </div>
+              {recap.customRecapProductSample &&
+                recap.customRecapProductSample.length > 0 && (
+                  <div className="kpi">
+                    <p className="kpi-value">
+                      {recap.customRecapProductSample
+                        .reduce((sum, s) => sum + (s.quantity ?? 0), 0)
+                        .toLocaleString()}
+                    </p>
+                    <p className="kpi-label">Units sampled</p>
+                  </div>
+                )}
+              <div className="kpi">
+                <p className="kpi-value">{flatImages.length}</p>
+                <p className="kpi-label">Photos</p>
+              </div>
+            </div>
+          )}
 
           {/* ======================================================
           QUALITY CHECK — server-computed review aid for the approver.
           Custom recap → isCustom={true}. Self-degrades to nothing on
           failure; wrapped in Suspense for the initial load.
           ====================================================== */}
+          {!isClient && (
           <Suspense
             fallback={
               <div
@@ -1311,6 +1253,7 @@ const RecapCustomView = () => {
           >
             <RecapQualityPanel recapId={recap.id} isCustom={true} />
           </Suspense>
+          )}
 
           {/* ======================================================
           KPI GRID
@@ -1318,7 +1261,7 @@ const RecapCustomView = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <KpiCardContainer
               title="Information"
-              icon={<Users className="text-primary" />}
+              icon={<Users className="w-3.5 h-3.5" style={lime} />}
             >
               <div className="space-y-4">
                 {/* Ambassador editor (edit mode) — reuses the same
@@ -1327,11 +1270,10 @@ const RecapCustomView = () => {
                     Seeded from the recap on enter-edit; the picked id is
                     saved as ambassadorId in saveValues. */}
                 {isEditingValues ? (
-                  <div className="space-y-3 rounded-xl border border-base-100/30 bg-base-200/30 p-3">
+                  <div className="space-y-3 rounded-xl p-3" style={inset}>
                     <label className="flex items-center gap-2">
                       <input
                         type="checkbox"
-                        className="checkbox checkbox-sm"
                         checked={editedFillingForAmbassador}
                         onChange={(e) => {
                           setEditedFillingForAmbassador(e.target.checked);
@@ -1358,7 +1300,7 @@ const RecapCustomView = () => {
                       <ErrorBoundary>
                         <Suspense
                         fallback={
-                          <div className="text-sm text-base-content/60">
+                          <div className="text-sm" style={muted}>
                             Loading ambassadors…
                           </div>
                         }
@@ -1396,7 +1338,10 @@ const RecapCustomView = () => {
                       only fall back to externalBaName when there's no FK. */}
                   {recap.ambassador ? (
                     <>
-                      <div className="w-10 h-10 rounded-full bg-base-200 flex items-center justify-center font-medium uppercase">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center font-medium uppercase"
+                        style={inset}
+                      >
                         {recap.ambassador?.user?.firstName?.[0]}
                       </div>
                       <div>
@@ -1404,111 +1349,111 @@ const RecapCustomView = () => {
                           {recap.ambassador?.user?.firstName}{" "}
                           {recap.ambassador?.user?.lastName}
                         </p>
-                        <p className="text-sm text-base-content/60">
+                        <p className="text-sm" style={muted}>
                           Ambassador
                         </p>
                       </div>
                     </>
                   ) : recap.externalBaName ? (
                     <>
-                      <div className="w-10 h-10 rounded-full bg-base-200 flex items-center justify-center font-medium uppercase">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center font-medium uppercase"
+                        style={inset}
+                      >
                         {recap.externalBaName[0]}
                       </div>
                       <div>
                         <p className="font-medium">{recap.externalBaName}</p>
-                        <p className="text-sm text-base-content/60">
+                        <p className="text-sm" style={muted}>
                           Ambassador (external)
                         </p>
                       </div>
                     </>
-                  ) : (
+                  ) : isEditingValues ? (
                     <>
-                      <div className="w-10 h-10 rounded-full bg-base-200 flex items-center justify-center font-medium uppercase">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center font-medium uppercase"
+                        style={inset}
+                      >
                         —
                       </div>
                       <div>
                         <p className="font-medium">—</p>
-                        <p className="text-sm text-base-content/60">
+                        <p className="text-sm" style={muted}>
                           Ambassador
                         </p>
                       </div>
                     </>
-                  )}
+                  ) : null}
                 </div>
                 )}
-                <div className="flex justify-between items-center py-2 border-b border-base-100/30">
-                  <span className="text-sm">Job</span>
-                  <span className="font-medium">{recap.job?.name ?? "—"}</span>
-                </div>
-                {/* Linked-event location. The recap's own retailer/
-                    location/state FKs are usually null on custom recaps,
-                    so we read the event-derived fields (walked server-
-                    side from event -> request/retailer/location/state)
-                    and fall back to the recap's own FK where one exists.
-                    Together these tell a client exactly where the
-                    activation happened. */}
-                <div className="flex justify-between items-center py-2 border-b border-base-100/30">
-                  <span className="text-sm">Retailer</span>
-                  <span className="font-medium text-right">
-                    {recap.eventRetailer ?? recap.retailer?.name ?? "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-base-100/30">
-                  <span className="text-sm">Venue</span>
-                  <span className="font-medium text-right">
-                    {recap.eventVenue ?? "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-start py-2 border-b border-base-100/30 gap-4">
-                  <span className="text-sm whitespace-nowrap flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 opacity-60" />
-                    Address
-                  </span>
-                  <span className="font-medium text-right">
-                    {recap.eventAddress ?? "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-base-100/30">
-                  <span className="text-sm">City / State</span>
-                  <span className="font-medium text-right">
-                    {recap.eventCity || recap.eventState
-                      ? [recap.eventCity, recap.eventState]
-                          .filter(Boolean)
-                          .join(", ")
-                      : "—"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-base-100/30">
-                  <span className="text-sm whitespace-nowrap flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 opacity-60" />
-                    Event Date
-                  </span>
-                  <span className="font-medium text-right">
-                    {formatDate(recap.eventDate ?? recap.event?.date ?? null)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-sm">Submitted At</span>
-                  <span className="font-medium">
-                    {formatDate(recap.submittedAt ?? recap.createdAt ?? null)}
-                  </span>
-                </div>
+                {(
+                  [
+                    ["Job", recap.job?.name],
+                    ["Retailer", recap.eventRetailer ?? recap.retailer?.name],
+                    ["Venue", recap.eventVenue],
+                    ["Address", recap.eventAddress],
+                    [
+                      "City / State",
+                      recap.eventCity || recap.eventState
+                        ? [recap.eventCity, recap.eventState]
+                            .filter(Boolean)
+                            .join(", ")
+                        : "",
+                    ],
+                    [
+                      "Event Date",
+                      formatDate(recap.eventDate ?? recap.event?.date ?? null),
+                    ],
+                    [
+                      "Submitted At",
+                      formatDate(recap.submittedAt ?? recap.createdAt ?? null),
+                    ],
+                  ] as [string, string | null | undefined][]
+                )
+                  .filter(([, value]) => isEditingValues || Boolean(value && value !== "—"))
+                  .map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="flex justify-between items-center py-2"
+                      style={hairline}
+                    >
+                      <span className="text-sm" style={muted}>
+                        {label === "Address" ? (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 opacity-60" />
+                            Address
+                          </span>
+                        ) : label === "Event Date" ? (
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 opacity-60" />
+                            Event Date
+                          </span>
+                        ) : (
+                          label
+                        )}
+                      </span>
+                      <span className="font-medium text-right">
+                        {value || "—"}
+                      </span>
+                    </div>
+                  ))}
               </div>
             </KpiCardContainer>
 
             <KpiCardContainer
               title="Metrics"
-              icon={<Goal className="text-primary" />}
+              icon={<Goal className="w-3.5 h-3.5" style={lime} />}
             >
               <div className="space-y-4">
-                <div className="flex justify-between items-center bg-base-200 rounded-lg p-3">
+                <div className="flex justify-between items-center rounded-lg p-3" style={inset}>
                   <span className="text-sm">Total Engagements</span>
                   {isEditingValues ? (
                     <input
                       type="number"
                       min={0}
                       inputMode="numeric"
-                      className="input input-sm input-bordered w-24 text-right"
+                      className="spark-input w-24 text-right text-sm"
                       value={editedTotalEngagements}
                       onChange={(e) =>
                         setEditedTotalEngagements(e.target.value)
@@ -1516,24 +1461,23 @@ const RecapCustomView = () => {
                       aria-label="Total engagements"
                     />
                   ) : (
-                    <span className="text-xl font-bold">
+                    <span className="text-xl font-bold" style={lime}>
                       {recap.totalEngagements ?? "—"}
                     </span>
                   )}
                 </div>
-                <div className="flex justify-between items-center p-3 border border-base-100/30 rounded-lg">
+                <div className="flex justify-between items-center p-3 rounded-lg" style={inset}>
                   <span className="text-sm">Corporate Card Used</span>
                   {isEditingValues ? (
                     <input
                       type="checkbox"
-                      className="toggle toggle-success"
                       checked={editedUsedCorpoCard}
                       onChange={(e) => setEditedUsedCorpoCard(e.target.checked)}
                       aria-label="Corporate card used"
                     />
                   ) : (
                     <span
-                      className={`badge badge-soft ${recap.usedCorpoCard ? "badge-success" : "badge-ghost text-base-content/40"}`}
+                      className={`chip ${recap.usedCorpoCard ? "chip-lime" : "chip-muted"}`}
                     >
                       {recap.usedCorpoCard ? "Yes" : "No"}
                     </span>
@@ -1544,10 +1488,10 @@ const RecapCustomView = () => {
                     owns this, so we hide the stale badge to avoid showing two
                     competing values. */}
                 {!isEditingValues && (
-                  <div className="flex justify-between items-center p-3 border border-base-100/30 rounded-lg">
+                  <div className="flex justify-between items-center p-3 rounded-lg" style={inset}>
                     <span className="text-sm">Filling for Ambassador</span>
                     <span
-                      className={`badge badge-soft ${recap.fillingForAmbassador ? "badge-info" : "badge-ghost text-base-content/40"}`}
+                      className={`chip ${recap.fillingForAmbassador ? "chip-lime" : "chip-muted"}`}
                     >
                       {recap.fillingForAmbassador ? "Yes" : "No"}
                     </span>
@@ -1561,13 +1505,14 @@ const RecapCustomView = () => {
                 <KpiCardContainer
                   title="Sales Performance"
                   className="md:col-span-2"
-                  icon={<ShoppingCart className="text-primary" />}
+                  icon={<ShoppingCart className="w-3.5 h-3.5" style={lime} />}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {recap.customRecapSalePerformance.map((sale) => (
                       <div
                         key={sale.id}
-                        className="border border-base-100/30 rounded-xl p-4 space-y-2 bg-base-200/20 shadow-sm"
+                        className="rounded-xl p-4 space-y-2"
+                        style={inset}
                       >
                         <div className="flex items-center gap-3">
                           {sale.product?.image && (
@@ -1584,10 +1529,10 @@ const RecapCustomView = () => {
                           </p>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-base-content/60">
+                          <span style={muted}>
                             Type: {sale.typeOfGood?.name ?? "—"}
                           </span>
-                          <span className="font-bold text-primary">
+                          <span className="font-bold" style={lime}>
                             ${sale.price?.toFixed(2)}
                           </span>
                         </div>
@@ -1601,16 +1546,16 @@ const RecapCustomView = () => {
               <KpiCardContainer
                 title="Product Samples"
                 className="md:col-span-2"
-                icon={<Package className="text-primary" />}
+                icon={<Package className="w-3.5 h-3.5" style={lime} />}
               >
-                <p className="text-sm text-base-content/60 mb-3">
+                <p className="text-sm mb-3" style={muted}>
                   Mark which products were sampled and how many units went
                   out. Leave a product at 0 if none did. Saved when you hit
                   “Save changes”.
                 </p>
                 <Suspense
                   fallback={
-                    <p className="text-sm text-base-content/40 italic">
+                    <p className="text-sm italic" style={faint}>
                       Loading products…
                     </p>
                   }
@@ -1633,13 +1578,14 @@ const RecapCustomView = () => {
                 <KpiCardContainer
                   title="Product Samples"
                   className="md:col-span-2"
-                  icon={<Package className="text-primary" />}
+                  icon={<Package className="w-3.5 h-3.5" style={lime} />}
                 >
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {recap.customRecapProductSample.map((sample) => (
                       <div
                         key={sample.id}
-                        className="border border-base-100/30 rounded-xl p-4 space-y-2 bg-base-200/20 shadow-sm transition hover:border-primary/20"
+                        className="rounded-xl p-4 space-y-2"
+                        style={inset}
                       >
                         <div className="flex items-center gap-3">
                           {sample.product?.image && (
@@ -1656,10 +1602,10 @@ const RecapCustomView = () => {
                           </p>
                         </div>
                         <div className="flex justify-between items-center text-sm pt-2">
-                          <span className="text-base-content/60">
+                          <span style={muted}>
                             Quantity Distributed
                           </span>
-                          <span className="badge badge-primary badge-sm font-bold">
+                          <span className="mono" style={lime}>
                             {sample.quantity}
                           </span>
                         </div>
@@ -1670,14 +1616,19 @@ const RecapCustomView = () => {
               )
             )}
 
-            {customFieldsBySection.map((section) => (
+            {customFieldsBySection.map((section) => {
+              const visibleFields = isEditingValues
+                ? section.fields
+                : section.fields.filter(customFieldHasDisplayValue);
+              if (visibleFields.length === 0) return null;
+              return (
               <KpiCardContainer
                 key={section.name}
                 title={section.name}
-                icon={<List className="text-primary" />}
+                icon={<List className="w-3.5 h-3.5" style={lime} />}
               >
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  {section.fields.map((field) => {
+                  {visibleFields.map((field) => {
                     const fieldId = String(field.id);
                     const displayValue = isEditingValues
                       ? (editedValues[fieldId] ?? field.value ?? "")
@@ -1700,25 +1651,51 @@ const RecapCustomView = () => {
                       const imgSrc = displayValue
                         ? recapFileUrl(displayValue)
                         : "";
+                      // One photo surface: empty IMAGE fields stay out of
+                      // read mode when the Photos gallery already has files
+                      // (or when the field is blank).
+                      if (!isEditingValues && !imgSrc) return null;
                       return (
                         <div
                           key={field.id}
-                          className="border border-base-100/30 rounded-xl p-4 space-y-3 bg-base-200/20 shadow-sm transition hover:border-primary/20 xl:col-span-2"
+                          className="rounded-xl p-4 space-y-3 xl:col-span-2"
+                          style={inset}
                         >
-                          <p className="text-[11px] uppercase font-bold text-base-content/50 tracking-wider">
+                          <p
+                            className="mono text-[10px]"
+                            style={{ letterSpacing: "0.14em", ...muted }}
+                          >
                             {field.name}
                           </p>
                           {imgSrc ? (
                             <img
                               src={imgSrc}
                               alt={field.name ?? "Field image"}
-                              className="max-h-64 w-auto rounded-lg border border-base-100/30 object-contain bg-base-200/40"
+                              className="max-h-64 w-auto rounded-lg object-contain"
+                              style={inset}
                             />
-                          ) : (
-                            <p className="text-sm text-base-content/40 italic">
-                              No image
+                          ) : fieldId === firstEmptyImageFieldId &&
+                            flatImages.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {flatImages.slice(0, 8).map((f) => {
+                                const src = displaySrc(f);
+                                if (!src) return null;
+                                return (
+                                  <img
+                                    key={f.id}
+                                    src={src}
+                                    alt={f.name ?? "Recap photo"}
+                                    className="max-h-40 w-auto rounded-lg object-contain"
+                                    style={inset}
+                                  />
+                                );
+                              })}
+                            </div>
+                          ) : isEditingValues ? (
+                            <p className="text-sm italic" style={faint}>
+                              No image yet
                             </p>
-                          )}
+                          ) : null}
                           {isEditingValues && recap.uuid && (
                             <div className="flex flex-wrap items-center gap-2 pt-1">
                               {/* Generic image-field uploader. Use the
@@ -1749,7 +1726,8 @@ const RecapCustomView = () => {
                                       [fieldId]: "",
                                     }))
                                   }
-                                  className="btn btn-sm btn-ghost btn-error gap-1"
+                                  className="px-3 py-1.5 rounded-xl text-sm font-semibold transition"
+                                  style={dangerBtn}
                                   title="Remove the image from this field"
                                 >
                                   <XIcon className="w-4 h-4" />
@@ -1775,9 +1753,13 @@ const RecapCustomView = () => {
                       return (
                         <div
                           key={field.id}
-                          className="border border-base-100/30 rounded-xl p-4 space-y-2 bg-base-200/20 shadow-sm transition hover:border-primary/20"
+                          className="rounded-xl p-4 space-y-2"
+                          style={inset}
                         >
-                          <p className="text-[11px] uppercase font-bold text-base-content/50 tracking-wider">
+                          <p
+                            className="mono text-[10px]"
+                            style={{ letterSpacing: "0.14em", ...muted }}
+                          >
                             {field.name}
                           </p>
                           {isEditingValues ? (
@@ -1790,7 +1772,7 @@ const RecapCustomView = () => {
                                     [fieldId]: e.target.value,
                                   }))
                                 }
-                                className="select select-bordered w-full text-sm md:text-base"
+                                className="spark-input w-full text-sm md:text-base"
                               >
                                 <option value="">— Select —</option>
                                 {options.map((opt) => (
@@ -1816,7 +1798,8 @@ const RecapCustomView = () => {
                                           [fieldId]: JSON.stringify(next),
                                         }));
                                       }}
-                                      className={`btn btn-sm ${isOn ? "btn-primary" : "btn-ghost border border-base-100/40"}`}
+                                      className="px-3 py-1.5 rounded-xl text-sm font-semibold transition"
+                                      style={isOn ? limeBtn : ghostBtn}
                                     >
                                       {opt}
                                     </button>
@@ -1827,16 +1810,13 @@ const RecapCustomView = () => {
                           ) : selected.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {selected.map((v) => (
-                                <span
-                                  key={v}
-                                  className="badge badge-primary badge-outline text-sm font-medium"
-                                >
+                                <span key={v} className="chip chip-lime">
                                   {v}
                                 </span>
                               ))}
                             </div>
                           ) : (
-                            <p className="text-sm md:text-base text-base-content/40">
+                            <p className="text-sm md:text-base" style={faint}>
                               —
                             </p>
                           )}
@@ -1855,9 +1835,13 @@ const RecapCustomView = () => {
                     return (
                       <div
                         key={field.id}
-                        className={`border border-base-100/30 rounded-xl p-4 space-y-2 bg-base-200/20 shadow-sm transition hover:border-primary/20 ${isLongText ? "xl:col-span-2" : ""}`}
+                        className={`rounded-xl p-4 space-y-2 ${isLongText ? "xl:col-span-2" : ""}`}
+                        style={inset}
                       >
-                        <p className="text-[11px] uppercase font-bold text-base-content/50 tracking-wider">
+                        <p
+                          className="mono text-[10px]"
+                          style={{ letterSpacing: "0.14em", ...muted }}
+                        >
                           {field.name}
                         </p>
                         {isEditingValues ? (
@@ -1874,7 +1858,7 @@ const RecapCustomView = () => {
                                 10,
                                 Math.max(2, Math.ceil(displayValue.length / 60)),
                               )}
-                              className="textarea textarea-bordered w-full text-sm md:text-base"
+                              className="spark-input w-full text-sm md:text-base min-h-[6rem]"
                             />
                           ) : (
                             <input
@@ -1886,11 +1870,14 @@ const RecapCustomView = () => {
                                   [fieldId]: e.target.value,
                                 }))
                               }
-                              className="input input-bordered w-full text-sm md:text-base"
+                              className="spark-input w-full text-sm md:text-base"
                             />
                           )
                         ) : (
-                          <p className="text-sm md:text-base leading-relaxed font-medium text-base-content/90 whitespace-pre-wrap">
+                          <p
+                            className="text-sm md:text-base leading-relaxed font-medium whitespace-pre-wrap"
+                            style={{ color: "rgba(255,255,255,0.85)" }}
+                          >
                             {field.value || "—"}
                           </p>
                         )}
@@ -1899,24 +1886,31 @@ const RecapCustomView = () => {
                   })}
                 </div>
               </KpiCardContainer>
-            ))}
+              );
+            })}
           </div>
 
-          {/* Evidence & Attachments Section */}
-          <div
-            ref={evidenceRef}
-            className="mt-8 border-t border-base-200 pt-8 scroll-mt-24"
-          >
+          {/* Photos gallery */}
+          <div ref={evidenceRef} className="spark-card p-6 scroll-mt-24">
             {showPhotoPrompt && (
-              <div className="mb-6 rounded-2xl border border-warning/40 bg-warning/10 p-4 flex items-start gap-3">
-                <div className="p-2 bg-warning/20 rounded-lg shrink-0">
-                  <ImageIcon className="h-5 w-5 text-warning" />
+              <div
+                className="mb-6 rounded-2xl p-4 flex items-start gap-3"
+                style={{
+                  border: "1px solid rgba(255,196,0,0.4)",
+                  background: "rgba(255,196,0,0.10)",
+                }}
+              >
+                <div
+                  className="p-2 rounded-lg shrink-0"
+                  style={{ background: "rgba(255,196,0,0.18)" }}
+                >
+                  <ImageIcon className="h-5 w-5" style={{ color: "var(--spark-gold)" }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm">
                     No photos came through from the PDF
                   </p>
-                  <p className="text-xs text-base-content/70 mt-0.5">
+                  <p className="text-xs mt-0.5" style={muted}>
                     The imported Connecteam PDF didn't include any usable event
                     photos. Upload them here before approving — use the{" "}
                     <b>Upload</b> button on the right (pick the right section
@@ -1926,7 +1920,8 @@ const RecapCustomView = () => {
                 <button
                   type="button"
                   onClick={() => setPhotoPromptDismissed(true)}
-                  className="btn btn-ghost btn-xs shrink-0"
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0"
+                  style={ghostBtn}
                 >
                   Dismiss
                 </button>
@@ -1934,14 +1929,17 @@ const RecapCustomView = () => {
             )}
             <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <ImageIcon className="h-6 w-6 text-primary" />
+                <div
+                  className="p-2 rounded-lg"
+                  style={{ background: "rgba(197,245,70,0.10)" }}
+                >
+                  <ImageIcon className="h-6 w-6" style={lime} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold">
-                    Evidences &amp; Attachments
+                  <h2 className="display text-xl font-bold">
+                    Photos
                   </h2>
-                  <p className="text-xs text-base-content/50 mt-0.5">
+                  <p className="text-xs mt-0.5" style={muted}>
                     {recapFiles?.filter(
                       (f) => f?.fileRecapCategory?.name != null,
                     ).length ?? 0}{" "}
@@ -1950,7 +1948,7 @@ const RecapCustomView = () => {
                   </p>
                 </div>
               </div>
-              {recap.uuid && (
+              {recap.uuid && !isClient && (
                 <div className="flex items-center gap-2">
                   {/* Pick the section a new upload lands in, so receipts go
                       straight to Receipts instead of clumping with photos. */}
@@ -1958,15 +1956,19 @@ const RecapCustomView = () => {
                     value={uploadCategory}
                     onChange={(e) => setUploadCategory(e.target.value)}
                     title="Section for new uploads"
-                    className="select select-bordered select-sm rounded-full"
+                    className="spark-input text-sm rounded-full"
                   >
-                    <option value="1">Sampling photos</option>
-                    <option value="2">Receipts</option>
+                    <option value={FILE_CATEGORY_PHOTOS}>Sampling photos</option>
+                    <option value={FILE_CATEGORY_RECEIPTS}>Receipts</option>
                     <option value="">Uncategorized</option>
                   </select>
                   <RecapUploader
                     recapUuid={recap.uuid}
-                    category={uploadCategory === "2" ? "receipt" : "photo"}
+                    category={
+                      uploadCategory === FILE_CATEGORY_RECEIPTS
+                        ? "receipt"
+                        : "photo"
+                    }
                     onUploaded={handlePhotoUploaded}
                   />
                 </div>
@@ -1983,18 +1985,25 @@ const RecapCustomView = () => {
                   return (
                     <details
                       key={category.name}
-                      className="group rounded-2xl border border-base-200 bg-base-100/50 shadow-sm overflow-hidden"
+                      className="group rounded-2xl overflow-hidden"
+                      style={inset}
                       open
                     >
-                      <summary className="flex cursor-pointer list-none items-center gap-3 px-6 py-4 select-none hover:bg-base-200/40 transition-colors">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <summary className="flex cursor-pointer list-none items-center gap-3 px-6 py-4 select-none">
+                        <div
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                          style={{
+                            background: "rgba(197,245,70,0.10)",
+                            color: "var(--spark-lime)",
+                          }}
+                        >
                           <FolderOpen className="h-5 w-5" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-bold text-base-content">
+                          <span className="font-bold">
                             {category.name}
                           </span>
-                          <span className="text-[11px] text-base-content/50 font-medium">
+                          <span className="text-[11px] font-medium" style={muted}>
                             {` · ${imageCount} image${imageCount !== 1 ? "s" : ""}`}
                             {pdfCount > 0
                               ? ` · ${pdfCount} PDF${pdfCount !== 1 ? "s" : ""}`
@@ -2003,7 +2012,8 @@ const RecapCustomView = () => {
                         </div>
                         {/* Chevron indicator */}
                         <svg
-                          className="ml-auto h-5 w-5 shrink-0 text-base-content/30 transition-transform duration-300 group-open:rotate-180"
+                          className="ml-auto h-5 w-5 shrink-0 transition-transform duration-300 group-open:rotate-180"
+                          style={faint}
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -2017,12 +2027,13 @@ const RecapCustomView = () => {
                         </svg>
                       </summary>
 
-                      <div className="border-t border-base-200 p-4">
+                      <div className="p-4" style={{ borderTop: "1px solid var(--spark-border)" }}>
                         <div
                           className="grid gap-3"
                           style={{
-                            gridTemplateColumns:
-                              "repeat(auto-fill, minmax(160px, 1fr))",
+                            gridTemplateColumns: isClient
+                              ? "repeat(auto-fill, minmax(220px, 1fr))"
+                              : "repeat(auto-fill, minmax(160px, 1fr))",
                             maxHeight: files.length > 20 ? "520px" : undefined,
                             overflowY: files.length > 20 ? "auto" : undefined,
                           }}
@@ -2034,7 +2045,8 @@ const RecapCustomView = () => {
                             return (
                               <div
                                 key={file.id}
-                                className="group flex flex-col gap-1.5 rounded-xl border border-base-200 bg-base-100 p-2 shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5 cursor-pointer"
+                                className="group flex flex-col gap-1.5 rounded-xl p-2 cursor-pointer"
+                                style={inset}
                                 onClick={() => {
                                   if (isImage) {
                                     const idx = flatImages.findIndex(
@@ -2046,7 +2058,10 @@ const RecapCustomView = () => {
                                   }
                                 }}
                               >
-                                <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-base-200/60">
+                                <div
+                                  className="relative aspect-square w-full overflow-hidden rounded-lg"
+                                  style={{ background: "rgba(255,255,255,0.04)" }}
+                                >
                                   {/* Per-file delete (admin). Hard-removes
                                       this file from the recap's Evidences
                                       gallery — for pulling a misfiled image
@@ -2054,6 +2069,7 @@ const RecapCustomView = () => {
                                       wrong category). stopPropagation so the
                                       click doesn't also open the preview /
                                       a new tab. */}
+                                  {!isClient && (
                                   <button
                                     type="button"
                                     onClick={(event) => {
@@ -2066,38 +2082,33 @@ const RecapCustomView = () => {
                                     }
                                     title="Remove this file from the recap"
                                     aria-label="Remove this file from the recap"
-                                    className="absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 shadow transition hover:bg-error focus:opacity-100 group-hover:opacity-100 disabled:opacity-60"
+                                    className="absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full opacity-0 shadow transition focus:opacity-100 group-hover:opacity-100 disabled:opacity-60"
+                                    style={{
+                                      background: "rgba(10,13,9,0.85)",
+                                      color: "var(--spark-orange)",
+                                      border: "1px solid rgba(239,90,42,0.5)",
+                                    }}
                                   >
                                     {isDeletingFile &&
                                     deletingFileId === file.id ? (
-                                      <span className="loading loading-spinner loading-xs" />
+                                      <span className="text-[10px]">…</span>
                                     ) : (
                                       <Trash2 className="h-3.5 w-3.5" />
                                     )}
                                   </button>
+                                  )}
                                   {isImage ? (
-                                    convertingImageIds.includes(file.id) ? (
-                                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-base-content/60">
-                                        <span className="loading loading-spinner loading-md text-primary" />
-                                      </div>
-                                    ) : (
                                       <img
-                                        src={
-                                          imageSources[file.id] ||
-                                          displaySrc(file)
-                                        }
+                                        src={displaySrc(file)}
                                         alt={file.name || "Evidence"}
                                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                         onError={(event) => {
                                           const img = event.currentTarget;
-                                          console.error("[HEIC] <img> failed", {
+                                          console.error("Recap image failed", {
                                             fileId: file.id,
                                             fileName: file.name,
                                             originalUrl: file.url,
-                                            resolvedSrc:
-                                              imageSources[file.id] ||
-                                              file.url ||
-                                              "",
+                                            resolvedSrc: displaySrc(file),
                                             currentSrc: img.currentSrc,
                                             complete: img.complete,
                                             naturalWidth: img.naturalWidth,
@@ -2105,9 +2116,11 @@ const RecapCustomView = () => {
                                           });
                                         }}
                                       />
-                                    )
                                   ) : (
-                                    <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-base-content/30">
+                                    <div
+                                      className="flex h-full w-full flex-col items-center justify-center gap-1"
+                                      style={faint}
+                                    >
                                       {isPdf ? (
                                         <FileText className="h-8 w-8" />
                                       ) : (
@@ -2122,23 +2135,27 @@ const RecapCustomView = () => {
                                   )}
                                   {/* Hover overlay badge */}
                                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 rounded-lg">
-                                    <span className="rounded-lg bg-white/90 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-base-content shadow">
+                                    <span
+                                      className="rounded-lg px-2 py-1 text-[10px] font-black uppercase tracking-wider shadow"
+                                      style={{
+                                        background: "var(--spark-lime)",
+                                        color: "#0a0d09",
+                                      }}
+                                    >
                                       {isImage ? "View" : "Open"}
                                     </span>
                                   </div>
                                 </div>
                                 <div className="flex flex-col gap-0.5 px-0.5">
                                   <span
-                                    className="truncate text-xs font-semibold text-base-content leading-tight"
+                                    className="truncate text-xs font-semibold leading-tight"
                                     title={file.name || ""}
                                   >
                                     {file.name || "Unnamed File"}
                                   </span>
                                   <span
-                                    className={`text-[10px] font-bold uppercase tracking-wider ${
-                                      recap.approved
-                                        ? "text-success"
-                                        : "text-warning"
+                                    className={`chip ${
+                                      recap.approved ? "chip-lime" : "chip-orange"
                                     }`}
                                   >
                                     {statusLabel}
@@ -2148,6 +2165,7 @@ const RecapCustomView = () => {
                                       Sentinels resolve server-side to this
                                       tenant's own categories; stopPropagation
                                       keeps the click off the preview opener. */}
+                                  {!isClient && (
                                   <select
                                     value=""
                                     onClick={(e) => e.stopPropagation()}
@@ -2162,15 +2180,20 @@ const RecapCustomView = () => {
                                     }}
                                     disabled={isSettingCategory}
                                     title="Move this file to a section"
-                                    className="mt-0.5 w-full rounded border border-base-300 bg-base-100 px-1 py-0.5 text-[10px] text-base-content/70"
+                                    className="spark-input mt-0.5 w-full px-1 py-0.5 text-[10px]"
                                   >
                                     <option value="">Move to…</option>
-                                    <option value="2">Receipts</option>
-                                    <option value="1">Sampling photos</option>
+                                    <option value={FILE_CATEGORY_RECEIPTS}>
+                                      Receipts
+                                    </option>
+                                    <option value={FILE_CATEGORY_PHOTOS}>
+                                      Sampling photos
+                                    </option>
                                     <option value="__none__">
                                       Uncategorized
                                     </option>
                                   </select>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -2182,15 +2205,20 @@ const RecapCustomView = () => {
                 })}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center p-16 bg-base-200/30 rounded-2xl border border-dashed border-base-300">
-                <ImageIcon className="h-14 w-14 text-base-content/20 mb-3" />
-                <p className="text-base-content/50 font-semibold">
+              <div
+                className="flex flex-col items-center justify-center p-16 rounded-2xl"
+                style={{
+                  border: "1px dashed var(--spark-border)",
+                  background: "rgba(255,255,255,0.02)",
+                }}
+              >
+                <ImageIcon className="h-14 w-14 mb-3" style={faint} />
+                <p className="font-semibold" style={muted}>
                   No files or evidences attached.
                 </p>
               </div>
             )}
           </div>
-        </div>
       </div>
 
       {currentPreview && (

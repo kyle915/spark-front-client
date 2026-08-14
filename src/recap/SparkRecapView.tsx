@@ -27,9 +27,9 @@ import type { CreateProductMutation as CreateProductMutationType } from "@/api/m
 import useSparkRole from "@/hooks/useSparkRole";
 import RateBaControl from "@/components/RateBaControl";
 import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
+import { shareRecapLink } from "@/utils/recapShare";
 import { parseLocaleNumber } from "@/utils";
 import { useAlertStore } from "@/store/alertStore";
-import HeicImage from "./HeicImage";
 import RecapUploader from "./RecapUploader";
 import ReassignRecapModal from "./ReassignRecapModal";
 import RecapQualityPanel from "./RecapQualityPanel";
@@ -395,7 +395,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     useMutation<RemoveRecapFileMutationType>(RemoveRecapFileMutation);
   const [commitDelete, isDeleting] =
     useMutation<DeleteRecapMutationType>(DeleteRecapMutation);
-  const { isAdmin } = useSparkRole();
+  const { isAdmin, isClient } = useSparkRole();
   const [isZipping, setIsZipping] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
   // Admin-only inline number editor. `editingNumbers` toggles the panel;
@@ -782,11 +782,22 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           color: "rgba(255,255,255,0.45)",
         }}
       >
-        ← BACK TO RECAPS
+        ← Recaps
+        {recap.name ? ` / ${recap.name}` : ""}
+        {event?.request?.retailer?.name || event?.address
+          ? ` / ${event?.request?.retailer?.name ?? event?.address}`
+          : ""}
+        {` / ${fmtDate(fieldDate)}`}
       </button>
 
       {/* Title card */}
-      <div className="spark-card p-6">
+      <div
+        className="spark-card p-6 sticky top-0 z-20"
+        style={{
+          background: "rgba(10,13,9,0.92)",
+          backdropFilter: "blur(10px)",
+        }}
+      >
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-2">
@@ -801,7 +812,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   color: "rgba(255,255,255,0.7)",
                 }}
               >
-                R-{uuid.slice(-4).toUpperCase()}
+                {recap.name ?? event?.name ?? "Recap"}
               </span>
               <span
                 className={`chip ${recap.approved ? "chip-lime" : "chip-orange"}`}
@@ -923,18 +934,16 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 : `⬇ Download photos (${allFiles.length})`}
             </button>
             <button
-              onClick={() => {
-                if (navigator.share) {
-                  navigator
-                    .share({
-                      title: recap.name ?? "Spark recap",
-                      url: window.location.href,
-                    })
-                    .catch(() => {});
-                } else {
-                  navigator.clipboard.writeText(window.location.href);
-                  showAlert("Link copied.", "success");
+              onClick={async () => {
+                if (!recap.shareToken) {
+                  showAlert("Share link isn't ready yet.", "warning");
+                  return;
                 }
+                const result = await shareRecapLink({
+                  token: recap.shareToken,
+                  title: recap.name ?? "Spark recap",
+                });
+                if (result === "copied") showAlert("Link copied.", "success");
               }}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
@@ -945,6 +954,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             >
               ↗ Share
             </button>
+            {!isClient && (
             <button
               onClick={() => setReassignOpen(true)}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
@@ -957,6 +967,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             >
               ⇄ Move to event
             </button>
+            )}
             {/* Admin-only recap approval. Nevena: "I don't see where to
                 approve recap." Distinct from request approval — this
                 marks the RECAP itself approved. Shows the current state
@@ -1043,6 +1054,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       {/* Quality check — server-computed review aid for the approver. Legacy
           recap → isCustom={false}. Self-degrades to nothing on failure;
           wrapped in Suspense for the initial load. */}
+      {!isClient && (
       <Suspense
         fallback={
           <div
@@ -1055,6 +1067,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       >
         <RecapQualityPanel recapId={recap.id} isCustom={false} />
       </Suspense>
+      )}
 
       {/* Products sampled — read view (everyone). Hidden while the admin is
           editing, since the editor panel below shows the same data. */}
@@ -1837,7 +1850,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       recapId: recap.id,
                       file: blobName,
                       fileTypeId: "1",
-                      fileRecapCategoryId: "1",
+                      fileRecapCategoryId: "Sampling photos",
                     },
                   },
                   onCompleted: (res) => {
@@ -1866,8 +1879,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       recapId: recap.id,
                       file: blobName,
                       fileTypeId: "1",
-                      // Category "2" = receipt (matches recap-create form).
-                      fileRecapCategoryId: "2",
+                      fileRecapCategoryId: "Receipts",
                     },
                   },
                   onCompleted: (res) => {
@@ -2016,8 +2028,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   // passes http(s) through untouched (just adds the cache-
                   // buster). Falls back to `file` for older query results.
                   // `kind` is computed from the chosen source so a converted
-                  // HEIC (now a .jpg) is treated as a normal image, and only
-                  // a still-unconverted .heic drops to the HeicImage path.
+                  // HEIC (now a .jpg) is treated as a normal image. A still-
+                  // unconverted .heic is a labeled tile — no in-browser WASM.
                   const source = p?.displayUrl ?? p?.file;
                   const kind = recapFileKind(source);
                   const url = recapFileUrlFresh(source);
@@ -2077,11 +2089,6 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                             const t = e.currentTarget as HTMLImageElement;
                             t.outerHTML = `<div style="font:9px/12px monospace;color:#ef5a2a;padding:6px;word-break:break-all;background:rgba(239,90,42,0.08)">IMG FAILED<br/>${url}</div>`;
                           }}
-                        />
-                      ) : kind === "heic" ? (
-                        <HeicImage
-                          url={url}
-                          className="w-full h-full object-cover"
                         />
                       ) : (
                         <div className="w-full h-full grid place-items-center">

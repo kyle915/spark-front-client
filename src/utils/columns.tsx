@@ -16,12 +16,17 @@ import type {
 import { formatDate, formatTime } from "@/utils";
 
 const getRecapState = (row: RecapRow) =>
+  row.state?.code ??
+  row.event?.state?.code ??
+  row.event?.retailer?.location?.state?.code ??
   row.state?.name ??
   row.event?.state?.name ??
   row.event?.request?.state?.name ??
   "-";
 
 const getRecapLocation = (row: RecapRow) =>
+  row.event?.retailer?.name ??
+  row.event?.address ??
   row.location?.name ??
   row.event?.location?.name ??
   row.event?.request?.location?.name ??

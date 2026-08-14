@@ -202,6 +202,30 @@ const formatDate = (raw: string | null | undefined) => {
   }
 };
 
+const isoLocal = (d: Date) => {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+const daysAgoIso = (n: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return isoLocal(d);
+};
+const TODAY_ISO = isoLocal(new Date());
+const DAYS_30_ISO = daysAgoIso(30);
+const DAYS_90_ISO = daysAgoIso(90);
+
+const ghostBtn: React.CSSProperties = {
+  background: "transparent",
+  color: "var(--spark-text)",
+  border: "1px solid var(--spark-border)",
+};
+const limeBtn: React.CSSProperties = {
+  background: "var(--spark-lime)",
+  color: "#0a0d09",
+  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+};
+
 const RecapCard: React.FC<{
   recap: Recap;
   // Destination URL for this recap. Rendered as a real <a href> (see the
@@ -478,12 +502,12 @@ type StatusKey = "all" | "approved" | "draft";
 // Death, made the single payload so heavy the page hung on "Loading
 // recaps…". A bounded initial page paints fast; "Load more" pulls the
 // rest on demand.
-const INITIAL_LIMIT = 300;
+const INITIAL_LIMIT = 50;
 
 // How many more rows each "Load more" click requests (added to `first`
-// on BOTH queries). Re-fetches are cheap relative to the all-at-once
-// fetch and only happen when the user explicitly asks for more.
-const LOAD_MORE_STEP = 300;
+// on BOTH queries). Matches the server page ceiling
+// (RECAPS_LIST_MAX_LIMIT = 50).
+const LOAD_MORE_STEP = 50;
 
 const RecapsListInner: React.FC<{
   search: string;
@@ -513,7 +537,8 @@ const RecapsListInner: React.FC<{
   // checkboxes against it and reports toggles back up.
   selectedIds: Set<string>;
   onToggleSelected: (id: string) => void;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected }) => {
+  queueEmpty: boolean;
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, queueEmpty }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
@@ -525,7 +550,16 @@ const RecapsListInner: React.FC<{
   // belt-and-suspenders frontend half for the admin-side "Client view"
   // toggle (which the server can't distinguish from a normal admin).
   const { isClient } = useSparkRole();
-  const approvedOnly = isClient ? true : null;
+  const approvedFilter = isClient
+    ? true
+    : statusFilter === "approved"
+      ? true
+      : statusFilter === "draft"
+        ? false
+        : null;
+  const retailerName = retailerFilter === "all" ? null : retailerFilter;
+  const stateCode = stateFilter === "all" ? null : stateFilter;
+  const searchQ = search.trim() || null;
   // Server-side date bounds. The backend RecapFiltersInput /
   // CustomRecapFiltersInput both expose inclusive startDate / endDate
   // (YYYY-MM-DD), so when the user picks a date range we push it into the
@@ -550,6 +584,7 @@ const RecapsListInner: React.FC<{
     RecapsQuery,
     {
       first: limit,
+      q: searchQ,
       filters: tenantId
         ? {
             tenantId,
@@ -557,8 +592,9 @@ const RecapsListInner: React.FC<{
             // Filters by the recap's PRIMARY ambassador (Recap.ambassador_id);
             // the resolver decodes the Relay global id. "all" → no filter.
             ambassadorId: baFilter === "all" ? null : baFilter,
-            // Client view → approved-only; admin/RMM view → drafts too.
-            approved: approvedOnly,
+            approved: approvedFilter,
+            retailerName,
+            stateCode,
             startDate,
             endDate,
           }
@@ -581,15 +617,15 @@ const RecapsListInner: React.FC<{
     GetCustomRecapsQuery,
     {
       first: limit,
-      // Client view → approved-only; admin/RMM view → drafts too. Date
-      // bounds pushed server-side for the same reason as the legacy query.
+      q: searchQ,
       filters: tenantId
         ? {
             tenantId,
-            // Same primary-ambassador filter as the legacy query above —
-            // CustomRecapFiltersInput inherits ambassadorId. "all" → no filter.
+            rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
             ambassadorId: baFilter === "all" ? null : baFilter,
-            approved: approvedOnly,
+            approved: approvedFilter,
+            retailerName,
+            stateCode,
             startDate,
             endDate,
           }
@@ -607,36 +643,14 @@ const RecapsListInner: React.FC<{
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
         ?.map((n) => {
-          const retailerName =
-            n.event?.retailer?.name ??
-            n.event?.request?.retailer?.name ??
-            "—";
-          const stateCode =
-            n.event?.state?.code ??
-            n.event?.retailer?.location?.state?.code ??
-            n.state?.code ??
-            // Fall back to parsing the event address ("…, TX 78205") when no
-            // State FK is set — otherwise address-only events never surface
-            // in the state filter.
-            toStateCode(n.event?.address) ??
-            null;
-          // Server-side resolvers do the work: heroFile is the first
-          // browser-renderable image (jpg/png/webp/gif), recapFilesCount
-          // is the COUNT(*) of all files. Client just prepends the
-          // GCS bucket via recapFileUrl().
-          // List cards render at ~256px wide, so the 400px thumb is
-          // plenty — the endpoint 302s to the original on any failure.
+          const retailerName = n.eventRetailer || "—";
+          const stateCode = toStateCode(n.eventState);
           const hero = n.heroFile?.file
             ? thumbUrl(recapFileUrl(n.heroFile.file), 400)
             : null;
           const fileCount = n.recapFilesCount ?? 0;
-          const requestUuid = n.event?.request?.uuid ?? null;
-          // request.requestType is a NamedEntity; pull the human
-          // label ("Event Activation", "Retail Sampling", …). Null
-          // when the recap isn't linked to a request or the request
-          // hasn't been categorised yet.
-          const requestType =
-            n.event?.request?.requestType?.name ?? null;
+          const requestUuid = n.requestUuid ?? null;
+          const requestType = n.requestTypeName ?? null;
           const linkedBaName = [
             n.ambassador?.user?.firstName,
             n.ambassador?.user?.lastName,
@@ -653,15 +667,13 @@ const RecapsListInner: React.FC<{
             id: String(n.id),
             uuid: String(n.uuid),
             name: n.name ?? n.event?.name ?? "Untitled recap",
-            date: n.event?.date ?? n.createdAt ?? "",
+            date: n.eventDate ?? n.event?.date ?? n.createdAt ?? "",
             retailerName,
             stateCode,
             approved: Boolean(n.approved),
             heroImage: hero,
             fileCount,
             engagements: n.totalEngagements ?? null,
-            // Legacy recaps don't expose a separate sampled count; conversion
-            // falls back to engagements (unchanged behavior).
             consumersSampled: null,
             productsSold: n.productsSold ?? null,
             cansSold: n.totalCansSold ?? null,
@@ -710,16 +722,10 @@ const RecapsListInner: React.FC<{
             uuid: String(n.uuid),
             name:
               n.name ?? n.event?.name ?? n.customRecapTemplate?.name ?? "Custom recap",
-            date: n.event?.date ?? n.createdAt ?? "",
-            retailerName: n.retailer?.name ?? "—",
-            // Event State FK first, then the recap's own state, then parse
-            // the event address ("San Antonio, TX 78205") — so address-only
-            // custom recaps (Feel Free) surface FL/TX in the state filter
-            // instead of contributing nothing (was hardcoded null).
+            date: n.eventDate ?? n.event?.date ?? n.createdAt ?? "",
+            retailerName: n.eventRetailer || "—",
             stateCode:
-              n.event?.state?.code ??
-              toStateCode(n.state?.name) ??
-              toStateCode(n.event?.address),
+              toStateCode(n.eventState) ?? toStateCode(n.eventAddress),
             approved: Boolean(n.approved),
             heroImage: n.heroImageUrl ?? null,
             fileCount: n.customRecapFilesCount ?? 0,
@@ -894,7 +900,20 @@ const RecapsListInner: React.FC<{
         className="spark-card p-8 text-center text-sm"
         style={{ color: "rgba(255,255,255,0.55)" }}
       >
-        No recaps match these filters.
+        {queueEmpty ? (
+          <>
+            <p className="display text-2xl font-bold" style={{ color: "var(--spark-text)" }}>
+              You’re caught up.
+            </p>
+            <p className="mt-2">
+              No recaps need review in the last 30 days. Switch to{" "}
+              <span className="font-semibold">All published</span> to browse
+              the full archive.
+            </p>
+          </>
+        ) : (
+          "No recaps match these filters."
+        )}
       </div>
     );
   }
@@ -1023,14 +1042,14 @@ export default function SparkRecapsList() {
   // Brand Ambassador filter. "all" = no filter; otherwise the Ambassador's
   // Relay global id (pushed server-side as `ambassadorId`). Mirrors rmmFilter.
   const [baFilter, setBaFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<StatusKey>("all");
-  // Inclusive date range for the budget-reconciliation filter
-  // Myriant asked for. Empty string = unbounded on that side, so the
-  // default ("","") is the same as "all dates". Stored as ISO yyyy-
-  // mm-dd to match the native <input type="date"> value shape and
-  // r.date which is already date-prefixed.
-  const [dateFrom, setDateFrom] = useState<string>("");
-  const [dateTo, setDateTo] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<StatusKey>(
+    isClient ? "all" : "draft",
+  );
+  // Work-queue default: last 30 days. "All published" clears both
+  // bounds so the archive (every published recap) is an explicit choice.
+  const [dateFrom, setDateFrom] = useState<string>(DAYS_30_ISO);
+  const [dateTo, setDateTo] = useState<string>(TODAY_ISO);
+  const [opsOpen, setOpsOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
   // Server fetch size — how many rows we ask EACH list resolver for.
   // "Load more" bumps it by LOAD_MORE_STEP, re-fetching both queries with
@@ -1040,7 +1059,7 @@ export default function SparkRecapsList() {
   const [limit, setLimit] = useState(INITIAL_LIMIT);
   useEffect(() => {
     setLimit(INITIAL_LIMIT);
-  }, [rmmFilter, baFilter, dateFrom, dateTo]);
+  }, [rmmFilter, baFilter, dateFrom, dateTo, statusFilter, retailerFilter, stateFilter, search]);
   const [meta, setMeta] = useState<Meta>({
     retailers: [],
     states: [],
@@ -1273,127 +1292,218 @@ export default function SparkRecapsList() {
     }
   };
 
+  const statusWord = isClient
+    ? "APPROVED"
+    : statusFilter === "draft"
+      ? "NEEDS REVIEW"
+      : statusFilter === "approved"
+        ? "APPROVED"
+        : "ALL";
+  const windowLabel =
+    !dateFrom && !dateTo
+      ? `${statusWord} · ALL TIME`
+      : dateFrom === DAYS_30_ISO && dateTo === TODAY_ISO
+        ? `${statusWord} · 30D`
+        : dateFrom === DAYS_90_ISO && dateTo === TODAY_ISO
+          ? `${statusWord} · 90D`
+          : dateFrom && dateTo
+            ? `${statusWord} · ${dateFrom} → ${dateTo}`
+            : dateFrom
+              ? `${statusWord} · FROM ${dateFrom}`
+              : `${statusWord} · TO ${dateTo}`;
+  const isQueueDefault =
+    !isClient &&
+    statusFilter === "draft" &&
+    dateFrom === DAYS_30_ISO &&
+    dateTo === TODAY_ISO &&
+    !search.trim() &&
+    retailerFilter === "all" &&
+    stateFilter === "all" &&
+    rmmFilter === "all" &&
+    baFilter === "all";
+  const datePreset =
+    !dateFrom && !dateTo
+      ? "all"
+      : dateFrom === DAYS_30_ISO && dateTo === TODAY_ISO
+        ? "30d"
+        : dateFrom === DAYS_90_ISO && dateTo === TODAY_ISO
+          ? "90d"
+          : "custom";
+  const applyDatePreset = (preset: "30d" | "90d" | "all") => {
+    if (preset === "all") {
+      setDateFrom("");
+      setDateTo("");
+      return;
+    }
+    setDateFrom(preset === "90d" ? DAYS_90_ISO : DAYS_30_ISO);
+    setDateTo(TODAY_ISO);
+  };
+  const showAllPublished = () => {
+    setStatusFilter("all");
+    setDateFrom("");
+    setDateTo("");
+  };
+  const filterStyle: React.CSSProperties = {
+    padding: "0.65rem 0.85rem",
+    background: "var(--spark-bg)",
+    border: "1px solid var(--spark-border)",
+    color: "var(--spark-text)",
+    outline: "none",
+  };
+
   return (
     <Layout>
-      <div className="space-y-6 max-w-7xl">
-        <div className="flex items-end justify-between flex-wrap gap-4">
-          <div>
+      <div className="space-y-4 max-w-7xl">
+        <div
+          className="sticky top-0 z-20 spark-card p-3 flex flex-wrap gap-2 items-center"
+          style={{
+            background: "rgba(10,13,9,0.92)",
+            backdropFilter: "blur(10px)",
+          }}
+        >
+          <div className="min-w-[140px] mr-1">
             <p
               className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
-              }}
+              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
             >
-              RECAPS · {meta.total} PUBLISHED
+              RECAPS · {windowLabel}
             </p>
-            <h1
-              className="display text-4xl font-bold mt-2"
-              style={{ letterSpacing: "-0.04em" }}
+            <p
+              className="tab-num text-2xl font-bold leading-none mt-0.5"
+              style={{ color: "var(--spark-lime)" }}
             >
-              {isClient ? "Your recaps." : "Every recap."}
-            </h1>
-            <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
-              {isClient
-                ? "Field reports from your activations, synced nightly with photos + numbers."
-                : "Real field data, synced nightly from BA submissions."}
+              {meta.total}
             </p>
           </div>
-          <div className="flex gap-2 flex-wrap items-center">
-            <LinkedSheetChip />
-            <ExportReceiptsButton variant="ghost" />
-            <ImportConnecteamButton variant="ghost" />
-            <button
-              onClick={copyForSheets}
-              disabled={
-                visibleRecaps.length === 0 || recapCopyState === "copying"
-              }
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background:
-                  recapCopyState === "copied"
-                    ? "rgba(95,184,239,0.18)"
-                    : "transparent",
-                color:
-                  recapCopyState === "copied"
-                    ? "var(--spark-sky)"
-                    : "var(--spark-text)",
-                border: `1px solid ${
-                  recapCopyState === "copied"
-                    ? "rgba(95,184,239,0.5)"
-                    : "var(--spark-border)"
-                }`,
-                opacity: visibleRecaps.length === 0 ? 0.5 : 1,
-              }}
-              title={
-                visibleRecaps.length === 0
-                  ? "Nothing to copy"
-                  : `Copy ${visibleRecaps.length} recap${visibleRecaps.length === 1 ? "" : "s"} as TSV — paste into Google Sheets`
-              }
-            >
-              {recapCopyState === "copied"
-                ? `✓ Copied (${visibleRecaps.length})`
-                : recapCopyState === "copying"
-                  ? "Copying…"
-                  : `📋 Copy for Sheets ${visibleRecaps.length > 0 ? `(${visibleRecaps.length})` : ""}`}
-            </button>
-            <button
-              onClick={exportCsv}
-              disabled={visibleRecaps.length === 0}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-                opacity: visibleRecaps.length === 0 ? 0.5 : 1,
-              }}
-              title={
-                visibleRecaps.length === 0
-                  ? "Nothing matches the current filters"
-                  : `Download ${visibleRecaps.length} recap${visibleRecaps.length === 1 ? "" : "s"} as CSV`
-              }
-            >
-              ↓ Export CSV{" "}
-              {visibleRecaps.length > 0 ? `(${visibleRecaps.length})` : ""}
-            </button>
-            {!isClient && (
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search venue, retailer, R-ID…"
+            className="rounded-xl text-sm"
+            style={{ ...filterStyle, flex: 1, minWidth: 180, maxWidth: 260 }}
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as StatusKey)}
+            className="rounded-xl text-sm"
+            style={{ ...filterStyle, maxWidth: 160 }}
+            title="Filter by approval status"
+          >
+            <option value="draft">Needs review</option>
+            <option value="approved">Approved</option>
+            <option value="all">All status</option>
+          </select>
+          <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--spark-border)" }}>
+            {(["30d", "90d", "all"] as const).map((p) => (
               <button
-                onClick={() =>
-                  (window.location.href = "/recaps/templates")
-                }
-                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                key={p}
+                type="button"
+                onClick={() => applyDatePreset(p)}
+                className="px-2.5 py-2 text-xs font-semibold"
                 style={{
-                  background: "transparent",
-                  color: "var(--spark-text)",
+                  background:
+                    datePreset === p ? "rgba(197,245,70,0.16)" : "transparent",
+                  color:
+                    datePreset === p
+                      ? "var(--spark-lime)"
+                      : "rgba(255,255,255,0.65)",
+                }}
+              >
+                {p === "all" ? "All dates" : p.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={showAllPublished}
+            className="rounded-xl text-xs px-3 py-2 font-semibold"
+            style={ghostBtn}
+            title="Show every published recap, all dates"
+          >
+            All published
+          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpsOpen((v) => !v)}
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={ghostBtn}
+            >
+              Export / Import ▾
+            </button>
+            {opsOpen && (
+              <div
+                className="absolute right-0 top-full mt-2 z-40 flex flex-col gap-1 p-2 min-w-[240px] rounded-2xl"
+                style={{
+                  background: "rgba(10,13,9,0.98)",
                   border: "1px solid var(--spark-border)",
+                  boxShadow: "0 14px 40px rgba(0,0,0,0.55)",
                 }}
               >
-                + Build template
-              </button>
-            )}
-            {!isClient && (
-              // Primary action: build a recap against any Master-Tracker
-              // event. /recap/create's event picker already lists every
-              // tenant event, so this is the global "file a recap" entry
-              // point from the recaps tab.
-              <button
-                onClick={() => (window.location.href = "/recap/create")}
-                className="px-4 py-2 rounded-xl text-sm font-semibold"
-                style={{
-                  background: "var(--spark-lime)",
-                  color: "#0a0d09",
-                  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
-                }}
-              >
-                + New recap
-              </button>
+                <LinkedSheetChip />
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportCsv();
+                    setOpsOpen(false);
+                  }}
+                  disabled={visibleRecaps.length === 0}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                  style={{ ...ghostBtn, opacity: visibleRecaps.length === 0 ? 0.5 : 1 }}
+                >
+                  ↓ Export CSV
+                  {visibleRecaps.length > 0 ? ` (${visibleRecaps.length})` : ""}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void copyForSheets();
+                    setOpsOpen(false);
+                  }}
+                  disabled={
+                    visibleRecaps.length === 0 || recapCopyState === "copying"
+                  }
+                  className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                  style={ghostBtn}
+                >
+                  {recapCopyState === "copied"
+                    ? `✓ Copied (${visibleRecaps.length})`
+                    : "Copy for Sheets"}
+                </button>
+                <ExportReceiptsButton variant="ghost" />
+                <ImportConnecteamButton variant="ghost" />
+                {!isClient && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.href = "/recaps/templates";
+                    }}
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={ghostBtn}
+                  >
+                    + Build template
+                  </button>
+                )}
+              </div>
             )}
           </div>
+          {!isClient && (
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = "/recap/create";
+              }}
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={limeBtn}
+            >
+              + New recap
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="spark-card p-4">
-            <p className="label-mini">RECAPS · 90D</p>
+            <p className="label-mini">RECAPS · {windowLabel}</p>
             <p
               className="tab-num text-3xl font-bold mt-1"
               style={{ color: "var(--spark-lime)" }}
@@ -1430,23 +1540,7 @@ export default function SparkRecapsList() {
           </div>
         </div>
 
-        <div className="spark-card p-4 flex flex-wrap gap-3 items-center">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search venue, retailer, R-ID…"
-            className="rounded-xl text-sm"
-            style={{
-              padding: "0.75rem 0.95rem",
-              background: "var(--spark-bg)",
-              border: "1px solid var(--spark-border)",
-              color: "var(--spark-text)",
-              flex: 1,
-              minWidth: 200,
-              maxWidth: 280,
-              outline: "none",
-            }}
-          />
+        <div className="spark-card p-3 flex flex-wrap gap-2 items-center">
           <select
             value={retailerFilter}
             onChange={(e) => setRetailerFilter(e.target.value)}
@@ -1505,29 +1599,6 @@ export default function SparkRecapsList() {
               />
             </Suspense>
           )}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as StatusKey)}
-            className="rounded-xl text-sm"
-            style={{
-              padding: "0.75rem 0.95rem",
-              background: "var(--spark-bg)",
-              border: "1px solid var(--spark-border)",
-              color: "var(--spark-text)",
-              maxWidth: 160,
-              outline: "none",
-            }}
-            title="Filter by approval status"
-          >
-            <option value="all">All status</option>
-            <option value="approved">Approved only</option>
-            <option value="draft">Draft only</option>
-          </select>
-
-          {/* Date range — Myriant asked for this so she can pull
-              recaps for a specific budget reconciliation period. Both
-              bounds inclusive; clearing both = "all dates" (same as
-              before this filter existed). */}
           <input
             type="date"
             value={dateFrom}
@@ -1621,6 +1692,7 @@ export default function SparkRecapsList() {
             rmmFilter={rmmFilter}
             baFilter={baFilter}
             statusFilter={statusFilter}
+            queueEmpty={isQueueDefault}
             dateFrom={dateFrom}
             dateTo={dateTo}
             sortKey={sortKey}
@@ -1645,11 +1717,7 @@ export default function SparkRecapsList() {
               <button
                 onClick={() => setLimit((l) => l + LOAD_MORE_STEP)}
                 className="px-5 py-2.5 rounded-2xl text-sm font-semibold"
-                style={{
-                  background: "var(--spark-lime)",
-                  color: "#0a0d09",
-                  boxShadow: "0 0 20px rgba(197,245,70,0.35)",
-                }}
+                style={ghostBtn}
               >
                 Load {LOAD_MORE_STEP} more →
               </button>

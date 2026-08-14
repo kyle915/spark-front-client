@@ -434,6 +434,12 @@ const CampaignUpload = lazyDefault(
 const PublicCampaignReport = lazyDefault(
   () => import("@/public/reports/PublicCampaignReport"),
 );
+// Public, no-login shareable recap. The signed :token is the auth —
+// fetches GET /api/public/recap/<token>. Path is /r/:token so it
+// does not collide with /recap/list, /recap/create, /recap/view/:uuid.
+const PublicRecap = lazyDefault(
+  () => import("@/public/recaps/PublicRecap"),
+);
 // Public, no-login invoice page. The :token in the URL is the auth (no
 // tenant guard, like /c/:slug and /report/:token). Fetches the no-auth REST
 // invoice endpoint; renders a clean branded invoice + a Download-PDF button.
@@ -512,6 +518,11 @@ const PublicRoutes = {
     {
       path: "/report/:token",
       component: <PublicCampaignReport />,
+      isPublic: true,
+    },
+    {
+      path: "/r/:token",
+      component: <PublicRecap />,
       isPublic: true,
     },
     // Public, no-login invoice page. The :token is the auth (no tenant
