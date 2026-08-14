@@ -1,11 +1,12 @@
-import { Suspense, useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Navigate, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
+import { RecapDetailSkeleton } from "@/layout/PageSkeletons";
 import { RecapQuery } from "@/api/queries/RecapQuery";
 import type { RecapQuery as RecapQueryType } from "@api/queries/__generated__/RecapQuery.graphql";
-import { GetCustomRecapQuery } from "@/api/queries/CustomRecapsQuery";
-import type { CustomRecapsQueryDetailsQuery as CustomRecapsQueryDetailsQueryType } from "@api/queries/__generated__/CustomRecapsQueryDetailsQuery.graphql";
+import { CustomRecapExistsQuery } from "@/api/queries/CustomRecapsQuery";
+import type { CustomRecapsQueryExistsQuery as CustomRecapsQueryExistsQueryType } from "@/api/queries/__generated__/CustomRecapsQueryExistsQuery.graphql";
 import { GenerateRecapPdfMutation } from "@/api/mutations/GenerateRecapPdfMutation";
 import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateRecapPdfMutation.graphql";
 import { AddRecapFileMutation } from "@/api/mutations/AddRecapFileMutation";
@@ -32,7 +33,9 @@ import { parseLocaleNumber } from "@/utils";
 import { useAlertStore } from "@/store/alertStore";
 import RecapUploader from "./RecapUploader";
 import ReassignRecapModal from "./ReassignRecapModal";
-import RecapQualityPanel from "./RecapQualityPanel";
+import { thumbUrl } from "@/utils/thumb";
+
+const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
 
 /**
  * Spark v2 — Recap Detail.
@@ -491,6 +494,15 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const allFiles = (recap.recapFiles ?? []).filter(
     (f) => f && (f.file?.toString() || "").length > 0,
   );
+  const existingPdf = allFiles.find((f) => {
+    const ext = (f?.fileType?.extension ?? "").toLowerCase();
+    const typeName = (f?.fileType?.name ?? "").toLowerCase();
+    const path = (f?.file ?? "").toLowerCase();
+    return ext.includes("pdf") || typeName === "pdf" || path.endsWith(".pdf");
+  });
+  const existingPdfUrl = existingPdf
+    ? recapFileUrl(existingPdf.displayUrl || existingPdf.file)
+    : "";
   const sales = (recap.salesPerformance ?? []).filter(Boolean);
   const notes = (recap.accountFeedback ?? [])[0]?.feedback ?? null;
 
@@ -817,7 +829,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               <span
                 className={`chip ${recap.approved ? "chip-lime" : "chip-orange"}`}
               >
-                {recap.approved ? "PUBLISHED" : "DRAFT"}
+                {recap.approved ? "APPROVED" : "DRAFT"}
               </span>
             </div>
             <h1
@@ -840,6 +852,10 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             <button
               disabled={isPdfRunning}
               onClick={() => {
+                if (existingPdfUrl) {
+                  window.open(existingPdfUrl, "_blank", "noopener,noreferrer");
+                  return;
+                }
                 commitPdf({
                   variables: { input: { id: recap.id } },
                   onCompleted: (res) => {
@@ -848,7 +864,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       if (file) {
                         window.open(recapFileUrl(file), "_blank");
                       }
-                      showAlert("PDF generated.", "success");
+                      showAlert("PDF ready.", "success");
                     } else {
                       showAlert(
                         res.generateRecapPdf?.message ??
@@ -869,7 +885,13 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 opacity: isPdfRunning ? 0.5 : 1,
               }}
             >
-              {isPdfRunning ? "Generating…" : "⬇ PDF"}
+              {existingPdfUrl
+                ? "⬇ Download PDF"
+                : isPdfRunning
+                  ? "Generating…"
+                  : recap.approved
+                    ? "Generating…"
+                    : "⬇ PDF"}
             </button>
             <button
               disabled={isZipping || allFiles.length === 0}
@@ -1055,16 +1077,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           recap → isCustom={false}. Self-degrades to nothing on failure;
           wrapped in Suspense for the initial load. */}
       {!isClient && (
-      <Suspense
-        fallback={
-          <div
-            className="spark-card p-6 text-sm"
-            style={{ color: "rgba(255,255,255,0.5)" }}
-          >
-            Checking recap quality…
-          </div>
-        }
-      >
+      <Suspense fallback={null}>
         <RecapQualityPanel recapId={recap.id} isCustom={false} />
       </Suspense>
       )}
@@ -2078,15 +2091,18 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       )}
                       {kind === "image" ? (
                         <img
-                          src={url}
+                          src={thumbUrl(url, 400) || url}
                           alt=""
                           loading="lazy"
+                          decoding="async"
                           referrerPolicy="no-referrer"
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            // Make failures visible — don't hide. Show
-                            // the URL so we can diagnose in the wild.
                             const t = e.currentTarget as HTMLImageElement;
+                            if (url && t.src !== url) {
+                              t.src = url;
+                              return;
+                            }
                             t.outerHTML = `<div style="font:9px/12px monospace;color:#ef5a2a;padding:6px;word-break:break-all;background:rgba(239,90,42,0.08)">IMG FAILED<br/>${url}</div>`;
                           }}
                         />
@@ -2310,8 +2326,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
  * bounce between the two routes.
  */
 const CustomRecapFallback: React.FC<{ uuid: string }> = ({ uuid }) => {
-  const data = useLazyLoadQuery<CustomRecapsQueryDetailsQueryType>(
-    GetCustomRecapQuery,
+  const data = useLazyLoadQuery<CustomRecapsQueryExistsQueryType>(
+    CustomRecapExistsQuery,
     { uuid },
     { fetchPolicy: "store-or-network" },
   );
@@ -2332,16 +2348,7 @@ export default function SparkRecapView() {
   const { uuid } = useParams<{ uuid: string }>();
   return (
     <Layout>
-      <Suspense
-        fallback={
-          <div
-            className="spark-card p-8 text-center text-sm max-w-7xl"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            Loading recap…
-          </div>
-        }
-      >
+      <Suspense fallback={<RecapDetailSkeleton />}>
         <SparkRecapInner uuid={uuid ?? ""} />
       </Suspense>
     </Layout>

@@ -33,11 +33,9 @@ export const SetCustomRecapFileCategoryMutation = graphql`
           displayUrl
           approved
           fileRecapCategory {
-            id
             name
           }
           fileType {
-            id
             name
           }
         }

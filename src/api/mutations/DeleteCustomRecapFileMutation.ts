@@ -29,11 +29,9 @@ export const DeleteCustomRecapFileMutation = graphql`
           displayUrl
           approved
           fileRecapCategory {
-            id
             name
           }
           fileType {
-            id
             name
           }
         }

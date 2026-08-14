@@ -18,14 +18,15 @@ import type { SetCustomRecapFileCategoryMutation as SetCustomRecapFileCategoryMu
 import { GenerateCustomRecapPdfMutation } from "@/api/mutations/GenerateCustomRecapPdfMutation";
 import type { GenerateCustomRecapPdfMutation as GenerateCustomRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateCustomRecapPdfMutation.graphql";
 import { RecapUploader } from "./RecapUploader";
-import RecapQualityPanel from "./RecapQualityPanel";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { AmbassadorPicker } from "./SparkRecapCreate";
+import { AmbassadorPicker } from "./AmbassadorPicker";
+import { RecapDetailSkeleton } from "@/layout/PageSkeletons";
 import { buildCustomFieldValuesPayload } from "./customRecapSave";
 import { useAuthStore } from "@/store/authStore";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router";
 import {
+  lazy,
   useCallback,
   useEffect,
   useMemo,
@@ -34,6 +35,7 @@ import {
   Suspense,
 } from "react";
 import { formatDate, parseLocaleNumber } from "@/utils";
+import { thumbUrl } from "@/utils/thumb";
 import {
   Calendar,
   Goal,
@@ -53,6 +55,8 @@ import { useAlertStore } from "@/store/alertStore";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 import { shareRecapLink } from "@/utils/recapShare";
 import useSparkRole from "@/hooks/useSparkRole";
+
+const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
 
 // Custom-field type → control kind. Field-type names are lowercase by
 // convention (text / number / image / longtext / select / multiselect);
@@ -266,6 +270,8 @@ const ProductSamplesEditor = ({
                   <img
                     src={p.image}
                     alt={p.name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-contain"
                   />
                 ) : (
@@ -309,7 +315,7 @@ const ProductSamplesEditor = ({
   );
 };
 
-const RecapCustomView = () => {
+const RecapCustomViewInner = () => {
   const { uuid } = useParams();
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
@@ -351,7 +357,12 @@ const RecapCustomView = () => {
   const data = useLazyLoadQuery<CustomRecapsQueryDetailsQueryType>(
     GetCustomRecapQuery,
     { uuid: uuid ?? "" },
-    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+    {
+      // First paint can use a warm store; bumping refreshKey after
+      // approve/save forces a network refetch.
+      fetchPolicy: refreshKey === 0 ? "store-or-network" : "network-only",
+      fetchKey: refreshKey,
+    },
   );
 
   const recap = data?.customRecap;
@@ -644,8 +655,24 @@ const RecapCustomView = () => {
   // Generate (or regenerate) the recap PDF, then open the returned file in
   // a new tab. Mirrors the legacy SparkRecapView PDF button. CustomRecapFile
   // exposes url / displayUrl (no `file` field), so we open url ?? displayUrl.
+  const existingPdf = useMemo(() => {
+    return (recap?.customRecapFiles ?? []).find((f) => {
+      const name = (f?.name ?? "").toLowerCase();
+      const typeName = (f?.fileType?.name ?? "").toLowerCase();
+      const url = (f?.url ?? "").toLowerCase();
+      if (name.includes("connecteam source")) return false;
+      return typeName === "pdf" || url.split("?")[0]?.endsWith(".pdf");
+    });
+  }, [recap?.customRecapFiles]);
+  const existingPdfUrl =
+    existingPdf?.url || existingPdf?.displayUrl || "";
+
   const handleGeneratePdf = useCallback(() => {
     if (!recap?.id) return;
+    if (existingPdfUrl) {
+      window.open(existingPdfUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
     commitGeneratePdf({
       variables: { input: { id: recap.id as string } },
       onCompleted: (res) => {
@@ -667,7 +694,7 @@ const RecapCustomView = () => {
       },
       onError: (err) => showAlert(`PDF failed: ${err.message}`, "error"),
     });
-  }, [recap?.id, commitGeneratePdf, showAlert]);
+  }, [recap?.id, existingPdfUrl, commitGeneratePdf, showAlert]);
 
   // Approve the custom recap → backend emails the requestor + mapped RMM
   // (with the PDF). Returns `approved` so the view flips in-place.
@@ -1012,14 +1039,12 @@ const RecapCustomView = () => {
 
   if (!recap) {
     return (
-      <Layout>
-        <div
-          className="spark-card p-8 text-sm"
-          style={{ color: "rgba(255,255,255,0.7)" }}
-        >
-          Recap not found.
-        </div>
-      </Layout>
+      <div
+        className="spark-card p-8 text-sm"
+        style={{ color: "rgba(255,255,255,0.7)" }}
+      >
+        Recap not found.
+      </div>
     );
   }
 
@@ -1034,7 +1059,7 @@ const RecapCustomView = () => {
     .join(" · ");
 
   return (
-    <Layout>
+    <>
       <div className="space-y-6 max-w-7xl">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <Link
@@ -1077,10 +1102,21 @@ const RecapCustomView = () => {
                   disabled={isGeneratingPdf}
                   className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                   style={{ ...ghostBtn, opacity: isGeneratingPdf ? 0.5 : 1 }}
-                  title="Generate and download this recap as a PDF"
+                  title={
+                    existingPdfUrl
+                      ? "Download the ready PDF"
+                      : "Generate and download this recap as a PDF"
+                  }
                 >
-                  {isGeneratingPdf ? "Generating…" : "⬇ PDF"}
+                  {existingPdfUrl
+                    ? "⬇ Download PDF"
+                    : isGeneratingPdf
+                      ? "Generating…"
+                      : recap.approved
+                        ? "Generating…"
+                        : "⬇ PDF"}
                 </button>
+                {!isClient && (
                 <button
                   onClick={handleDownloadPhotos}
                   disabled={isZipping || flatImages.length === 0}
@@ -1095,6 +1131,7 @@ const RecapCustomView = () => {
                     ? `Zipping ${flatImages.length}…`
                     : `⬇ Photos (${flatImages.length})`}
                 </button>
+                )}
                 <button
                   onClick={async () => {
                     if (!recap.shareToken) {
@@ -1241,16 +1278,7 @@ const RecapCustomView = () => {
           failure; wrapped in Suspense for the initial load.
           ====================================================== */}
           {!isClient && (
-          <Suspense
-            fallback={
-              <div
-                className="spark-card p-6 text-sm"
-                style={{ color: "rgba(255,255,255,0.5)" }}
-              >
-                Checking recap quality…
-              </div>
-            }
-          >
+          <Suspense fallback={null}>
             <RecapQualityPanel recapId={recap.id} isCustom={true} />
           </Suspense>
           )}
@@ -1593,6 +1621,8 @@ const RecapCustomView = () => {
                               <img
                                 src={sample.product.image}
                                 alt={sample.product.name}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-full h-full object-contain"
                               />
                             </div>
@@ -1669,10 +1699,16 @@ const RecapCustomView = () => {
                           </p>
                           {imgSrc ? (
                             <img
-                              src={imgSrc}
+                              src={thumbUrl(imgSrc, 800) || imgSrc}
                               alt={field.name ?? "Field image"}
+                              loading="lazy"
+                              decoding="async"
                               className="max-h-64 w-auto rounded-lg object-contain"
                               style={inset}
+                              onError={(event) => {
+                                const img = event.currentTarget;
+                                if (imgSrc && img.src !== imgSrc) img.src = imgSrc;
+                              }}
                             />
                           ) : fieldId === firstEmptyImageFieldId &&
                             flatImages.length > 0 ? (
@@ -1683,10 +1719,16 @@ const RecapCustomView = () => {
                                 return (
                                   <img
                                     key={f.id}
-                                    src={src}
+                                    src={thumbUrl(src, 400) || src}
                                     alt={f.name ?? "Recap photo"}
+                                    loading="lazy"
+                                    decoding="async"
                                     className="max-h-40 w-auto rounded-lg object-contain"
                                     style={inset}
+                                    onError={(event) => {
+                                      const img = event.currentTarget;
+                                      if (src && img.src !== src) img.src = src;
+                                    }}
                                   />
                                 );
                               })}
@@ -1892,7 +1934,7 @@ const RecapCustomView = () => {
 
           {/* Photos gallery */}
           <div ref={evidenceRef} className="spark-card p-6 scroll-mt-24">
-            {showPhotoPrompt && (
+            {showPhotoPrompt && !isClient && (
               <div
                 className="mb-6 rounded-2xl p-4 flex items-start gap-3"
                 style={{
@@ -2099,21 +2141,24 @@ const RecapCustomView = () => {
                                   )}
                                   {isImage ? (
                                       <img
-                                        src={displaySrc(file)}
+                                        src={
+                                          thumbUrl(displaySrc(file), 400) ||
+                                          displaySrc(file)
+                                        }
                                         alt={file.name || "Evidence"}
+                                        loading="lazy"
+                                        decoding="async"
                                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                         onError={(event) => {
                                           const img = event.currentTarget;
-                                          console.error("Recap image failed", {
-                                            fileId: file.id,
-                                            fileName: file.name,
-                                            originalUrl: file.url,
-                                            resolvedSrc: displaySrc(file),
-                                            currentSrc: img.currentSrc,
-                                            complete: img.complete,
-                                            naturalWidth: img.naturalWidth,
-                                            naturalHeight: img.naturalHeight,
-                                          });
+                                          const full = displaySrc(file);
+                                          if (full && img.src !== full) {
+                                            img.src = full;
+                                            return;
+                                          }
+                                          if (file.url && img.src !== file.url) {
+                                            img.src = file.url;
+                                          }
                                         }}
                                       />
                                   ) : (
@@ -2232,8 +2277,16 @@ const RecapCustomView = () => {
           onPrev={goPrev}
         />
       )}
-    </Layout>
+    </>
   );
 };
 
-export default RecapCustomView;
+export default function RecapCustomView() {
+  return (
+    <Layout>
+      <Suspense fallback={<RecapDetailSkeleton />}>
+        <RecapCustomViewInner />
+      </Suspense>
+    </Layout>
+  );
+}
