@@ -15,6 +15,13 @@
     <script>
       (function () {
         try {
+          const host = location.hostname;
+          if (host === "spark.igniteproductions.co" || host === "www.spark.igniteproductions.co") {
+            location.replace("https://admin.igniteproductions.co" + location.pathname + location.search + location.hash);
+            return;
+          }
+        } catch (e) {}
+        try {
           const scheme =
             localStorage.getItem("@color-scheme") ||
             (window.matchMedia("(prefers-color-scheme: dark)").matches
