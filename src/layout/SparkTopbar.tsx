@@ -178,7 +178,7 @@ export const SparkTopbar: React.FC = () => {
           className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-base-300 text-xs text-base-content/55 hover:text-primary hover:border-primary transition"
         >
           <MagnifyingGlassIcon className="w-3.5 h-3.5" />
-          <span>Search</span>
+          <span>Jump</span>
           <span className="ml-3 mono text-[10px] px-1.5 py-0.5 rounded bg-base-300 text-base-content/55 border border-base-300">
             ⌘K
           </span>

@@ -21,7 +21,7 @@
  * isAdmin.
  */
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
@@ -31,17 +31,28 @@ import { useSidebarCounts } from "@/hooks/useSidebarCounts";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import AskAiButton from "@/components/ai/AskAiButton";
-import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
-import TenantKpiComparison from "@/components/ai/TenantKpiComparison";
-import TenantGoalsPanel from "@/components/ai/TenantGoalsPanel";
-import TenantInsightsPanel from "@/components/ai/TenantInsightsPanel";
-import TenantSentimentCard from "@/components/ai/TenantSentimentCard";
-import TenantGeoHeatmap from "@/components/ai/TenantGeoHeatmap";
-import TenantBaLeaderboard from "@/components/ai/TenantBaLeaderboard";
-// Embedded as tabs on this dashboard — the named exports are the
-// Layout-less bodies so we don't double-render the admin shell.
 import { ApprovalsBody } from "@/components/pages/approvals/SparkApprovals";
-import { AccountMapBody } from "@/components/pages/map/SparkAccountMap";
+
+const AccountMapBody = lazy(() =>
+  import("@/components/pages/map/SparkAccountMap").then((m) => ({
+    default: m.AccountMapBody,
+  })),
+);
+const TenantKpiCharts = lazy(() => import("@/components/ai/TenantKpiCharts"));
+const TenantKpiComparison = lazy(
+  () => import("@/components/ai/TenantKpiComparison"),
+);
+const TenantGoalsPanel = lazy(() => import("@/components/ai/TenantGoalsPanel"));
+const TenantInsightsPanel = lazy(
+  () => import("@/components/ai/TenantInsightsPanel"),
+);
+const TenantSentimentCard = lazy(
+  () => import("@/components/ai/TenantSentimentCard"),
+);
+const TenantGeoHeatmap = lazy(() => import("@/components/ai/TenantGeoHeatmap"));
+const TenantBaLeaderboard = lazy(
+  () => import("@/components/ai/TenantBaLeaderboard"),
+);
 
 type TabKey = "overview" | "approvals" | "map";
 
@@ -287,13 +298,13 @@ const ClientInner: React.FC = () => {
             className="display text-4xl font-bold mt-2"
             style={{ letterSpacing: "-0.04em" }}
           >
-            Where things stand.
+            Today
           </h1>
           <p
             className="mt-2"
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            Live from the field. Tap any tile to drill in.
+            Due recaps and this week&apos;s program.
           </p>
         </div>
         {/* Ask AI about this client's own program — scoped to the client's
@@ -396,7 +407,7 @@ const ClientInner: React.FC = () => {
               : "All caught up"
           }
           tone={completionPct != null && completionPct < 80 ? "orange" : "lime"}
-          onClick={() => navigate("/recaps/missing")}
+          onClick={() => navigate("/recaps/list")}
         />
         <Tile
           label="Needs review"
