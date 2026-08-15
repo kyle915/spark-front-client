@@ -1224,12 +1224,14 @@ function CheckedInFlow({
   const [busy, setBusy] = useState<"" | "in" | "out">("");
   const [showRecap, setShowRecap] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const [pending, setPending] = useState<PendingClockIn | null>(() => readPendingClock(code));
+  const [queuedClock, setQueuedClock] = useState<PendingClockIn | null>(() =>
+    readPendingClock(code),
+  );
   // A queued clock-in is the shift they already started. Treat it as on the
   // clock so they can fill the recap offline instead of staring at Clock in.
   const effectiveClock: Clock["state"] =
-    pending && clockState === "not_started" ? "clocked_in" : clockState;
-  const clockInAt = pending?.clockedInAt ?? ctx.session?.clock.clockInAt ?? null;
+    queuedClock && clockState === "not_started" ? "clocked_in" : clockState;
+  const clockInAt = queuedClock?.clockedInAt ?? ctx.session?.clock.clockInAt ?? null;
 
   const post = (path: string, body: Record<string, unknown>, timeoutMs?: number) =>
     fetchWithTimeout(
@@ -1249,7 +1251,7 @@ function CheckedInFlow({
       clockedInAt: tappedAt,
       ...coords,
     });
-    setPending(row);
+    setQueuedClock(row);
     setMsg(offlineClockBanner(row.clockedInAt));
   };
 
@@ -1269,7 +1271,7 @@ function CheckedInFlow({
       },
     });
     if (result === "flushed" || result === "already") {
-      setPending(readPendingClock(code));
+      setQueuedClock(readPendingClock(code));
       await onRefresh();
     }
     return result;
@@ -1278,7 +1280,7 @@ function CheckedInFlow({
   }, [code, token, onRefresh]);
 
   useEffect(() => {
-    if (!pending) return;
+    if (!queuedClock) return;
     const onOnline = () => {
       void tryFlushPending();
     };
@@ -1292,7 +1294,7 @@ function CheckedInFlow({
       window.removeEventListener("online", onOnline);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [pending, tryFlushPending]);
+  }, [queuedClock, tryFlushPending]);
 
   // While the BA is ON THE CLOCK and this page is open, drop a location pin
   // every few minutes so ops can see they're on site rather than only having
@@ -1347,10 +1349,10 @@ function CheckedInFlow({
     // Best-effort geolocation — clocking works even if it's denied/unavailable.
     const withCoords = async (coords: { latitude?: number; longitude?: number }) => {
       try {
-        if (kind === "out" && pending) {
+        if (kind === "out" && queuedClock) {
           const flushed = await tryFlushPending();
           if (flushed === "retry") {
-            setMsg(offlineClockBanner(pending.clockedInAt));
+            setMsg(offlineClockBanner(queuedClock.clockedInAt));
             return;
           }
         }
@@ -1358,7 +1360,7 @@ function CheckedInFlow({
           kind,
           ...coords,
           ...(kind === "in"
-            ? { clockedInAt: pending?.clockedInAt ?? tappedAt, idempotencyKey: pending?.id }
+            ? { clockedInAt: queuedClock?.clockedInAt ?? tappedAt, idempotencyKey: queuedClock?.id }
             : {}),
         });
         let json: { message?: string; alreadyIn?: boolean; clock?: Clock } = {};
@@ -1375,7 +1377,7 @@ function CheckedInFlow({
           setMsg(json.message || "Couldn't record that.");
           return;
         }
-        if (kind === "in") setPending(readPendingClock(code));
+        if (kind === "in") setQueuedClock(readPendingClock(code));
         await onRefresh();
       } catch (error) {
         if (kind === "in" && isOfflineClockFailure({ error })) {
@@ -1545,7 +1547,7 @@ function CheckedInFlow({
               <div style={{ fontSize: 12, opacity: 0.55, marginTop: 2 }}>
                 In {fmtTime(clockInAt)}
                 {ctx.session?.clock.clockOutAt ? ` · Out ${fmtTime(ctx.session.clock.clockOutAt)}` : ""}
-                {pending ? " · saved on this device" : ""}
+                {queuedClock ? " · saved on this device" : ""}
               </div>
             ) : null}
           </div>
@@ -1659,12 +1661,12 @@ function CheckedInFlow({
             </>
           ) : null}
         </div>
-        {pending ? (
+        {queuedClock ? (
           <p style={{ ...errText, color: "#92400e" }}>
-            {offlineClockBanner(pending.clockedInAt)}
+            {offlineClockBanner(queuedClock.clockedInAt)}
           </p>
         ) : null}
-        {msg && !pending ? <p style={errText}>{msg}</p> : null}
+        {msg && !queuedClock ? <p style={errText}>{msg}</p> : null}
       </div>
 
       {/* Wrong store or wrong day is easy to do on a shared link, and the
