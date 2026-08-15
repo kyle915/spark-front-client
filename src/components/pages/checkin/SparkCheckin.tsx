@@ -1890,7 +1890,6 @@ function RecapForm({
               ref={fileRef}
               type="file"
               accept="image/*"
-              capture="environment"
               multiple
               style={{ display: "none" }}
               onChange={(e) => {
@@ -2007,7 +2006,6 @@ function FieldInput({
           ref={localRef}
           type="file"
           accept="image/*"
-          capture="environment"
           multiple
           style={{ display: "none" }}
           onChange={(e) => {
@@ -2168,7 +2166,6 @@ function PhotoBucketZone({
         ref={ref}
         type="file"
         accept="image/*"
-        capture="environment"
         multiple
         style={{ display: "none" }}
         onChange={(e) => {
@@ -2233,7 +2230,7 @@ function PhotoGrid({
           padding: "16px 12px",
         }}
       >
-        Take photo
+        Add photos
       </button>
     </div>
   );
