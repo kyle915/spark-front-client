@@ -53,7 +53,6 @@ import {
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import { useAlertStore } from "@/store/alertStore";
 import { recapFileUrl } from "@/utils/recapFileUrl";
-import { shareRecapLink } from "@/utils/recapShare";
 import useSparkRole from "@/hooks/useSparkRole";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
 import { ClientTenantRecapBrand } from "@/recap/TenantBrandedRecap";
@@ -1138,24 +1137,7 @@ const RecapCustomViewInner = () => {
                     : `⬇ Photos (${flatImages.length})`}
                 </button>
                 )}
-                <button
-                  onClick={async () => {
-                    if (!recap.shareToken) {
-                      showAlert("Share link isn't ready yet.", "warning");
-                      return;
-                    }
-                    const result = await shareRecapLink({
-                      token: recap.shareToken,
-                      title: recap.name ?? "Spark recap",
-                    });
-                    if (result === "copied")
-                      showAlert("Link copied.", "success");
-                  }}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                  style={ghostBtn}
-                >
-                  ↗ Share
-                </button>
+                {/* Share token is API PR 915 — hide until Cloud Run has it. */}
                 {!isClient && (
                   <button
                     onClick={enterEditMode}
@@ -2272,9 +2254,9 @@ const RecapCustomViewInner = () => {
           </div>
           {isClient && (
             <RecapClientSignoff
-              existingStatus={recap.clientSignoffStatus}
-              existingComment={recap.clientSignoffComment}
-              existingAt={recap.clientSignoffAt}
+              existingStatus={null}
+              existingComment={null}
+              existingAt={null}
               busy={isSigningOff}
               onSubmit={(status, comment) => {
                 commitSignoff({

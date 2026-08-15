@@ -31,10 +31,7 @@ export const RecapsQuery = graphql`
           uuid
           name
           approved
-          shareToken
-          sharedAt
           createdAt
-          submittedAt
           totalEngagements
           productsSold
           totalCansSold
@@ -45,11 +42,17 @@ export const RecapsQuery = graphql`
           heroFile {
             file
           }
-          eventDate
-          eventRetailer
-          eventState
-          requestUuid
-          requestTypeName
+          # shareToken / sharedAt / submittedAt / eventDate / eventRetailer /
+          # eventState / requestUuid / requestTypeName land with API PR 915.
+          # Selecting them against today's Cloud Run Recap type 500s the
+          # whole /recaps page (GraphQL rejects unknown fields).
+          retailer {
+            name
+          }
+          state {
+            name
+            code
+          }
           ambassador {
             id
             user {
@@ -60,6 +63,15 @@ export const RecapsQuery = graphql`
           event {
             name
             date
+            address
+            retailer {
+              name
+            }
+            request {
+              retailer {
+                name
+              }
+            }
           }
         }
       }

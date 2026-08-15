@@ -9,11 +9,8 @@ export const RecapQuery = graphql`
       createdAt
       updatedAt
       approved
-      shareToken
-      sharedAt
-      clientSignoffStatus
-      clientSignoffComment
-      clientSignoffAt
+      # shareToken / sharedAt / clientSignoff* are API PR 915. Asking for
+      # them on today's Recap type 500s the detail page.
       totalEngagements
       productsSold
       totalCansSold
