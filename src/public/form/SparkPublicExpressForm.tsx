@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
-import SparkFormLayout from "./layout/FormLayout";
+import SparkFormLayout, { PublicFormTenantContext } from "./layout/FormLayout";
 import {
   usePublicProducts,
   usePublicProductTypes,
@@ -23,9 +23,6 @@ import { buildRequestDateTimes } from "./utils/buildPayload";
  * bits (RMM/internal notes) are stripped — clients submitting via the
  * public link only see what's relevant to them.
  */
-// Slug words that are acronyms, so title-casing them reads wrong ("Thc").
-const ACRONYMS = new Set(["thc", "cbd", "rtd", "ba", "usa", "dtc"]);
-
 // Per-tenant page titles. The default is "<Brand> BA Request Form"; a brand
 // whose form covers something more specific gets its exact wording here rather
 // than changing the heading for every other client's live public form.
@@ -33,34 +30,15 @@ const FORM_TITLE_OVERRIDES: Record<string, string> = {
   "keee-torch-thc": "TORCH THC Retail Sampling + BA Request Form",
 };
 
-export default function SparkPublicExpressForm() {
+function ExpressFormBody() {
   const { tenantSlug } = useParams();
   const slug = tenantSlug ?? "";
   const [searchParams] = useSearchParams();
-  // Derive a human brand name from the slug. "ighn-liquid-death" →
-  // "Liquid Death", "keee-torch-thc" → "Torch THC".
-  //
-  // The slug is `request_url_name`, generated in tenants/mutations.py as
-  // "<4 random chars>-<slugified name>" on create — and, when a tenant is
-  // later renamed, as "<slugified name>-<4 random chars>", which puts the
-  // code on the opposite end. So strip a 4-character token from the front,
-  // else from the back, and only while another token survives. Hardcoding
-  // one known prefix (this used to strip "ighn-" only) left every other
-  // tenant showing its raw code — Torch read "Keee Torch Thc".
-  const brandName = useMemo(() => {
-    const parts = slug.split("-").filter(Boolean);
-    const isCode = (t: string) => /^[a-z0-9]{4}$/i.test(t);
-    if (parts.length > 1 && isCode(parts[0])) parts.shift();
-    else if (parts.length > 1 && isCode(parts[parts.length - 1])) parts.pop();
-    if (!parts.length) return "Brand";
-    return parts
-      .map((w) =>
-        ACRONYMS.has(w.toLowerCase())
-          ? w.toUpperCase()
-          : w.charAt(0).toUpperCase() + w.slice(1),
-      )
-      .join(" ");
-  }, [slug]);
+  // Real brand name from tenantPublic — never parse the URL slug. A 4-char
+  // slug token ("girl" in girl-beer, "keee" in keee-torch-thc) is not a
+  // brand name, and stripping it left Girl Beer titled "Beer".
+  const tenant = useContext(PublicFormTenantContext);
+  const brandName = tenant?.name?.trim() || "Brand";
 
   const [selectedProductTypeId, setSelectedProductTypeId] = useState<string | null>(null);
   const { products, loading: productsLoading, hasMore, loadMore } = usePublicProducts(
@@ -292,7 +270,7 @@ export default function SparkPublicExpressForm() {
   };
 
   return (
-    <SparkFormLayout slug={slug}>
+    <>
       <form
         onSubmit={onSubmit}
         className="w-full max-w-2xl mx-auto px-1 sm:px-0 space-y-3"
@@ -306,7 +284,7 @@ export default function SparkPublicExpressForm() {
               color: "var(--spark-lime, #c5f546)",
             }}
           >
-            REQUEST A DEMO
+            REQUEST A TEAM
           </p>
           <h1
             className="display text-2xl font-bold mt-1"
@@ -1002,6 +980,15 @@ export default function SparkPublicExpressForm() {
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+export default function SparkPublicExpressForm() {
+  const { tenantSlug } = useParams();
+  return (
+    <SparkFormLayout slug={tenantSlug ?? ""}>
+      <ExpressFormBody />
     </SparkFormLayout>
   );
 }

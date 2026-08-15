@@ -1,8 +1,12 @@
-import useTenantPublic from "../hooks/useTenantPublic";
+import useTenantPublic, { type TenantPublic } from "../hooks/useTenantPublic";
 import useTenantThemePublic from "../hooks/useTenantThemePublic";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
-import { useEffect, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import { Link } from "react-router";
+
+export const PublicFormTenantContext = createContext<TenantPublic | null>(null);
+
+const IGNITE_HOME = "https://www.igniteproductions.co/";
 
 /**
  * Spark v2 — public form layout.
@@ -64,7 +68,10 @@ export default function SparkFormLayout({
         }}
       >
         {/* Left: real Spark logo, inverted to white for the dark band */}
-        <a href="/" style={{ display: "flex", alignItems: "center" }}>
+        <a
+          href={IGNITE_HOME}
+          style={{ display: "flex", alignItems: "center" }}
+        >
           <img
             src="/legal/spark-logo.png"
             alt="Spark by Ignite"
@@ -111,7 +118,7 @@ export default function SparkFormLayout({
             />
           ) : (
             <span className="chip chip-lime">
-              ● {(tenant?.requestUrlName ?? "PUBLIC").toUpperCase()}
+              ● {(tenant?.name ?? tenant?.requestUrlName ?? "PUBLIC").toUpperCase()}
             </span>
           )}
         </div>
@@ -152,7 +159,9 @@ export default function SparkFormLayout({
             </p>
           </div>
         ) : (
-          <div className="w-full">{children}</div>
+          <PublicFormTenantContext.Provider value={tenant}>
+            <div className="w-full">{children}</div>
+          </PublicFormTenantContext.Provider>
         )}
       </div>
 
