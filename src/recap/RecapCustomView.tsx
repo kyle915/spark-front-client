@@ -57,6 +57,7 @@ import { shareRecapLink } from "@/utils/recapShare";
 import useSparkRole from "@/hooks/useSparkRole";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
 import { ClientTenantRecapBrand } from "@/recap/TenantBrandedRecap";
+import { clientRecapKpis } from "@/recap/clientRecapKpis";
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
 import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
 
@@ -1042,6 +1043,25 @@ const RecapCustomViewInner = () => {
   const currentPreview =
     flatImages && previewIndex !== null ? flatImages[previewIndex] : null;
   const currentPreviewSrc = currentPreview ? displaySrc(currentPreview) : "";
+
+  const unitsSampled = useMemo(
+    () =>
+      (recap?.customRecapProductSample ?? []).reduce(
+        (sum, s) => sum + (s.quantity ?? 0),
+        0,
+      ),
+    [recap?.customRecapProductSample],
+  );
+  const reviewKpis = useMemo(
+    () =>
+      clientRecapKpis({
+        engagements: recap?.totalEngagements,
+        soldUnits: recap?.soldUnits,
+        unitsSampled,
+        photoCount: flatImages.length,
+      }),
+    [recap?.totalEngagements, recap?.soldUnits, unitsSampled, flatImages.length],
+  );
 
   if (!recap) {
     return (
@@ -2318,7 +2338,188 @@ const RecapCustomViewInner = () => {
   );
 
   if (isClient) {
-    return <ClientTenantRecapBrand>{inner}</ClientTenantRecapBrand>;
+    const clientInner = (
+      <>
+        <div className="space-y-6 max-w-5xl">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <Link
+              to={backToListUrl}
+              className="mono text-[11px] transition"
+              style={{
+                letterSpacing: "0.14em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              ← Recaps
+              {recap.name ? ` / ${recap.name}` : ""}
+            </Link>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handleGeneratePdf}
+                disabled={isGeneratingPdf}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{ ...ghostBtn, opacity: isGeneratingPdf ? 0.5 : 1 }}
+                title={
+                  existingPdfUrl
+                    ? "Download the ready PDF"
+                    : "Generate and download this recap as a PDF"
+                }
+              >
+                {existingPdfUrl
+                  ? "Download PDF"
+                  : isGeneratingPdf
+                    ? "Generating…"
+                    : "PDF"}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!recap.shareToken) {
+                    showAlert("Share link isn't ready yet.", "warning");
+                    return;
+                  }
+                  const result = await shareRecapLink({
+                    token: recap.shareToken,
+                    title: recap.name ?? "Spark recap",
+                  });
+                  if (result === "copied")
+                    showAlert("Link copied.", "success");
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={ghostBtn}
+              >
+                Share
+              </button>
+            </div>
+          </div>
+
+          <div className="spark-card p-6">
+            <h1
+              className="display text-3xl font-bold"
+              style={{ letterSpacing: "-0.03em" }}
+            >
+              {recap.name}
+            </h1>
+            <p className="mt-1" style={{ color: "rgba(255,255,255,0.65)" }}>
+              {place || "—"}
+              {" · "}
+              {formatDate(recap.event?.date ?? recap.eventDate ?? null)}
+            </p>
+          </div>
+
+          <div ref={evidenceRef} className="spark-card p-6">
+            <p
+              className="mono text-[10px] mb-4"
+              style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}
+            >
+              PHOTOS · {flatImages.length}
+            </p>
+            {flatImages.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {flatImages.map((file, idx) => {
+                  const src = displaySrc(file);
+                  return (
+                    <button
+                      key={file.id}
+                      type="button"
+                      onClick={() => setPreviewIndex(idx)}
+                      className="block overflow-hidden rounded-xl text-left"
+                      style={{ border: "1px solid var(--spark-border)" }}
+                    >
+                      <img
+                        src={thumbUrl(src, 400) || src}
+                        alt={file.name || "Recap photo"}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-40 object-cover"
+                        onError={(event) => {
+                          const img = event.currentTarget;
+                          if (src && img.src !== src) img.src = src;
+                        }}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm" style={muted}>
+                No photos on this recap yet.
+              </p>
+            )}
+          </div>
+
+          {reviewKpis.length > 0 && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {reviewKpis.map((k, i) => (
+                <div
+                  key={k.label}
+                  className="kpi"
+                  style={
+                    i === 0
+                      ? {
+                          boxShadow:
+                            "0 0 28px color-mix(in srgb, var(--recap-brand, #c5f546) 25%, transparent)",
+                        }
+                      : undefined
+                  }
+                >
+                  <p
+                    className="kpi-value"
+                    style={{ color: "var(--recap-brand, var(--spark-lime))" }}
+                  >
+                    {k.value}
+                  </p>
+                  <p className="kpi-label">{k.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <RecapClientSignoff
+            existingStatus={recap.clientSignoffStatus}
+            existingComment={recap.clientSignoffComment}
+            existingAt={recap.clientSignoffAt}
+            busy={isSigningOff}
+            onSubmit={(status, comment) => {
+              commitSignoff({
+                variables: {
+                  input: {
+                    customRecapId: recap.id,
+                    status,
+                    comment,
+                  },
+                },
+                onCompleted: (res) => {
+                  if (res.submitRecapClientSignoff?.success) {
+                    showAlert("Sign-off saved.", "success");
+                    setRefreshKey((k) => k + 1);
+                  } else {
+                    showAlert(
+                      res.submitRecapClientSignoff?.message ??
+                        "Couldn't save sign-off.",
+                      "error",
+                    );
+                  }
+                },
+                onError: (err) => showAlert(err.message, "error"),
+              });
+            }}
+          />
+        </div>
+
+        {currentPreview && (
+          <ImagePreviewModal
+            image={{
+              name: currentPreview.name ?? "Evidence",
+              file: currentPreviewSrc,
+            }}
+            onClose={closePreview}
+            onNext={goNext}
+            onPrev={goPrev}
+          />
+        )}
+      </>
+    );
+    return <ClientTenantRecapBrand>{clientInner}</ClientTenantRecapBrand>;
   }
   return inner;
 };
