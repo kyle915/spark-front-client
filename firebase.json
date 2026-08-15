@@ -48,7 +48,7 @@
     },
     {
       "target": "spark",
-      "public": "dist",
+      "public": "hosting/spark-redirect",
       "ignore": [
         "firebase.json",
         "**/node_modules/**",
@@ -56,16 +56,16 @@
         "**/.gitignore",
         "**/.eslintrc*"
       ],
-      "rewrites": [{ "source": "**", "destination": "/index.html" }],
-      "headers": [
+      "redirects": [
         {
-          "source": "**",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-cache, no-store, must-revalidate"
-            }
-          ]
+          "source": "/",
+          "destination": "https://client.igniteproductions.co/",
+          "type": 301
+        },
+        {
+          "source": "/:path*",
+          "destination": "https://client.igniteproductions.co/:path",
+          "type": 301
         }
       ]
     },
