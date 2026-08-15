@@ -300,22 +300,18 @@ const ClientApprovalsInner: React.FC = () => {
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
         ?.map((n) => {
-          const venue =
-            n.event?.retailer?.name ||
-            n.event?.request?.retailer?.name ||
-            n.retailer?.name ||
-            null;
-          const st = n.state?.code || n.state?.name || null;
-          const date = n.event?.date ?? n.createdAt ?? "";
+          const venue = n.eventRetailer || null;
+          const st = n.eventState || null;
+          const date = n.eventDate ?? n.event?.date ?? n.createdAt ?? "";
           return {
             kind: "legacy" as const,
             id: String(n.id),
             uuid: String(n.uuid),
             name: n.name ?? n.event?.name ?? "Untitled recap",
             date,
-            where: joinWhere(venue, n.event?.address ?? null, st),
-            typeLabel: null,
-            sortMs: toMs(n.event?.date) || toMs(n.createdAt),
+            where: joinWhere(venue, null, st),
+            typeLabel: n.requestTypeName ?? null,
+            sortMs: toMs(n.eventDate) || toMs(n.event?.date) || toMs(n.createdAt),
           };
         }) ?? [];
 

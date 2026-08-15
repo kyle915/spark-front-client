@@ -28,6 +28,7 @@ import type { CreateProductMutation as CreateProductMutationType } from "@/api/m
 import useSparkRole from "@/hooks/useSparkRole";
 import RateBaControl from "@/components/RateBaControl";
 import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
+import { shareRecapLink } from "@/utils/recapShare";
 import { parseLocaleNumber } from "@/utils";
 import { useAlertStore } from "@/store/alertStore";
 import RecapUploader from "./RecapUploader";
@@ -959,7 +960,27 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 ? `Zipping ${allFiles.length}…`
                 : `⬇ Download photos (${allFiles.length})`}
             </button>
-            {/* Share token is API PR 915 — hide until Cloud Run has it. */}
+            <button
+              onClick={async () => {
+                if (!recap.shareToken) {
+                  showAlert("Share link isn't ready yet.", "warning");
+                  return;
+                }
+                const result = await shareRecapLink({
+                  token: recap.shareToken,
+                  title: recap.name ?? "Spark recap",
+                });
+                if (result === "copied") showAlert("Link copied.", "success");
+              }}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              ↗ Share
+            </button>
             {!isClient && (
             <button
               onClick={() => setReassignOpen(true)}
@@ -1067,9 +1088,9 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       )}
       {isClient && (
         <RecapClientSignoff
-          existingStatus={null}
-          existingComment={null}
-          existingAt={null}
+          existingStatus={recap.clientSignoffStatus}
+          existingComment={recap.clientSignoffComment}
+          existingAt={recap.clientSignoffAt}
           busy={isSigningOff}
           onSubmit={(status, comment) => {
             commitSignoff({
