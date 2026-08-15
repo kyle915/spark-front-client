@@ -291,13 +291,6 @@ const PublicRecap: React.FC = () => {
     .filter(Boolean)
     .join(" · ");
   const kpis = (recap.kpis ?? []).filter((k) => k.value != null);
-  const fieldsBySection = (recap.fields ?? []).reduce<
-    Record<string, PublicField[]>
-  >((acc, f) => {
-    const key = f.section || "Details";
-    (acc[key] ??= []).push(f);
-    return acc;
-  }, {});
 
   return shell(
     <div className="space-y-6">
@@ -324,78 +317,6 @@ const PublicRecap: React.FC = () => {
         </div>
       </div>
 
-      {kpis.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          {kpis.map((k, i) => (
-            <div
-              key={k.label}
-              className="kpi"
-              style={
-                i === 0
-                  ? {
-                      boxShadow:
-                        "0 0 28px color-mix(in srgb, var(--recap-brand, #c5f546) 25%, transparent)",
-                    }
-                  : undefined
-              }
-            >
-              <p className="kpi-value" style={{ color: "var(--recap-brand, var(--spark-lime))" }}>
-                {typeof k.value === "number" && k.label.includes("$")
-                  ? `$${k.value.toFixed(2)}`
-                  : fmtNum(k.value)}
-              </p>
-              <p className="kpi-label">{k.label}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {recap.samples.length > 0 && (
-        <div className="spark-card p-6">
-          <p className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}>
-            PRODUCTS SAMPLED
-          </p>
-          <div className="mt-3 space-y-1.5">
-            {recap.samples.map((s, i) => (
-              <div
-                key={`${s.name}-${i}`}
-                className="flex items-center justify-between text-sm"
-                style={{ color: "rgba(255,255,255,0.8)" }}
-              >
-                <span>{s.name ?? "Product"}</span>
-                <span className="mono" style={{ color: "var(--recap-brand, var(--spark-lime))" }}>
-                  {s.quantity != null ? `${s.quantity.toLocaleString()} units` : "—"}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {Object.entries(fieldsBySection).map(([section, fields]) => (
-        <div key={section} className="spark-card p-6">
-          <p className="mono text-[10px] mb-4" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}>
-            {section.toUpperCase()}
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {fields.map((f) => (
-              <div key={`${section}-${f.name}`}>
-                <p className="mono text-[10px] mb-1" style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}>
-                  {f.name}
-                </p>
-                {f.imageUrl ? (
-                  <img src={thumbUrl(f.imageUrl, 800) || f.imageUrl} alt={f.name} className="max-h-56 w-auto rounded-lg object-contain" />
-                ) : (
-                  <p className="text-sm whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.85)" }}>
-                    {f.value || "—"}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-
       {recap.photos.length > 0 && (
         <div className="spark-card p-6">
           <p className="mono text-[10px] mb-4" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}>
@@ -420,6 +341,32 @@ const PublicRecap: React.FC = () => {
               </a>
             ))}
           </div>
+        </div>
+      )}
+
+      {kpis.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {kpis.slice(0, 4).map((k, i) => (
+            <div
+              key={k.label}
+              className="kpi"
+              style={
+                i === 0
+                  ? {
+                      boxShadow:
+                        "0 0 28px color-mix(in srgb, var(--recap-brand, #c5f546) 25%, transparent)",
+                    }
+                  : undefined
+              }
+            >
+              <p className="kpi-value" style={{ color: "var(--recap-brand, var(--spark-lime))" }}>
+                {typeof k.value === "number" && k.label.includes("$")
+                  ? `$${k.value.toFixed(2)}`
+                  : fmtNum(k.value)}
+              </p>
+              <p className="kpi-label">{k.label}</p>
+            </div>
+          ))}
         </div>
       )}
 

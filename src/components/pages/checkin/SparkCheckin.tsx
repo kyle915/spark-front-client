@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type RefObject } from "react";
 import { useParams } from "react-router";
 import { bucketCountHint } from "./photoBuckets";
+import { isHeicUpload } from "./heicUpload";
 
 /**
  * Public, no-login web check-in for a BA working a specific event.
@@ -201,6 +202,9 @@ const UPLOAD_CONCURRENCY = 3;
  * it returns the original file rather than losing the photo.
  */
 async function compressImage(file: File): Promise<File> {
+  // Safari cannot decode HEIC in canvas. Skip the doomed Image() attempt
+  // and upload the original — the API converts after File recap commits.
+  if (isHeicUpload(file)) return file;
   if (!file.type.startsWith("image/") || file.size < COMPRESS_MIN_BYTES) return file;
 
   let url: string | null = null;
