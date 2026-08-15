@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type RefObject } from "react";
 import { useParams } from "react-router";
 import { bucketCountHint } from "./photoBuckets";
 
@@ -1671,7 +1671,8 @@ function RecapForm({
   );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement | null>(null);
+  const libraryRef = useRef<HTMLInputElement | null>(null);
+  const cameraRef = useRef<HTMLInputElement | null>(null);
   const photoSeq = useRef(0);
 
   // Debounced so a BA typing a long answer isn't writing to storage per
@@ -1885,18 +1886,17 @@ function RecapForm({
             <label style={{ ...label, marginTop: 10 }}>
               Photos <span style={{ color: "#EF5A2A" }}>*</span>
             </label>
-            <PhotoGrid photos={loosePhotos} onAdd={() => fileRef.current?.click()} onRemove={removePhoto} accent={accent} />
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              multiple
-              style={{ display: "none" }}
-              onChange={(e) => {
-                void uploadFiles(e.target.files);
-                e.target.value = "";
-              }}
+            <PhotoGrid
+              photos={loosePhotos}
+              onAdd={() => libraryRef.current?.click()}
+              onTake={() => cameraRef.current?.click()}
+              onRemove={removePhoto}
+              accent={accent}
+            />
+            <PhotoFileInputs
+              libraryRef={libraryRef}
+              cameraRef={cameraRef}
+              onFiles={(files) => void uploadFiles(files)}
             />
           </>
         ) : null}
@@ -1992,7 +1992,8 @@ function FieldInput({
   photos: Photo[];
   onRemovePhoto: (id: string) => void;
 }) {
-  const localRef = useRef<HTMLInputElement | null>(null);
+  const libraryRef = useRef<HTMLInputElement | null>(null);
+  const cameraRef = useRef<HTMLInputElement | null>(null);
   const req = field.required ? <span style={{ color: "#EF5A2A" }}> *</span> : null;
 
   if (isPhotoType(field.type)) {
@@ -2002,18 +2003,17 @@ function FieldInput({
           {field.name}
           {req}
         </label>
-        <PhotoGrid photos={photos} onAdd={() => localRef.current?.click()} onRemove={onRemovePhoto} accent={accent} />
-        <input
-          ref={localRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          multiple
-          style={{ display: "none" }}
-          onChange={(e) => {
-            onAddPhotos(e.target.files);
-            e.target.value = "";
-          }}
+        <PhotoGrid
+          photos={photos}
+          onAdd={() => libraryRef.current?.click()}
+          onTake={() => cameraRef.current?.click()}
+          onRemove={onRemovePhoto}
+          accent={accent}
+        />
+        <PhotoFileInputs
+          libraryRef={libraryRef}
+          cameraRef={cameraRef}
+          onFiles={onAddPhotos}
         />
       </div>
     );
@@ -2123,7 +2123,8 @@ function PhotoBucketZone({
   onRemove: (id: string) => void;
   accent: string;
 }) {
-  const ref = useRef<HTMLInputElement | null>(null);
+  const libraryRef = useRef<HTMLInputElement | null>(null);
+  const cameraRef = useRef<HTMLInputElement | null>(null);
   // Count what actually landed, not what was picked — a photo still uploading
   // or failed isn't in the client's report yet, so counting it would tell a BA
   // they're done when they aren't.
@@ -2155,86 +2156,146 @@ function PhotoBucketZone({
       {bucket.helper ? (
         <p style={{ fontSize: 12, opacity: 0.6, margin: "2px 0 0" }}>{bucket.helper}</p>
       ) : null}
-      <p style={{ fontSize: 12, opacity: 0.55, margin: "2px 0 0" }}>
-        iPhone photos are fine.
-      </p>
       <PhotoGrid
         photos={photos}
-        onAdd={() => ref.current?.click()}
+        onAdd={() => libraryRef.current?.click()}
+        onTake={() => cameraRef.current?.click()}
         onRemove={onRemove}
         accent={accent}
       />
+      <PhotoFileInputs
+        libraryRef={libraryRef}
+        cameraRef={cameraRef}
+        onFiles={(files) => onAdd(files, bucket.id)}
+      />
+    </div>
+  );
+}
+
+/**
+ * Library picker first, camera second.
+ *
+ * `capture="environment"` on the ONLY file input opens the camera on iOS and
+ * blocks Camera Roll multi-select — the "Take photo" tile Kyle screenshotted
+ * on Consumer Sampling Pictures. The library input has no capture attribute
+ * and is `multiple`, so iOS offers Photo Library / Files and a BA can pick
+ * the table, product, receipts, and crowd shots in one go. HEIC stays on
+ * `accept="image/*"` (listing MIME types falls back to the Files app).
+ */
+function PhotoFileInputs({
+  libraryRef,
+  cameraRef,
+  onFiles,
+}: {
+  libraryRef: RefObject<HTMLInputElement | null>;
+  cameraRef: RefObject<HTMLInputElement | null>;
+  onFiles: (files: FileList | null) => void;
+}) {
+  const handle = (e: ChangeEvent<HTMLInputElement>) => {
+    onFiles(e.target.files);
+    e.target.value = "";
+  };
+  return (
+    <>
       <input
-        ref={ref}
+        ref={libraryRef}
+        type="file"
+        accept="image/*"
+        multiple
+        style={{ display: "none" }}
+        onChange={handle}
+      />
+      <input
+        ref={cameraRef}
         type="file"
         accept="image/*"
         capture="environment"
-        multiple
         style={{ display: "none" }}
-        onChange={(e) => {
-          onAdd(e.target.files, bucket.id);
-          e.target.value = "";
-        }}
+        onChange={handle}
       />
-    </div>
+    </>
   );
 }
 
 function PhotoGrid({
   photos,
   onAdd,
+  onTake,
   onRemove,
   accent,
 }: {
   photos: Photo[];
   onAdd: () => void;
+  onTake: () => void;
   onRemove: (id: string) => void;
   accent: string;
 }) {
+  const tile: CSSProperties = {
+    minWidth: 120,
+    minHeight: 120,
+    borderRadius: 16,
+    background: "transparent",
+    fontWeight: 700,
+    cursor: "pointer",
+    padding: "16px 12px",
+  };
+
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-      {photos.map((p) => (
-        <div key={p.id} style={{ position: "relative", width: 120, height: 120 }}>
-          <img
-            src={p.previewUrl}
-            alt=""
-            style={{
-              width: 120,
-              height: 120,
-              objectFit: "cover",
-              borderRadius: 10,
-              opacity: p.state === "done" ? 1 : 0.5,
-              border: p.state === "failed" ? "2px solid #EF5A2A" : "1px solid rgba(0,0,0,0.1)",
-            }}
-          />
-          {p.state === "uploading" ? (
-            <span style={photoBadge}>…</span>
-          ) : p.state === "failed" ? (
-            <span style={{ ...photoBadge, color: "#EF5A2A" }}>!</span>
-          ) : null}
-          <button onClick={() => onRemove(p.id)} style={photoRemove} aria-label="Remove photo">
-            ×
-          </button>
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={onAdd}
-        style={{
-          minWidth: 120,
-          minHeight: 120,
-          borderRadius: 16,
-          border: `2px dashed ${accent}`,
-          background: "transparent",
-          fontSize: 15,
-          fontWeight: 700,
-          color: accent,
-          cursor: "pointer",
-          padding: "16px 12px",
-        }}
-      >
-        Take photo
-      </button>
+    <div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+        {photos.map((p) => (
+          <div key={p.id} style={{ position: "relative", width: 120, height: 120 }}>
+            <img
+              src={p.previewUrl}
+              alt=""
+              style={{
+                width: 120,
+                height: 120,
+                objectFit: "cover",
+                borderRadius: 10,
+                opacity: p.state === "done" ? 1 : 0.5,
+                border: p.state === "failed" ? "2px solid #EF5A2A" : "1px solid rgba(0,0,0,0.1)",
+              }}
+            />
+            {p.state === "uploading" ? (
+              <span style={photoBadge}>…</span>
+            ) : p.state === "failed" ? (
+              <span style={{ ...photoBadge, color: "#EF5A2A" }}>!</span>
+            ) : null}
+            <button onClick={() => onRemove(p.id)} style={photoRemove} aria-label="Remove photo">
+              ×
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={onAdd}
+          style={{
+            ...tile,
+            border: `2px dashed ${accent}`,
+            fontSize: 15,
+            color: accent,
+          }}
+        >
+          Upload photos
+        </button>
+        <button
+          type="button"
+          onClick={onTake}
+          style={{
+            ...tile,
+            border: "2px dashed rgba(0,0,0,0.22)",
+            fontSize: 13,
+            color: "inherit",
+            opacity: 0.75,
+          }}
+        >
+          Take photo
+        </button>
+      </div>
+      <p style={{ fontSize: 12, opacity: 0.55, margin: "6px 0 0" }}>
+        You can select many. iPhone photos are fine.
+      </p>
     </div>
   );
 }
