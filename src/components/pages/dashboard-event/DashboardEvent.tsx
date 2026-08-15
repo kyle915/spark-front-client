@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
@@ -11,16 +11,26 @@ import AttentionEngine from "./AttentionEngine";
 import PaceWidget from "./PaceWidget";
 import AskAiButton from "@/components/ai/AskAiButton";
 import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
-import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
-import TenantKpiComparison from "@/components/ai/TenantKpiComparison";
-import TenantGoalsPanel from "@/components/ai/TenantGoalsPanel";
-import TenantInsightsPanel from "@/components/ai/TenantInsightsPanel";
-import TenantSentimentCard from "@/components/ai/TenantSentimentCard";
-import TenantGeoHeatmap from "@/components/ai/TenantGeoHeatmap";
-import TenantBaLeaderboard from "@/components/ai/TenantBaLeaderboard";
-import MetroBreakdownCard from "./MetroBreakdownCard";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { useNavigate } from "react-router";
+import { DashboardSkeleton } from "@/layout/PageSkeletons";
+
+const TenantKpiCharts = lazy(() => import("@/components/ai/TenantKpiCharts"));
+const TenantKpiComparison = lazy(
+  () => import("@/components/ai/TenantKpiComparison"),
+);
+const TenantGoalsPanel = lazy(() => import("@/components/ai/TenantGoalsPanel"));
+const TenantInsightsPanel = lazy(
+  () => import("@/components/ai/TenantInsightsPanel"),
+);
+const TenantSentimentCard = lazy(
+  () => import("@/components/ai/TenantSentimentCard"),
+);
+const TenantGeoHeatmap = lazy(() => import("@/components/ai/TenantGeoHeatmap"));
+const TenantBaLeaderboard = lazy(
+  () => import("@/components/ai/TenantBaLeaderboard"),
+);
+const MetroBreakdownCard = lazy(() => import("./MetroBreakdownCard"));
 
 /**
  * Compact priority-glance card: shows pending approvals (with SLA
@@ -60,10 +70,12 @@ const TodaysSnapshot: React.FC = () => {
       // one click per row.
       label: "Recaps due",
       value: counts.recapsDue,
-      sub: counts.recapsDue > 0 ? "Nudge or file" : undefined,
+      sub:
+        counts.recapsDue > 0
+          ? `Review the ${counts.recapsDue} recap${counts.recapsDue === 1 ? "" : "s"} due`
+          : "Caught up",
       tone: counts.recapsDue > 0 ? "orange" : "gold",
-      to: "/recaps/missing",
-      hide: counts.recapsDue === 0,
+      to: "/recaps/list",
     },
     {
       label: "Upcoming · 14d",
@@ -194,35 +206,6 @@ const RANGES: { key: RangeKey; label: string }[] = [
   { key: "ytd", label: "YTD" },
 ];
 
-const fmtNum = (v: number | null | undefined) =>
-  typeof v === "number" ? v.toLocaleString() : "0";
-
-const fmtPct = (v: number | null | undefined) =>
-  typeof v === "number" ? `${v.toFixed(1)}%` : "—";
-
-type Delta = { text: string; positive: boolean } | null;
-const computeDelta = (
-  current?: number | null,
-  previous?: number | null,
-): Delta => {
-  if (
-    typeof current !== "number" ||
-    typeof previous !== "number" ||
-    previous === 0
-  )
-    return null;
-  const diff = ((current - previous) / previous) * 100;
-  const sign = diff >= 0 ? "+" : "";
-  return { text: `${sign}${diff.toFixed(0)}%`, positive: diff >= 0 };
-};
-
-const greeting = () => {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
-};
-
 const monthLabel = () =>
   new Date()
     .toLocaleString("en-US", { month: "long", year: "numeric" })
@@ -246,187 +229,6 @@ const slugToName = (slug: string | null | undefined): string => {
     .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
     .join(" ");
 };
-
-/* ───────────────────────────── KPI TILE ───────────────────────────── */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-// These primitives are kept around for the Reports page and future
-// dashboard variants. Not used in the current hero layout.
-
-const KpiTile: React.FC<{
-  icon: string;
-  label: string;
-  value: string;
-  delta?: Delta;
-  hint?: string;
-  glow?: boolean;
-}> = ({ icon, label, value, delta, hint, glow }) => (
-  <div className={`kpi kpi-hover ${glow ? "kpi-glow" : ""}`}>
-    <div className="flex items-start justify-between">
-      <span className="kpi-icon" aria-hidden>
-        {icon}
-      </span>
-      {delta && (
-        <span className={`kpi-delta ${delta.positive ? "" : "neg"}`}>
-          {delta.text}
-        </span>
-      )}
-      {!delta && hint && (
-        <span className="kpi-delta muted">{hint}</span>
-      )}
-    </div>
-    <p className="kpi-value">{value}</p>
-    <p className="kpi-label">{label}</p>
-  </div>
-);
-
-/* ───────────────────────────── ATTENTION CARD ──────────────────────── */
-
-const AttentionCard: React.FC<{
-  tone: "orange" | "gold";
-  badge: string;
-  headline: string;
-  body: string;
-  cta: string;
-  onClick?: () => void;
-}> = ({ tone, badge, headline, body, cta, onClick }) => {
-  const color = tone === "orange" ? "var(--spark-orange)" : "var(--spark-gold)";
-  return (
-    <div
-      className="spark-card p-5"
-      style={{ borderColor: `${color}55` }}
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <span className="spark-dot" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
-        <span
-          className="mono text-[10px]"
-          style={{ letterSpacing: "0.18em", color }}
-        >
-          {badge}
-        </span>
-      </div>
-      <h4 className="font-bold text-sm leading-snug mb-1.5">{headline}</h4>
-      <p className="text-xs text-base-content/65 leading-relaxed">{body}</p>
-      <button
-        onClick={onClick}
-        className="mt-4 w-full text-xs py-2 rounded-xl transition"
-        style={{
-          background: "transparent",
-          color,
-          border: `1px solid ${color}55`,
-          fontFamily: "Space Grotesk, sans-serif",
-          fontWeight: 600,
-        }}
-      >
-        {cta} →
-      </button>
-    </div>
-  );
-};
-
-/* ───────────────────────────── ROWS ───────────────────────────── */
-
-const UpcomingRow: React.FC<{
-  date: string;
-  venue: string;
-  info: string;
-  status: string;
-  tone?: "lime" | "sky" | "gold";
-}> = ({ date, venue, info, status, tone = "lime" }) => {
-  const c =
-    tone === "sky"
-      ? "var(--spark-sky)"
-      : tone === "gold"
-        ? "var(--spark-gold)"
-        : "var(--spark-lime)";
-  return (
-    <div
-      className="flex items-center gap-3 py-3"
-      style={{ borderBottom: "1px solid var(--spark-border)" }}
-    >
-      <span
-        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{ background: c, boxShadow: `0 0 6px ${c}` }}
-      />
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm truncate">{venue}</p>
-        <p
-          className="mono text-[10px] uppercase truncate"
-          style={{
-            letterSpacing: "0.14em",
-            color: "rgba(255,255,255,0.45)",
-          }}
-        >
-          {info}
-        </p>
-      </div>
-      <div className="text-right">
-        <p
-          className="text-xs"
-          style={{ color: "rgba(255,255,255,0.85)" }}
-        >
-          {date}
-        </p>
-        <p
-          className="mono text-[10px]"
-          style={{ letterSpacing: "0.14em", color: c }}
-        >
-          {status.toUpperCase()}
-        </p>
-      </div>
-    </div>
-  );
-};
-
-const RecapRow: React.FC<{
-  venue: string;
-  market: string;
-  date: string;
-  samples: string;
-  conv: string;
-  emoji?: string;
-}> = ({ venue, market, date, samples, conv, emoji = "◈" }) => (
-  <div
-    className="flex items-center gap-3 py-3 cursor-pointer hov rounded-lg -mx-2 px-2"
-    style={{ borderBottom: "1px solid var(--spark-border)" }}
-  >
-    <div className="w-10 h-12 grid place-items-center flex-shrink-0">
-      <span className="text-2xl">{emoji}</span>
-    </div>
-    <div className="flex-1 min-w-0">
-      <p className="font-semibold text-sm truncate">{venue}</p>
-      <p
-        className="mono text-[10px] uppercase truncate"
-        style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
-      >
-        {market} · {date}
-      </p>
-    </div>
-    <div className="text-right">
-      <p
-        className="tab-num text-sm font-bold"
-        style={{ color: "var(--spark-lime)" }}
-      >
-        {samples}
-      </p>
-      <p
-        className="mono text-[10px]"
-        style={{
-          letterSpacing: "0.14em",
-          color: "rgba(255,255,255,0.45)",
-        }}
-      >
-        {conv}
-      </p>
-    </div>
-  </div>
-);
-
-// Keep dead-but-useful primitives around for future variants. Tell TS
-// they're intentional so the build doesn't fail on TS6133.
-void KpiTile;
-void AttentionCard;
-void UpcomingRow;
-void RecapRow;
 
 /* ─────────────── ACTIVATION-TYPE BREAKDOWN ─────────────── */
 
@@ -541,8 +343,8 @@ const ActivationBreakdown: React.FC = () => {
 
 /* ───────────────────────────── PAGE ───────────────────────────── */
 
-export default function DashboardIndex() {
-  const { tenantId, user, tenantMeta } = useAuthStore();
+function DashboardInner() {
+  const { tenantId, tenantMeta } = useAuthStore();
   const { isClient } = useSparkRole();
   const navigate = useNavigate();
   const [range, setRange] = useState<RangeKey>("30d");
@@ -584,21 +386,10 @@ export default function DashboardIndex() {
   }, [range]);
 
   const { dashboard } = useEventDashboardData(tenantId || "", filters, 0);
-  const m = dashboard.metrics;
-  const cmp = (m.comparisonValues ?? {}) as {
-    totalEvents?: number | null;
-    consumersSampled?: number | null;
-    brandAwareness?: number | null;
-    purchaseIntent?: number | null;
-  };
-
   const tenantDisplay = slugToName(tenantMeta?.requestUrlName);
-  const consumerDelta = computeDelta(m.consumersSampled, cmp.consumersSampled);
-
   const recent = dashboard.recentEvents ?? [];
 
   return (
-    <Layout>
       <div className="space-y-6 lg:space-y-8 max-w-7xl">
         {/* Greeting + period pills */}
         <div className="flex items-end justify-between flex-wrap gap-4">
@@ -617,19 +408,13 @@ export default function DashboardIndex() {
               className="display text-2xl lg:text-3xl font-bold mt-2 leading-[1.1]"
               style={{ letterSpacing: "-0.03em" }}
             >
-              {greeting()}, {user?.firstName ?? "there"}.
+              Today
             </h1>
             <p
               className="mt-3 text-base"
               style={{ color: "rgba(255,255,255,0.55)" }}
             >
-              {fmtNum(m.consumersSampled)} consumers sampled.{" "}
-              {consumerDelta && (
-                <span style={{ color: "var(--spark-lime)" }}>
-                  {consumerDelta.positive ? "Up " : "Down "}
-                  {consumerDelta.text.replace(/^[+-]/, "")}.
-                </span>
-              )}
+              Due recaps and who&apos;s on the clock.
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -702,165 +487,10 @@ export default function DashboardIndex() {
             → "deeper KPIs". Self-suspends; hides on empty weeks. */}
         <PaceWidget />
 
-        {/* Compact hero + dense CPG KPI grid.
-            Tile design is Apple Stocks-style — small label up top,
-            tab-num value in the middle, lime/orange delta underneath.
-            Half the height of the legacy hero. */}
-        {(() => {
-          const single = dashboard.globalKpis?.singleCansSold ?? 0;
-          const multi = dashboard.globalKpis?.multiPacksSold ?? 0;
-          // Cans-equivalent of the packs with the pack size parsed from
-          // each field label server-side ("6-packs Sold" → ×6). The old
-          // client-side ×12 overstated 6-pack brands (Girl Beer) by 2× —
-          // and folding consumersSampled into "cans" conflated people
-          // with units. Falls back to ×12 only if the field is missing
-          // (stale schema cache).
-          const packCans =
-            dashboard.globalKpis?.packCansEquivalent ?? multi * 12;
-          const productsSold = dashboard.globalKpis?.productsSold ?? 0;
-          // Drink/unit tenants (Girl Beer, Total Wireless, Liquid Death) break
-          // sales into cans + multi-packs. Non-drink tenants (Stone House Bread)
-          // track a single "products sold" count instead — so when there's no
-          // can/pack breakdown, collapse the two drink tiles into one
-          // "Products sold" tile (fed by the same two-tier matcher the recap
-          // list uses) rather than showing two permanently-empty drink tiles.
-          const hasUnitBreakdown = single + multi + packCans > 0;
-          const ins = dashboard.performanceInsights;
-          const willingPct = ins?.willingToPurchasePercentage ?? m.purchaseIntent ?? null;
-          const knewPct = ins?.knewAboutBrandPercentage ?? m.brandAwareness ?? null;
-          const tiles: Array<{
-            label: string;
-            value: string;
-            tone?: "lime" | "sky" | "gold" | "purple";
-            delta?: { text: string; positive: boolean } | null;
-            sub?: string | null;
-          }> = [
-            {
-              label: "Consumers sampled",
-              value: fmtNum(m.consumersSampled),
-              tone: "lime",
-              delta: consumerDelta,
-            },
-            hasUnitBreakdown
-              ? {
-                  label: "Cans sold",
-                  value: fmtNum(single + packCans),
-                  tone: "lime",
-                  sub: `${fmtNum(single)} single · ${fmtNum(multi)} packs`,
-                }
-              : {
-                  label: "Products sold",
-                  value: fmtNum(productsSold),
-                  tone: "lime",
-                },
-            // Brand awareness / purchase intent only appear when the tenant's
-            // recap template actually asks about them. A bread tenant (Stone
-            // House Bread) that never collects awareness gets null here, so we
-            // drop the tile entirely rather than show a meaningless "—".
-            ...(knewPct != null
-              ? [
-                  {
-                    label: "Brand awareness",
-                    value: fmtPct(knewPct),
-                    tone: "sky" as const,
-                    delta: computeDelta(m.brandAwareness, cmp.brandAwareness),
-                  },
-                ]
-              : []),
-            ...(willingPct != null
-              ? [
-                  {
-                    label: "Purchase intent",
-                    value: fmtPct(willingPct),
-                    tone: "sky" as const,
-                    delta: computeDelta(m.purchaseIntent, cmp.purchaseIntent),
-                  },
-                ]
-              : []),
-            // Multi-packs tile only when the tenant actually breaks sales into
-            // packs — otherwise it's a permanently-empty tile for bread/etc.
-            ...(hasUnitBreakdown
-              ? [
-                  {
-                    label: "Multi-packs sold",
-                    value: fmtNum(multi),
-                    tone: "gold" as const,
-                    sub: multi ? `≈ ${fmtNum(packCans)} cans` : null,
-                  },
-                ]
-              : []),
-            {
-              label: "Events run",
-              value: fmtNum(m.totalEvents),
-              tone: "purple",
-              delta: computeDelta(m.totalEvents, cmp.totalEvents),
-            },
-          ];
-          const toneColor: Record<string, string> = {
-            lime: "var(--spark-lime)",
-            sky: "var(--spark-sky)",
-            gold: "var(--spark-gold)",
-            purple: "var(--spark-purple)",
-          };
-          return (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              {tiles.map((t) => (
-                <div
-                  key={t.label}
-                  className="spark-card rounded-2xl px-4 py-4"
-                  style={{
-                    background:
-                      "linear-gradient(180deg, rgba(197,245,70,0.04), transparent 60%)",
-                    borderTop: `2px solid ${toneColor[t.tone ?? "lime"]}`,
-                  }}
-                >
-                  <p
-                    className="mono text-[9px]"
-                    style={{
-                      letterSpacing: "0.18em",
-                      color: "rgba(255,255,255,0.55)",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {t.label}
-                  </p>
-                  <p
-                    className="display tab-num font-bold mt-1.5"
-                    style={{
-                      fontSize: "clamp(1.5rem, 3.2vw, 2rem)",
-                      letterSpacing: "-0.03em",
-                      lineHeight: 1.05,
-                      color: "var(--spark-text)",
-                    }}
-                  >
-                    {t.value}
-                  </p>
-                  {t.sub && (
-                    <p
-                      className="mono text-[10px] mt-1"
-                      style={{ color: "rgba(255,255,255,0.45)" }}
-                    >
-                      {t.sub}
-                    </p>
-                  )}
-                  {t.delta && (
-                    <p
-                      className="mono text-[10px] mt-1"
-                      style={{
-                        letterSpacing: "0.04em",
-                        color: t.delta.positive
-                          ? "var(--spark-lime)"
-                          : "var(--spark-orange)",
-                      }}
-                    >
-                      {t.delta.positive ? "▲" : "▼"} {t.delta.text}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          );
-        })()}
+        {/* Program analytics stay below the work-home strip. Chart.js
+            widgets lazy-load only when this section mounts — Recaps
+            routes never pull them. */}
+
 
         {/* Aggregated program KPIs + 12-month trend for the active tenant.
             Scoped to useAuthStore().tenantId (same id the Ask-AI button
@@ -1152,6 +782,15 @@ export default function DashboardIndex() {
           )}
         </div>
       </div>
+  );
+}
+
+export default function DashboardIndex() {
+  return (
+    <Layout>
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardInner />
+      </Suspense>
     </Layout>
   );
 }

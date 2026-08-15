@@ -9,7 +9,8 @@ on:
 # Background — why this workflow is shaped the way it is:
 #
 # `firebase.json` defines two hosting blocks (target "admin" →
-# spark-new-admin.web.app, target "client" → spark-new-client.web.app).
+# Firebase site spark-new-admin, public host admin.igniteproductions.co;
+# target "client" → spark-new-client / spark.igniteproductions.co).
 # The resource → target mapping lives in `.firebaserc` keyed by
 # project ID. The first CI fix attempt (just naming the targets in
 # `--only hosting:admin / hosting:client`) still failed with:

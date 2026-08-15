@@ -6,6 +6,7 @@ import type { TenantQuery as TenantQueryType } from "@api/queries/__generated__/
 import environment from "@api/relay/environment";
 import { useAuthStore } from "@store/authStore";
 import { useTenantSelection } from "@/hooks/useTenantSelection";
+import { AppShellSkeleton } from "@/layout/PageSkeletons";
 
 interface TenantRouteProps {
   component: ReactElement;
@@ -91,22 +92,7 @@ export default function TenantRoute({ component }: TenantRouteProps) {
   }, [tenantUuid, user?.uuid, selectTenant, logout, navigate]);
 
   if (resolving) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: "var(--spark-bg, #0a0d09)" }}
-      >
-        <div
-          className="text-xs mono"
-          style={{
-            letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
-          }}
-        >
-          LOADING…
-        </div>
-      </div>
-    );
+    return <AppShellSkeleton />;
   }
 
   if (noTenants) {

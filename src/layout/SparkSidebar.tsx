@@ -87,7 +87,7 @@ type NavSection = {
 // recaps, reports, and the inbox to message Ignite.
 const SECTIONS: NavSection[] = [
   {
-    title: "Workspace",
+    title: "Today",
     items: [
       {
         label: "Dashboard",
@@ -98,15 +98,15 @@ const SECTIONS: NavSection[] = [
       { label: "Today", Icon: Radio, to: "/today" },
       { label: "Upcoming", Icon: CalendarRange, to: "/upcoming" },
       {
-        label: "Staffing Board",
-        Icon: LayoutGrid,
-        to: "/schedule",
-        adminOnly: true,
-      },
-      {
         label: "On the Clock",
         Icon: Clock,
         to: "/live-board",
+        adminOnly: true,
+      },
+      {
+        label: "Staffing Board",
+        Icon: LayoutGrid,
+        to: "/schedule",
         adminOnly: true,
       },
       {
@@ -115,6 +115,40 @@ const SECTIONS: NavSection[] = [
         to: "/event-confirmation",
         adminOnly: true,
       },
+    ],
+  },
+  {
+    title: "Recaps",
+    items: [
+      {
+        label: "Recaps",
+        Icon: FileText,
+        to: "/recaps/list",
+        clientLabel: "My Recaps",
+      },
+      {
+        label: "Missing Recaps",
+        Icon: FileText,
+        to: "/recaps/missing",
+        adminOnly: true,
+      },
+      {
+        label: "Receipts",
+        Icon: Receipt,
+        to: "/receipts",
+        adminOnly: true,
+      },
+      {
+        label: "Master Tracker",
+        Icon: ListChecks,
+        to: "/requests/list",
+        clientLabel: "Master Tracker",
+      },
+    ],
+  },
+  {
+    title: "Workspace",
+    items: [
       {
         label: "Timesheet",
         Icon: Receipt,
@@ -127,54 +161,14 @@ const SECTIONS: NavSection[] = [
         to: "/campaign-cost",
         adminOnly: true,
       },
-      // Jobs moved up from TALENT — it's a primary day-to-day staffing
-      // workflow, not a back-office talent tool. Same /jobs route + icon.
       { label: "Jobs", Icon: Hammer, to: "/jobs", adminOnly: true },
       {
-        // Visible to clients too — the page uses the tenant-scoped
-        // RequestsQuery and no admin-only fields, and the backend forces
-        // clients to their own tenant, so it's safe to expose.
         label: "Recent submissions",
         Icon: Inbox,
         to: "/recent",
         clientLabel: "Recent Submissions",
       },
-      // Chat lives in WORKSPACE (moved up from COMMUNICATION) — it's a
-      // day-to-day BA-messaging surface, not a broadcast channel. Route,
-      // badge (wired by route below), and icon are unchanged.
-      // Admin-only: clients don't get the Chat surface.
       { label: "Chat", Icon: MessageCircle, to: "/chat", adminOnly: true },
-      {
-        label: "Master Tracker",
-        Icon: ListChecks,
-        to: "/requests/list",
-        // Clients see the Master Tracker under its real name (tenant-scoped
-        // by the backend to their own requests).
-        clientLabel: "Master Tracker",
-      },
-      {
-        label: "Recaps",
-        Icon: FileText,
-        to: "/recaps/list",
-        clientLabel: "My Recaps",
-      },
-      {
-        label: "Missing Recaps",
-        Icon: FileText,
-        to: "/recaps/missing",
-        // Client tenants don't typically nudge BAs — this is an
-        // ops/admin action. Hide on client surface.
-        adminOnly: true,
-      },
-      {
-        // Consumer receipt validation queue — admin-only. Distinct
-        // route from /recaps. Ops review consumer-submitted receipts
-        // here and mint per-event public upload links.
-        label: "Receipts",
-        Icon: Receipt,
-        to: "/receipts",
-        adminOnly: true,
-      },
       {
         label: "Walk-ups",
         Icon: QrCode,
@@ -189,27 +183,12 @@ const SECTIONS: NavSection[] = [
       },
       { label: "Calendar", Icon: Calendar, to: "/connect-calendar" },
       {
-        // Visible to clients too. The page's only data source is the
-        // tenant-scoped RequestsQuery; the backend forces a client to
-        // their own membership tenant (events/queries.py resolve_tenant_id
-        // → get_user_tenant → user.get_tenant), so the map can only ever
-        // show the client's own accounts. No cross-tenant / "all accounts"
-        // controls exist on the page, and the account uploader is
-        // client-side + per-tenant. Safe to expose.
         label: "Account Map",
         Icon: MapPin,
         to: "/account-map",
         clientLabel: "Account Map",
       },
       {
-        // Two surfaces behind one nav item, split by role:
-        //  - ADMINS → /approvals: the RMM request-approval QUEUE (bulk
-        //    approve/decline, decline-reason emails to requestors, SLA
-        //    tracking, "copy queue for Slack"). An ops action surface.
-        //  - CLIENTS → /my-approvals: a clean, list-only view of their
-        //    own recaps still awaiting sign-off, each linking to the
-        //    recap detail to review. No ops controls.
-        // clientTo/clientLabel are honored by NavRow below.
         label: "Approvals",
         Icon: CheckCircle2,
         to: "/approvals",
@@ -470,19 +449,7 @@ const SidebarNav: React.FC<{
         };
       }
       if (it.to === "/requests/list" && counts.tracker > 0) {
-        // Recap-due takes priority over the active-tracker count so
-        // ops sees "12 RECAPS DUE" (orange) before the calmer total.
-        // Falls back to the active count when no recaps are
-        // outstanding.
-        if (counts.recapsDue > 0) {
-          chip = {
-            text: `${counts.recapsDue} RECAP${counts.recapsDue === 1 ? "" : "S"} DUE`,
-            tone: "orange",
-            blink: counts.recapsDue > 5,
-          };
-        } else {
-          chip = { text: String(counts.tracker), tone: "lime" };
-        }
+        chip = { text: String(counts.tracker), tone: "lime" };
       }
       if (it.to === "/approvals" && counts.approvals > 0)
         chip = {
@@ -493,8 +460,12 @@ const SidebarNav: React.FC<{
           tone: counts.approvalsSlaBreach > 0 ? "orange" : "gold",
           blink: counts.approvalsSlaBreach > 0,
         };
-      if (it.to === "/recaps/list" && counts.done30d > 0)
-        chip = { text: String(counts.done30d), tone: "lime" };
+      if (it.to === "/recaps/list" && counts.recapsDue > 0)
+        chip = {
+          text: `${counts.recapsDue} DUE`,
+          tone: "orange",
+          blink: counts.recapsDue > 5,
+        };
       if (it.to === "/walkups" && counts.pendingWalkups > 0)
         chip = {
           // Walk-ups awaiting confirmation — gold (a review queue, not an
@@ -521,7 +492,10 @@ const SidebarNav: React.FC<{
             section={section}
             pathname={pathname}
             defaultOpen={
-              isClient || section.title === "Workspace" || activeInSection
+              isClient ||
+              section.title === "Today" ||
+              section.title === "Recaps" ||
+              activeInSection
             }
             onStub={onStub}
             isClient={isClient}
@@ -564,7 +538,10 @@ export const SparkSidebar: React.FC = () => {
             section={section}
             pathname={pathname}
             defaultOpen={
-              isClient || section.title === "Workspace" || activeInSection
+              isClient ||
+              section.title === "Today" ||
+              section.title === "Recaps" ||
+              activeInSection
             }
             onStub={onStub}
             isClient={isClient}

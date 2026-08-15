@@ -115,6 +115,8 @@ const loadSparkRequestEdit = () => import("@/requests/SparkRequestEdit");
 const loadSparkApprovals = () =>
   import("@/components/pages/approvals/SparkApprovals");
 const loadSparkRequestCreate = () => import("@/requests/SparkRequestCreate");
+const loadSparkRecapsList = () => import("@/recap/SparkRecapsList");
+const loadRecapCustomView = () => import("@/recap/RecapCustomView");
 
 const DashboardEvents = lazyDefault(loadDashboardEvents);
 const MasterTracker = lazyDefault(loadMasterTracker);
@@ -135,6 +137,8 @@ export function prefetchHotRoutes(): void {
     loadSparkRequestEdit().catch(() => {});
     loadSparkApprovals().catch(() => {});
     loadSparkRequestCreate().catch(() => {});
+    loadSparkRecapsList().catch(() => {});
+    loadRecapCustomView().catch(() => {});
   };
   if ("requestIdleCallback" in window) {
     window.requestIdleCallback(warm, { timeout: 4000 });
@@ -245,7 +249,7 @@ const EditRetailer = lazyNamed(
 
 // Recap (heaviest — pulls HEIC decoder via dynamic import)
 const RecapList = lazyDefault(() => import("@/recap/RecapsList"));
-const SparkRecapsList = lazyDefault(() => import("@/recap/SparkRecapsList"));
+const SparkRecapsList = lazyDefault(loadSparkRecapsList);
 const SparkRecapsMissing = lazyDefault(
   () => import("@/recap/SparkRecapsMissing"),
 );
@@ -272,7 +276,7 @@ const SparkRecapTemplateEdit = lazyDefault(
 );
 const RecapCustomList = lazyDefault(() => import("@/recap/RecapCustomList"));
 const RecapView = lazyDefault(() => import("@/recap/RecapView"));
-const RecapCustomView = lazyDefault(() => import("@/recap/RecapCustomView"));
+const RecapCustomView = lazyDefault(loadRecapCustomView);
 // Client-facing recap sign-off list (/my-approvals). The clean counterpart
 // to the admin /approvals ops queue — see SparkClientApprovals for why it's
 // list-only and how it's tenant-scoped.
@@ -434,6 +438,12 @@ const CampaignUpload = lazyDefault(
 const PublicCampaignReport = lazyDefault(
   () => import("@/public/reports/PublicCampaignReport"),
 );
+// Public, no-login shareable recap. The signed :token is the auth —
+// fetches GET /api/public/recap/<token>. Path is /r/:token so it
+// does not collide with /recap/list, /recap/create, /recap/view/:uuid.
+const PublicRecap = lazyDefault(
+  () => import("@/public/recaps/PublicRecap"),
+);
 // Public, no-login invoice page. The :token in the URL is the auth (no
 // tenant guard, like /c/:slug and /report/:token). Fetches the no-auth REST
 // invoice endpoint; renders a clean branded invoice + a Download-PDF button.
@@ -512,6 +522,11 @@ const PublicRoutes = {
     {
       path: "/report/:token",
       component: <PublicCampaignReport />,
+      isPublic: true,
+    },
+    {
+      path: "/r/:token",
+      component: <PublicRecap />,
       isPublic: true,
     },
     // Public, no-login invoice page. The :token is the auth (no tenant

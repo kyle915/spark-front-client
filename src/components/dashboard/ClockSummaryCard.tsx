@@ -19,13 +19,9 @@ import { useAuthStore } from "@/store/authStore";
  *   PAY WEEK  — end of week. Hours per BA for the current Mon–Sun, which is
  *               what gets approved and paid.
  *
- * Both are scoped to the active tenant, so this is Total Wireless' numbers
- * when Total Wireless is selected — nothing here is hardcoded to one client.
- *
- * No new backend: Today reads the same `liveShiftBoard` the On the Clock page
- * uses, Pay week the same `payrollTimesheet` behind Timesheet. Deliberate —
- * a summary that computes its own totals is a summary that will eventually
- * disagree with the page it summarises.
+ * Empty boards render nothing — a "No shifts on the board" card is chrome
+ * without a next action. The On the Clock / Timesheet pages still exist
+ * in the sidebar when someone wants to look anyway.
  */
 
 const ymd = (d: Date): string => {
@@ -36,7 +32,6 @@ const ymd = (d: Date): string => {
 /** Monday of the week containing `d`, in local time. */
 const mondayOf = (d: Date): Date => {
   const out = new Date(d);
-  // getDay(): 0=Sun … 6=Sat. Sunday belongs to the week that just ended.
   const shift = (out.getDay() + 6) % 7;
   out.setDate(out.getDate() - shift);
   out.setHours(0, 0, 0, 0);
@@ -58,7 +53,6 @@ const fmtClock = (iso: string | null | undefined): string => {
   return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 };
 
-const card: React.CSSProperties = {};
 const label: React.CSSProperties = {
   fontSize: 11,
   letterSpacing: "0.14em",
@@ -67,18 +61,74 @@ const label: React.CSSProperties = {
 };
 const muted = "rgba(255,255,255,0.55)";
 
+type Tab = "today" | "week";
+
+const ClockFrame: React.FC<{
+  tab: Tab;
+  setTab: (t: Tab) => void;
+  weekLabel: string;
+  children: React.ReactNode;
+}> = ({ tab, setTab, weekLabel, children }) => (
+  <div className="spark-card p-5">
+    <div
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: 12,
+        flexWrap: "wrap",
+      }}
+    >
+      <div>
+        <p style={{ ...label, margin: 0 }}>Time clock</p>
+        <p style={{ fontSize: 13, color: muted, margin: "4px 0 0" }}>
+          {tab === "today"
+            ? "Who's working right now"
+            : `Hours this pay week · ${weekLabel}`}
+        </p>
+      </div>
+      <div style={{ display: "flex", gap: 6 }}>
+        {(["today", "week"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className="px-3 py-1.5 rounded-full text-xs font-semibold"
+            style={{
+              background: tab === t ? "var(--spark-lime)" : "transparent",
+              color: tab === t ? "#0a0d09" : "var(--spark-text)",
+              border: tab === t ? "none" : "1px solid var(--spark-border)",
+            }}
+          >
+            {t === "today" ? "Today" : "Pay week"}
+          </button>
+        ))}
+      </div>
+    </div>
+    {children}
+    <div style={{ marginTop: 14, display: "flex", gap: 14 }}>
+      <Link
+        to={tab === "today" ? "/live-board" : "/timesheet"}
+        style={{ fontSize: 12, color: "var(--spark-lime)", textDecoration: "none" }}
+      >
+        {tab === "today" ? "Open On the Clock →" : "Open Timesheet →"}
+      </Link>
+    </div>
+  </div>
+);
+
 // ── Today ───────────────────────────────────────────────────────────────────
-const TodayView: React.FC<{ tenantId: string }> = ({ tenantId }) => {
+const TodayView: React.FC<{
+  tenantId: string;
+  setTab: (t: Tab) => void;
+  weekLabel: string;
+}> = ({ tenantId, setTab, weekLabel }) => {
   const data = useLazyLoadQuery<LiveShiftBoardQueryType>(
     LiveShiftBoardQuery,
     { tenantId },
-    // Live board: always hit the network, a cached "who's on the clock" is
-    // worse than a spinner.
     { fetchPolicy: "network-only" },
   );
   const shifts = (data?.liveShiftBoard ?? []).filter(Boolean);
 
-  // Flatten to per-BA rows — the question is about people, not events.
   const rows = shifts.flatMap((s) =>
     (s.assigned ?? []).filter(Boolean).map((a) => ({
       key: `${s.eventUuid}:${a!.ambassadorUuid}`,
@@ -95,16 +145,10 @@ const TodayView: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const notIn = rows.filter((r) => !r.clockInAt);
   const totalToday = done.reduce((sum, r) => sum + Number(r.hours ?? 0), 0);
 
-  if (!rows.length) {
-    return (
-      <p style={{ fontSize: 13, color: muted, margin: "14px 0 0" }}>
-        No shifts on the board today.
-      </p>
-    );
-  }
+  if (!rows.length) return null;
 
   return (
-    <>
+    <ClockFrame tab="today" setTab={setTab} weekLabel={weekLabel}>
       <div style={{ display: "flex", gap: 26, margin: "14px 0 4px", flexWrap: "wrap" }}>
         <Stat value={String(onClock.length)} unit="on the clock" live={onClock.length > 0} />
         <Stat value={fmtHours(totalToday)} unit="logged today" />
@@ -133,16 +177,18 @@ const TodayView: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           +{rows.length - 8} more
         </p>
       ) : null}
-    </>
+    </ClockFrame>
   );
 };
 
 // ── Pay week ────────────────────────────────────────────────────────────────
-const WeekView: React.FC<{ tenantId: string; start: string; end: string }> = ({
-  tenantId,
-  start,
-  end,
-}) => {
+const WeekView: React.FC<{
+  tenantId: string;
+  start: string;
+  end: string;
+  setTab: (t: Tab) => void;
+  weekLabel: string;
+}> = ({ tenantId, start, end, setTab, weekLabel }) => {
   const data = useLazyLoadQuery<PayrollTimesheetQueryType>(
     PayrollTimesheetQuery,
     { startDate: start, endDate: end, tenantId },
@@ -151,19 +197,13 @@ const WeekView: React.FC<{ tenantId: string; start: string; end: string }> = ({
   const sheet = data?.payrollTimesheet;
   const rows = (sheet?.rows ?? []).filter(Boolean);
 
-  if (!rows.length) {
-    return (
-      <p style={{ fontSize: 13, color: muted, margin: "14px 0 0" }}>
-        No hours logged this week yet.
-      </p>
-    );
-  }
+  if (!rows.length) return null;
 
   const sorted = [...rows].sort((a, b) => Number(b!.hours ?? 0) - Number(a!.hours ?? 0));
   const needsReview = rows.filter((r) => r!.needsReview).length;
 
   return (
-    <>
+    <ClockFrame tab="week" setTab={setTab} weekLabel={weekLabel}>
       <div style={{ display: "flex", gap: 26, margin: "14px 0 4px", flexWrap: "wrap" }}>
         <Stat value={fmtHours(sheet?.totalHours)} unit="total hours" />
         <Stat value={String(rows.length)} unit={rows.length === 1 ? "BA" : "BAs"} />
@@ -185,7 +225,7 @@ const WeekView: React.FC<{ tenantId: string; start: string; end: string }> = ({
           +{rows.length - 8} more
         </p>
       ) : null}
-    </>
+    </ClockFrame>
   );
 };
 
@@ -293,7 +333,7 @@ const Row: React.FC<{
 // ── Card ────────────────────────────────────────────────────────────────────
 const ClockSummaryCard: React.FC = () => {
   const { tenantId } = useAuthStore();
-  const [tab, setTab] = useState<"today" | "week">("today");
+  const [tab, setTab] = useState<Tab>("today");
 
   const { start, end, weekLabel } = useMemo(() => {
     const now = new Date();
@@ -308,67 +348,19 @@ const ClockSummaryCard: React.FC = () => {
   if (!tenantId) return null;
 
   return (
-    <div className="spark-card p-5">
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <div>
-          <p style={{ ...label, margin: 0 }}>Time clock</p>
-          <p style={{ fontSize: 13, color: muted, margin: "4px 0 0" }}>
-            {tab === "today"
-              ? "Who's working right now"
-              : `Hours this pay week · ${weekLabel}`}
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          {(["today", "week"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className="px-3 py-1.5 rounded-full text-xs font-semibold"
-              style={{
-                background: tab === t ? "var(--spark-lime)" : "transparent",
-                color: tab === t ? "#0a0d09" : "var(--spark-text)",
-                border: tab === t ? "none" : "1px solid var(--spark-border)",
-              }}
-            >
-              {t === "today" ? "Today" : "Pay week"}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={card}>
-        {/* Each tab owns its Suspense so switching shows a small placeholder
-            instead of blanking the whole card. */}
-        <Suspense
-          fallback={
-            <p style={{ fontSize: 13, color: muted, margin: "14px 0 0" }}>Loading…</p>
-          }
-        >
-          {tab === "today" ? (
-            <TodayView tenantId={tenantId} />
-          ) : (
-            <WeekView tenantId={tenantId} start={start} end={end} />
-          )}
-        </Suspense>
-      </div>
-
-      <div style={{ marginTop: 14, display: "flex", gap: 14 }}>
-        <Link
-          to={tab === "today" ? "/live-board" : "/timesheet"}
-          style={{ fontSize: 12, color: "var(--spark-lime)", textDecoration: "none" }}
-        >
-          {tab === "today" ? "Open On the Clock →" : "Open Timesheet →"}
-        </Link>
-      </div>
-    </div>
+    <Suspense fallback={null}>
+      {tab === "today" ? (
+        <TodayView tenantId={tenantId} setTab={setTab} weekLabel={weekLabel} />
+      ) : (
+        <WeekView
+          tenantId={tenantId}
+          start={start}
+          end={end}
+          setTab={setTab}
+          weekLabel={weekLabel}
+        />
+      )}
+    </Suspense>
   );
 };
 

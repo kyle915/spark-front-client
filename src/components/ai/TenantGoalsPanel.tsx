@@ -31,9 +31,9 @@ import { useAlertStore } from "@/store/alertStore";
  * lazy-loaded dashboard cards) so it loads the data the app's usual way and
  * doesn't block first paint.
  *
- * Dark-theme styled to match <TenantKpiCharts> and <TenantInsightsPanel>. The
- * empty / zero-targets state still renders every row (with "Set a target") plus
- * the Edit button, so the user can set targets from here.
+ * Dark-theme styled to match <TenantKpiCharts> and <TenantInsightsPanel>.
+ * When no targets are set, the four empty "Set a target" rows stay hidden
+ * and we show one next-action instead of a hollow card.
  */
 
 // The four goal-tracked metric slugs, in the order we render them, each mapped
@@ -410,6 +410,53 @@ const TenantGoalsPanel: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   if (!goals) return null;
 
   const year = goals.year;
+  const hasAnyTarget = rows.some((item) => item.target > 0);
+
+  // No targets → one next action, not four empty "Set a target" rows.
+  if (!hasAnyTarget) {
+    return (
+      <>
+        <div
+          className="spark-card p-5 flex items-center justify-between gap-4 flex-wrap"
+          style={{ borderRadius: 18 }}
+        >
+          <div>
+            <h2
+              className="display text-lg font-bold"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              Goals
+            </h2>
+            <p
+              className="text-sm mt-1"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              No targets set for {year}.
+            </p>
+          </div>
+          <button
+            onClick={() => setEditing(true)}
+            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+            }}
+          >
+            Set this year's targets
+          </button>
+        </div>
+        {editing && (
+          <EditGoalsModal
+            tenantId={tenantId}
+            year={year}
+            items={rows}
+            onClose={() => setEditing(false)}
+            onSaved={() => setFetchKey((k) => k + 1)}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="spark-card p-6 lg:p-8" style={{ borderRadius: 22 }}>
@@ -442,22 +489,11 @@ const TenantGoalsPanel: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         </div>
       </div>
 
-      {rows.length === 0 ? (
-        // No items at all from the backend — still let the user open the modal
-        // to set targets for the four tracked metrics.
-        <p
-          className="text-sm py-10 text-center"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          No goals set yet. Use “Edit goals” to set this year's targets.
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {rows.map((item) => (
-            <PaceRow key={item.metric} item={item} />
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {rows.map((item) => (
+          <PaceRow key={item.metric} item={item} />
+        ))}
+      </div>
 
       {editing && (
         <EditGoalsModal

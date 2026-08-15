@@ -7,6 +7,7 @@ export const GetCustomRecapsQuery = graphql`
     $last: Int
     $before: String
     $filters: CustomRecapFiltersInput
+    $q: String
   ) {
     customRecaps(
       first: $first
@@ -14,6 +15,7 @@ export const GetCustomRecapsQuery = graphql`
       last: $last
       before: $before
       filters: $filters
+      q: $q
     ) {
       totalCount
       pageInfo {
@@ -31,45 +33,23 @@ export const GetCustomRecapsQuery = graphql`
           submittedAt
           createdAt
           totalEngagements
-          fillingForAmbassador
-          late
-          incomplete
           approved
-          usedCorpoCard
+          shareToken
+          sharedAt
           event {
-            id
             name
             date
-            # Needed for the state filter: custom-recap tenants (Feel Free)
-            # file address-only events with no State FK, so we parse the
-            # 2-letter code out of the address client-side (toStateCode).
-            address
-            state {
-              code
-            }
           }
+          eventDate
+          eventAddress
+          eventRetailer
+          eventState
           ambassador {
             id
             user {
               firstName
               lastName
             }
-          }
-          job {
-            id
-            name
-          }
-          retailer {
-            id
-            name
-          }
-          location {
-            id
-            name
-          }
-          state {
-            id
-            name
           }
           customRecapTemplate {
             id
@@ -109,6 +89,11 @@ export const GetCustomRecapQuery = graphql`
       late
       incomplete
       approved
+      shareToken
+      sharedAt
+      clientSignoffStatus
+      clientSignoffComment
+      clientSignoffAt
       usedCorpoCard
       # Linked-event location, walked server-side from the recap's event
       # (and its request/retailer/location/state). The recap's own
@@ -136,19 +121,15 @@ export const GetCustomRecapQuery = graphql`
       }
       externalBaName
       job {
-        id
         name
       }
       retailer {
-        id
         name
       }
       location {
-        id
         name
       }
       state {
-        id
         name
       }
       customRecapTemplate {
@@ -173,7 +154,6 @@ export const GetCustomRecapQuery = graphql`
           image
         }
         typeOfGood {
-          id
           name
         }
       }
@@ -187,11 +167,9 @@ export const GetCustomRecapQuery = graphql`
         displayUrl
         approved
         fileRecapCategory {
-          id
           name
         }
         fileType {
-          id
           name
         }
       }
@@ -208,7 +186,6 @@ export const GetCustomRecapQuery = graphql`
         # control in inline-edit mode instead of a text input — see
         # RecapCustomView (mirrors SparkRecapCreate's fieldKind()).
         customFieldType {
-          id
           name
         }
         # ID of the CustomFieldValue row tying this template field to
@@ -217,10 +194,24 @@ export const GetCustomRecapQuery = graphql`
         # without having to look it up by (recapId, fieldId).
         customFieldValueId
         recapSection {
-          id
           name
         }
       }
+    }
+  }
+`;
+
+/**
+ * Existence probe for the legacy /recap/view/:uuid route. Custom-template
+ * recaps live on a separate model, so SparkRecapView uses this (id + uuid
+ * only) to decide whether to redirect — not the full detail query, which
+ * would pull every file + template field just to bounce the user.
+ */
+export const CustomRecapExistsQuery = graphql`
+  query CustomRecapsQueryExistsQuery($uuid: ID) {
+    customRecap(uuid: $uuid) {
+      id
+      uuid
     }
   }
 `;

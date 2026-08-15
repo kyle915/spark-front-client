@@ -27,13 +27,12 @@ export const AddCustomRecapFileMutation = graphql`
           id
           name
           url
+          displayUrl
           approved
           fileRecapCategory {
-            id
             name
           }
           fileType {
-            id
             name
           }
         }

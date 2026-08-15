@@ -723,6 +723,27 @@ input ApproveCustomRecapInput {
   approved: Boolean!
 }
 
+input BulkApproveRecapsInput {
+  clientMutationId: ID = null
+  recapIds: [ID!] = null
+  customRecapIds: [ID!] = null
+  approved: Boolean = true
+}
+
+input MarkRecapsSharedInput {
+  clientMutationId: ID = null
+  recapIds: [ID!] = null
+  customRecapIds: [ID!] = null
+}
+
+input RecapClientSignoffInput {
+  clientMutationId: ID = null
+  recapId: ID = null
+  customRecapId: ID = null
+  status: String!
+  comment: String = null
+}
+
 input ApproveEventInput {
   clientMutationId: ID = null
   id: ID!
@@ -1543,7 +1564,8 @@ input ImportConnecteamRecapPdfInput {
   clientMutationId: ID = null
   eventId: ID!
   customRecapTemplateId: ID!
-  pdfBase64: String!
+  pdfGcsPath: String = null
+  pdfBase64: String = null
   name: String = null
 }
 
@@ -1564,7 +1586,19 @@ type ImportConnecteamRecapPdfResponse {
   matchedCount: Int!
   unmatchedCount: Int!
   imagesAttached: Int!
+  queued: Boolean!
+  jobId: String
   stats: [ImportConnecteamRecapPdfStat!]!
+}
+
+type ConnecteamImportJob {
+  jobId: String!
+  status: String!
+  message: String
+  customRecap: CustomRecap
+  matchedCount: Int!
+  unmatchedCount: Int!
+  imagesAttached: Int!
 }
 
 input ParseConnecteamRecapPdfInput {
@@ -2060,6 +2094,11 @@ type CustomRecap implements Node {
   late: Boolean!
   incomplete: Boolean!
   approved: Boolean!
+  shareToken: String!
+  sharedAt: String
+  clientSignoffStatus: String!
+  clientSignoffComment: String!
+  clientSignoffAt: String
   usedCorpoCard: Boolean!
   soldUnits: Int
   consumersSampled: Int
@@ -2215,6 +2254,9 @@ input CustomRecapFiltersInput {
   approved: Boolean = null
   edited: Boolean = null
   customRecapTemplateId: ID = null
+  retailerName: String = null
+  stateCode: String = null
+  shared: Boolean = null
 }
 
 """
@@ -4015,6 +4057,9 @@ type Mutation {
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
+  bulkApproveRecaps(input: BulkApproveRecapsInput!): BulkRecapsResponse!
+  markRecapsShared(input: MarkRecapsSharedInput!): BulkRecapsResponse!
+  submitRecapClientSignoff(input: RecapClientSignoffInput!): RecapClientSignoffResponse!
   declineCustomRecap(input: DeclineCustomRecapInput!): CustomRecapDetailResponse!
   generateRecapPdf(input: GenerateRecapPdfInput!): RecapFileDetailResponse!
   generateCampaignReportPdf(input: GenerateCampaignReportPdfInput!): RecapExportResponse!
@@ -4776,6 +4821,7 @@ type Query {
   ambassadorsBookedOnDate(onDate: String!, tenantId: ID = null): [ID!]!
   favoriteAmbassadors(tenantId: ID = null): [TenantFavoriteAmbassador!]!
   customRecaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: CustomRecapFiltersInput = null): CustomRecapCountableConnection!
+  connecteamImportJob(jobId: String!): ConnecteamImportJob
   customRecap(id: ID = null, uuid: ID = null): CustomRecap
   typeOfGoods(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: TypeOfGoodFiltersInput = null): TypeOfGoodCountableConnection!
   typeOfGood(id: ID = null, uuid: ID = null): TypeOfGood
@@ -5054,6 +5100,11 @@ type Recap implements Node {
   uuid: String!
   name: String!
   approved: Boolean!
+  shareToken: String!
+  sharedAt: String
+  clientSignoffStatus: String!
+  clientSignoffComment: String!
+  clientSignoffAt: String
   fillingForAmbassador: Boolean!
   event: Event!
   eventId: ID!
@@ -5069,6 +5120,7 @@ type Recap implements Node {
   state: State
   createdAt: String!
   updatedAt: String!
+  submittedAt: String
   totalEngagements: Int
   productsSold: Int
   totalCansSold: Int
@@ -5089,6 +5141,11 @@ type Recap implements Node {
   heroFile: RecapFile
   ambassadors: [Ambassador!]! @deprecated(reason: "Use ambassador instead.")
   requestStoreManagers: [RequestStoreManager!]!
+  eventDate: String
+  eventRetailer: String
+  eventState: String
+  requestUuid: String
+  requestTypeName: String
 }
 
 type RecapComparisonValues {
@@ -5152,6 +5209,21 @@ type RecapDetailResponse {
   message: String!
   clientMutationId: ID
   recap: Recap
+}
+
+type BulkRecapsResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  updatedCount: Int!
+}
+
+type RecapClientSignoffResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  recap: Recap
+  customRecap: CustomRecap
 }
 
 type RecapExportResponse {
@@ -5222,6 +5294,9 @@ input RecapFiltersInput {
   eventAddress: String = null
   approved: Boolean = null
   edited: Boolean = null
+  retailerName: String = null
+  stateCode: String = null
+  shared: Boolean = null
 }
 
 type RecapGlobalKPIByRMM {

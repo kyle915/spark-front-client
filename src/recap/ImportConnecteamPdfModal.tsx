@@ -12,6 +12,12 @@ import { RecapEventOptionsQuery } from "@/api/queries/RecapEventOptionsQuery";
 import type { RecapEventOptionsQuery as RecapEventOptionsQueryType } from "@api/queries/__generated__/RecapEventOptionsQuery.graphql";
 import { CustomRecapTemplatesQuery } from "@/api/queries/CustomRecapTemplatesQuery";
 import type { CustomRecapTemplatesQuery as CustomRecapTemplatesQueryType } from "@api/queries/__generated__/CustomRecapTemplatesQuery.graphql";
+import { fetchQuery } from "relay-runtime";
+import environment from "@/api/relay/environment";
+import { GetUploadUrlQuery } from "@/api/queries/GetUploadUrlQuery";
+import type { GetUploadUrlQuery as GetUploadUrlQueryType } from "@api/queries/__generated__/GetUploadUrlQuery.graphql";
+import { ConnecteamImportJobQuery } from "@/api/queries/ConnecteamImportJobQuery";
+import type { ConnecteamImportJobQuery as ConnecteamImportJobQueryType } from "@api/queries/__generated__/ConnecteamImportJobQuery.graphql";
 import { ImportConnecteamRecapPdfMutation } from "@/api/mutations/ImportConnecteamRecapPdfMutation";
 import type { ImportConnecteamRecapPdfMutation as ImportConnecteamRecapPdfMutationType } from "@api/mutations/__generated__/ImportConnecteamRecapPdfMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
@@ -98,8 +104,11 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
   const [eventId, setEventId] = useState<string | null>(null);
   const [eventLabel, setEventLabel] = useState<string>("");
   const [templateId, setTemplateId] = useState<string | null>(null);
-  const [fileBase64, setFileBase64] = useState<string | null>(null);
+  const [pickedFile, setPickedFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [uploadPhase, setUploadPhase] = useState<
+    "idle" | "uploading" | "importing"
+  >("idle");
   // Optional recap title. Pre-filled from the picked event so imports
   // aren't all named the backend default ("Imported from Connecteam ·
   // <date>") — Kyle's report: a recap list of identical titles is messy.
@@ -379,71 +388,126 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
       showAlert("File must be a PDF.", "warning");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result || "");
-      // data:application/pdf;base64,<...>  →  strip the prefix.
-      const comma = dataUrl.indexOf(",");
-      if (comma < 0) {
-        showAlert("Couldn't read the PDF — try a different file.", "error");
-        return;
-      }
-      setFileBase64(dataUrl.slice(comma + 1));
-      setFileName(file.name);
-    };
-    reader.onerror = () =>
-      showAlert("Couldn't read the PDF — try a different file.", "error");
-    reader.readAsDataURL(file);
+    setPickedFile(file);
+    setFileName(file.name);
   };
 
-  const onSubmit = () => {
-    if (!eventId || !templateId || !fileBase64) {
+  const finishImport = (
+    uuid: string | null | undefined,
+    matchedCount: number,
+    unmatchedCount: number,
+    imagesAttached: number,
+  ) => {
+    if (!uuid) {
+      showAlert("Imported but recap UUID missing.", "warning");
+      return;
+    }
+    showAlert(
+      `Imported · ${matchedCount} mapped, ${unmatchedCount} unmatched` +
+        (imagesAttached
+          ? `, ${imagesAttached} photo(s)`
+          : " · no photos found in PDF") +
+        ".",
+      "success",
+    );
+    const query = imagesAttached === 0 ? "?needPhotos=1" : "";
+    navigate(`/recap/view-custom/${uuid}${query}`);
+    onImported?.(String(uuid));
+  };
+
+  const pollImportJob = async (jobId: string) => {
+    const deadline = Date.now() + 180_000;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const data = await fetchQuery<ConnecteamImportJobQueryType>(
+        environment,
+        ConnecteamImportJobQuery,
+        { jobId },
+      ).toPromise();
+      const job = data?.connecteamImportJob;
+      if (!job) continue;
+      if (job.status === "done") {
+        finishImport(
+          job.customRecap?.uuid,
+          job.matchedCount ?? 0,
+          job.unmatchedCount ?? 0,
+          job.imagesAttached ?? 0,
+        );
+        return;
+      }
+      if (job.status === "error") {
+        showAlert(job.message ?? "Couldn't import PDF.", "error");
+        return;
+      }
+    }
+    showAlert("Import is still running — check Recaps in a minute.", "warning");
+  };
+
+  const onSubmit = async () => {
+    if (!eventId || !templateId || !pickedFile) {
       showAlert("Pick an event, a template, and a PDF first.", "warning");
       return;
     }
-    if (isImporting) return;
+    if (isImporting || uploadPhase !== "idle") return;
 
-    commit({
-      variables: {
-        input: {
-          eventId,
-          customRecapTemplateId: templateId,
-          pdfBase64: fileBase64,
-          // Blank falls back to the backend's event-based default name.
-          name: title.trim() || null,
+    try {
+      setUploadPhase("uploading");
+      const stamp = Date.now();
+      const safe = pickedFile.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
+      const filePath = `connecteam-imports/${stamp}-${safe}`;
+      const uploadData = await fetchQuery<GetUploadUrlQueryType>(
+        environment,
+        GetUploadUrlQuery,
+        { filePath, contentType: "application/pdf" },
+      ).toPromise();
+      const uploadUrl = uploadData?.getUploadUrl?.uploadUrl;
+      const blobName = uploadData?.getUploadUrl?.blobName ?? filePath;
+      if (!uploadUrl) throw new Error("No signed upload URL returned");
+      const put = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "application/pdf" },
+        body: pickedFile,
+      });
+      if (!put.ok) throw new Error(`Upload failed (${put.status})`);
+
+      setUploadPhase("importing");
+      commit({
+        variables: {
+          input: {
+            eventId,
+            customRecapTemplateId: templateId,
+            pdfGcsPath: blobName,
+            name: title.trim() || null,
+          },
         },
-      },
-      onCompleted: (res) => {
-        const r = res.importConnecteamRecapPdf;
-        if (!r?.success) {
-          showAlert(r?.message ?? "Couldn't import PDF.", "error");
-          return;
-        }
-        const uuid = r.customRecap?.uuid;
-        if (!uuid) {
-          showAlert("Imported but recap UUID missing.", "warning");
-          return;
-        }
-        const imagesAttached = r.imagesAttached ?? 0;
-        showAlert(
-          `Imported · ${r.matchedCount} mapped, ${r.unmatchedCount} unmatched` +
-            (imagesAttached
-              ? `, ${imagesAttached} photo(s)`
-              : " · no photos found in PDF") +
-            ".",
-          "success",
-        );
-        // Open the freshly-drafted recap so the admin can review, edit, and
-        // approve it right away instead of landing back on the recap list.
-        // When the PDF carried no photos, flag it so the recap view drops
-        // them straight into the photo-upload workflow.
-        const query = imagesAttached === 0 ? "?needPhotos=1" : "";
-        navigate(`/recap/view-custom/${uuid}${query}`);
-        // Refresh the list behind us so it's current if they navigate back.
-        onImported?.(String(uuid));
-      },
-      onError: (err) => showAlert(err.message, "error"),
-    });
+        onCompleted: (res) => {
+          const r = res.importConnecteamRecapPdf;
+          if (!r?.success) {
+            setUploadPhase("idle");
+            showAlert(r?.message ?? "Couldn't import PDF.", "error");
+            return;
+          }
+          if (r.queued && r.jobId) {
+            void pollImportJob(r.jobId).finally(() => setUploadPhase("idle"));
+            return;
+          }
+          setUploadPhase("idle");
+          finishImport(
+            r.customRecap?.uuid,
+            r.matchedCount ?? 0,
+            r.unmatchedCount ?? 0,
+            r.imagesAttached ?? 0,
+          );
+        },
+        onError: (err) => {
+          setUploadPhase("idle");
+          showAlert(err.message, "error");
+        },
+      });
+    } catch (err) {
+      setUploadPhase("idle");
+      showAlert((err as Error).message || "Upload failed.", "error");
+    }
   };
 
   return (
@@ -930,7 +994,12 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                     className="text-xs mt-1"
                     style={{ color: "rgba(197,245,70,0.85)" }}
                   >
-                    {fileName} · ready to upload
+                    {fileName}
+                    {uploadPhase === "uploading"
+                      ? " · uploading…"
+                      : uploadPhase === "importing"
+                        ? " · importing…"
+                        : " · ready"}
                   </p>
                 )}
               </div>
@@ -982,16 +1051,24 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
           <button
             type="button"
             className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
-            disabled={isImporting || !eventId || !templateId || !fileBase64}
+            disabled={
+              isImporting ||
+              uploadPhase !== "idle" ||
+              !eventId ||
+              !templateId ||
+              !pickedFile
+            }
             style={{
               background: "var(--spark-lime, #c5f546)",
               color: "#0a0d09",
             }}
             onClick={onSubmit}
           >
-            {isImporting
-              ? "Importing…"
-              : eventLabel
+            {uploadPhase === "uploading"
+              ? "Uploading…"
+              : isImporting || uploadPhase === "importing"
+                ? "Importing…"
+                : eventLabel
                 ? `Import → ${eventLabel.slice(0, 28)}${eventLabel.length > 28 ? "…" : ""}`
                 : "Import PDF"}
           </button>

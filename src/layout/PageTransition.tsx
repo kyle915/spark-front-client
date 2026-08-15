@@ -29,14 +29,16 @@ const pageVariants: Variants = {
 export const PageTransition = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
 
+  // No mode="wait": waiting for the exit animation unmounts the page
+  // (and its Layout) before the next route paints, which is what made
+  // navigations flash a blank/LOADING screen for seconds.
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence>
       <motion.div
         key={location.pathname}
         variants={pageVariants}
         initial="initial"
         animate="animate"
-        exit="exit"
       >
         {children}
       </motion.div>

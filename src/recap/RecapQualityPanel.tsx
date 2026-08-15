@@ -1,4 +1,4 @@
-import { Component, type ReactNode, useMemo } from "react";
+import { Component, type ReactNode, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { RecapQualityFlagsQuery } from "@/api/queries/RecapQualityFlagsQuery";
 import type { RecapQualityFlagsQuery as RecapQualityFlagsQueryType } from "@api/queries/__generated__/RecapQualityFlagsQuery.graphql";
@@ -187,10 +187,31 @@ class QuietBoundary extends Component<
 const RecapQualityPanel: React.FC<{
   recapId: string;
   isCustom: boolean;
-}> = ({ recapId, isCustom }) => (
-  <QuietBoundary>
-    <RecapQualityPanelInner recapId={recapId} isCustom={isCustom} />
-  </QuietBoundary>
-);
+}> = ({ recapId, isCustom }) => {
+  // Don't fire the quality query until the recap body has had a chance
+  // to paint. Liquid Death detail was waiting on this extra round-trip
+  // (and its JS) before photos appeared.
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let idleId: number | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const ric = window.requestIdleCallback;
+    if (typeof ric === "function") {
+      idleId = ric(() => setReady(true), { timeout: 1800 });
+    } else {
+      timeoutId = setTimeout(() => setReady(true), 350);
+    }
+    return () => {
+      if (idleId != null) window.cancelIdleCallback(idleId);
+      if (timeoutId != null) clearTimeout(timeoutId);
+    };
+  }, []);
+  if (!ready) return null;
+  return (
+    <QuietBoundary>
+      <RecapQualityPanelInner recapId={recapId} isCustom={isCustom} />
+    </QuietBoundary>
+  );
+};
 
 export default RecapQualityPanel;

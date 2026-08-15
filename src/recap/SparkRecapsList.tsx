@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Link, useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
+import { RecapsListSkeleton } from "@/layout/PageSkeletons";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
 import { thumbUrl } from "@/utils/thumb";
 import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/RecapsQuery.graphql";
@@ -18,10 +19,15 @@ import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
 import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import { GenerateCampaignReportPdfMutation } from "@/api/mutations/GenerateCampaignReportPdfMutation";
 import type { GenerateCampaignReportPdfMutation as GenerateCampaignReportPdfMutationType } from "@api/mutations/__generated__/GenerateCampaignReportPdfMutation.graphql";
+import { BulkApproveRecapsMutation } from "@/api/mutations/BulkApproveRecapsMutation";
+import type { BulkApproveRecapsMutation as BulkApproveRecapsMutationType } from "@api/mutations/__generated__/BulkApproveRecapsMutation.graphql";
+import { MarkRecapsSharedMutation } from "@/api/mutations/MarkRecapsSharedMutation";
+import type { MarkRecapsSharedMutation as MarkRecapsSharedMutationType } from "@api/mutations/__generated__/MarkRecapsSharedMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { recapFileUrl } from "@/utils/recapFileUrl";
+import { shareRecapLink } from "@/utils/recapShare";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import EmailCampaignReportModal from "./EmailCampaignReportModal";
 import ImportConnecteamButton from "./ImportConnecteamButton";
@@ -142,20 +148,10 @@ type Recap = {
   // to a request or the request type hasn't been set. Surfaced in
   // the CSV export so client reports can group by activation type.
   requestType: string | null;
+  shareToken: string | null;
+  sharedAt: string | null;
 };
 
-// Compute a 0-3 completeness score from the signals already in the
-// list query so the card can flag thin recaps without an extra
-// round-trip. Skips approval as a signal (admins approve regardless
-// of completeness; that's a separate workflow).
-//
-// Score buckets:
-//   3 → all three present (engagements, products sold, photos)
-//   2 → "thin" but useful (some data + photos OR strong numbers)
-//   ≤1 → "sparse" — needs review before going to a client
-//
-// We only render the chip when score < 3 — full recaps don't need a
-// gold star, they just need to not get flagged.
 // CONV = products sold ÷ consumers SAMPLED (a sampling program's conversion is
 // sold-per-person-sampled, NOT sold-per-engagement). Falls back to engagements
 // for legacy recaps with no separate sampled count. `empty` is what to show
@@ -173,22 +169,6 @@ const conversionStr = (
   return `${Math.round((r.productsSold / base) * 100)}%`;
 };
 
-type QualityTier = "sparse" | "thin" | null;
-
-const recapQualityTier = (recap: {
-  engagements: number | null;
-  productsSold: number | null;
-  fileCount: number;
-}): QualityTier => {
-  let score = 0;
-  if ((recap.engagements ?? 0) > 0) score += 1;
-  if ((recap.productsSold ?? 0) > 0) score += 1;
-  if (recap.fileCount > 0) score += 1;
-  if (score >= 3) return null;
-  if (score <= 1) return "sparse";
-  return "thin";
-};
-
 const formatDate = (raw: string | null | undefined) => {
   if (!raw) return "";
   try {
@@ -200,6 +180,44 @@ const formatDate = (raw: string | null | undefined) => {
   } catch {
     return raw;
   }
+};
+
+const SlaHours: React.FC<{ since: string }> = ({ since }) => {
+  const ms = Date.now() - new Date(since).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  const hours = ms / 3_600_000;
+  const days = hours / 24;
+  const label = hours < 24 ? `${Math.max(1, Math.round(hours))}h since event` : `${Math.round(days)}d since event`;
+  const color = days > 9 ? "var(--spark-orange)" : hours > 3 ? "#f5c042" : "rgba(255,255,255,0.4)";
+  return (
+    <p className="mono text-[10px] mt-1" style={{ letterSpacing: "0.12em", color }} title="Time since the activation — 3h is the sell, not 9 days.">
+      {label}
+    </p>
+  );
+};
+
+const isoLocal = (d: Date) => {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+const daysAgoIso = (n: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return isoLocal(d);
+};
+const TODAY_ISO = isoLocal(new Date());
+const DAYS_30_ISO = daysAgoIso(30);
+const DAYS_90_ISO = daysAgoIso(90);
+
+const ghostBtn: React.CSSProperties = {
+  background: "transparent",
+  color: "var(--spark-text)",
+  border: "1px solid var(--spark-border)",
+};
+const limeBtn: React.CSSProperties = {
+  background: "var(--spark-lime)",
+  color: "#0a0d09",
+  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
 };
 
 const RecapCard: React.FC<{
@@ -216,7 +234,9 @@ const RecapCard: React.FC<{
   // parent owns the selected-set state; the card is dumb.
   selected: boolean;
   onToggleSelect: () => void;
-}> = ({ recap, href, onOpenRequest, selected, onToggleSelect }) => (
+  selectMode: boolean;
+  showSla: boolean;
+}> = ({ recap, href, onOpenRequest, selected, onToggleSelect, selectMode, showSla }) => (
   <div
     className="spark-card hov overflow-hidden cursor-pointer relative"
     style={
@@ -241,16 +261,17 @@ const RecapCard: React.FC<{
     {/* Checkbox sits above the hero so it's reachable without
         depending on row-level hover; tapping it doesn't open the
         recap. Lime when on so it pairs with the brand. */}
+    {(selectMode || selected) && (
     <label
       onClick={(e) => e.stopPropagation()}
-      className="absolute top-2 right-2 z-10 cursor-pointer"
+      className="absolute top-3 left-2 z-10 cursor-pointer"
       style={{
         background: "rgba(0,0,0,0.55)",
         border: "1px solid rgba(255,255,255,0.25)",
         borderRadius: 6,
         padding: "4px 6px",
       }}
-      title={selected ? "Remove from campaign report" : "Add to campaign report"}
+      title={selected ? "Deselect" : "Select"}
     >
       <input
         type="checkbox"
@@ -265,6 +286,7 @@ const RecapCard: React.FC<{
         }}
       />
     </label>
+    )}
     <div
       className="h-32 relative overflow-hidden"
       style={{
@@ -307,65 +329,6 @@ const RecapCard: React.FC<{
       >
         ● {recap.approved ? "APPROVED" : "DRAFT"}
       </span>
-      {(() => {
-        const tier = recapQualityTier(recap);
-        if (!tier) return null;
-        const cfg =
-          tier === "sparse"
-            ? {
-                bg: "rgba(239,90,42,0.18)",
-                fg: "var(--spark-orange)",
-                br: "rgba(239,90,42,0.5)",
-                label: "⚠ SPARSE",
-                title: "Missing 2+ key fields. Needs review before client export.",
-              }
-            : {
-                bg: "rgba(255,200,60,0.14)",
-                fg: "#f5c042",
-                br: "rgba(255,200,60,0.4)",
-                label: "◐ THIN",
-                title: "Missing one key field (numbers, samples, or photos).",
-              };
-        return (
-          <span
-            className="absolute mono"
-            style={{
-              top: 38, // sits just under the APPROVED/DRAFT chip
-              right: 8,
-              fontSize: 9,
-              letterSpacing: "0.16em",
-              padding: "2px 7px",
-              borderRadius: 999,
-              background: cfg.bg,
-              color: cfg.fg,
-              border: `1px solid ${cfg.br}`,
-            }}
-            title={cfg.title}
-          >
-            {cfg.label}
-          </span>
-        );
-      })()}
-      <span
-        className="absolute bottom-2 left-2 mono"
-        style={{
-          fontSize: 9,
-          letterSpacing: "0.14em",
-          padding: "2px 6px",
-          borderRadius: 999,
-          background:
-            recap.fileCount > 0
-              ? "rgba(197,245,70,0.15)"
-              : "rgba(239,90,42,0.15)",
-          color:
-            recap.fileCount > 0
-              ? "var(--spark-lime)"
-              : "var(--spark-orange)",
-          border: `1px solid ${recap.fileCount > 0 ? "rgba(197,245,70,0.35)" : "rgba(239,90,42,0.35)"}`,
-        }}
-      >
-        ◉ {recap.fileCount} FILE{recap.fileCount === 1 ? "" : "S"}
-      </span>
     </div>
 
     <div className="p-4">
@@ -390,25 +353,54 @@ const RecapCard: React.FC<{
         {recap.stateCode ? ` · ${recap.stateCode}` : ""}
         {recap.date ? ` · ${formatDate(recap.date)}` : ""}
       </p>
+      {showSla && recap.date ? <SlaHours since={recap.date} /> : null}
 
-      {recap.requestUuid && onOpenRequest && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenRequest(recap.requestUuid!);
-          }}
-          className="relative z-10 mono inline-flex items-center gap-1 mt-2 px-2 py-1 rounded-full text-[10px]"
-          style={{
-            letterSpacing: "0.14em",
-            background: "rgba(197,245,70,0.10)",
-            border: "1px solid rgba(197,245,70,0.30)",
-            color: "var(--spark-lime)",
-          }}
-          title="View the parent request on the Master Tracker"
-        >
-          ← {recap.requestShortId} REQUEST
-        </button>
-      )}
+      <div className="relative z-10 flex items-center gap-2 mt-2 flex-wrap">
+        {recap.requestUuid && onOpenRequest && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenRequest(recap.requestUuid!);
+            }}
+            className="mono inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              background: "rgba(197,245,70,0.10)",
+              border: "1px solid rgba(197,245,70,0.30)",
+              color: "var(--spark-lime)",
+            }}
+            title="View the parent request on the Master Tracker"
+          >
+            ← {recap.requestShortId} REQUEST
+          </button>
+        )}
+        {recap.shareToken && (
+          <button
+            type="button"
+            onClick={async (e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              const result = await shareRecapLink({
+                token: recap.shareToken!,
+                title: recap.name,
+              });
+              if (result === "copied") {
+                useAlertStore.getState().showAlert("Link copied.", "success");
+              }
+            }}
+            className="mono inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid var(--spark-border)",
+              color: "rgba(255,255,255,0.75)",
+            }}
+            title="Copy public /r/:token link"
+          >
+            ↗ SHARE
+          </button>
+        )}
+      </div>
 
       <div
         className="mt-3 pt-3 grid grid-cols-3 gap-2 text-center"
@@ -469,7 +461,7 @@ type Meta = {
 };
 
 type SortKey = "date-desc" | "date-asc" | "eng-desc" | "sold-desc";
-type StatusKey = "all" | "approved" | "draft";
+type StatusKey = "submitted" | "needs_review" | "approved" | "shared" | "all" | "draft";
 
 // Initial number of rows fetched from EACH list resolver (legacy +
 // custom). "Load more" grows this by LOAD_MORE_STEP, re-fetching both
@@ -478,12 +470,12 @@ type StatusKey = "all" | "approved" | "draft";
 // Death, made the single payload so heavy the page hung on "Loading
 // recaps…". A bounded initial page paints fast; "Load more" pulls the
 // rest on demand.
-const INITIAL_LIMIT = 300;
+const INITIAL_LIMIT = 50;
 
 // How many more rows each "Load more" click requests (added to `first`
-// on BOTH queries). Re-fetches are cheap relative to the all-at-once
-// fetch and only happen when the user explicitly asks for more.
-const LOAD_MORE_STEP = 300;
+// on BOTH queries). Matches the server page ceiling
+// (RECAPS_LIST_MAX_LIMIT = 50).
+const LOAD_MORE_STEP = 50;
 
 const RecapsListInner: React.FC<{
   search: string;
@@ -513,7 +505,9 @@ const RecapsListInner: React.FC<{
   // checkboxes against it and reports toggles back up.
   selectedIds: Set<string>;
   onToggleSelected: (id: string) => void;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected }) => {
+  selectMode: boolean;
+  queueEmpty: boolean;
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
@@ -525,7 +519,17 @@ const RecapsListInner: React.FC<{
   // belt-and-suspenders frontend half for the admin-side "Client view"
   // toggle (which the server can't distinguish from a normal admin).
   const { isClient } = useSparkRole();
-  const approvedOnly = isClient ? true : null;
+  const pipeline = statusFilter === "draft" ? "needs_review" : statusFilter;
+  const approvedFilter = isClient
+    ? true
+    : pipeline === "approved" || pipeline === "shared"
+      ? true
+      : pipeline === "needs_review"
+        ? false
+        : null;
+  const retailerName = retailerFilter === "all" ? null : retailerFilter;
+  const stateCode = stateFilter === "all" ? null : stateFilter;
+  const searchQ = search.trim() || null;
   // Server-side date bounds. The backend RecapFiltersInput /
   // CustomRecapFiltersInput both expose inclusive startDate / endDate
   // (YYYY-MM-DD), so when the user picks a date range we push it into the
@@ -550,6 +554,7 @@ const RecapsListInner: React.FC<{
     RecapsQuery,
     {
       first: limit,
+      q: searchQ,
       filters: tenantId
         ? {
             tenantId,
@@ -557,8 +562,10 @@ const RecapsListInner: React.FC<{
             // Filters by the recap's PRIMARY ambassador (Recap.ambassador_id);
             // the resolver decodes the Relay global id. "all" → no filter.
             ambassadorId: baFilter === "all" ? null : baFilter,
-            // Client view → approved-only; admin/RMM view → drafts too.
-            approved: approvedOnly,
+            approved: approvedFilter,
+            shared: pipeline === "shared" ? true : pipeline === "approved" ? false : null,
+            retailerName,
+            stateCode,
             startDate,
             endDate,
           }
@@ -581,15 +588,16 @@ const RecapsListInner: React.FC<{
     GetCustomRecapsQuery,
     {
       first: limit,
-      // Client view → approved-only; admin/RMM view → drafts too. Date
-      // bounds pushed server-side for the same reason as the legacy query.
+      q: searchQ,
       filters: tenantId
         ? {
             tenantId,
-            // Same primary-ambassador filter as the legacy query above —
-            // CustomRecapFiltersInput inherits ambassadorId. "all" → no filter.
+            rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
             ambassadorId: baFilter === "all" ? null : baFilter,
-            approved: approvedOnly,
+            approved: approvedFilter,
+            shared: pipeline === "shared" ? true : pipeline === "approved" ? false : null,
+            retailerName,
+            stateCode,
             startDate,
             endDate,
           }
@@ -607,36 +615,14 @@ const RecapsListInner: React.FC<{
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
         ?.map((n) => {
-          const retailerName =
-            n.event?.retailer?.name ??
-            n.event?.request?.retailer?.name ??
-            "—";
-          const stateCode =
-            n.event?.state?.code ??
-            n.event?.retailer?.location?.state?.code ??
-            n.state?.code ??
-            // Fall back to parsing the event address ("…, TX 78205") when no
-            // State FK is set — otherwise address-only events never surface
-            // in the state filter.
-            toStateCode(n.event?.address) ??
-            null;
-          // Server-side resolvers do the work: heroFile is the first
-          // browser-renderable image (jpg/png/webp/gif), recapFilesCount
-          // is the COUNT(*) of all files. Client just prepends the
-          // GCS bucket via recapFileUrl().
-          // List cards render at ~256px wide, so the 400px thumb is
-          // plenty — the endpoint 302s to the original on any failure.
+          const retailerName = n.eventRetailer || "—";
+          const stateCode = toStateCode(n.eventState);
           const hero = n.heroFile?.file
             ? thumbUrl(recapFileUrl(n.heroFile.file), 400)
             : null;
           const fileCount = n.recapFilesCount ?? 0;
-          const requestUuid = n.event?.request?.uuid ?? null;
-          // request.requestType is a NamedEntity; pull the human
-          // label ("Event Activation", "Retail Sampling", …). Null
-          // when the recap isn't linked to a request or the request
-          // hasn't been categorised yet.
-          const requestType =
-            n.event?.request?.requestType?.name ?? null;
+          const requestUuid = n.requestUuid ?? null;
+          const requestType = n.requestTypeName ?? null;
           const linkedBaName = [
             n.ambassador?.user?.firstName,
             n.ambassador?.user?.lastName,
@@ -653,15 +639,13 @@ const RecapsListInner: React.FC<{
             id: String(n.id),
             uuid: String(n.uuid),
             name: n.name ?? n.event?.name ?? "Untitled recap",
-            date: n.event?.date ?? n.createdAt ?? "",
+            date: n.eventDate ?? n.event?.date ?? n.createdAt ?? "",
             retailerName,
             stateCode,
             approved: Boolean(n.approved),
             heroImage: hero,
             fileCount,
             engagements: n.totalEngagements ?? null,
-            // Legacy recaps don't expose a separate sampled count; conversion
-            // falls back to engagements (unchanged behavior).
             consumersSampled: null,
             productsSold: n.productsSold ?? null,
             cansSold: n.totalCansSold ?? null,
@@ -675,6 +659,8 @@ const RecapsListInner: React.FC<{
               ? `R-${String(requestUuid).slice(-4).toUpperCase()}`
               : null,
             requestType,
+            shareToken: n.shareToken ?? null,
+            sharedAt: n.sharedAt ?? null,
           };
         }) ?? [];
 
@@ -710,16 +696,10 @@ const RecapsListInner: React.FC<{
             uuid: String(n.uuid),
             name:
               n.name ?? n.event?.name ?? n.customRecapTemplate?.name ?? "Custom recap",
-            date: n.event?.date ?? n.createdAt ?? "",
-            retailerName: n.retailer?.name ?? "—",
-            // Event State FK first, then the recap's own state, then parse
-            // the event address ("San Antonio, TX 78205") — so address-only
-            // custom recaps (Feel Free) surface FL/TX in the state filter
-            // instead of contributing nothing (was hardcoded null).
+            date: n.eventDate ?? n.event?.date ?? n.createdAt ?? "",
+            retailerName: n.eventRetailer || "—",
             stateCode:
-              n.event?.state?.code ??
-              toStateCode(n.state?.name) ??
-              toStateCode(n.event?.address),
+              toStateCode(n.eventState) ?? toStateCode(n.eventAddress),
             approved: Boolean(n.approved),
             heroImage: n.heroImageUrl ?? null,
             fileCount: n.customRecapFilesCount ?? 0,
@@ -754,6 +734,8 @@ const RecapsListInner: React.FC<{
             requestUuid: null,
             requestShortId: null,
             requestType: n.customRecapTemplate?.name ?? null,
+            shareToken: n.shareToken ?? null,
+            sharedAt: n.sharedAt ?? null,
           };
         }) ?? [];
 
@@ -800,8 +782,11 @@ const RecapsListInner: React.FC<{
       // null) drop out of a narrowed BA filter.
       const matchBa = baFilter === "all" || r.ambassadorId === baFilter;
       const matchStatus =
-        statusFilter === "all" ||
-        (statusFilter === "approved" ? r.approved : !r.approved);
+        pipeline === "all" ||
+        pipeline === "submitted" ||
+        (pipeline === "needs_review" && !r.approved) ||
+        (pipeline === "approved" && r.approved && !r.sharedAt) ||
+        (pipeline === "shared" && Boolean(r.sharedAt));
       // Date range: compare on the yyyy-mm-dd prefix. Each bound is
       // inclusive — `dateFrom` = "2026-05-01" passes recaps from May 1
       // onwards, `dateTo` = "2026-05-31" passes recaps up to and
@@ -894,7 +879,20 @@ const RecapsListInner: React.FC<{
         className="spark-card p-8 text-center text-sm"
         style={{ color: "rgba(255,255,255,0.55)" }}
       >
-        No recaps match these filters.
+        {queueEmpty ? (
+          <>
+            <p className="display text-2xl font-bold" style={{ color: "var(--spark-text)" }}>
+              You’re caught up.
+            </p>
+            <p className="mt-2">
+              No recaps need review in the last 30 days. Switch to{" "}
+              <span className="font-semibold">Submitted</span> to browse
+              the full archive.
+            </p>
+          </>
+        ) : (
+          "No recaps match these filters."
+        )}
       </div>
     );
   }
@@ -907,6 +905,8 @@ const RecapsListInner: React.FC<{
           recap={r}
           selected={selectedIds.has(r.id)}
           onToggleSelect={() => onToggleSelected(r.id)}
+          selectMode={selectMode}
+          showSla={pipeline === "needs_review"}
           href={
             r.kind === "custom"
               ? `/recap/view-custom/${r.uuid}`
@@ -1016,6 +1016,7 @@ const BaFilterDropdown: React.FC<{
 export default function SparkRecapsList() {
   const { tenantId } = useAuthStore();
   const { isClient } = useSparkRole();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
@@ -1023,14 +1024,15 @@ export default function SparkRecapsList() {
   // Brand Ambassador filter. "all" = no filter; otherwise the Ambassador's
   // Relay global id (pushed server-side as `ambassadorId`). Mirrors rmmFilter.
   const [baFilter, setBaFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<StatusKey>("all");
-  // Inclusive date range for the budget-reconciliation filter
-  // Myriant asked for. Empty string = unbounded on that side, so the
-  // default ("","") is the same as "all dates". Stored as ISO yyyy-
-  // mm-dd to match the native <input type="date"> value shape and
-  // r.date which is already date-prefixed.
-  const [dateFrom, setDateFrom] = useState<string>("");
-  const [dateTo, setDateTo] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<StatusKey>(
+    isClient ? "submitted" : "needs_review",
+  );
+  const [selectMode, setSelectMode] = useState(false);
+  // Work-queue default: last 30 days. "All published" clears both
+  // bounds so the archive (every published recap) is an explicit choice.
+  const [dateFrom, setDateFrom] = useState<string>(DAYS_30_ISO);
+  const [dateTo, setDateTo] = useState<string>(TODAY_ISO);
+  const [opsOpen, setOpsOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
   // Server fetch size — how many rows we ask EACH list resolver for.
   // "Load more" bumps it by LOAD_MORE_STEP, re-fetching both queries with
@@ -1040,7 +1042,7 @@ export default function SparkRecapsList() {
   const [limit, setLimit] = useState(INITIAL_LIMIT);
   useEffect(() => {
     setLimit(INITIAL_LIMIT);
-  }, [rmmFilter, baFilter, dateFrom, dateTo]);
+  }, [rmmFilter, baFilter, dateFrom, dateTo, statusFilter, retailerFilter, stateFilter, search]);
   const [meta, setMeta] = useState<Meta>({
     retailers: [],
     states: [],
@@ -1080,6 +1082,10 @@ export default function SparkRecapsList() {
     useMutation<GenerateCampaignReportPdfMutationType>(
       GenerateCampaignReportPdfMutation,
     );
+  const [commitBulkApprove, isBulkApproving] =
+    useMutation<BulkApproveRecapsMutationType>(BulkApproveRecapsMutation);
+  const [commitMarkShared, isMarkingShared] =
+    useMutation<MarkRecapsSharedMutationType>(MarkRecapsSharedMutation);
 
   // The mutation expects ids ordered the way the user picked them on
   // the page (which determines cover-page recap order). We don't
@@ -1126,6 +1132,120 @@ export default function SparkRecapsList() {
       onError: (err) =>
         showAlert(`Campaign report failed: ${err.message}`, "error"),
     });
+  };
+
+  const selectedByKind = useMemo(() => {
+    const recapIds: string[] = [];
+    const customRecapIds: string[] = [];
+    for (const r of visibleRecaps) {
+      if (!selectedIds.has(r.id)) continue;
+      if (r.kind === "custom") customRecapIds.push(r.id);
+      else recapIds.push(r.id);
+    }
+    return { recapIds, customRecapIds };
+  }, [visibleRecaps, selectedIds]);
+
+  const approveSelected = () => {
+    if (selectedIds.size === 0 || isBulkApproving) return;
+    commitBulkApprove({
+      variables: {
+        input: {
+          recapIds: selectedByKind.recapIds,
+          customRecapIds: selectedByKind.customRecapIds,
+          approved: true,
+        },
+      },
+      onCompleted: (res) => {
+        const payload = res.bulkApproveRecaps;
+        if (payload?.success) {
+          showAlert(payload.message ?? "Approved.", "success");
+          clearSelection();
+        } else {
+          showAlert(payload?.message ?? "Bulk approve failed.", "error");
+        }
+      },
+      onError: (err) => showAlert(err.message, "error"),
+    });
+  };
+
+  const shareSelected = async () => {
+    const tokens = visibleRecaps
+      .filter((r) => selectedIds.has(r.id) && r.shareToken)
+      .map((r) => `${window.location.origin}/r/${encodeURIComponent(r.shareToken!)}`);
+    if (tokens.length === 0) {
+      showAlert("No share links on the selected recaps.", "warning");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(tokens.join("\n"));
+      showAlert(`Copied ${tokens.length} share link${tokens.length === 1 ? "" : "s"}.`, "success");
+    } catch {
+      showAlert("Couldn't reach the clipboard.", "error");
+      return;
+    }
+    commitMarkShared({
+      variables: {
+        input: {
+          recapIds: selectedByKind.recapIds,
+          customRecapIds: selectedByKind.customRecapIds,
+        },
+      },
+      onCompleted: (res) => {
+        if (!res.markRecapsShared?.success) {
+          showAlert(res.markRecapsShared?.message ?? "Couldn't mark shared.", "warning");
+        }
+      },
+    });
+  };
+
+  type SavedView = {
+    name: string;
+    search: string;
+    retailerFilter: string;
+    stateFilter: string;
+    baFilter: string;
+    statusFilter: StatusKey;
+    dateFrom: string;
+    dateTo: string;
+  };
+  const viewsKey = `spark.recapFilterViews.${tenantId ?? "none"}`;
+  const [savedViews, setSavedViews] = useState<SavedView[]>(() => {
+    try {
+      const raw = localStorage.getItem(viewsKey);
+      return raw ? (JSON.parse(raw) as SavedView[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const persistViews = (next: SavedView[]) => {
+    setSavedViews(next);
+    localStorage.setItem(viewsKey, JSON.stringify(next));
+  };
+  const pinCurrentView = () => {
+    const name = window.prompt("Name this filter view (e.g. Girl Beer CA this week)");
+    if (!name?.trim()) return;
+    persistViews([
+      ...savedViews.filter((v) => v.name !== name.trim()),
+      {
+        name: name.trim(),
+        search,
+        retailerFilter,
+        stateFilter,
+        baFilter,
+        statusFilter,
+        dateFrom,
+        dateTo,
+      },
+    ]);
+  };
+  const applyView = (v: SavedView) => {
+    setSearch(v.search);
+    setRetailerFilter(v.retailerFilter);
+    setStateFilter(v.stateFilter);
+    setBaFilter(v.baFilter);
+    setStatusFilter(v.statusFilter);
+    setDateFrom(v.dateFrom);
+    setDateTo(v.dateTo);
   };
 
   // CSV export of the currently-visible recaps (respects retailer /
@@ -1273,180 +1393,283 @@ export default function SparkRecapsList() {
     }
   };
 
+  const pipelineKey =
+    statusFilter === "draft" ? "needs_review" : statusFilter;
+  const statusWord = isClient
+    ? "APPROVED"
+    : pipelineKey === "needs_review"
+      ? "NEEDS REVIEW"
+      : pipelineKey === "approved"
+        ? "APPROVED"
+        : pipelineKey === "shared"
+          ? "SHARED"
+          : pipelineKey === "submitted"
+            ? "SUBMITTED"
+            : "ALL";
+  const windowLabel =
+    !dateFrom && !dateTo
+      ? `${statusWord} · ALL TIME`
+      : dateFrom === DAYS_30_ISO && dateTo === TODAY_ISO
+        ? `${statusWord} · 30D`
+        : dateFrom === DAYS_90_ISO && dateTo === TODAY_ISO
+          ? `${statusWord} · 90D`
+          : dateFrom && dateTo
+            ? `${statusWord} · ${dateFrom} → ${dateTo}`
+            : dateFrom
+              ? `${statusWord} · FROM ${dateFrom}`
+              : `${statusWord} · TO ${dateTo}`;
+  const isQueueDefault =
+    !isClient &&
+    (statusFilter === "needs_review" || statusFilter === "draft") &&
+    dateFrom === DAYS_30_ISO &&
+    dateTo === TODAY_ISO &&
+    !search.trim() &&
+    retailerFilter === "all" &&
+    stateFilter === "all" &&
+    rmmFilter === "all" &&
+    baFilter === "all";
+  const datePreset =
+    !dateFrom && !dateTo
+      ? "all"
+      : dateFrom === DAYS_30_ISO && dateTo === TODAY_ISO
+        ? "30d"
+        : dateFrom === DAYS_90_ISO && dateTo === TODAY_ISO
+          ? "90d"
+          : "custom";
+  const applyDatePreset = (preset: "30d" | "90d" | "all") => {
+    if (preset === "all") {
+      setDateFrom("");
+      setDateTo("");
+      return;
+    }
+    setDateFrom(preset === "90d" ? DAYS_90_ISO : DAYS_30_ISO);
+    setDateTo(TODAY_ISO);
+  };
+  const showAllPublished = () => {
+    setStatusFilter("all");
+    setDateFrom("");
+    setDateTo("");
+  };
+  const filterStyle: React.CSSProperties = {
+    padding: "0.65rem 0.85rem",
+    background: "var(--spark-bg)",
+    border: "1px solid var(--spark-border)",
+    color: "var(--spark-text)",
+    outline: "none",
+  };
+
   return (
     <Layout>
-      <div className="space-y-6 max-w-7xl">
-        <div className="flex items-end justify-between flex-wrap gap-4">
-          <div>
+      <div className="space-y-4 max-w-7xl">
+        <div
+          className="sticky top-0 z-20 spark-card p-3 flex flex-wrap gap-2 items-center"
+          style={{
+            background: "rgba(10,13,9,0.92)",
+            backdropFilter: "blur(10px)",
+          }}
+        >
+          <div className="min-w-[140px] mr-1">
             <p
               className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
-              }}
+              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
             >
-              RECAPS · {meta.total} PUBLISHED
+              RECAPS · {windowLabel}
             </p>
-            <h1
-              className="display text-4xl font-bold mt-2"
-              style={{ letterSpacing: "-0.04em" }}
-            >
-              {isClient ? "Your recaps." : "Every recap."}
-            </h1>
-            <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
-              {isClient
-                ? "Field reports from your activations, synced nightly with photos + numbers."
-                : "Real field data, synced nightly from BA submissions."}
-            </p>
-          </div>
-          <div className="flex gap-2 flex-wrap items-center">
-            <LinkedSheetChip />
-            <ExportReceiptsButton variant="ghost" />
-            <ImportConnecteamButton variant="ghost" />
-            <button
-              onClick={copyForSheets}
-              disabled={
-                visibleRecaps.length === 0 || recapCopyState === "copying"
-              }
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background:
-                  recapCopyState === "copied"
-                    ? "rgba(95,184,239,0.18)"
-                    : "transparent",
-                color:
-                  recapCopyState === "copied"
-                    ? "var(--spark-sky)"
-                    : "var(--spark-text)",
-                border: `1px solid ${
-                  recapCopyState === "copied"
-                    ? "rgba(95,184,239,0.5)"
-                    : "var(--spark-border)"
-                }`,
-                opacity: visibleRecaps.length === 0 ? 0.5 : 1,
-              }}
-              title={
-                visibleRecaps.length === 0
-                  ? "Nothing to copy"
-                  : `Copy ${visibleRecaps.length} recap${visibleRecaps.length === 1 ? "" : "s"} as TSV — paste into Google Sheets`
-              }
-            >
-              {recapCopyState === "copied"
-                ? `✓ Copied (${visibleRecaps.length})`
-                : recapCopyState === "copying"
-                  ? "Copying…"
-                  : `📋 Copy for Sheets ${visibleRecaps.length > 0 ? `(${visibleRecaps.length})` : ""}`}
-            </button>
-            <button
-              onClick={exportCsv}
-              disabled={visibleRecaps.length === 0}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-                opacity: visibleRecaps.length === 0 ? 0.5 : 1,
-              }}
-              title={
-                visibleRecaps.length === 0
-                  ? "Nothing matches the current filters"
-                  : `Download ${visibleRecaps.length} recap${visibleRecaps.length === 1 ? "" : "s"} as CSV`
-              }
-            >
-              ↓ Export CSV{" "}
-              {visibleRecaps.length > 0 ? `(${visibleRecaps.length})` : ""}
-            </button>
-            {!isClient && (
-              <button
-                onClick={() =>
-                  (window.location.href = "/recaps/templates")
-                }
-                className="px-4 py-2 rounded-xl text-sm font-semibold"
-                style={{
-                  background: "transparent",
-                  color: "var(--spark-text)",
-                  border: "1px solid var(--spark-border)",
-                }}
-              >
-                + Build template
-              </button>
-            )}
-            {!isClient && (
-              // Primary action: build a recap against any Master-Tracker
-              // event. /recap/create's event picker already lists every
-              // tenant event, so this is the global "file a recap" entry
-              // point from the recaps tab.
-              <button
-                onClick={() => (window.location.href = "/recap/create")}
-                className="px-4 py-2 rounded-xl text-sm font-semibold"
-                style={{
-                  background: "var(--spark-lime)",
-                  color: "#0a0d09",
-                  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
-                }}
-              >
-                + New recap
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="spark-card p-4">
-            <p className="label-mini">RECAPS · 90D</p>
             <p
-              className="tab-num text-3xl font-bold mt-1"
+              className="tab-num text-2xl font-bold leading-none mt-0.5"
               style={{ color: "var(--spark-lime)" }}
             >
               {meta.total}
             </p>
           </div>
-          <div className="spark-card p-4">
-            <p className="label-mini">CONSUMERS</p>
-            <p className="tab-num text-3xl font-bold mt-1">
-              {meta.totalConsumers > 0
-                ? meta.totalConsumers.toLocaleString()
-                : "—"}
-            </p>
-          </div>
-          <div className="spark-card p-4">
-            <p className="label-mini">PRODUCTS SOLD</p>
-            <p
-              className="tab-num text-3xl font-bold mt-1"
-              style={{ color: "var(--spark-lime)" }}
-            >
-              {meta.totalProducts > 0
-                ? meta.totalProducts.toLocaleString()
-                : "—"}
-            </p>
-          </div>
-          <div className="spark-card p-4">
-            <p className="label-mini">AVG · CONV</p>
-            <p className="tab-num text-3xl font-bold mt-1">
-              {meta.totalConsumers > 0 && meta.totalProducts > 0
-                ? `${Math.round((meta.totalProducts / meta.totalConsumers) * 100)}%`
-                : "—"}
-            </p>
-          </div>
-        </div>
-
-        <div className="spark-card p-4 flex flex-wrap gap-3 items-center">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search venue, retailer, R-ID…"
             className="rounded-xl text-sm"
-            style={{
-              padding: "0.75rem 0.95rem",
-              background: "var(--spark-bg)",
-              border: "1px solid var(--spark-border)",
-              color: "var(--spark-text)",
-              flex: 1,
-              minWidth: 200,
-              maxWidth: 280,
-              outline: "none",
-            }}
+            style={{ ...filterStyle, flex: 1, minWidth: 180, maxWidth: 260 }}
           />
+          <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--spark-border)" }}>
+            {([
+              ["needs_review", "Needs review"],
+              ["approved", "Approved"],
+              ["shared", "Shared"],
+              ["submitted", "Submitted"],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setStatusFilter(key)}
+                className="px-2.5 py-2 text-xs font-semibold"
+                style={{
+                  background:
+                    pipelineKey === key ? "rgba(197,245,70,0.16)" : "transparent",
+                  color:
+                    pipelineKey === key
+                      ? "var(--spark-lime)"
+                      : "rgba(255,255,255,0.65)",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectMode((v) => !v)}
+            className="rounded-xl text-xs px-3 py-2 font-semibold"
+            style={selectMode ? limeBtn : ghostBtn}
+          >
+            {selectMode ? "Selecting" : "Select"}
+          </button>
+          <button
+            type="button"
+            onClick={pinCurrentView}
+            className="rounded-xl text-xs px-3 py-2 font-semibold"
+            style={ghostBtn}
+            title="Save the current filters as a named view"
+          >
+            Pin view
+          </button>
+          {savedViews.length > 0 && (
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                const v = savedViews.find((x) => x.name === e.target.value);
+                if (v) applyView(v);
+                e.currentTarget.value = "";
+              }}
+              className="rounded-xl text-sm"
+              style={{ ...filterStyle, maxWidth: 180 }}
+            >
+              <option value="">Saved views…</option>
+              {savedViews.map((v) => (
+                <option key={v.name} value={v.name}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {!isClient && (
+            <button
+              type="button"
+              onClick={() => navigate("/recaps/missing")}
+              className="rounded-xl text-xs px-3 py-2 font-semibold"
+              style={ghostBtn}
+              title="Events in the last 30 days with no recap filed"
+            >
+              Missing
+            </button>
+          )}
+          <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--spark-border)" }}>
+            {(["30d", "90d", "all"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => applyDatePreset(p)}
+                className="px-2.5 py-2 text-xs font-semibold"
+                style={{
+                  background:
+                    datePreset === p ? "rgba(197,245,70,0.16)" : "transparent",
+                  color:
+                    datePreset === p
+                      ? "var(--spark-lime)"
+                      : "rgba(255,255,255,0.65)",
+                }}
+              >
+                {p === "all" ? "All dates" : p.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={showAllPublished}
+            className="rounded-xl text-xs px-3 py-2 font-semibold"
+            style={ghostBtn}
+            title="Show every published recap, all dates"
+          >
+            All published
+          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setOpsOpen((v) => !v)}
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={ghostBtn}
+            >
+              Export / Import ▾
+            </button>
+            {opsOpen && (
+              <div
+                className="absolute right-0 top-full mt-2 z-40 flex flex-col gap-1 p-2 min-w-[240px] rounded-2xl"
+                style={{
+                  background: "rgba(10,13,9,0.98)",
+                  border: "1px solid var(--spark-border)",
+                  boxShadow: "0 14px 40px rgba(0,0,0,0.55)",
+                }}
+              >
+                <LinkedSheetChip />
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportCsv();
+                    setOpsOpen(false);
+                  }}
+                  disabled={visibleRecaps.length === 0}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                  style={{ ...ghostBtn, opacity: visibleRecaps.length === 0 ? 0.5 : 1 }}
+                >
+                  ↓ Export CSV
+                  {visibleRecaps.length > 0 ? ` (${visibleRecaps.length})` : ""}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void copyForSheets();
+                    setOpsOpen(false);
+                  }}
+                  disabled={
+                    visibleRecaps.length === 0 || recapCopyState === "copying"
+                  }
+                  className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                  style={ghostBtn}
+                >
+                  {recapCopyState === "copied"
+                    ? `✓ Copied (${visibleRecaps.length})`
+                    : "Copy for Sheets"}
+                </button>
+                <ExportReceiptsButton variant="ghost" />
+                <ImportConnecteamButton variant="ghost" />
+                {!isClient && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.href = "/recaps/templates";
+                    }}
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={ghostBtn}
+                  >
+                    + Build template
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          {!isClient && (
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href = "/recap/create";
+              }}
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={limeBtn}
+            >
+              + New recap
+            </button>
+          )}
+        </div>
+
+        <div className="spark-card p-3 flex flex-wrap gap-2 items-center">
           <select
             value={retailerFilter}
             onChange={(e) => setRetailerFilter(e.target.value)}
@@ -1505,29 +1728,6 @@ export default function SparkRecapsList() {
               />
             </Suspense>
           )}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as StatusKey)}
-            className="rounded-xl text-sm"
-            style={{
-              padding: "0.75rem 0.95rem",
-              background: "var(--spark-bg)",
-              border: "1px solid var(--spark-border)",
-              color: "var(--spark-text)",
-              maxWidth: 160,
-              outline: "none",
-            }}
-            title="Filter by approval status"
-          >
-            <option value="all">All status</option>
-            <option value="approved">Approved only</option>
-            <option value="draft">Draft only</option>
-          </select>
-
-          {/* Date range — Myriant asked for this so she can pull
-              recaps for a specific budget reconciliation period. Both
-              bounds inclusive; clearing both = "all dates" (same as
-              before this filter existed). */}
           <input
             type="date"
             value={dateFrom}
@@ -1604,16 +1804,7 @@ export default function SparkRecapsList() {
           </select>
         </div>
 
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading recaps…
-            </div>
-          }
-        >
+        <Suspense fallback={<RecapsListSkeleton />}>
           <RecapsListInner
             search={search}
             retailerFilter={retailerFilter}
@@ -1621,6 +1812,7 @@ export default function SparkRecapsList() {
             rmmFilter={rmmFilter}
             baFilter={baFilter}
             statusFilter={statusFilter}
+            queueEmpty={isQueueDefault}
             dateFrom={dateFrom}
             dateTo={dateTo}
             sortKey={sortKey}
@@ -1629,6 +1821,7 @@ export default function SparkRecapsList() {
             onVisibleRecapsChange={setVisibleRecaps}
             selectedIds={selectedIds}
             onToggleSelected={toggleSelected}
+            selectMode={selectMode}
           />
         </Suspense>
 
@@ -1645,11 +1838,7 @@ export default function SparkRecapsList() {
               <button
                 onClick={() => setLimit((l) => l + LOAD_MORE_STEP)}
                 className="px-5 py-2.5 rounded-2xl text-sm font-semibold"
-                style={{
-                  background: "var(--spark-lime)",
-                  color: "#0a0d09",
-                  boxShadow: "0 0 20px rgba(197,245,70,0.35)",
-                }}
+                style={ghostBtn}
               >
                 Load {LOAD_MORE_STEP} more →
               </button>
@@ -1711,6 +1900,26 @@ export default function SparkRecapsList() {
             }}
           >
             ✕ CLEAR
+          </button>
+          {!isClient && (
+            <button
+              type="button"
+              onClick={approveSelected}
+              disabled={isBulkApproving}
+              className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+              style={limeBtn}
+            >
+              {isBulkApproving ? "Approving…" : "Approve selected"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={shareSelected}
+            disabled={isMarkingShared}
+            className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+            style={ghostBtn}
+          >
+            Share selected
           </button>
           <button
             type="button"

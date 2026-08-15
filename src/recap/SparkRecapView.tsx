@@ -1,11 +1,12 @@
-import { Suspense, useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Navigate, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
+import { RecapDetailSkeleton } from "@/layout/PageSkeletons";
 import { RecapQuery } from "@/api/queries/RecapQuery";
 import type { RecapQuery as RecapQueryType } from "@api/queries/__generated__/RecapQuery.graphql";
-import { GetCustomRecapQuery } from "@/api/queries/CustomRecapsQuery";
-import type { CustomRecapsQueryDetailsQuery as CustomRecapsQueryDetailsQueryType } from "@api/queries/__generated__/CustomRecapsQueryDetailsQuery.graphql";
+import { CustomRecapExistsQuery } from "@/api/queries/CustomRecapsQuery";
+import type { CustomRecapsQueryExistsQuery as CustomRecapsQueryExistsQueryType } from "@/api/queries/__generated__/CustomRecapsQueryExistsQuery.graphql";
 import { GenerateRecapPdfMutation } from "@/api/mutations/GenerateRecapPdfMutation";
 import type { GenerateRecapPdfMutation as GenerateRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateRecapPdfMutation.graphql";
 import { AddRecapFileMutation } from "@/api/mutations/AddRecapFileMutation";
@@ -27,12 +28,17 @@ import type { CreateProductMutation as CreateProductMutationType } from "@/api/m
 import useSparkRole from "@/hooks/useSparkRole";
 import RateBaControl from "@/components/RateBaControl";
 import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
+import { shareRecapLink } from "@/utils/recapShare";
 import { parseLocaleNumber } from "@/utils";
 import { useAlertStore } from "@/store/alertStore";
-import HeicImage from "./HeicImage";
 import RecapUploader from "./RecapUploader";
 import ReassignRecapModal from "./ReassignRecapModal";
-import RecapQualityPanel from "./RecapQualityPanel";
+import { thumbUrl } from "@/utils/thumb";
+import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
+import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
+import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
+
+const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
 
 /**
  * Spark v2 — Recap Detail.
@@ -391,11 +397,13 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     useMutation<UpdateRecapMutationType>(UpdateRecapMutation);
   const [commitApprove, isApproving] =
     useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
+  const [commitSignoff, isSigningOff] =
+    useMutation<RecapClientSignoffMutationType>(RecapClientSignoffMutation);
   const [commitRemoveFile] =
     useMutation<RemoveRecapFileMutationType>(RemoveRecapFileMutation);
   const [commitDelete, isDeleting] =
     useMutation<DeleteRecapMutationType>(DeleteRecapMutation);
-  const { isAdmin } = useSparkRole();
+  const { isAdmin, isClient } = useSparkRole();
   const [isZipping, setIsZipping] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
   // Admin-only inline number editor. `editingNumbers` toggles the panel;
@@ -491,6 +499,15 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const allFiles = (recap.recapFiles ?? []).filter(
     (f) => f && (f.file?.toString() || "").length > 0,
   );
+  const existingPdf = allFiles.find((f) => {
+    const ext = (f?.fileType?.extension ?? "").toLowerCase();
+    const typeName = (f?.fileType?.name ?? "").toLowerCase();
+    const path = (f?.file ?? "").toLowerCase();
+    return ext.includes("pdf") || typeName === "pdf" || path.endsWith(".pdf");
+  });
+  const existingPdfUrl = existingPdf
+    ? recapFileUrl(existingPdf.displayUrl || existingPdf.file)
+    : "";
   const sales = (recap.salesPerformance ?? []).filter(Boolean);
   const notes = (recap.accountFeedback ?? [])[0]?.feedback ?? null;
 
@@ -782,11 +799,22 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           color: "rgba(255,255,255,0.45)",
         }}
       >
-        ← BACK TO RECAPS
+        ← Recaps
+        {recap.name ? ` / ${recap.name}` : ""}
+        {event?.request?.retailer?.name || event?.address
+          ? ` / ${event?.request?.retailer?.name ?? event?.address}`
+          : ""}
+        {` / ${fmtDate(fieldDate)}`}
       </button>
 
       {/* Title card */}
-      <div className="spark-card p-6">
+      <div
+        className="spark-card p-6 sticky top-0 z-20"
+        style={{
+          background: "rgba(10,13,9,0.92)",
+          backdropFilter: "blur(10px)",
+        }}
+      >
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-2">
@@ -801,12 +829,12 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   color: "rgba(255,255,255,0.7)",
                 }}
               >
-                R-{uuid.slice(-4).toUpperCase()}
+                {recap.name ?? event?.name ?? "Recap"}
               </span>
               <span
                 className={`chip ${recap.approved ? "chip-lime" : "chip-orange"}`}
               >
-                {recap.approved ? "PUBLISHED" : "DRAFT"}
+                {recap.approved ? "APPROVED" : "DRAFT"}
               </span>
             </div>
             <h1
@@ -829,6 +857,10 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             <button
               disabled={isPdfRunning}
               onClick={() => {
+                if (existingPdfUrl) {
+                  window.open(existingPdfUrl, "_blank", "noopener,noreferrer");
+                  return;
+                }
                 commitPdf({
                   variables: { input: { id: recap.id } },
                   onCompleted: (res) => {
@@ -837,7 +869,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       if (file) {
                         window.open(recapFileUrl(file), "_blank");
                       }
-                      showAlert("PDF generated.", "success");
+                      showAlert("PDF ready.", "success");
                     } else {
                       showAlert(
                         res.generateRecapPdf?.message ??
@@ -858,7 +890,13 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 opacity: isPdfRunning ? 0.5 : 1,
               }}
             >
-              {isPdfRunning ? "Generating…" : "⬇ PDF"}
+              {existingPdfUrl
+                ? "⬇ Download PDF"
+                : isPdfRunning
+                  ? "Generating…"
+                  : recap.approved
+                    ? "Generating…"
+                    : "⬇ PDF"}
             </button>
             <button
               disabled={isZipping || allFiles.length === 0}
@@ -923,18 +961,16 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 : `⬇ Download photos (${allFiles.length})`}
             </button>
             <button
-              onClick={() => {
-                if (navigator.share) {
-                  navigator
-                    .share({
-                      title: recap.name ?? "Spark recap",
-                      url: window.location.href,
-                    })
-                    .catch(() => {});
-                } else {
-                  navigator.clipboard.writeText(window.location.href);
-                  showAlert("Link copied.", "success");
+              onClick={async () => {
+                if (!recap.shareToken) {
+                  showAlert("Share link isn't ready yet.", "warning");
+                  return;
                 }
+                const result = await shareRecapLink({
+                  token: recap.shareToken,
+                  title: recap.name ?? "Spark recap",
+                });
+                if (result === "copied") showAlert("Link copied.", "success");
               }}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
@@ -945,6 +981,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             >
               ↗ Share
             </button>
+            {!isClient && (
             <button
               onClick={() => setReassignOpen(true)}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
@@ -957,6 +994,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             >
               ⇄ Move to event
             </button>
+            )}
             {/* Admin-only recap approval. Nevena: "I don't see where to
                 approve recap." Distinct from request approval — this
                 marks the RECAP itself approved. Shows the current state
@@ -1043,18 +1081,35 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       {/* Quality check — server-computed review aid for the approver. Legacy
           recap → isCustom={false}. Self-degrades to nothing on failure;
           wrapped in Suspense for the initial load. */}
-      <Suspense
-        fallback={
-          <div
-            className="spark-card p-6 text-sm"
-            style={{ color: "rgba(255,255,255,0.5)" }}
-          >
-            Checking recap quality…
-          </div>
-        }
-      >
+      {!isClient && (
+      <Suspense fallback={null}>
         <RecapQualityPanel recapId={recap.id} isCustom={false} />
       </Suspense>
+      )}
+      {isClient && (
+        <RecapClientSignoff
+          existingStatus={recap.clientSignoffStatus}
+          existingComment={recap.clientSignoffComment}
+          existingAt={recap.clientSignoffAt}
+          busy={isSigningOff}
+          onSubmit={(status, comment) => {
+            commitSignoff({
+              variables: { input: { recapId: recap.id, status, comment } },
+              onCompleted: (res) => {
+                if (res.submitRecapClientSignoff?.success) {
+                  showAlert("Sign-off saved.", "success");
+                } else {
+                  showAlert(
+                    res.submitRecapClientSignoff?.message ?? "Couldn't save sign-off.",
+                    "error",
+                  );
+                }
+              },
+              onError: (err) => showAlert(err.message, "error"),
+            });
+          }}
+        />
+      )}
 
       {/* Products sampled — read view (everyone). Hidden while the admin is
           editing, since the editor panel below shows the same data. */}
@@ -1837,7 +1892,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       recapId: recap.id,
                       file: blobName,
                       fileTypeId: "1",
-                      fileRecapCategoryId: "1",
+                      fileRecapCategoryId: "Sampling photos",
                     },
                   },
                   onCompleted: (res) => {
@@ -1866,8 +1921,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       recapId: recap.id,
                       file: blobName,
                       fileTypeId: "1",
-                      // Category "2" = receipt (matches recap-create form).
-                      fileRecapCategoryId: "2",
+                      fileRecapCategoryId: "Receipts",
                     },
                   },
                   onCompleted: (res) => {
@@ -2016,8 +2070,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   // passes http(s) through untouched (just adds the cache-
                   // buster). Falls back to `file` for older query results.
                   // `kind` is computed from the chosen source so a converted
-                  // HEIC (now a .jpg) is treated as a normal image, and only
-                  // a still-unconverted .heic drops to the HeicImage path.
+                  // HEIC (now a .jpg) is treated as a normal image. A still-
+                  // unconverted .heic is a labeled tile — no in-browser WASM.
                   const source = p?.displayUrl ?? p?.file;
                   const kind = recapFileKind(source);
                   const url = recapFileUrlFresh(source);
@@ -2066,22 +2120,20 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       )}
                       {kind === "image" ? (
                         <img
-                          src={url}
+                          src={thumbUrl(url, 400) || url}
                           alt=""
                           loading="lazy"
+                          decoding="async"
                           referrerPolicy="no-referrer"
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            // Make failures visible — don't hide. Show
-                            // the URL so we can diagnose in the wild.
                             const t = e.currentTarget as HTMLImageElement;
+                            if (url && t.src !== url) {
+                              t.src = url;
+                              return;
+                            }
                             t.outerHTML = `<div style="font:9px/12px monospace;color:#ef5a2a;padding:6px;word-break:break-all;background:rgba(239,90,42,0.08)">IMG FAILED<br/>${url}</div>`;
                           }}
-                        />
-                      ) : kind === "heic" ? (
-                        <HeicImage
-                          url={url}
-                          className="w-full h-full object-cover"
                         />
                       ) : (
                         <div className="w-full h-full grid place-items-center">
@@ -2303,8 +2355,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
  * bounce between the two routes.
  */
 const CustomRecapFallback: React.FC<{ uuid: string }> = ({ uuid }) => {
-  const data = useLazyLoadQuery<CustomRecapsQueryDetailsQueryType>(
-    GetCustomRecapQuery,
+  const data = useLazyLoadQuery<CustomRecapsQueryExistsQueryType>(
+    CustomRecapExistsQuery,
     { uuid },
     { fetchPolicy: "store-or-network" },
   );
@@ -2325,16 +2377,7 @@ export default function SparkRecapView() {
   const { uuid } = useParams<{ uuid: string }>();
   return (
     <Layout>
-      <Suspense
-        fallback={
-          <div
-            className="spark-card p-8 text-center text-sm max-w-7xl"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            Loading recap…
-          </div>
-        }
-      >
+      <Suspense fallback={<RecapDetailSkeleton />}>
         <SparkRecapInner uuid={uuid ?? ""} />
       </Suspense>
     </Layout>

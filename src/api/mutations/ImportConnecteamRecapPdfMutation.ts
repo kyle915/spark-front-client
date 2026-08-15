@@ -21,6 +21,8 @@ export const ImportConnecteamRecapPdfMutation = graphql`
       matchedCount
       unmatchedCount
       imagesAttached
+      queued
+      jobId
       customRecap {
         id
         uuid
