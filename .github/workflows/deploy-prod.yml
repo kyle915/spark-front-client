@@ -77,6 +77,15 @@ jobs:
       - name: Deploy hosting:client (spark-new-client)
         run: firebase deploy --only hosting:client --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
 
+      # spark.igniteproductions.co CNAMEs to this leftover May 2026 site,
+      # not spark-new-admin / spark-new-client. Isolated so a missing
+      # site cannot roll back the admin deploy.
+      - name: Deploy hosting:spark (spark.igniteproductions.co)
+        continue-on-error: true
+        run: |
+          firebase target:apply hosting spark spark-front-client-prod --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+          firebase deploy --only hosting:spark --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+
       - name: Clean up Firebase auth file
         if: always()
         run: rm -f "$HOME/firebase-key.json"
