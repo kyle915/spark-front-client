@@ -28,6 +28,7 @@ import {
   AlertCircle,
   Sun,
 } from "lucide-react";
+import useSparkRole from "@/hooks/useSparkRole";
 
 /**
  * Spark v2 — Command Palette (⌘K).
@@ -44,6 +45,8 @@ type CommandEntry = {
   label: string;
   hint: string;
   to: string;
+  clientTo?: string;
+  adminOnly?: boolean;
   Icon: React.ComponentType<{
     size?: number;
     className?: string;
@@ -53,25 +56,25 @@ type CommandEntry = {
 };
 
 const ENTRIES: CommandEntry[] = [
-  { id: "dashboard", label: "Dashboard", hint: "Today · due recaps · clock", to: "/", Icon: LayoutDashboard, keywords: "home overview work" },
-  { id: "recaps-due", label: "Recaps due", hint: "Needs review · last 30 days", to: "/recaps/list", Icon: FileText, keywords: "due inbox review queue" },
-  { id: "recaps-missing", label: "Missing recaps", hint: "Events with no recap filed", to: "/recaps/missing", Icon: AlertCircle, keywords: "missing due file" },
+  { id: "dashboard", label: "Dashboard", hint: "Today · due recaps · clock", to: "/", clientTo: "/client-dashboard", Icon: LayoutDashboard, keywords: "home overview work" },
+  { id: "recaps-due", label: "Recaps due", hint: "Events with no recap filed", to: "/recaps/missing", Icon: FileText, keywords: "due inbox review queue missing", adminOnly: true },
+  { id: "recaps-missing", label: "Missing recaps", hint: "Events with no recap filed", to: "/recaps/missing", Icon: AlertCircle, keywords: "missing due file", adminOnly: true },
   { id: "today", label: "Today", hint: "On the ground", to: "/today", Icon: Sun, keywords: "today map live field" },
-  { id: "clock", label: "On the clock", hint: "Who's working now", to: "/live-board", Icon: Clock, keywords: "clock timesheet live board" },
+  { id: "clock", label: "On the clock", hint: "Who's working now", to: "/live-board", Icon: Clock, keywords: "clock timesheet live board", adminOnly: true },
   { id: "tracker", label: "Master Tracker", hint: "All events, every status", to: "/requests/list", Icon: ListChecks, keywords: "events list table due" },
   { id: "calendar", label: "Calendar", hint: "Shifts board", to: "/connect-calendar", Icon: Calendar, keywords: "schedule shifts" },
   { id: "map", label: "Account Map", hint: "Venues by status", to: "/account-map", Icon: MapPin, keywords: "map accounts retailers" },
-  { id: "approvals", label: "Approvals", hint: "Review pending requests", to: "/approvals", Icon: CheckCircle2, keywords: "pending review approve" },
-  { id: "jobs", label: "Jobs", hint: "Open + filling roles", to: "/jobs", Icon: Hammer, keywords: "ba shifts hire" },
-  { id: "talent", label: "Search Talent", hint: "BA roster", to: "/talent", Icon: Users, keywords: "ba ambassador roster" },
+  { id: "approvals", label: "Approvals", hint: "Review pending requests", to: "/approvals", clientTo: "/my-approvals", Icon: CheckCircle2, keywords: "pending review approve" },
+  { id: "jobs", label: "Jobs", hint: "Open + filling roles", to: "/jobs", Icon: Hammer, keywords: "ba shifts hire", adminOnly: true },
+  { id: "talent", label: "Search Talent", hint: "BA roster", to: "/talent", Icon: Users, keywords: "ba ambassador roster", adminOnly: true },
   { id: "recaps", label: "Recaps", hint: "Field reports", to: "/recaps/list", Icon: FileText, keywords: "reports recap photos" },
-  { id: "templates", label: "Recap Templates", hint: "Custom recap shapes", to: "/recaps/templates", Icon: Star, keywords: "templates" },
+  { id: "templates", label: "Recap Templates", hint: "Custom recap shapes", to: "/recaps/templates", Icon: Star, keywords: "templates", adminOnly: true },
   { id: "reports", label: "Reports", hint: "Analytics dashboards", to: "/reports", Icon: BarChart3, keywords: "analytics charts" },
   { id: "inbox", label: "Inbox", hint: "Messages with BAs", to: "/inbox", Icon: Mail, keywords: "messages chat" },
   { id: "alerts", label: "Alerts", hint: "Notifications feed", to: "/alerts", Icon: Bell, keywords: "notifications" },
   { id: "settings", label: "Settings", hint: "Workspace + integrations", to: "/settings", Icon: Settings, keywords: "preferences workspace" },
   { id: "cal-sync", label: "Calendar Sync", hint: "Google Calendar integration", to: "/settings/calendar", Icon: CalendarClock, keywords: "google sync" },
-  { id: "create", label: "Create Request", hint: "Submit a new request", to: "/requests/create", Icon: Plus, keywords: "new request submit" },
+  { id: "create", label: "Create Request", hint: "Submit a new request", to: "/requests/create", Icon: Plus, keywords: "new request submit", adminOnly: true },
 ];
 
 const score = (entry: CommandEntry, q: string) => {
@@ -89,6 +92,7 @@ const score = (entry: CommandEntry, q: string) => {
 
 export const CommandPalette: React.FC = () => {
   const navigate = useNavigate();
+  const { isClient } = useSparkRole();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
@@ -103,8 +107,13 @@ export const CommandPalette: React.FC = () => {
         setOpen(false);
       }
     };
+    const onOpen = () => setOpen(true);
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    window.addEventListener("spark:open-jump", onOpen);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("spark:open-jump", onOpen);
+    };
   }, []);
 
   useEffect(() => {
@@ -293,12 +302,19 @@ export const CommandPalette: React.FC = () => {
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
-    const pages = ENTRIES.map((e) => ({ entry: e, s: score(e, q) }))
+    const visible = ENTRIES.filter((e) => !(isClient && e.adminOnly)).map(
+      (e) =>
+        isClient && e.clientTo
+          ? { ...e, to: e.clientTo }
+          : e,
+    );
+    const pages = visible
+      .map((e) => ({ entry: e, s: score(e, q) }))
       .filter((x) => x.s > 0)
       .sort((a, b) => b.s - a.s)
       .map((x) => x.entry);
     return [...pages, ...requestEntries, ...recapEntries, ...baEntries];
-  }, [query, baEntries, requestEntries, recapEntries]);
+  }, [query, baEntries, requestEntries, recapEntries, isClient]);
 
   const select = (entry: CommandEntry) => {
     navigate(entry.to);

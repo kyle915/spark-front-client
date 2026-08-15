@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
   ArrowRightEndOnRectangleIcon,
@@ -9,6 +9,8 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import NotificationBell from "./NotificationBell";
+import useSparkRole from "@/hooks/useSparkRole";
+import useSparkPlatform from "@/hooks/useSparkPlatform";
 
 /**
  * Spark v2 topbar — wireframe-faithful version of spark-demo/index.html
@@ -24,6 +26,7 @@ const useBreadcrumb = () => {
   const { pathname } = useLocation();
   return useMemo(() => {
     if (pathname === "/") return "DASHBOARD";
+    if (pathname === "/client-dashboard") return "CLIENT";
     const last = pathname.split("/").filter(Boolean).pop() ?? "";
     return last.replace(/-/g, " ").toUpperCase();
   }, [pathname]);
@@ -43,7 +46,7 @@ const PillGroup: React.FC<{
           key={o.value}
           onClick={() => onChange(o.value)}
           className={[
-            "px-3 py-1 rounded-full text-xs transition flex items-center gap-1.5",
+            "px-3 py-1 rounded-full text-xs transition flex items-center gap-1.5 active:scale-[0.98]",
             on
               ? "bg-primary text-primary-content font-semibold"
               : "text-base-content/65 hover:text-base-content",
@@ -66,27 +69,19 @@ export const SparkTopbar: React.FC = () => {
   const { showAlert } = useAlertStore();
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const crumb = useBreadcrumb();
+  const { role, isClient, setRole } = useSparkRole();
+  const { platform, setPlatform } = useSparkPlatform();
   const initial = (user?.firstName ?? user?.email ?? "U")
     .charAt(0)
     .toUpperCase();
 
-  // Toggles — persist in localStorage so they survive route changes.
-  const [platform, setPlatform] = useState<Platform>(
-    (localStorage.getItem("@spark.platform") as Platform) || "desktop",
-  );
-  const [role, setRole] = useState<Role>(
-    (localStorage.getItem("@spark.role") as Role) || "admin",
-  );
-  useEffect(
-    () => localStorage.setItem("@spark.platform", platform),
-    [platform],
-  );
   useEffect(() => {
-    localStorage.setItem("@spark.role", role);
-    // Notify the rest of the app so the sidebar + page-level gates update.
-    window.dispatchEvent(new Event("spark:role-changed"));
-  }, [role]);
+    if (role === "client" && (pathname === "/" || pathname === "/dashboard")) {
+      navigate("/client-dashboard", { replace: true });
+    }
+  }, [role, pathname, navigate]);
 
   const publicFormUrl = useMemo(() => {
     const slug = tenantMeta?.requestUrlName?.trim();
@@ -114,6 +109,15 @@ export const SparkTopbar: React.FC = () => {
     navigate("/login");
   };
 
+  const onRole = (next: Role) => {
+    setRole(next);
+    navigate(next === "client" ? "/client-dashboard" : "/");
+  };
+
+  const openJump = () => {
+    window.dispatchEvent(new Event("spark:open-jump"));
+  };
+
   return (
     <header className="sticky top-0 z-30 bg-base-100/80 backdrop-blur-xl border-b border-base-300 px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
       {/* Left: breadcrumb + (optional) public form chip */}
@@ -125,7 +129,7 @@ export const SparkTopbar: React.FC = () => {
           {crumb}
         </span>
 
-        {publicFormUrl && (
+        {publicFormUrl && !isClient && (
           <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-base-300/40 border border-base-300 text-xs ml-2">
             <span className="text-base-content/55">Public form</span>
             <span className="font-medium text-primary truncate max-w-[140px]">
@@ -149,37 +153,29 @@ export const SparkTopbar: React.FC = () => {
         )}
       </div>
 
-      {/* Right: + Create Request, ⌘K, platform toggle, role toggle, avatar, logout */}
       <div className="flex items-center gap-2 flex-wrap">
-        <button
-          onClick={() => navigate("/requests/create")}
-          className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition"
-          style={{
-            background: "var(--spark-lime)",
-            color: "#0a0d09",
-            boxShadow: "0 0 18px rgba(197,245,70,0.35)",
-          }}
-        >
-          <span aria-hidden>+</span>
-          <span>Create Request</span>
-        </button>
+        {!isClient && (
+          <button
+            onClick={() => navigate("/requests/create")}
+            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition active:scale-[0.98]"
+            style={{
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+            }}
+          >
+            <span aria-hidden>+</span>
+            <span>Create Request</span>
+          </button>
+        )}
 
         <button
-          onClick={() => {
-            // Dispatch ⌘K to open the CommandPalette listener
-            const evt = new KeyboardEvent("keydown", {
-              key: "k",
-              metaKey: true,
-              ctrlKey: true,
-              bubbles: true,
-            });
-            document.dispatchEvent(evt);
-          }}
-          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-base-300 text-xs text-base-content/55 hover:text-primary hover:border-primary transition"
+          onClick={openJump}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-base-300 text-xs text-base-content/55 hover:text-primary hover:border-primary transition active:scale-[0.98]"
         >
           <MagnifyingGlassIcon className="w-3.5 h-3.5" />
           <span>Jump</span>
-          <span className="ml-3 mono text-[10px] px-1.5 py-0.5 rounded bg-base-300 text-base-content/55 border border-base-300">
+          <span className="hidden sm:inline ml-3 mono text-[10px] px-1.5 py-0.5 rounded bg-base-300 text-base-content/55 border border-base-300">
             ⌘K
           </span>
         </button>
@@ -195,7 +191,7 @@ export const SparkTopbar: React.FC = () => {
 
         <PillGroup
           value={role}
-          onChange={(v) => setRole(v as Role)}
+          onChange={(v) => onRole(v as Role)}
           options={[
             { value: "admin", label: "Admin", icon: "⚒" },
             { value: "client", label: "Client", icon: "◐" },

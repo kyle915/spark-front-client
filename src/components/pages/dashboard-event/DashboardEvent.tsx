@@ -75,7 +75,7 @@ const TodaysSnapshot: React.FC = () => {
           ? `Review the ${counts.recapsDue} recap${counts.recapsDue === 1 ? "" : "s"} due`
           : "Caught up",
       tone: counts.recapsDue > 0 ? "orange" : "gold",
-      to: "/recaps/list",
+      to: "/recaps/missing",
     },
     {
       label: "Upcoming · 14d",
