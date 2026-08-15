@@ -25,12 +25,18 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      only_spark:
+        description: 'Deploy only spark.igniteproductions.co (301 to client). Skip admin and client.'
+        type: boolean
+        default: false
 
 env:
   FIREBASE_PROJECT_ID: spark-479222
 
 jobs:
   build_and_deploy:
+    if: ${{ github.event_name == 'push' || inputs.only_spark != true }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -77,11 +83,44 @@ jobs:
       - name: Deploy hosting:client (spark-new-client)
         run: firebase deploy --only hosting:client --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
 
-      # spark.igniteproductions.co CNAMEs to this leftover May 2026 site,
-      # not spark-new-admin / spark-new-client. Isolated so a missing
-      # site cannot roll back the admin deploy.
+      # spark.igniteproductions.co CNAMEs to spark-front-client-prod, not
+      # spark-new-admin / spark-new-client. This target is a Hosting 301
+      # to client.igniteproductions.co (see firebase.json). Isolated so
+      # a missing site cannot roll back the admin deploy.
       - name: Deploy hosting:spark (spark.igniteproductions.co)
         continue-on-error: true
+        run: |
+          firebase target:apply hosting spark spark-front-client-prod --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+          firebase deploy --only hosting:spark --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+
+      - name: Clean up Firebase auth file
+        if: always()
+        run: rm -f "$HOME/firebase-key.json"
+
+  # Local `firebase deploy --only hosting:spark` needs a valid CLI login.
+  # This job ships just the leftover spark. host from any branch via
+  # workflow_dispatch, using the same CI service account as prod.
+  deploy_spark_only:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.only_spark == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@latest
+
+      - name: Set up Firebase auth
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DENO }}' > "$HOME/firebase-key.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/firebase-key.json" >> "$GITHUB_ENV"
+
+      - name: Deploy hosting:spark (spark.igniteproductions.co)
         run: |
           firebase target:apply hosting spark spark-front-client-prod --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
           firebase deploy --only hosting:spark --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
