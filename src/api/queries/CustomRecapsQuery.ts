@@ -34,8 +34,8 @@ export const GetCustomRecapsQuery = graphql`
           createdAt
           totalEngagements
           approved
-          # shareToken / sharedAt are API PR 915. CustomRecap already has
-          # submittedAt + event* scalars on live Cloud Run.
+          shareToken
+          sharedAt
           event {
             name
             date
@@ -89,7 +89,11 @@ export const GetCustomRecapQuery = graphql`
       late
       incomplete
       approved
-      # shareToken / sharedAt / clientSignoff* are API PR 915.
+      shareToken
+      sharedAt
+      clientSignoffStatus
+      clientSignoffComment
+      clientSignoffAt
       usedCorpoCard
       # Linked-event location, walked server-side from the recap's event
       # (and its request/retailer/location/state). The recap's own

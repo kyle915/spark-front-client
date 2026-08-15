@@ -595,6 +595,8 @@ const RecapsListInner: React.FC<{
       : pipeline === "needs_review"
         ? false
         : null;
+  const retailerName = retailerFilter === "all" ? null : retailerFilter;
+  const stateCode = stateFilter === "all" ? null : stateFilter;
   const searchQ = search.trim() || null;
   // Server-side date bounds. The backend RecapFiltersInput /
   // CustomRecapFiltersInput both expose inclusive startDate / endDate
@@ -629,9 +631,9 @@ const RecapsListInner: React.FC<{
             // the resolver decodes the Relay global id. "all" → no filter.
             ambassadorId: baFilter === "all" ? null : baFilter,
             approved: approvedFilter,
-            // shared / retailerName / stateCode are API PR 915 filter
-            // fields. Sending them against today's RecapFiltersInput
-            // 500s the list. Retailer / state / pipeline stay client-side.
+            shared: pipeline === "shared" ? true : pipeline === "approved" ? false : null,
+            retailerName,
+            stateCode,
             startDate,
             endDate,
           }
@@ -661,8 +663,9 @@ const RecapsListInner: React.FC<{
             rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
             ambassadorId: baFilter === "all" ? null : baFilter,
             approved: approvedFilter,
-            // shared / retailerName / stateCode are API PR 915 — omit
-            // until Cloud Run has CustomRecapFiltersInput extras.
+            shared: pipeline === "shared" ? true : pipeline === "approved" ? false : null,
+            retailerName,
+            stateCode,
             startDate,
             endDate,
           }
@@ -680,21 +683,14 @@ const RecapsListInner: React.FC<{
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
         ?.map((n) => {
-          const retailerName =
-            n.event?.retailer?.name ||
-            n.event?.request?.retailer?.name ||
-            n.retailer?.name ||
-            "—";
-          const stateCode =
-            toStateCode(n.state?.code) ??
-            toStateCode(n.state?.name) ??
-            toStateCode(n.event?.address);
+          const retailerName = n.eventRetailer || "—";
+          const stateCode = toStateCode(n.eventState);
           const hero = n.heroFile?.file
             ? thumbUrl(recapFileUrl(n.heroFile.file), 400)
             : null;
           const fileCount = n.recapFilesCount ?? 0;
-          const requestUuid = null;
-          const requestType = null;
+          const requestUuid = n.requestUuid ?? null;
+          const requestType = n.requestTypeName ?? null;
           const linkedBaName = [
             n.ambassador?.user?.firstName,
             n.ambassador?.user?.lastName,
@@ -711,7 +707,7 @@ const RecapsListInner: React.FC<{
             id: String(n.id),
             uuid: String(n.uuid),
             name: n.name ?? n.event?.name ?? "Untitled recap",
-            date: n.event?.date ?? n.createdAt ?? "",
+            date: n.eventDate ?? n.event?.date ?? n.createdAt ?? "",
             retailerName,
             stateCode,
             approved: Boolean(n.approved),
@@ -731,8 +727,8 @@ const RecapsListInner: React.FC<{
               ? `R-${String(requestUuid).slice(-4).toUpperCase()}`
               : null,
             requestType,
-            shareToken: null,
-            sharedAt: null,
+            shareToken: n.shareToken ?? null,
+            sharedAt: n.sharedAt ?? null,
           };
         }) ?? [];
 
@@ -806,8 +802,8 @@ const RecapsListInner: React.FC<{
             requestUuid: null,
             requestShortId: null,
             requestType: n.customRecapTemplate?.name ?? null,
-            shareToken: null,
-            sharedAt: null,
+            shareToken: n.shareToken ?? null,
+            sharedAt: n.sharedAt ?? null,
           };
         }) ?? [];
 
