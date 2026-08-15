@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import CampaignReportView from "@/reports/CampaignReportView";
 import type { CampaignReportData } from "@/reports/CampaignReportView";
+import PublicDeadLink from "@/public/PublicDeadLink";
 
 /**
  * Public, no-login campaign report — /report/:token.
@@ -174,17 +175,15 @@ const PublicCampaignReport: React.FC = () => {
 
   if (loadErr || !report) {
     return (
-      <Shell>
-        <div
-          className="spark-card p-10 text-center"
-          style={{ color: "rgba(255,255,255,0.7)" }}
-        >
-          <p className="display text-2xl font-bold">Report unavailable.</p>
-          <p className="text-sm mt-3">
-            {loadErr?.message ?? errorCopy(400, "invalid")}
-          </p>
-        </div>
-      </Shell>
+      <PublicDeadLink
+        eyebrow="Campaign report"
+        title={
+          loadErr?.error === "expired" || loadErr?.error === "token_expired"
+            ? "This report link has expired."
+            : "We couldn't open this report."
+        }
+        message={loadErr?.message ?? errorCopy(400, "invalid")}
+      />
     );
   }
 

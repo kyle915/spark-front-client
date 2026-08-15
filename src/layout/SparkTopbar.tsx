@@ -8,6 +8,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import { sparkFormUrl } from "@/utils/publicHosts";
 import NotificationBell from "./NotificationBell";
 
 /**
@@ -91,7 +92,7 @@ export const SparkTopbar: React.FC = () => {
   const publicFormUrl = useMemo(() => {
     const slug = tenantMeta?.requestUrlName?.trim();
     if (!slug) return null;
-    return `${window.location.origin}/spark-form/${slug}`;
+    return sparkFormUrl(slug);
   }, [tenantMeta?.requestUrlName]);
 
   const copyForm = async () => {

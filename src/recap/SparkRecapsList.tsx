@@ -27,7 +27,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { recapFileUrl } from "@/utils/recapFileUrl";
-import { shareRecapLink } from "@/utils/recapShare";
+import { recapShareUrl, shareRecapLink } from "@/utils/recapShare";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import EmailCampaignReportModal from "./EmailCampaignReportModal";
 import ImportConnecteamButton from "./ImportConnecteamButton";
@@ -1171,7 +1171,7 @@ export default function SparkRecapsList() {
   const shareSelected = async () => {
     const tokens = visibleRecaps
       .filter((r) => selectedIds.has(r.id) && r.shareToken)
-      .map((r) => `${window.location.origin}/r/${encodeURIComponent(r.shareToken!)}`);
+      .map((r) => recapShareUrl(r.shareToken!));
     if (tokens.length === 0) {
       showAlert("No share links on the selected recaps.", "warning");
       return;

@@ -3,6 +3,7 @@ import { TenantCheckinCodeQuery } from "@/api/queries/TenantCheckinCodeQuery";
 import type { TenantCheckinCodeQuery as TenantCheckinCodeQueryType } from "@api/queries/__generated__/TenantCheckinCodeQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import { checkinUrl } from "@/utils/publicHosts";
 
 /**
  * The tenant's STANDING check-in link, pinned at the top of Walk-ups.
@@ -49,9 +50,9 @@ const StandingCheckinLink: React.FC = () => {
   const code = (node?.checkinCode ?? "").trim();
   if (!code) return null;
 
-  // Built from the live origin so it's correct in prod and locally alike,
-  // rather than hardcoding admin.igniteproductions.co.
-  const url = `${window.location.origin}/checkin/${code}`;
+  // Always client.igniteproductions.co in prod — never the tab origin.
+  // Walk-ups opened on leftover spark. tabs used to text BAs a spark. URL.
+  const url = checkinUrl(code);
 
   const copy = async (): Promise<void> => {
     try {

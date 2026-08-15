@@ -1,6 +1,7 @@
 import useTenantPublic, { type TenantPublic } from "../hooks/useTenantPublic";
 import useTenantThemePublic from "../hooks/useTenantThemePublic";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
+import PublicDeadLink from "@/public/PublicDeadLink";
 import { createContext, useEffect, useState } from "react";
 import { Link } from "react-router";
 
@@ -46,6 +47,17 @@ export default function SparkFormLayout({
   useEffect(() => {
     localStorage.setItem("@color-scheme", colorScheme);
   }, [colorScheme]);
+
+  if (invalidLink) {
+    return (
+      <PublicDeadLink
+        eyebrow="Request form"
+        title="This request form isn't active."
+        message="The link doesn't match an active brand. Double-check the URL you were sent."
+        nextStep="Ask your Ignite contact for the current form link, or email staffing. This page will not sign you into Spark."
+      />
+    );
+  }
 
   return (
     <div
@@ -126,43 +138,9 @@ export default function SparkFormLayout({
 
       {/* Body */}
       <div className="px-4 py-8 flex flex-col items-center flex-1 w-full">
-        {invalidLink ? (
-          <div
-            className="w-full max-w-xl rounded-2xl p-8 text-center"
-            style={{
-              background:
-                "linear-gradient(180deg, var(--spark-surface, #11140e), var(--spark-surface-2, #161a12))",
-              border: "1px solid var(--spark-border, #1f2418)",
-            }}
-          >
-            <p
-              className="mono text-[10px] mb-2"
-              style={{
-                letterSpacing: "0.18em",
-                color: "var(--spark-orange, #ef5a2a)",
-              }}
-            >
-              INVALID LINK
-            </p>
-            <h2
-              className="display text-2xl font-bold"
-              style={{ letterSpacing: "-0.02em" }}
-            >
-              This request form isn't active.
-            </h2>
-            <p
-              className="mt-3"
-              style={{ color: "rgba(255,255,255,0.65)" }}
-            >
-              The tenant slug in the URL doesn't match an active brand.
-              Double-check the link or reach out to your Spark contact.
-            </p>
-          </div>
-        ) : (
-          <PublicFormTenantContext.Provider value={tenant}>
-            <div className="w-full">{children}</div>
-          </PublicFormTenantContext.Provider>
-        )}
+        <PublicFormTenantContext.Provider value={tenant}>
+          <div className="w-full">{children}</div>
+        </PublicFormTenantContext.Provider>
       </div>
 
       {/* Footer */}

@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useParams } from "react-router";
+import PublicDeadLink from "@/public/PublicDeadLink";
 
 type ResourceKind = "video" | "pdf" | "link" | "page";
 
@@ -298,34 +299,15 @@ export default function TrainingHub() {
   }
 
   if (error || !hub) {
-    return shell(
-      <div style={{ paddingTop: 80, maxWidth: "48ch" }}>
-        <h1 style={{ fontFamily: DISPLAY, fontSize: 30, margin: "0 0 12px" }}>
-          Training not found
-        </h1>
-        <p style={{ lineHeight: 1.6, color: "rgba(244,239,227,0.72)" }}>
-          {error}
-        </p>
-        <button
-          type="button"
-          onClick={() => void load()}
-          style={{
-            fontFamily: MONO,
-            fontSize: 12,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            marginTop: 20,
-            color: INK,
-            background: CREAM,
-            border: "none",
-            padding: "11px 18px",
-            cursor: "pointer",
-            minHeight: 44,
-          }}
-        >
-          Try again
-        </button>
-      </div>,
+    return (
+      <PublicDeadLink
+        eyebrow="Training"
+        title="This training link isn't active."
+        message={
+          error ||
+          "Check the link you were sent, or ask your Ignite contact for a new one."
+        }
+      />
     );
   }
 
