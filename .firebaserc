@@ -8,6 +8,9 @@
         ],
         "client": [
           "spark-new-client"
+        ],
+        "spark": [
+          "spark-front-client-prod"
         ]
       }
     }
