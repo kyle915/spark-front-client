@@ -104,7 +104,16 @@ type StoreOption = { name: string; address: string };
 type Context = {
   // OPTIONAL on a standing tenant link: until the BA picks a store + date there
   // is no event yet, so nothing here may be dereferenced unguarded.
-  event?: { uuid: string; name: string; address: string | null; startTime: string | null; endTime: string | null; date?: string | null };
+  event?: {
+    uuid: string;
+    name: string;
+    address: string | null;
+    startTime: string | null;
+    endTime: string | null;
+    date?: string | null;
+    storeManagerName?: string | null;
+    storeManagerPhone?: string | null;
+  };
   brand: { name: string; primaryColor: string | null };
   template?: Template | null;
   // Labelled photo dropzones, in render order. Absent/empty for every brand
@@ -169,6 +178,11 @@ type Photo = {
 };
 
 const FALLBACK_ACCENT = "#C4D82E";
+
+function telHref(phone: string): string {
+  const cleaned = phone.replace(/[^\d+]/g, "");
+  return cleaned ? `tel:${cleaned}` : "";
+}
 
 // A BA on store LTE uploading 20 straight-off-the-camera iPhone photos is
 // pushing ~80MB. Downscaling to a long edge of 1600px at JPEG 0.82 lands each
@@ -1411,6 +1425,47 @@ function CheckedInFlow({
             }}
           />
         </div>
+        {clockState === "clocked_in" &&
+        (ctx.event?.storeManagerName || ctx.event?.storeManagerPhone) ? (
+          <div
+            style={{
+              marginTop: 14,
+              paddingTop: 12,
+              borderTop: "1px solid rgba(28, 25, 23, 0.08)",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "#78716c",
+              }}
+            >
+              Ask for
+            </div>
+            {ctx.event.storeManagerName ? (
+              <div style={{ fontSize: 15, fontWeight: 600, marginTop: 3, color: "#1c1917" }}>
+                {ctx.event.storeManagerName}
+              </div>
+            ) : null}
+            {ctx.event.storeManagerPhone ? (
+              <a
+                href={telHref(ctx.event.storeManagerPhone)}
+                style={{
+                  display: "inline-block",
+                  marginTop: 2,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: accent,
+                  textDecoration: "none",
+                }}
+              >
+                {ctx.event.storeManagerPhone}
+              </a>
+            ) : null}
+          </div>
+        ) : null}
         {/* ONE action at a time, in order: clock in → file recap → clock out.
             Clock-out is deliberately withheld until the recap is in. A BA who
             can clock out first files the recap from the car, or not at all —
