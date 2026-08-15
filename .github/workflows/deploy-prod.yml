@@ -83,18 +83,19 @@ jobs:
       - name: Deploy hosting:client (spark-new-client)
         run: firebase deploy --only hosting:client --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
 
-      # spark.igniteproductions.co CNAMEs to spark-front-client-prod, which
-      # still lives on the pre-split Firebase project
-      # (FIREBASE_PROJECT_ID_PROD / FIREBASE_SERVICE_ACCOUNT_PROD) — not
-      # spark-479222. Isolated so a missing site cannot roll back admin.
+      # spark.igniteproductions.co CNAMEs to the default site of project
+      # spark-front-client-prod — a different Firebase project than
+      # spark-479222 (admin/client). Kyle's user can see that project
+      # but cannot deploy Hosting there; the pre-split PROD service
+      # account can. Isolated so a miss cannot roll back admin.
       - name: Deploy hosting:spark (spark.igniteproductions.co)
         continue-on-error: true
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-prod-key.json
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}' > "$GOOGLE_APPLICATION_CREDENTIALS"
-          firebase target:apply hosting spark spark-front-client-prod --project "${{ secrets.FIREBASE_PROJECT_ID_PROD }}" --non-interactive
-          firebase deploy --only hosting:spark --project "${{ secrets.FIREBASE_PROJECT_ID_PROD }}" --non-interactive
+          firebase target:apply hosting spark spark-front-client-prod --project spark-front-client-prod --non-interactive
+          firebase deploy --only hosting:spark --project spark-front-client-prod --non-interactive
 
       - name: Clean up Firebase auth file
         if: always()
@@ -125,8 +126,8 @@ jobs:
 
       - name: Deploy hosting:spark (spark.igniteproductions.co)
         run: |
-          firebase target:apply hosting spark spark-front-client-prod --project "${{ secrets.FIREBASE_PROJECT_ID_PROD }}" --non-interactive
-          firebase deploy --only hosting:spark --project "${{ secrets.FIREBASE_PROJECT_ID_PROD }}" --non-interactive
+          firebase target:apply hosting spark spark-front-client-prod --project spark-front-client-prod --non-interactive
+          firebase deploy --only hosting:spark --project spark-front-client-prod --non-interactive
 
       - name: Clean up Firebase auth file
         if: always()
