@@ -37,6 +37,16 @@ export function RecapClientSignoff({
           CLIENT SIGN-OFF
         </p>
         <p className="mt-2 text-sm font-semibold">{label}</p>
+        {existingStatus === "need_more_photos" ? (
+          <p
+            className="mt-2 text-sm"
+            style={{
+              color: "color-mix(in srgb, var(--recap-text, #f2f3ee) 75%, transparent)",
+            }}
+          >
+            We sent this to the ambassador.
+          </p>
+        ) : null}
         {existingComment ? (
           <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
             “{existingComment}”

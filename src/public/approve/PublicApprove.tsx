@@ -32,6 +32,8 @@ type RequestDetail = {
   endTime: string;
   activationType: string;
   distributor: string;
+  products: string[];
+  baCount: number | null;
   requestorName: string;
   requestorEmail: string;
   status: { slug: string; name: string };
@@ -291,6 +293,18 @@ const PublicApprove: React.FC = () => {
         />
         <Row label="Activation type" value={req.activationType || "—"} />
         <Row label="Distributor" value={req.distributor || "—"} />
+        <Row
+          label="Products"
+          value={
+            req.products && req.products.length > 0
+              ? req.products.join(", ")
+              : "—"
+          }
+        />
+        <Row
+          label="BA count"
+          value={req.baCount != null ? String(req.baCount) : "—"}
+        />
       </div>
 
       {err && (
