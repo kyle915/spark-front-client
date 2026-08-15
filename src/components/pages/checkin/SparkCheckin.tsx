@@ -706,6 +706,7 @@ export default function SparkCheckin() {
   const accent = ctx?.brand.primaryColor || FALLBACK_ACCENT;
   const clockState = ctx?.session?.clock.state ?? "not_started";
   const identified = Boolean(token && ctx?.session);
+  // Filed content only — the API's has_recap() ignores empty clock-out stubs.
   const hasRecap = Boolean(ctx?.session?.hasRecap);
 
   if (loadErr) {

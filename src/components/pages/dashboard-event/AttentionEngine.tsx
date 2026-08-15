@@ -1,23 +1,16 @@
 import { useMemo } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
-import { RequestsQuery } from "@/api/queries/RequestsQuery";
-import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { SidebarCountsQuery } from "@/api/queries/SidebarCountsQuery";
+import type { SidebarCountsQuery as SidebarCountsQueryType } from "@api/queries/__generated__/SidebarCountsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 
 /**
  * Data-driven "What needs you" engine.
  *
- * Surfaces real attention items based on live data, not hardcoded
- * placeholders. Returns null when there's nothing meaningful — so the
- * section disappears when the workspace is in a good state.
- *
- * v1 signals:
- *   1. PENDING / QUEUE requests older than 24h → approval bottleneck
- *   2. Upcoming events (next 7 days) without a status of "scheduled"
- *      → staffing risk
- *   3. Done events without a recap submitted in 48h+ → reporting gap
- *      (v2 — needs join with recaps_recap, leaving as TODO)
+ * Reuses SidebarCountsQuery (first: 1000) — the same document
+ * useSidebarCounts already loaded — so Home does not fire a second
+ * RequestsQuery for the first 500 rows.
  */
 
 type AttentionItem = {
@@ -55,9 +48,9 @@ export const AttentionEngine: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
 
-  const data = useLazyLoadQuery<RequestsQueryType>(
-    RequestsQuery,
-    { first: 500, filters: tenantId ? { tenantId } : null },
+  const data = useLazyLoadQuery<SidebarCountsQueryType>(
+    SidebarCountsQuery,
+    { first: 1000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
 
@@ -68,51 +61,35 @@ export const AttentionEngine: React.FC = () => {
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
 
-    // 1. Pending or Queue requests > 24h old
     const stalePending = requests.filter((r) => {
       const slug = (r.status?.slug ?? r.status?.name ?? "").toLowerCase();
       if (!(slug === "pending" || slug === "queue")) return false;
       return ageHours(r.createdAt) > 24;
     });
     if (stalePending.length > 0) {
-      const venues = stalePending
-        .slice(0, 5)
-        .map((r) => r.retailer?.name ?? r.name ?? "—")
-        .join(" · ");
       out.push({
         id: "stale-pending",
         tone: "orange",
         badge: `${stalePending.length} REQUESTS · 24H+ OLD`,
         headline: "Approval bottleneck",
-        body: `${venues}${stalePending.length > 5 ? ` + ${stalePending.length - 5} more` : ""}`,
+        body: `${stalePending.length} request${stalePending.length === 1 ? "" : "s"} waiting more than 24 hours`,
         cta: "Review now",
         to: "/approvals",
       });
     }
 
-    // 2. Upcoming (next 7 days) requests not yet "scheduled" or "done"
     const upcomingUnscheduled = requests.filter((r) => {
       if (!isUpcomingWithin(r.date, 7)) return false;
       const slug = (r.status?.slug ?? r.status?.name ?? "").toLowerCase();
       return slug !== "scheduled" && slug !== "done" && slug !== "completed";
     });
     if (upcomingUnscheduled.length > 0) {
-      const cities = Array.from(
-        new Set(
-          upcomingUnscheduled
-            .slice(0, 8)
-            .map(
-              (r) =>
-                r.retailer?.location?.name ?? r.location?.name ?? "Unknown",
-            ),
-        ),
-      ).join(" · ");
       out.push({
         id: "upcoming-unscheduled",
         tone: "gold",
         badge: `${upcomingUnscheduled.length} UPCOMING · NOT YET SCHEDULED`,
         headline: "Staffing risk this week",
-        body: `${cities}`,
+        body: `${upcomingUnscheduled.length} upcoming request${upcomingUnscheduled.length === 1 ? "" : "s"} not yet scheduled`,
         cta: "Open tracker",
         to: "/requests/list",
       });
@@ -174,7 +151,7 @@ export const AttentionEngine: React.FC = () => {
               </p>
               <button
                 onClick={() => navigate(it.to)}
-                className="mt-4 w-full text-xs py-2 rounded-xl transition"
+                className="mt-4 w-full text-xs py-2 rounded-xl transition active:scale-[0.98]"
                 style={{
                   background: "transparent",
                   color,

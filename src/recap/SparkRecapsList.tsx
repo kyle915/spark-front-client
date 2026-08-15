@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Link, useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
@@ -208,6 +208,11 @@ const daysAgoIso = (n: number) => {
 const TODAY_ISO = isoLocal(new Date());
 const DAYS_30_ISO = daysAgoIso(30);
 const DAYS_90_ISO = daysAgoIso(90);
+const monthStartIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+};
+const MONTH_START_ISO = monthStartIso();
 
 const ghostBtn: React.CSSProperties = {
   background: "transparent",
@@ -218,6 +223,16 @@ const limeBtn: React.CSSProperties = {
   background: "var(--spark-lime)",
   color: "#0a0d09",
   boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+};
+
+const recapIsEmptyShell = (r: Recap): boolean => {
+  const hasPhotos = Boolean(r.heroImage) || (r.fileCount ?? 0) > 0;
+  const hasMetrics =
+    r.engagements != null ||
+    r.productsSold != null ||
+    r.cansSold != null ||
+    r.packsSold != null;
+  return !hasPhotos && !hasMetrics;
 };
 
 const RecapCard: React.FC<{
@@ -236,17 +251,35 @@ const RecapCard: React.FC<{
   onToggleSelect: () => void;
   selectMode: boolean;
   showSla: boolean;
-}> = ({ recap, href, onOpenRequest, selected, onToggleSelect, selectMode, showSla }) => (
+}> = ({ recap, href, onOpenRequest, selected, onToggleSelect, selectMode, showSla }) => {
+  const emptyShell = recapIsEmptyShell(recap);
+  const completeness = emptyShell
+    ? "Not filed"
+    : [
+        recap.fileCount > 0
+          ? `${recap.fileCount} photo${recap.fileCount === 1 ? "" : "s"}`
+          : "No photos",
+        recap.engagements != null || recap.productsSold != null
+          ? "Metrics in"
+          : "No metrics",
+      ].join(" · ");
+  return (
   <div
     className="spark-card hov overflow-hidden cursor-pointer relative"
-    style={
-      selected
+    style={{
+      ...(selected
         ? {
             outline: "2px solid var(--spark-lime)",
             outlineOffset: 2,
           }
-        : undefined
-    }
+        : {}),
+      ...(emptyShell
+        ? {
+            opacity: 0.72,
+            borderStyle: "dashed",
+          }
+        : {}),
+    }}
   >
     {/* Stretched-link overlay — a real <a href> covering the whole card.
         Left-click navigates in-app (react-router intercepts); right-click /
@@ -325,9 +358,24 @@ const RecapCard: React.FC<{
         R-{recap.uuid.slice(-4).toUpperCase()}
       </span>
       <span
-        className={`absolute top-2 right-2 chip ${recap.approved ? "chip-lime" : "chip-orange"}`}
+        className={`absolute top-2 right-2 chip ${
+          emptyShell
+            ? ""
+            : recap.approved
+              ? "chip-lime"
+              : "chip-orange"
+        }`}
+        style={
+          emptyShell
+            ? {
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.18)",
+                color: "rgba(255,255,255,0.62)",
+              }
+            : undefined
+        }
       >
-        ● {recap.approved ? "APPROVED" : "DRAFT"}
+        ● {emptyShell ? "NOT FILED" : recap.approved ? "APPROVED" : "DRAFT"}
       </span>
     </div>
 
@@ -353,7 +401,24 @@ const RecapCard: React.FC<{
         {recap.stateCode ? ` · ${recap.stateCode}` : ""}
         {recap.date ? ` · ${formatDate(recap.date)}` : ""}
       </p>
-      {showSla && recap.date ? <SlaHours since={recap.date} /> : null}
+      <p
+        className="mono text-[10px] mt-1"
+        style={{
+          letterSpacing: "0.12em",
+          color: emptyShell ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.55)",
+        }}
+      >
+        {completeness}
+      </p>
+      {emptyShell ? (
+        <p
+          className="text-[12px] mt-1"
+          style={{ color: "rgba(255,255,255,0.5)" }}
+        >
+          BA clocked out — recap not filed
+        </p>
+      ) : null}
+      {showSla && !emptyShell && recap.date ? <SlaHours since={recap.date} /> : null}
 
       <div className="relative z-10 flex items-center gap-2 mt-2 flex-wrap">
         {recap.requestUuid && onOpenRequest && (
@@ -402,6 +467,7 @@ const RecapCard: React.FC<{
         )}
       </div>
 
+      {!emptyShell ? (
       <div
         className="mt-3 pt-3 grid grid-cols-3 gap-2 text-center"
         style={{ borderTop: "1px solid var(--spark-border)" }}
@@ -435,9 +501,11 @@ const RecapCard: React.FC<{
           <p className="label-mini">CONV</p>
         </div>
       </div>
+      ) : null}
     </div>
   </div>
-);
+  );
+};
 
 type Meta = {
   retailers: string[];
@@ -1025,12 +1093,14 @@ export default function SparkRecapsList() {
   // Relay global id (pushed server-side as `ambassadorId`). Mirrors rmmFilter.
   const [baFilter, setBaFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<StatusKey>(
-    isClient ? "submitted" : "needs_review",
+    isClient ? "shared" : "needs_review",
   );
   const [selectMode, setSelectMode] = useState(false);
   // Work-queue default: last 30 days. "All published" clears both
   // bounds so the archive (every published recap) is an explicit choice.
-  const [dateFrom, setDateFrom] = useState<string>(DAYS_30_ISO);
+  const [dateFrom, setDateFrom] = useState<string>(
+    isClient ? MONTH_START_ISO : DAYS_30_ISO,
+  );
   const [dateTo, setDateTo] = useState<string>(TODAY_ISO);
   const [opsOpen, setOpsOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
@@ -1040,6 +1110,7 @@ export default function SparkRecapsList() {
   // change (tenant scope, RMM, and the date bounds we push to the server)
   // so a freshly-scoped query starts from a small, fast page again.
   const [limit, setLimit] = useState(INITIAL_LIMIT);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     setLimit(INITIAL_LIMIT);
   }, [rmmFilter, baFilter, dateFrom, dateTo, statusFilter, retailerFilter, stateFilter, search]);
@@ -1053,6 +1124,21 @@ export default function SparkRecapsList() {
     totalConsumers: 0,
     totalProducts: 0,
   });
+  useEffect(() => {
+    if (!meta.hasMore) return;
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setLimit((l) => l + LOAD_MORE_STEP);
+        }
+      },
+      { rootMargin: "240px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [meta.hasMore, limit]);
 
   const onMeta = useMemo(() => (next: Meta) => setMeta(next), []);
 
@@ -1396,7 +1482,7 @@ export default function SparkRecapsList() {
   const pipelineKey =
     statusFilter === "draft" ? "needs_review" : statusFilter;
   const statusWord = isClient
-    ? "APPROVED"
+    ? "SHARED"
     : pipelineKey === "needs_review"
       ? "NEEDS REVIEW"
       : pipelineKey === "approved"
@@ -1489,6 +1575,7 @@ export default function SparkRecapsList() {
             className="rounded-xl text-sm"
             style={{ ...filterStyle, flex: 1, minWidth: 180, maxWidth: 260 }}
           />
+          {!isClient && (
           <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--spark-border)" }}>
             {([
               ["needs_review", "Needs review"],
@@ -1514,6 +1601,8 @@ export default function SparkRecapsList() {
               </button>
             ))}
           </div>
+          )}
+          {!isClient && (
           <button
             type="button"
             onClick={() => setSelectMode((v) => !v)}
@@ -1522,6 +1611,8 @@ export default function SparkRecapsList() {
           >
             {selectMode ? "Selecting" : "Select"}
           </button>
+          )}
+          {!isClient && (
           <button
             type="button"
             onClick={pinCurrentView}
@@ -1531,6 +1622,7 @@ export default function SparkRecapsList() {
           >
             Pin view
           </button>
+          )}
           {savedViews.length > 0 && (
             <select
               defaultValue=""
@@ -1825,24 +1917,14 @@ export default function SparkRecapsList() {
           />
         </Suspense>
 
-        {/* Load-more gate + counter. The gate fires off the SERVER's
-            pageInfo.hasNextPage (meta.hasMore) — i.e. there are more rows
-            on the server than we've fetched — so each click pulls another
-            bounded page instead of loading everything up front (the old
-            2000-row hang). The counter shows how many rows are loaded vs
-            the combined server total; client-side filters (search /
-            status / retailer / state / date) run over the loaded rows. */}
+        {/* Infinite scroll for Needs review (and the rest of the list).
+            A sentinel at the bottom grows `limit` instead of a "Load 50
+            more" button — LD weekends were paging through a weekend of
+            recaps one click at a time. The counter still shows how many
+            rows are loaded vs the combined server total. */}
         {(meta.hasMore || (meta.total > 0 && meta.loaded > 0)) && (
           <div className="flex flex-col items-center gap-2 py-4">
-            {meta.hasMore && (
-              <button
-                onClick={() => setLimit((l) => l + LOAD_MORE_STEP)}
-                className="px-5 py-2.5 rounded-2xl text-sm font-semibold"
-                style={ghostBtn}
-              >
-                Load {LOAD_MORE_STEP} more →
-              </button>
-            )}
+            {meta.hasMore && <div ref={loadMoreRef} className="h-8 w-full" />}
             <p
               className="mono text-[10px]"
               style={{
