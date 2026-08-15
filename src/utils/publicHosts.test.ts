@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  ADMIN_ORIGIN,
   CLIENT_ORIGIN,
   adminOrigin,
   checkinUrl,
@@ -31,6 +30,7 @@ describe("isPublicFieldPath", () => {
     expect(isPublicFieldPath("/checkin/abc")).toBe(true);
     expect(isPublicFieldPath("/spark-form/liquid-death")).toBe(true);
     expect(isPublicFieldPath("/r/tok.en")).toBe(true);
+    expect(isPublicFieldPath("/training/LD-FZUWXT")).toBe(true);
   });
   it("does not match admin or login", () => {
     expect(isPublicFieldPath("/")).toBe(false);
@@ -63,10 +63,10 @@ describe("client / admin origins", () => {
 });
 
 describe("recap share origin", () => {
-  it("uses admin when staff mint from admin", () => {
+  it("mints client even when staff are on admin", () => {
     mockLocation("admin.igniteproductions.co");
-    expect(recapShareOrigin()).toBe(ADMIN_ORIGIN);
-    expect(recapPublicUrl("tok")).toBe(`${ADMIN_ORIGIN}/r/tok`);
+    expect(recapShareOrigin()).toBe(CLIENT_ORIGIN);
+    expect(recapPublicUrl("tok")).toBe(`${CLIENT_ORIGIN}/r/tok`);
   });
 
   it("uses client when minted from the client portal", () => {
