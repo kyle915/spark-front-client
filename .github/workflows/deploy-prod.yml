@@ -83,15 +83,18 @@ jobs:
       - name: Deploy hosting:client (spark-new-client)
         run: firebase deploy --only hosting:client --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
 
-      # spark.igniteproductions.co CNAMEs to spark-front-client-prod, not
-      # spark-new-admin / spark-new-client. This target is a Hosting 301
-      # to client.igniteproductions.co (see firebase.json). Isolated so
-      # a missing site cannot roll back the admin deploy.
+      # spark.igniteproductions.co CNAMEs to spark-front-client-prod, which
+      # still lives on the pre-split Firebase project
+      # (FIREBASE_PROJECT_ID_PROD / FIREBASE_SERVICE_ACCOUNT_PROD) — not
+      # spark-479222. Isolated so a missing site cannot roll back admin.
       - name: Deploy hosting:spark (spark.igniteproductions.co)
         continue-on-error: true
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-prod-key.json
         run: |
-          firebase target:apply hosting spark spark-front-client-prod --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
-          firebase deploy --only hosting:spark --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}' > "$GOOGLE_APPLICATION_CREDENTIALS"
+          firebase target:apply hosting spark spark-front-client-prod --project "${{ secrets.FIREBASE_PROJECT_ID_PROD }}" --non-interactive
+          firebase deploy --only hosting:spark --project "${{ secrets.FIREBASE_PROJECT_ID_PROD }}" --non-interactive
 
       - name: Clean up Firebase auth file
         if: always()
@@ -99,7 +102,7 @@ jobs:
 
   # Local `firebase deploy --only hosting:spark` needs a valid CLI login.
   # This job ships just the leftover spark. host from any branch via
-  # workflow_dispatch, using the same CI service account as prod.
+  # workflow_dispatch, using the pre-split PROD Firebase project.
   deploy_spark_only:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.only_spark == true }}
     runs-on: ubuntu-latest
@@ -117,13 +120,13 @@ jobs:
 
       - name: Set up Firebase auth
         run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DENO }}' > "$HOME/firebase-key.json"
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}' > "$HOME/firebase-key.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$HOME/firebase-key.json" >> "$GITHUB_ENV"
 
       - name: Deploy hosting:spark (spark.igniteproductions.co)
         run: |
-          firebase target:apply hosting spark spark-front-client-prod --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
-          firebase deploy --only hosting:spark --project "${{ env.FIREBASE_PROJECT_ID }}" --non-interactive
+          firebase target:apply hosting spark spark-front-client-prod --project "${{ secrets.FIREBASE_PROJECT_ID_PROD }}" --non-interactive
+          firebase deploy --only hosting:spark --project "${{ secrets.FIREBASE_PROJECT_ID_PROD }}" --non-interactive
 
       - name: Clean up Firebase auth file
         if: always()
