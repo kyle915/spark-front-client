@@ -2,6 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, ty
 import { useParams } from "react-router";
 import { bucketCountHint } from "./photoBuckets";
 import { isHeicUpload } from "./heicUpload";
+import {
+  CLOCK_FETCH_TIMEOUT_MS,
+  enqueueClockIn,
+  flushPendingClock,
+  isOfflineClockFailure,
+  offlineClockBanner,
+  readCachedContext,
+  readPendingClock,
+  writeCachedContext,
+  type PendingClockIn,
+} from "./offlineClock";
 
 /**
  * Public, no-login web check-in for a BA working a specific event.
@@ -518,6 +529,20 @@ function apiOrigin(): string {
   }
 }
 
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs = CLOCK_FETCH_TIMEOUT_MS,
+): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = window.setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
 const isPhotoType = (t: string) => t.includes("photo") || t.includes("image");
 const choiceKind = (t: string): "select" | "multiselect" | null => {
   if (t === "multiselect" || t.includes("multi")) return "multiselect";
@@ -696,9 +721,18 @@ export default function SparkCheckin() {
       } else {
         setCtx(json);
         setLoadErr(null);
+        writeCachedContext(code, json);
       }
     } catch {
-      setLoadErr("Couldn't load this check-in. Check your connection and reload.");
+      const cached = readCachedContext<Context>(code);
+      if (cached) {
+        // Last good shell — a BA who already opened this link can still
+        // clock in / draft a recap when the reload itself has no bars.
+        setCtx(cached);
+        setLoadErr(null);
+      } else {
+        setLoadErr("Couldn't load this check-in. Check your connection and reload.");
+      }
     }
   }, [code, token]);
 
@@ -1021,7 +1055,7 @@ function IdentifyStep({
       writeIdentity(code, { firstName, lastName, phone, email });
       onDone(json.sessionToken);
     } catch {
-      setErr("Network error. Try again.");
+      setErr("No service. Stay on this page and tap again when you have a bar.");
       setBusy(false);
     }
   };
@@ -1190,13 +1224,77 @@ function CheckedInFlow({
   const [busy, setBusy] = useState<"" | "in" | "out">("");
   const [showRecap, setShowRecap] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [queuedClock, setQueuedClock] = useState<PendingClockIn | null>(() =>
+    readPendingClock(code),
+  );
+  // A queued clock-in is the shift they already started. Treat it as on the
+  // clock so they can fill the recap offline instead of staring at Clock in.
+  const effectiveClock: Clock["state"] =
+    queuedClock && clockState === "not_started" ? "clocked_in" : clockState;
+  const clockInAt = queuedClock?.clockedInAt ?? ctx.session?.clock.clockInAt ?? null;
 
-  const post = (path: string, body: Record<string, unknown>) =>
-    fetch(`${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session: token, ...body }),
+  const post = (path: string, body: Record<string, unknown>, timeoutMs?: number) =>
+    fetchWithTimeout(
+      `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/${path}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session: token, ...body }),
+      },
+      timeoutMs ?? CLOCK_FETCH_TIMEOUT_MS,
+    );
+
+  const queueOfflineIn = (coords: { latitude?: number; longitude?: number }, tappedAt: string) => {
+    const row = enqueueClockIn({
+      code,
+      token,
+      clockedInAt: tappedAt,
+      ...coords,
     });
+    setQueuedClock(row);
+    setMsg(offlineClockBanner(row.clockedInAt));
+  };
+
+  const tryFlushPending = useCallback(async () => {
+    const result = await flushPendingClock({
+      code,
+      postClock: async (body) => {
+        const res = await post("clock", body);
+        let alreadyIn = false;
+        try {
+          const json = (await res.clone().json()) as { alreadyIn?: boolean; clock?: Clock };
+          alreadyIn = Boolean(json.alreadyIn || json.clock?.state === "clocked_in");
+        } catch {
+          /* body may be empty on a gateway error */
+        }
+        return { ok: res.ok, status: res.status, alreadyIn };
+      },
+    });
+    if (result === "flushed" || result === "already") {
+      setQueuedClock(readPendingClock(code));
+      await onRefresh();
+    }
+    return result;
+    // `post` closes over code+token, which are stable for this session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, token, onRefresh]);
+
+  useEffect(() => {
+    if (!queuedClock) return;
+    const onOnline = () => {
+      void tryFlushPending();
+    };
+    window.addEventListener("online", onOnline);
+    const onVis = () => {
+      if (document.visibilityState === "visible") void tryFlushPending();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    void tryFlushPending();
+    return () => {
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [queuedClock, tryFlushPending]);
 
   // While the BA is ON THE CLOCK and this page is open, drop a location pin
   // every few minutes so ops can see they're on site rather than only having
@@ -1247,18 +1345,50 @@ function CheckedInFlow({
   const clock = async (kind: "in" | "out") => {
     setMsg(null);
     setBusy(kind);
+    const tappedAt = new Date().toISOString();
     // Best-effort geolocation — clocking works even if it's denied/unavailable.
-    const withCoords = (coords: { latitude?: number; longitude?: number }) =>
-      post("clock", { kind, ...coords })
-        .then(async (res) => {
-          const json = await res.json();
-          if (!res.ok) setMsg(json.message || "Couldn't record that.");
-        })
-        .catch(() => setMsg("Network error. Try again."))
-        .finally(async () => {
-          setBusy("");
-          await onRefresh();
+    const withCoords = async (coords: { latitude?: number; longitude?: number }) => {
+      try {
+        if (kind === "out" && queuedClock) {
+          const flushed = await tryFlushPending();
+          if (flushed === "retry") {
+            setMsg(offlineClockBanner(queuedClock.clockedInAt));
+            return;
+          }
+        }
+        const res = await post("clock", {
+          kind,
+          ...coords,
+          ...(kind === "in"
+            ? { clockedInAt: queuedClock?.clockedInAt ?? tappedAt, idempotencyKey: queuedClock?.id }
+            : {}),
         });
+        let json: { message?: string; alreadyIn?: boolean; clock?: Clock } = {};
+        try {
+          json = (await res.json()) as typeof json;
+        } catch {
+          json = {};
+        }
+        if (!res.ok) {
+          if (kind === "in" && isOfflineClockFailure({ status: res.status })) {
+            queueOfflineIn(coords, tappedAt);
+            return;
+          }
+          setMsg(json.message || "Couldn't record that.");
+          return;
+        }
+        if (kind === "in") setQueuedClock(readPendingClock(code));
+        await onRefresh();
+      } catch (error) {
+        if (kind === "in" && isOfflineClockFailure({ error })) {
+          queueOfflineIn(coords, tappedAt);
+          return;
+        }
+        setMsg("Network error. Try again.");
+      } finally {
+        setBusy("");
+      }
+    };
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => void withCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
@@ -1411,12 +1541,13 @@ function CheckedInFlow({
               Time clock
             </div>
             <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2 }}>
-              {clockState === "clocked_in" ? "On the clock" : clockState === "clocked_out" ? "Clocked out" : "Not started"}
+              {effectiveClock === "clocked_in" ? "On the clock" : effectiveClock === "clocked_out" ? "Clocked out" : "Not started"}
             </div>
-            {ctx.session?.clock.clockInAt ? (
+            {clockInAt ? (
               <div style={{ fontSize: 12, opacity: 0.55, marginTop: 2 }}>
-                In {fmtTime(ctx.session.clock.clockInAt)}
-                {ctx.session.clock.clockOutAt ? ` · Out ${fmtTime(ctx.session.clock.clockOutAt)}` : ""}
+                In {fmtTime(clockInAt)}
+                {ctx.session?.clock.clockOutAt ? ` · Out ${fmtTime(ctx.session.clock.clockOutAt)}` : ""}
+                {queuedClock ? " · saved on this device" : ""}
               </div>
             ) : null}
           </div>
@@ -1425,7 +1556,7 @@ function CheckedInFlow({
               width: 10,
               height: 10,
               borderRadius: 999,
-              background: clockState === "clocked_in" ? accent : "rgba(0,0,0,0.2)",
+              background: effectiveClock === "clocked_in" ? accent : "rgba(0,0,0,0.2)",
             }}
           />
         </div>
@@ -1478,7 +1609,7 @@ function CheckedInFlow({
             Nobody can get stranded on the clock: the auto-clock-out cron
             closes anything left open. */}
         <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-          {clockState === "not_started" ? (
+          {effectiveClock === "not_started" ? (
             <button style={primaryBtn(accent)} disabled={busy !== ""} onClick={() => clock("in")}>
               {busy === "in" ? "Clocking in…" : "Clock in"}
             </button>
@@ -1490,7 +1621,7 @@ function CheckedInFlow({
               clock out only appeared after a recap existed, so a failed upload
               silently kept them on the clock with no way to end the shift.
               Never gate ending a shift on another action succeeding. */}
-          {clockState === "clocked_in" && !hasRecap ? (
+          {effectiveClock === "clocked_in" && !hasRecap ? (
             <>
               <button style={primaryBtn(accent)} onClick={() => setShowRecap(true)}>
                 File recap
@@ -1501,7 +1632,7 @@ function CheckedInFlow({
             </>
           ) : null}
 
-          {clockState === "clocked_in" && hasRecap ? (
+          {effectiveClock === "clocked_in" && hasRecap ? (
             <>
               <button style={primaryBtn(accent)} disabled={busy !== ""} onClick={() => clock("out")}>
                 {busy === "out" ? "Clocking out…" : "Clock out"}
@@ -1517,7 +1648,7 @@ function CheckedInFlow({
               the only way out: a BA whose last shift ended without a recap
               would otherwise be trapped on that dead event forever, unable to
               start today's. Hence the escape hatch below. */}
-          {clockState === "clocked_out" && !hasRecap ? (
+          {effectiveClock === "clocked_out" && !hasRecap ? (
             <>
               <button style={primaryBtn(accent)} onClick={() => setShowRecap(true)}>
                 File recap
@@ -1530,7 +1661,12 @@ function CheckedInFlow({
             </>
           ) : null}
         </div>
-        {msg ? <p style={errText}>{msg}</p> : null}
+        {queuedClock ? (
+          <p style={{ ...errText, color: "#92400e" }}>
+            {offlineClockBanner(queuedClock.clockedInAt)}
+          </p>
+        ) : null}
+        {msg && !queuedClock ? <p style={errText}>{msg}</p> : null}
       </div>
 
       {/* Wrong store or wrong day is easy to do on a shared link, and the
@@ -1655,16 +1791,16 @@ function CheckedInFlow({
         </div>
       ) : null}
 
-      {clockState === "not_started" ? (
+      {effectiveClock === "not_started" ? (
         <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>Clock in when you arrive to start your shift.</p>
       ) : null}
-      {clockState === "clocked_in" && !hasRecap ? (
+      {effectiveClock === "clocked_in" && !hasRecap ? (
         <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>
           You're on the clock. File your recap when you're done. If it won't go
           through, clock out anyway — you can come back and file it after.
         </p>
       ) : null}
-      {clockState === "clocked_in" && hasRecap ? (
+      {effectiveClock === "clocked_in" && hasRecap ? (
         <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>
           Recap's in. Clock out to finish your shift.
         </p>
@@ -1855,6 +1991,34 @@ function RecapForm({
 
     setBusy(true);
     try {
+      // Recap can be drafted offline. If a clock-in is still queued, attach
+      // it first so the API sees the shift that started at tap time.
+      await flushPendingClock({
+        code,
+        postClock: async (body) => {
+          const clockRes = await fetchWithTimeout(
+            `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/clock`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ session: token, ...body }),
+            },
+          );
+          let alreadyIn = false;
+          try {
+            const clockJson = (await clockRes.clone().json()) as {
+              alreadyIn?: boolean;
+              clock?: { state?: string };
+            };
+            alreadyIn = Boolean(
+              clockJson.alreadyIn || clockJson.clock?.state === "clocked_in",
+            );
+          } catch {
+            /* gateway / empty */
+          }
+          return { ok: clockRes.ok, status: clockRes.status, alreadyIn };
+        },
+      });
       const res = await fetch(`${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/recap`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1893,8 +2057,16 @@ function RecapForm({
     );
   }
 
+  const pendingClock = readPendingClock(code);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {pendingClock ? (
+        <p style={{ ...errText, color: "#92400e", margin: 0 }}>
+          {offlineClockBanner(pendingClock.clockedInAt)} You can still fill this
+          recap — it stays on this device until it sends.
+        </p>
+      ) : null}
       {template.sections.map((section) => (
         <div key={section.id} style={card}>
           <h2 style={h2}>{section.name}</h2>
