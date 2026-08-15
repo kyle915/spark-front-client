@@ -42,13 +42,12 @@ export function adminOrigin(): string {
 
 /**
  * Public recap leave-behind host.
- * Staff on admin mint admin./r/:token. Clients on client mint client.
- * spark. and anything else mint client — never spark.
+ * Always client. in production — field phones have failed to resolve
+ * admin. (ERR_NAME_NOT_RESOLVED). spark. 301s here anyway.
  */
 export function recapShareOrigin(): string {
   const host = windowHostname();
   if (host && isLocalHostname(host)) return windowOrigin() as string;
-  if (host === "admin.igniteproductions.co") return ADMIN_ORIGIN;
   return CLIENT_ORIGIN;
 }
 
@@ -71,5 +70,5 @@ export function recapPublicUrl(token: string): string {
 
 /** True when this first paint should boot the public field entry (no GSI / shell). */
 export function isPublicFieldPath(pathname: string): boolean {
-  return /^\/(checkin|spark-form|r)(\/|$)/.test(pathname);
+  return /^\/(checkin|spark-form|r|training)(\/|$)/.test(pathname);
 }
