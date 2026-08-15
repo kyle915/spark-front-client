@@ -47,6 +47,29 @@
       ]
     },
     {
+      "target": "spark",
+      "public": "dist",
+      "ignore": [
+        "firebase.json",
+        "**/node_modules/**",
+        "**/.DS_Store",
+        "**/.gitignore",
+        "**/.eslintrc*"
+      ],
+      "rewrites": [{ "source": "**", "destination": "/index.html" }],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "target": "client",
       "public": "dist",
       "ignore": [
