@@ -710,17 +710,31 @@ export default function SparkCheckin() {
 
   if (loadErr) {
     return (
-      <Shell>
-        <div style={{ ...card, textAlign: "center", maxWidth: 440 }}>
-          <p style={{ fontSize: 15, opacity: 0.85 }}>{loadErr}</p>
-        </div>
+      <Shell framed>
+        <p
+          className="text-xs uppercase tracking-[0.22em] text-stone-500 mb-2"
+        >
+          Walk-up check-in
+        </p>
+        <h1
+          className="text-2xl font-bold mb-3"
+          style={{ fontFamily: "Georgia, serif" }}
+        >
+          This check-in link isn't active.
+        </h1>
+        <p className="text-sm text-stone-600 mb-4">{loadErr}</p>
+        <p className="text-sm text-stone-600">
+          If you were sent here for a shift, ask your Ignite contact for a
+          new link. This page is for brand ambassadors — it will not sign
+          you into Spark.
+        </p>
       </Shell>
     );
   }
   if (!ctx) {
     return (
-      <Shell>
-        <p style={{ opacity: 0.6 }}>Loading…</p>
+      <Shell framed>
+        <p className="text-sm text-stone-500">Loading check-in…</p>
       </Shell>
     );
   }
@@ -760,7 +774,7 @@ export default function SparkCheckin() {
           />
         )}
         <p style={{ fontSize: 11, opacity: 0.4, marginTop: 22, textAlign: "center" }}>
-          Powered by Spark by Ignite
+          Spark by Ignite
         </p>
       </div>
     </Shell>
@@ -1876,6 +1890,7 @@ function RecapForm({
               ref={fileRef}
               type="file"
               accept="image/*"
+              capture="environment"
               multiple
               style={{ display: "none" }}
               onChange={(e) => {
@@ -1988,10 +2003,18 @@ function FieldInput({
           {req}
         </label>
         <PhotoGrid photos={photos} onAdd={() => localRef.current?.click()} onRemove={onRemovePhoto} accent={accent} />
-        <input ref={localRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => {
-          onAddPhotos(e.target.files);
-          e.target.value = "";
-        }} />
+        <input
+          ref={localRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          multiple
+          style={{ display: "none" }}
+          onChange={(e) => {
+            onAddPhotos(e.target.files);
+            e.target.value = "";
+          }}
+        />
       </div>
     );
   }
@@ -2142,6 +2165,7 @@ function PhotoBucketZone({
         ref={ref}
         type="file"
         accept="image/*"
+        capture="environment"
         multiple
         style={{ display: "none" }}
         onChange={(e) => {
@@ -2167,13 +2191,13 @@ function PhotoGrid({
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
       {photos.map((p) => (
-        <div key={p.id} style={{ position: "relative", width: 72, height: 72 }}>
+        <div key={p.id} style={{ position: "relative", width: 120, height: 120 }}>
           <img
             src={p.previewUrl}
             alt=""
             style={{
-              width: 72,
-              height: 72,
+              width: 120,
+              height: 120,
               objectFit: "cover",
               borderRadius: 10,
               opacity: p.state === "done" ? 1 : 0.5,
@@ -2194,35 +2218,101 @@ function PhotoGrid({
         type="button"
         onClick={onAdd}
         style={{
-          width: 72,
-          height: 72,
-          borderRadius: 10,
+          minWidth: 120,
+          minHeight: 120,
+          borderRadius: 16,
           border: `2px dashed ${accent}`,
           background: "transparent",
-          fontSize: 26,
+          fontSize: 15,
+          fontWeight: 700,
           color: accent,
           cursor: "pointer",
+          padding: "16px 12px",
         }}
       >
-        +
+        Take photo
       </button>
     </div>
   );
 }
 
 // ── Chrome ──────────────────────────────────────────────────────────────────
-function Shell({ children }: { children: React.ReactNode }) {
-  return <div style={wrap}>{children}</div>;
+// Matches /approve cream chrome so a dead or live check-in link still
+// looks like Ignite — not a blank Tailwind canvas, and never /login.
+const IGNITE_HOME = "https://www.igniteproductions.co/";
+const IGNITE_SUPPORT = "staffing@igniteproductions.co";
+
+function Shell({
+  children,
+  framed = false,
+}: {
+  children: React.ReactNode;
+  framed?: boolean;
+}) {
+  return (
+    <div style={wrap}>
+      <div style={{ width: "100%", maxWidth: 560 }}>
+        <a
+          href={IGNITE_HOME}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 28,
+            textDecoration: "none",
+          }}
+        >
+          <img
+            src="/legal/spark-logo.png"
+            alt="Spark by Ignite"
+            style={{ height: 28, width: "auto" }}
+          />
+        </a>
+        {framed ? (
+          <div
+            style={{
+              background: "#ffffff",
+              border: "1px solid #e7e5e4",
+              borderRadius: 24,
+              padding: "28px 24px",
+              boxShadow: "0 1px 2px rgba(28, 25, 23, 0.04)",
+            }}
+          >
+            {children}
+          </div>
+        ) : (
+          children
+        )}
+        <p
+          style={{
+            marginTop: 24,
+            textAlign: "center",
+            fontSize: 12,
+            color: "#a8a29e",
+          }}
+        >
+          Questions?{" "}
+          <a href={`mailto:${IGNITE_SUPPORT}`} style={{ color: "#78716c" }}>
+            {IGNITE_SUPPORT}
+          </a>
+          {" · "}
+          <a href={IGNITE_HOME} style={{ color: "#78716c" }}>
+            igniteproductions.co
+          </a>
+        </p>
+      </div>
+    </div>
+  );
 }
 
 const wrap: React.CSSProperties = {
-  minHeight: "100vh",
-  background: "#fafafa",
-  color: "#14181a",
+  minHeight: "100dvh",
+  background: "#faf7f1",
+  color: "#1c1917",
   display: "flex",
   justifyContent: "center",
   alignItems: "flex-start",
-  padding: "28px 16px 48px",
+  padding: "48px 20px 56px",
   fontFamily: "system-ui, -apple-system, sans-serif",
 };
 const card: React.CSSProperties = {

@@ -3,6 +3,7 @@ export const PUBLIC_TENANT_QUERY = `
     tenantPublic(requestUrlName: $requestUrlName) {
       id,
       uuid,
+      name,
       image,
       requestUrlName
     }

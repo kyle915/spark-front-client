@@ -340,6 +340,7 @@ const CampaignUpload: React.FC = () => {
       : campaign?.name
         ? campaign.name
         : "Upload your receipt");
+  const description = rebateDescription(slug, campaign?.description);
 
   return (
     <Shell
@@ -365,9 +366,9 @@ const CampaignUpload: React.FC = () => {
           >
             {headline}
           </h1>
-          {campaign?.description && (
+          {description && (
             <p className="text-sm mb-2" style={{ opacity: 0.75 }}>
-              {campaign.description}
+              {description}
             </p>
           )}
 
@@ -551,6 +552,20 @@ const CampaignUpload: React.FC = () => {
   );
 };
 
+const GIRLBEER_REBATE_COPY =
+  "Bought Girl Beer? Photograph your receipt and submit it here. Once we verify the purchase, we'll send your rebate to the PayPal email you enter.";
+
+function rebateDescription(
+  slug: string | undefined,
+  raw: string | null | undefined,
+): string {
+  const text = (raw || "").trim();
+  if (slug === "girlbeer" && (!text || /connor/i.test(text))) {
+    return GIRLBEER_REBATE_COPY;
+  }
+  return text;
+}
+
 // Fallback reward label when the backend doesn't send a preformatted one.
 // rewardAmount arrives as a numeric string like "5.00".
 function formatReward(raw: string | null | undefined): string {
@@ -675,8 +690,14 @@ const Shell: React.FC<{
           opacity: 0.55,
         }}
       >
-        Spark by Ignite · We'll only use this to verify your purchase and
-        send your reward.
+        <a
+          href="https://www.igniteproductions.co/"
+          style={{ color: "inherit", textDecoration: "none" }}
+        >
+          Spark by Ignite
+        </a>
+        {" · "}
+        We'll only use this to verify your purchase and send your reward.
       </p>
     </div>
   </div>

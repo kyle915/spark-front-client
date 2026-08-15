@@ -10,6 +10,7 @@ type UseTenantPublicOptions = {
 export type TenantPublic = {
   id: string;
   uuid: string;
+  name: string | null;
   image: string | null;
   requestUrlName: string;
 };
