@@ -2155,6 +2155,9 @@ function PhotoBucketZone({
       {bucket.helper ? (
         <p style={{ fontSize: 12, opacity: 0.6, margin: "2px 0 0" }}>{bucket.helper}</p>
       ) : null}
+      <p style={{ fontSize: 12, opacity: 0.55, margin: "2px 0 0" }}>
+        iPhone photos are fine.
+      </p>
       <PhotoGrid
         photos={photos}
         onAdd={() => ref.current?.click()}

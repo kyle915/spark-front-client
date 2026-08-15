@@ -5,6 +5,8 @@ import {
   type SignoffStatus,
 } from "@/recap/RecapClientSignoff";
 import { TenantBrandedRecap, recapBrandBtn } from "@/recap/TenantBrandedRecap";
+import PublicDeadLink from "@/public/PublicDeadLink";
+import { thumbUrl } from "@/utils/thumb";
 import type { CssVariablesMap } from "@/utils/tenantThemeConfig";
 
 /**
@@ -272,11 +274,16 @@ const PublicRecap: React.FC = () => {
   }
 
   if (loadErr || !recap) {
-    return shell(
-      <div className="spark-card p-10 text-center" style={{ color: "rgba(255,255,255,0.7)" }}>
-        <p className="display text-2xl font-bold">Recap unavailable.</p>
-        <p className="text-sm mt-3">{loadErr?.message ?? errorCopy(400, "invalid")}</p>
-      </div>,
+    return (
+      <PublicDeadLink
+        eyebrow="Shared recap"
+        title={
+          loadErr?.error === "expired" || loadErr?.error === "token_expired"
+            ? "This recap link has expired."
+            : "We couldn't open this recap."
+        }
+        message={loadErr?.message ?? errorCopy(400, "invalid")}
+      />
     );
   }
 
@@ -297,14 +304,6 @@ const PublicRecap: React.FC = () => {
       <div className="spark-card p-6">
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              <span className={`chip ${recap.approved ? "chip-lime" : "chip-orange"}`}>
-                {recap.approved ? "APPROVED" : "DRAFT"}
-              </span>
-              {recap.templateName && (
-                <span className="chip chip-muted">{recap.templateName}</span>
-              )}
-            </div>
             <h1 className="display text-3xl font-bold" style={{ letterSpacing: "-0.03em" }}>
               {recap.name}
             </h1>
@@ -385,7 +384,7 @@ const PublicRecap: React.FC = () => {
                   {f.name}
                 </p>
                 {f.imageUrl ? (
-                  <img src={f.imageUrl} alt={f.name} className="max-h-56 w-auto rounded-lg object-contain" />
+                  <img src={thumbUrl(f.imageUrl, 800) || f.imageUrl} alt={f.name} className="max-h-56 w-auto rounded-lg object-contain" />
                 ) : (
                   <p className="text-sm whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.85)" }}>
                     {f.value || "—"}
@@ -412,7 +411,7 @@ const PublicRecap: React.FC = () => {
                 className="block overflow-hidden rounded-xl"
                 style={{ border: "1px solid var(--spark-border)" }}
               >
-                <img src={p.url} alt={p.name ?? "Recap photo"} className="w-full h-40 object-cover" />
+                <img src={thumbUrl(p.url, 400) || p.url} alt={p.name ?? "Recap photo"} className="w-full h-40 object-cover" />
                 {p.category && (
                   <p className="mono text-[9px] px-2 py-1.5" style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.45)" }}>
                     {p.category.toUpperCase()}

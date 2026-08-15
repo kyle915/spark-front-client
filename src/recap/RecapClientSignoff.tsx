@@ -60,7 +60,7 @@ export function RecapClientSignoff({
         YOUR SIGN-OFF
       </p>
       <p className="mt-2 text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
-        Does this recap look ready to share?
+        Does this look right?
       </p>
       <textarea
         value={comment}

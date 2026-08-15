@@ -7,6 +7,7 @@ import {
 import type { WalkupMutationsGenerateMutation as GenType } from "@api/mutations/__generated__/WalkupMutationsGenerateMutation.graphql";
 import type { WalkupMutationsRevokeMutation as RevokeType } from "@api/mutations/__generated__/WalkupMutationsRevokeMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
+import { checkinUrl } from "@/utils/publicHosts";
 
 /**
  * Walk-up access control for an event. An admin generates a short code (shown
@@ -74,10 +75,10 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
 
   // Shareable no-login web link — the BA opens it, clocks in/out, and files the
   // full recap right in their browser (no app). Same code, web door.
-  const checkinUrl = code ? `${window.location.origin}/checkin/${code}` : null;
+  const checkinHref = code ? checkinUrl(code) : null;
   const copyLink = () => {
-    if (checkinUrl) {
-      navigator.clipboard?.writeText(checkinUrl).then(
+    if (checkinHref) {
+      navigator.clipboard?.writeText(checkinHref).then(
         () => showAlert("Check-in link copied.", "success"),
         () => {},
       );
@@ -132,7 +133,7 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
           {/* Shareable no-login web check-in link. Text it to whoever's working
               the event — they clock in/out and file the full recap in a browser,
               no app required. */}
-          {checkinUrl ? (
+          {checkinHref ? (
             <div
               className="rounded-xl mb-3"
               style={{
@@ -151,7 +152,7 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
                 className="text-xs break-all"
                 style={{ color: "rgba(255,255,255,0.6)" }}
               >
-                {checkinUrl}
+                {checkinHref}
               </p>
               <button
                 onClick={copyLink}

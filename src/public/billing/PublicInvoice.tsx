@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
+import PublicDeadLink from "@/public/PublicDeadLink";
 
 /**
  * Public, no-login invoice — /invoice/:token.
@@ -276,17 +277,17 @@ const PublicInvoice: React.FC = () => {
 
   if (loadErr || !invoice) {
     return (
-      <Shell>
-        <div
-          className="spark-card p-10 text-center"
-          style={{ color: "rgba(255,255,255,0.7)" }}
-        >
-          <p className="display text-2xl font-bold">Invoice unavailable.</p>
-          <p className="text-sm mt-3">
-            {loadErr?.message ?? errorCopy(400, "invalid")}
-          </p>
-        </div>
-      </Shell>
+      <PublicDeadLink
+        eyebrow="Invoice"
+        title={
+          loadErr?.error === "expired" ||
+          loadErr?.error === "revoked" ||
+          loadErr?.error === "void"
+            ? "This invoice link has expired."
+            : "We couldn't open this invoice."
+        }
+        message={loadErr?.message ?? errorCopy(400, "invalid")}
+      />
     );
   }
 
