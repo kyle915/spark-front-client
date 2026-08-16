@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import CampaignReportView from "@/reports/CampaignReportView";
 import type { CampaignReportData } from "@/reports/CampaignReportView";
 import PublicDeadLink from "@/public/PublicDeadLink";
+import { SparkMark } from "@/recap/SparkMark";
 
 /**
  * Public, no-login campaign report — /report/:token.
@@ -69,20 +70,12 @@ const Shell: React.FC<{ children: React.ReactNode; actions?: React.ReactNode }> 
         backdropFilter: "blur(12px)",
       }}
     >
-      <p
-        className="display"
-        style={{ fontWeight: 700, fontSize: 18, letterSpacing: "-0.02em", margin: 0 }}
-      >
-        Spark <span style={{ color: "var(--spark-lime, #c5f546)" }}>by Ignite</span>
-      </p>
+      <SparkMark height={22} />
       {actions}
     </header>
     <main className="max-w-5xl mx-auto px-5 py-8 sm:py-10">{children}</main>
-    <footer
-      className="max-w-5xl mx-auto px-5 pb-10 mono"
-      style={{ fontSize: 10, letterSpacing: "0.14em", color: "rgba(255,255,255,0.35)" }}
-    >
-      SPARK BY IGNITE · SHARED CAMPAIGN REPORT
+    <footer className="max-w-5xl mx-auto px-5 pb-10">
+      <SparkMark height={20} />
     </footer>
   </div>
 );

@@ -5,6 +5,8 @@ import {
   type SignoffStatus,
 } from "@/recap/RecapClientSignoff";
 import { TenantBrandedRecap, recapBrandBtn } from "@/recap/TenantBrandedRecap";
+import { SparkMark } from "@/recap/SparkMark";
+import { RecapShareFieldSections } from "@/recap/RecapFieldRows";
 import PublicDeadLink from "@/public/PublicDeadLink";
 import { thumbUrl } from "@/utils/thumb";
 import type { CssVariablesMap } from "@/utils/tenantThemeConfig";
@@ -236,30 +238,30 @@ const PublicRecap: React.FC = () => {
             backdropFilter: "blur(12px)",
           }}
         >
-          <p
-            className="display"
-            style={{
-              fontWeight: 700,
-              fontSize: 18,
-              letterSpacing: "-0.02em",
-              margin: 0,
-            }}
-          >
-            {brandName}{" "}
-            <span style={{ color: "var(--recap-brand, #c5f546)" }}>recap</span>
-          </p>
+          <div className="flex items-center gap-3 min-w-0">
+            <SparkMark height={22} />
+            {brandName && brandName !== "Spark" && (
+              <p
+                className="display truncate"
+                style={{
+                  fontWeight: 700,
+                  fontSize: 16,
+                  letterSpacing: "-0.02em",
+                  margin: 0,
+                }}
+              >
+                {brandName}{" "}
+                <span style={{ color: "var(--recap-brand, #c5f546)" }}>
+                  recap
+                </span>
+              </p>
+            )}
+          </div>
           {actions}
         </header>
         <main className="max-w-5xl mx-auto px-5 py-8 sm:py-10">{children}</main>
-        <footer
-          className="max-w-5xl mx-auto px-5 pb-10 mono"
-          style={{
-            fontSize: 10,
-            letterSpacing: "0.14em",
-            color: "rgba(255,255,255,0.35)",
-          }}
-        >
-          SPARK BY IGNITE · SHARED RECAP
+        <footer className="max-w-5xl mx-auto px-5 pb-10">
+          <SparkMark height={20} />
         </footer>
       </div>
     </TenantBrandedRecap>
@@ -343,6 +345,18 @@ const PublicRecap: React.FC = () => {
           </div>
         </div>
       )}
+
+      <RecapShareFieldSections
+        sections={Array.from(
+          (recap.fields ?? []).reduce((map, field) => {
+            const key = field.section || "Details";
+            const list = map.get(key) ?? [];
+            list.push(field);
+            map.set(key, list);
+            return map;
+          }, new Map<string, PublicField[]>()),
+        ).map(([name, fields]) => ({ name, fields }))}
+      />
 
       {kpis.length > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

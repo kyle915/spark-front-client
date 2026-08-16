@@ -66,6 +66,12 @@ import useSparkRole from "@/hooks/useSparkRole";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
 import { ClientTenantRecapBrand } from "@/recap/TenantBrandedRecap";
 import { clientRecapKpis } from "@/recap/clientRecapKpis";
+import {
+  RecapFieldBlockLabel,
+  RecapFieldRow,
+  RecapFieldStack,
+  RecapShareFieldSections,
+} from "@/recap/RecapFieldRows";
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
 import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
 
@@ -160,7 +166,7 @@ const KpiCardContainer = ({
   <div className={`spark-card p-6 ${className ?? ""}`}>
     <p
       className="mono text-[10px] mb-4 flex items-center gap-2"
-      style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}
+      style={{ letterSpacing: "0.18em", color: "var(--spark-lime)" }}
     >
       {icon}
       {title.toUpperCase()}
@@ -1696,10 +1702,63 @@ const RecapCustomViewInner = () => {
               <KpiCardContainer
                 key={section.name}
                 title={section.name}
+                className="md:col-span-2"
                 icon={<List className="w-3.5 h-3.5" style={lime} />}
               >
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  {visibleFields.map((field) => {
+                {(() => {
+                  const metricFields = visibleFields.filter((field) => {
+                    const kind = customFieldKind(field.customFieldType?.name);
+                    if (
+                      kind === "image" ||
+                      kind === "select" ||
+                      kind === "multiselect"
+                    ) {
+                      return false;
+                    }
+                    const fieldId = String(field.id);
+                    const displayValue = isEditingValues
+                      ? (editedValues[fieldId] ?? field.value ?? "")
+                      : (field.value ?? "");
+                    return displayValue.length <= 50;
+                  });
+                  const blockFields = visibleFields.filter(
+                    (field) => !metricFields.includes(field),
+                  );
+                  return (
+                    <>
+                      {metricFields.length > 0 && (
+                        <RecapFieldStack>
+                          {metricFields.map((field) => {
+                            const fieldId = String(field.id);
+                            return (
+                              <RecapFieldRow key={field.id} label={field.name}>
+                                {isEditingValues ? (
+                                  <input
+                                    type="text"
+                                    value={editedValues[fieldId] ?? ""}
+                                    onChange={(e) =>
+                                      setEditedValues((prev) => ({
+                                        ...prev,
+                                        [fieldId]: e.target.value,
+                                      }))
+                                    }
+                                    className="spark-input w-28 text-right text-sm"
+                                  />
+                                ) : (
+                                  field.value || "—"
+                                )}
+                              </RecapFieldRow>
+                            );
+                          })}
+                        </RecapFieldStack>
+                      )}
+                      {blockFields.length > 0 && (
+                        <div
+                          className={`grid grid-cols-1 xl:grid-cols-2 gap-4 ${
+                            metricFields.length > 0 ? "mt-4" : ""
+                          }`}
+                        >
+                          {blockFields.map((field) => {
                     const fieldId = String(field.id);
                     const displayValue = isEditingValues
                       ? (editedValues[fieldId] ?? field.value ?? "")
@@ -1732,12 +1791,7 @@ const RecapCustomViewInner = () => {
                           className="rounded-xl p-4 space-y-3 xl:col-span-2"
                           style={inset}
                         >
-                          <p
-                            className="mono text-[10px]"
-                            style={{ letterSpacing: "0.14em", ...muted }}
-                          >
-                            {field.name}
-                          </p>
+                          <RecapFieldBlockLabel label={field.name} />
                           {imgSrc ? (
                             <img
                               src={thumbUrl(imgSrc, 400) || imgSrc}
@@ -1841,12 +1895,7 @@ const RecapCustomViewInner = () => {
                           className="rounded-xl p-4 space-y-2"
                           style={inset}
                         >
-                          <p
-                            className="mono text-[10px]"
-                            style={{ letterSpacing: "0.14em", ...muted }}
-                          >
-                            {field.name}
-                          </p>
+                          <RecapFieldBlockLabel label={field.name} />
                           {isEditingValues ? (
                             kind === "select" ? (
                               <select
@@ -1923,12 +1972,7 @@ const RecapCustomViewInner = () => {
                         className={`rounded-xl p-4 space-y-2 ${isLongText ? "xl:col-span-2" : ""}`}
                         style={inset}
                       >
-                        <p
-                          className="mono text-[10px]"
-                          style={{ letterSpacing: "0.14em", ...muted }}
-                        >
-                          {field.name}
-                        </p>
+                        <RecapFieldBlockLabel label={field.name} />
                         {isEditingValues ? (
                           useTextarea ? (
                             <textarea
@@ -1969,7 +2013,11 @@ const RecapCustomViewInner = () => {
                       </div>
                     );
                   })}
-                </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </KpiCardContainer>
               );
             })}
@@ -2467,6 +2515,18 @@ const RecapCustomViewInner = () => {
               </p>
             )}
           </div>
+
+          <RecapShareFieldSections
+            sections={customFieldsBySection.map((section) => ({
+              name: section.name,
+              fields: section.fields
+                .filter(customFieldHasDisplayValue)
+                .map((field) => ({
+                  name: field.name,
+                  value: field.value,
+                })),
+            }))}
+          />
 
           {reviewKpis.length > 0 && (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
