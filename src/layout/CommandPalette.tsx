@@ -406,26 +406,24 @@ export const CommandPalette: React.FC = () => {
       {open ? (
     <motion.div
       onClick={() => setOpen(false)}
-      className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]"
-      style={{
-        background: "rgba(10,13,9,0.55)",
-        backdropFilter: "blur(8px)",
-        transformOrigin: jumpOriginCss(origin),
-      }}
-      initial={{ opacity: 0, scale: 0.94 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+      className="spark-overlay-scrim"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
     >
-      <div
+      <motion.div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl rounded-2xl overflow-hidden relative"
+        className="w-full max-w-xl overflow-hidden relative spark-overlay-panel"
         style={{
-          background:
-            "linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2))",
-          border: "1px solid var(--spark-border)",
-          boxShadow: "0 24px 64px rgba(0,0,0,0.55)",
+          maxWidth: "36rem",
+          padding: 0,
+          transformOrigin: jumpOriginCss(origin),
         }}
+        initial={{ opacity: 0, scale: 0.94 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
       >
         <input
           ref={inputRef}
@@ -567,7 +565,7 @@ export const CommandPalette: React.FC = () => {
             ⌘K
           </p>
         </div>
-      </div>
+      </motion.div>
     </motion.div>
       ) : null}
     </AnimatePresence>

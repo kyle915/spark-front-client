@@ -22,6 +22,7 @@ import { DeleteInvoiceMutation } from "@/api/mutations/DeleteInvoiceMutation";
 import type { DeleteInvoiceMutation as DeleteInvoiceMutationType } from "@api/mutations/__generated__/DeleteInvoiceMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import SparkConfirm from "@/shared/SparkConfirm";
 
 /**
  * Spark v2 — Billing.
@@ -155,14 +156,6 @@ const ghostButton: React.CSSProperties = {
   border: "1px solid var(--spark-border)",
 };
 
-// Subtle-red, used for the destructive Delete action so it reads as
-// dangerous without shouting.
-const dangerButton: React.CSSProperties = {
-  background: "rgba(239,90,42,0.12)",
-  color: "var(--spark-orange)",
-  border: "1px solid rgba(239,90,42,0.5)",
-};
-
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({
   label,
   children,
@@ -183,6 +176,7 @@ const ShareLink: React.FC<{ token: string }> = ({ token }) => {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
+      showAlert("Client link copied.", "success");
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       showAlert(
@@ -209,65 +203,7 @@ const ShareLink: React.FC<{ token: string }> = ({ token }) => {
 };
 
 // ─── Confirm dialog ────────────────────────────────────────────────────
-const ConfirmDialog: React.FC<{
-  title: string;
-  body: React.ReactNode;
-  confirmLabel: string;
-  busy?: boolean;
-  tone?: "danger" | "default";
-  onConfirm: () => void;
-  onCancel: () => void;
-}> = ({
-  title,
-  body,
-  confirmLabel,
-  busy,
-  tone = "default",
-  onConfirm,
-  onCancel,
-}) => (
-  <div
-    className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-    style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-    onClick={onCancel}
-  >
-    <div
-      className="spark-card w-full max-w-sm"
-      style={{ background: "var(--spark-surface, #0f1310)" }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="p-6">
-        <h2 className="display text-lg font-bold">{title}</h2>
-        <div className="text-sm mt-2" style={{ color: "rgba(255,255,255,0.65)" }}>
-          {body}
-        </div>
-      </div>
-      <div
-        className="px-6 py-4 flex justify-end gap-3"
-        style={{ borderTop: "1px solid var(--spark-border)" }}
-      >
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={busy}
-          className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
-          style={ghostButton}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={busy}
-          className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
-          style={tone === "danger" ? dangerButton : limeButton}
-        >
-          {busy ? "…" : confirmLabel}
-        </button>
-      </div>
-    </div>
-  </div>
-);
+const ConfirmDialog = SparkConfirm;
 
 // ─── Line-item editor ──────────────────────────────────────────────────
 // An editable row: description, qty, unit price → live amount. The parent
@@ -959,6 +895,7 @@ const InvoiceList: React.FC<{
       {pendingDelete && (
         <ConfirmDialog
           title="Delete invoice?"
+          kicker="Delete"
           tone="danger"
           confirmLabel="Delete invoice"
           busy={deletingId === pendingDelete.id}

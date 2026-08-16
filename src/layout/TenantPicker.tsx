@@ -114,7 +114,7 @@ export const TenantPicker: React.FC = () => {
         // absent; a client created minutes earlier appeared not to exist.
         // Taller, capped against the viewport so it can't overflow a laptop
         // screen, and the scrollbar stays visible as the affordance.
-        <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-md border border-base-300 bg-base-100 shadow-lg max-h-[min(70vh,34rem)] overflow-y-auto p-1">
+        <div className="spark-popover absolute left-0 right-0 top-full mt-1 z-50 max-h-[min(70vh,34rem)] overflow-y-auto p-1">
           {tenants.length === 0 && (
             <div className="px-3 py-2 text-xs text-base-content/55">
               No tenants

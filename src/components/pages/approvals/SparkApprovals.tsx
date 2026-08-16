@@ -8,6 +8,7 @@ import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generate
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import SparkOverlay from "@/shared/SparkOverlay";
 
 /**
  * Spark v2 — Approvals.
@@ -1410,39 +1411,23 @@ const ApprovalsInner: React.FC = () => {
           confirm(). Surfaces what actually happens downstream so kyle
           isn't flying blind on a "yes" click. */}
       {approving && (
-        <div
-          onClick={() => !busyId && setApproving(null)}
-          className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
-          style={{
-            background: "rgba(10,11,13,0.7)",
-            backdropFilter: "blur(8px)",
+        <SparkOverlay
+          onClose={() => {
+            if (!busyId) setApproving(null);
           }}
+          size="md"
+          label={`Approve ${approving.reqId}?`}
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg spark-card p-6"
-            style={{ borderRadius: 20 }}
-          >
-            <p
-              className="mono text-[10px] mb-1"
-              style={{
-                letterSpacing: "0.18em",
-                color: "var(--spark-lime)",
-              }}
-            >
-              APPROVE REQUEST
+            <p className="spark-overlay-kicker" style={{ color: "var(--spark-lime)" }}>
+              Approve request
             </p>
-            <h2
-              className="display text-2xl font-bold"
-              style={{ letterSpacing: "-0.03em" }}
-            >
+            <h2 className="spark-overlay-title">
               Approve {approving.reqId}?
             </h2>
-            <p
-              className="text-sm mt-2"
-              style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.55 }}
-            >
-              <strong>{approving.venue}</strong> · {approving.locationDate}
+            <p className="spark-overlay-copy">
+              <strong style={{ color: "var(--spark-text)" }}>{approving.venue}</strong>
+              {" · "}
+              {approving.locationDate}
             </p>
             <div
               className="mt-4 p-4 rounded-xl text-xs"
@@ -1462,36 +1447,25 @@ const ApprovalsInner: React.FC = () => {
               <br />
               3. Ignite staffs a BA and a clock-in link goes out the day of.
             </div>
-            <div className="flex justify-end gap-2 mt-5">
+            <div className="spark-overlay-actions">
+              <button
+                onClick={confirmApprove}
+                disabled={busyId !== null}
+                className="spark-overlay-action spark-overlay-action-primary"
+              >
+                {busyId ? "Approving…" : "Approve + notify"}
+              </button>
               <button
                 onClick={() => {
                   if (busyId) return;
                   setApproving(null);
                 }}
-                className="mono text-[11px] px-3"
-                style={{
-                  letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.55)",
-                }}
+                className="spark-overlay-action spark-overlay-action-cancel"
               >
-                CANCEL
-              </button>
-              <button
-                onClick={confirmApprove}
-                disabled={busyId !== null}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold"
-                style={{
-                  background: "var(--spark-lime)",
-                  color: "#0a0d09",
-                  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
-                  opacity: busyId !== null ? 0.5 : 1,
-                }}
-              >
-                {busyId ? "Approving…" : "✓ Approve + notify"}
+                Cancel
               </button>
             </div>
-          </div>
-        </div>
+        </SparkOverlay>
       )}
 
       {/* Decline modal — requires a comment per Kyle's spec. The

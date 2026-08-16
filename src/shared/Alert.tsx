@@ -18,12 +18,10 @@ export default function Alert() {
             key={alert.id}
             type="button"
             onClick={() => removeAlert(alert.id)}
-            className="pointer-events-auto text-left max-w-sm rounded-xl px-4 py-3 text-sm font-semibold active:scale-[0.98] transition"
+            className="spark-toast pointer-events-auto text-left max-w-sm px-4 py-3 text-sm font-semibold active:scale-[0.98] transition"
             style={{
-              background: "rgba(10,13,9,0.96)",
-              border: `1px solid ${tone.border}`,
+              borderColor: tone.border,
               color: "var(--spark-text, #f2f3ee)",
-              boxShadow: "0 16px 40px rgba(0,0,0,0.45)",
             }}
           >
             <span style={{ color: tone.accent }}>{alert.message}</span>
