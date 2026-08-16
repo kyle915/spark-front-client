@@ -6,6 +6,7 @@ import { TenantQuery } from "@/api/queries/TenantQuery";
 import type { TenantQuery as TenantQueryType } from "@/api/queries/__generated__/TenantQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useTenantSelection } from "@/hooks/useTenantSelection";
+import { TenantLogo } from "./TenantLogo";
 
 /**
  * Inline tenant switcher for the Spark v2 sidebar.
@@ -67,7 +68,6 @@ export const TenantPicker: React.FC = () => {
       })) ?? [];
 
   const current = tenants.find((t) => t.uuid === tenantUuid) ?? tenants[0];
-  const initials = (current?.name ?? "—").slice(0, 2).toUpperCase();
 
   const onPick = (t: TenantNode) => {
     selectTenant({
@@ -89,17 +89,13 @@ export const TenantPicker: React.FC = () => {
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-base-300/40 border border-base-300 hover:border-primary/40 transition"
       >
-        {current?.image ? (
-          <img
-            src={current.image}
-            alt=""
-            className="w-5 h-5 object-contain rounded-sm shrink-0"
-          />
-        ) : (
-          <span className="w-5 h-5 rounded-sm bg-primary/20 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
-            {initials}
-          </span>
-        )}
+        <TenantLogo
+          name={current?.name}
+          requestUrlName={current?.requestUrlName}
+          tenantSlug={current?.tenantSlug}
+          image={current?.image}
+          active
+        />
         <span className="text-sm truncate flex-1 text-left">
           {current?.name ?? "Select tenant"}
         </span>
@@ -134,24 +130,13 @@ export const TenantPicker: React.FC = () => {
                     : "hover:bg-base-300/40 text-base-content/80",
                 ].join(" ")}
               >
-                {t.image ? (
-                  <img
-                    src={t.image}
-                    alt=""
-                    className="w-5 h-5 object-contain rounded-sm shrink-0"
-                  />
-                ) : (
-                  <span
-                    className={[
-                      "w-5 h-5 rounded-sm text-[10px] font-bold flex items-center justify-center shrink-0",
-                      active
-                        ? "bg-primary/30 text-primary"
-                        : "bg-base-300 text-base-content/55",
-                    ].join(" ")}
-                  >
-                    {(t.name ?? "—").slice(0, 2).toUpperCase()}
-                  </span>
-                )}
+                <TenantLogo
+                  name={t.name}
+                  requestUrlName={t.requestUrlName}
+                  tenantSlug={t.tenantSlug}
+                  image={t.image}
+                  active={active}
+                />
                 <span className="truncate flex-1">{t.name ?? "—"}</span>
                 {active && (
                   <span className="mono text-[9px] tracking-[0.16em] text-primary">

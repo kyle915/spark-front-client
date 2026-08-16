@@ -22,6 +22,8 @@ import {
   readPendingRecap,
   type PendingRecap,
 } from "./offlineRecap";
+import { ActionMorphButton } from "@/motion/ActionMorphButton";
+import { holdActionSuccess, type ActionPhase } from "@/motion/opsMotion";
 
 /**
  * Public, no-login web check-in for a BA working a specific event.
@@ -1331,6 +1333,7 @@ function CheckedInFlow({
   onRefresh: () => Promise<void>;
 }) {
   const [busy, setBusy] = useState<"" | "in" | "out">("");
+  const [inPhase, setInPhase] = useState<ActionPhase>("idle");
   const [showRecap, setShowRecap] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [queuedClock, setQueuedClock] = useState<PendingClockIn | null>(() =>
@@ -1470,6 +1473,7 @@ function CheckedInFlow({
   const clock = async (kind: "in" | "out") => {
     setMsg(null);
     setBusy(kind);
+    if (kind === "in") setInPhase("pending");
     const tappedAt = new Date().toISOString();
     // Best-effort geolocation — clocking works even if it's denied/unavailable.
     const withCoords = async (coords: { latitude?: number; longitude?: number }) => {
@@ -1496,19 +1500,29 @@ function CheckedInFlow({
         }
         if (!res.ok) {
           if (kind === "in" && isOfflineClockFailure({ status: res.status })) {
+            setInPhase("success");
+            await holdActionSuccess();
             queueOfflineIn(coords, tappedAt);
             return;
           }
+          if (kind === "in") setInPhase("idle");
           setMsg(json.message || "Couldn't record that.");
           return;
         }
-        if (kind === "in") setQueuedClock(readPendingClock(code));
+        if (kind === "in") {
+          setQueuedClock(readPendingClock(code));
+          setInPhase("success");
+          await holdActionSuccess();
+        }
         await onRefresh();
       } catch (error) {
         if (kind === "in" && isOfflineClockFailure({ error })) {
+          setInPhase("success");
+          await holdActionSuccess();
           queueOfflineIn(coords, tappedAt);
           return;
         }
+        if (kind === "in") setInPhase("idle");
         setMsg("Network error. Try again.");
       } finally {
         setBusy("");
@@ -1740,9 +1754,16 @@ function CheckedInFlow({
             closes anything left open. */}
         <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
           {effectiveClock === "not_started" ? (
-            <button style={primaryBtn(accent)} disabled={busy !== ""} onClick={() => clock("in")}>
-              {busy === "in" ? "Clocking in…" : "Clock in"}
-            </button>
+            <ActionMorphButton
+              style={primaryBtn(accent)}
+              disabled={busy !== ""}
+              onClick={() => clock("in")}
+              phase={inPhase}
+              pendingLabel="Clocking in…"
+              successLabel="Clocked in"
+            >
+              Clock in
+            </ActionMorphButton>
           ) : null}
 
           {/* Recap first — that's the intended order, so it stays the primary
@@ -2003,6 +2024,7 @@ function RecapForm({
     () => restored.current?.savedAt ?? null,
   );
   const [busy, setBusy] = useState(false);
+  const [submitPhase, setSubmitPhase] = useState<ActionPhase>("idle");
   const [err, setErr] = useState<string | null>(null);
   const libraryRef = useRef<HTMLInputElement | null>(null);
   const cameraRef = useRef<HTMLInputElement | null>(null);
@@ -2153,6 +2175,7 @@ function RecapForm({
     };
 
     setBusy(true);
+    setSubmitPhase("pending");
     try {
       // Recap can be drafted offline. If a clock-in is still queued, attach
       // it first so the API sees the shift that started at tap time.
@@ -2162,6 +2185,8 @@ function RecapForm({
       });
       if (offlineNow) {
         await queueThisSubmit();
+        setSubmitPhase("success");
+        await holdActionSuccess();
         return;
       }
       const existing = readPendingRecap(code);
@@ -2181,19 +2206,25 @@ function RecapForm({
         }
         setErr("Couldn't submit your recap.");
         setBusy(false);
+        setSubmitPhase("idle");
         return;
       }
       // Filed — the draft has served its purpose. Cleared before the parent
       // unmounts this form so a later shift can't resurrect these answers.
       clearDraft(code, token);
+      setSubmitPhase("success");
+      await holdActionSuccess();
       await onSubmitted();
     } catch (error) {
       if (isOfflineClockFailure({ error })) {
         await queueThisSubmit();
+        setSubmitPhase("success");
+        await holdActionSuccess();
         return;
       }
       setErr("Network error. Try again.");
       setBusy(false);
+      setSubmitPhase("idle");
     }
   };
 
@@ -2351,13 +2382,18 @@ function RecapForm({
         <button style={secondaryBtn} onClick={onCancel} disabled={busy}>
           Back
         </button>
-        <button style={primaryBtn(accent)} onClick={submit} disabled={busy || uploadingCount > 0}>
-          {busy
-            ? "Submitting…"
-            : failedCount > 0
-              ? `Submit without ${failedCount} photo${failedCount === 1 ? "" : "s"}`
-              : "Submit recap"}
-        </button>
+        <ActionMorphButton
+          style={primaryBtn(accent)}
+          onClick={submit}
+          disabled={busy || uploadingCount > 0}
+          phase={submitPhase}
+          pendingLabel="Submitting…"
+          successLabel="Submitted"
+        >
+          {failedCount > 0
+            ? `Submit without ${failedCount} photo${failedCount === 1 ? "" : "s"}`
+            : "Submit recap"}
+        </ActionMorphButton>
       </div>
     </div>
   );

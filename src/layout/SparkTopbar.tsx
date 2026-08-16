@@ -12,6 +12,7 @@ import { sparkFormUrl } from "@/utils/publicHosts";
 import NotificationBell from "./NotificationBell";
 import useSparkRole from "@/hooks/useSparkRole";
 import { looksLikeRouteId, usePageCrumb } from "./pageCrumb";
+import { dispatchOpenJump } from "@/motion/opsMotion";
 
 /**
  * Spark v2 topbar — wireframe-faithful version of spark-demo/index.html
@@ -121,8 +122,8 @@ export const SparkTopbar: React.FC = () => {
     navigate(next === "client" ? "/client-dashboard" : "/");
   };
 
-  const openJump = () => {
-    window.dispatchEvent(new Event("spark:open-jump"));
+  const openJump = (el: HTMLElement) => {
+    dispatchOpenJump(el);
   };
 
   return (
@@ -177,7 +178,8 @@ export const SparkTopbar: React.FC = () => {
         )}
 
         <button
-          onClick={openJump}
+          data-spark-jump
+          onClick={(e) => openJump(e.currentTarget)}
           className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-base-300 text-xs text-base-content/55 hover:text-primary hover:border-primary transition active:scale-[0.98]"
         >
           <MagnifyingGlassIcon className="w-3.5 h-3.5" />

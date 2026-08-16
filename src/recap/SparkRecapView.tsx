@@ -1,4 +1,11 @@
 import { lazy, Suspense, useMemo, useState } from "react";
+import { ActionMorphButton } from "@/motion/ActionMorphButton";
+import { StatusMorph } from "@/motion/StatusMorph";
+import {
+  holdActionSuccess,
+  recapReviewStatus,
+  type ActionPhase,
+} from "@/motion/opsMotion";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Navigate, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
@@ -398,6 +405,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     useMutation<UpdateRecapMutationType>(UpdateRecapMutation);
   const [commitApprove, isApproving] =
     useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
+  const [approvePhase, setApprovePhase] = useState<ActionPhase>("idle");
   const [commitSignoff, isSigningOff] =
     useMutation<RecapClientSignoffMutationType>(RecapClientSignoffMutation);
   const [commitRemoveFile] =
@@ -723,7 +731,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   // Uses the existing approveRecap mutation; the response returns
   // `approved` so the status chip updates in-place.
   const setApproved = (approved: boolean) => {
-    if (isApproving) return;
+    if (isApproving || approvePhase !== "idle") return;
+    if (approved) setApprovePhase("pending");
     commitApprove({
       variables: { input: { id: recap.id, approved } },
       onCompleted: (res) => {
@@ -732,17 +741,29 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             approved ? "Recap approved." : "Recap marked not approved.",
             "success",
           );
+          if (approved) {
+            setApprovePhase("success");
+            void holdActionSuccess().then(() => {
+              setRefreshKey((k) => k + 1);
+              setApprovePhase("idle");
+            });
+            return;
+          }
           // Refetch so the approval status updates immediately — the
           // mutation response alone doesn't refresh the rendered query.
           setRefreshKey((k) => k + 1);
         } else {
+          setApprovePhase("idle");
           showAlert(
             res.approveRecap?.message ?? "Couldn't update approval.",
             "error",
           );
         }
       },
-      onError: (err) => showAlert(`Approval failed: ${err.message}`, "error"),
+      onError: (err) => {
+        setApprovePhase("idle");
+        showAlert(`Approval failed: ${err.message}`, "error");
+      },
     });
   };
 
@@ -846,7 +867,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               <span
                 className={`chip ${recap.approved ? "chip-lime" : "chip-orange"}`}
               >
-                {recap.approved ? "APPROVED" : "DRAFT"}
+                <StatusMorph value={recapReviewStatus(Boolean(recap.approved))} />
               </span>
             </div>
             <h1
@@ -1026,9 +1047,10 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   ✓ Approved · undo
                 </button>
               ) : (
-                <button
+                <ActionMorphButton
                   onClick={() => setApproved(true)}
                   disabled={isApproving}
+                  phase={approvePhase}
                   className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                   style={{
                     background: "var(--spark-lime)",
@@ -1037,9 +1059,11 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                     opacity: isApproving ? 0.5 : 1,
                   }}
                   title="Approve this recap"
+                  pendingLabel="Approving…"
+                  successLabel="Approved"
                 >
-                  {isApproving ? "Approving…" : "✓ Approve recap"}
-                </button>
+                  Approve recap
+                </ActionMorphButton>
               ))}
 
             {/* Admin-only delete. Removes the recap and frees the event

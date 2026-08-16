@@ -34,6 +34,13 @@ import {
   useState,
   Suspense,
 } from "react";
+import { ActionMorphButton } from "@/motion/ActionMorphButton";
+import { StatusMorph } from "@/motion/StatusMorph";
+import {
+  holdActionSuccess,
+  recapReviewStatus,
+  type ActionPhase,
+} from "@/motion/opsMotion";
 import { formatDate, parseLocaleNumber } from "@/utils";
 import { thumbUrl } from "@/utils/thumb";
 import {
@@ -435,6 +442,7 @@ const RecapCustomViewInner = () => {
     );
   const [commitApprove, isApproving] =
     useMutation<ApproveCustomRecapMutationType>(ApproveCustomRecapMutation);
+  const [approvePhase, setApprovePhase] = useState<ActionPhase>("idle");
   const [commitSignoff, isSigningOff] =
     useMutation<RecapClientSignoffMutationType>(RecapClientSignoffMutation);
   const [commitAddFile] = useMutation<AddCustomRecapFileMutationType>(
@@ -712,7 +720,8 @@ const RecapCustomViewInner = () => {
   // Approve the custom recap → backend emails the requestor + mapped RMM
   // (with the PDF). Returns `approved` so the view flips in-place.
   const handleApprove = useCallback(() => {
-    if (!recap?.id) return;
+    if (!recap?.id || approvePhase !== "idle") return;
+    setApprovePhase("pending");
     commitApprove({
       variables: { input: { id: recap.id as string, approved: true } },
       onCompleted: (res) => {
@@ -722,18 +731,26 @@ const RecapCustomViewInner = () => {
             "Recap approved — the requestor and mapped RMM have been emailed.",
             "success",
           );
-          // Refetch so the status flips to Approved in-place. Relay's
-          // auto-normalization of the mutation payload wasn't reliably
-          // re-rendering this view, so bump the query's fetchKey to force
-          // a fresh read (same fix the legacy SparkRecapView uses).
-          setRefreshKey((k) => k + 1);
+          setApprovePhase("success");
+          void holdActionSuccess().then(() => {
+            // Refetch so the status flips to Approved in-place. Relay's
+            // auto-normalization of the mutation payload wasn't reliably
+            // re-rendering this view, so bump the query's fetchKey to force
+            // a fresh read (same fix the legacy SparkRecapView uses).
+            setRefreshKey((k) => k + 1);
+            setApprovePhase("idle");
+          });
         } else {
+          setApprovePhase("idle");
           showAlert(payload?.message ?? "Approve failed.", "error");
         }
       },
-      onError: (err) => showAlert(`Approve failed: ${err.message}`, "error"),
+      onError: (err) => {
+        setApprovePhase("idle");
+        showAlert(`Approve failed: ${err.message}`, "error");
+      },
     });
-  }, [recap?.id, commitApprove, showAlert]);
+  }, [recap?.id, commitApprove, showAlert, approvePhase]);
 
   // Attach an uploaded blob to this custom recap. RecapUploader fires
   // this once per selected file; addCustomRecapFile returns the FULL
@@ -1107,7 +1124,7 @@ const RecapCustomViewInner = () => {
     );
   }
 
-  const statusLabel = recap.approved ? "APPROVED" : "DRAFT";
+  const statusLabel = recapReviewStatus(Boolean(recap.approved));
   const place = [
     recap.eventRetailer ?? recap.retailer?.name,
     recap.eventVenue ?? recap.location?.name,
@@ -1142,19 +1159,26 @@ const RecapCustomViewInner = () => {
             {!isEditingValues ? (
               <div className="flex items-center gap-2 flex-wrap">
                 {recap.approved ? (
-                  <span className="chip chip-lime">✓ APPROVED</span>
+                  <span className="chip chip-lime">
+                    <StatusMorph value="Approved" />
+                  </span>
                 ) : !isClient ? (
-                  <button
+                  <ActionMorphButton
                     onClick={handleApprove}
                     disabled={isApproving}
+                    phase={approvePhase}
                     className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                     style={{ ...limeBtn, opacity: isApproving ? 0.5 : 1 }}
                     title="Approve recap and email the requestor + mapped RMM"
+                    pendingLabel="Approving…"
+                    successLabel="Approved"
                   >
-                    {isApproving ? "Approving…" : "✓ Approve recap"}
-                  </button>
+                    Approve recap
+                  </ActionMorphButton>
                 ) : (
-                  <span className="chip chip-orange">DRAFT</span>
+                  <span className="chip chip-orange">
+                    <StatusMorph value="Needs review" />
+                  </span>
                 )}
                 <button
                   onClick={handleGeneratePdf}
@@ -1264,7 +1288,7 @@ const RecapCustomViewInner = () => {
                   <span
                     className={`chip ${recap.approved ? "chip-lime" : "chip-orange"}`}
                   >
-                    {statusLabel}
+                    <StatusMorph value={statusLabel} />
                   </span>
                   {recap.customRecapTemplate?.name && (
                     <span className="chip chip-muted">
