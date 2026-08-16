@@ -11,6 +11,7 @@ import { useAuthStore } from "@store/authStore";
 import { register } from "@api/auth/register";
 import MagicLinkButton from "@/auth/MagicLinkButton";
 import SparkLoginCreative from "@/auth/SparkLoginCreative";
+import { SparkMark } from "@/recap/SparkMark";
 import type { RegisterFormFields } from "@/types/auth";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
 import { themes } from "@/utils";
@@ -118,28 +119,7 @@ const Login = () => {
             className={`w-full max-w-sm transition-opacity duration-500 ease-in-out ${fade ? "opacity-100" : "opacity-0"
               }`}
           >
-            <img
-                src="/legal/spark-logo.png"
-                alt="Spark by Ignite"
-                className="block mx-auto mb-5 lg:hidden"
-                style={{
-                  height: 36,
-                  width: "auto",
-                  filter: "invert(1) hue-rotate(180deg)",
-                }}
-            />
-            <p
-              style={{
-                fontFamily: "var(--font-mono, monospace)",
-                fontSize: 10,
-                letterSpacing: "0.28em",
-                color: "rgba(214,243,95,0.75)",
-                textTransform: "uppercase",
-                textAlign: "center",
-              }}
-            >
-              {isLogin ? "Spark" : "Get Started"}
-            </p>
+            <SparkMark height={20} className="mx-auto" />
             <h1
               style={{
                 fontFamily: "var(--font-display, sans-serif)",
