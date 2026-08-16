@@ -16,6 +16,8 @@ import { RecentLocationPingsQuery } from "@/api/queries/RecentLocationPingsQuery
 import type { RecentLocationPingsQuery as RecentLocationPingsQueryType } from "@api/queries/__generated__/RecentLocationPingsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import { SparkBentoTile, SparkStat } from "@/shared/SparkStat";
+import { todayGroundKpis } from "@/shared/sparkStat";
 
 /**
  * "Today's events" — list of events happening today with a Google Maps
@@ -173,10 +175,20 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   }, [mappable]);
 
   return (
-    <div
-      className="grid gap-5"
-      style={{ gridTemplateColumns: "1fr 380px" }}
-    >
+    <div className="space-y-4">
+      <div className="spark-bento" aria-label="Today on the ground">
+        {todayGroundKpis({
+          events: shifts.length,
+          liveBas: pings.length,
+          mapped: mappable.length,
+        }).map((k) => (
+          <SparkBentoTile key={k.label} {...k} />
+        ))}
+      </div>
+      <div
+        className="grid gap-5"
+        style={{ gridTemplateColumns: "1fr 380px" }}
+      >
       {/* Map */}
       <div
         className="spark-card overflow-hidden relative"
@@ -447,15 +459,6 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                     {s.retailer}
                     {s.state ? ` · ${s.state}` : ""}
                   </p>
-                  <p
-                    className="mono text-[10px] mt-1"
-                    style={{
-                      letterSpacing: "0.14em",
-                      color: "var(--spark-lime)",
-                    }}
-                  >
-                    {s.startTime} – {s.endTime}
-                  </p>
                   {s.address && (
                     <p
                       className="text-xs mt-1 truncate"
@@ -474,10 +477,17 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                     BA · — · — (assigned from mobile app)
                   </p>
                 </div>
+                <SparkStat
+                  size="sm"
+                  tone="lime"
+                  value={s.startTime || "—"}
+                  label={s.endTime ? `To ${s.endTime}` : "Start"}
+                />
               </div>
             </li>
           ))}
         </ul>
+      </div>
       </div>
     </div>
   );

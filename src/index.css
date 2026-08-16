@@ -647,6 +647,68 @@ body:has(.spark-login-page) {
   margin-top: 0.4rem;
 }
 
+/* Tanjim / Abrar lockups — Recaps scan, Today strip, Jump index.
+   Dense numbers + muted labels. Not a new product look. */
+.spark-bento {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 8px;
+}
+.spark-bento-tile {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--spark-border);
+  border-radius: 14px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+.spark-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.spark-stat-sm .spark-stat-value {
+  font-size: 0.95rem;
+}
+.spark-stat-value {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.25rem;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.spark-stat-lg {
+  font-size: 1.65rem;
+  margin-top: 6px;
+}
+.spark-stat-value.is-lime { color: var(--spark-lime); }
+.spark-stat-value.is-orange { color: var(--spark-orange); }
+.spark-stat-label {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+.spark-stat-hint {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 6px;
+}
+.spark-idx {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.28);
+  width: 1.6em;
+  flex-shrink: 0;
+}
+
 /* === Apple-style time pill toggle === */
 .pill-group {
   display: inline-flex;
@@ -869,7 +931,7 @@ body { background: var(--spark-bg); }
   }
 
   /* Mono labels stay light grey for hierarchy */
-  .mono, [class*="label-mini"] {
+  .mono, [class*="label-mini"], .spark-stat-label, .spark-stat-hint, .spark-idx {
     color: #6b7280 !important;
   }
 

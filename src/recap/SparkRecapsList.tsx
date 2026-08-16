@@ -41,6 +41,8 @@ import {
   recapReviewStatus,
   type ActionPhase,
 } from "@/motion/opsMotion";
+import { SparkBentoTile, SparkStat } from "@/shared/SparkStat";
+import { recapListKpis } from "@/shared/sparkStat";
 
 // Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
 // keeps the sticky action bar's button disabled with a friendly
@@ -485,37 +487,31 @@ const RecapCard: React.FC<{
 
       {!emptyShell ? (
       <div
-        className="mt-3 pt-3 grid grid-cols-3 gap-2 text-center"
+        className="mt-3 pt-3 grid grid-cols-3 gap-2"
         style={{ borderTop: "1px solid var(--spark-border)" }}
       >
-        <div>
-          <p
-            className="tab-num text-base font-bold"
-            style={{ color: "var(--spark-lime)" }}
-          >
-            {recap.engagements != null
+        <SparkStat
+          tone="lime"
+          value={
+            recap.engagements != null
               ? recap.engagements.toLocaleString()
-              : "—"}
-          </p>
-          <p className="label-mini">ENG</p>
-        </div>
-        <div>
-          <p className="tab-num text-base font-bold">
-            {recap.productsSold != null
+              : "—"
+          }
+          label="Eng"
+        />
+        <SparkStat
+          value={
+            recap.productsSold != null
               ? recap.productsSold.toLocaleString()
-              : "—"}
-          </p>
-          <p className="label-mini">SOLD</p>
-        </div>
-        <div>
-          <p
-            className="tab-num text-base font-bold"
-            style={{ color: "var(--spark-lime)" }}
-          >
-            {conversionStr(recap, "—")}
-          </p>
-          <p className="label-mini">CONV</p>
-        </div>
+              : "—"
+          }
+          label="Sold"
+        />
+        <SparkStat
+          tone="lime"
+          value={conversionStr(recap, "—")}
+          label="Conv"
+        />
       </div>
       ) : null}
     </div>
@@ -620,14 +616,27 @@ const RecapCompactRow: React.FC<{
       >
         {statusText}
       </span>
-      <span
-        className="relative z-10 mono text-[10px] shrink-0"
-        style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.55)" }}
-      >
-        ENG {recap.engagements != null ? recap.engagements.toLocaleString() : "—"}
-        {" · "}
-        SOLD {recap.productsSold != null ? recap.productsSold.toLocaleString() : "—"}
-      </span>
+      <div className="relative z-10 flex items-center gap-3 shrink-0">
+        <SparkStat
+          size="sm"
+          tone="lime"
+          value={
+            recap.engagements != null
+              ? recap.engagements.toLocaleString()
+              : "—"
+          }
+          label="Eng"
+        />
+        <SparkStat
+          size="sm"
+          value={
+            recap.productsSold != null
+              ? recap.productsSold.toLocaleString()
+              : "—"
+          }
+          label="Sold"
+        />
+      </div>
     </div>
   );
 };
@@ -2167,6 +2176,18 @@ export default function SparkRecapsList() {
               + New recap
             </button>
           )}
+        </div>
+
+        <div className="spark-bento" aria-label="Recap totals in view">
+          {recapListKpis({
+            filteredTotal: meta.filteredTotal,
+            loaded: meta.loaded,
+            total: meta.total,
+            engagements: meta.totalConsumers,
+            sold: meta.totalProducts,
+          }).map((k) => (
+            <SparkBentoTile key={k.label} {...k} />
+          ))}
         </div>
 
         <div className="spark-card p-3 flex flex-wrap gap-2 items-center">

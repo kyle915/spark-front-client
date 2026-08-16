@@ -38,6 +38,16 @@ X `1Aakib` 2089078856636588493 was 403 / credits-depleted, so Aakib is inferred 
 
 Refused: glassmorphism soup, 3D, white iOS sheets, Geist/new fonts, copying Collect UI Dribbble chrome, restyling every page, PhotoLightbox redo (already shipped).
 
+## Tanjim + Best Designs on X (steal 3, refuse the rest)
+
+Fetched via FxTwitter after X MCP 402 / x.com 403. Posts, not the Best Designs library.
+
+1. **Stole — bento KPI tiles** — Recaps list + Today: compact 3–4 tiles, large tabular number, muted micro-label, optional hint. Lime / orange on real counts only. From Tanjim Lumis dashboard (`2072733178435862728`) and Tanjim data-heavy (`2029592653306753420`).
+2. **Stole — numbered / stat lockups** — Recaps scan rows: stacked ENG / SOLD instead of a mono run-on. Jump: `01` index matching arrow-key order. From Abrar via Best Designs (`2089019356390834639`) + Tanjim data-heavy.
+3. **Stole — type hierarchy** — Big number, small label, quieter metadata. Same Space Grotesk + JetBrains Mono. Not a new typeface.
+
+Refused from these posts: light-mode SaaS chrome, “Welcome back Jane”, 3D/isometric template cards, hexagonal heatmaps, honeycomb, dot-matrix charts, neon cyan power-grid viz, sidebar restyle, homepage / liquid metal / orbs / glass soup. Did not redo PR 526 inset/frost/radius/shadow or PR 529 scale-from-trigger / action-sheet / toasts.
+
 ## Do not
 
 - Restyle to white iOS light mode

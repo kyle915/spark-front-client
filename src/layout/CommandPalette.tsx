@@ -43,6 +43,7 @@ import {
   rememberJumpRecent,
   type JumpRecent,
 } from "./jumpRecents";
+import { padIndex } from "@/shared/sparkStat";
 
 /**
  * Spark v2 — Command Palette (⌘K).
@@ -495,6 +496,17 @@ export const CommandPalette: React.FC = () => {
                           borderRadius: 0,
                         }}
                       >
+                        <span
+                          className="spark-idx"
+                          aria-hidden
+                          style={{
+                            color: on
+                              ? "rgba(197,245,70,0.55)"
+                              : "rgba(255,255,255,0.28)",
+                          }}
+                        >
+                          {padIndex(i + 1)}
+                        </span>
                         <Icon
                           size={16}
                           className="shrink-0"
