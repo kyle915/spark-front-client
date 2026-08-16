@@ -7,9 +7,12 @@ import AiMarkdown from "./AiMarkdown";
 import AiChartView, { type AiChart } from "./AiChartView";
 import {
   ASK_AI_FOLLOWUPS,
+  jumpOriginFromElement,
   thoughtLabel,
   thoughtSeconds,
+  type JumpOrigin,
 } from "@/motion/opsMotion";
+import SparkOverlay from "@/shared/SparkOverlay";
 
 /**
  * Reusable "Ask AI" surface — a prominent button that opens a pop-up modal
@@ -53,8 +56,9 @@ const limeBtn: React.CSSProperties = {
 const AskAiModal: React.FC<{
   tenantId: string;
   tenantName?: string;
+  origin?: JumpOrigin | null;
   onClose: () => void;
-}> = ({ tenantId, tenantName, onClose }) => {
+}> = ({ tenantId, tenantName, origin = null, onClose }) => {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiAnswerResult | null>(null);
@@ -116,44 +120,21 @@ const AskAiModal: React.FC<{
   }, [tenantId, question]);
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]"
-      style={{
-        background: "rgba(10,13,9,0.55)",
-        backdropFilter: "blur(8px)",
-      }}
+    <SparkOverlay
+      onClose={onClose}
+      origin={origin}
+      size="lg"
+      label="Ask AI about this client"
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg spark-card p-6"
-        style={{ borderRadius: 20 }}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Ask AI about this client"
-      >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p
-              className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                color: "var(--spark-lime)",
-              }}
-            >
+            <p className="spark-overlay-kicker" style={{ color: "var(--spark-lime)" }}>
               Ask AI
             </p>
-            <h2
-              className="display text-2xl font-bold mt-1"
-              style={{ letterSpacing: "-0.03em" }}
-            >
+            <h2 className="spark-overlay-title">
               {tenantName ? `Ask about ${tenantName}.` : "Ask about this client."}
             </h2>
-            <p
-              className="text-xs mt-1"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
+            <p className="spark-overlay-copy">
               Answers draw on this client&apos;s whole program — every event,
               recap, and KPI we have.
             </p>
@@ -240,8 +221,7 @@ const AskAiModal: React.FC<{
             )}
           </div>
         )}
-      </div>
-    </div>
+    </SparkOverlay>
   );
 };
 
@@ -251,6 +231,7 @@ const AskAiButton: React.FC<{
   className?: string;
 }> = ({ tenantId, tenantName, className }) => {
   const [open, setOpen] = useState(false);
+  const [origin, setOrigin] = useState<JumpOrigin | null>(null);
 
   // No tenant in scope → nothing to ask about. Hide rather than render a
   // dead button.
@@ -260,7 +241,10 @@ const AskAiButton: React.FC<{
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={(e) => {
+          setOrigin(jumpOriginFromElement(e.currentTarget));
+          setOpen(true);
+        }}
         className={`px-4 py-2 rounded-xl text-sm font-semibold transition inline-flex items-center gap-2 ${
           className ?? ""
         }`}
@@ -273,6 +257,7 @@ const AskAiButton: React.FC<{
         <AskAiModal
           tenantId={tenantId}
           tenantName={tenantName}
+          origin={origin}
           onClose={() => setOpen(false)}
         />
       )}

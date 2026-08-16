@@ -28,6 +28,16 @@ Kyle liked a bit of Apple-ish scanability. Steal only these, on the dark ops chr
 
 System-like padding in sheets (enough to scan). Not empty marketing whitespace.
 
+## Popover density (Aakib + Collect UI — steal 3, refuse the rest)
+
+X `1Aakib` 2089078856636588493 was 403 / credits-depleted, so Aakib is inferred from his usual dark SaaS cards (tight hierarchy, compact overlays). Collect UI popup/modal gallery is client-rendered; we stole patterns, not shots.
+
+1. **Stole — compact confirm** — scale+fade from the trigger, dim scrim, 16–20px radius, hairline. Title + one sentence + stacked lime / muted-cancel actions. Not a full-screen takeover.
+2. **Stole — action-sheet grouping** — Jump groups, Ask AI follow-ups, tenant picker rows stay inset lists. Primary lime, cancel muted.
+3. **Stole — share/copy toast** — corner chip, 16px radius, scale+fade. Same chrome as Coming Soon.
+
+Refused: glassmorphism soup, 3D, white iOS sheets, Geist/new fonts, copying Collect UI Dribbble chrome, restyling every page, PhotoLightbox redo (already shipped).
+
 ## Do not
 
 - Restyle to white iOS light mode

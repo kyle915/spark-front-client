@@ -181,6 +181,143 @@
   }
 }
 
+/* Compact overlays — Collect UI action-sheet + Aakib SaaS density.
+   Dark ops only. Dim scrim, 16–20px radius, hairline. No glass soup. */
+.spark-overlay-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh 1rem 2rem;
+  background: rgba(10, 13, 9, 0.62);
+}
+
+.spark-overlay-panel {
+  width: 100%;
+  max-width: 28rem;
+  border-radius: 20px;
+  padding: 1.25rem 1.35rem 1.1rem;
+  background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
+  border: 1px solid var(--spark-border);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.28),
+    0 24px 64px rgba(0, 0, 0, 0.4);
+}
+
+.spark-overlay-panel-sm {
+  max-width: 22rem;
+}
+
+.spark-overlay-panel-lg {
+  max-width: 32rem;
+}
+
+.spark-overlay-kicker {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+
+.spark-overlay-title {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: var(--spark-text);
+}
+
+.spark-overlay-copy {
+  margin-top: 0.45rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.spark-overlay-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 1.15rem;
+}
+
+.spark-overlay-action {
+  width: 100%;
+  min-height: 44px;
+  border-radius: 14px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: opacity 0.15s ease, transform 0.12s ease;
+}
+
+.spark-overlay-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.spark-overlay-action:not(:disabled):active {
+  transform: scale(0.98);
+}
+
+.spark-overlay-action-primary {
+  background: var(--spark-lime);
+  color: #0a0d09;
+}
+
+.spark-overlay-action-danger {
+  background: var(--spark-orange);
+  color: #0a0d09;
+}
+
+.spark-overlay-action-cancel {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--spark-border);
+}
+
+.spark-popover {
+  border-radius: 16px;
+  border: 1px solid var(--spark-border);
+  background: var(--spark-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  transform-origin: top center;
+  animation: spark-popover-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.spark-toast {
+  border-radius: 16px;
+  border: 1px solid var(--spark-border);
+  background: var(--spark-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  animation: spark-toast-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes spark-popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes spark-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .spark-ops-spinner,
   .spark-ops-check-path,
@@ -188,7 +325,9 @@
   .spark-ops-status-out,
   .spark-ops-thinking,
   .spark-ops-thought,
-  .spark-ops-query-ghost {
+  .spark-ops-query-ghost,
+  .spark-popover,
+  .spark-toast {
     animation: none !important;
   }
   .spark-ops-thinking {

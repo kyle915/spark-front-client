@@ -34,6 +34,7 @@ import { UploadUrlQuery } from "@/api/queries/UploadUrlQuery";
 import type { UploadUrlQuery as UploadUrlQueryType } from "@/api/queries/__generated__/UploadUrlQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import SparkConfirm from "@/shared/SparkConfirm";
 
 /**
  * Upload a single File to GCS and return its blob name, or throw. Mirrors
@@ -240,14 +241,6 @@ const ghostButton: React.CSSProperties = {
   border: "1px solid var(--spark-border)",
 };
 
-// Subtle-red, used for the destructive Delete action so it reads as
-// dangerous without shouting.
-const dangerButton: React.CSSProperties = {
-  background: "rgba(239,90,42,0.12)",
-  color: "var(--spark-orange)",
-  border: "1px solid rgba(239,90,42,0.5)",
-};
-
 // Parse a money-ish string ("12.50", "$12.50") to a finite number, else null.
 const parseMoney = (raw: string | null | undefined): number | null => {
   if (raw == null) return null;
@@ -382,62 +375,8 @@ const QrPanel: React.FC<{ slug: string }> = ({ slug }) => {
 };
 
 // ─── Confirm dialog ────────────────────────────────────────────────────
-// A small modal that requires an explicit confirm before a destructive
-// action runs. Tone "danger" gives the confirm button the subtle-red look.
-const ConfirmDialog: React.FC<{
-  title: string;
-  body: React.ReactNode;
-  confirmLabel: string;
-  busy?: boolean;
-  tone?: "danger" | "default";
-  onConfirm: () => void;
-  onCancel: () => void;
-}> = ({ title, body, confirmLabel, busy, tone = "default", onConfirm, onCancel }) => (
-  <div
-    className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-    style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-    onClick={onCancel}
-  >
-    <div
-      className="spark-card w-full max-w-sm"
-      style={{ background: "var(--spark-surface, #0f1310)" }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="p-6">
-        <h2 className="display text-lg font-bold">{title}</h2>
-        <div
-          className="text-sm mt-2"
-          style={{ color: "rgba(255,255,255,0.65)" }}
-        >
-          {body}
-        </div>
-      </div>
-      <div
-        className="px-6 py-4 flex justify-end gap-3"
-        style={{ borderTop: "1px solid var(--spark-border)" }}
-      >
-        <button
-          type="button"
-          onClick={onCancel}
-          disabled={busy}
-          className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
-          style={ghostButton}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={onConfirm}
-          disabled={busy}
-          className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
-          style={tone === "danger" ? dangerButton : limeButton}
-        >
-          {busy ? "…" : confirmLabel}
-        </button>
-      </div>
-    </div>
-  </div>
-);
+// Compact overlay: title + one sentence + stacked lime/orange + cancel.
+const ConfirmDialog = SparkConfirm;
 
 // ─── Count tile ────────────────────────────────────────────────────────
 const CountTile: React.FC<{
@@ -1715,6 +1654,7 @@ const CampaignList: React.FC<{
       {pendingDelete && (
         <ConfirmDialog
           title="Delete campaign?"
+          kicker="Delete"
           tone="danger"
           confirmLabel="Delete campaign"
           busy={deletingId === pendingDelete.id}

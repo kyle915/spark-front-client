@@ -418,10 +418,8 @@ const onStub = (label: string) => {
   document.getElementById(id)?.remove();
   const el = document.createElement("div");
   el.id = id;
-  el.className =
-    "fixed bottom-6 left-6 z-50 rounded-md px-4 py-3 shadow-lg max-w-xs";
-  el.style.cssText =
-    "background: var(--spark-surface); border:1px solid var(--spark-border);";
+  el.className = "spark-toast fixed bottom-6 left-6 z-50 px-4 py-3 max-w-xs";
+  el.style.cssText = "border-color: var(--spark-border);";
   el.innerHTML = `<p style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;color:var(--spark-lime);margin-bottom:0.25rem;">COMING SOON</p><p style="font-size:0.875rem;color:var(--spark-text);">${label} ships in a later phase.</p>`;
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 2400);
