@@ -4,9 +4,9 @@ import { useNavigate } from "react-router";
 import {
   APIProvider,
   Map as GMap,
-  AdvancedMarker,
   InfoWindow,
 } from "@vis.gl/react-google-maps";
+import { SparkGoogleClusters } from "@/shared/map/SparkGoogleClusters";
 import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
@@ -523,24 +523,15 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                 gestureHandling="greedy"
                 style={{ width: "100%", height: "100%" }}
               >
-                {filtered.map((a) => (
-                  <AdvancedMarker
-                    key={a.key}
-                    position={a.coords}
-                    onClick={() => setOpenKey(a.key)}
-                  >
-                    <div
-                      style={{
-                        width: 14,
-                        height: 14,
-                        borderRadius: 7,
-                        background: STATUS_COLOR[a.status],
-                        border: "2px solid #0a0d09",
-                        boxShadow: `0 0 10px ${STATUS_COLOR[a.status]}`,
-                      }}
-                    />
-                  </AdvancedMarker>
-                ))}
+                <SparkGoogleClusters
+                  pins={filtered.map((a) => ({
+                    id: a.key,
+                    position: a.coords,
+                    color: STATUS_COLOR[a.status],
+                    title: a.name,
+                    onClick: () => setOpenKey(a.key),
+                  }))}
+                />
                 {openKey &&
                   (() => {
                     const a = filtered.find((x) => x.key === openKey);

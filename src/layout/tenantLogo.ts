@@ -14,7 +14,9 @@ export type TenantLogoInput = {
   name?: string | null;
   requestUrlName?: string | null;
   tenantSlug?: string | null;
+  /** API avatar. Prefer `logoUrl` when the schema grows it; today the field is `image`. */
   image?: string | null;
+  logoUrl?: string | null;
 };
 
 /** API images that exist but do not read as a 20px mark on a dark chip. */
@@ -59,6 +61,9 @@ const OFFICIAL_FALLBACKS: Record<string, string> = {
   // Wikimedia Commons, sourced from dudeproducts.com.
   // https://commons.wikimedia.org/wiki/File:Dude_Wipes_logo.svg
   dudewipes: "https://upload.wikimedia.org/wikipedia/commons/e/e4/Dude_Wipes_logo.svg",
+
+  // Resort Beverage has no official public mark we can hotlink without
+  // inventing a trademark. Initials until tenant.image / logoUrl is set.
 };
 
 export function normalizeTenantKey(raw: string | null | undefined): string {
@@ -98,7 +103,7 @@ export function officialFallbackSrc(input: TenantLogoInput): string | null {
 /** Ordered sources to try: usable API image, then official fallback. */
 export function tenantLogoCandidates(input: TenantLogoInput): string[] {
   const out: string[] = [];
-  const api = input.image?.trim() ?? "";
+  const api = (input.logoUrl ?? input.image)?.trim() ?? "";
   if (isUsableApiImage(api)) out.push(api);
   const fallback = officialFallbackSrc(input);
   if (fallback && !out.includes(fallback)) out.push(fallback);

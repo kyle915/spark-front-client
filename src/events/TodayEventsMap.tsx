@@ -1,44 +1,19 @@
 import { useState, Suspense, useEffect, useMemo } from "react";
 import { Marker, Popup, Circle } from "react-leaflet";
 import { useLazyLoadQuery } from "react-relay";
-import * as L from "leaflet";
 
 import Layout from "@/layout/Layout";
 import InteractiveMap from "@/shared/InteractiveMap";
+import { SparkLeafletCluster } from "@/shared/map/SparkLeafletCluster";
+import { STATUS_COLOR, sparkDotIcon } from "@/shared/map/sparkMap";
 import { useAuthStore } from "@/store/authStore";
 
 import { TodayEventsCoordinatesQuery } from "@/api/queries/TodayEventsCoordinatesQuery";
 import type { TodayEventsCoordinatesQuery as TodayEventsCoordinatesQueryType } from "@/api/queries/__generated__/TodayEventsCoordinatesQuery.graphql";
 
-import markerIconUrl from "leaflet/dist/images/marker-icon.png?url";
-import markerIcon2xUrl from "leaflet/dist/images/marker-icon-2x.png?url";
-import markerShadowUrl from "leaflet/dist/images/marker-shadow.png?url";
-
 import { LocateFixed, MapPin } from "lucide-react";
 
-// =========================
-// ICONS
-// =========================
-const defaultIcon = new L.Icon({
-  iconUrl: markerIconUrl,
-  iconRetinaUrl: markerIcon2xUrl,
-  shadowUrl: markerShadowUrl,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
-
-const eventIcon = new L.Icon({
-  iconUrl:
-    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+const defaultIcon = sparkDotIcon(STATUS_COLOR.scheduled);
 
 // =========================
 // EVENTS LAYER
@@ -65,7 +40,34 @@ const EventsMapLayer = ({
     { fetchPolicy: "store-or-network" },
   );
 
-  const events = data.todayEventsCoordinates?.edges ?? [];
+  const events = useMemo(
+    () => data.todayEventsCoordinates?.edges ?? [],
+    [data.todayEventsCoordinates],
+  );
+
+  const pins = useMemo(
+    () =>
+      events
+        .map(({ node }) => {
+          const coords = node.request?.coordinates;
+          if (!coords?.[0] || !coords?.[1]) return null;
+          const type = node.eventType?.name ?? "";
+          const status = node.status?.name ?? "";
+          return {
+            id: node.id,
+            position: [coords[0], coords[1]] as [number, number],
+            color: STATUS_COLOR.unvisited,
+            popupHtml: `<div style="min-width:220px">
+              <strong>${escapeHtml(node.name ?? "Event")}</strong>
+              <p style="font-size:12px;margin:4px 0 0">${escapeHtml(node.address ?? "")}</p>
+              <p style="font-size:11px;margin:6px 0 0">${escapeHtml(type)} · ${escapeHtml(status)}</p>
+              <p style="font-size:11px;margin:2px 0 0">${escapeHtml(node.startTime ?? "")} – ${escapeHtml(node.endTime ?? "")}</p>
+            </div>`,
+          };
+        })
+        .filter((p): p is NonNullable<typeof p> => Boolean(p)),
+    [events],
+  );
 
   if (events.length === 0) {
     return (
@@ -77,41 +79,16 @@ const EventsMapLayer = ({
     );
   }
 
-  return (
-    <>
-      {events.map(({ node }) => {
-        const coords = node.request?.coordinates;
-        if (!coords?.[0] || !coords?.[1]) return null;
-
-        return (
-          <Marker
-            key={node.id}
-            position={[coords[0], coords[1]]}
-            icon={eventIcon}
-          >
-            <Popup>
-              <div className="min-w-[220px] space-y-2">
-                <h3 className="font-semibold">{node.name}</h3>
-                <p className="text-xs text-base-content/70">{node.address}</p>
-                <div className="flex flex-wrap gap-1">
-                  <span className="badge badge-sm badge-primary">
-                    {node.eventType?.name}
-                  </span>
-                  <span className="badge badge-sm badge-outline">
-                    {node.status?.name}
-                  </span>
-                </div>
-                <div className="text-xs text-base-content/60">
-                  {node.startTime} – {node.endTime}
-                </div>
-              </div>
-            </Popup>
-          </Marker>
-        );
-      })}
-    </>
-  );
+  return <SparkLeafletCluster pins={pins} />;
 };
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 // =========================
 // PAGE
@@ -217,8 +194,8 @@ const TodayEventsMap = () => {
                 center={center}
                 radius={radius}
                 pathOptions={{
-                  color: "#2563eb",
-                  fillColor: "#2563eb",
+                  color: "#c5f546",
+                  fillColor: "#c5f546",
                   fillOpacity: 0.08,
                 }}
               />

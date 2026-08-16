@@ -231,11 +231,43 @@ html[color-scheme="light"] .app-logo-public-default {
   position: relative;
 }
 
-.leaflet-theme-dark .leaflet-layer,
-.leaflet-theme-dark .leaflet-control-zoom-in,
-.leaflet-theme-dark .leaflet-control-zoom-out,
-.leaflet-theme-dark .leaflet-control-attribution {
-  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+/* Real Carto Dark Matter tiles — do not invert OSM. */
+.spark-map-dot {
+  background: transparent !important;
+  border: none !important;
+}
+.spark-map-dot-core {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  border: 2px solid #0a0d09;
+}
+.spark-map-cluster {
+  background: transparent !important;
+  border: none !important;
+}
+.spark-map-cluster-core,
+.spark-gmap-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background: #c5f546;
+  color: #0a0d09;
+  border: 2px solid #0a0d09;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.spark-gmap-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  border: 2px solid #0a0d09;
 }
 
 @keyframes border-flow {
@@ -507,7 +539,8 @@ body:has(.spark-login-page) {
 .spark-card {
   background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
   border: 1px solid var(--spark-border);
-  border-radius: 20px;
+  border-radius: 22px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
   transition:
     border-color 0.2s ease,
     transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
@@ -516,10 +549,35 @@ body:has(.spark-login-page) {
 }
 .spark-card.hov:hover {
   transform: translateY(-2px);
-  border-color: rgba(197, 245, 70, 0.35);
-  box-shadow:
-    0 12px 32px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(197, 245, 70, 0.12);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36);
+}
+
+/* iOS Settings-style grouped inset — Recaps compact + Jump groups */
+.spark-inset-label {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 0 4px 8px;
+}
+.spark-inset-group {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--spark-border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.spark-inset-row {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 14px;
+  gap: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.spark-inset-row:first-child {
+  border-top: none;
 }
 .spark-card-flat {
   background: rgba(255, 255, 255, 0.025);

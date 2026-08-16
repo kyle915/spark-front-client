@@ -1035,47 +1035,7 @@ const RecapCustomViewInner = () => {
     setPreviewIndex(null);
   }, []);
 
-  const goNext = useCallback(() => {
-    if (!flatImages.length) return;
-
-    setPreviewIndex((current) => {
-      if (current === null) return 0;
-      return (current + 1) % flatImages.length;
-    });
-  }, [flatImages.length]);
-
-  const goPrev = useCallback(() => {
-    if (!flatImages.length) return;
-
-    setPreviewIndex((current) => {
-      if (current === null) return flatImages.length - 1;
-      return (current - 1 + flatImages.length) % flatImages.length;
-    });
-  }, [flatImages.length]);
-
-  useEffect(() => {
-    if (previewIndex === null) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        goNext();
-      }
-
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        goPrev();
-      }
-
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closePreview();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [closePreview, goNext, goPrev, previewIndex]);
+  // Keyboard (Esc / ← / → / zoom) lives on PhotoLightbox.
 
   const currentPreview =
     flatImages && previewIndex !== null ? flatImages[previewIndex] : null;
@@ -2386,9 +2346,13 @@ const RecapCustomViewInner = () => {
             name: currentPreview.name ?? "Evidence",
             file: currentPreviewSrc,
           }}
+          images={flatImages.map((file) => ({
+            name: file.name ?? "Evidence",
+            file: displaySrc(file),
+          }))}
+          index={previewIndex ?? 0}
           onClose={closePreview}
-          onNext={goNext}
-          onPrev={goPrev}
+          onIndex={setPreviewIndex}
         />
       )}
     </>
@@ -2569,9 +2533,13 @@ const RecapCustomViewInner = () => {
               name: currentPreview.name ?? "Evidence",
               file: currentPreviewSrc,
             }}
+            images={flatImages.map((file) => ({
+              name: file.name ?? "Evidence",
+              file: displaySrc(file),
+            }))}
+            index={previewIndex ?? 0}
             onClose={closePreview}
-            onNext={goNext}
-            onPrev={goPrev}
+            onIndex={setPreviewIndex}
           />
         )}
       </>

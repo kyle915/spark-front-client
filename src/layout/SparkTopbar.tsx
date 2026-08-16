@@ -127,7 +127,7 @@ export const SparkTopbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-base-100/80 backdrop-blur-xl border-b border-base-300 px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+    <header className="sticky top-0 z-30 bg-base-200/50 backdrop-blur-2xl border-b border-base-300 px-6 py-3 flex items-center justify-between gap-3 flex-wrap" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.18)" }}>
       {/* Left: breadcrumb + (optional) public form chip */}
       <div className="flex items-center gap-3 min-w-0">
         <span className="mono text-[11px] tracking-[0.18em] text-base-content/40">
@@ -169,7 +169,7 @@ export const SparkTopbar: React.FC = () => {
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+              boxShadow: "0 8px 20px rgba(0,0,0,0.28)",
             }}
           >
             <span aria-hidden>+</span>

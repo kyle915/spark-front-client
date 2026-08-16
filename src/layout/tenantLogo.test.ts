@@ -56,6 +56,16 @@ describe("tenantLogoCandidates", () => {
     ).toEqual([api]);
   });
 
+  it("prefers logoUrl over image when both are set", () => {
+    const logoUrl =
+      "https://storage.googleapis.com/sparkio-production/tenants/images/logo-url.png";
+    const image =
+      "https://storage.googleapis.com/sparkio-production/tenants/images/image.png";
+    expect(
+      tenantLogoCandidates({ name: "Girl Beer", image, logoUrl }),
+    ).toEqual([logoUrl]);
+  });
+
   it("skips the unusable Liquid Death API wordmark and uses the official mark", () => {
     const candidates = tenantLogoCandidates({
       name: "Liquid Death",

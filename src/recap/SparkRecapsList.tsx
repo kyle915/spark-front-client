@@ -263,6 +263,7 @@ const RecapCard: React.FC<{
   showSla: boolean;
   forceApproved?: boolean;
 }> = ({ recap, href, onOpenRequest, selected, onToggleSelect, selectMode, showSla, forceApproved }) => {
+  const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
   const statusText = emptyShell ? "Not filed" : recapReviewStatus(approved);
@@ -340,7 +341,7 @@ const RecapCard: React.FC<{
           "radial-gradient(circle at 50% 50%, rgba(197,245,70,0.10), transparent 70%)",
       }}
     >
-      {recap.heroImage ? (
+      {recap.heroImage && !heroFailed ? (
         <img
           src={recap.heroImage}
           alt=""
@@ -349,10 +350,12 @@ const RecapCard: React.FC<{
           style={{
             filter: "drop-shadow(0 8px 16px rgba(0,0,0,0.5))",
           }}
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.display = "none";
-          }}
+          onError={() => setHeroFailed(true)}
         />
+      ) : recap.heroImage && heroFailed ? (
+        <div className="absolute inset-0 grid place-items-center">
+          <span className="chip chip-orange">PHOTO FAIL</span>
+        </div>
       ) : (
         <div className="absolute inset-0 grid place-items-center">
           <span className="text-4xl" aria-hidden>
@@ -520,6 +523,115 @@ const RecapCard: React.FC<{
   );
 };
 
+const recapHref = (r: Recap) =>
+  r.kind === "custom" ? `/recap/view-custom/${r.uuid}` : `/recap/view/${r.uuid}`;
+
+const RecapCompactRow: React.FC<{
+  recap: Recap;
+  href: string;
+  selected: boolean;
+  focused: boolean;
+  selectMode: boolean;
+  onToggleSelect: () => void;
+  forceApproved?: boolean;
+}> = ({ recap, href, selected, focused, selectMode, onToggleSelect, forceApproved }) => {
+  const [heroFailed, setHeroFailed] = useState(false);
+  const emptyShell = recapIsEmptyShell(recap);
+  const approved = recap.approved || Boolean(forceApproved);
+  const statusText = emptyShell ? "Not filed" : recapReviewStatus(approved);
+  return (
+    <div
+      className="spark-inset-row relative"
+      style={{
+        minHeight: 48,
+        background: focused
+          ? "rgba(197,245,70,0.08)"
+          : selected
+            ? "rgba(197,245,70,0.05)"
+            : "transparent",
+        outline: focused ? "1px solid rgba(197,245,70,0.45)" : undefined,
+        outlineOffset: -1,
+      }}
+    >
+      <Link to={href} aria-label={`Open recap ${recap.name}`} className="absolute inset-0 z-[1]" />
+      {(selectMode || selected) && (
+        <label
+          onClick={(e) => e.stopPropagation()}
+          className="relative z-10 cursor-pointer shrink-0"
+        >
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelect}
+            style={{ accentColor: "var(--spark-lime)", width: 14, height: 14 }}
+          />
+        </label>
+      )}
+      <div
+        className="relative z-10 shrink-0 overflow-hidden"
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 10,
+          background: "rgba(197,245,70,0.08)",
+        }}
+      >
+        {recap.heroImage && !heroFailed ? (
+          <img
+            src={recap.heroImage}
+            alt=""
+            className="w-full h-full object-cover"
+            onError={() => setHeroFailed(true)}
+          />
+        ) : recap.heroImage && heroFailed ? (
+          <span className="chip chip-orange absolute inset-0 grid place-items-center text-[8px]">
+            PHOTO FAIL
+          </span>
+        ) : (
+          <span className="grid place-items-center w-full h-full text-base" aria-hidden>
+            ◈
+          </span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1 relative z-10">
+        <p className="text-sm font-semibold truncate">{recap.baName || "Unattributed"}</p>
+        <p
+          className="mono text-[10px] truncate"
+          style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.45)" }}
+        >
+          {recap.retailerName && recap.retailerName !== "—"
+            ? recap.retailerName
+            : recap.name}
+        </p>
+      </div>
+      <span
+        className={`relative z-10 chip shrink-0 ${
+          emptyShell ? "" : approved ? "chip-lime" : "chip-orange"
+        }`}
+        style={
+          emptyShell
+            ? {
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.18)",
+                color: "rgba(255,255,255,0.62)",
+              }
+            : undefined
+        }
+      >
+        {statusText}
+      </span>
+      <span
+        className="relative z-10 mono text-[10px] shrink-0"
+        style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.55)" }}
+      >
+        ENG {recap.engagements != null ? recap.engagements.toLocaleString() : "—"}
+        {" · "}
+        SOLD {recap.productsSold != null ? recap.productsSold.toLocaleString() : "—"}
+      </span>
+    </div>
+  );
+};
+
 type Meta = {
   retailers: string[];
   states: string[];
@@ -592,7 +704,9 @@ const RecapsListInner: React.FC<{
   onClearFilters: () => void;
   justApprovedIds: Set<string>;
   refreshKey: number;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey }) => {
+  density: "cards" | "compact";
+  focusedId: string | null;
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
@@ -1021,6 +1135,28 @@ const RecapsListInner: React.FC<{
     );
   }
 
+  if (density === "compact") {
+    return (
+      <div>
+        <p className="spark-inset-label">Recaps</p>
+        <div className="spark-inset-group">
+          {displayed.map((r) => (
+            <RecapCompactRow
+              key={r.uuid}
+              recap={r}
+              href={recapHref(r)}
+              selected={selectedIds.has(r.id)}
+              focused={focusedId === r.uuid}
+              selectMode={selectMode}
+              onToggleSelect={() => onToggleSelected(r.id)}
+              forceApproved={justApprovedIds.has(r.id)}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {displayed.map((r) => (
@@ -1031,11 +1167,7 @@ const RecapsListInner: React.FC<{
           onToggleSelect={() => onToggleSelected(r.id)}
           selectMode={selectMode}
           showSla={pipeline === "needs_review"}
-          href={
-            r.kind === "custom"
-              ? `/recap/view-custom/${r.uuid}`
-              : `/recap/view/${r.uuid}`
-          }
+          href={recapHref(r)}
           forceApproved={justApprovedIds.has(r.id)}
           onOpenRequest={(reqUuid) =>
             navigate(`/request/view/${reqUuid}`, {
@@ -1146,6 +1278,18 @@ export default function SparkRecapsList() {
   const statusFromUrl = searchParams.get("status");
   const rangeFromUrl = searchParams.get("range");
   const [search, setSearch] = useState("");
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  const [density, setDensity] = useState<"cards" | "compact">(() => {
+    try {
+      return localStorage.getItem("spark-recaps-density") === "compact"
+        ? "compact"
+        : "cards";
+    } catch {
+      return "cards";
+    }
+  });
+  const [focusedIdx, setFocusedIdx] = useState(-1);
+  const [showHelp, setShowHelp] = useState(false);
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
   const [rmmFilter, setRmmFilter] = useState("all");
@@ -1229,6 +1373,77 @@ export default function SparkRecapsList() {
   const onMeta = useMemo(() => (next: Meta) => setMeta(next), []);
 
   const [visibleRecaps, setVisibleRecaps] = useState<Recap[]>([]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("spark-recaps-density", density);
+    } catch {
+      /* ignore */
+    }
+  }, [density]);
+
+  useEffect(() => {
+    if (visibleRecaps.length === 0) {
+      if (focusedIdx !== -1) setFocusedIdx(-1);
+      return;
+    }
+    if (focusedIdx >= visibleRecaps.length) setFocusedIdx(visibleRecaps.length - 1);
+  }, [visibleRecaps.length, focusedIdx]);
+
+  useEffect(() => {
+    const isTypingTarget = (el: EventTarget | null) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName.toLowerCase();
+      return (
+        tag === "input" ||
+        tag === "textarea" ||
+        tag === "select" ||
+        el.isContentEditable
+      );
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (showHelp) {
+        if (e.key === "Escape" || e.key === "?") {
+          e.preventDefault();
+          setShowHelp(false);
+        }
+        return;
+      }
+      if (e.key === "/" && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        searchRef.current?.focus();
+        return;
+      }
+      if (e.key === "?" && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        setShowHelp(true);
+        return;
+      }
+      if (isTypingTarget(e.target)) {
+        if (e.key === "Escape" && document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        return;
+      }
+      if (visibleRecaps.length === 0) return;
+      const focused = focusedIdx >= 0 ? visibleRecaps[focusedIdx] : null;
+      if (e.key === "j" || e.key === "ArrowDown") {
+        e.preventDefault();
+        setFocusedIdx((i) => Math.min(visibleRecaps.length - 1, i + 1 < 0 ? 0 : i + 1));
+      } else if (e.key === "k" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setFocusedIdx((i) => Math.max(0, (i < 0 ? 0 : i) - 1));
+      } else if (e.key === "Enter" && focused) {
+        e.preventDefault();
+        navigate(recapHref(focused));
+      } else if (e.key === "Escape" && focusedIdx !== -1) {
+        e.preventDefault();
+        setFocusedIdx(-1);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [focusedIdx, navigate, showHelp, visibleRecaps]);
 
   // ─── Campaign report multi-select ────────────────────────────
   // Set of recap.id (relay id) the user has ticked. Survives filter
@@ -1723,12 +1938,39 @@ export default function SparkRecapsList() {
             </p>
           </div>
           <input
+            ref={searchRef}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search venue, retailer, R-ID…"
             className="rounded-xl text-sm"
             style={{ ...filterStyle, flex: 1, minWidth: 180, maxWidth: 260 }}
           />
+          <div
+            className="flex overflow-hidden"
+            style={{ border: "1px solid var(--spark-border)", borderRadius: 12 }}
+          >
+            {([
+              ["cards", "Cards"],
+              ["compact", "Scan"],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setDensity(key)}
+                className="px-2.5 py-2 text-xs font-semibold"
+                style={{
+                  background:
+                    density === key ? "rgba(197,245,70,0.16)" : "transparent",
+                  color:
+                    density === key
+                      ? "var(--spark-lime)"
+                      : "rgba(255,255,255,0.65)",
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <button
             type="button"
             onClick={(e) => dispatchOpenJump(e.currentTarget)}
@@ -2115,6 +2357,10 @@ export default function SparkRecapsList() {
             onClearFilters={clearAllFilters}
             justApprovedIds={justApprovedIds}
             refreshKey={refreshKey}
+            density={density}
+            focusedId={
+              focusedIdx >= 0 ? visibleRecaps[focusedIdx]?.uuid ?? null : null
+            }
           />
         </Suspense>
 
@@ -2261,6 +2507,37 @@ export default function SparkRecapsList() {
           onClose={() => setEmailReportOpen(false)}
           onSent={clearSelection}
         />
+      )}
+
+      {showHelp && (
+        <div
+          className="fixed inset-0 z-[60] grid place-items-center px-4"
+          style={{ background: "rgba(10,13,9,0.62)", backdropFilter: "blur(8px)" }}
+          onClick={() => setShowHelp(false)}
+        >
+          <div
+            className="spark-card p-5 w-full max-w-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="spark-inset-label">Recaps keys</p>
+            <div className="spark-inset-group">
+              {[
+                ["/", "Focus search"],
+                ["j / k", "Move focus"],
+                ["Enter", "Open recap"],
+                ["?", "This help"],
+                ["Esc", "Clear focus"],
+              ].map(([key, label]) => (
+                <div key={key} className="spark-inset-row justify-between">
+                  <span className="text-sm">{label}</span>
+                  <span className="mono text-[10px]" style={{ letterSpacing: "0.14em", color: "var(--spark-lime)" }}>
+                    {key}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </Layout>
   );
