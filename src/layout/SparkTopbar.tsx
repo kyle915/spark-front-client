@@ -2,17 +2,14 @@ import React, { useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
   ArrowRightEndOnRectangleIcon,
-  ClipboardIcon,
-  ArrowTopRightOnSquareIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import { useAuthStore } from "@/store/authStore";
-import { useAlertStore } from "@/store/alertStore";
-import { sparkFormUrl } from "@/utils/publicHosts";
 import NotificationBell from "./NotificationBell";
 import useSparkRole from "@/hooks/useSparkRole";
 import { looksLikeRouteId, usePageCrumb } from "./pageCrumb";
 import { dispatchOpenJump } from "@/motion/opsMotion";
+import { PublicFormPill } from "./PublicFormPill";
 
 /**
  * Spark v2 topbar — wireframe-faithful version of spark-demo/index.html
@@ -75,7 +72,6 @@ const PillGroup: React.FC<{
 
 export const SparkTopbar: React.FC = () => {
   const { user, tenantMeta } = useAuthStore();
-  const { showAlert } = useAlertStore();
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -90,27 +86,6 @@ export const SparkTopbar: React.FC = () => {
       navigate("/client-dashboard", { replace: true });
     }
   }, [role, pathname, navigate]);
-
-  const publicFormUrl = useMemo(() => {
-    const slug = tenantMeta?.requestUrlName?.trim();
-    if (!slug) return null;
-    return sparkFormUrl(slug);
-  }, [tenantMeta?.requestUrlName]);
-
-  const copyForm = async () => {
-    if (!publicFormUrl) return;
-    try {
-      await navigator.clipboard.writeText(publicFormUrl);
-      showAlert("Link copied to clipboard", "success");
-    } catch {
-      showAlert("Error copying link", "error");
-    }
-  };
-
-  const openForm = () => {
-    if (!publicFormUrl) return;
-    window.open(publicFormUrl, "_blank", "noopener,noreferrer");
-  };
 
   const onLogout = () => {
     logout();
@@ -137,28 +112,10 @@ export const SparkTopbar: React.FC = () => {
           {crumb}
         </span>
 
-        {publicFormUrl && !isClient && (
-          <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-base-300/40 border border-base-300 text-xs ml-2">
-            <span className="text-base-content/55">Public form</span>
-            <span className="font-medium text-primary truncate max-w-[140px]">
-              {tenantMeta?.requestUrlName}
-            </span>
-            <button
-              onClick={copyForm}
-              className="text-primary hover:text-primary/70"
-              title="Copy link"
-            >
-              <ClipboardIcon className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={openForm}
-              className="text-primary hover:text-primary/70"
-              title="Open in new tab"
-            >
-              <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
+        <PublicFormPill
+          slug={tenantMeta?.requestUrlName}
+          className="ml-2"
+        />
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
