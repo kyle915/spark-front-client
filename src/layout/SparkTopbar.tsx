@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { Suspense, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
   ArrowRightEndOnRectangleIcon,
@@ -10,6 +10,7 @@ import useSparkRole from "@/hooks/useSparkRole";
 import { looksLikeRouteId, usePageCrumb } from "./pageCrumb";
 import { dispatchOpenJump } from "@/motion/opsMotion";
 import { PublicFormPill } from "./PublicFormPill";
+import { usePublicFormLink } from "@/hooks/usePublicFormLink";
 
 /**
  * Spark v2 topbar — wireframe-faithful version of spark-demo/index.html
@@ -37,6 +38,17 @@ const useBreadcrumb = () => {
     return last.replace(/-/g, " ").toUpperCase();
   }, [pathname, pageCrumb]);
 };
+
+function PublicFormPillSlot({ className = "" }: { className?: string }) {
+  const publicForm = usePublicFormLink();
+  return (
+    <PublicFormPill
+      slug={publicForm?.slug}
+      url={publicForm?.url}
+      className={className}
+    />
+  );
+}
 
 /** Pill-group toggle (lime fill on active, mono label). */
 const PillGroup: React.FC<{
@@ -71,7 +83,7 @@ const PillGroup: React.FC<{
 );
 
 export const SparkTopbar: React.FC = () => {
-  const { user, tenantMeta } = useAuthStore();
+  const { user } = useAuthStore();
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -112,10 +124,9 @@ export const SparkTopbar: React.FC = () => {
           {crumb}
         </span>
 
-        <PublicFormPill
-          slug={tenantMeta?.requestUrlName}
-          className="ml-2"
-        />
+        <Suspense fallback={null}>
+          <PublicFormPillSlot className="ml-2" />
+        </Suspense>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">

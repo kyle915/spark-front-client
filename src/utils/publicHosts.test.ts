@@ -8,6 +8,7 @@ import {
   recapPublicUrl,
   recapShareOrigin,
   sparkFormUrl,
+  resolvePublicFormLink,
 } from "./publicHosts";
 
 const originalWindow = globalThis.window;
@@ -59,6 +60,42 @@ describe("client / admin origins", () => {
     mockLocation("admin.igniteproductions.co");
     expect(checkinUrl("WALK")).toBe(`${CLIENT_ORIGIN}/checkin/WALK`);
     expect(sparkFormUrl("ld")).toBe(`${CLIENT_ORIGIN}/spark-form/ld`);
+  });
+});
+
+describe("resolvePublicFormLink", () => {
+  it("prefers the spark-form slug when the tenant has one", () => {
+    mockLocation("admin.igniteproductions.co");
+    expect(
+      resolvePublicFormLink({
+        requestUrlName: "keee-torch-thc",
+        checkinCode: "FF-XXXX",
+      }),
+    ).toEqual({
+      slug: "keee-torch-thc",
+      url: `${CLIENT_ORIGIN}/spark-form/keee-torch-thc`,
+      kind: "spark-form",
+    });
+  });
+
+  it("falls back to the standing check-in for Feel Free-style tenants", () => {
+    mockLocation("admin.igniteproductions.co");
+    expect(
+      resolvePublicFormLink({
+        requestUrlName: null,
+        checkinCode: "FF-YMMK3Q",
+      }),
+    ).toEqual({
+      slug: "FF-YMMK3Q",
+      url: `${CLIENT_ORIGIN}/checkin/FF-YMMK3Q`,
+      kind: "checkin",
+    });
+  });
+
+  it("hides when the tenant has neither a form slug nor a check-in code", () => {
+    expect(
+      resolvePublicFormLink({ requestUrlName: "  ", checkinCode: null }),
+    ).toBeNull();
   });
 });
 

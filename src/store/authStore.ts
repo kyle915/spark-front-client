@@ -6,6 +6,7 @@ import { themes } from "@/utils";
 type TenantMeta = {
   logo?: string | null;
   requestUrlName?: string | null;
+  checkinCode?: string | null;
 };
 
 interface AuthState {
@@ -31,7 +32,8 @@ interface AuthState {
     tenantId: string,
     logo?: string | null,
     requestUrlName?: string | null,
-    tenantSlug?: string | null
+    tenantSlug?: string | null,
+    checkinCode?: string | null
   ) => void;
   clearTenant: () => void;
 }
@@ -120,6 +122,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem("@tenantSlug");
     localStorage.removeItem("@tenantLogo");
     localStorage.removeItem("@tenantRequestUrlName");
+    localStorage.removeItem("@tenantCheckinCode");
 
     set({
       user: null,
@@ -142,6 +145,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     const tenantSlugFromStorage = localStorage.getItem("@tenantSlug");
     const logo = localStorage.getItem("@tenantLogo");
     const requestUrlName = localStorage.getItem("@tenantRequestUrlName");
+    const checkinCode = localStorage.getItem("@tenantCheckinCode");
 
     const theme = localStorage.getItem("@theme") || themes.light;
     document.documentElement.setAttribute("data-theme", theme);
@@ -159,6 +163,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           tenantMeta: {
             logo,
             requestUrlName,
+            checkinCode,
           },
         });
       } catch (err) {
@@ -185,7 +190,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     tenantId: string,
     logo?: string | null,
     requestUrlName?: string | null,
-    tenantSlug?: string | null
+    tenantSlug?: string | null,
+    checkinCode?: string | null
   ) => {
     localStorage.setItem("@tenantUuid", tenantUuid);
     localStorage.setItem("@tenantId", tenantId);
@@ -196,8 +202,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
 
     if (logo) localStorage.setItem("@tenantLogo", logo);
+    else localStorage.removeItem("@tenantLogo");
     if (requestUrlName)
       localStorage.setItem("@tenantRequestUrlName", requestUrlName);
+    else localStorage.removeItem("@tenantRequestUrlName");
+    if (checkinCode) localStorage.setItem("@tenantCheckinCode", checkinCode);
+    else localStorage.removeItem("@tenantCheckinCode");
 
     set({
       tenantUuid,
@@ -206,6 +216,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       tenantMeta: {
         logo,
         requestUrlName,
+        checkinCode,
       },
     });
   },
@@ -216,6 +227,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem("@tenantSlug");
     localStorage.removeItem("@tenantLogo");
     localStorage.removeItem("@tenantRequestUrlName");
+    localStorage.removeItem("@tenantCheckinCode");
 
     set({
       tenantUuid: null,

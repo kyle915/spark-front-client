@@ -4,26 +4,29 @@ import { sparkFormUrl } from "@/utils/publicHosts";
 
 /**
  * Compact public-form chip: muted label, lime mono slug, copy + open.
- * Field URL is always the client host (`sparkFormUrl`), never admin.
+ * URL is always the client host — spark-form or standing check-in —
+ * never admin.
  */
 export function PublicFormPill({
   slug,
+  url,
   className = "",
 }: {
   slug?: string | null;
+  url?: string | null;
   className?: string;
 }) {
   const trimmed = slug?.trim() ?? "";
   const { showAlert } = useAlertStore();
   if (!trimmed) return null;
 
-  const url = sparkFormUrl(trimmed);
+  const href = url?.trim() || sparkFormUrl(trimmed);
 
   const copy = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(href);
       showAlert("Link copied to clipboard", "success");
     } catch {
       showAlert("Error copying link", "error");
@@ -33,7 +36,7 @@ export function PublicFormPill({
   const open = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    window.open(url, "_blank", "noopener,noreferrer");
+    window.open(href, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -48,7 +51,7 @@ export function PublicFormPill({
       <span
         className="mono font-medium truncate max-w-[160px]"
         style={{ color: "var(--spark-lime)" }}
-        title={url}
+        title={href}
       >
         {trimmed}
       </span>
