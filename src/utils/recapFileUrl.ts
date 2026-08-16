@@ -44,6 +44,17 @@ export const recapFileUrl = (path: string | null | undefined): string => {
 };
 
 /**
+ * Browser-renderable recap image URL. HEIC/HEIF rewrites to the server
+ * `.jpg` sibling the same way GraphQL `displayUrl` does, so <img> and
+ * thumbUrl(400) can load iPhone sampling shots instead of grey boxes.
+ */
+export const recapDisplayUrl = (path: string | null | undefined): string => {
+  const url = recapFileUrl(path);
+  if (!url) return "";
+  return url.replace(/\.hei[cf](?=(\?|#|$))/i, ".jpg");
+};
+
+/**
  * Same as recapFileUrl but appends a one-time cache-buster query string.
  * Use sparingly — only when you've changed bucket permissions and need
  * to force the browser to re-fetch URLs that previously 403'd.

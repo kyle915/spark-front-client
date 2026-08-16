@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   recapFileKind,
   recapFileUrl,
+  recapDisplayUrl,
   recapFileUrlFresh,
   pickHeroImage,
 } from "./recapFileUrl";
@@ -60,6 +61,18 @@ describe("recapFileUrl", () => {
     expect(recapFileUrl(null)).toBe("");
     expect(recapFileUrl(undefined)).toBe("");
     expect(recapFileUrl("")).toBe("");
+  });
+});
+
+describe("recapDisplayUrl", () => {
+  it("rewrites HEIC to the jpg sibling", () => {
+    const out = recapDisplayUrl("recaps/bin.heic");
+    expect(out.endsWith("recaps/bin.jpg")).toBe(true);
+    expect(out.includes(".heic")).toBe(false);
+  });
+  it("leaves jpeg paths alone", () => {
+    const out = recapDisplayUrl("recaps/table.jpg");
+    expect(out.endsWith("recaps/table.jpg")).toBe(true);
   });
 });
 

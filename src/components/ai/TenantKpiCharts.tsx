@@ -18,6 +18,7 @@ import type { ChartData, ChartOptions } from "chart.js";
 import { useThemeMode } from "@/hooks/useThemeMode";
 import { TenantKpisQuery } from "@/api/queries/TenantKpisQuery";
 import type { TenantKpisQuery as TenantKpisQueryType } from "@api/queries/__generated__/TenantKpisQuery.graphql";
+import { collapseSamplingKpis } from "@/lib/collapseSamplingKpis";
 
 /**
  * Phase 1 KPI panel for the dashboards.
@@ -234,11 +235,18 @@ const TenantKpiCharts: React.FC<{ tenantId: string }> = ({ tenantId }) => {
     // dependent: a bread tenant (Stone House Bread) never collects brand
     // awareness / first-time, so those come back 0 — hide them rather than
     // show empty tiles (per kyle's "if we're not tracking it, delete it").
+    const sampling = collapseSamplingKpis({
+      consumersReached: kpis.consumersReached,
+      samplesDistributed: kpis.samplesDistributed,
+      totalEngagements: kpis.totalEngagements,
+    }).map((t) => ({
+      label: t.label,
+      value: fmt(t.value),
+      tone: (t.key === "totalEngagements" ? "sky" : "lime") as "lime" | "sky",
+    }));
     const core = [
-      { label: "Consumers reached", value: fmt(kpis.consumersReached), tone: "lime" as const },
-      { label: "Samples distributed", value: fmt(kpis.samplesDistributed), tone: "lime" as const },
+      ...sampling,
       { label: "Products sold", value: fmt(kpis.productsSold), tone: "gold" as const },
-      { label: "Total engagements", value: fmt(kpis.totalEngagements), tone: "sky" as const },
     ];
     const optional = [
       { label: "First-time consumers", value: kpis.firstTimeConsumers, tone: "purple" as const },

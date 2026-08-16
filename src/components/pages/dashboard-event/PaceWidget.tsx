@@ -76,22 +76,24 @@ const Inner: React.FC<{ tenantId: string | null }> = ({ tenantId }) => {
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className={`grid gap-3 ${summary.consumerReach === summary.samplesDistributed ? "grid-cols-2" : "grid-cols-3"}`}>
         <StatTile
           label="Recaps"
           value={summary.recapCount}
           chip={summary.recapCountDeltaChip}
         />
         <StatTile
-          label="Consumers Reached"
-          value={summary.consumerReach}
+          label="Consumers sampled"
+          value={summary.consumerReach || summary.samplesDistributed}
           chip={summary.consumerReachDeltaChip}
           highlight
         />
-        <StatTile
-          label="Samples Out"
-          value={summary.samplesDistributed}
-        />
+        {summary.consumerReach !== summary.samplesDistributed && (
+          <StatTile
+            label="Samples Out"
+            value={summary.samplesDistributed}
+          />
+        )}
       </div>
 
       {(summary.topStores.length > 0 || summary.topBas.length > 0) && (

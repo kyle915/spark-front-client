@@ -300,6 +300,9 @@ const SparkBulkUpload = lazyDefault(() => import("@/requests/SparkBulkUpload"));
 const SparkReports = lazyDefault(
   () => import("@/components/pages/reports/SparkReports"),
 );
+const SparkInsights = lazyDefault(
+  () => import("@/components/pages/insights/SparkInsights"),
+);
 const SparkInbox = lazyDefault(
   () => import("@/components/pages/inbox/SparkInbox"),
 );
@@ -682,6 +685,11 @@ const RequestsLinks = {
           <SparkJobs />
         </AdminOnly>
       ),
+      isPublic: false,
+    },
+    {
+      path: "/insights",
+      component: <SparkInsights />,
       isPublic: false,
     },
     {

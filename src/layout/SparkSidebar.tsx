@@ -55,7 +55,7 @@ import {
  * classes lifted from spark-demo/index.html so React renders the same pixels.
  */
 
-type ChipTone = "lime" | "orange" | "sky" | "purple" | "gold";
+type ChipTone = "lime" | "orange" | "sky" | "purple" | "gold" | "muted";
 
 type NavItem = {
   label: string;
@@ -211,6 +211,7 @@ const SECTIONS: NavSection[] = [
   {
     title: "Outputs",
     items: [
+      { label: "Insights", Icon: Activity, to: "/insights" },
       { label: "Reports", Icon: BarChart3, to: "/reports" },
       // Ignite-internal cost lens — labor + spend per event.
       { label: "P&L", Icon: DollarSign, to: "/pnl", adminOnly: true },
@@ -323,6 +324,8 @@ const chipClass = (tone: ChipTone): string => {
       return "chip chip-purple";
     case "gold":
       return "chip chip-gold";
+    case "muted":
+      return "chip chip-muted";
     default:
       return "chip chip-lime";
   }
@@ -449,7 +452,8 @@ const SidebarNav: React.FC<{
         };
       }
       if (it.to === "/requests/list" && counts.tracker > 0) {
-        chip = { text: String(counts.tracker), tone: "lime" };
+        // Inventory count — outline, not the lime Create Request alarm.
+        chip = { text: String(counts.tracker), tone: "muted" };
       }
       if (it.to === "/approvals" && counts.approvals > 0)
         chip = {
@@ -460,7 +464,7 @@ const SidebarNav: React.FC<{
           tone: counts.approvalsSlaBreach > 0 ? "orange" : "gold",
           blink: counts.approvalsSlaBreach > 0,
         };
-      if (it.to === "/recaps/list" && counts.recapsDue > 0)
+      if (it.to === "/recaps/missing" && counts.recapsDue > 0)
         chip = {
           text: `${counts.recapsDue} DUE`,
           tone: "orange",
