@@ -67,7 +67,9 @@ const ENTRIES: CommandEntry[] = [
   { id: "approvals", label: "Approvals", hint: "Review pending requests", to: "/approvals", clientTo: "/my-approvals", Icon: CheckCircle2, keywords: "pending review approve" },
   { id: "jobs", label: "Jobs", hint: "Open + filling roles", to: "/jobs", Icon: Hammer, keywords: "ba shifts hire", adminOnly: true },
   { id: "talent", label: "Search Talent", hint: "BA roster", to: "/talent", Icon: Users, keywords: "ba ambassador roster", adminOnly: true },
-  { id: "recaps", label: "Recaps", hint: "Field reports", to: "/recaps/list", Icon: FileText, keywords: "reports recap photos" },
+  { id: "recaps", label: "Recaps", hint: "Jump to a recap", to: "/recaps/list", Icon: FileText, keywords: "reports recap photos jump" },
+  { id: "recaps-needs-review", label: "Needs review", hint: "Recaps awaiting approval", to: "/recaps/list?status=needs_review", Icon: FileText, keywords: "needs review recaps filter", adminOnly: true },
+  { id: "recaps-this-week", label: "This week", hint: "Recaps from the last 7 days", to: "/recaps/list?range=week", Icon: Calendar, keywords: "this week recaps filter" },
   { id: "templates", label: "Recap Templates", hint: "Custom recap shapes", to: "/recaps/templates", Icon: Star, keywords: "templates", adminOnly: true },
   { id: "reports", label: "Reports", hint: "Analytics dashboards", to: "/reports", Icon: BarChart3, keywords: "analytics charts" },
   { id: "inbox", label: "Inbox", hint: "Messages with BAs", to: "/inbox", Icon: Mail, keywords: "messages chat" },
@@ -363,7 +365,7 @@ export const CommandPalette: React.FC = () => {
             setActive(0);
           }}
           onKeyDown={onKey}
-          placeholder="Jump to a screen, search anything…"
+          placeholder="Jump to a recap, a screen, or search…"
           className="w-full text-base"
           style={{
             background: "transparent",

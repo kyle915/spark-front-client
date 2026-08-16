@@ -17,6 +17,8 @@ import { ApproveRequestMutation } from "@/api/mutations/ApproveRequestMutation";
 import type { ApproveRequestMutation as ApproveRequestMutationType } from "@api/mutations/__generated__/ApproveRequestMutation.graphql";
 import { DeclineRequestMutation } from "@/api/mutations/DeclineRequestMutation";
 import type { DeclineRequestMutation as DeclineRequestMutationType } from "@api/mutations/__generated__/DeclineRequestMutation.graphql";
+import { recapFileUrl } from "@/utils/recapFileUrl";
+import { thumbUrl } from "@/utils/thumb";
 
 /**
  * Spark v2 — Client Approvals (/my-approvals).
@@ -63,6 +65,8 @@ type PendingRecap = {
   typeLabel: string | null;
   /** Sort key — event date (ms), falling back to createdAt, then 0. */
   sortMs: number;
+  heroImage: string | null;
+  fileCount: number;
 };
 
 const fmtDate = (raw: string | null | undefined): string => {
@@ -112,6 +116,7 @@ const ApprovalRow: React.FC<{
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = legacyInFlight || customInFlight;
+  const hasPhotos = Boolean(row.heroImage) || row.fileCount > 0;
 
   const approve = useCallback(() => {
     setError(null);
@@ -147,6 +152,25 @@ const ApprovalRow: React.FC<{
         borderRadius: 14,
       }}
     >
+      {row.heroImage ? (
+        <img
+          src={row.heroImage}
+          alt=""
+          className="w-16 h-16 rounded-lg object-cover shrink-0"
+        />
+      ) : (
+        <div
+          className="w-16 h-16 rounded-lg shrink-0 flex items-center justify-center mono text-[10px] text-center px-1"
+          style={{
+            letterSpacing: "0.08em",
+            background: "rgba(255,255,255,0.04)",
+            border: "1px dashed rgba(255,255,255,0.18)",
+            color: "rgba(255,255,255,0.4)",
+          }}
+        >
+          {row.fileCount > 0 ? `${row.fileCount} PHOTOS` : "NO PHOTOS"}
+        </div>
+      )}
       <div className="min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold truncate">{row.name}</span>
@@ -230,7 +254,7 @@ const ApprovalRow: React.FC<{
               Cancel
             </button>
           </>
-        ) : (
+        ) : hasPhotos ? (
           <button
             type="button"
             onClick={() => setConfirming(true)}
@@ -241,10 +265,24 @@ const ApprovalRow: React.FC<{
               border: "1px solid var(--spark-lime)",
               cursor: "pointer",
             }}
-            title="Sign off on this recap"
+            title="Review the photos on this row, then confirm"
           >
-            Approve ✓
+            Approve
           </button>
+        ) : (
+          <Link
+            to={reviewTo}
+            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+            style={{
+              background: "transparent",
+              color: "var(--spark-lime)",
+              textDecoration: "none",
+              border: "1px solid var(--spark-lime)",
+            }}
+            title="Open the recap — there are no photos on this row"
+          >
+            Review first
+          </Link>
         )}
       </div>
     </li>
@@ -312,6 +350,10 @@ const ClientApprovalsInner: React.FC = () => {
             where: joinWhere(venue, null, st),
             typeLabel: n.requestTypeName ?? null,
             sortMs: toMs(n.eventDate) || toMs(n.event?.date) || toMs(n.createdAt),
+            heroImage: n.heroFile?.file
+              ? thumbUrl(recapFileUrl(n.heroFile.file), 400)
+              : null,
+            fileCount: n.recapFilesCount ?? 0,
           };
         }) ?? [];
 
@@ -338,6 +380,8 @@ const ClientApprovalsInner: React.FC = () => {
             ),
             typeLabel: n.customRecapTemplate?.name ?? null,
             sortMs: toMs(n.event?.date) || toMs(n.createdAt),
+            heroImage: n.heroImageUrl ? thumbUrl(n.heroImageUrl, 400) : null,
+            fileCount: n.customRecapFilesCount ?? 0,
           };
         }) ?? [];
 

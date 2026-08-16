@@ -137,6 +137,15 @@ function ExpressFormBody() {
     !!schedulingStatus &&
     !submitting;
 
+  const submitBlocker =
+    !venue || !address || !addressComplete || !date || !startTime || !endTime || !timezoneId
+      ? "Venue"
+      : productIds.length === 0
+        ? "Products"
+        : !requestorName.trim() || !requestorEmail.trim() || !requestTypeId || !schedulingStatus
+          ? "Client"
+          : null;
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -768,6 +777,7 @@ function ExpressFormBody() {
         >
           <div className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}>
             {allDates.length > 1 ? `${allDates.length} VISITS · ${productIds.length} PRODUCTS · ${baCount} BAs` : `${productIds.length} PRODUCTS · ${baCount} BAs`}
+            {submitBlocker ? ` · Needs ${submitBlocker}` : ""}
           </div>
           <button
             type="submit"

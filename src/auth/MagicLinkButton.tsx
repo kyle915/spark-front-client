@@ -90,7 +90,7 @@ export default function MagicLinkButton({
           fontSize: 11,
         }}
       >
-        ✦ EMAIL ME A SIGN-IN LINK
+        Email me a sign-in link
       </button>
     );
   }
