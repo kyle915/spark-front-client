@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Navigate, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
@@ -27,7 +27,8 @@ import { CreateProductMutation } from "@/api/mutations/CreateProductMutation";
 import type { CreateProductMutation as CreateProductMutationType } from "@/api/mutations/__generated__/CreateProductMutation.graphql";
 import useSparkRole from "@/hooks/useSparkRole";
 import RateBaControl from "@/components/RateBaControl";
-import { recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
+import { recapDisplayUrl, recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
+import { useRecapPageCrumb } from "@/layout/pageCrumb";
 import { shareRecapLink } from "@/utils/recapShare";
 import { parseLocaleNumber } from "@/utils";
 import { useAlertStore } from "@/store/alertStore";
@@ -448,6 +449,17 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   );
 
   const recap = data?.recap;
+  const crumbTitle = useMemo(() => {
+    if (!recap) return null;
+    const venue =
+      recap.name ||
+      recap.event?.request?.retailer?.name ||
+      recap.event?.address ||
+      "Recap";
+    const date = fmtDate(recap.event?.date ?? recap.createdAt);
+    return date && date !== "—" ? `${venue} · ${date}` : venue;
+  }, [recap]);
+  useRecapPageCrumb(crumbTitle);
 
   if (!recap) {
     // The uuid may belong to a custom-template recap (a separate model the
@@ -894,9 +906,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 ? "⬇ Download PDF"
                 : isPdfRunning
                   ? "Generating…"
-                  : recap.approved
-                    ? "Generating…"
-                    : "⬇ PDF"}
+                  : "⬇ PDF"}
             </button>
             <button
               disabled={isZipping || allFiles.length === 0}
@@ -2072,7 +2082,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   // `kind` is computed from the chosen source so a converted
                   // HEIC (now a .jpg) is treated as a normal image. A still-
                   // unconverted .heic is a labeled tile — no in-browser WASM.
-                  const source = p?.displayUrl ?? p?.file;
+                  const source = recapDisplayUrl(p?.displayUrl || p?.file);
                   const kind = recapFileKind(source);
                   const url = recapFileUrlFresh(source);
                   const labelByKind: Record<typeof kind, string> = {

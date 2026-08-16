@@ -11,6 +11,7 @@ import { useAlertStore } from "@/store/alertStore";
 import { sparkFormUrl } from "@/utils/publicHosts";
 import NotificationBell from "./NotificationBell";
 import useSparkRole from "@/hooks/useSparkRole";
+import { looksLikeRouteId, usePageCrumb } from "./pageCrumb";
 
 /**
  * Spark v2 topbar — wireframe-faithful version of spark-demo/index.html
@@ -23,12 +24,20 @@ type Role = "admin" | "client";
 
 const useBreadcrumb = () => {
   const { pathname } = useLocation();
+  const pageCrumb = usePageCrumb();
   return useMemo(() => {
+    if (pageCrumb) return `${pageCrumb.parent} / ${pageCrumb.title}`;
     if (pathname === "/") return "DASHBOARD";
+    if (pathname === "/insights") return "INSIGHTS";
     if (pathname === "/client-dashboard") return "CLIENT";
-    const last = pathname.split("/").filter(Boolean).pop() ?? "";
+    const parts = pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1] ?? "";
+    if (looksLikeRouteId(last)) {
+      const parent = parts[parts.length - 2] ?? "page";
+      return parent.replace(/-/g, " ").toUpperCase();
+    }
     return last.replace(/-/g, " ").toUpperCase();
-  }, [pathname]);
+  }, [pathname, pageCrumb]);
 };
 
 /** Pill-group toggle (lime fill on active, mono label). */

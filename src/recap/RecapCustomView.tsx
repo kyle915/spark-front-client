@@ -52,7 +52,8 @@ import {
 } from "lucide-react";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import { useAlertStore } from "@/store/alertStore";
-import { recapFileUrl } from "@/utils/recapFileUrl";
+import { recapDisplayUrl, recapFileUrl } from "@/utils/recapFileUrl";
+import { useRecapPageCrumb } from "@/layout/pageCrumb";
 import { shareRecapLink } from "@/utils/recapShare";
 import useSparkRole from "@/hooks/useSparkRole";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
@@ -666,9 +667,14 @@ const RecapCustomViewInner = () => {
     return (recap?.customRecapFiles ?? []).find((f) => {
       const name = (f?.name ?? "").toLowerCase();
       const typeName = (f?.fileType?.name ?? "").toLowerCase();
-      const url = (f?.url ?? "").toLowerCase();
+      const url = (f?.url || f?.displayUrl || "").toLowerCase();
       if (name.includes("connecteam source")) return false;
-      return typeName === "pdf" || url.split("?")[0]?.endsWith(".pdf");
+      return (
+        typeName === "pdf" ||
+        name.endsWith(".pdf") ||
+        name.includes(" recap.pdf") ||
+        url.split("?")[0]?.endsWith(".pdf")
+      );
     });
   }, [recap?.customRecapFiles]);
   const existingPdfUrl =
@@ -878,7 +884,8 @@ const RecapCustomViewInner = () => {
   // with no in-browser HEIC decode / bucket-CORS dependency. Falls back to
   // `url` for older query results.
   const displaySrc = useCallback(
-    (file: (typeof recapFiles)[number]) => file.displayUrl ?? file.url ?? "",
+    (file: (typeof recapFiles)[number]) =>
+      recapDisplayUrl(file.displayUrl || file.url || ""),
     [],
   );
 
@@ -886,9 +893,22 @@ const RecapCustomViewInner = () => {
     (file: (typeof recapFiles)[number]) => {
       const typeName = file.fileType?.name?.toLowerCase() ?? "";
       const url = displaySrc(file).toLowerCase();
-      if (typeName === "image" || typeName === "img") return true;
+      const category = (file.fileRecapCategory?.name ?? "").toLowerCase();
       if (typeName === "pdf" || url.endsWith(".pdf")) return false;
-      return /\.(jpg|jpeg|png|gif|heic|heif|webp)/i.test(url);
+      if (
+        typeName === "image" ||
+        typeName === "img" ||
+        typeName === "photo"
+      )
+        return true;
+      if (/\.(jpg|jpeg|png|gif|heic|heif|webp)/i.test(url)) return true;
+      return (
+        Boolean(url) &&
+        (category.includes("photo") ||
+          category.includes("sampling") ||
+          category.includes("picture") ||
+          category.includes("table"))
+      );
     },
     [displaySrc],
   );
@@ -1063,6 +1083,19 @@ const RecapCustomViewInner = () => {
     [recap?.totalEngagements, recap?.soldUnits, unitsSampled, flatImages.length],
   );
 
+  const crumbTitle = useMemo(() => {
+    if (!recap) return null;
+    const venue =
+      recap.name ||
+      recap.eventRetailer ||
+      recap.retailer?.name ||
+      recap.eventVenue ||
+      "Recap";
+    const date = formatDate(recap.event?.date ?? recap.eventDate ?? null);
+    return date && date !== "—" && date !== "-" ? `${venue} · ${date}` : venue;
+  }, [recap]);
+  useRecapPageCrumb(crumbTitle);
+
   if (!recap) {
     return (
       <div
@@ -1138,9 +1171,7 @@ const RecapCustomViewInner = () => {
                     ? "⬇ Download PDF"
                     : isGeneratingPdf
                       ? "Generating…"
-                      : recap.approved
-                        ? "Generating…"
-                        : "⬇ PDF"}
+                      : "⬇ PDF"}
                 </button>
                 {!isClient && (
                 <button
@@ -1705,7 +1736,7 @@ const RecapCustomViewInner = () => {
                     // image fields via the GCS upload flow.
                     if (kind === "image") {
                       const imgSrc = displayValue
-                        ? recapFileUrl(displayValue)
+                        ? recapDisplayUrl(displayValue)
                         : "";
                       // One photo surface: empty IMAGE fields stay out of
                       // read mode when the Photos gallery already has files
@@ -1725,7 +1756,7 @@ const RecapCustomViewInner = () => {
                           </p>
                           {imgSrc ? (
                             <img
-                              src={thumbUrl(imgSrc, 800) || imgSrc}
+                              src={thumbUrl(imgSrc, 400) || imgSrc}
                               alt={field.name ?? "Field image"}
                               loading="lazy"
                               decoding="async"
@@ -1733,7 +1764,9 @@ const RecapCustomViewInner = () => {
                               style={inset}
                               onError={(event) => {
                                 const img = event.currentTarget;
-                                if (imgSrc && img.src !== imgSrc) img.src = imgSrc;
+                                const fallback = recapFileUrl(displayValue);
+                                if (fallback && img.src !== fallback)
+                                  img.src = fallback;
                               }}
                             />
                           ) : fieldId === firstEmptyImageFieldId &&

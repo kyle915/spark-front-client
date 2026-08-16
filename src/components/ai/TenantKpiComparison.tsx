@@ -2,6 +2,10 @@ import { useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { TenantKpiComparisonQuery } from "@/api/queries/TenantKpiComparisonQuery";
 import type { TenantKpiComparisonQuery as TenantKpiComparisonQueryType } from "@api/queries/__generated__/TenantKpiComparisonQuery.graphql";
+import {
+  collapseSamplingKpis,
+  previousForSamplingTile,
+} from "@/lib/collapseSamplingKpis";
 
 /**
  * "Period comparison" card for the dashboards — each headline KPI this-period
@@ -272,11 +276,23 @@ const TenantKpiComparison: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const headline = useMemo(() => {
     if (!comparison) return [];
     const { current: c, previous: p } = comparison;
+    const sampling = collapseSamplingKpis({
+      consumersReached: c.consumersReached,
+      samplesDistributed: c.samplesDistributed,
+      totalEngagements: c.totalEngagements,
+    }).map((t) => ({
+      label: t.label,
+      current: t.value,
+      previous: previousForSamplingTile(t, {
+        consumersReached: p.consumersReached,
+        samplesDistributed: p.samplesDistributed,
+        totalEngagements: p.totalEngagements,
+      }),
+      tone: (t.key === "totalEngagements" ? "sky" : "lime") as Tone,
+    }));
     return [
-      { label: "Consumers reached", current: c.consumersReached, previous: p.consumersReached, tone: "lime" as const },
-      { label: "Samples distributed", current: c.samplesDistributed, previous: p.samplesDistributed, tone: "lime" as const },
+      ...sampling,
       { label: "Products sold", current: c.productsSold, previous: p.productsSold, tone: "gold" as const },
-      { label: "Total engagements", current: c.totalEngagements, previous: p.totalEngagements, tone: "sky" as const },
     ];
   }, [comparison]);
 
