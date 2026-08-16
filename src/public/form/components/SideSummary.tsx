@@ -75,6 +75,13 @@ export default function SideSummary({
         Boolean(values.request_type),
     },
   ];
+  const blocker = !steps[0].done
+    ? "Venue"
+    : !steps[1].done
+      ? "Products"
+      : !steps[2].done
+        ? "Client"
+        : null;
 
   // WARNINGS
   const warnings: string[] = [];
@@ -247,6 +254,7 @@ export default function SideSummary({
       <section>
         <h3 className="text-sm font-semibold opacity-70">
           Form Status {progress.toFixed(0)}%
+          {blocker ? ` · Needs ${blocker}` : ""}
         </h3>
 
         <div className="w-full h-2 bg-base-300 rounded-full mt-2 overflow-hidden">

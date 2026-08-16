@@ -2606,6 +2606,8 @@ function PhotoFileInputs({
   );
 }
 
+const PHOTO_CAP = 20;
+
 function PhotoGrid({
   photos,
   onAdd,
@@ -2628,9 +2630,21 @@ function PhotoGrid({
     cursor: "pointer",
     padding: "16px 12px",
   };
+  const done = photos.filter((p) => p.state === "done").length;
 
   return (
     <div>
+      <p
+        style={{
+          fontSize: 12,
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          opacity: 0.55,
+          margin: "0 0 6px",
+        }}
+      >
+        {done}/{PHOTO_CAP}
+      </p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
         {photos.map((p) => (
           <div key={p.id} style={{ position: "relative", width: 120, height: 120 }}>
@@ -2646,11 +2660,24 @@ function PhotoGrid({
                 border: p.state === "failed" ? "2px solid #EF5A2A" : "1px solid rgba(0,0,0,0.1)",
               }}
             />
-            {p.state === "uploading" ? (
-              <span style={photoBadge}>…</span>
-            ) : p.state === "failed" ? (
-              <span style={{ ...photoBadge, color: "#EF5A2A" }}>!</span>
-            ) : null}
+            <span
+              style={{
+                ...photoBadge,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                background:
+                  p.state === "failed"
+                    ? "rgba(239,90,42,0.72)"
+                    : p.state === "uploading"
+                      ? "rgba(20,24,26,0.55)"
+                      : "rgba(46,125,50,0.55)",
+                color: "#fff",
+              }}
+            >
+              {p.state}
+            </span>
             <button onClick={() => onRemove(p.id)} style={photoRemove} aria-label="Remove photo">
               ×
             </button>

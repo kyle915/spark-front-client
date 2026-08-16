@@ -133,36 +133,36 @@ const Login = () => {
                 fontFamily: "var(--font-mono, monospace)",
                 fontSize: 10,
                 letterSpacing: "0.28em",
-                color: "#D6F35F",
+                color: "rgba(214,243,95,0.75)",
                 textTransform: "uppercase",
                 textAlign: "center",
               }}
             >
-              {isLogin ? "Welcome Back" : "Get Started"}
+              {isLogin ? "Spark" : "Get Started"}
             </p>
             <h1
               style={{
                 fontFamily: "var(--font-display, sans-serif)",
-                fontWeight: 800,
-                fontSize: 36,
+                fontWeight: 700,
+                fontSize: 28,
                 letterSpacing: "-0.03em",
                 color: "#F5F2EC",
                 textAlign: "center",
                 marginTop: 6,
-                marginBottom: 24,
+                marginBottom: 20,
               }}
             >
-              {isLogin ? "Sign in to Spark." : "Create your account."}
+              {isLogin ? "Sign in." : "Create your account."}
             </h1>
             {isLogin ? (
               <>
-                <MagicLinkButton defaultOpen />
                 <AuthForm
                   control={control}
                   handleSubmit={handleSubmit}
                   onSubmit={onSubmit}
                   loading={loading}
                 />
+                <MagicLinkButton />
               </>
             ) : (
               <RegisterForm

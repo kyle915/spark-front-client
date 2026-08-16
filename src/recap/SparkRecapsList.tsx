@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapsListSkeleton } from "@/layout/PageSkeletons";
 import { RecapsQuery } from "@/api/queries/RecapsQuery";
@@ -206,6 +206,7 @@ const daysAgoIso = (n: number) => {
   return isoLocal(d);
 };
 const TODAY_ISO = isoLocal(new Date());
+const DAYS_7_ISO = daysAgoIso(7);
 const DAYS_30_ISO = daysAgoIso(30);
 const DAYS_90_ISO = daysAgoIso(90);
 const monthStartIso = () => {
@@ -575,7 +576,9 @@ const RecapsListInner: React.FC<{
   onToggleSelected: (id: string) => void;
   selectMode: boolean;
   queueEmpty: boolean;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty }) => {
+  filterChips: { key: string; label: string }[];
+  onClearFilters: () => void;
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
@@ -959,7 +962,45 @@ const RecapsListInner: React.FC<{
             </p>
           </>
         ) : (
-          "No recaps match these filters."
+          <div className="text-left max-w-lg mx-auto">
+            <p className="display text-2xl font-bold" style={{ color: "var(--spark-text)" }}>
+              Nothing in this view.
+            </p>
+            <p className="mt-2">
+              These filters emptied the list. Clear one, or clear all.
+            </p>
+            {filterChips.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-4">
+                {filterChips.map((chip) => (
+                  <span
+                    key={chip.key}
+                    className="mono text-[10px] px-2.5 py-1.5 rounded-full"
+                    style={{
+                      letterSpacing: "0.12em",
+                      color: "var(--spark-lime)",
+                      background: "rgba(197,245,70,0.10)",
+                      border: "1px solid rgba(197,245,70,0.28)",
+                    }}
+                  >
+                    {chip.label}
+                  </span>
+                ))}
+                <button
+                  type="button"
+                  onClick={onClearFilters}
+                  className="mono text-[10px] px-2.5 py-1.5 rounded-full font-semibold"
+                  style={{
+                    letterSpacing: "0.12em",
+                    color: "#0a0d09",
+                    background: "var(--spark-lime)",
+                    border: "none",
+                  }}
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
     );
@@ -1085,6 +1126,9 @@ export default function SparkRecapsList() {
   const { tenantId } = useAuthStore();
   const { isClient } = useSparkRole();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const statusFromUrl = searchParams.get("status");
+  const rangeFromUrl = searchParams.get("range");
   const [search, setSearch] = useState("");
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
@@ -1092,16 +1136,42 @@ export default function SparkRecapsList() {
   // Brand Ambassador filter. "all" = no filter; otherwise the Ambassador's
   // Relay global id (pushed server-side as `ambassadorId`). Mirrors rmmFilter.
   const [baFilter, setBaFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<StatusKey>(
-    isClient ? "shared" : "needs_review",
-  );
+  const [statusFilter, setStatusFilter] = useState<StatusKey>(() => {
+    if (
+      statusFromUrl === "needs_review" ||
+      statusFromUrl === "approved" ||
+      statusFromUrl === "shared" ||
+      statusFromUrl === "submitted" ||
+      statusFromUrl === "all"
+    ) {
+      return statusFromUrl;
+    }
+    return isClient ? "shared" : "needs_review";
+  });
   const [selectMode, setSelectMode] = useState(false);
   // Work-queue default: last 30 days. "All published" clears both
   // bounds so the archive (every published recap) is an explicit choice.
-  const [dateFrom, setDateFrom] = useState<string>(
-    isClient ? MONTH_START_ISO : DAYS_30_ISO,
-  );
+  const [dateFrom, setDateFrom] = useState<string>(() => {
+    if (rangeFromUrl === "week") return DAYS_7_ISO;
+    return isClient ? MONTH_START_ISO : DAYS_30_ISO;
+  });
   const [dateTo, setDateTo] = useState<string>(TODAY_ISO);
+  useEffect(() => {
+    const status = searchParams.get("status");
+    if (
+      status === "needs_review" ||
+      status === "approved" ||
+      status === "shared" ||
+      status === "submitted" ||
+      status === "all"
+    ) {
+      setStatusFilter(status);
+    }
+    if (searchParams.get("range") === "week") {
+      setDateFrom(DAYS_7_ISO);
+      setDateTo(TODAY_ISO);
+    }
+  }, [searchParams]);
   const [opsOpen, setOpsOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
   // Server fetch size — how many rows we ask EACH list resolver for.
@@ -1244,7 +1314,15 @@ export default function SparkRecapsList() {
       onCompleted: (res) => {
         const payload = res.bulkApproveRecaps;
         if (payload?.success) {
-          showAlert(payload.message ?? "Approved.", "success");
+          const names = visibleRecaps
+            .filter((r) => selectedIds.has(r.id))
+            .map((r) => r.retailerName || r.name)
+            .filter(Boolean);
+          const copy =
+            names.length === 1
+              ? `Approved · ${names[0]}`
+              : `Approved · ${selectedIds.size}`;
+          showAlert(copy, "success");
           clearSelection();
         } else {
           showAlert(payload?.message ?? "Bulk approve failed.", "error");
@@ -1264,7 +1342,7 @@ export default function SparkRecapsList() {
     }
     try {
       await navigator.clipboard.writeText(tokens.join("\n"));
-      showAlert(`Copied ${tokens.length} share link${tokens.length === 1 ? "" : "s"}.`, "success");
+      showAlert(`Shared with ${tokens.length}.`, "success");
     } catch {
       showAlert("Couldn't reach the clipboard.", "error");
       return;
@@ -1536,6 +1614,48 @@ export default function SparkRecapsList() {
     setDateFrom("");
     setDateTo("");
   };
+  const clearAllFilters = () => {
+    setSearch("");
+    setRetailerFilter("all");
+    setStateFilter("all");
+    setRmmFilter("all");
+    setBaFilter("all");
+    setStatusFilter(isClient ? "shared" : "all");
+    setDateFrom("");
+    setDateTo("");
+  };
+  const filterChips = [
+    !isClient && statusFilter !== "all"
+      ? {
+          key: "status",
+          label:
+            statusFilter === "needs_review" || statusFilter === "draft"
+              ? "Needs review"
+              : statusFilter === "approved"
+                ? "Approved"
+                : statusFilter === "shared"
+                  ? "Shared"
+                  : "Submitted",
+        }
+      : null,
+    search.trim() ? { key: "search", label: search.trim() } : null,
+    retailerFilter !== "all" ? { key: "client", label: retailerFilter } : null,
+    stateFilter !== "all" ? { key: "state", label: stateFilter } : null,
+    baFilter !== "all" ? { key: "ba", label: "BA" } : null,
+    dateFrom || dateTo
+      ? {
+          key: "date",
+          label:
+            dateFrom === DAYS_7_ISO && dateTo === TODAY_ISO
+              ? "This week"
+              : dateFrom === DAYS_30_ISO && dateTo === TODAY_ISO
+                ? "30d"
+                : dateFrom === DAYS_90_ISO && dateTo === TODAY_ISO
+                  ? "90d"
+                  : [dateFrom, dateTo].filter(Boolean).join(" → ") || "Dates",
+        }
+      : null,
+  ].filter((c): c is { key: string; label: string } => Boolean(c));
   const filterStyle: React.CSSProperties = {
     padding: "0.65rem 0.85rem",
     background: "var(--spark-bg)",
@@ -1575,6 +1695,18 @@ export default function SparkRecapsList() {
             className="rounded-xl text-sm"
             style={{ ...filterStyle, flex: 1, minWidth: 180, maxWidth: 260 }}
           />
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("spark:open-jump"))}
+            className="rounded-xl text-xs px-3 py-2 font-semibold"
+            style={ghostBtn}
+            title="Jump to a recap"
+          >
+            Jump to a recap
+            <span className="mono ml-2 text-[10px]" style={{ letterSpacing: "0.12em", opacity: 0.65 }}>
+              ⌘K
+            </span>
+          </button>
           {!isClient && (
           <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--spark-border)" }}>
             {([
@@ -1894,6 +2026,37 @@ export default function SparkRecapsList() {
             <option value="eng-desc">Most consumers</option>
             <option value="sold-desc">Most products sold</option>
           </select>
+          {filterChips.length > 0 && !isQueueDefault && (
+            <div className="flex flex-wrap gap-2 items-center w-full">
+              {filterChips.map((chip) => (
+                <span
+                  key={chip.key}
+                  className="mono text-[10px] px-2.5 py-1.5 rounded-full"
+                  style={{
+                    letterSpacing: "0.12em",
+                    color: "var(--spark-lime)",
+                    background: "rgba(197,245,70,0.10)",
+                    border: "1px solid rgba(197,245,70,0.28)",
+                  }}
+                >
+                  {chip.label}
+                </span>
+              ))}
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="mono text-[10px] px-2.5 py-1.5 rounded-full font-semibold"
+                style={{
+                  letterSpacing: "0.12em",
+                  color: "rgba(255,255,255,0.7)",
+                  background: "transparent",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                Clear all
+              </button>
+            </div>
+          )}
         </div>
 
         <Suspense fallback={<RecapsListSkeleton />}>
@@ -1914,6 +2077,8 @@ export default function SparkRecapsList() {
             selectedIds={selectedIds}
             onToggleSelected={toggleSelected}
             selectMode={selectMode}
+            filterChips={filterChips}
+            onClearFilters={clearAllFilters}
           />
         </Suspense>
 

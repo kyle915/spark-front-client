@@ -396,14 +396,14 @@ const ClientInner: React.FC = () => {
           label="This week"
           value={totalThisWeek}
           sub={`${weekAhead.filter((b) => b.count > 0).length} active days`}
-          onClick={() => navigate("/tracker")}
+          onClick={() => navigate("/requests/list")}
         />
         <Tile
           label="Recap completion"
           value={completionPct == null ? "—" : `${completionPct}%`}
           sub={
             counts.recapsDue > 0
-              ? `File the ${counts.recapsDue} recap${counts.recapsDue === 1 ? "" : "s"} due`
+              ? `${counts.recapsDue} recap${counts.recapsDue === 1 ? "" : "s"} still open`
               : "All caught up"
           }
           tone={completionPct != null && completionPct < 80 ? "orange" : "lime"}
@@ -420,14 +420,14 @@ const ClientInner: React.FC = () => {
                 : "Awaiting your approval"
           }
           tone={counts.approvalsSlaBreach > 0 ? "orange" : "sky"}
-          onClick={() => navigate("/approvals")}
+          onClick={() => navigate("/my-approvals")}
         />
         <Tile
           label="Done · last 30d"
           value={counts.done30d}
           sub="Completed events"
           tone="muted"
-          onClick={() => navigate("/tracker?status=done")}
+          onClick={() => navigate("/requests/list")}
         />
       </div>
 
@@ -699,7 +699,7 @@ const ClientInner: React.FC = () => {
               📒 Recaps
             </button>
             <button
-              onClick={() => navigate("/tracker")}
+              onClick={() => navigate("/requests/list")}
               className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
               style={{
                 background: "transparent",
@@ -707,7 +707,7 @@ const ClientInner: React.FC = () => {
                 border: "1px solid var(--spark-border)",
               }}
             >
-              📋 Master tracker
+              Master tracker
             </button>
             <button
               onClick={() => navigate("/today")}

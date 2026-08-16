@@ -11,16 +11,14 @@ import { useAlertStore } from "@/store/alertStore";
 import { sparkFormUrl } from "@/utils/publicHosts";
 import NotificationBell from "./NotificationBell";
 import useSparkRole from "@/hooks/useSparkRole";
-import useSparkPlatform from "@/hooks/useSparkPlatform";
 
 /**
  * Spark v2 topbar — wireframe-faithful version of spark-demo/index.html
  * lines 467–490.
  *
- *   spark.app / DASHBOARD                         [Search ⌘K] [Desktop|Mobile] [Admin|Client] avatar Logout
+ *   spark.app / DASHBOARD                         [Search ⌘K] [Admin|Client] avatar Logout
  */
 
-type Platform = "desktop" | "mobile";
 type Role = "admin" | "client";
 
 const useBreadcrumb = () => {
@@ -73,7 +71,6 @@ export const SparkTopbar: React.FC = () => {
   const { pathname } = useLocation();
   const crumb = useBreadcrumb();
   const { role, isClient, setRole } = useSparkRole();
-  const { platform, setPlatform } = useSparkPlatform();
   const initial = (user?.firstName ?? user?.email ?? "U")
     .charAt(0)
     .toUpperCase();
@@ -180,15 +177,6 @@ export const SparkTopbar: React.FC = () => {
             ⌘K
           </span>
         </button>
-
-        <PillGroup
-          value={platform}
-          onChange={(v) => setPlatform(v as Platform)}
-          options={[
-            { value: "desktop", label: "Desktop", icon: "▢" },
-            { value: "mobile", label: "Mobile", icon: "▯" },
-          ]}
-        />
 
         <PillGroup
           value={role}
