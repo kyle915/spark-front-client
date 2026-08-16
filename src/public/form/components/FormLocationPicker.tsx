@@ -4,20 +4,15 @@ import type { LatLngExpression } from "leaflet";
 import { Marker, useMap } from "react-leaflet";
 import type { Control, UseFormSetValue } from "react-hook-form";
 import type { SparkFormData } from "../schema/schema";
-import * as L from "leaflet";
 
 import InteractiveMap from "@/shared/InteractiveMap";
 import MapSearchControl from "@/shared/MapSearchControl";
+import { STATUS_COLOR, sparkDotIcon } from "@/shared/map/sparkMap";
 
 // Fallback to Times Square, NY
 const FALLBACK_POSITION: [number, number] = [40.758, -73.9855];
 
-const defaultMarkerIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
+const defaultMarkerIcon = sparkDotIcon(STATUS_COLOR.scheduled);
 
 interface Props {
   control: Control<SparkFormData>;

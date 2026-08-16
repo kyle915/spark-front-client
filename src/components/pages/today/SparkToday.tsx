@@ -7,6 +7,7 @@ import {
   AdvancedMarker,
   InfoWindow,
 } from "@vis.gl/react-google-maps";
+import { SparkGoogleClusters } from "@/shared/map/SparkGoogleClusters";
 import Layout from "@/layout/Layout";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import { EventsQuery } from "@/api/queries/EventsQuery";
@@ -212,24 +213,15 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
               gestureHandling="greedy"
               style={{ width: "100%", height: "100%" }}
             >
-              {mappable.map((s) => (
-                <AdvancedMarker
-                  key={s.uuid}
-                  position={s.coords!}
-                  onClick={() => setOpenKey(s.uuid)}
-                >
-                  <div
-                    style={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: 8,
-                      background: "var(--spark-lime)",
-                      border: "2px solid #0a0d09",
-                      boxShadow: "0 0 12px var(--spark-lime)",
-                    }}
-                  />
-                </AdvancedMarker>
-              ))}
+              <SparkGoogleClusters
+                pins={mappable.map((s) => ({
+                  id: s.uuid,
+                  position: s.coords!,
+                  color: "#c5f546",
+                  title: s.name,
+                  onClick: () => setOpenKey(s.uuid),
+                }))}
+              />
 
               {/* Live BA GPS pins — orange / sky based on freshness. */}
               {pings.map((p) => {

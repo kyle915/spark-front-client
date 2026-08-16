@@ -9,36 +9,17 @@ import {
 } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { LatLngExpression, Map as LeafletMap } from "leaflet";
-import * as L from "leaflet";
-import markerIconUrl from "leaflet/dist/images/marker-icon.png?url";
-import markerIcon2xUrl from "leaflet/dist/images/marker-icon-2x.png?url";
-import markerShadowUrl from "leaflet/dist/images/marker-shadow.png?url";
 import { themes } from "@utils/index";
 import MapSearchControl from "./MapSearchControl";
+import { CARTO_DARK_TILE, OSM_LIGHT_TILE, STATUS_COLOR, sparkDotIcon } from "./map/sparkMap";
 
 type CoordinateValue = number | string | null | undefined;
 
-const markerIcon = new L.Icon({
-  iconUrl: markerIconUrl,
-  iconRetinaUrl: markerIcon2xUrl,
-  shadowUrl: markerShadowUrl,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+const markerIcon = sparkDotIcon(STATUS_COLOR.scheduled);
 
 const TILE_LAYERS = {
-  light: {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  },
-  dark: {
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  },
+  light: OSM_LIGHT_TILE,
+  dark: CARTO_DARK_TILE,
 } as const;
 
 const toNumber = (value: CoordinateValue): number => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router";
 import {
@@ -35,6 +35,14 @@ import {
   Sun,
 } from "lucide-react";
 import useSparkRole from "@/hooks/useSparkRole";
+import {
+  JUMP_GROUP_LABEL,
+  JUMP_GROUP_ORDER,
+  jumpGroupOf,
+  loadJumpRecents,
+  rememberJumpRecent,
+  type JumpRecent,
+} from "./jumpRecents";
 
 /**
  * Spark v2 — Command Palette (⌘K).
@@ -143,6 +151,11 @@ export const CommandPalette: React.FC = () => {
   // (a failed fetch just means no BA rows; page entries still work).
   // Results become ordinary CommandEntry rows appended after the page
   // matches, so the existing keyboard navigation needs no changes.
+  const [recents, setRecents] = useState<JumpRecent[]>([]);
+  useEffect(() => {
+    if (open) setRecents(loadJumpRecents());
+  }, [open]);
+
   const [baEntries, setBaEntries] = useState<CommandEntry[]>([]);
   useEffect(() => {
     const q = query.trim();
@@ -328,10 +341,38 @@ export const CommandPalette: React.FC = () => {
       .filter((x) => x.s > 0)
       .sort((a, b) => b.s - a.s)
       .map((x) => x.entry);
-    return [...pages, ...requestEntries, ...recapEntries, ...baEntries];
-  }, [query, baEntries, requestEntries, recapEntries, isClient]);
+    const recentEntries: CommandEntry[] = recents
+      .filter((row) => {
+        if (!q) return true;
+        return `${row.label} ${row.hint} ${row.to}`.toLowerCase().includes(q);
+      })
+      .map((row) => ({
+        id: row.id.startsWith("recent-") ? row.id : `recent-${row.id}`,
+        label: row.label,
+        hint: row.hint,
+        to: row.to,
+        Icon: Clock,
+      }));
+    return [...recentEntries, ...recapEntries, ...requestEntries, ...baEntries, ...pages];
+  }, [query, baEntries, requestEntries, recapEntries, recents, isClient]);
+
+  const grouped = useMemo(
+    () =>
+      JUMP_GROUP_ORDER.map((id) => ({
+        id,
+        label: JUMP_GROUP_LABEL[id],
+        items: filtered.filter((entry) => jumpGroupOf(entry.id) === id),
+      })).filter((group) => group.items.length > 0),
+    [filtered],
+  );
 
   const select = (entry: CommandEntry) => {
+    rememberJumpRecent({
+      id: entry.id.replace(/^recent-/, ""),
+      label: entry.label,
+      hint: entry.hint,
+      to: entry.to,
+    });
     navigate(entry.to);
     setOpen(false);
   };
@@ -416,7 +457,7 @@ export const CommandPalette: React.FC = () => {
           }}
         />
         <div
-          className="max-h-[60vh] overflow-y-auto p-2 hide-scroll"
+          className="max-h-[60vh] overflow-y-auto p-2 hide-scroll space-y-3"
           style={{ scrollbarWidth: "none" }}
         >
           {filtered.length === 0 && (
@@ -427,68 +468,78 @@ export const CommandPalette: React.FC = () => {
               No matches.
             </p>
           )}
-          {filtered.map((entry, i) => {
-            const on = i === active;
-            const Icon = entry.Icon;
-            return (
-              <motion.button
-                key={entry.id}
-                onMouseEnter={() => setActive(i)}
-                onClick={() => select(entry)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition"
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.16,
-                  delay: Math.min(i * 0.028, 0.16),
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-                style={{
-                  background: on
-                    ? "rgba(197,245,70,0.08)"
-                    : "transparent",
-                  color: on ? "var(--spark-lime)" : "var(--spark-text)",
-                }}
-              >
-                <Icon
-                  size={16}
-                  className="shrink-0"
-                  style={{
-                    color: on
-                      ? "var(--spark-lime)"
-                      : "rgba(255,255,255,0.55)",
-                  }}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">
-                    {entry.label}
-                  </p>
-                  <p
-                    className="mono text-[10px] truncate"
-                    style={{
-                      letterSpacing: "0.14em",
-                      color: on
-                        ? "rgba(197,245,70,0.65)"
-                        : "rgba(255,255,255,0.4)",
-                    }}
-                  >
-                    {entry.hint.toUpperCase()}
-                  </p>
-                </div>
-                {on && (
-                  <span
-                    className="mono text-[10px] shrink-0"
-                    style={{
-                      letterSpacing: "0.14em",
-                      color: "var(--spark-lime)",
-                    }}
-                  >
-                    ↵ OPEN
-                  </span>
-                )}
-              </motion.button>
-            );
-          })}
+          {grouped.map((group) => (
+            <div key={group.id}>
+              <p className="spark-inset-label">{group.label}</p>
+              <div className="spark-inset-group">
+                {group.items.map((entry) => {
+                  const i = filtered.indexOf(entry);
+                  const on = i === active;
+                  const Icon = entry.Icon;
+                  return (
+                    <Fragment key={entry.id}>
+                      <motion.button
+                        onMouseEnter={() => setActive(i)}
+                        onClick={() => select(entry)}
+                        className="spark-inset-row w-full text-left transition"
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          duration: 0.16,
+                          delay: Math.min(i * 0.028, 0.16),
+                          ease: [0.16, 1, 0.3, 1],
+                        }}
+                        style={{
+                          background: on
+                            ? "rgba(197,245,70,0.08)"
+                            : "transparent",
+                          color: on ? "var(--spark-lime)" : "var(--spark-text)",
+                          borderRadius: 0,
+                        }}
+                      >
+                        <Icon
+                          size={16}
+                          className="shrink-0"
+                          style={{
+                            color: on
+                              ? "var(--spark-lime)"
+                              : "rgba(255,255,255,0.55)",
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold truncate">
+                            {entry.label}
+                          </p>
+                          <p
+                            className="mono text-[10px] truncate"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: on
+                                ? "rgba(197,245,70,0.65)"
+                                : "rgba(255,255,255,0.4)",
+                            }}
+                          >
+                            {entry.hint.toUpperCase()}
+                          </p>
+                        </div>
+                        {on && (
+                          <span
+                            className="mono text-[10px] shrink-0"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: "var(--spark-lime)",
+                            }}
+                          >
+                            ↵ OPEN
+                          </span>
+                        )}
+                      </motion.button>
+                    </Fragment>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
         <div
           className="flex items-center justify-between px-4 py-2.5"

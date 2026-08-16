@@ -1,12 +1,10 @@
 import { useMemo } from "react";
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { MapContainer, TileLayer } from "react-leaflet";
 import type { LatLngExpression, LatLngBoundsExpression } from "leaflet";
-import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import markerIconUrl from "leaflet/dist/images/marker-icon.png?url";
-import markerIcon2xUrl from "leaflet/dist/images/marker-icon-2x.png?url";
-import markerShadowUrl from "leaflet/dist/images/marker-shadow.png?url";
 import CampaignPhotoHighlights from "./CampaignPhotoHighlights";
+import { SparkLeafletCluster } from "@/shared/map/SparkLeafletCluster";
+import { CARTO_DARK_TILE, STATUS_COLOR } from "@/shared/map/sparkMap";
 
 /**
  * Shared, presentational campaign-report renderer.
@@ -151,15 +149,12 @@ const locationLabel = (e: CampaignReportEventRow): string => {
 };
 
 // ─── Leaflet marker (default icon assets via Vite ?url imports) ─────────
-const markerIcon = new L.Icon({
-  iconUrl: markerIconUrl,
-  iconRetinaUrl: markerIcon2xUrl,
-  shadowUrl: markerShadowUrl,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 
 // ─── Section header ─────────────────────────────────────────────────────
 const SectionLabel: React.FC<{ children: React.ReactNode }> = ({
@@ -302,27 +297,21 @@ const ActivationMap: React.FC<{ events: ReadonlyArray<CampaignReportEventRow> }>
         style={{ height: 360, width: "100%" }}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution={CARTO_DARK_TILE.attribution}
+          url={CARTO_DARK_TILE.url}
         />
-        {points.map(({ event, pos }) => (
-          <Marker key={event.id} position={pos} icon={markerIcon}>
-            <Popup>
-              <div style={{ minWidth: 140 }}>
-                <p style={{ fontWeight: 600, margin: 0 }}>
-                  {event.name || event.locationName || "Activation"}
-                </p>
-                <p style={{ margin: "2px 0 0", fontSize: 12, color: "#555" }}>
-                  {locationLabel(event)}
-                </p>
-                <p style={{ margin: "4px 0 0", fontSize: 12, color: "#555" }}>
-                  {formatEventDate(event.date)} · {event.recapCount} recap
-                  {event.recapCount === 1 ? "" : "s"}
-                </p>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        <SparkLeafletCluster
+          pins={points.map(({ event, pos }) => ({
+            id: event.id,
+            position: pos,
+            color: STATUS_COLOR.recent,
+            popupHtml: `<div style="min-width:140px">
+              <strong>${escapeHtml(event.name || event.locationName || "Activation")}</strong>
+              <p style="margin:2px 0 0;font-size:12px">${escapeHtml(locationLabel(event))}</p>
+              <p style="margin:4px 0 0;font-size:12px">${escapeHtml(formatEventDate(event.date))} · ${event.recapCount} recap${event.recapCount === 1 ? "" : "s"}</p>
+            </div>`,
+          }))}
+        />
       </MapContainer>
     </div>
   );

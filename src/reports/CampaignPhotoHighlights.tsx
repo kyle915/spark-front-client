@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { CampaignReportPhoto } from "./CampaignReportView";
+import { PhotoLightbox } from "@/shared/PhotoLightbox";
 
 /**
  * Photo highlights gallery for a campaign report.
@@ -58,168 +59,6 @@ const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     {children}
   </p>
 );
-
-// ─── Lightbox overlay ───────────────────────────────────────────────────
-const Lightbox: React.FC<{
-  photos: ReadonlyArray<CampaignReportPhoto>;
-  index: number;
-  onClose: () => void;
-  onStep: (next: number) => void;
-}> = ({ photos, index, onClose, onStep }) => {
-  const photo = photos[index];
-  const hasPrev = index > 0;
-  const hasNext = index < photos.length - 1;
-
-  // Close on Escape, step on ← / → — same keyboard handling shape as the
-  // workspace's other overlays (AskAiModal closes on Escape).
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      else if (e.key === "ArrowLeft" && hasPrev) onStep(index - 1);
-      else if (e.key === "ArrowRight" && hasNext) onStep(index + 1);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [index, hasPrev, hasNext, onClose, onStep]);
-
-  if (!photo) return null;
-
-  const arrowBtn: React.CSSProperties = {
-    background: "rgba(10,13,9,0.6)",
-    color: C.text,
-    border: `1px solid ${C.border}`,
-    borderRadius: 9999,
-    width: 44,
-    height: 44,
-    fontSize: 22,
-    lineHeight: 1,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    flex: "0 0 auto",
-  };
-
-  return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
-      style={{ background: "rgba(10,13,9,0.78)", backdropFilter: "blur(10px)" }}
-      role="dialog"
-      aria-modal="true"
-      aria-label={photo.caption || `Photo ${index + 1} of ${photos.length}`}
-    >
-      {/* Close (✕) — fixed to the viewport corner so it never overlaps the image */}
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="Close"
-        title="Close"
-        className="fixed top-4 right-4 z-[71]"
-        style={{
-          background: "rgba(10,13,9,0.6)",
-          color: C.text,
-          border: `1px solid ${C.border}`,
-          borderRadius: 9999,
-          width: 40,
-          height: 40,
-          fontSize: 20,
-          lineHeight: 1,
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-        }}
-      >
-        ✕
-      </button>
-
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="flex items-center gap-3 sm:gap-4"
-        style={{ maxWidth: "100%", maxHeight: "100%" }}
-      >
-        {/* Prev arrow — hidden (not just disabled) at the first photo */}
-        {hasPrev ? (
-          <button
-            type="button"
-            onClick={() => onStep(index - 1)}
-            aria-label="Previous photo"
-            title="Previous"
-            style={arrowBtn}
-          >
-            ‹
-          </button>
-        ) : (
-          <span aria-hidden style={{ width: 44, flex: "0 0 auto" }} />
-        )}
-
-        <figure
-          style={{
-            margin: 0,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            maxWidth: "min(90vw, 1100px)",
-          }}
-        >
-          <img
-            src={photo.url}
-            alt={photo.caption || `Activation photo ${index + 1}`}
-            style={{
-              maxWidth: "100%",
-              maxHeight: "78vh",
-              objectFit: "contain",
-              borderRadius: 14,
-              border: `1px solid ${C.border}`,
-              display: "block",
-              background: C.surface,
-            }}
-          />
-          {photo.caption ? (
-            <figcaption
-              style={{
-                marginTop: 12,
-                fontSize: 13,
-                color: C.muted,
-                textAlign: "center",
-                maxWidth: 720,
-              }}
-            >
-              {photo.caption}
-            </figcaption>
-          ) : null}
-          <p
-            className="mono"
-            style={{
-              marginTop: 8,
-              fontSize: 10,
-              letterSpacing: "0.14em",
-              color: C.faint,
-            }}
-          >
-            {index + 1} / {photos.length}
-          </p>
-        </figure>
-
-        {/* Next arrow — hidden (not just disabled) at the last photo */}
-        {hasNext ? (
-          <button
-            type="button"
-            onClick={() => onStep(index + 1)}
-            aria-label="Next photo"
-            title="Next"
-            style={arrowBtn}
-          >
-            ›
-          </button>
-        ) : (
-          <span aria-hidden style={{ width: 44, flex: "0 0 auto" }} />
-        )}
-      </div>
-    </div>
-  );
-};
 
 // ─── Gallery ────────────────────────────────────────────────────────────
 const CampaignPhotoHighlights: React.FC<{
@@ -295,8 +134,8 @@ const CampaignPhotoHighlights: React.FC<{
       </div>
 
       {openIndex !== null ? (
-        <Lightbox
-          photos={photos}
+        <PhotoLightbox
+          photos={photos.map((p) => ({ url: p.url, caption: p.caption ?? undefined }))}
           index={openIndex}
           onClose={close}
           onStep={step}

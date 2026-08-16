@@ -5,18 +5,11 @@ import "leaflet/dist/leaflet.css";
 import type { LatLngExpression, Map as LeafletMap } from "leaflet";
 import { themes } from "@utils/index";
 import MapSearchControl from "./MapSearchControl";
+import { CARTO_DARK_TILE, OSM_LIGHT_TILE } from "./map/sparkMap";
 
 const TILE_LAYERS = {
-  light: {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  },
-  dark: {
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  },
+  light: OSM_LIGHT_TILE,
+  dark: CARTO_DARK_TILE,
 } as const;
 
 const getThemeVariant = (themeName: string | null): keyof typeof TILE_LAYERS =>
