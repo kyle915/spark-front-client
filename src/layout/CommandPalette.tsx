@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router";
+import {
+  jumpOriginCss,
+  jumpOriginFromEvent,
+  type JumpOrigin,
+} from "@/motion/opsMotion";
 import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
@@ -98,18 +104,25 @@ export const CommandPalette: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const [origin, setOrigin] = useState<JumpOrigin | null>(null);
+  const [ghostQuery, setGhostQuery] = useState("");
+  const prevQuery = useRef("");
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
+        setOrigin(jumpOriginFromEvent(e));
         setOpen((v) => !v);
       } else if (e.key === "Escape") {
         setOpen(false);
       }
     };
-    const onOpen = () => setOpen(true);
+    const onOpen = (e: Event) => {
+      setOrigin(jumpOriginFromEvent(e));
+      setOpen(true);
+    };
     document.addEventListener("keydown", onKey);
     window.addEventListener("spark:open-jump", onOpen);
     return () => {
@@ -336,20 +349,36 @@ export const CommandPalette: React.FC = () => {
     }
   };
 
-  if (!open) return null;
+  useEffect(() => {
+    if (query === "" && prevQuery.current) {
+      setGhostQuery(prevQuery.current);
+      const t = window.setTimeout(() => setGhostQuery(""), 220);
+      prevQuery.current = query;
+      return () => window.clearTimeout(t);
+    }
+    prevQuery.current = query;
+    if (query) setGhostQuery("");
+  }, [query]);
 
   return (
-    <div
+    <AnimatePresence>
+      {open ? (
+    <motion.div
       onClick={() => setOpen(false)}
       className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]"
       style={{
         background: "rgba(10,13,9,0.55)",
         backdropFilter: "blur(8px)",
+        transformOrigin: jumpOriginCss(origin),
       }}
+      initial={{ opacity: 0, scale: 0.94 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl rounded-2xl overflow-hidden"
+        className="w-full max-w-xl rounded-2xl overflow-hidden relative"
         style={{
           background:
             "linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2))",
@@ -376,6 +405,11 @@ export const CommandPalette: React.FC = () => {
             fontFamily: "Space Grotesk, sans-serif",
           }}
         />
+        {ghostQuery ? (
+          <span className="spark-ops-query-ghost" aria-hidden>
+            {ghostQuery}
+          </span>
+        ) : null}
         <div
           style={{
             borderTop: "1px solid rgba(255,255,255,0.06)",
@@ -397,11 +431,18 @@ export const CommandPalette: React.FC = () => {
             const on = i === active;
             const Icon = entry.Icon;
             return (
-              <button
+              <motion.button
                 key={entry.id}
                 onMouseEnter={() => setActive(i)}
                 onClick={() => select(entry)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition"
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.16,
+                  delay: Math.min(i * 0.028, 0.16),
+                  ease: [0.16, 1, 0.3, 1],
+                }}
                 style={{
                   background: on
                     ? "rgba(197,245,70,0.08)"
@@ -445,7 +486,7 @@ export const CommandPalette: React.FC = () => {
                     ↵ OPEN
                   </span>
                 )}
-              </button>
+              </motion.button>
             );
           })}
         </div>
@@ -476,7 +517,9 @@ export const CommandPalette: React.FC = () => {
           </p>
         </div>
       </div>
-    </div>
+    </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 };
 

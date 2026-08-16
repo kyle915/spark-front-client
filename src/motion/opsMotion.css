@@ -1,0 +1,201 @@
+/* Short operational motions — spinner→check, count reel, status blur, Ask AI. */
+
+.spark-ops-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.spark-ops-glyph {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+
+.spark-ops-spinner {
+  width: 0.95em;
+  height: 0.95em;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  opacity: 0.7;
+  animation: spark-ops-spin 0.7s linear infinite;
+}
+
+.spark-ops-check {
+  width: 1em;
+  height: 1em;
+  overflow: visible;
+}
+
+.spark-ops-check-path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 18;
+  stroke-dashoffset: 18;
+  animation: spark-ops-draw 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.spark-ops-reel {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.spark-ops-status {
+  display: inline-grid;
+  align-items: center;
+}
+
+.spark-ops-status > span {
+  grid-area: 1 / 1;
+}
+
+.spark-ops-status-in {
+  animation: spark-ops-status-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.spark-ops-status-out {
+  animation: spark-ops-status-out 0.22s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.spark-ops-thinking {
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.38) 0%,
+    rgba(197, 245, 70, 0.85) 45%,
+    rgba(255, 255, 255, 0.38) 90%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: spark-ops-shimmer 1.4s linear infinite;
+}
+
+.spark-ops-thought {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.45);
+  animation: spark-ops-status-in 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.spark-ops-followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+}
+
+.spark-ops-chip {
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--spark-border);
+  transition: border-color 0.18s ease, color 0.18s ease, transform 0.12s ease;
+}
+
+.spark-ops-chip:hover {
+  color: var(--spark-lime);
+  border-color: rgba(197, 245, 70, 0.35);
+}
+
+.spark-ops-chip:active {
+  transform: scale(0.98);
+}
+
+.spark-ops-query-ghost {
+  position: absolute;
+  inset: 1rem 1.25rem auto 1.25rem;
+  pointer-events: none;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1rem;
+  color: var(--spark-text);
+  animation: spark-ops-dissolve 0.22s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+@keyframes spark-ops-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spark-ops-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes spark-ops-status-in {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes spark-ops-status-out {
+  from {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes spark-ops-shimmer {
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes spark-ops-dissolve {
+  from {
+    opacity: 0.7;
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    filter: blur(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spark-ops-spinner,
+  .spark-ops-check-path,
+  .spark-ops-status-in,
+  .spark-ops-status-out,
+  .spark-ops-thinking,
+  .spark-ops-thought,
+  .spark-ops-query-ghost {
+    animation: none !important;
+  }
+  .spark-ops-thinking {
+    color: rgba(255, 255, 255, 0.55);
+    background: none;
+  }
+  .spark-ops-check-path {
+    stroke-dashoffset: 0;
+  }
+}

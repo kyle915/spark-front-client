@@ -1,10 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import { TenantAiAnswerQuery } from "@/api/queries/TenantAiAnswerQuery";
 import type { TenantAiAnswerQuery as TenantAiAnswerQueryType } from "@api/queries/__generated__/TenantAiAnswerQuery.graphql";
 import AiMarkdown from "./AiMarkdown";
 import AiChartView, { type AiChart } from "./AiChartView";
+import {
+  ASK_AI_FOLLOWUPS,
+  thoughtLabel,
+  thoughtSeconds,
+} from "@/motion/opsMotion";
 
 /**
  * Reusable "Ask AI" surface — a prominent button that opens a pop-up modal
@@ -53,6 +58,8 @@ const AskAiModal: React.FC<{
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiAnswerResult | null>(null);
+  const [thoughtFor, setThoughtFor] = useState<number | null>(null);
+  const startedAt = useRef(0);
 
   const trimmed = question.trim();
   const canAsk = trimmed.length > 0 && !loading && Boolean(tenantId);
@@ -66,10 +73,13 @@ const AskAiModal: React.FC<{
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const ask = useCallback(async () => {
-    const q = question.trim();
+  const ask = useCallback(async (raw?: string) => {
+    const q = (raw ?? question).trim();
     if (!q || !tenantId) return;
+    setQuestion(q);
     setLoading(true);
+    setThoughtFor(null);
+    startedAt.current = Date.now();
     try {
       const data = await fetchQuery<TenantAiAnswerQueryType>(
         environment,
@@ -100,6 +110,7 @@ const AskAiModal: React.FC<{
         reason: "Couldn't reach the answer service — try again.",
       });
     } finally {
+      setThoughtFor(thoughtSeconds(Date.now() - startedAt.current));
       setLoading(false);
     }
   }, [tenantId, question]);
@@ -189,26 +200,34 @@ const AskAiModal: React.FC<{
             style={limeBtn}
             title="Ask a question about this client's program"
           >
-            {loading && (
-              <span
-                aria-hidden
-                className="inline-block w-3.5 h-3.5 rounded-full animate-spin"
-                style={{
-                  border: "2px solid rgba(10,13,9,0.35)",
-                  borderTopColor: "#0a0d09",
-                }}
-              />
-            )}
-            {loading ? "Thinking…" : "Ask"}
+            Ask
           </button>
         </form>
 
+        {loading ? (
+          <p className="spark-ops-thinking mt-4">Thinking…</p>
+        ) : thoughtFor != null ? (
+          <p className="spark-ops-thought mt-4">{thoughtLabel(thoughtFor)}</p>
+        ) : null}
+
         {result && !loading && (
-          <div className="mt-4 max-h-[55vh] overflow-y-auto pr-1">
+          <div className="mt-3 max-h-[55vh] overflow-y-auto pr-1">
             {result.ok ? (
               <>
                 <AiMarkdown>{result.answer}</AiMarkdown>
                 {result.chart ? <AiChartView chart={result.chart} /> : null}
+                <div className="spark-ops-followups">
+                  {ASK_AI_FOLLOWUPS.map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      className="spark-ops-chip"
+                      onClick={() => void ask(chip)}
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
               </>
             ) : (
               <p
