@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import "./motion/opsMotion.css";
 import { isPublicFieldPath } from "@/utils/publicHosts";
 
 // leaflet.css / Chart.js stay out of this file — see the previous

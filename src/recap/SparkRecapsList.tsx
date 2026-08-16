@@ -32,6 +32,15 @@ import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import EmailCampaignReportModal from "./EmailCampaignReportModal";
 import ImportConnecteamButton from "./ImportConnecteamButton";
 import ExportReceiptsButton from "./ExportReceiptsButton";
+import { ActionMorphButton } from "@/motion/ActionMorphButton";
+import { CountReel } from "@/motion/CountReel";
+import { StatusMorph } from "@/motion/StatusMorph";
+import {
+  dispatchOpenJump,
+  holdActionSuccess,
+  recapReviewStatus,
+  type ActionPhase,
+} from "@/motion/opsMotion";
 
 // Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
 // keeps the sticky action bar's button disabled with a friendly
@@ -252,8 +261,11 @@ const RecapCard: React.FC<{
   onToggleSelect: () => void;
   selectMode: boolean;
   showSla: boolean;
-}> = ({ recap, href, onOpenRequest, selected, onToggleSelect, selectMode, showSla }) => {
+  forceApproved?: boolean;
+}> = ({ recap, href, onOpenRequest, selected, onToggleSelect, selectMode, showSla, forceApproved }) => {
   const emptyShell = recapIsEmptyShell(recap);
+  const approved = recap.approved || Boolean(forceApproved);
+  const statusText = emptyShell ? "Not filed" : recapReviewStatus(approved);
   const completeness = emptyShell
     ? "Not filed"
     : [
@@ -362,7 +374,7 @@ const RecapCard: React.FC<{
         className={`absolute top-2 right-2 chip ${
           emptyShell
             ? ""
-            : recap.approved
+            : approved
               ? "chip-lime"
               : "chip-orange"
         }`}
@@ -376,7 +388,7 @@ const RecapCard: React.FC<{
             : undefined
         }
       >
-        ● {emptyShell ? "NOT FILED" : recap.approved ? "APPROVED" : "DRAFT"}
+        ● <StatusMorph value={statusText} />
       </span>
     </div>
 
@@ -578,7 +590,9 @@ const RecapsListInner: React.FC<{
   queueEmpty: boolean;
   filterChips: { key: string; label: string }[];
   onClearFilters: () => void;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters }) => {
+  justApprovedIds: Set<string>;
+  refreshKey: number;
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
@@ -647,7 +661,7 @@ const RecapsListInner: React.FC<{
     // populated — so a recap submitted minutes earlier looked "lost" from
     // the list (it was always safe in the DB). store-and-network paints the
     // cache instantly, then refreshes from the server.
-    { fetchPolicy: "store-and-network" },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
 
   // Parallel query for tenants on a Custom Recap Template. Fetched with
@@ -677,7 +691,7 @@ const RecapsListInner: React.FC<{
     // Always refetch on mount — same reason as the legacy query above. A
     // stale cached connection here is what made just-submitted CUSTOM recaps
     // vanish from the list after approve.
-    { fetchPolicy: "store-and-network" },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
 
   const recaps: Recap[] = useMemo(() => {
@@ -855,7 +869,8 @@ const RecapsListInner: React.FC<{
       const matchStatus =
         pipeline === "all" ||
         pipeline === "submitted" ||
-        (pipeline === "needs_review" && !r.approved) ||
+        (pipeline === "needs_review" &&
+          (!r.approved || justApprovedIds.has(r.id))) ||
         (pipeline === "approved" && r.approved && !r.sharedAt) ||
         (pipeline === "shared" && Boolean(r.sharedAt));
       // Date range: compare on the yyyy-mm-dd prefix. Each bound is
@@ -888,7 +903,7 @@ const RecapsListInner: React.FC<{
           return (b.date || "").localeCompare(a.date || "");
       }
     });
-  }, [recaps, search, retailerFilter, stateFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey]);
+  }, [recaps, search, retailerFilter, stateFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, justApprovedIds]);
 
   // We paint every loaded row that matches the client-side filters.
   // Pagination now lives at the FETCH layer (`limit` / "Load more"), so
@@ -1021,6 +1036,7 @@ const RecapsListInner: React.FC<{
               ? `/recap/view-custom/${r.uuid}`
               : `/recap/view/${r.uuid}`
           }
+          forceApproved={justApprovedIds.has(r.id)}
           onOpenRequest={(reqUuid) =>
             navigate(`/request/view/${reqUuid}`, {
               state: { from: "/recaps/list" },
@@ -1240,6 +1256,11 @@ export default function SparkRecapsList() {
     );
   const [commitBulkApprove, isBulkApproving] =
     useMutation<BulkApproveRecapsMutationType>(BulkApproveRecapsMutation);
+  const [approvePhase, setApprovePhase] = useState<ActionPhase>("idle");
+  const [justApprovedIds, setJustApprovedIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [refreshKey, setRefreshKey] = useState(0);
   const [commitMarkShared, isMarkingShared] =
     useMutation<MarkRecapsSharedMutationType>(MarkRecapsSharedMutation);
 
@@ -1302,7 +1323,9 @@ export default function SparkRecapsList() {
   }, [visibleRecaps, selectedIds]);
 
   const approveSelected = () => {
-    if (selectedIds.size === 0 || isBulkApproving) return;
+    if (selectedIds.size === 0 || isBulkApproving || approvePhase !== "idle") return;
+    setApprovePhase("pending");
+    const approvedNow = new Set(selectedIds);
     commitBulkApprove({
       variables: {
         input: {
@@ -1315,20 +1338,31 @@ export default function SparkRecapsList() {
         const payload = res.bulkApproveRecaps;
         if (payload?.success) {
           const names = visibleRecaps
-            .filter((r) => selectedIds.has(r.id))
+            .filter((r) => approvedNow.has(r.id))
             .map((r) => r.retailerName || r.name)
             .filter(Boolean);
           const copy =
             names.length === 1
               ? `Approved · ${names[0]}`
-              : `Approved · ${selectedIds.size}`;
+              : `Approved · ${approvedNow.size}`;
           showAlert(copy, "success");
-          clearSelection();
+          setJustApprovedIds(approvedNow);
+          setApprovePhase("success");
+          void holdActionSuccess().then(() => {
+            clearSelection();
+            setApprovePhase("idle");
+            setJustApprovedIds(new Set());
+            setRefreshKey((k) => k + 1);
+          });
         } else {
+          setApprovePhase("idle");
           showAlert(payload?.message ?? "Bulk approve failed.", "error");
         }
       },
-      onError: (err) => showAlert(err.message, "error"),
+      onError: (err) => {
+        setApprovePhase("idle");
+        showAlert(err.message, "error");
+      },
     });
   };
 
@@ -1685,7 +1719,7 @@ export default function SparkRecapsList() {
               className="tab-num text-2xl font-bold leading-none mt-0.5"
               style={{ color: "var(--spark-lime)" }}
             >
-              {meta.total}
+              <CountReel value={meta.total} />
             </p>
           </div>
           <input
@@ -1697,7 +1731,7 @@ export default function SparkRecapsList() {
           />
           <button
             type="button"
-            onClick={() => window.dispatchEvent(new Event("spark:open-jump"))}
+            onClick={(e) => dispatchOpenJump(e.currentTarget)}
             className="rounded-xl text-xs px-3 py-2 font-semibold"
             style={ghostBtn}
             title="Jump to a recap"
@@ -2079,6 +2113,8 @@ export default function SparkRecapsList() {
             selectMode={selectMode}
             filterChips={filterChips}
             onClearFilters={clearAllFilters}
+            justApprovedIds={justApprovedIds}
+            refreshKey={refreshKey}
           />
         </Suspense>
 
@@ -2149,15 +2185,17 @@ export default function SparkRecapsList() {
             ✕ CLEAR
           </button>
           {!isClient && (
-            <button
-              type="button"
+            <ActionMorphButton
+              phase={approvePhase}
               onClick={approveSelected}
               disabled={isBulkApproving}
               className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
               style={limeBtn}
+              pendingLabel="Approving…"
+              successLabel="Approved"
             >
-              {isBulkApproving ? "Approving…" : "Approve selected"}
-            </button>
+              Approve selected
+            </ActionMorphButton>
           )}
           <button
             type="button"
