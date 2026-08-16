@@ -8,6 +8,12 @@ import type { WalkupMutationsGenerateMutation as GenType } from "@api/mutations/
 import type { WalkupMutationsRevokeMutation as RevokeType } from "@api/mutations/__generated__/WalkupMutationsRevokeMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
 import { checkinUrl } from "@/utils/publicHosts";
+import CheckinQr from "@/components/pages/walkups/CheckinQr";
+import {
+  clearLiveWalkupCode,
+  readLiveWalkupCode,
+  writeLiveWalkupCode,
+} from "@/components/pages/walkups/walkupLiveCode";
 
 /**
  * Walk-up access control for an event. An admin generates a short code (shown
@@ -18,8 +24,12 @@ import { checkinUrl } from "@/utils/publicHosts";
  */
 export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
   const showAlert = useAlertStore((s) => s.showAlert);
-  const [code, setCode] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [code, setCode] = useState<string | null>(
+    () => readLiveWalkupCode(eventUuid)?.code ?? null,
+  );
+  const [expiresAt, setExpiresAt] = useState<string | null>(
+    () => readLiveWalkupCode(eventUuid)?.expiresAt ?? null,
+  );
   const [off, setOff] = useState(false);
 
   const [commitGen, generating] = useMutation<GenType>(
@@ -38,6 +48,10 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
           setCode(r.code);
           setExpiresAt(r.expiresAt ?? null);
           setOff(false);
+          writeLiveWalkupCode(eventUuid, {
+            code: r.code,
+            expiresAt: r.expiresAt ?? null,
+          });
         } else {
           showAlert(r?.message || "Couldn't generate a code.", "error");
         }
@@ -55,6 +69,7 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
           setCode(null);
           setExpiresAt(null);
           setOff(true);
+          clearLiveWalkupCode(eventUuid);
           showAlert("Walk-ups turned off for this event.", "success");
         } else {
           showAlert(r?.message || "Couldn't turn off walk-ups.", "error");
@@ -154,6 +169,9 @@ export default function WalkupCodePanel({ eventUuid }: { eventUuid: string }) {
               >
                 {checkinHref}
               </p>
+              <div className="mt-3">
+                <CheckinQr url={checkinHref} downloadName={`${code}-checkin-qr.png`} />
+              </div>
               <button
                 onClick={copyLink}
                 className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold"

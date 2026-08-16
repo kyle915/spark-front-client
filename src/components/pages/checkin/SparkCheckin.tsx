@@ -13,6 +13,15 @@ import {
   writeCachedContext,
   type PendingClockIn,
 } from "./offlineClock";
+import {
+  RECAP_FETCH_TIMEOUT_MS,
+  enqueueRecap,
+  flushPendingRecap,
+  offlineRecapBanner,
+  putCheckinPhoto,
+  readPendingRecap,
+  type PendingRecap,
+} from "./offlineRecap";
 
 /**
  * Public, no-login web check-in for a BA working a specific event.
@@ -659,6 +668,80 @@ const clearDraft = (code: string, token: string) => {
   }
 };
 
+async function postCheckinClock(
+  code: string,
+  body: Record<string, unknown>,
+): Promise<{ ok: boolean; status: number; alreadyIn?: boolean }> {
+  const res = await fetchWithTimeout(
+    `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/clock`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  let alreadyIn = false;
+  try {
+    const json = (await res.clone().json()) as { alreadyIn?: boolean; clock?: Clock };
+    alreadyIn = Boolean(json.alreadyIn || json.clock?.state === "clocked_in");
+  } catch {
+    /* gateway / empty */
+  }
+  return { ok: res.ok, status: res.status, alreadyIn };
+}
+
+async function postCheckinRecap(
+  code: string,
+  body: Record<string, unknown>,
+): Promise<{ ok: boolean; status: number; already?: boolean }> {
+  const res = await fetchWithTimeout(
+    `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/recap`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    RECAP_FETCH_TIMEOUT_MS,
+  );
+  let already = false;
+  let success: boolean | undefined;
+  try {
+    const json = (await res.clone().json()) as {
+      already?: boolean;
+      alreadySubmitted?: boolean;
+      hasRecap?: boolean;
+      success?: boolean;
+    };
+    already = Boolean(json.already || json.alreadySubmitted || json.hasRecap);
+    success = json.success;
+  } catch {
+    /* gateway / empty */
+  }
+  if (res.status === 409) already = true;
+  return { ok: res.ok && success !== false, status: res.status, already };
+}
+
+async function flushQueuedRecap(code: string) {
+  const pending = readPendingRecap(code);
+  const result = await flushPendingRecap({
+    code,
+    postRecap: (body) => postCheckinRecap(code, body),
+    putPhoto: async (file, sessionToken) => {
+      const compressed = await compressImage(file);
+      return putCheckinPhoto({
+        code,
+        token: sessionToken,
+        file: compressed,
+        apiOrigin: apiOrigin(),
+      });
+    },
+  });
+  if ((result === "flushed" || result === "already") && pending) {
+    clearDraft(code, pending.token);
+  }
+  return result;
+}
+
 const readIdentity = (code: string): Identity => {
   const empty: Identity = { firstName: "", lastName: "", phone: "", email: "" };
   try {
@@ -739,6 +822,32 @@ export default function SparkCheckin() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Flush clock-in + recap queues even if the BA is still on identify
+  // (they started over) or the recap form is closed. Idempotent.
+  useEffect(() => {
+    if (!code) return;
+    const flush = () => {
+      void flushPendingClock({
+        code,
+        postClock: (body) => postCheckinClock(code, body),
+      });
+      void flushQueuedRecap(code).then((result) => {
+        if (result === "flushed" || result === "already") void refresh();
+      });
+    };
+    const onOnline = () => flush();
+    const onVis = () => {
+      if (document.visibilityState === "visible") flush();
+    };
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVis);
+    flush();
+    return () => {
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [code, refresh]);
 
   // Same crew works these stores week after week, so the link has to be
   // reusable. Dropping the session token returns them to the store + date
@@ -1227,6 +1336,9 @@ function CheckedInFlow({
   const [queuedClock, setQueuedClock] = useState<PendingClockIn | null>(() =>
     readPendingClock(code),
   );
+  const [queuedRecap, setQueuedRecap] = useState<PendingRecap | null>(() =>
+    readPendingRecap(code),
+  );
   // A queued clock-in is the shift they already started. Treat it as on the
   // clock so they can fill the recap offline instead of staring at Clock in.
   const effectiveClock: Clock["state"] =
@@ -1279,22 +1391,35 @@ function CheckedInFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, token, onRefresh]);
 
+  const tryFlushRecap = useCallback(async () => {
+    const result = await flushQueuedRecap(code);
+    if (result === "flushed" || result === "already") {
+      setQueuedRecap(readPendingRecap(code));
+      await onRefresh();
+    }
+    return result;
+  }, [code, onRefresh]);
+
   useEffect(() => {
-    if (!queuedClock) return;
+    if (!queuedClock && !queuedRecap) return;
     const onOnline = () => {
-      void tryFlushPending();
+      if (queuedClock) void tryFlushPending();
+      if (queuedRecap) void tryFlushRecap();
     };
     window.addEventListener("online", onOnline);
     const onVis = () => {
-      if (document.visibilityState === "visible") void tryFlushPending();
+      if (document.visibilityState !== "visible") return;
+      if (queuedClock) void tryFlushPending();
+      if (queuedRecap) void tryFlushRecap();
     };
     document.addEventListener("visibilitychange", onVis);
-    void tryFlushPending();
+    if (queuedClock) void tryFlushPending();
+    if (queuedRecap) void tryFlushRecap();
     return () => {
       window.removeEventListener("online", onOnline);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [queuedClock, tryFlushPending]);
+  }, [queuedClock, queuedRecap, tryFlushPending, tryFlushRecap]);
 
   // While the BA is ON THE CLOCK and this page is open, drop a location pin
   // every few minutes so ops can see they're on site rather than only having
@@ -1526,7 +1651,12 @@ function CheckedInFlow({
         onCancel={() => setShowRecap(false)}
         onSubmitted={async () => {
           setShowRecap(false);
+          setQueuedRecap(null);
           await onRefresh();
+        }}
+        onQueued={() => {
+          setShowRecap(false);
+          setQueuedRecap(readPendingRecap(code));
         }}
       />
     );
@@ -1624,7 +1754,7 @@ function CheckedInFlow({
           {effectiveClock === "clocked_in" && !hasRecap ? (
             <>
               <button style={primaryBtn(accent)} onClick={() => setShowRecap(true)}>
-                File recap
+                {queuedRecap ? "Edit saved recap" : "File recap"}
               </button>
               <button style={secondaryBtn} disabled={busy !== ""} onClick={() => clock("out")}>
                 {busy === "out" ? "Clocking out…" : "Clock out"}
@@ -1666,7 +1796,12 @@ function CheckedInFlow({
             {offlineClockBanner(queuedClock.clockedInAt)}
           </p>
         ) : null}
-        {msg && !queuedClock ? <p style={errText}>{msg}</p> : null}
+        {queuedRecap ? (
+          <p style={{ ...errText, color: "#92400e" }}>
+            {offlineRecapBanner(queuedRecap.submittedAt)}
+          </p>
+        ) : null}
+        {msg && !queuedClock && !queuedRecap ? <p style={errText}>{msg}</p> : null}
       </div>
 
       {/* Wrong store or wrong day is easy to do on a shared link, and the
@@ -1819,6 +1954,7 @@ function RecapForm({
   brandName,
   onCancel,
   onSubmitted,
+  onQueued,
 }: {
   code: string;
   token: string;
@@ -1828,6 +1964,7 @@ function RecapForm({
   brandName: string;
   onCancel: () => void;
   onSubmitted: () => Promise<void>;
+  onQueued: () => void;
 }) {
   // Prefill the brand into an "Event Name" field. Spark already knows the
   // brand, and every Total Wireless recap wants the same answer — making the
@@ -1905,21 +2042,14 @@ function RecapForm({
   const uploadOne = async (id: string, original: File) => {
     try {
       const file = await compressImage(original);
-      const urlRes = await fetch(`${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/upload-url`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session: token, filename: file.name, contentType: file.type || "image/jpeg" }),
+      const { blobName } = await putCheckinPhoto({
+        code,
+        token,
+        file,
+        apiOrigin: apiOrigin(),
       });
-      const meta = await urlRes.json();
-      if (!urlRes.ok || !meta.uploadUrl) throw new Error(meta.message || "no url");
-      const put = await fetch(meta.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type || "image/jpeg" },
-        body: file,
-      });
-      if (!put.ok) throw new Error("upload failed");
       setPhotos((p) =>
-        p.map((ph) => (ph.id === id ? { ...ph, blobName: meta.blobName, state: "done" } : ph)),
+        p.map((ph) => (ph.id === id ? { ...ph, blobName, state: "done" } : ph)),
       );
     } catch {
       setPhotos((p) => p.map((ph) => (ph.id === id ? { ...ph, state: "failed" } : ph)));
@@ -1974,12 +2104,15 @@ function RecapForm({
         `Still uploading ${uploadingCount} photo${uploadingCount === 1 ? "" : "s"} — one moment.`,
       );
     }
+    const offlineNow = typeof navigator !== "undefined" && navigator.onLine === false;
     if (donePhotos.length === 0) {
-      return setErr(
-        failedCount > 0
-          ? "No photos uploaded yet. Tap Retry, or check your signal."
-          : "Add at least one photo of your event.",
-      );
+      if (!(failedCount > 0 && offlineNow)) {
+        return setErr(
+          failedCount > 0
+            ? "No photos uploaded yet. Tap Retry, or check your signal."
+            : "Add at least one photo of your event.",
+        );
+      }
     }
 
     const fieldValues = Object.entries(values)
@@ -1988,6 +2121,36 @@ function RecapForm({
     const productSamples = Object.entries(samples)
       .map(([productId, q]) => ({ productId, quantity: Number(q) }))
       .filter((s) => Number.isFinite(s.quantity) && s.quantity > 0);
+    const totalEngagements = engagements.trim() === "" ? null : Number(engagements);
+    const submittedAt = new Date().toISOString();
+
+    const queueThisSubmit = async () => {
+      const photoFiles: Record<string, File> = {};
+      const files = photos
+        .filter((p) => p.state !== "uploading")
+        .map((p) => {
+          if (!p.blobName) photoFiles[p.id] = p.file;
+          return {
+            id: p.id,
+            blobName: p.blobName,
+            category: p.category,
+            filename: p.file.name || "photo.jpg",
+            contentType: p.file.type || "image/jpeg",
+          };
+        });
+      await enqueueRecap({
+        code,
+        token,
+        fieldValues,
+        files,
+        productSamples,
+        totalEngagements,
+        submittedAt,
+        photoFiles,
+      });
+      // Draft stays until the server ACKs — flushQueuedRecap clears it.
+      onQueued();
+    };
 
     setBusy(true);
     try {
@@ -1995,44 +2158,28 @@ function RecapForm({
       // it first so the API sees the shift that started at tap time.
       await flushPendingClock({
         code,
-        postClock: async (body) => {
-          const clockRes = await fetchWithTimeout(
-            `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/clock`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ session: token, ...body }),
-            },
-          );
-          let alreadyIn = false;
-          try {
-            const clockJson = (await clockRes.clone().json()) as {
-              alreadyIn?: boolean;
-              clock?: { state?: string };
-            };
-            alreadyIn = Boolean(
-              clockJson.alreadyIn || clockJson.clock?.state === "clocked_in",
-            );
-          } catch {
-            /* gateway / empty */
-          }
-          return { ok: clockRes.ok, status: clockRes.status, alreadyIn };
-        },
+        postClock: (body) => postCheckinClock(code, { session: token, ...body }),
       });
-      const res = await fetch(`${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/recap`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          session: token,
-          fieldValues,
-          files: donePhotos.map((p) => ({ blobName: p.blobName, category: p.category })),
-          productSamples,
-          totalEngagements: engagements.trim() === "" ? null : Number(engagements),
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        setErr(json.message || "Couldn't submit your recap.");
+      if (offlineNow) {
+        await queueThisSubmit();
+        return;
+      }
+      const existing = readPendingRecap(code);
+      const recapBody = {
+        session: token,
+        idempotencyKey: existing && existing.token === token ? existing.id : undefined,
+        fieldValues,
+        files: donePhotos.map((p) => ({ blobName: p.blobName, category: p.category })),
+        productSamples,
+        totalEngagements,
+      };
+      const posted = await postCheckinRecap(code, recapBody);
+      if (!posted.ok && !posted.already) {
+        if (isOfflineClockFailure({ status: posted.status })) {
+          await queueThisSubmit();
+          return;
+        }
+        setErr("Couldn't submit your recap.");
         setBusy(false);
         return;
       }
@@ -2040,7 +2187,11 @@ function RecapForm({
       // unmounts this form so a later shift can't resurrect these answers.
       clearDraft(code, token);
       await onSubmitted();
-    } catch {
+    } catch (error) {
+      if (isOfflineClockFailure({ error })) {
+        await queueThisSubmit();
+        return;
+      }
       setErr("Network error. Try again.");
       setBusy(false);
     }
@@ -2058,6 +2209,7 @@ function RecapForm({
   }
 
   const pendingClock = readPendingClock(code);
+  const pendingRecap = readPendingRecap(code);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -2065,6 +2217,11 @@ function RecapForm({
         <p style={{ ...errText, color: "#92400e", margin: 0 }}>
           {offlineClockBanner(pendingClock.clockedInAt)} You can still fill this
           recap — it stays on this device until it sends.
+        </p>
+      ) : null}
+      {pendingRecap ? (
+        <p style={{ ...errText, color: "#92400e", margin: 0 }}>
+          {offlineRecapBanner(pendingRecap.submittedAt)}
         </p>
       ) : null}
       {template.sections.map((section) => (

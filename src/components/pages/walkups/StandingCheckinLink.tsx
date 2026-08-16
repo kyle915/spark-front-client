@@ -4,6 +4,7 @@ import type { TenantCheckinCodeQuery as TenantCheckinCodeQueryType } from "@api/
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { checkinUrl } from "@/utils/publicHosts";
+import CheckinQr from "./CheckinQr";
 
 /**
  * The tenant's STANDING check-in link, pinned at the top of Walk-ups.
@@ -112,17 +113,18 @@ const StandingCheckinLink: React.FC = () => {
         </div>
       </div>
 
-      {/* The URL itself, selectable for anyone who'd rather copy by hand.
-          break-all so a long code can't push the card wide on mobile. */}
-      <p
-        className="mono text-xs mt-3 pt-3 break-all"
-        style={{
-          borderTop: "1px solid var(--spark-border)",
-          color: "rgba(255,255,255,0.7)",
-        }}
+      <div
+        className="mt-3 pt-3"
+        style={{ borderTop: "1px solid var(--spark-border)" }}
       >
-        {url}
-      </p>
+        <CheckinQr url={url} downloadName={`${code}-checkin-qr.png`} />
+        <p
+          className="mono text-xs mt-3 break-all"
+          style={{ color: "rgba(255,255,255,0.7)" }}
+        >
+          {url}
+        </p>
+      </div>
     </div>
   );
 };

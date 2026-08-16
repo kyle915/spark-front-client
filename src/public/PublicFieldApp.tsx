@@ -1,5 +1,6 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router";
+import { registerCheckinPwa } from "./registerCheckinPwa";
 
 /**
  * Field-facing public app — /checkin, /spark-form, /r/:token, /training.
@@ -26,6 +27,10 @@ const Fallback = () => (
 );
 
 export default function PublicFieldApp() {
+  useEffect(() => {
+    registerCheckinPwa();
+  }, []);
+
   return (
     <BrowserRouter>
       <Suspense fallback={<Fallback />}>

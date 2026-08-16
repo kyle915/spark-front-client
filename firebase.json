@@ -43,6 +43,21 @@
           "headers": [
             { "key": "Cache-Control", "value": "public, max-age=604800" }
           ]
+        },
+        {
+          "//": "Check-in service worker must not inherit the immutable JS cache. A stale SW would keep an old shell after a deploy.",
+          "source": "/checkin/sw.js",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+            { "key": "Content-Type", "value": "application/javascript" }
+          ]
+        },
+        {
+          "source": "/checkin/manifest.webmanifest",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+            { "key": "Content-Type", "value": "application/manifest+json" }
+          ]
         }
       ]
     },
@@ -104,6 +119,20 @@
               "key": "Cache-Control",
               "value": "public, max-age=31536000, immutable"
             }
+          ]
+        },
+        {
+          "source": "/checkin/sw.js",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+            { "key": "Content-Type", "value": "application/javascript" }
+          ]
+        },
+        {
+          "source": "/checkin/manifest.webmanifest",
+          "headers": [
+            { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" },
+            { "key": "Content-Type", "value": "application/manifest+json" }
           ]
         }
       ]
