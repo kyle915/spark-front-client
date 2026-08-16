@@ -28,6 +28,7 @@ export const TenantQuery = graphql`
           name
           requestUrlName
           tenantSlug: slug
+          checkinCode
           image
         }
       }

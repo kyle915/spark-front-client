@@ -7,16 +7,17 @@ import { graphql } from "react-relay";
  * banner can mount anywhere without dragging in a heavier tenant payload.
  *
  * There is no tenant-by-id query on this schema, so we fetch the viewer's
- * tenants and pick the active one client-side — see useTenantCheckinCode.
+ * tenants and pick the active one client-side — see usePublicFormLink.
  */
 export const TenantCheckinCodeQuery = graphql`
   query TenantCheckinCodeQuery($userUuid: ID) {
-    tenants(userUuid: $userUuid, first: 50) {
+    tenants(userUuid: $userUuid, first: 100) {
       edges {
         node {
           id
           uuid
           name
+          requestUrlName
           checkinCode
         }
       }

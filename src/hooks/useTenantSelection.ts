@@ -7,6 +7,7 @@ type SelectTenantPayload = {
   logo?: string | null;
   requestUrlName?: string | null;
   tenantSlug?: string | null;
+  checkinCode?: string | null;
 };
 
 export function useTenantSelection() {
@@ -24,8 +25,16 @@ export function useTenantSelection() {
       logo,
       requestUrlName,
       tenantSlug,
+      checkinCode,
     }: SelectTenantPayload) => {
-      setTenant(tenantUuid, tenantId, logo, requestUrlName, tenantSlug);
+      setTenant(
+        tenantUuid,
+        tenantId,
+        logo,
+        requestUrlName,
+        tenantSlug,
+        checkinCode,
+      );
     },
     [setTenant]
   );

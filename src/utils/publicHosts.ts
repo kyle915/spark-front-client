@@ -64,6 +64,35 @@ export function sparkFormUrl(slug: string): string {
   return withPath(clientOrigin(), `/spark-form/${slug}`);
 }
 
+export type PublicFormLink = {
+  slug: string;
+  url: string;
+  kind: "spark-form" | "checkin";
+};
+
+/**
+ * The public URL clients and BAs actually use.
+ *
+ * Prefer the spark-form slug (`requestUrlName`) when the brand has one
+ * (Torch, Liquid Death). Guerrilla sampling programs like Feel Free
+ * never got a request form — BAs use the standing `/checkin/<code>`
+ * link instead. Hide only when neither exists.
+ */
+export function resolvePublicFormLink(input: {
+  requestUrlName?: string | null;
+  checkinCode?: string | null;
+}): PublicFormLink | null {
+  const form = input.requestUrlName?.trim() ?? "";
+  if (form) {
+    return { slug: form, url: sparkFormUrl(form), kind: "spark-form" };
+  }
+  const code = input.checkinCode?.trim() ?? "";
+  if (code) {
+    return { slug: code, url: checkinUrl(code), kind: "checkin" };
+  }
+  return null;
+}
+
 export function recapPublicUrl(token: string): string {
   return withPath(recapShareOrigin(), `/r/${encodeURIComponent(token)}`);
 }

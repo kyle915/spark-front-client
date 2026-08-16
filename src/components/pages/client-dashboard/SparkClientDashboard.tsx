@@ -32,6 +32,7 @@ import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import AskAiButton from "@/components/ai/AskAiButton";
 import { PublicFormPill } from "@/layout/PublicFormPill";
+import { usePublicFormLink } from "@/hooks/usePublicFormLink";
 import { ApprovalsBody } from "@/components/pages/approvals/SparkApprovals";
 
 const AccountMapBody = lazy(() =>
@@ -156,9 +157,14 @@ const Tile: React.FC<{
   );
 };
 
+function ClientPublicFormPill() {
+  const publicForm = usePublicFormLink();
+  return <PublicFormPill slug={publicForm?.slug} url={publicForm?.url} />;
+}
+
 const ClientInner: React.FC = () => {
   const navigate = useNavigate();
-  const { tenantId, tenantMeta } = useAuthStore();
+  const { tenantId } = useAuthStore();
   const counts = useSidebarCounts();
 
   // Active tab — Overview / Approvals / Account Map. Persists in the
@@ -308,7 +314,9 @@ const ClientInner: React.FC = () => {
             Due recaps and this week&apos;s program.
           </p>
           <div className="mt-3">
-            <PublicFormPill slug={tenantMeta?.requestUrlName} />
+            <Suspense fallback={null}>
+              <ClientPublicFormPill />
+            </Suspense>
           </div>
         </div>
         {/* Ask AI about this client's own program — scoped to the client's

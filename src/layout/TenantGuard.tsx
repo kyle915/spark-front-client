@@ -56,6 +56,7 @@ export default function TenantRoute({ component }: TenantRouteProps) {
             logo: t.image,
             requestUrlName: t.requestUrlName,
             tenantSlug: t.tenantSlug,
+            checkinCode: t.checkinCode,
           };
         });
 
@@ -75,6 +76,7 @@ export default function TenantRoute({ component }: TenantRouteProps) {
           logo: preferred.logo,
           requestUrlName: preferred.requestUrlName,
           tenantSlug: preferred.tenantSlug,
+          checkinCode: preferred.checkinCode,
         });
         setResolving(false);
       })

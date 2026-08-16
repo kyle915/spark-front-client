@@ -21,6 +21,7 @@ type TenantNode = {
   name: string | null;
   requestUrlName?: string | null;
   tenantSlug?: string | null;
+  checkinCode?: string | null;
   image?: string | null;
 };
 
@@ -64,6 +65,7 @@ export const TenantPicker: React.FC = () => {
         name: n.name ?? null,
         requestUrlName: n.requestUrlName ?? null,
         tenantSlug: n.tenantSlug ?? null,
+        checkinCode: n.checkinCode ?? null,
         image: n.image ?? null,
       })) ?? [];
 
@@ -76,6 +78,7 @@ export const TenantPicker: React.FC = () => {
       logo: t.image,
       requestUrlName: t.requestUrlName,
       tenantSlug: t.tenantSlug,
+      checkinCode: t.checkinCode,
     });
     setOpen(false);
     // Hard reload "/" so every Relay query refetches under the new tenant
