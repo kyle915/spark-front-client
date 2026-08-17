@@ -172,6 +172,8 @@ type Context = {
   // the identify step; the API then finds-or-creates the event.
   mode?: "tenant";
   needsEventDetails?: boolean;
+  // 3rd-party / agency URL: skip punch, go name + date + store + questions.
+  recapOnly?: boolean;
   recentLocations?: StoreOption[];
   // Roaming brands (Feel Free) pick a MARKET instead of typing a store
   // address: the event is keyed on the market so a whole crew shares one, and
@@ -962,6 +964,7 @@ export default function SparkCheckin() {
             storeKey={storeKey}
             onDone={setToken}
             needsEventDetails={Boolean(ctx.needsEventDetails)}
+            recapOnly={Boolean(ctx.recapOnly)}
             recentLocations={ctx.recentLocations || []}
             locationMode={ctx.locationMode || "address"}
             markets={ctx.markets || []}
@@ -994,6 +997,16 @@ function Header({ ctx }: { ctx: Context }) {
   // title says what's about to happen. The brand mark lives in the chrome
   // (same TenantLogo as /spark-form), not as shouting name copy here.
   if (!ev) {
+    if (ctx.recapOnly) {
+      return (
+        <div style={{ marginBottom: 18 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>File a recap</h1>
+          <div style={{ fontSize: 13, opacity: 0.6 }}>
+            Date, your name, the store, then the recap questions. No time clock.
+          </div>
+        </div>
+      );
+    }
     return (
       <div style={{ marginBottom: 18 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>Start your shift</h1>
@@ -1038,6 +1051,7 @@ function IdentifyStep({
   storeKey,
   onDone,
   needsEventDetails = false,
+  recapOnly = false,
   recentLocations = [],
   locationMode = "address",
   markets = [],
@@ -1048,6 +1062,7 @@ function IdentifyStep({
   storeKey: string;
   onDone: (t: string) => void;
   needsEventDetails?: boolean;
+  recapOnly?: boolean;
   recentLocations?: StoreOption[];
   locationMode?: "address" | "market";
   markets?: string[];
@@ -1153,7 +1168,7 @@ function IdentifyStep({
   };
 
   useEffect(() => {
-    if (!needsEventDetails || !phone.trim()) {
+    if (recapOnly || !needsEventDetails || !phone.trim()) {
       setUnfiled([]);
       return;
     }
@@ -1179,12 +1194,12 @@ function IdentifyStep({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [code, needsEventDetails, firstName, lastName, phone]);
+  }, [code, needsEventDetails, firstName, lastName, phone, recapOnly]);
 
   const submit = async (overrides?: { eventDate?: string; address?: string; market?: string }) => {
     setErr(null);
     if (!firstName.trim()) return setErr("Enter your name.");
-    if (!phone.trim()) return setErr("Enter a phone number.");
+    if (!recapOnly && !phone.trim()) return setErr("Enter a phone number.");
     const date = overrides?.eventDate ?? eventDate;
     const addr = overrides?.address ?? address;
     const mkt = overrides?.market ?? market;
@@ -1196,6 +1211,8 @@ function IdentifyStep({
       if (hasPrograms && !eventTypeId) return setErr("Pick the event you're working.");
       if (isMarket) {
         if (!mkt) return setErr("Pick your market.");
+      } else if (recapOnly && recentLocations.length > 0) {
+        if (!addr.trim()) return setErr("Pick the store from the list.");
       } else if (!addr.trim()) {
         return setErr("Enter the store address.");
       }
@@ -1242,15 +1259,17 @@ function IdentifyStep({
 
   return (
     <div style={card}>
-      <h2 style={h2}>Who's working?</h2>
+      <h2 style={h2}>{recapOnly ? "Who's filing?" : "Who's working?"}</h2>
       <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
-        Tell us who you are so your lead can confirm your hours.
+        {recapOnly
+          ? "Your name on this recap. Phone is optional."
+          : "Tell us who you are so your lead can confirm your hours."}
       </p>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <input style={{ ...input, flex: "1 1 140px" }} placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
         <input style={{ ...input, flex: "1 1 140px" }} placeholder="Last name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
       </div>
-      <input style={input} placeholder="Mobile phone" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+      <input style={input} placeholder={recapOnly ? "Mobile phone (optional)" : "Mobile phone"} inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
       <input style={input} placeholder="Email (optional)" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
 
       {needsEventDetails && hasPrograms ? (
@@ -1280,7 +1299,7 @@ function IdentifyStep({
 
       {needsEventDetails ? (
         <>
-          <h2 style={{ ...h2, marginTop: 22 }}>Where are you working?</h2>
+          <h2 style={{ ...h2, marginTop: 22 }}>{recapOnly ? "Which store?" : "Where are you working?"}</h2>
 
           {/* ROAMING crews pick a market. Their whole day lands on ONE event
               per market, and the individual spots get logged as stops while
@@ -1303,6 +1322,25 @@ function IdentifyStep({
                   </option>
                 ))}
               </select>
+            </>
+          ) : recapOnly && recentLocations.length > 0 ? (
+            <>
+          <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
+            Pick the Total Wine (store name and address). Required — this is
+            how the recap lands on the right account.
+          </p>
+          <select
+            style={{ ...input, appearance: "none" }}
+            value={address}
+            onChange={(e) => pickStore(e.target.value)}
+          >
+            <option value="">Select the store…</option>
+            {recentLocations.map((l) => (
+              <option key={l.address} value={l.address}>
+                {l.name && l.name !== l.address ? `${l.name} — ${l.address}` : l.address}
+              </option>
+            ))}
+          </select>
             </>
           ) : (
             <>
@@ -1356,7 +1394,7 @@ function IdentifyStep({
             </>
           )}
 
-          {unfiled.length > 0 ? (
+          {unfiled.length > 0 && !recapOnly ? (
             <div style={{ margin: "14px 0 8px" }}>
               <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 6px" }}>
                 Still need a recap
@@ -1396,11 +1434,13 @@ function IdentifyStep({
           ) : null}
 
           <label style={{ fontSize: 12, opacity: 0.6, display: "block", margin: "10px 0 4px" }}>
-            Date you're working
+            {recapOnly ? "Date of this recap" : "Date you're working"}
           </label>
           <p style={{ fontSize: 12, opacity: 0.55, margin: "0 0 6px" }}>
-            Working a past shift? Change this to the day you actually worked.
-            You can pick any day in the last {CHECKIN_MAX_PAST_DAYS} days.
+            {recapOnly
+              ? "The day the sampling happened. You can pick any day in the last "
+              : "Working a past shift? Change this to the day you actually worked. You can pick any day in the last "}
+            {CHECKIN_MAX_PAST_DAYS} days.
           </p>
           <input
             style={input}
@@ -1415,7 +1455,7 @@ function IdentifyStep({
 
       {err ? <p style={errText}>{err}</p> : null}
       <button style={{ ...primaryBtn(accent), marginTop: 6 }} disabled={busy} onClick={() => void submit()}>
-        {busy ? "Starting…" : "Start check-in"}
+        {busy ? "Starting…" : recapOnly ? "Continue to recap" : "Start check-in"}
       </button>
     </div>
   );
@@ -1443,7 +1483,7 @@ function CheckedInFlow({
 }) {
   const [busy, setBusy] = useState<"" | "in" | "out">("");
   const [inPhase, setInPhase] = useState<ActionPhase>("idle");
-  const [showRecap, setShowRecap] = useState(false);
+  const [showRecap, setShowRecap] = useState(() => Boolean(ctx.recapOnly) && !hasRecap);
   const [recapAsNew, setRecapAsNew] = useState(false);
   const openRecap = (asNew: boolean) => {
     setRecapAsNew(asNew);
@@ -1704,7 +1744,7 @@ function CheckedInFlow({
 
   const pending = ctx.session?.pendingReview;
 
-  if (showRecap) {
+  if (showRecap || (ctx.recapOnly && !hasRecap)) {
     return (
       <RecapForm
         code={code}
@@ -1714,8 +1754,11 @@ function CheckedInFlow({
         accent={accent}
         brandName={ctx.brand.name || ""}
         eventDate={ctx.event?.date}
-        forceNew={recapAsNew && ctx.mode === "tenant"}
-        onCancel={() => setShowRecap(false)}
+        forceNew={(recapAsNew || Boolean(ctx.recapOnly && hasRecap)) && ctx.mode === "tenant"}
+        onCancel={() => {
+          if (ctx.recapOnly && !hasRecap) onStartAnother();
+          else setShowRecap(false);
+        }}
         onSubmitted={async () => {
           setShowRecap(false);
           setQueuedRecap(null);
@@ -1757,7 +1800,7 @@ function CheckedInFlow({
               onClick={onStartAnother}
               style={{ ...secondaryBtn, marginTop: 10, width: "100%" }}
             >
-              Log another event
+              {ctx.recapOnly ? "File for another store / date" : "Log another event"}
             </button>
           </>
         ) : null}
