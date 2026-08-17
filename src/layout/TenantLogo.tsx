@@ -10,6 +10,8 @@ type TenantLogoProps = TenantLogoInput & {
   active?: boolean;
   /** `chip` is the 20×20 sidebar mark. `header` is a full-color form header mark. */
   variant?: "chip" | "header";
+  /** Header fallback text: `dark` for spark-form chrome, `light` for cream check-in. */
+  tone?: "dark" | "light";
 };
 
 /**
@@ -20,6 +22,7 @@ type TenantLogoProps = TenantLogoInput & {
 export function TenantLogo({
   active = false,
   variant = "chip",
+  tone = "dark",
   ...input
 }: TenantLogoProps) {
   const candidates = tenantLogoCandidates(input);
@@ -37,7 +40,9 @@ export function TenantLogo({
       return (
         <span
           className="text-sm font-medium truncate max-w-[9rem]"
-          style={{ color: "rgba(255,255,255,0.7)" }}
+          style={{
+            color: tone === "light" ? "#57534e" : "rgba(255,255,255,0.7)",
+          }}
         >
           {label}
         </span>

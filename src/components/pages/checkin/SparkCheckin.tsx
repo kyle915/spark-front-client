@@ -25,6 +25,7 @@ import {
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { holdActionSuccess, type ActionPhase } from "@/motion/opsMotion";
 import { recapSubmitErrorMessage } from "./recapSubmitError";
+import { TenantLogo } from "@/layout/TenantLogo";
 
 /**
  * Public, no-login web check-in for a BA working a specific event.
@@ -146,7 +147,14 @@ type Context = {
     storeManagerName?: string | null;
     storeManagerPhone?: string | null;
   };
-  brand: { name: string; primaryColor: string | null };
+  brand: {
+    name: string;
+    primaryColor: string | null;
+    /** Same tenant.image URL tenantPublic / spark-form feed TenantLogo. */
+    image?: string | null;
+    logoUrl?: string | null;
+    requestUrlName?: string | null;
+  };
   template?: Template | null;
   // Labelled photo dropzones, in render order. Absent/empty for every brand
   // that hasn't opted in, which is the signal to keep the single generic grid.
@@ -908,7 +916,7 @@ export default function SparkCheckin() {
 
   if (loadErr) {
     return (
-      <Shell framed>
+      <Shell framed brand={ctx?.brand}>
         <p
           className="text-xs uppercase tracking-[0.22em] text-stone-500 mb-2"
         >
@@ -938,9 +946,9 @@ export default function SparkCheckin() {
   }
 
   return (
-    <Shell>
+    <Shell brand={ctx.brand}>
       <div style={{ width: "100%", maxWidth: 560 }}>
-        <Header ctx={ctx} accent={accent} />
+        <Header ctx={ctx} />
         {/* Sits directly under the header so it's present on the landing
             screen AND after clock-in — the BA asks "how do I pitch this?"
             at the table, not before they leave the house, and the
@@ -980,17 +988,14 @@ export default function SparkCheckin() {
 }
 
 // ── Header ────────────────────────────────────────────────────────────────
-function Header({ ctx, accent }: { ctx: Context; accent: string }) {
+function Header({ ctx }: { ctx: Context }) {
   const ev = ctx.event;
   // A standing tenant link has no event until the BA picks a store, so the
-  // header leads with the brand and says what's about to happen instead of
-  // rendering an empty title block.
+  // title says what's about to happen. The brand mark lives in the chrome
+  // (same TenantLogo as /spark-form), not as shouting name copy here.
   if (!ev) {
     return (
       <div style={{ marginBottom: 18 }}>
-        <div style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", color: accent, fontWeight: 700 }}>
-          {ctx.brand.name || "Check in"}
-        </div>
         <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>Start your shift</h1>
         <div style={{ fontSize: 13, opacity: 0.6 }}>Clock in, work, then file your recap — all from this page.</div>
       </div>
@@ -1015,9 +1020,6 @@ function Header({ ctx, accent }: { ctx: Context; accent: string }) {
     : "";
   return (
     <div style={{ marginBottom: 18 }}>
-      <div style={{ fontSize: 12, letterSpacing: "0.14em", textTransform: "uppercase", color: accent, fontWeight: 700 }}>
-        {ctx.brand.name || "Check in"}
-      </div>
       <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>{ev.name}</h1>
       <div style={{ fontSize: 13, opacity: 0.6 }}>
         {when}
@@ -2910,29 +2912,50 @@ const IGNITE_SUPPORT = "staffing@igniteproductions.co";
 function Shell({
   children,
   framed = false,
+  brand,
 }: {
   children: React.ReactNode;
   framed?: boolean;
+  brand?: Context["brand"] | null;
 }) {
   return (
     <div style={wrap}>
       <div style={{ width: "100%", maxWidth: 560 }}>
-        <a
-          href={IGNITE_HOME}
+        <header
           style={{
-            display: "inline-flex",
+            display: "flex",
             alignItems: "center",
-            gap: 10,
+            justifyContent: "space-between",
+            gap: 12,
             marginBottom: 28,
-            textDecoration: "none",
           }}
         >
-          <img
-            src="/legal/spark-logo.png"
-            alt="Spark by Ignite"
-            style={{ height: 28, width: "auto" }}
-          />
-        </a>
+          <a
+            href={IGNITE_HOME}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 10,
+              textDecoration: "none",
+            }}
+          >
+            <img
+              src="/legal/spark-logo.png"
+              alt="Spark by Ignite"
+              style={{ height: 28, width: "auto" }}
+            />
+          </a>
+          {brand ? (
+            <TenantLogo
+              variant="header"
+              tone="light"
+              name={brand.name}
+              requestUrlName={brand.requestUrlName}
+              image={brand.image}
+              logoUrl={brand.logoUrl}
+            />
+          ) : null}
+        </header>
         {framed ? (
           <div
             style={{
