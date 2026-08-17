@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isUsableApiImage,
   officialFallbackSrc,
+  shortTenantName,
   tenantInitials,
   tenantLogoCandidates,
 } from "./tenantLogo";
@@ -84,6 +85,15 @@ describe("tenantLogoCandidates", () => {
     });
     expect(candidates[0]).toContain("neutonic.com");
   });
+
+  it("gives the Torch spark-form slug a real mark without an API image", () => {
+    const candidates = tenantLogoCandidates({
+      name: "Torch THC",
+      requestUrlName: "keee-torch-thc",
+      image: null,
+    });
+    expect(candidates[0]).toContain("TorchLogo");
+  });
 });
 
 describe("tenantInitials", () => {
@@ -94,5 +104,23 @@ describe("tenantInitials", () => {
 
   it("falls back to the first two letters of a single word", () => {
     expect(tenantInitials("Neutonic")).toBe("NE");
+  });
+});
+
+describe("shortTenantName", () => {
+  it("keeps a short brand name as-is", () => {
+    expect(shortTenantName("Torch THC")).toBe("Torch THC");
+    expect(shortTenantName("Neutonic")).toBe("Neutonic");
+  });
+
+  it("shortens a long name instead of leaving a hole", () => {
+    expect(shortTenantName("Really Long Brand Name That Would Overflow")).toBe(
+      "Really Long",
+    );
+  });
+
+  it("falls back to Brand when empty", () => {
+    expect(shortTenantName(null)).toBe("Brand");
+    expect(shortTenantName("")).toBe("Brand");
   });
 });

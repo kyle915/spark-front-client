@@ -119,3 +119,16 @@ export function tenantInitials(name: string | null | undefined): string {
   }
   return trimmed.slice(0, 2).toUpperCase();
 }
+
+/** Quiet header fallback when no logo exists — not a shouting chip. */
+export function shortTenantName(name: string | null | undefined): string {
+  const trimmed = (name ?? "").trim();
+  if (!trimmed) return "Brand";
+  if (trimmed.length <= 22) return trimmed;
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    const two = `${words[0]} ${words[1]}`;
+    return two.length <= 22 ? two : words[0].slice(0, 22);
+  }
+  return trimmed.slice(0, 22);
+}

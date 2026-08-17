@@ -2,6 +2,7 @@ import useTenantPublic, { type TenantPublic } from "../hooks/useTenantPublic";
 import useTenantThemePublic from "../hooks/useTenantThemePublic";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
 import PublicDeadLink from "@/public/PublicDeadLink";
+import { TenantLogo } from "@/layout/TenantLogo";
 import { createContext, useEffect, useState } from "react";
 import { Link } from "react-router";
 
@@ -12,11 +13,11 @@ const IGNITE_HOME = "https://www.igniteproductions.co/";
 /**
  * Spark v2 — public form layout.
  *
- * Wraps the request form in the Spark brand chrome: italic "Spark BY IGNITE"
- * mark on the left, lime status pill in the middle, tenant logo + brand
- * tag on the right. Background is the spark-v2 near-black. The tenant
- * theme hook still runs for public pages — clients want their brand color
- * on their public request form, unlike the admin shell.
+ * Wraps the request form in the Spark brand chrome: Spark mark on the
+ * left, tenant logo (API image / logoUrl, then official fallback) on the
+ * right. No marketing copy or shouting tenant name in the header. The
+ * tenant theme hook still runs for public pages — clients want their
+ * brand color on their public request form, unlike the admin shell.
  */
 
 export default function SparkFormLayout({
@@ -30,11 +31,7 @@ export default function SparkFormLayout({
     (localStorage.getItem("@color-scheme") as TenantColorScheme) || "dark",
   );
 
-  const {
-    tenant,
-    hasImage,
-    loading: loadingTenant,
-  } = useTenantPublic({ slug });
+  const { tenant, loading: loadingTenant } = useTenantPublic({ slug });
 
   const { loading: loadingTheme } = useTenantThemePublic({
     slug,
@@ -113,26 +110,15 @@ export default function SparkFormLayout({
           </span>
         </a>
 
-        {/* Right: tenant logo, force-rendered white so it reads on the
-            dark Spark v2 chrome regardless of source colour. */}
-        <div className="flex items-center gap-3">
-          {hasImage && tenant?.image ? (
-            <img
-              src={tenant.image}
-              alt=""
-              className="h-8 w-auto object-contain"
-              style={{
-                filter: "brightness(0) invert(1)",
-              }}
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
-          ) : (
-            <span className="chip chip-lime">
-              ● {(tenant?.name ?? tenant?.requestUrlName ?? "PUBLIC").toUpperCase()}
-            </span>
-          )}
+        {/* Right: full-color tenant mark. API image / logoUrl first,
+            official fallback second, short name if nothing loads. */}
+        <div className="flex items-center justify-end shrink-0">
+          <TenantLogo
+            variant="header"
+            name={tenant?.name}
+            requestUrlName={tenant?.requestUrlName ?? slug}
+            image={tenant?.image}
+          />
         </div>
       </header>
 
