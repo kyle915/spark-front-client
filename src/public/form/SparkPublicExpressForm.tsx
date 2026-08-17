@@ -13,6 +13,7 @@ import SharedTimeSlotSelect from "@/components/inputs/TimeSlotSelect";
 import type { CreateRequestInput } from "./types/CreateRequestByUrl";
 import GooglePlacesInput, { matchTimezoneOption } from "@/components/inputs/GooglePlacesInput";
 import { buildRequestDateTimes } from "./utils/buildPayload";
+import { isTorchRequestForm } from "./torchRequestForm";
 
 /**
  * Spark v2 — public Express request form.
@@ -39,6 +40,7 @@ function ExpressFormBody() {
   // brand name, and stripping it left Girl Beer titled "Beer".
   const tenant = useContext(PublicFormTenantContext);
   const brandName = tenant?.name?.trim() || "Brand";
+  const isTorch = isTorchRequestForm(slug);
 
   const [selectedProductTypeId, setSelectedProductTypeId] = useState<string | null>(null);
   const { products, loading: productsLoading, hasMore, loadMore } = usePublicProducts(
@@ -95,6 +97,8 @@ function ExpressFormBody() {
   // account's books or Ignite still needs to book it. Plain metadata,
   // no approval-flow impact. "" until the requestor picks one.
   const [schedulingStatus, setSchedulingStatus] = useState<string>("");
+  // Torch-only: "Is Non-Active Product Required?" Yes/No. "" until picked.
+  const [nonActiveProductRequired, setNonActiveProductRequired] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   // Modal-popup payload shown on successful submit (per Kyle's spec,
   // external form only). Surfaces the RMM the request was routed to so
@@ -135,6 +139,7 @@ function ExpressFormBody() {
     !!requestorName.trim() &&
     !!requestorEmail.trim() &&
     !!schedulingStatus &&
+    (!isTorch || !!nonActiveProductRequired) &&
     !submitting;
 
   const submitBlocker =
@@ -144,7 +149,9 @@ function ExpressFormBody() {
         ? "Products"
         : !requestorName.trim() || !requestorEmail.trim() || !requestTypeId || !schedulingStatus
           ? "Client"
-          : null;
+          : isTorch && !nonActiveProductRequired
+            ? "Products"
+            : null;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,6 +164,9 @@ function ExpressFormBody() {
     const notesPlus = [
       notes,
       `BA count: ${baCount}`,
+      isTorch && nonActiveProductRequired
+        ? `Is Non-Active Product Required?: ${nonActiveProductRequired === "yes" ? "Yes" : "No"}`
+        : null,
       allDates.length > 1
         ? `Bulk submission — ${allDates.length} visits at this venue.`
         : null,
@@ -233,6 +243,9 @@ function ExpressFormBody() {
         requestTypeId,
         timezoneId,
         schedulingStatus,
+        ...(isTorch
+          ? { isNonActiveProductRequired: nonActiveProductRequired === "yes" }
+          : {}),
         products: productIds.map((productId) => ({ productId })),
         details: [{ isTableNeeded: false, tableSize: null }],
         notes: notesPlus,
@@ -271,6 +284,7 @@ function ExpressFormBody() {
       setProductIds([]);
       setNotes("");
       setSchedulingStatus("");
+      setNonActiveProductRequired("");
     } else {
       setError(
         `Submitted ${successes} of ${allDates.length}. Failed: ${failures.join("; ")}`,
@@ -672,6 +686,59 @@ function ExpressFormBody() {
             </button>
           )}
         </Card>
+
+        {isTorch && (
+          <Card title="NON-ACTIVE PRODUCT *">
+            <Field label="Is Non-Active Product Required? *">
+              <div className="grid grid-cols-1 gap-2">
+                {[
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No" },
+                ].map((opt) => {
+                  const selected = nonActiveProductRequired === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setNonActiveProductRequired(opt.value)}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition"
+                      style={{
+                        background: selected
+                          ? "rgba(197,245,70,0.1)"
+                          : "var(--spark-surface-2, #161a12)",
+                        border: selected
+                          ? "2px solid var(--spark-lime, #c5f546)"
+                          : "1px solid var(--spark-border, #1f2418)",
+                      }}
+                    >
+                      <span
+                        className="shrink-0 rounded-full"
+                        style={{
+                          width: 16,
+                          height: 16,
+                          border: selected
+                            ? "5px solid var(--spark-lime, #c5f546)"
+                            : "2px solid rgba(255,255,255,0.3)",
+                          background: selected ? "#0a0d09" : "transparent",
+                        }}
+                      />
+                      <span
+                        className="text-sm font-medium"
+                        style={{
+                          color: selected
+                            ? "var(--spark-text, #f2f3ee)"
+                            : "rgba(255,255,255,0.75)",
+                        }}
+                      >
+                        {opt.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+          </Card>
+        )}
 
         {/* Requestor */}
         <Card title="YOUR INFO">
