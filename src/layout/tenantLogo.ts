@@ -62,6 +62,12 @@ const OFFICIAL_FALLBACKS: Record<string, string> = {
   // https://commons.wikimedia.org/wiki/File:Dude_Wipes_logo.svg
   dudewipes: "https://upload.wikimedia.org/wikipedia/commons/e/e4/Dude_Wipes_logo.svg",
 
+  // English Wikipedia infobox — official Krispy Krunchy Chicken barn mark
+  // (red barn, yellow sun, "Freshly made. Perfectly Cajun.").
+  // https://en.wikipedia.org/wiki/File:Krispy_Krunchy_Chicken_logo.jpg
+  krispykrunchychicken: "https://upload.wikimedia.org/wikipedia/en/b/b3/Krispy_Krunchy_Chicken_logo.jpg",
+  kkc: "https://upload.wikimedia.org/wikipedia/en/b/b3/Krispy_Krunchy_Chicken_logo.jpg",
+
   // Resort Beverage has no official public mark we can hotlink without
   // inventing a trademark. Initials until tenant.image / logoUrl is set.
 };
