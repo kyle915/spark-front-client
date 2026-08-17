@@ -24,6 +24,7 @@ import {
 } from "./offlineRecap";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { holdActionSuccess, type ActionPhase } from "@/motion/opsMotion";
+import { recapSubmitErrorMessage } from "./recapSubmitError";
 
 /**
  * Public, no-login web check-in for a BA working a specific event.
@@ -124,6 +125,14 @@ type CheckinResource = {
   note?: string;
 };
 type StoreOption = { name: string; address: string };
+type UnfiledShift = {
+  eventDate: string | null;
+  name: string;
+  address: string;
+  clockInAt: string | null;
+  clockOutAt: string | null;
+  clockState: string;
+};
 type Context = {
   // OPTIONAL on a standing tenant link: until the BA picks a store + date there
   // is no event yet, so nothing here may be dereferenced unguarded.
@@ -175,6 +184,8 @@ type Context = {
   // the table, not at home, and the release QR is needed mid-shift by
   // definition.
   resources?: CheckinResource[];
+  // Standing link only: shifts this BA already clocked that still need a recap.
+  unfiledShifts?: UnfiledShift[];
   // Legacy single-URL twin of `resources`, still sent by the API. Read only as
   // a fallback (see `checkinResources`) so this page keeps working against an
   // API that predates the list.
@@ -695,7 +706,7 @@ async function postCheckinClock(
 async function postCheckinRecap(
   code: string,
   body: Record<string, unknown>,
-): Promise<{ ok: boolean; status: number; already?: boolean }> {
+): Promise<{ ok: boolean; status: number; already?: boolean; message?: string }> {
   const res = await fetchWithTimeout(
     `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/recap`,
     {
@@ -707,20 +718,24 @@ async function postCheckinRecap(
   );
   let already = false;
   let success: boolean | undefined;
+  let message: string | undefined;
   try {
     const json = (await res.clone().json()) as {
       already?: boolean;
       alreadySubmitted?: boolean;
       hasRecap?: boolean;
       success?: boolean;
+      message?: string;
+      error?: string;
     };
     already = Boolean(json.already || json.alreadySubmitted || json.hasRecap);
     success = json.success;
+    message = recapSubmitErrorMessage(json, res.status);
   } catch {
-    /* gateway / empty */
+    message = recapSubmitErrorMessage(null, res.status);
   }
   if (res.status === 409) already = true;
-  return { ok: res.ok && success !== false, status: res.status, already };
+  return { ok: res.ok && success !== false, status: res.status, already, message };
 }
 
 async function flushQueuedRecap(code: string) {
@@ -776,6 +791,14 @@ const fmtTime = (iso: string | null): string => {
   return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }).replace(":00", "");
 };
 
+const fmtDay = (iso: string | null | undefined): string => {
+  if (!iso) return "";
+  const raw = String(iso);
+  const d = new Date(raw.includes("T") ? raw : `${raw.slice(0, 10)}T12:00:00`);
+  if (isNaN(d.getTime())) return raw.slice(0, 10);
+  return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+};
+
 export default function SparkCheckin() {
   const { code = "" } = useParams<{ code: string }>();
   const storeKey = `spark.checkin.${code}`;
@@ -807,6 +830,17 @@ export default function SparkCheckin() {
         setCtx(json);
         setLoadErr(null);
         writeCachedContext(code, json);
+        // Expired standing-link tokens fall through to tenant context with
+        // no session. Drop the stale token so the BA can pick Friday again
+        // instead of staring at a dead "You're all set" from cache.
+        if (json.mode === "tenant" && token && !json.session) {
+          try {
+            window.localStorage.removeItem(storeKey);
+          } catch {
+            /* private mode */
+          }
+          setToken(null);
+        }
       }
     } catch {
       const cached = readCachedContext<Context>(code);
@@ -1045,6 +1079,7 @@ function IdentifyStep({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+  const [unfiled, setUnfiled] = useState<UnfiledShift[]>([]);
 
   // Picking a known store fills BOTH fields, so the address matches an existing
   // event's exactly and this BA joins it rather than forking a near-duplicate.
@@ -1115,10 +1150,42 @@ function IdentifyStep({
     );
   };
 
-  const submit = async () => {
+  useEffect(() => {
+    if (!needsEventDetails || !phone.trim()) {
+      setUnfiled([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void fetch(
+        `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/unfiled-recaps`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ firstName, lastName, phone }),
+        },
+      )
+        .then((r) => r.json())
+        .then((json: { shifts?: UnfiledShift[] }) => {
+          if (!cancelled && Array.isArray(json.shifts)) setUnfiled(json.shifts);
+        })
+        .catch(() => {
+          if (!cancelled) setUnfiled([]);
+        });
+    }, 400);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [code, needsEventDetails, firstName, lastName, phone]);
+
+  const submit = async (overrides?: { eventDate?: string; address?: string; market?: string }) => {
     setErr(null);
     if (!firstName.trim()) return setErr("Enter your name.");
     if (!phone.trim()) return setErr("Enter a phone number.");
+    const date = overrides?.eventDate ?? eventDate;
+    const addr = overrides?.address ?? address;
+    const mkt = overrides?.market ?? market;
     if (needsEventDetails) {
       // Required, and asked BEFORE the store, because it decides which form the
       // BA gets. The backend falls back to the brand's default rather than
@@ -1126,11 +1193,11 @@ function IdentifyStep({
       // standing between a distracted BA and the wrong recap.
       if (hasPrograms && !eventTypeId) return setErr("Pick the event you're working.");
       if (isMarket) {
-        if (!market) return setErr("Pick your market.");
-      } else if (!address.trim()) {
+        if (!mkt) return setErr("Pick your market.");
+      } else if (!addr.trim()) {
         return setErr("Enter the store address.");
       }
-      if (!eventDate) return setErr("Pick the date you're working.");
+      if (!date) return setErr("Pick the date you're working.");
     }
     setBusy(true);
     try {
@@ -1144,9 +1211,9 @@ function IdentifyStep({
                 lastName,
                 phone,
                 email,
-                eventDate,
+                eventDate: date,
                 ...(hasPrograms ? { eventTypeId } : {}),
-                ...(isMarket ? { market } : { storeName, address }),
+                ...(isMarket ? { market: mkt } : { storeName, address: addr }),
               }
             : { firstName, lastName, phone, email },
         ),
@@ -1287,11 +1354,51 @@ function IdentifyStep({
             </>
           )}
 
+          {unfiled.length > 0 ? (
+            <div style={{ margin: "14px 0 8px" }}>
+              <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 6px" }}>
+                Still need a recap
+              </p>
+              <p style={{ fontSize: 12, opacity: 0.55, margin: "0 0 8px" }}>
+                You already clocked these days. Tap one to file it — even if it
+                was Friday.
+              </p>
+              {unfiled.map((s) => (
+                <button
+                  key={`${s.eventDate}-${s.address}-${s.name}`}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    if (s.eventDate) setEventDate(s.eventDate);
+                    if (isMarket) setMarket(s.address);
+                    else setAddress(s.address);
+                    void submit({
+                      eventDate: s.eventDate ?? undefined,
+                      address: s.address,
+                      market: s.address,
+                    });
+                  }}
+                  style={{
+                    ...secondaryBtn,
+                    width: "100%",
+                    textAlign: "left",
+                    marginBottom: 8,
+                  }}
+                >
+                  {fmtDay(s.eventDate)}
+                  {s.address ? ` · ${s.address}` : s.name ? ` · ${s.name}` : ""}
+                  {s.clockOutAt ? " · clocked out" : ""}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           <label style={{ fontSize: 12, opacity: 0.6, display: "block", margin: "10px 0 4px" }}>
             Date you're working
           </label>
           <p style={{ fontSize: 12, opacity: 0.55, margin: "0 0 6px" }}>
             Working a past shift? Change this to the day you actually worked.
+            You can pick any day in the last {CHECKIN_MAX_PAST_DAYS} days.
           </p>
           <input
             style={input}
@@ -1305,7 +1412,7 @@ function IdentifyStep({
       ) : null}
 
       {err ? <p style={errText}>{err}</p> : null}
-      <button style={{ ...primaryBtn(accent), marginTop: 6 }} disabled={busy} onClick={submit}>
+      <button style={{ ...primaryBtn(accent), marginTop: 6 }} disabled={busy} onClick={() => void submit()}>
         {busy ? "Starting…" : "Start check-in"}
       </button>
     </div>
@@ -1335,6 +1442,11 @@ function CheckedInFlow({
   const [busy, setBusy] = useState<"" | "in" | "out">("");
   const [inPhase, setInPhase] = useState<ActionPhase>("idle");
   const [showRecap, setShowRecap] = useState(false);
+  const [recapAsNew, setRecapAsNew] = useState(false);
+  const openRecap = (asNew: boolean) => {
+    setRecapAsNew(asNew);
+    setShowRecap(true);
+  };
   const [msg, setMsg] = useState<string | null>(null);
   const [queuedClock, setQueuedClock] = useState<PendingClockIn | null>(() =>
     readPendingClock(code),
@@ -1629,30 +1741,6 @@ function CheckedInFlow({
 
   const pending = ctx.session?.pendingReview;
 
-  if (hasRecap && clockState !== "clocked_in") {
-    return (
-      <div style={{ ...card, textAlign: "center" }}>
-        <div style={{ fontSize: 40, marginBottom: 6 }}>✓</div>
-        <h2 style={{ ...h2, marginBottom: 6 }}>You're all set</h2>
-        <p style={{ fontSize: 14, opacity: 0.7 }}>
-          Your recap is in{pending ? " and is pending your lead's confirmation" : ""}. Thanks for the great work!
-        </p>
-        {/* Without this the page is a dead end: the session sticks, so a BA
-            coming back for their next event would just see this screen again.
-            Only on the standing link — an event code covers one event, so
-            there is no "another" to log. */}
-        {ctx.mode === "tenant" ? (
-          <button
-            onClick={onStartAnother}
-            style={{ ...primaryBtn(accent), marginTop: 18, width: "100%" }}
-          >
-            Log another event
-          </button>
-        ) : null}
-      </div>
-    );
-  }
-
   if (showRecap) {
     return (
       <RecapForm
@@ -1662,6 +1750,8 @@ function CheckedInFlow({
         photoBuckets={ctx.photoBuckets}
         accent={accent}
         brandName={ctx.brand.name || ""}
+        eventDate={ctx.event?.date}
+        forceNew={recapAsNew && ctx.mode === "tenant"}
         onCancel={() => setShowRecap(false)}
         onSubmitted={async () => {
           setShowRecap(false);
@@ -1676,6 +1766,42 @@ function CheckedInFlow({
     );
   }
 
+  if (hasRecap && clockState !== "clocked_in") {
+    return (
+      <div style={{ ...card, textAlign: "center" }}>
+        <div style={{ fontSize: 40, marginBottom: 6 }}>✓</div>
+        <h2 style={{ ...h2, marginBottom: 6 }}>You're all set</h2>
+        <p style={{ fontSize: 14, opacity: 0.7 }}>
+          Your recap is in{pending ? " and is pending your lead's confirmation" : ""}. Thanks for the great work!
+        </p>
+        {ctx.event?.date ? (
+          <p style={{ fontSize: 13, opacity: 0.55, marginTop: 8 }}>
+            {fmtDay(ctx.event.date)}
+            {ctx.event.address ? ` · ${ctx.event.address}` : ""}
+          </p>
+        ) : null}
+        {/* Standing links (Feel Free) allow another recap the same day —
+            one event per market, several shifts. Per-event codes stay done. */}
+        {ctx.mode === "tenant" ? (
+          <>
+            <button
+              onClick={() => openRecap(true)}
+              style={{ ...primaryBtn(accent), marginTop: 18, width: "100%" }}
+            >
+              File another recap
+            </button>
+            <button
+              onClick={onStartAnother}
+              style={{ ...secondaryBtn, marginTop: 10, width: "100%" }}
+            >
+              Log another event
+            </button>
+          </>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={card}>
@@ -1687,6 +1813,12 @@ function CheckedInFlow({
             <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2 }}>
               {effectiveClock === "clocked_in" ? "On the clock" : effectiveClock === "clocked_out" ? "Clocked out" : "Not started"}
             </div>
+            {ctx.event?.date ? (
+              <div style={{ fontSize: 12, opacity: 0.55, marginTop: 2 }}>
+                {fmtDay(ctx.event.date)}
+                {ctx.event.address ? ` · ${ctx.event.address}` : ""}
+              </div>
+            ) : null}
             {clockInAt ? (
               <div style={{ fontSize: 12, opacity: 0.55, marginTop: 2 }}>
                 In {fmtTime(clockInAt)}
@@ -1774,7 +1906,7 @@ function CheckedInFlow({
               Never gate ending a shift on another action succeeding. */}
           {effectiveClock === "clocked_in" && !hasRecap ? (
             <>
-              <button style={primaryBtn(accent)} onClick={() => setShowRecap(true)}>
+              <button style={primaryBtn(accent)} onClick={() => openRecap(false)}>
                 {queuedRecap ? "Edit saved recap" : "File recap"}
               </button>
               <button style={secondaryBtn} disabled={busy !== ""} onClick={() => clock("out")}>
@@ -1788,9 +1920,14 @@ function CheckedInFlow({
               <button style={primaryBtn(accent)} disabled={busy !== ""} onClick={() => clock("out")}>
                 {busy === "out" ? "Clocking out…" : "Clock out"}
               </button>
-              <button style={secondaryBtn} onClick={() => setShowRecap(true)}>
+              <button style={secondaryBtn} onClick={() => openRecap(false)}>
                 Edit recap
               </button>
+              {ctx.mode === "tenant" ? (
+                <button style={secondaryBtn} onClick={() => openRecap(true)}>
+                  File another
+                </button>
+              ) : null}
             </>
           ) : null}
 
@@ -1801,7 +1938,7 @@ function CheckedInFlow({
               start today's. Hence the escape hatch below. */}
           {effectiveClock === "clocked_out" && !hasRecap ? (
             <>
-              <button style={primaryBtn(accent)} onClick={() => setShowRecap(true)}>
+              <button style={primaryBtn(accent)} onClick={() => openRecap(false)}>
                 File recap
               </button>
               {ctx.mode === "tenant" ? (
@@ -1830,7 +1967,7 @@ function CheckedInFlow({
           back beats an admin having to merge two events later. Not offered
           mid-shift on a per-event link, where there is no other event to
           move to. */}
-      {ctx.mode === "tenant" && clockState === "clocked_in" ? (
+      {ctx.mode === "tenant" && (clockState === "clocked_in" || clockState === "not_started") ? (
         <button
           onClick={onStartAnother}
           style={{
@@ -1973,6 +2110,8 @@ function RecapForm({
   photoBuckets,
   accent,
   brandName,
+  eventDate,
+  forceNew = false,
   onCancel,
   onSubmitted,
   onQueued,
@@ -1983,6 +2122,8 @@ function RecapForm({
   photoBuckets?: PhotoBucket[];
   accent: string;
   brandName: string;
+  eventDate?: string | null;
+  forceNew?: boolean;
   onCancel: () => void;
   onSubmitted: () => Promise<void>;
   onQueued: () => void;
@@ -2167,6 +2308,7 @@ function RecapForm({
         files,
         productSamples,
         totalEngagements,
+        forceNew,
         submittedAt,
         photoFiles,
       });
@@ -2197,6 +2339,7 @@ function RecapForm({
         files: donePhotos.map((p) => ({ blobName: p.blobName, category: p.category })),
         productSamples,
         totalEngagements,
+        forceNew,
       };
       const posted = await postCheckinRecap(code, recapBody);
       if (!posted.ok && !posted.already) {
@@ -2204,7 +2347,7 @@ function RecapForm({
           await queueThisSubmit();
           return;
         }
-        setErr("Couldn't submit your recap.");
+        setErr(posted.message || "Couldn't submit your recap.");
         setBusy(false);
         setSubmitPhase("idle");
         return;
@@ -2244,6 +2387,12 @@ function RecapForm({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {eventDate ? (
+        <p style={{ fontSize: 13, opacity: 0.65, margin: 0 }}>
+          Recap for {fmtDay(eventDate)}
+          {forceNew ? " · additional filing" : ""}
+        </p>
+      ) : null}
       {pendingClock ? (
         <p style={{ ...errText, color: "#92400e", margin: 0 }}>
           {offlineClockBanner(pendingClock.clockedInAt)} You can still fill this
