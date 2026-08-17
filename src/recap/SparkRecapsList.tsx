@@ -43,6 +43,13 @@ import {
 } from "@/motion/opsMotion";
 import { SparkBentoTile, SparkStat } from "@/shared/SparkStat";
 import { recapListKpis } from "@/shared/sparkStat";
+import {
+  defaultRecapStatus,
+  recapEmptyKind,
+  recapListStatusWord,
+  recapMatchesPipeline,
+  sharedQueryFilter,
+} from "./recapListFilters";
 
 // Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
 // keeps the sticky action bar's button disabled with a friendly
@@ -220,11 +227,6 @@ const TODAY_ISO = isoLocal(new Date());
 const DAYS_7_ISO = daysAgoIso(7);
 const DAYS_30_ISO = daysAgoIso(30);
 const DAYS_90_ISO = daysAgoIso(90);
-const monthStartIso = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-};
-const MONTH_START_ISO = monthStartIso();
 
 const ghostBtn: React.CSSProperties = {
   background: "transparent",
@@ -771,7 +773,7 @@ const RecapsListInner: React.FC<{
             // the resolver decodes the Relay global id. "all" → no filter.
             ambassadorId: baFilter === "all" ? null : baFilter,
             approved: approvedFilter,
-            shared: pipeline === "shared" ? true : pipeline === "approved" ? false : null,
+            shared: sharedQueryFilter(isClient, pipeline),
             retailerName,
             stateCode,
             startDate,
@@ -803,7 +805,7 @@ const RecapsListInner: React.FC<{
             rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
             ambassadorId: baFilter === "all" ? null : baFilter,
             approved: approvedFilter,
-            shared: pipeline === "shared" ? true : pipeline === "approved" ? false : null,
+            shared: sharedQueryFilter(isClient, pipeline),
             retailerName,
             stateCode,
             startDate,
@@ -989,13 +991,13 @@ const RecapsListInner: React.FC<{
       // row's PRIMARY ambassador id — external/unlinked BAs (ambassadorId
       // null) drop out of a narrowed BA filter.
       const matchBa = baFilter === "all" || r.ambassadorId === baFilter;
-      const matchStatus =
-        pipeline === "all" ||
-        pipeline === "submitted" ||
-        (pipeline === "needs_review" &&
-          (!r.approved || justApprovedIds.has(r.id))) ||
-        (pipeline === "approved" && r.approved && !r.sharedAt) ||
-        (pipeline === "shared" && Boolean(r.sharedAt));
+      const matchStatus = recapMatchesPipeline({
+        isClient,
+        pipeline,
+        approved: r.approved,
+        sharedAt: r.sharedAt,
+        justApproved: justApprovedIds.has(r.id),
+      });
       // Date range: compare on the yyyy-mm-dd prefix. Each bound is
       // inclusive — `dateFrom` = "2026-05-01" passes recaps from May 1
       // onwards, `dateTo` = "2026-05-31" passes recaps up to and
@@ -1026,7 +1028,7 @@ const RecapsListInner: React.FC<{
           return (b.date || "").localeCompare(a.date || "");
       }
     });
-  }, [recaps, search, retailerFilter, stateFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, justApprovedIds]);
+  }, [recaps, search, retailerFilter, stateFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, justApprovedIds, isClient, pipeline]);
 
   // We paint every loaded row that matches the client-side filters.
   // Pagination now lives at the FETCH layer (`limit` / "Load more"), so
@@ -1083,12 +1085,13 @@ const RecapsListInner: React.FC<{
   }, [displayed, onVisibleRecapsChange]);
 
   if (filtered.length === 0) {
+    const emptyKind = recapEmptyKind({ isClient, queueEmpty, filterChips });
     return (
       <div
         className="spark-card p-8 text-center text-sm"
         style={{ color: "rgba(255,255,255,0.55)" }}
       >
-        {queueEmpty ? (
+        {emptyKind === "queue" ? (
           <>
             <p className="display text-2xl font-bold" style={{ color: "var(--spark-text)" }}>
               You’re caught up.
@@ -1099,6 +1102,15 @@ const RecapsListInner: React.FC<{
               the full archive.
             </p>
           </>
+        ) : emptyKind === "window" ? (
+          <div className="text-left max-w-lg mx-auto">
+            <p className="display text-2xl font-bold" style={{ color: "var(--spark-text)" }}>
+              No approved recaps in this window.
+            </p>
+            <p className="mt-2">
+              Approved recaps from the last 30 days will show here.
+            </p>
+          </div>
         ) : (
           <div className="text-left max-w-lg mx-auto">
             <p className="display text-2xl font-bold" style={{ color: "var(--spark-text)" }}>
@@ -1305,42 +1317,32 @@ export default function SparkRecapsList() {
   // Brand Ambassador filter. "all" = no filter; otherwise the Ambassador's
   // Relay global id (pushed server-side as `ambassadorId`). Mirrors rmmFilter.
   const [baFilter, setBaFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<StatusKey>(() => {
-    if (
-      statusFromUrl === "needs_review" ||
-      statusFromUrl === "approved" ||
-      statusFromUrl === "shared" ||
-      statusFromUrl === "submitted" ||
-      statusFromUrl === "all"
-    ) {
-      return statusFromUrl;
-    }
-    return isClient ? "shared" : "needs_review";
-  });
+  const [statusFilter, setStatusFilter] = useState<StatusKey>(() =>
+    defaultRecapStatus(isClient, statusFromUrl),
+  );
   const [selectMode, setSelectMode] = useState(false);
-  // Work-queue default: last 30 days. "All published" clears both
-  // bounds so the archive (every published recap) is an explicit choice.
+  // Work-queue default: last 30 days for admin AND client. "All published"
+  // clears both bounds so the archive is an explicit choice. Clients used
+  // to start at month-start, which made the 30d chip look like a lie.
   const [dateFrom, setDateFrom] = useState<string>(() => {
     if (rangeFromUrl === "week") return DAYS_7_ISO;
-    return isClient ? MONTH_START_ISO : DAYS_30_ISO;
+    return DAYS_30_ISO;
   });
   const [dateTo, setDateTo] = useState<string>(TODAY_ISO);
   useEffect(() => {
     const status = searchParams.get("status");
-    if (
-      status === "needs_review" ||
-      status === "approved" ||
-      status === "shared" ||
-      status === "submitted" ||
-      status === "all"
-    ) {
-      setStatusFilter(status);
+    if (status) {
+      setStatusFilter(defaultRecapStatus(isClient, status));
+    } else if (isClient) {
+      setStatusFilter((s) =>
+        s === "all" || s === "approved" ? s : "approved",
+      );
     }
     if (searchParams.get("range") === "week") {
       setDateFrom(DAYS_7_ISO);
       setDateTo(TODAY_ISO);
     }
-  }, [searchParams]);
+  }, [searchParams, isClient]);
   const [opsOpen, setOpsOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
   // Server fetch size — how many rows we ask EACH list resolver for.
@@ -1817,17 +1819,7 @@ export default function SparkRecapsList() {
 
   const pipelineKey =
     statusFilter === "draft" ? "needs_review" : statusFilter;
-  const statusWord = isClient
-    ? "SHARED"
-    : pipelineKey === "needs_review"
-      ? "NEEDS REVIEW"
-      : pipelineKey === "approved"
-        ? "APPROVED"
-        : pipelineKey === "shared"
-          ? "SHARED"
-          : pipelineKey === "submitted"
-            ? "SUBMITTED"
-            : "ALL";
+  const statusWord = recapListStatusWord(isClient, pipelineKey);
   const windowLabel =
     !dateFrom && !dateTo
       ? `${statusWord} · ALL TIME`
@@ -1878,7 +1870,7 @@ export default function SparkRecapsList() {
     setStateFilter("all");
     setRmmFilter("all");
     setBaFilter("all");
-    setStatusFilter(isClient ? "shared" : "all");
+    setStatusFilter(isClient ? "approved" : "all");
     setDateFrom("");
     setDateTo("");
   };
