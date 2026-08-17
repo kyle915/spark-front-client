@@ -43,6 +43,7 @@ import RecapUploader from "./RecapUploader";
 import ReassignRecapModal from "./ReassignRecapModal";
 import { thumbUrl } from "@/utils/thumb";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
+import { RecapDocument } from "@/recap/RecapDocument";
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
 import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
 
@@ -191,13 +192,13 @@ const ProductSampleEditor: React.FC<{
     <div className="mt-5">
       <label
         className="mono text-[10px] block mb-2"
-        style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+        style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
       >
         PRODUCTS SAMPLED
       </label>
       <div className="space-y-2">
         {rows.length === 0 && (
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+          <p className="text-xs" style={{ color: "var(--recap-faint, #7a7f70)" }}>
             No products added yet — add a line below.
           </p>
         )}
@@ -313,7 +314,7 @@ const BaSearch: React.FC<{
             <div>
               <p
                 className="mono text-[10px] py-1"
-                style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+                style={{ letterSpacing: "0.16em", color: "var(--recap-muted, #5c6154)" }}
               >
                 NO MATCHES
               </p>
@@ -347,7 +348,7 @@ const BaSearch: React.FC<{
                     className="mono text-[10px] block mt-1"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.45)",
+                      color: "var(--recap-muted, #5c6154)",
                     }}
                   >
                     USE WHEN THE WORKER ISN'T IN SPARK YET
@@ -377,7 +378,7 @@ const BaSearch: React.FC<{
                   {full && amb.user?.email && (
                     <span
                       className="mono text-[10px] ml-2"
-                      style={{ color: "rgba(255,255,255,0.5)" }}
+                      style={{ color: "var(--recap-muted, #5c6154)" }}
                     >
                       {amb.user.email}
                     </span>
@@ -480,7 +481,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         fallback={
           <div
             className="spark-card p-8 text-center text-sm"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--recap-muted, #5c6154)" }}
           >
             Loading recap…
           </div>
@@ -840,14 +841,10 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         {` / ${fmtDate(fieldDate)}`}
       </button>
 
+      <RecapDocument status={recap.approved ? "APPROVED" : "DRAFT"}>
+      <div className="space-y-6">
       {/* Title card */}
-      <div
-        className="spark-card p-6 sticky top-0 z-20"
-        style={{
-          background: "rgba(10,13,9,0.92)",
-          backdropFilter: "blur(10px)",
-        }}
-      >
+      <div className="spark-card p-6">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-2">
@@ -858,8 +855,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   letterSpacing: "0.16em",
                   padding: "0.2rem 0.55rem",
                   borderRadius: 6,
-                  background: "rgba(255,255,255,0.05)",
-                  color: "rgba(255,255,255,0.7)",
+                  background: "rgba(20, 22, 15, 0.05)",
+                  color: "var(--recap-muted, #5c6154)",
                 }}
               >
                 {recap.name ?? event?.name ?? "Recap"}
@@ -876,10 +873,9 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             >
               {recap.name ?? event?.name ?? "Recap"}
             </h1>
-            <p
-              className="mt-1"
-              style={{ color: "rgba(255,255,255,0.65)" }}
-            >
+            <p className="mt-1 recap-doc-kicker">
+              Field recap
+              {" · "}
               {event?.request?.retailer?.name ?? event?.address ?? "—"}
               {" · "}
               {fmtDate(fieldDate)}
@@ -1152,7 +1148,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           <div className="spark-card p-6">
             <p
               className="mono text-[10px]"
-              style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}
+              style={{ letterSpacing: "0.18em", color: "var(--recap-muted, #5c6154)" }}
             >
               PRODUCTS SAMPLED
             </p>
@@ -1163,7 +1159,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   <div
                     key={s.id}
                     className="flex items-center justify-between text-sm"
-                    style={{ color: "rgba(255,255,255,0.8)" }}
+                    style={{ color: "var(--recap-text, #14160f)" }}
                   >
                     <span>{s.product?.name ?? "Product"}</span>
                     <span className="mono" style={{ color: "var(--spark-lime)" }}>
@@ -1192,7 +1188,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           <h3 className="display font-bold mt-1" style={{ letterSpacing: "-0.02em" }}>
             Edit recap details
           </h3>
-          <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.5)" }}>
+          <p className="text-xs mt-1" style={{ color: "var(--recap-muted, #5c6154)" }}>
             Numbers, BA assignment, environment notes, and feedback all
             save together. Leave a field blank to clear it. Photos and
             sales-performance rows are preserved.
@@ -1210,7 +1206,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               <div key={f.key}>
                 <label
                   className="mono text-[10px] block mb-1"
-                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                  style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
                 >
                   {f.label.toUpperCase()}
                 </label>
@@ -1236,7 +1232,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           </div>
           <p
             className="mono text-[10px] mt-2"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+            style={{ color: "var(--recap-muted, #5c6154)" }}
           >
             * Products sold auto-fills from Cans + Packs. Type a value to
             override.
@@ -1250,7 +1246,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               fallback={
                 <p
                   className="text-xs mt-5"
-                  style={{ color: "rgba(255,255,255,0.4)" }}
+                  style={{ color: "var(--recap-faint, #7a7f70)" }}
                 >
                   Loading products…
                 </p>
@@ -1270,11 +1266,11 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           <div className="mt-5">
             <label
               className="mono text-[10px] block mb-1"
-              style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+              style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
             >
               ASSIGNED BA
             </label>
-            <p className="text-sm mb-2" style={{ color: "rgba(255,255,255,0.75)" }}>
+            <p className="text-sm mb-2" style={{ color: "var(--recap-muted, #5c6154)" }}>
               {pickedBa ? (
                 <>
                   <span style={{ color: "var(--spark-lime)" }}>
@@ -1285,9 +1281,9 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       className="mono text-[10px] ml-2 px-1.5 py-0.5 rounded"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.55)",
-                        background: "rgba(255,255,255,0.06)",
-                        border: "1px solid rgba(255,255,255,0.1)",
+                        color: "var(--recap-muted, #5c6154)",
+                        background: "rgba(20, 22, 15, 0.06)",
+                        border: "1px solid var(--recap-border, #e2e4d8)",
                       }}
                     >
                       EXTERNAL
@@ -1313,16 +1309,16 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                     className="mono text-[10px] ml-2 px-1.5 py-0.5 rounded"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.55)",
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.1)",
+                      color: "var(--recap-muted, #5c6154)",
+                      background: "rgba(20, 22, 15, 0.06)",
+                      border: "1px solid var(--recap-border, #e2e4d8)",
                     }}
                   >
                     EXTERNAL
                   </span>
                 </>
               ) : (
-                <span style={{ color: "rgba(255,255,255,0.45)" }}>
+                <span style={{ color: "var(--recap-muted, #5c6154)" }}>
                   No BA assigned yet
                 </span>
               )}
@@ -1331,7 +1327,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               fallback={
                 <div
                   className="mono text-[10px] py-2"
-                  style={{ color: "rgba(255,255,255,0.45)" }}
+                  style={{ color: "var(--recap-muted, #5c6154)" }}
                 >
                   Loading BA search…
                 </div>
@@ -1352,7 +1348,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           <div className="mt-6 pt-5" style={{ borderTop: "1px solid var(--spark-border)" }}>
             <p
               className="mono text-[10px] mb-3"
-              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.55)" }}
+              style={{ letterSpacing: "0.16em", color: "var(--recap-muted, #5c6154)" }}
             >
               FEEDBACK &amp; NOTES
             </p>
@@ -1362,7 +1358,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               <div>
                 <label
                   className="mono text-[10px] block mb-1"
-                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                  style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
                 >
                   TRAFFIC DESCRIPTION
                 </label>
@@ -1383,7 +1379,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               <div>
                 <label
                   className="mono text-[10px] block mb-1"
-                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                  style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
                 >
                   COMPETITIVE PRESENCE
                 </label>
@@ -1406,7 +1402,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             {/* Consumer feedback group */}
             <p
               className="mono text-[10px] mt-5 mb-2"
-              style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+              style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
             >
               CONSUMER FEEDBACK
             </p>
@@ -1420,7 +1416,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 <div key={key}>
                   <label
                     className="mono text-[10px] block mb-1"
-                    style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                    style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
                   >
                     {label}
                   </label>
@@ -1444,7 +1440,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               <div className="md:col-span-2">
                 <label
                   className="mono text-[10px] block mb-1"
-                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                  style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
                 >
                   DEMOGRAPHICS
                 </label>
@@ -1469,7 +1465,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             {/* Account feedback group */}
             <p
               className="mono text-[10px] mt-5 mb-2"
-              style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+              style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
             >
               ACCOUNT FEEDBACK
             </p>
@@ -1477,7 +1473,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               <div>
                 <label
                   className="mono text-[10px] block mb-1"
-                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                  style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
                 >
                   ACCOUNT FEEDBACK
                 </label>
@@ -1500,7 +1496,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               <div>
                 <label
                   className="mono text-[10px] block mb-1"
-                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                  style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
                 >
                   THINGS TO DO DIFFERENTLY
                 </label>
@@ -1523,7 +1519,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               <div className="md:col-span-2">
                 <label
                   className="mono text-[10px] block mb-1"
-                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.5)" }}
+                  style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
                 >
                   CORPORATE CARD REFERENCE
                 </label>
@@ -1622,7 +1618,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.16em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--recap-muted, #5c6154)",
               }}
             >
               FIELD-LOGGED · UNITS + DOLLARS
@@ -1710,7 +1706,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.16em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--recap-muted, #5c6154)",
               }}
             >
               QUOTES · DEMOGRAPHICS · WHAT WORKED
@@ -1730,7 +1726,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               <blockquote
                 className="italic text-sm leading-relaxed pl-4"
                 style={{
-                  color: "rgba(255,255,255,0.85)",
+                  color: "var(--recap-text, #14160f)",
                   borderLeft: "2px solid rgba(197,245,70,0.5)",
                 }}
               >
@@ -1752,7 +1748,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 </p>
                 <p
                   className="text-sm leading-relaxed"
-                  style={{ color: "rgba(255,255,255,0.85)" }}
+                  style={{ color: "var(--recap-text, #14160f)" }}
                 >
                   {consumerFeedback.feedback}
                 </p>
@@ -1771,7 +1767,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 </p>
                 <p
                   className="text-sm leading-relaxed"
-                  style={{ color: "rgba(255,255,255,0.85)" }}
+                  style={{ color: "var(--recap-text, #14160f)" }}
                 >
                   {consumerFeedback.demographics}
                 </p>
@@ -1790,7 +1786,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 </p>
                 <p
                   className="text-sm leading-relaxed"
-                  style={{ color: "rgba(255,255,255,0.85)" }}
+                  style={{ color: "var(--recap-text, #14160f)" }}
                 >
                   {consumerFeedback.positiveStories}
                 </p>
@@ -1809,7 +1805,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 </p>
                 <p
                   className="text-sm leading-relaxed"
-                  style={{ color: "rgba(255,255,255,0.85)" }}
+                  style={{ color: "var(--recap-text, #14160f)" }}
                 >
                   {consumerFeedback.reasonsToDecline}
                 </p>
@@ -1840,7 +1836,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 </p>
                 <p
                   className="text-sm leading-relaxed"
-                  style={{ color: "rgba(255,255,255,0.85)" }}
+                  style={{ color: "var(--recap-text, #14160f)" }}
                 >
                   {accountFeedback.feedback}
                 </p>
@@ -1859,7 +1855,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 </p>
                 <p
                   className="text-sm leading-relaxed"
-                  style={{ color: "rgba(255,255,255,0.85)" }}
+                  style={{ color: "var(--recap-text, #14160f)" }}
                 >
                   {accountFeedback.doDifferentlyFeedback}
                 </p>
@@ -1873,7 +1869,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 letterSpacing: "0.16em",
                 color: accountFeedback.wasCorpoCardUsed
                   ? "var(--spark-lime)"
-                  : "rgba(255,255,255,0.45)",
+                  : "var(--recap-muted, #5c6154)",
               }}
             >
               CORPORATE CARD ·{" "}
@@ -1978,7 +1974,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         </div>
         <p
           className="text-xs"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--recap-muted, #5c6154)" }}
         >
           Photos and receipts upload directly to GCS via signed URL, then
           attach to this recap automatically — they appear in the Files
@@ -2002,7 +1998,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               </p>
               <p
                 className="text-sm leading-relaxed"
-                style={{ color: "rgba(255,255,255,0.85)" }}
+                style={{ color: "var(--recap-text, #14160f)" }}
               >
                 {recap.trafficDescription}
               </p>
@@ -2021,7 +2017,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               </p>
               <p
                 className="text-sm leading-relaxed"
-                style={{ color: "rgba(255,255,255,0.85)" }}
+                style={{ color: "var(--recap-text, #14160f)" }}
               >
                 {recap.competitivePresence}
               </p>
@@ -2058,7 +2054,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                           className="mono text-[10px]"
                           style={{
                             letterSpacing: "0.14em",
-                            color: "rgba(255,255,255,0.55)",
+                            color: "var(--recap-muted, #5c6154)",
                           }}
                         >
                           {s.typeOfGood.name.toUpperCase()}
@@ -2089,7 +2085,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   className="mono text-[10px]"
                   style={{
                     letterSpacing: "0.16em",
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--recap-muted, #5c6154)",
                   }}
                 >
                   CLICK ANY TILE →
@@ -2127,7 +2123,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       rel="noreferrer"
                       className="block aspect-square rounded-lg overflow-hidden relative group"
                       style={{
-                        background: "rgba(255,255,255,0.04)",
+                        background: "rgba(20, 22, 15, 0.04)",
                         border: "1px solid var(--spark-border)",
                       }}
                     >
@@ -2187,7 +2183,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                               style={{
                                 fontSize: 8,
                                 letterSpacing: "0.14em",
-                                color: "rgba(255,255,255,0.45)",
+                                color: "var(--recap-muted, #5c6154)",
                               }}
                             >
                               OPEN →
@@ -2204,7 +2200,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   className="mt-3 mono text-[10px]"
                   style={{
                     letterSpacing: "0.16em",
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--recap-muted, #5c6154)",
                   }}
                 >
                   + {allFiles.length - 36} more files
@@ -2213,7 +2209,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               {allFiles.length === 0 && (
                 <p
                   className="text-sm py-6 text-center"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
+                  style={{ color: "var(--recap-muted, #5c6154)" }}
                 >
                   No files attached yet. BAs upload photos + PDFs from the
                   field; they show up here.
@@ -2228,7 +2224,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               <blockquote
                 className="italic text-sm leading-relaxed pl-4"
                 style={{
-                  color: "rgba(255,255,255,0.75)",
+                  color: "var(--recap-text, #14160f)",
                   borderLeft: "2px solid rgba(197,245,70,0.5)",
                 }}
               >
@@ -2239,7 +2235,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   className="mono text-[10px] mt-3"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--recap-muted, #5c6154)",
                   }}
                 >
                   — {ambassadors[0].user.firstName?.toUpperCase() ?? ""}{" "}
@@ -2250,7 +2246,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   className="mono text-[10px] mt-3"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--recap-muted, #5c6154)",
                   }}
                 >
                   — {recap.externalBaName.toUpperCase()} (EXTERNAL)
@@ -2291,9 +2287,9 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                     className="mono text-[10px] mt-0.5 inline-block px-1.5 py-0.5 rounded"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.6)",
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.1)",
+                      color: "var(--recap-muted, #5c6154)",
+                      background: "rgba(20, 22, 15, 0.06)",
+                      border: "1px solid var(--recap-border, #e2e4d8)",
                     }}
                   >
                     EXTERNAL · NOT IN SPARK
@@ -2303,7 +2299,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             ) : ambassadors.length === 0 ? (
               <p
                 className="text-sm"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--recap-muted, #5c6154)" }}
               >
                 No team logged yet.
               </p>
@@ -2333,7 +2329,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                         </p>
                         <p
                           className="mono text-[10px]"
-                          style={{ color: "rgba(255,255,255,0.45)" }}
+                          style={{ color: "var(--recap-muted, #5c6154)" }}
                         >
                           {shownRating != null && shownRating > 0
                             ? `★ ${shownRating.toFixed(1)} avg`
@@ -2347,7 +2343,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                           className="mono text-[10px] mb-1"
                           style={{
                             letterSpacing: "0.12em",
-                            color: "rgba(255,255,255,0.4)",
+                            color: "var(--recap-faint, #7a7f70)",
                           }}
                         >
                           RATE THIS BA
@@ -2372,6 +2368,8 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           </div>
         </aside>
       </div>
+      </div>
+      </RecapDocument>
     </div>
   );
 };
@@ -2400,7 +2398,7 @@ const CustomRecapFallback: React.FC<{ uuid: string }> = ({ uuid }) => {
   return (
     <div
       className="spark-card p-8 text-center text-sm"
-      style={{ color: "rgba(255,255,255,0.55)" }}
+      style={{ color: "var(--recap-muted, #5c6154)" }}
     >
       Recap not found.
     </div>

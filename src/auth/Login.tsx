@@ -119,7 +119,7 @@ const Login = () => {
             className={`w-full max-w-sm transition-opacity duration-500 ease-in-out ${fade ? "opacity-100" : "opacity-0"
               }`}
           >
-            <SparkMark height={20} className="mx-auto" />
+            <SparkMark height={20} className="mx-auto" onDark />
             <h1
               style={{
                 fontFamily: "var(--font-display, sans-serif)",

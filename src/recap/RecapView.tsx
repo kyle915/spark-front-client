@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useAlertStore } from "@store/alertStore";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
+import { RecapDocument } from "@/recap/RecapDocument";
 
 type HeifDecodedImage = {
   get_width: () => number;
@@ -533,6 +534,7 @@ const RecapView = () => {
               Back to list
             </Link>
           </div>
+          <RecapDocument status={statusLabel}>
           {/* ======================================================
           HEADER
       ====================================================== */}
@@ -1156,6 +1158,7 @@ const RecapView = () => {
             </div>
           </div>
 
+          </RecapDocument>
           {/* ======================================================
           IMAGE PREVIEW MODAL
       ====================================================== */}

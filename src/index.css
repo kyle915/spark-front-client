@@ -891,6 +891,113 @@ body:has(.spark-login-page) {
 /* Reduce default app body color noise so the dark surface is clean */
 body { background: var(--spark-bg); }
 
+/* Shareable recap / campaign report — white field document.
+   Admin sidebar, Jump, and Today stay on dark spark chrome. */
+.recap-doc {
+  --spark-bg: #f6f6f2;
+  --spark-surface: #ffffff;
+  --spark-surface-2: #ffffff;
+  --spark-border: #e2e4d8;
+  --spark-text: #14160f;
+  --recap-bg: #f6f6f2;
+  --recap-surface: #ffffff;
+  --recap-text: #14160f;
+  --recap-muted: #5c6154;
+  --recap-faint: #7a7f70;
+  --recap-heading: #3f5c12;
+  --recap-brand: #3f5c12;
+  --recap-brand-ink: #f6f6f2;
+  --recap-border: #e2e4d8;
+  background: var(--recap-bg);
+  color: var(--recap-text);
+  border-radius: 20px;
+  padding: 1.35rem 1.5rem 1.75rem;
+}
+.recap-doc-page {
+  min-height: 100dvh;
+  border-radius: 0;
+  padding: 0;
+}
+.recap-doc-page > .recap-doc-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin-bottom: 0;
+  padding: 1rem 1.5rem;
+  background: color-mix(in srgb, var(--recap-bg) 92%, transparent);
+  backdrop-filter: blur(12px);
+}
+.recap-doc-page > main,
+.recap-doc-page > .recap-doc-body {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 2.5rem;
+}
+.recap-doc-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--recap-border);
+}
+.recap-doc-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border: 1px solid currentColor;
+  background: transparent;
+}
+.recap-doc-badge.is-draft {
+  color: #ef5a2a;
+  border-color: rgba(239, 90, 42, 0.55);
+}
+.recap-doc-badge.is-approved {
+  color: #3f5c12;
+  border-color: rgba(63, 92, 18, 0.45);
+}
+.recap-doc-kicker {
+  margin: 0.35rem 0 0;
+  color: var(--recap-muted, #5c6154);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+.recap-doc .spark-card,
+.recap-doc .kpi {
+  background: #ffffff;
+  box-shadow: none;
+  border: 1px solid var(--recap-border);
+}
+.recap-doc .kpi-glow {
+  box-shadow: none;
+  border-color: rgba(63, 92, 18, 0.28);
+}
+.recap-doc .kpi-label,
+.recap-doc .label-mini,
+.recap-doc .spark-inset-label {
+  color: var(--recap-muted);
+}
+.recap-doc .chip-muted {
+  color: var(--recap-muted);
+  background: rgba(20, 22, 15, 0.04);
+}
+.recap-doc .spark-input {
+  background: #ffffff;
+  color: var(--recap-text);
+  border-color: var(--recap-border);
+}
+.recap-doc .spark-input:focus {
+  background: #ffffff;
+}
+
 /* ============================================================
    Print stylesheet — clean brief sheet for BAs heading to the
    venue. Strips chrome (sidebar, header, action buttons) and
@@ -906,14 +1013,28 @@ body { background: var(--spark-bg); }
     color: #0a0d09 !important;
   }
 
-  /* Hide chrome: sidebar, headers, anything tagged no-print */
+  /* Hide chrome: sidebar, admin headers, anything tagged no-print.
+     Keep the recap document header so the Spark mark prints. */
   .spark-sidebar,
   nav.spark-sidebar,
-  header,
+  header:not(.recap-doc-header),
   .no-print,
   [data-no-print],
-  button {
+  button:not(.recap-doc-header button) {
     display: none !important;
+  }
+
+  .recap-doc,
+  .recap-doc-page {
+    background: #ffffff !important;
+    color: #14160f !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+  .recap-doc-header {
+    position: static !important;
+    background: #ffffff !important;
+    display: flex !important;
   }
 
   /* Cards lose their dark surfaces, glow, and borders */

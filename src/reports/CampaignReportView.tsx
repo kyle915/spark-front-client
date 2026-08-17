@@ -4,7 +4,8 @@ import type { LatLngExpression, LatLngBoundsExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import CampaignPhotoHighlights from "./CampaignPhotoHighlights";
 import { SparkLeafletCluster } from "@/shared/map/SparkLeafletCluster";
-import { CARTO_DARK_TILE, STATUS_COLOR } from "@/shared/map/sparkMap";
+import { OSM_LIGHT_TILE, STATUS_COLOR } from "@/shared/map/sparkMap";
+import { SparkMark } from "@/recap/SparkMark";
 
 /**
  * Shared, presentational campaign-report renderer.
@@ -77,17 +78,17 @@ export type CampaignReportData = {
 
 // ─── Brand tokens (fallbacks so we render on-brand even un-themed) ──────
 const C = {
-  bg: "var(--spark-bg, #0a0d09)",
-  surface: "var(--spark-surface, #11140e)",
-  surface2: "var(--spark-surface-2, #161a12)",
-  border: "var(--spark-border, #1f2418)",
-  text: "var(--spark-text, #f2f3ee)",
-  lime: "var(--spark-lime, #c5f546)",
-  sky: "var(--spark-sky, #5fb8ef)",
-  gold: "var(--spark-gold, #ffc400)",
+  bg: "var(--recap-bg, #f6f6f2)",
+  surface: "var(--recap-surface, #ffffff)",
+  surface2: "var(--recap-surface, #ffffff)",
+  border: "var(--recap-border, #e2e4d8)",
+  text: "var(--recap-text, #14160f)",
+  lime: "var(--recap-heading, #3f5c12)",
+  sky: "var(--spark-sky, #2a7aa8)",
+  gold: "var(--spark-gold, #b8860b)",
   orange: "var(--spark-orange, #ef5a2a)",
-  muted: "rgba(255,255,255,0.55)",
-  faint: "rgba(255,255,255,0.4)",
+  muted: "var(--recap-muted, #5c6154)",
+  faint: "var(--recap-faint, #7a7f70)",
 } as const;
 
 const cardStyle: React.CSSProperties = {
@@ -297,8 +298,8 @@ const ActivationMap: React.FC<{ events: ReadonlyArray<CampaignReportEventRow> }>
         style={{ height: 360, width: "100%" }}
       >
         <TileLayer
-          attribution={CARTO_DARK_TILE.attribution}
-          url={CARTO_DARK_TILE.url}
+          attribution={OSM_LIGHT_TILE.attribution}
+          url={OSM_LIGHT_TILE.url}
         />
         <SparkLeafletCluster
           pins={points.map(({ event, pos }) => ({
@@ -327,6 +328,7 @@ const CampaignReportView: React.FC<{ report: CampaignReportData }> = ({
     <div style={{ color: C.text }}>
       {/* Branded header */}
       <header style={{ ...cardStyle, padding: "1.75rem 2rem", marginBottom: 24 }}>
+        <SparkMark height={28} />
         <SectionLabel>Campaign report · {report.brandName}</SectionLabel>
         <h1
           className="display"

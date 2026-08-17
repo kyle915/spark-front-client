@@ -30,13 +30,13 @@ import { PhotoLightbox } from "@/shared/PhotoLightbox";
  */
 
 const C = {
-  surface: "var(--spark-surface, #11140e)",
-  surface2: "var(--spark-surface-2, #161a12)",
-  border: "var(--spark-border, #1f2418)",
-  text: "var(--spark-text, #f2f3ee)",
-  lime: "var(--spark-lime, #c5f546)",
-  muted: "rgba(255,255,255,0.55)",
-  faint: "rgba(255,255,255,0.4)",
+  surface: "var(--recap-surface, #ffffff)",
+  surface2: "var(--recap-surface, #ffffff)",
+  border: "var(--recap-border, #e2e4d8)",
+  text: "var(--recap-text, #14160f)",
+  lime: "var(--recap-heading, #3f5c12)",
+  muted: "var(--recap-muted, #5c6154)",
+  faint: "var(--recap-faint, #7a7f70)",
 } as const;
 
 const cardStyle: React.CSSProperties = {

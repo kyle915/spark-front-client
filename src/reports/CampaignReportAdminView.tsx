@@ -10,6 +10,7 @@ import type { CampaignReportQuery as CampaignReportQueryType } from "@api/querie
 import { CampaignReportAiAnswerQuery } from "@/api/queries/CampaignReportAiAnswerQuery";
 import type { CampaignReportAiAnswerQuery as CampaignReportAiAnswerQueryType } from "@api/queries/__generated__/CampaignReportAiAnswerQuery.graphql";
 import CampaignReportView from "./CampaignReportView";
+import { RecapDocument } from "@/recap/RecapDocument";
 import type { CampaignReportData } from "./CampaignReportView";
 import AiMarkdown from "@/components/ai/AiMarkdown";
 import AiChartView, { type AiChart } from "@/components/ai/AiChartView";
@@ -316,7 +317,9 @@ const ReportLoaded: React.FC<{ requestId: string }> = ({ requestId }) => {
       {/* On-demand campaign Q&A — admin view only */}
       <AiAnswerCard requestId={report.requestId} />
 
-      <CampaignReportView report={viewData} />
+      <RecapDocument>
+        <CampaignReportView report={viewData} />
+      </RecapDocument>
     </div>
   );
 };

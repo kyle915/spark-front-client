@@ -65,6 +65,7 @@ import { shareRecapLink } from "@/utils/recapShare";
 import useSparkRole from "@/hooks/useSparkRole";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
 import { ClientTenantRecapBrand } from "@/recap/TenantBrandedRecap";
+import { RecapDocument } from "@/recap/RecapDocument";
 import { clientRecapKpis } from "@/recap/clientRecapKpis";
 import {
   RecapFieldBlockLabel,
@@ -141,15 +142,15 @@ const dangerBtn: React.CSSProperties = {
   color: "var(--spark-orange)",
   border: "1px solid rgba(239,90,42,0.4)",
 };
-const muted: React.CSSProperties = { color: "rgba(255,255,255,0.55)" };
-const faint: React.CSSProperties = { color: "rgba(255,255,255,0.4)" };
-const lime: React.CSSProperties = { color: "var(--spark-lime)" };
+const muted: React.CSSProperties = { color: "var(--recap-muted, #5c6154)" };
+const faint: React.CSSProperties = { color: "var(--recap-faint, #7a7f70)" };
+const lime: React.CSSProperties = { color: "var(--recap-heading, #3f5c12)" };
 const hairline: React.CSSProperties = {
-  borderBottom: "1px solid var(--spark-border)",
+  borderBottom: "1px solid var(--recap-border, var(--spark-border))",
 };
 const inset: React.CSSProperties = {
-  border: "1px solid var(--spark-border)",
-  background: "rgba(255,255,255,0.03)",
+  border: "1px solid var(--recap-border, var(--spark-border))",
+  background: "rgba(20, 22, 15, 0.03)",
 };
 
 const KpiCardContainer = ({
@@ -166,7 +167,7 @@ const KpiCardContainer = ({
   <div className={`spark-card p-6 ${className ?? ""}`}>
     <p
       className="mono text-[10px] mb-4 flex items-center gap-2"
-      style={{ letterSpacing: "0.18em", color: "var(--spark-lime)" }}
+      style={{ letterSpacing: "0.18em", color: "var(--recap-heading, #3f5c12)" }}
     >
       {icon}
       {title.toUpperCase()}
@@ -1241,13 +1242,9 @@ const RecapCustomViewInner = () => {
             )}
           </div>
 
-          <div
-            className="spark-card p-6 sticky top-0 z-20"
-            style={{
-              background: "rgba(10,13,9,0.92)",
-              backdropFilter: "blur(10px)",
-            }}
-          >
+          <RecapDocument status={recap.approved ? "APPROVED" : "DRAFT"}>
+          <div className="space-y-6">
+          <div className="spark-card p-6">
             <div className="flex items-start justify-between flex-wrap gap-4">
               <div>
                 <div className="flex items-center gap-2 flex-wrap mb-2">
@@ -1282,7 +1279,9 @@ const RecapCustomViewInner = () => {
                     {recap.name}
                   </h1>
                 )}
-                <p className="mt-1" style={{ color: "rgba(255,255,255,0.65)" }}>
+                <p className="mt-1 recap-doc-kicker">
+                  Field recap
+                  {" · "}
                   {place || "—"}
                   {" · "}
                   {formatDate(recap.event?.date ?? recap.eventDate ?? null)}
@@ -2005,7 +2004,7 @@ const RecapCustomViewInner = () => {
                         ) : (
                           <p
                             className="text-sm md:text-base leading-relaxed font-medium whitespace-pre-wrap"
-                            style={{ color: "rgba(255,255,255,0.85)" }}
+                            style={{ color: "var(--recap-text, #14160f)" }}
                           >
                             {field.value || "—"}
                           </p>
@@ -2193,7 +2192,7 @@ const RecapCustomViewInner = () => {
                               >
                                 <div
                                   className="relative aspect-square w-full overflow-hidden rounded-lg"
-                                  style={{ background: "rgba(255,255,255,0.04)" }}
+                                  style={{ background: "rgba(20, 22, 15, 0.04)" }}
                                 >
                                   {/* Per-file delete (admin). Hard-removes
                                       this file from the recap's Evidences
@@ -2345,7 +2344,7 @@ const RecapCustomViewInner = () => {
                 className="flex flex-col items-center justify-center p-16 rounded-2xl"
                 style={{
                   border: "1px dashed var(--spark-border)",
-                  background: "rgba(255,255,255,0.02)",
+                  background: "rgba(20, 22, 15, 0.02)",
                 }}
               >
                 <ImageIcon className="h-14 w-14 mb-3" style={faint} />
@@ -2386,6 +2385,8 @@ const RecapCustomViewInner = () => {
               }}
             />
           )}
+          </div>
+          </RecapDocument>
       </div>
 
       {currentPreview && (
@@ -2461,6 +2462,8 @@ const RecapCustomViewInner = () => {
             </div>
           </div>
 
+          <RecapDocument status={recap.approved ? "APPROVED" : "DRAFT"}>
+          <div className="space-y-6">
           <div className="spark-card p-6">
             <h1
               className="display text-3xl font-bold"
@@ -2468,7 +2471,9 @@ const RecapCustomViewInner = () => {
             >
               {recap.name}
             </h1>
-            <p className="mt-1" style={{ color: "rgba(255,255,255,0.65)" }}>
+            <p className="mt-1 recap-doc-kicker">
+              Field recap
+              {" · "}
               {place || "—"}
               {" · "}
               {formatDate(recap.event?.date ?? recap.eventDate ?? null)}
@@ -2478,7 +2483,7 @@ const RecapCustomViewInner = () => {
           <div ref={evidenceRef} className="spark-card p-6">
             <p
               className="mono text-[10px] mb-4"
-              style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}
+              style={{ letterSpacing: "0.18em", color: "var(--recap-muted, #5c6154)" }}
             >
               PHOTOS · {flatImages.length}
             </p>
@@ -2585,6 +2590,8 @@ const RecapCustomViewInner = () => {
               });
             }}
           />
+          </div>
+          </RecapDocument>
         </div>
 
         {currentPreview && (

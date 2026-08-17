@@ -3,7 +3,7 @@ import { useParams } from "react-router";
 import CampaignReportView from "@/reports/CampaignReportView";
 import type { CampaignReportData } from "@/reports/CampaignReportView";
 import PublicDeadLink from "@/public/PublicDeadLink";
-import { SparkMark } from "@/recap/SparkMark";
+import { RecapDocument } from "@/recap/RecapDocument";
 
 /**
  * Public, no-login campaign report — /report/:token.
@@ -58,26 +58,9 @@ const Shell: React.FC<{ children: React.ReactNode; actions?: React.ReactNode }> 
   children,
   actions,
 }) => (
-  <div
-    className="min-h-screen"
-    style={{ background: "var(--spark-bg, #0a0d09)", color: "var(--spark-text, #f2f3ee)" }}
-  >
-    <header
-      className="sticky top-0 z-20 px-6 py-4 flex items-center justify-between gap-3 flex-wrap"
-      style={{
-        background: "rgba(10,13,9,0.85)",
-        borderBottom: "1px solid var(--spark-border, #1f2418)",
-        backdropFilter: "blur(12px)",
-      }}
-    >
-      <SparkMark height={22} />
-      {actions}
-    </header>
-    <main className="max-w-5xl mx-auto px-5 py-8 sm:py-10">{children}</main>
-    <footer className="max-w-5xl mx-auto px-5 pb-10">
-      <SparkMark height={20} />
-    </footer>
-  </div>
+  <RecapDocument page actions={actions}>
+    <main className="recap-doc-body">{children}</main>
+  </RecapDocument>
 );
 
 const PublicCampaignReport: React.FC = () => {
@@ -158,7 +141,7 @@ const PublicCampaignReport: React.FC = () => {
       <Shell>
         <div
           className="spark-card p-10 text-center text-sm"
-          style={{ color: "rgba(255,255,255,0.55)" }}
+          style={{ color: "var(--recap-muted, #5c6154)" }}
         >
           Loading report…
         </div>
