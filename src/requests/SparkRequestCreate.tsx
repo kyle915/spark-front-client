@@ -19,7 +19,14 @@ import TimeSlotSelect from "@/components/inputs/TimeSlotSelect";
 // option per region (Pacific/Central/…), so we re-expand the picked
 // region to the right sibling for the visit date at submit time.
 import { resolveTimezoneIdByDate } from "@/utils";
-import { isTorchRequestForm } from "@/public/form/torchRequestForm";
+import {
+  isEventActivationRequestType,
+  isOnPremiseRequestType,
+  isTorchRequestForm,
+  torchActivationFieldsComplete,
+  torchActivationGraphqlFields,
+  torchActivationNoteLines,
+} from "@/public/form/torchRequestForm";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
 import type { RequestMutation } from "@api/mutations/__generated__/RequestMutation.graphql";
 import { CreateDistributorMutation } from "@/api/mutations/CreateDistributorMutation";
@@ -328,6 +335,21 @@ const SparkRequestInner: React.FC = () => {
   const [nonActiveProductRequired, setNonActiveProductRequired] = useState(
     searchParams.get("isNonActiveProductRequired") ?? "",
   );
+  const [accountSpendAmount, setAccountSpendAmount] = useState(
+    searchParams.get("accountSpendAmount") ?? "",
+  );
+  const [eventAssetsNeeded, setEventAssetsNeeded] = useState(
+    searchParams.get("eventAssetsNeeded") ?? "",
+  );
+  const [loadInTime, setLoadInTime] = useState(
+    searchParams.get("loadInTime") ?? "",
+  );
+  const [onsitePoc, setOnsitePoc] = useState(
+    searchParams.get("onsitePoc") ?? "",
+  );
+  const [additionalTeamDetails, setAdditionalTeamDetails] = useState(
+    searchParams.get("additionalTeamDetails") ?? "",
+  );
   const [rmmId, setRmmId] = useState("");
   // RMM picker state used to drive the inline ROUTING chip that lived
   // alongside the Address/Time block. That block is gone in Express
@@ -341,6 +363,20 @@ const SparkRequestInner: React.FC = () => {
     const t = requestTypes.find((rt) => String(rt?.id) === requestTypeId);
     return (t?.name ?? "").toLowerCase().includes("retail");
   }, [requestTypes, requestTypeId]);
+  const selectedRequestTypeName = useMemo(() => {
+    const t = requestTypes.find((rt) => String(rt?.id) === requestTypeId);
+    return t?.name ?? "";
+  }, [requestTypes, requestTypeId]);
+  const torchActivationValues = {
+    accountSpendAmount,
+    eventAssetsNeeded,
+    loadInTime,
+    onsitePoc,
+    additionalTeamDetails,
+  };
+  const torchActivationOk =
+    !isTorch ||
+    torchActivationFieldsComplete(selectedRequestTypeName, torchActivationValues);
   const [notes, setNotes] = useState(qpNotes);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
     new Set(qpProducts),
@@ -589,6 +625,15 @@ const SparkRequestInner: React.FC = () => {
       showAlert("Pick whether non-active product is required — Yes or No.", "warning");
       return;
     }
+    if (isTorch && !torchActivationOk) {
+      showAlert(
+        isOnPremiseRequestType(selectedRequestTypeName)
+          ? "Enter the Account Spend Amount."
+          : "Fill in the Event Activation details.",
+        "warning",
+      );
+      return;
+    }
     const allDates = [date, ...extraDates.filter(Boolean)];
     const geocoded = await geocode(address);
     const coords: ReadonlyArray<number> = geocoded ?? [0, 0];
@@ -605,6 +650,9 @@ const SparkRequestInner: React.FC = () => {
       isTorch && nonActiveProductRequired
         ? `Is Non-Active Product Required?: ${nonActiveProductRequired === "yes" ? "Yes" : "No"}`
         : null,
+      ...(isTorch
+        ? torchActivationNoteLines(selectedRequestTypeName, torchActivationValues)
+        : []),
       allDates.length > 1
         ? `Bulk submission — ${allDates.length} visits at this venue.`
         : null,
@@ -659,6 +707,12 @@ const SparkRequestInner: React.FC = () => {
               isNonActiveProductRequired: isTorch
                 ? nonActiveProductRequired === "yes"
                 : undefined,
+              ...(isTorch
+                ? torchActivationGraphqlFields(
+                    selectedRequestTypeName,
+                    torchActivationValues,
+                  )
+                : {}),
               rmmAsignedId: rmmId || undefined,
               tenantId: tenantId ?? undefined,
               clientName: fullName || undefined,
@@ -1049,6 +1103,74 @@ const SparkRequestInner: React.FC = () => {
                   <option value="no">No</option>
                 </select>
               </div>
+            )}
+            {isTorch && isOnPremiseRequestType(selectedRequestTypeName) && (
+              <div>
+                <label className="label-mini block mb-1.5">
+                  Account Spend Amount *
+                </label>
+                <input
+                  style={inputStyle}
+                  value={accountSpendAmount}
+                  onChange={(e) => setAccountSpendAmount(e.target.value)}
+                  placeholder="$0.00"
+                  required
+                />
+              </div>
+            )}
+            {isTorch && isEventActivationRequestType(selectedRequestTypeName) && (
+              <>
+                <div>
+                  <label className="label-mini block mb-1.5">
+                    What assets are needed at this event? *
+                  </label>
+                  <textarea
+                    style={inputStyle}
+                    value={eventAssetsNeeded}
+                    onChange={(e) => setEventAssetsNeeded(e.target.value)}
+                    rows={3}
+                    placeholder="10x10, Barrel Cooler, etc"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label-mini block mb-1.5">
+                    What time is Load-In: *
+                  </label>
+                  <input
+                    style={inputStyle}
+                    value={loadInTime}
+                    onChange={(e) => setLoadInTime(e.target.value)}
+                    placeholder="e.g. 8:00 AM"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label-mini block mb-1.5">
+                    Who is the onsite POC: *
+                  </label>
+                  <input
+                    style={inputStyle}
+                    value={onsitePoc}
+                    onChange={(e) => setOnsitePoc(e.target.value)}
+                    placeholder="Name and phone or email"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label-mini block mb-1.5">
+                    Any additional details for the team to know? *
+                  </label>
+                  <textarea
+                    style={inputStyle}
+                    value={additionalTeamDetails}
+                    onChange={(e) => setAdditionalTeamDetails(e.target.value)}
+                    rows={3}
+                    placeholder="Anything the team should know"
+                    required
+                  />
+                </div>
+              </>
             )}
             <div className="relative">
               <label className="label-mini block mb-1.5">Distributor</label>
@@ -1563,14 +1685,19 @@ const SparkRequestInner: React.FC = () => {
               !venue ||
               !date ||
               !schedulingStatus ||
-              (isTorch && !nonActiveProductRequired)
+              (isTorch && !nonActiveProductRequired) ||
+              (isTorch && !torchActivationOk)
             }
             className="px-6 py-3 rounded-2xl text-sm font-semibold transition"
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
               boxShadow:
-                !venue || !date || !schedulingStatus || (isTorch && !nonActiveProductRequired)
+                !venue ||
+                !date ||
+                !schedulingStatus ||
+                (isTorch && !nonActiveProductRequired) ||
+                (isTorch && !torchActivationOk)
                   ? "none"
                   : "0 0 24px rgba(197,245,70,0.35)",
               opacity:
@@ -1578,7 +1705,8 @@ const SparkRequestInner: React.FC = () => {
                 !venue ||
                 !date ||
                 !schedulingStatus ||
-                (isTorch && !nonActiveProductRequired)
+                (isTorch && !nonActiveProductRequired) ||
+                (isTorch && !torchActivationOk)
                   ? 0.5
                   : 1,
             }}

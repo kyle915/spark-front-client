@@ -13,7 +13,14 @@ import SharedTimeSlotSelect from "@/components/inputs/TimeSlotSelect";
 import type { CreateRequestInput } from "./types/CreateRequestByUrl";
 import GooglePlacesInput, { matchTimezoneOption } from "@/components/inputs/GooglePlacesInput";
 import { buildRequestDateTimes } from "./utils/buildPayload";
-import { isTorchRequestForm } from "./torchRequestForm";
+import {
+  isEventActivationRequestType,
+  isOnPremiseRequestType,
+  isTorchRequestForm,
+  torchActivationFieldsComplete,
+  torchActivationGraphqlFields,
+  torchActivationNoteLines,
+} from "./torchRequestForm";
 
 /**
  * Spark v2 — public Express request form.
@@ -99,6 +106,12 @@ function ExpressFormBody() {
   const [schedulingStatus, setSchedulingStatus] = useState<string>("");
   // Torch-only: "Is Non-Active Product Required?" Yes/No. "" until picked.
   const [nonActiveProductRequired, setNonActiveProductRequired] = useState<string>("");
+  // Torch-only extras gated by the existing Request Type picker.
+  const [accountSpendAmount, setAccountSpendAmount] = useState("");
+  const [eventAssetsNeeded, setEventAssetsNeeded] = useState("");
+  const [loadInTime, setLoadInTime] = useState("");
+  const [onsitePoc, setOnsitePoc] = useState("");
+  const [additionalTeamDetails, setAdditionalTeamDetails] = useState("");
   const [error, setError] = useState<string | null>(null);
   // Modal-popup payload shown on successful submit (per Kyle's spec,
   // external form only). Surfaces the RMM the request was routed to so
@@ -118,6 +131,21 @@ function ExpressFormBody() {
     () => [date, ...extraDates].filter(Boolean),
     [date, extraDates],
   );
+
+  const selectedRequestTypeName = useMemo(
+    () => requestTypes.find((rt) => rt.id === requestTypeId)?.name ?? "",
+    [requestTypes, requestTypeId],
+  );
+  const torchActivationValues = {
+    accountSpendAmount,
+    eventAssetsNeeded,
+    loadInTime,
+    onsitePoc,
+    additionalTeamDetails,
+  };
+  const torchActivationOk =
+    !isTorch ||
+    torchActivationFieldsComplete(selectedRequestTypeName, torchActivationValues);
 
   // Require a FULL address — street, city, state, ZIP — not just a street
   // line. Google Places' formattedAddress always carries a 5-digit ZIP; a
@@ -140,6 +168,7 @@ function ExpressFormBody() {
     !!requestorEmail.trim() &&
     !!schedulingStatus &&
     (!isTorch || !!nonActiveProductRequired) &&
+    torchActivationOk &&
     !submitting;
 
   const submitBlocker =
@@ -151,7 +180,9 @@ function ExpressFormBody() {
           ? "Client"
           : isTorch && !nonActiveProductRequired
             ? "Products"
-            : null;
+            : isTorch && !torchActivationOk
+              ? "Request"
+              : null;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,6 +198,9 @@ function ExpressFormBody() {
       isTorch && nonActiveProductRequired
         ? `Is Non-Active Product Required?: ${nonActiveProductRequired === "yes" ? "Yes" : "No"}`
         : null,
+      ...(isTorch
+        ? torchActivationNoteLines(selectedRequestTypeName, torchActivationValues)
+        : []),
       allDates.length > 1
         ? `Bulk submission — ${allDates.length} visits at this venue.`
         : null,
@@ -245,6 +279,12 @@ function ExpressFormBody() {
         schedulingStatus,
         ...(isTorch
           ? { isNonActiveProductRequired: nonActiveProductRequired === "yes" }
+          : {}),
+        ...(isTorch
+          ? torchActivationGraphqlFields(
+              selectedRequestTypeName,
+              torchActivationValues,
+            )
           : {}),
         products: productIds.map((productId) => ({ productId })),
         details: [{ isTableNeeded: false, tableSize: null }],
@@ -584,6 +624,59 @@ function ExpressFormBody() {
                 ))}
             </select>
           </Field>
+          {isTorch && isOnPremiseRequestType(selectedRequestTypeName) && (
+            <Field label="Account Spend Amount *">
+              <input
+                value={accountSpendAmount}
+                onChange={(e) => setAccountSpendAmount(e.target.value)}
+                className={inputCls}
+                placeholder="$0.00"
+                required
+              />
+            </Field>
+          )}
+          {isTorch && isEventActivationRequestType(selectedRequestTypeName) && (
+            <>
+              <Field label="What assets are needed at this event? *">
+                <textarea
+                  value={eventAssetsNeeded}
+                  onChange={(e) => setEventAssetsNeeded(e.target.value)}
+                  className={inputCls}
+                  rows={3}
+                  placeholder="10x10, Barrel Cooler, etc"
+                  required
+                />
+              </Field>
+              <Field label="What time is Load-In: *">
+                <input
+                  value={loadInTime}
+                  onChange={(e) => setLoadInTime(e.target.value)}
+                  className={inputCls}
+                  placeholder="e.g. 8:00 AM"
+                  required
+                />
+              </Field>
+              <Field label="Who is the onsite POC: *">
+                <input
+                  value={onsitePoc}
+                  onChange={(e) => setOnsitePoc(e.target.value)}
+                  className={inputCls}
+                  placeholder="Name and phone or email"
+                  required
+                />
+              </Field>
+              <Field label="Any additional details for the team to know? *">
+                <textarea
+                  value={additionalTeamDetails}
+                  onChange={(e) => setAdditionalTeamDetails(e.target.value)}
+                  className={inputCls}
+                  rows={3}
+                  placeholder="Anything the team should know"
+                  required
+                />
+              </Field>
+            </>
+          )}
           <Field label="Brand Ambassadors Needed">
             <div className="flex items-center gap-3">
               <button type="button" onClick={() => setBaCount(Math.max(1, baCount - 1))} className="w-10 h-10 rounded-xl text-lg" style={{ background: "var(--spark-surface-2, #161a12)", border: "1px solid var(--spark-border, #1f2418)" }}>−</button>

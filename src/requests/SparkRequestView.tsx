@@ -585,6 +585,14 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                 "isNonActiveProductRequired",
                 request.isNonActiveProductRequired ? "yes" : "no",
               );
+            if (request.accountSpendAmount)
+              params.set("accountSpendAmount", request.accountSpendAmount);
+            if (request.eventAssetsNeeded)
+              params.set("eventAssetsNeeded", request.eventAssetsNeeded);
+            if (request.loadInTime) params.set("loadInTime", request.loadInTime);
+            if (request.onsitePoc) params.set("onsitePoc", request.onsitePoc);
+            if (request.additionalTeamDetails)
+              params.set("additionalTeamDetails", request.additionalTeamDetails);
             if (request.notes) params.set("notes", request.notes);
             const productIds = (request.products ?? [])
               .map((p) => (p ? String(p.id) : ""))
@@ -702,6 +710,27 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           {request.isNonActiveProductRequired != null && (
             <Field label="Is Non-Active Product Required?">
               {request.isNonActiveProductRequired ? "Yes" : "No"}
+            </Field>
+          )}
+          {request.accountSpendAmount && (
+            <Field label="Account Spend Amount">
+              {request.accountSpendAmount}
+            </Field>
+          )}
+          {request.eventAssetsNeeded && (
+            <Field label="What assets are needed at this event?">
+              {request.eventAssetsNeeded}
+            </Field>
+          )}
+          {request.loadInTime && (
+            <Field label="What time is Load-In">{request.loadInTime}</Field>
+          )}
+          {request.onsitePoc && (
+            <Field label="Who is the onsite POC">{request.onsitePoc}</Field>
+          )}
+          {request.additionalTeamDetails && (
+            <Field label="Any additional details for the team to know?">
+              {request.additionalTeamDetails}
             </Field>
           )}
         </div>
