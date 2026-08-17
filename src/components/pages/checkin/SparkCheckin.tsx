@@ -1702,45 +1702,6 @@ function CheckedInFlow({
     );
   };
 
-  // ── Sampling stops ────────────────────────────────────────────────────
-  // A roaming crew's event is the MARKET, so the individual spots need their
-  // own record — and it has to be captured here, in the moment, not recalled
-  // into the recap hours later.
-  const stops = ctx.session?.stops ?? [];
-  const [stopBusy, setStopBusy] = useState(false);
-  const [stopName, setStopName] = useState("");
-
-  const logStop = () => {
-    setMsg(null);
-    setStopBusy(true);
-    const send = (coords: { latitude?: number; longitude?: number }) =>
-      post("sampling-stop", { ...coords, name: stopName })
-        .then(async (res) => {
-          const json = await res.json();
-          if (!res.ok) setMsg(json.message || "Couldn't log that stop.");
-          else setStopName("");
-        })
-        .catch(() => setMsg("Network error. Try again."))
-        .finally(async () => {
-          setStopBusy(false);
-          await onRefresh();
-        });
-    if (!navigator.geolocation) {
-      // No GPS is survivable — a typed name still records where they were.
-      void send({});
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) =>
-        void send({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-        }),
-      () => void send({}),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
-    );
-  };
-
   const pending = ctx.session?.pendingReview;
 
   if (showRecap) {
@@ -1985,66 +1946,6 @@ function CheckedInFlow({
         >
           Wrong store or date? Start over
         </button>
-      ) : null}
-
-      {/* Where they sampled. Only while on the clock — a stop before clock-in
-          or after clock-out isn't work. */}
-      {clockState === "clocked_in" ? (
-        <div style={card}>
-          <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>
-            Where are you sampling?
-          </p>
-          <p style={{ fontSize: 12, opacity: 0.55, margin: "4px 0 10px" }}>
-            Tap this at each spot. We grab the location for you — the name is
-            just so you recognise it later.
-          </p>
-          <input
-            style={input}
-            placeholder="Spot name (optional) — e.g. Whole Foods patio"
-            value={stopName}
-            onChange={(e) => setStopName(e.target.value)}
-          />
-          <button
-            style={{ ...secondaryBtn, width: "100%", margin: "8px 0 0" }}
-            disabled={stopBusy}
-            onClick={logStop}
-          >
-            {stopBusy ? "Logging…" : "📍 Log this stop"}
-          </button>
-
-          {stops.length > 0 ? (
-            <div style={{ marginTop: 12 }}>
-              <p className="mono" style={{ fontSize: 11, opacity: 0.5, margin: "0 0 6px", letterSpacing: "0.1em" }}>
-                {stops.length} STOP{stops.length === 1 ? "" : "S"} TODAY
-              </p>
-              {stops.map((st, i) => (
-                <div
-                  key={st.uuid}
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    fontSize: 13,
-                    padding: "6px 0",
-                    borderTop: i === 0 ? "none" : "1px solid rgba(0,0,0,0.06)",
-                  }}
-                >
-                  <span style={{ opacity: 0.45, minWidth: 18 }}>{i + 1}.</span>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    {st.name || st.address || "Logged stop"}
-                    {st.name && st.address ? (
-                      <span style={{ display: "block", fontSize: 11, opacity: 0.55 }}>
-                        {st.address}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span style={{ opacity: 0.55, whiteSpace: "nowrap" }}>
-                    {fmtTime(st.recordedAt)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </div>
       ) : null}
 
       {/* Mileage — only for gigs with track_mileage on, and only once the BA
