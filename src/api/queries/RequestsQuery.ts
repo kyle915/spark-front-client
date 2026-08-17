@@ -37,6 +37,7 @@ export const RequestsQuery = graphql`
           address
           coordinates
           schedulingStatus
+          isNonActiveProductRequired
           location {
             id
             name

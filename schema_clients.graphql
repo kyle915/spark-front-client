@@ -1906,6 +1906,7 @@ input CreateRequestInput {
   requestorEmail: String = null
   reviewed: Boolean = null
   schedulingStatus: String = null
+  isNonActiveProductRequired: Boolean = null
   storeNumber: String = null
   clientName: String = null
   clientEmail: String = null
@@ -1967,6 +1968,7 @@ input CreateRequestWithDependenciesInput {
   stateId: ID = null
   requestorEmail: String = null
   schedulingStatus: String = null
+  isNonActiveProductRequired: Boolean = null
   storeNumber: String = null
   clientName: String!
   clientEmail: String!
@@ -5461,6 +5463,7 @@ type Request implements Node {
   declineReason: String
   reviewed: Boolean!
   schedulingStatus: String
+  isNonActiveProductRequired: Boolean
   storeNumber: String
   notes: String
   coordinates: [Float!]!

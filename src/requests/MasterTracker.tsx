@@ -157,6 +157,8 @@ type Row = {
   recapCount: number;
   // Two-value metadata: "already_scheduled" | "needs_scheduling" | "".
   schedulingStatus: string;
+  // Torch form: true / false / null when the tenant doesn't collect it.
+  isNonActiveProductRequired: boolean | null;
   // BA staffing on the linked event: assigned = invited + confirmed,
   // confirmed = the subset that accepted. Drives the per-row "BA
   // assigned" chip in the status column.
@@ -579,6 +581,23 @@ const TrackerTable: React.FC<{
                         ✓ SCHEDULED
                       </span>
                     ) : null}
+                    {r.isNonActiveProductRequired === true ? (
+                      <span
+                        className="chip chip-gold chip-sm mt-1"
+                        style={{ display: "inline-flex" }}
+                        title="Is Non-Active Product Required?"
+                      >
+                        NON-ACTIVE REQUIRED
+                      </span>
+                    ) : r.isNonActiveProductRequired === false ? (
+                      <span
+                        className="chip chip-muted chip-sm mt-1"
+                        style={{ display: "inline-flex" }}
+                        title="Is Non-Active Product Required?"
+                      >
+                        NO NON-ACTIVE
+                      </span>
+                    ) : null}
                     {r.openShiftsOpen > 0 ? (
                       <span
                         className="chip chip-gold chip-sm mt-1"
@@ -971,6 +990,8 @@ const MasterTrackerInner: React.FC<{
             recapStatus,
             recapCount,
             schedulingStatus: n.schedulingStatus ?? "",
+            isNonActiveProductRequired:
+              n.isNonActiveProductRequired ?? null,
             assignedBa: n.event?.assignedAmbassadorsCount ?? 0,
             confirmedBa: n.event?.confirmedAmbassadorsCount ?? 0,
           };
@@ -1353,6 +1374,7 @@ export default function MasterTracker() {
       "SKUs",
       "Time",
       "Scheduling",
+      "Non-Active Product",
       "Recap",
       "Recap Count",
       "Event UUID",
@@ -1378,6 +1400,11 @@ export default function MasterTracker() {
           r.schedulingStatus
             ? (SCHEDULING_LABEL[r.schedulingStatus] ?? r.schedulingStatus)
             : "",
+          r.isNonActiveProductRequired == null
+            ? ""
+            : r.isNonActiveProductRequired
+              ? "Yes"
+              : "No",
           r.recapStatus,
           String(r.recapCount),
           r.eventUuid ?? "",
@@ -1422,6 +1449,7 @@ export default function MasterTracker() {
       "SKUs",
       "Time",
       "Scheduling",
+      "Non-Active Product",
       "Recap",
       "Recap Count",
       "Event UUID",
@@ -1444,6 +1472,11 @@ export default function MasterTracker() {
           r.schedulingStatus
             ? (SCHEDULING_LABEL[r.schedulingStatus] ?? r.schedulingStatus)
             : "",
+          r.isNonActiveProductRequired == null
+            ? ""
+            : r.isNonActiveProductRequired
+              ? "Yes"
+              : "No",
           r.recapStatus,
           String(r.recapCount),
           r.eventUuid ?? "",

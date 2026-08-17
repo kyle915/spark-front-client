@@ -44,6 +44,9 @@ export interface CreateRequestInput {
   // SCHEDULING — required choice: "already_scheduled" | "needs_scheduling"
   schedulingStatus?: string | null;
 
+  // Torch form: "Is Non-Active Product Required?" Yes → true, No → false
+  isNonActiveProductRequired?: boolean | null;
+
   // REQUEST TYPE
   requestTypeId: string;
 

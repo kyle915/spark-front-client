@@ -19,6 +19,7 @@ import TimeSlotSelect from "@/components/inputs/TimeSlotSelect";
 // option per region (Pacific/Central/…), so we re-expand the picked
 // region to the right sibling for the visit date at submit time.
 import { resolveTimezoneIdByDate } from "@/utils";
+import { isTorchRequestForm } from "@/public/form/torchRequestForm";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
 import type { RequestMutation } from "@api/mutations/__generated__/RequestMutation.graphql";
 import { CreateDistributorMutation } from "@/api/mutations/CreateDistributorMutation";
@@ -144,7 +145,8 @@ const VenueIndexLoader: React.FC<{
 };
 
 const SparkRequestInner: React.FC = () => {
-  const { user, tenantId } = useAuthStore();
+  const { user, tenantId, tenantMeta } = useAuthStore();
+  const isTorch = isTorchRequestForm(tenantMeta?.requestUrlName);
   const showAlert = useAlertStore((s) => s.showAlert);
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
@@ -323,6 +325,9 @@ const SparkRequestInner: React.FC = () => {
   const [schedulingStatus, setSchedulingStatus] = useState(
     searchParams.get("schedulingStatus") ?? "",
   );
+  const [nonActiveProductRequired, setNonActiveProductRequired] = useState(
+    searchParams.get("isNonActiveProductRequired") ?? "",
+  );
   const [rmmId, setRmmId] = useState("");
   // RMM picker state used to drive the inline ROUTING chip that lived
   // alongside the Address/Time block. That block is gone in Express
@@ -393,6 +398,8 @@ const SparkRequestInner: React.FC = () => {
         setTimezoneId(draft.timezoneId);
       if (typeof draft.schedulingStatus === "string")
         setSchedulingStatus(draft.schedulingStatus);
+      if (typeof draft.nonActiveProductRequired === "string")
+        setNonActiveProductRequired(draft.nonActiveProductRequired);
       if (typeof draft.rmmId === "string") setRmmId(draft.rmmId);
       if (typeof draft.storeNumber === "string")
         setStoreNumber(draft.storeNumber);
@@ -427,6 +434,7 @@ const SparkRequestInner: React.FC = () => {
         requestTypeId,
         timezoneId,
         schedulingStatus,
+        nonActiveProductRequired,
         rmmId,
         distributorId,
         storeNumber,
@@ -461,6 +469,7 @@ const SparkRequestInner: React.FC = () => {
     requestTypeId,
     timezoneId,
     schedulingStatus,
+    nonActiveProductRequired,
     rmmId,
     distributorId,
     storeNumber,
@@ -576,6 +585,10 @@ const SparkRequestInner: React.FC = () => {
       );
       return;
     }
+    if (isTorch && !nonActiveProductRequired) {
+      showAlert("Pick whether non-active product is required — Yes or No.", "warning");
+      return;
+    }
     const allDates = [date, ...extraDates.filter(Boolean)];
     const geocoded = await geocode(address);
     const coords: ReadonlyArray<number> = geocoded ?? [0, 0];
@@ -589,6 +602,9 @@ const SparkRequestInner: React.FC = () => {
         : null,
       notes,
       `BA count: ${baCount}`,
+      isTorch && nonActiveProductRequired
+        ? `Is Non-Active Product Required?: ${nonActiveProductRequired === "yes" ? "Yes" : "No"}`
+        : null,
       allDates.length > 1
         ? `Bulk submission — ${allDates.length} visits at this venue.`
         : null,
@@ -640,6 +656,9 @@ const SparkRequestInner: React.FC = () => {
               timezoneId: resolvedTimezoneId,
               requestTypeId,
               schedulingStatus: schedulingStatus || undefined,
+              isNonActiveProductRequired: isTorch
+                ? nonActiveProductRequired === "yes"
+                : undefined,
               rmmAsignedId: rmmId || undefined,
               tenantId: tenantId ?? undefined,
               clientName: fullName || undefined,
@@ -1014,6 +1033,23 @@ const SparkRequestInner: React.FC = () => {
                 </option>
               </select>
             </div>
+            {isTorch && (
+              <div>
+                <label className="label-mini block mb-1.5">
+                  Is Non-Active Product Required? *
+                </label>
+                <select
+                  style={inputStyle}
+                  value={nonActiveProductRequired}
+                  onChange={(e) => setNonActiveProductRequired(e.target.value)}
+                  required
+                >
+                  <option value="">Select Yes or No</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+            )}
             <div className="relative">
               <label className="label-mini block mb-1.5">Distributor</label>
               {/* Autocomplete: typing filters the dropdown; selecting
@@ -1522,17 +1558,29 @@ const SparkRequestInner: React.FC = () => {
           </button>
           <button
             type="submit"
-            disabled={isCommitting || !venue || !date || !schedulingStatus}
+            disabled={
+              isCommitting ||
+              !venue ||
+              !date ||
+              !schedulingStatus ||
+              (isTorch && !nonActiveProductRequired)
+            }
             className="px-6 py-3 rounded-2xl text-sm font-semibold transition"
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
               boxShadow:
-                !venue || !date || !schedulingStatus
+                !venue || !date || !schedulingStatus || (isTorch && !nonActiveProductRequired)
                   ? "none"
                   : "0 0 24px rgba(197,245,70,0.35)",
               opacity:
-                isCommitting || !venue || !date || !schedulingStatus ? 0.5 : 1,
+                isCommitting ||
+                !venue ||
+                !date ||
+                !schedulingStatus ||
+                (isTorch && !nonActiveProductRequired)
+                  ? 0.5
+                  : 1,
             }}
           >
             {isCommitting

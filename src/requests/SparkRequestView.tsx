@@ -580,6 +580,11 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               params.set("distributorId", String(request.distributor.id));
             if (request.schedulingStatus)
               params.set("schedulingStatus", request.schedulingStatus);
+            if (request.isNonActiveProductRequired != null)
+              params.set(
+                "isNonActiveProductRequired",
+                request.isNonActiveProductRequired ? "yes" : "no",
+              );
             if (request.notes) params.set("notes", request.notes);
             const productIds = (request.products ?? [])
               .map((p) => (p ? String(p.id) : ""))
@@ -692,6 +697,11 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             <Field label="SCHEDULING">
               {SCHEDULING_LABEL[request.schedulingStatus] ??
                 request.schedulingStatus}
+            </Field>
+          )}
+          {request.isNonActiveProductRequired != null && (
+            <Field label="Is Non-Active Product Required?">
+              {request.isNonActiveProductRequired ? "Yes" : "No"}
             </Field>
           )}
         </div>

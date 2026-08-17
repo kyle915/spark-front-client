@@ -15,6 +15,7 @@ export const CreateRequestMutation = graphql`
         address
         coordinates
         schedulingStatus
+        isNonActiveProductRequired
         client {
           id
           uuid
