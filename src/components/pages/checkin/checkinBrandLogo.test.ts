@@ -32,6 +32,19 @@ describe("check-in brand logo matches spark-form", () => {
     expect(walkup).toEqual(form);
   });
 
+  it("Krispy Krunchy Chicken uses the official Wikipedia barn mark", () => {
+    const walkup = tenantLogoCandidates({
+      name: "Krispy Krunchy Chicken",
+      requestUrlName: "krispy-krunchy-chicken",
+    });
+    const form = tenantLogoCandidates({
+      name: "Krispy Krunchy Chicken",
+      tenantSlug: "krispy-krunchy-chicken",
+    });
+    expect(walkup[0]).toContain("Krispy_Krunchy_Chicken_logo.jpg");
+    expect(walkup).toEqual(form);
+  });
+
   it("prefers the tenant image/logoUrl the check-in API now sends", () => {
     const api =
       "https://storage.googleapis.com/sparkio-production/tenants/images/girl-beer.png";

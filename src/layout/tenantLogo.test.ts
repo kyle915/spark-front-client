@@ -43,6 +43,15 @@ describe("officialFallbackSrc", () => {
     ).toContain("TorchLogo");
   });
 
+  it("maps Krispy Krunchy Chicken by name and slug", () => {
+    const byName = officialFallbackSrc({ name: "Krispy Krunchy Chicken" });
+    const bySlug = officialFallbackSrc({
+      tenantSlug: "krispy-krunchy-chicken",
+    });
+    expect(byName).toContain("Krispy_Krunchy_Chicken_logo.jpg");
+    expect(bySlug).toBe(byName);
+  });
+
   it("returns null when we have no official file", () => {
     expect(officialFallbackSrc({ name: "Resort Beverage" })).toBeNull();
   });
@@ -93,6 +102,27 @@ describe("tenantLogoCandidates", () => {
       image: null,
     });
     expect(candidates[0]).toContain("TorchLogo");
+  });
+
+  it("gives Krispy Krunchy Chicken the official barn mark without an API image", () => {
+    const candidates = tenantLogoCandidates({
+      name: "Krispy Krunchy Chicken",
+      tenantSlug: "krispy-krunchy-chicken",
+      image: null,
+    });
+    expect(candidates[0]).toContain("Krispy_Krunchy_Chicken_logo.jpg");
+  });
+
+  it("still prefers a tenant image/logoUrl over the KKC Wikipedia mark", () => {
+    const api =
+      "https://storage.googleapis.com/sparkio-production/tenants/images/kkc.png";
+    expect(
+      tenantLogoCandidates({
+        name: "Krispy Krunchy Chicken",
+        image: api,
+        logoUrl: api,
+      }),
+    ).toEqual([api, "https://upload.wikimedia.org/wikipedia/en/b/b3/Krispy_Krunchy_Chicken_logo.jpg"]);
   });
 });
 
