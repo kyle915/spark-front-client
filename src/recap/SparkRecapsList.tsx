@@ -1,5 +1,6 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
+import { fetchQuery } from "relay-runtime";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapsListSkeleton } from "@/layout/PageSkeletons";
@@ -43,6 +44,10 @@ import {
 } from "@/motion/opsMotion";
 import { SparkBentoTile, SparkStat } from "@/shared/SparkStat";
 import { recapListKpis } from "@/shared/sparkStat";
+import {
+  appendUniqueByUuid,
+  recapsListPageVariables,
+} from "./recapsListPagination";
 import {
   defaultRecapStatus,
   recapEmptyKind,
@@ -238,6 +243,104 @@ const limeBtn: React.CSSProperties = {
   color: "#0a0d09",
   boxShadow: "0 0 24px rgba(197,245,70,0.35)",
 };
+
+type LegacyRecapNode = RecapsQueryType["response"]["recaps"]["edges"][number]["node"];
+type CustomRecapNode =
+  CustomRecapsQueryType["response"]["customRecaps"]["edges"][number]["node"];
+
+const mapLegacyRecap = (n: LegacyRecapNode): Recap => {
+  const retailerName = n.eventRetailer || "—";
+  const stateCode = toStateCode(n.eventState);
+  const hero = n.heroFile?.file
+    ? thumbUrl(recapFileUrl(n.heroFile.file), 400)
+    : null;
+  const fileCount = n.recapFilesCount ?? 0;
+  const requestUuid = n.requestUuid ?? null;
+  const requestType = n.requestTypeName ?? null;
+  const linkedBaName = [
+    n.ambassador?.user?.firstName,
+    n.ambassador?.user?.lastName,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  const baName =
+    linkedBaName ||
+    (n.externalBaName ?? "").trim() ||
+    "";
+  return {
+    kind: "legacy" as const,
+    id: String(n.id),
+    uuid: String(n.uuid),
+    name: n.name ?? n.event?.name ?? "Untitled recap",
+    date: n.eventDate ?? n.event?.date ?? n.createdAt ?? "",
+    retailerName,
+    stateCode,
+    approved: Boolean(n.approved),
+    heroImage: hero,
+    fileCount,
+    engagements: n.totalEngagements ?? null,
+    consumersSampled: null,
+    productsSold: n.productsSold ?? null,
+    cansSold: n.totalCansSold ?? null,
+    packsSold: n.totalPacksSold ?? null,
+    accountSpendAmount: n.accountSpendAmount ?? null,
+    baName,
+    isExternalBa: !linkedBaName && Boolean(n.externalBaName),
+    ambassadorId: n.ambassador?.id ? String(n.ambassador.id) : null,
+    requestUuid: requestUuid ? String(requestUuid) : null,
+    requestShortId: requestUuid
+      ? `R-${String(requestUuid).slice(-4).toUpperCase()}`
+      : null,
+    requestType,
+    shareToken: n.shareToken ?? null,
+    sharedAt: n.sharedAt ?? null,
+  };
+};
+
+const mapCustomRecap = (n: CustomRecapNode): Recap => ({
+  kind: "custom" as const,
+  id: String(n.id),
+  uuid: String(n.uuid),
+  name:
+    n.name ?? n.event?.name ?? n.customRecapTemplate?.name ?? "Custom recap",
+  date: n.eventDate ?? n.event?.date ?? n.createdAt ?? "",
+  retailerName: n.eventRetailer || "—",
+  stateCode: toStateCode(n.eventState) ?? toStateCode(n.eventAddress),
+  approved: Boolean(n.approved),
+  heroImage: n.heroImageUrl ?? null,
+  fileCount: n.customRecapFilesCount ?? 0,
+  engagements: n.totalEngagements ?? n.consumersSampled ?? null,
+  consumersSampled: n.consumersSampled ?? null,
+  productsSold: n.soldUnits ?? null,
+  cansSold: null,
+  packsSold: null,
+  accountSpendAmount: n.accountSpend ?? null,
+  baName:
+    [n.ambassador?.user?.firstName, n.ambassador?.user?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || (n.baDisplayName ?? "").trim(),
+  isExternalBa: !n.ambassador?.id && Boolean((n.baDisplayName ?? "").trim()),
+  ambassadorId: n.ambassador?.id ? String(n.ambassador.id) : null,
+  requestUuid: null,
+  requestShortId: null,
+  requestType: n.customRecapTemplate?.name ?? null,
+  shareToken: n.shareToken ?? null,
+  sharedAt: n.sharedAt ?? null,
+});
+
+const recapsFromConnection = <
+  TEdge extends { node?: TNode | null } | null | undefined,
+  TNode,
+>(
+  edges: ReadonlyArray<TEdge> | null | undefined,
+  mapNode: (node: TNode) => Recap,
+): Recap[] =>
+  edges
+    ?.map((e) => e?.node)
+    ?.filter((n): n is TNode => Boolean(n))
+    ?.map(mapNode) ?? [];
 
 const recapIsEmptyShell = (r: Recap): boolean => {
   const hasPhotos = Boolean(r.heroImage) || (r.fileCount ?? 0) > 0;
@@ -658,28 +761,18 @@ type Meta = {
   // counter so the user can see there are more rows behind "Load more".
   loaded: number;
   // True when EITHER list resolver reports pageInfo.hasNextPage — i.e.
-  // more rows exist on the server than we've fetched. Gates "Load more".
+  // more rows exist on the server than we've fetched. Gates infinite
+  // scroll. A failed page-2 fetch must NOT clear this in a way that
+  // unmounts the rows already on screen.
   hasMore: boolean;
+  loadingMore: boolean;
+  loadMoreError: string | null;
   totalConsumers: number;
   totalProducts: number;
 };
 
 type SortKey = "date-desc" | "date-asc" | "eng-desc" | "sold-desc";
 type StatusKey = "submitted" | "needs_review" | "approved" | "shared" | "all" | "draft";
-
-// Initial number of rows fetched from EACH list resolver (legacy +
-// custom). "Load more" grows this by LOAD_MORE_STEP, re-fetching both
-// queries with a larger `first`. We used to fetch the whole tenant set
-// in one shot (first: 2000) which, for a high-volume tenant like Liquid
-// Death, made the single payload so heavy the page hung on "Loading
-// recaps…". A bounded initial page paints fast; "Load more" pulls the
-// rest on demand.
-const INITIAL_LIMIT = 50;
-
-// How many more rows each "Load more" click requests (added to `first`
-// on BOTH queries). Matches the server page ceiling
-// (RECAPS_LIST_MAX_LIMIT = 50).
-const LOAD_MORE_STEP = 50;
 
 const RecapsListInner: React.FC<{
   search: string;
@@ -699,9 +792,6 @@ const RecapsListInner: React.FC<{
   dateFrom: string;
   dateTo: string;
   sortKey: SortKey;
-  // Server fetch size — the `first` we ask BOTH list resolvers for. Grown
-  // by the parent's "Load more" button (see onMeta.hasMore below).
-  limit: number;
   onMeta: (m: Meta) => void;
   onVisibleRecapsChange?: (recaps: Recap[]) => void;
   // Campaign Report multi-select. The Set lives in the parent so
@@ -717,7 +807,7 @@ const RecapsListInner: React.FC<{
   refreshKey: number;
   density: "cards" | "compact";
   focusedId: string | null;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, limit, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId }) => {
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
@@ -753,211 +843,199 @@ const RecapsListInner: React.FC<{
   // case. Empty string = unbounded on that side → send null.
   const startDate = dateFrom || null;
   const endDate = dateTo || null;
-  // Fetch a BOUNDED page from the legacy `recaps` resolver (first: limit),
-  // grown by the parent's "Load more". We used to fetch the whole tenant
-  // set in one shot which hung the page for high-volume tenants (Liquid
-  // Death). The list still applies search / status / retailer / state
-  // filters CLIENT-SIDE over whatever rows are loaded; date bounds are
-  // additionally pushed to the server (above) so older matches aren't
-  // hidden behind the load window.
+  const listFilters = useMemo(
+    () =>
+      tenantId
+        ? {
+            tenantId,
+            rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
+            ambassadorId: baFilter === "all" ? null : baFilter,
+            approved: approvedFilter,
+            shared: sharedQueryFilter(isClient, pipeline),
+            retailerName,
+            stateCode,
+            startDate,
+            endDate,
+          }
+        : null,
+    [
+      tenantId,
+      rmmFilter,
+      baFilter,
+      approvedFilter,
+      isClient,
+      pipeline,
+      retailerName,
+      stateCode,
+      startDate,
+      endDate,
+    ],
+  );
+  const page1Vars = recapsListPageVariables(null);
+  const environment = useRelayEnvironment();
+
+  // Page 1 only: first:50, after:null. Growing `first` past the API cap
+  // (50) re-fetched the same 50 rows, the sentinel stayed in view, and
+  // Relay aborted the in-flight request → "Failed to fetch". Later pages
+  // use fetchQuery + after:endCursor so this hook never remounts.
   const data = useLazyLoadQuery<RecapsQueryType>(
     RecapsQuery,
     {
-      first: limit,
+      first: page1Vars.first,
+      after: page1Vars.after,
       q: searchQ,
-      filters: tenantId
-        ? {
-            tenantId,
-            rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
-            // Filters by the recap's PRIMARY ambassador (Recap.ambassador_id);
-            // the resolver decodes the Relay global id. "all" → no filter.
-            ambassadorId: baFilter === "all" ? null : baFilter,
-            approved: approvedFilter,
-            shared: sharedQueryFilter(isClient, pipeline),
-            retailerName,
-            stateCode,
-            startDate,
-            endDate,
-          }
-        : null,
+      filters: listFilters,
     },
-    // Always refetch on mount. store-or-network served a STALE cached
-    // connection that omitted recaps created/approved after the cache was
-    // populated — so a recap submitted minutes earlier looked "lost" from
-    // the list (it was always safe in the DB). store-and-network paints the
-    // cache instantly, then refreshes from the server.
     { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
 
-  // Parallel query for tenants on a Custom Recap Template. Fetched with
-  // the SAME bounded `first: limit` as the legacy list and merged on the
-  // client. Both queries grow together when "Load more" bumps `limit`, so
-  // neither flow is starved. Typical tenants have either-or (legacy XOR
-  // custom); a tenant with both just loads `limit` of each per page.
   const customData = useLazyLoadQuery<CustomRecapsQueryType>(
     GetCustomRecapsQuery,
     {
-      first: limit,
+      first: page1Vars.first,
+      after: page1Vars.after,
       q: searchQ,
-      filters: tenantId
-        ? {
-            tenantId,
-            rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
-            ambassadorId: baFilter === "all" ? null : baFilter,
-            approved: approvedFilter,
-            shared: sharedQueryFilter(isClient, pipeline),
-            retailerName,
-            stateCode,
-            startDate,
-            endDate,
-          }
-        : null,
+      filters: listFilters,
     },
-    // Always refetch on mount — same reason as the legacy query above. A
-    // stale cached connection here is what made just-submitted CUSTOM recaps
-    // vanish from the list after approve.
     { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
 
+  const page1Legacy = useMemo(
+    () => recapsFromConnection(data?.recaps?.edges, mapLegacyRecap),
+    [data],
+  );
+  const page1Custom = useMemo(
+    () => recapsFromConnection(customData?.customRecaps?.edges, mapCustomRecap),
+    [customData],
+  );
+
+  const [extraLegacy, setExtraLegacy] = useState<Recap[]>([]);
+  const [extraCustom, setExtraCustom] = useState<Recap[]>([]);
+  const [legacyAfter, setLegacyAfter] = useState<string | null>(null);
+  const [customAfter, setCustomAfter] = useState<string | null>(null);
+  const [legacyHasMore, setLegacyHasMore] = useState(false);
+  const [customHasMore, setCustomHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const loadingMoreRef = useRef(false);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+
+  const firstPageKey = [
+    refreshKey,
+    tenantId ?? "",
+    rmmFilter,
+    baFilter,
+    dateFrom,
+    dateTo,
+    statusFilter,
+    retailerFilter,
+    stateFilter,
+    search,
+  ].join("|");
+
+  useEffect(() => {
+    setExtraLegacy([]);
+    setExtraCustom([]);
+    setLoadMoreError(null);
+    setLoadingMore(false);
+    loadingMoreRef.current = false;
+  }, [firstPageKey]);
+
+  useEffect(() => {
+    if (extraLegacy.length > 0) return;
+    setLegacyAfter(data?.recaps?.pageInfo?.endCursor ?? null);
+    setLegacyHasMore(Boolean(data?.recaps?.pageInfo?.hasNextPage));
+  }, [data, extraLegacy.length]);
+
+  useEffect(() => {
+    if (extraCustom.length > 0) return;
+    setCustomAfter(customData?.customRecaps?.pageInfo?.endCursor ?? null);
+    setCustomHasMore(Boolean(customData?.customRecaps?.pageInfo?.hasNextPage));
+  }, [customData, extraCustom.length]);
+
   const recaps: Recap[] = useMemo(() => {
-    const legacy: Recap[] =
-      data?.recaps?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
-        ?.map((n) => {
-          const retailerName = n.eventRetailer || "—";
-          const stateCode = toStateCode(n.eventState);
-          const hero = n.heroFile?.file
-            ? thumbUrl(recapFileUrl(n.heroFile.file), 400)
-            : null;
-          const fileCount = n.recapFilesCount ?? 0;
-          const requestUuid = n.requestUuid ?? null;
-          const requestType = n.requestTypeName ?? null;
-          const linkedBaName = [
-            n.ambassador?.user?.firstName,
-            n.ambassador?.user?.lastName,
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .trim();
-          const baName =
-            linkedBaName ||
-            (n.externalBaName ?? "").trim() ||
-            "";
-          return {
-            kind: "legacy" as const,
-            id: String(n.id),
-            uuid: String(n.uuid),
-            name: n.name ?? n.event?.name ?? "Untitled recap",
-            date: n.eventDate ?? n.event?.date ?? n.createdAt ?? "",
-            retailerName,
-            stateCode,
-            approved: Boolean(n.approved),
-            heroImage: hero,
-            fileCount,
-            engagements: n.totalEngagements ?? null,
-            consumersSampled: null,
-            productsSold: n.productsSold ?? null,
-            cansSold: n.totalCansSold ?? null,
-            packsSold: n.totalPacksSold ?? null,
-            accountSpendAmount: n.accountSpendAmount ?? null,
-            baName,
-            isExternalBa: !linkedBaName && Boolean(n.externalBaName),
-            ambassadorId: n.ambassador?.id ? String(n.ambassador.id) : null,
-            requestUuid: requestUuid ? String(requestUuid) : null,
-            requestShortId: requestUuid
-              ? `R-${String(requestUuid).slice(-4).toUpperCase()}`
-              : null,
-            requestType,
-            shareToken: n.shareToken ?? null,
-            sharedAt: n.sharedAt ?? null,
-          };
-        }) ?? [];
+    return [...page1Legacy, ...extraLegacy, ...page1Custom, ...extraCustom].sort(
+      (a, b) => {
+        const aT = a.date ? new Date(a.date).getTime() : 0;
+        const bT = b.date ? new Date(b.date).getTime() : 0;
+        return bT - aT;
+      },
+    );
+  }, [page1Legacy, extraLegacy, page1Custom, extraCustom]);
 
-    // Custom recaps go through a different model (CustomRecap, not
-    // Recap) so the available fields differ slightly. We map to the
-    // same Recap shape so the rest of the page (filters, CSV export,
-    // card rendering) doesn't need to branch. Fields that don't
-    // exist on CustomRecap are set to safe defaults:
-    //   - heroImage: pulled from customRecapFiles, first image-typed
-    //     URL we find; null if none
-    //   - fileCount: customRecapFiles.length
-    //   - productsSold: null (CustomRecap doesn't carry a totalised
-    //     products-sold scalar; the per-product breakdown lives in
-    //     customRecapSalePerformance which is too detailed for the
-    //     list card)
-    //   - requestUuid/requestShortId: null because CustomRecap
-    //     doesn't link to a Request row (it's tied to a JobAssignment
-    //     instead; opening the recap shows the BA + event)
-    // SOLD (cans+packs), ENG (consumers-sampled fallback), the hero image,
-    // and the file count are now computed SERVER-SIDE (CustomRecap.soldUnits /
-    // consumersSampled / heroImageUrl / customRecapFilesCount) so the list
-    // query no longer pulls every field value + file per recap — that full
-    // payload across thousands of rows is what made the list slow. The server
-    // helpers replicate the old client derivations byte-for-byte.
-    const custom: Recap[] =
-      customData?.customRecaps?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
-        ?.map((n) => {
-          return {
-            kind: "custom" as const,
-            id: String(n.id),
-            uuid: String(n.uuid),
-            name:
-              n.name ?? n.event?.name ?? n.customRecapTemplate?.name ?? "Custom recap",
-            date: n.eventDate ?? n.event?.date ?? n.createdAt ?? "",
-            retailerName: n.eventRetailer || "—",
-            stateCode:
-              toStateCode(n.eventState) ?? toStateCode(n.eventAddress),
-            approved: Boolean(n.approved),
-            heroImage: n.heroImageUrl ?? null,
-            fileCount: n.customRecapFilesCount ?? 0,
-            engagements: n.totalEngagements ?? n.consumersSampled ?? null,
-            // Conversion base: the consumers-SAMPLED count (278), distinct from
-            // total_engagements (286). soldUnits ÷ this is the real conversion.
-            consumersSampled: n.consumersSampled ?? null,
-            productsSold: n.soldUnits ?? null,
-            // CustomRecap doesn't carry these scalar fields; leave
-            // blank in the row so the export shows empty cells rather
-            // than fake zeroes. Future work could pull from custom
-            // fields when templates name them clearly.
-            cansSold: null,
-            packsSold: null,
-            // Account / corporate-card spend now comes from a server scalar
-            // (sum of the recap's spend field), not a hard-coded null — so
-            // the export's "Account Spend" column populates for custom
-            // recaps that log it. Null (blank cell) when none.
-            accountSpendAmount: n.accountSpend ?? null,
-            // Prefer the LINKED Spark ambassador's name; fall back to the
-            // server's baDisplayName (typed external BA name, else a
-            // BA-naming custom field) so external / imported recaps aren't
-            // blank in the export. Mirrors the legacy external fallback.
-            baName:
-              [n.ambassador?.user?.firstName, n.ambassador?.user?.lastName]
-                .filter(Boolean)
-                .join(" ")
-                .trim() || (n.baDisplayName ?? "").trim(),
-            isExternalBa:
-              !n.ambassador?.id && Boolean((n.baDisplayName ?? "").trim()),
-            ambassadorId: n.ambassador?.id ? String(n.ambassador.id) : null,
-            requestUuid: null,
-            requestShortId: null,
-            requestType: n.customRecapTemplate?.name ?? null,
-            shareToken: n.shareToken ?? null,
-            sharedAt: n.sharedAt ?? null,
-          };
-        }) ?? [];
-
-    // Newest first. Mixed sort means custom and legacy recaps from
-    // the same day land next to each other on the page instead of
-    // siloed into two clumps.
-    return [...legacy, ...custom].sort((a, b) => {
-      const aT = a.date ? new Date(a.date).getTime() : 0;
-      const bT = b.date ? new Date(b.date).getTime() : 0;
-      return bT - aT;
-    });
-  }, [data, customData]);
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current) return;
+    if (!legacyHasMore && !customHasMore) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    setLoadMoreError(null);
+    const next = recapsListPageVariables;
+    try {
+      const [legacyPage, customPage] = await Promise.all([
+        legacyHasMore
+          ? fetchQuery<RecapsQueryType>(environment, RecapsQuery, {
+              ...next(legacyAfter),
+              q: searchQ,
+              filters: listFilters,
+            }, { fetchPolicy: "network-only" }).toPromise()
+          : Promise.resolve(null),
+        customHasMore
+          ? fetchQuery<CustomRecapsQueryType>(
+              environment,
+              GetCustomRecapsQuery,
+              {
+                ...next(customAfter),
+                q: searchQ,
+                filters: listFilters,
+              },
+              { fetchPolicy: "network-only" },
+            ).toPromise()
+          : Promise.resolve(null),
+      ]);
+      if (legacyPage?.recaps) {
+        setExtraLegacy((prev) =>
+          appendUniqueByUuid(
+            prev,
+            recapsFromConnection(legacyPage.recaps.edges, mapLegacyRecap),
+          ),
+        );
+        setLegacyAfter(legacyPage.recaps.pageInfo.endCursor ?? null);
+        setLegacyHasMore(Boolean(legacyPage.recaps.pageInfo.hasNextPage));
+      }
+      if (customPage?.customRecaps) {
+        setExtraCustom((prev) =>
+          appendUniqueByUuid(
+            prev,
+            recapsFromConnection(
+              customPage.customRecaps.edges,
+              mapCustomRecap,
+            ),
+          ),
+        );
+        setCustomAfter(customPage.customRecaps.pageInfo.endCursor ?? null);
+        setCustomHasMore(
+          Boolean(customPage.customRecaps.pageInfo.hasNextPage),
+        );
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : "Failed to fetch";
+      setLoadMoreError(message);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [
+    environment,
+    legacyHasMore,
+    customHasMore,
+    legacyAfter,
+    customAfter,
+    searchQ,
+    listFilters,
+  ]);
 
   const retailers = useMemo(
     () =>
@@ -1036,33 +1114,36 @@ const RecapsListInner: React.FC<{
   // renders.
   const displayed = filtered;
 
-  // Whether either resolver has more rows on the server than we've
-  // fetched. Drives the parent's "Load more" gate.
-  const hasMore = Boolean(
-    data?.recaps?.pageInfo?.hasNextPage ||
-      customData?.customRecaps?.pageInfo?.hasNextPage,
-  );
+  const hasMore = legacyHasMore || customHasMore;
 
-  // Publish counts up to the page chrome. `total` is the combined
-  // server-side total (both flows). `loaded` is how many rows we've
-  // pulled; `hasMore` gates "Load more"; `filteredTotal` is how many of
-  // the loaded rows match the active client-side filters.
+  useEffect(() => {
+    if (!hasMore || loadingMore || loadMoreError) return;
+    const el = loadMoreSentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) void loadMore();
+      },
+      { rootMargin: "240px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, loadingMore, loadMoreError, loadMore, recaps.length]);
+
   useEffect(() => {
     const totalConsumers = recaps.reduce((s, r) => s + (r.engagements ?? 0), 0);
     const totalProducts = recaps.reduce((s, r) => s + (r.productsSold ?? 0), 0);
     onMeta({
       retailers,
       states,
-      // Tenant's full total spans BOTH flows. Summing the two server
-      // totalCounts so a custom-only tenant (legacy totalCount = 0) no
-      // longer shows "0 PUBLISHED". Honours server-side date bounds when
-      // a range is active.
       total:
         (data?.recaps?.totalCount ?? 0) +
         (customData?.customRecaps?.totalCount ?? 0),
       filteredTotal: filtered.length,
       loaded: recaps.length,
       hasMore,
+      loadingMore,
+      loadMoreError,
       totalConsumers,
       totalProducts,
     });
@@ -1074,6 +1155,8 @@ const RecapsListInner: React.FC<{
     recaps,
     filtered.length,
     hasMore,
+    loadingMore,
+    loadMoreError,
     onMeta,
   ]);
 
@@ -1084,9 +1167,51 @@ const RecapsListInner: React.FC<{
     if (onVisibleRecapsChange) onVisibleRecapsChange(displayed);
   }, [displayed, onVisibleRecapsChange]);
 
+  const listFooter = (
+    <div className="flex flex-col items-center gap-2 py-4">
+      {hasMore && !loadMoreError ? (
+        <div ref={loadMoreSentinelRef} className="h-8 w-full" />
+      ) : null}
+      {loadingMore ? (
+        <p
+          className="mono text-[10px]"
+          style={{
+            letterSpacing: "0.16em",
+            color: "rgba(255,255,255,0.45)",
+          }}
+        >
+          Loading more recaps…
+        </p>
+      ) : null}
+      {loadMoreError ? (
+        <div className="spark-card p-4 text-center max-w-md">
+          <p className="text-sm" style={{ color: "var(--spark-text)" }}>
+            Couldn’t load more recaps. The {recaps.length} already on
+            screen are still here.
+          </p>
+          <p
+            className="mono text-[11px] mt-2 break-words"
+            style={{ color: "rgba(255,255,255,0.4)" }}
+          >
+            {loadMoreError.slice(0, 300)}
+          </p>
+          <button
+            type="button"
+            onClick={() => void loadMore()}
+            className="mt-3 px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+          >
+            Try again
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+
   if (filtered.length === 0) {
     const emptyKind = recapEmptyKind({ isClient, queueEmpty, filterChips });
     return (
+      <>
       <div
         className="spark-card p-8 text-center text-sm"
         style={{ color: "rgba(255,255,255,0.55)" }}
@@ -1153,11 +1278,14 @@ const RecapsListInner: React.FC<{
           </div>
         )}
       </div>
+      {listFooter}
+      </>
     );
   }
 
   if (density === "compact") {
     return (
+      <>
       <div>
         <p className="spark-inset-label">Recaps</p>
         <div className="spark-inset-group">
@@ -1175,10 +1303,13 @@ const RecapsListInner: React.FC<{
           ))}
         </div>
       </div>
+      {listFooter}
+      </>
     );
   }
 
   return (
+    <>
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {displayed.map((r) => (
         <RecapCard
@@ -1198,6 +1329,8 @@ const RecapsListInner: React.FC<{
         />
       ))}
     </div>
+    {listFooter}
+    </>
   );
 };
 
@@ -1345,16 +1478,6 @@ export default function SparkRecapsList() {
   }, [searchParams, isClient]);
   const [opsOpen, setOpsOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
-  // Server fetch size — how many rows we ask EACH list resolver for.
-  // "Load more" bumps it by LOAD_MORE_STEP, re-fetching both queries with
-  // a larger `first`. Reset to INITIAL_LIMIT when the server-side filters
-  // change (tenant scope, RMM, and the date bounds we push to the server)
-  // so a freshly-scoped query starts from a small, fast page again.
-  const [limit, setLimit] = useState(INITIAL_LIMIT);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    setLimit(INITIAL_LIMIT);
-  }, [rmmFilter, baFilter, dateFrom, dateTo, statusFilter, retailerFilter, stateFilter, search]);
   const [meta, setMeta] = useState<Meta>({
     retailers: [],
     states: [],
@@ -1362,24 +1485,11 @@ export default function SparkRecapsList() {
     filteredTotal: 0,
     loaded: 0,
     hasMore: false,
+    loadingMore: false,
+    loadMoreError: null,
     totalConsumers: 0,
     totalProducts: 0,
   });
-  useEffect(() => {
-    if (!meta.hasMore) return;
-    const el = loadMoreRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setLimit((l) => l + LOAD_MORE_STEP);
-        }
-      },
-      { rootMargin: "240px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [meta.hasMore, limit]);
 
   const onMeta = useMemo(() => (next: Meta) => setMeta(next), []);
 
@@ -2360,7 +2470,6 @@ export default function SparkRecapsList() {
             dateFrom={dateFrom}
             dateTo={dateTo}
             sortKey={sortKey}
-            limit={limit}
             onMeta={onMeta}
             onVisibleRecapsChange={setVisibleRecaps}
             selectedIds={selectedIds}
@@ -2377,14 +2486,8 @@ export default function SparkRecapsList() {
           />
         </Suspense>
 
-        {/* Infinite scroll for Needs review (and the rest of the list).
-            A sentinel at the bottom grows `limit` instead of a "Load 50
-            more" button — LD weekends were paging through a weekend of
-            recaps one click at a time. The counter still shows how many
-            rows are loaded vs the combined server total. */}
-        {(meta.hasMore || (meta.total > 0 && meta.loaded > 0)) && (
-          <div className="flex flex-col items-center gap-2 py-4">
-            {meta.hasMore && <div ref={loadMoreRef} className="h-8 w-full" />}
+        {meta.total > 0 && meta.loaded > 0 && (
+          <div className="flex flex-col items-center gap-2 py-2">
             <p
               className="mono text-[10px]"
               style={{
@@ -2396,6 +2499,7 @@ export default function SparkRecapsList() {
               {meta.filteredTotal !== meta.loaded
                 ? ` · ${meta.filteredTotal} match filters`
                 : ""}
+              {meta.loadingMore ? " · loading more" : ""}
             </p>
           </div>
         )}
