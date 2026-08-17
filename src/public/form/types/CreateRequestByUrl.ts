@@ -47,6 +47,13 @@ export interface CreateRequestInput {
   // Torch form: "Is Non-Active Product Required?" Yes → true, No → false
   isNonActiveProductRequired?: boolean | null;
 
+  // Torch On-Premise / Event Activation extras (slug keee-torch-thc only)
+  accountSpendAmount?: string | null;
+  eventAssetsNeeded?: string | null;
+  loadInTime?: string | null;
+  onsitePoc?: string | null;
+  additionalTeamDetails?: string | null;
+
   // REQUEST TYPE
   requestTypeId: string;
 
