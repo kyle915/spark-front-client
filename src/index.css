@@ -970,6 +970,43 @@ body { background: var(--spark-bg); }
   font-size: 0.8rem;
   letter-spacing: 0.04em;
 }
+.recap-choice-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  letter-spacing: 0;
+  line-height: 1.25;
+  text-transform: none;
+  color: #14160f;
+  background: #ffffff;
+  border: 1px solid #e2e4d8;
+  box-shadow: inset 3px 0 0 #3f5c12;
+}
+.recap-doc .chip {
+  font-family: inherit;
+  letter-spacing: 0.06em;
+  color: #14160f;
+  background: #ffffff;
+  border-color: #e2e4d8;
+}
+.recap-doc .chip-lime {
+  color: #3f5c12;
+  background: rgba(63, 92, 18, 0.08);
+  border-color: rgba(63, 92, 18, 0.28);
+}
+.recap-doc .chip-orange {
+  color: #9b2c14;
+  background: rgba(239, 90, 42, 0.08);
+  border-color: rgba(155, 44, 20, 0.35);
+}
+.recap-doc .chip-muted {
+  color: #5c6154;
+  background: rgba(20, 22, 15, 0.04);
+  border-color: #e2e4d8;
+}
 .recap-doc .spark-card,
 .recap-doc .kpi {
   background: #ffffff;

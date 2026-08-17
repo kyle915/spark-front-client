@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatRecapFieldLabel } from "./recapFieldLabel";
+import {
+  formatRecapFieldLabel,
+  formatRecapProductName,
+  recapLabelsMatch,
+} from "./recapFieldLabel";
 
 describe("formatRecapFieldLabel", () => {
   it("sentence-cases shouting Liquid Death questions", () => {
@@ -35,5 +39,34 @@ describe("formatRecapFieldLabel", () => {
     expect(formatRecapFieldLabel("First-time consumers")).toBe(
       "First-time consumers",
     );
+  });
+});
+
+describe("formatRecapProductName", () => {
+  it("turns shouting catalog SKUs into readable flavor identity", () => {
+    expect(formatRecapProductName("SPARKLING WATER - STRAWBERRY TERROR")).toBe(
+      "Sparkling water · Strawberry Terror",
+    );
+    expect(formatRecapProductName("SPARKLING WATER - SEVERED LIME")).toBe(
+      "Sparkling water · Severed Lime",
+    );
+    expect(formatRecapProductName("SPARKLING WATER - DOCTOR DEATH")).toBe(
+      "Sparkling water · Doctor Death",
+    );
+  });
+
+  it("title-cases a shouting name with no flavor split", () => {
+    expect(formatRecapProductName("LIQUID DEATH")).toBe("Liquid Death");
+  });
+
+  it("leaves an already-readable name alone", () => {
+    expect(formatRecapProductName("Strawberry Terror")).toBe("Strawberry Terror");
+  });
+});
+
+describe("recapLabelsMatch", () => {
+  it("treats shouting and sentence-case as the same header", () => {
+    expect(recapLabelsMatch("PRODUCTS SAMPLED", "Products Sampled")).toBe(true);
+    expect(recapLabelsMatch("Summary", "Consumer engagement")).toBe(false);
   });
 });

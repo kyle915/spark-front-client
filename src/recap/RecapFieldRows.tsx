@@ -1,5 +1,9 @@
 import type { ReactNode } from "react";
-import { formatRecapFieldLabel } from "./recapFieldLabel";
+import {
+  formatRecapFieldLabel,
+  formatRecapProductName,
+  recapLabelsMatch,
+} from "./recapFieldLabel";
 
 const rowBorder = "1px solid var(--recap-border, var(--spark-border, #e2e4d8))";
 const labelInk = "var(--recap-muted, #5c6154)";
@@ -53,6 +57,11 @@ export function RecapFieldBlockLabel({ label }: { label: string }) {
   );
 }
 
+/** Product / SKU chip — dark type on white, lime as a hairline accent only. */
+export function RecapChoiceChip({ label }: { label: string }) {
+  return <span className="recap-choice-chip">{formatRecapProductName(label)}</span>;
+}
+
 export type RecapShareField = {
   name: string;
   value?: string | null;
@@ -84,26 +93,49 @@ export function RecapShareFieldSections({
         return (
           <div key={section.name} className="spark-card p-6">
             <p
-              className="mono text-[10px] mb-4"
-              style={{
-                letterSpacing: "0.18em",
-                color: "var(--recap-heading, var(--recap-brand, #3f5c12))",
-              }}
+              className="text-sm font-semibold mb-4"
+              style={{ color: "var(--recap-heading, #3f5c12)" }}
             >
-              {section.name.toUpperCase()}
+              {formatRecapFieldLabel(section.name)}
             </p>
             {rows.length > 0 && (
               <RecapFieldStack>
-                {rows.map((f) => (
-                  <RecapFieldRow key={f.name} label={f.name}>
-                    {f.value || "—"}
-                  </RecapFieldRow>
-                ))}
+                {rows.map((f) => {
+                  const choices = parseChoiceValue(f.value);
+                  const hideLabel = recapLabelsMatch(f.name, section.name);
+                  if (choices) {
+                    return (
+                      <div
+                        key={f.name}
+                        className="flex flex-wrap gap-2 px-4 py-3"
+                      >
+                        {!hideLabel && (
+                          <span
+                            className="w-full text-sm"
+                            style={{ color: labelInk }}
+                          >
+                            {formatRecapFieldLabel(f.name)}
+                          </span>
+                        )}
+                        {choices.map((choice) => (
+                          <RecapChoiceChip key={choice} label={choice} />
+                        ))}
+                      </div>
+                    );
+                  }
+                  return (
+                    <RecapFieldRow key={f.name} label={f.name}>
+                      {formatRecapProductName(f.value || "—")}
+                    </RecapFieldRow>
+                  );
+                })}
               </RecapFieldStack>
             )}
             {notes.map((f) => (
               <div key={f.name} className={rows.length > 0 ? "mt-4" : undefined}>
-                <RecapFieldBlockLabel label={f.name} />
+                {!recapLabelsMatch(f.name, section.name) && (
+                  <RecapFieldBlockLabel label={f.name} />
+                )}
                 <p
                   className="text-sm leading-relaxed whitespace-pre-wrap"
                   style={{ color: "var(--recap-text, #14160f)" }}
@@ -114,7 +146,9 @@ export function RecapShareFieldSections({
             ))}
             {images.map((f) => (
               <div key={f.name} className="mt-4">
-                <RecapFieldBlockLabel label={f.name} />
+                {!recapLabelsMatch(f.name, section.name) && (
+                  <RecapFieldBlockLabel label={f.name} />
+                )}
                 <img
                   src={f.imageUrl ?? ""}
                   alt={formatRecapFieldLabel(f.name)}
@@ -127,4 +161,17 @@ export function RecapShareFieldSections({
       })}
     </>
   );
+}
+
+function parseChoiceValue(value: string | null | undefined): string[] | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed) && parsed.every((v) => typeof v === "string")) {
+      return parsed.map((v) => String(v));
+    }
+  } catch {
+    /* not a choice list */
+  }
+  return null;
 }
