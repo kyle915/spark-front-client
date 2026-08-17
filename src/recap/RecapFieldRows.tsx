@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { formatRecapFieldLabel } from "./recapFieldLabel";
 
-const rowBorder = "1px solid var(--spark-border, #1f2418)";
-const labelInk = "rgba(242, 243, 238, 0.82)";
+const rowBorder = "1px solid var(--recap-border, var(--spark-border, #e2e4d8))";
+const labelInk = "var(--recap-muted, #5c6154)";
 
 /** Grouped inset stack — Apple-settings rows on dark recap chrome. */
 export function RecapFieldStack({ children }: { children: ReactNode }) {
@@ -11,7 +11,7 @@ export function RecapFieldStack({ children }: { children: ReactNode }) {
       className="rounded-xl overflow-hidden divide-y"
       style={{
         border: rowBorder,
-        background: "rgba(255,255,255,0.03)",
+        background: "rgba(20, 22, 15, 0.03)",
         borderColor: "var(--spark-border, #1f2418)",
       }}
     >
@@ -37,7 +37,7 @@ export function RecapFieldRow({
       </span>
       <div
         className="shrink-0 text-right tabular-nums font-semibold text-base leading-snug"
-        style={{ color: "var(--spark-text, #f2f3ee)" }}
+        style={{ color: "var(--recap-text, #14160f)" }}
       >
         {children}
       </div>
@@ -87,7 +87,7 @@ export function RecapShareFieldSections({
               className="mono text-[10px] mb-4"
               style={{
                 letterSpacing: "0.18em",
-                color: "var(--recap-brand, var(--spark-lime, #c5f546))",
+                color: "var(--recap-heading, var(--recap-brand, #3f5c12))",
               }}
             >
               {section.name.toUpperCase()}
@@ -106,7 +106,7 @@ export function RecapShareFieldSections({
                 <RecapFieldBlockLabel label={f.name} />
                 <p
                   className="text-sm leading-relaxed whitespace-pre-wrap"
-                  style={{ color: "rgba(242,243,238,0.88)" }}
+                  style={{ color: "var(--recap-text, #14160f)" }}
                 >
                   {f.value}
                 </p>

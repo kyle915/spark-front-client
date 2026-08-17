@@ -1,13 +1,16 @@
 /**
  * Real Spark product mark — same PNG the sidebar and login use.
- * Source file is black on transparent; invert it for dark recap chrome.
+ * Source file is black on transparent. Recaps are white, so do not invert.
+ * Pass `onDark` only for dark chrome (login).
  */
 export function SparkMark({
   height = 22,
   className,
+  onDark = false,
 }: {
   height?: number;
   className?: string;
+  onDark?: boolean;
 }) {
   return (
     <img
@@ -18,7 +21,7 @@ export function SparkMark({
         height,
         width: "auto",
         display: "block",
-        filter: "invert(1) hue-rotate(180deg)",
+        filter: onDark ? "invert(1) hue-rotate(180deg)" : undefined,
       }}
     />
   );

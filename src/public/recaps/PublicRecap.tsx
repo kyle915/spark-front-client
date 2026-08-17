@@ -5,7 +5,7 @@ import {
   type SignoffStatus,
 } from "@/recap/RecapClientSignoff";
 import { TenantBrandedRecap, recapBrandBtn } from "@/recap/TenantBrandedRecap";
-import { SparkMark } from "@/recap/SparkMark";
+import { RecapDocument } from "@/recap/RecapDocument";
 import { RecapShareFieldSections } from "@/recap/RecapFieldRows";
 import PublicDeadLink from "@/public/PublicDeadLink";
 import { thumbUrl } from "@/utils/thumb";
@@ -223,53 +223,32 @@ const PublicRecap: React.FC = () => {
       primary={brand?.primary}
       className="min-h-[100dvh]"
     >
-      <div
-        className="min-h-[100dvh]"
-        style={{
-          background: "var(--recap-bg, #0a0d09)",
-          color: "var(--recap-text, #f2f3ee)",
-        }}
+      <RecapDocument
+        page
+        status={recap ? (recap.approved ? "APPROVED" : "DRAFT") : null}
+        actions={actions}
       >
-        <header
-          className="sticky top-0 z-20 px-6 py-4 flex items-center justify-between gap-3 flex-wrap"
-          style={{
-            background: "color-mix(in srgb, var(--recap-bg, #0a0d09) 85%, transparent)",
-            borderBottom: "1px solid var(--spark-border, #1f2418)",
-            backdropFilter: "blur(12px)",
-          }}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <SparkMark height={22} />
-            {brandName && brandName !== "Spark" && (
-              <p
-                className="display truncate"
-                style={{
-                  fontWeight: 700,
-                  fontSize: 16,
-                  letterSpacing: "-0.02em",
-                  margin: 0,
-                }}
-              >
-                {brandName}{" "}
-                <span style={{ color: "var(--recap-brand, #c5f546)" }}>
-                  recap
-                </span>
-              </p>
-            )}
-          </div>
-          {actions}
-        </header>
-        <main className="max-w-5xl mx-auto px-5 py-8 sm:py-10">{children}</main>
-        <footer className="max-w-5xl mx-auto px-5 pb-10">
-          <SparkMark height={20} />
-        </footer>
-      </div>
+        {brandName && brandName !== "Spark" && (
+          <p
+            className="display truncate px-5 pt-2"
+            style={{
+              fontWeight: 700,
+              fontSize: 16,
+              letterSpacing: "-0.02em",
+              margin: 0,
+            }}
+          >
+            {brandName} recap
+          </p>
+        )}
+        <main className="recap-doc-body">{children}</main>
+      </RecapDocument>
     </TenantBrandedRecap>
   );
 
   if (loading) {
     return shell(
-      <div className="spark-card p-10 text-center text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+      <div className="spark-card p-10 text-center text-sm" style={{ color: "var(--recap-muted, #5c6154)" }}>
         Loading recap…
       </div>,
     );
@@ -302,7 +281,7 @@ const PublicRecap: React.FC = () => {
             <h1 className="display text-3xl font-bold" style={{ letterSpacing: "-0.03em" }}>
               {recap.name}
             </h1>
-            <p className="mt-1" style={{ color: "rgba(255,255,255,0.65)" }}>
+            <p className="mt-1 recap-doc-kicker">
               {place || recap.address || "—"}
               {" · "}
               {fmtDate(recap.date)}
@@ -310,7 +289,7 @@ const PublicRecap: React.FC = () => {
             {recap.ambassadorName && (
               <p
                 className="mono text-[10px] mt-2"
-                style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+                style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
               >
                 {recap.ambassadorName.toUpperCase()}
               </p>
@@ -321,7 +300,7 @@ const PublicRecap: React.FC = () => {
 
       {recap.photos.length > 0 && (
         <div className="spark-card p-6">
-          <p className="mono text-[10px] mb-4" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}>
+          <p className="mono text-[10px] mb-4" style={{ letterSpacing: "0.18em", color: "var(--recap-heading, #3f5c12)" }}>
             PHOTOS · {recap.photos.length}
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -336,7 +315,7 @@ const PublicRecap: React.FC = () => {
               >
                 <img src={thumbUrl(p.url, 400) || p.url} alt={p.name ?? "Recap photo"} className="w-full h-40 object-cover" />
                 {p.category && (
-                  <p className="mono text-[9px] px-2 py-1.5" style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.45)" }}>
+                  <p className="mono text-[9px] px-2 py-1.5" style={{ letterSpacing: "0.12em", color: "var(--recap-muted, #5c6154)" }}>
                     {p.category.toUpperCase()}
                   </p>
                 )}
@@ -399,8 +378,8 @@ const PublicRecap: React.FC = () => {
         className="px-4 py-2 rounded-xl text-sm font-semibold"
         style={{
           background: "transparent",
-          border: "1px solid var(--spark-border, #1f2418)",
-          color: "var(--recap-text, #f2f3ee)",
+          border: "1px solid var(--recap-border, #e2e4d8)",
+          color: "var(--recap-text, #14160f)",
         }}
       >
         {copied ? "Copied" : "Share"}

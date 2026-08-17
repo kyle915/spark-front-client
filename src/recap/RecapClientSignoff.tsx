@@ -48,12 +48,12 @@ export function RecapClientSignoff({
           </p>
         ) : null}
         {existingComment ? (
-          <p className="mt-1 text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+          <p className="mt-1 text-sm" style={{ color: "var(--recap-muted, #5c6154)" }}>
             “{existingComment}”
           </p>
         ) : null}
         {existingAt ? (
-          <p className="mono text-[10px] mt-2" style={{ color: "rgba(255,255,255,0.4)" }}>
+          <p className="mono text-[10px] mt-2" style={{ color: "var(--recap-faint, #7a7f70)" }}>
             {new Date(existingAt).toLocaleString()}
           </p>
         ) : null}
@@ -69,7 +69,7 @@ export function RecapClientSignoff({
       >
         YOUR SIGN-OFF
       </p>
-      <p className="mt-2 text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+      <p className="mt-2 text-sm" style={{ color: "var(--recap-muted, #5c6154)" }}>
         Does this look right?
       </p>
       <textarea

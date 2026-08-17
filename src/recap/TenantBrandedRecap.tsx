@@ -24,15 +24,16 @@ export function TenantBrandedRecap({
   const style: CSSProperties = {
     ...(cssVariables ?? {}),
     ["--recap-brand" as string]:
-      primary || cssVariables?.["--color-primary"] || "var(--spark-lime, #c5f546)",
+      primary || cssVariables?.["--color-primary"] || "#3f5c12",
     ["--recap-brand-ink" as string]:
-      cssVariables?.["--color-primary-content"] || "#0a0d09",
-    ["--recap-bg" as string]:
-      cssVariables?.["--color-base-200"] || "var(--spark-bg, #0a0d09)",
-    ["--recap-surface" as string]:
-      cssVariables?.["--color-base-100"] || "var(--spark-card, #11140e)",
-    ["--recap-text" as string]:
-      cssVariables?.["--color-base-content"] || "var(--spark-text, #f2f3ee)",
+      cssVariables?.["--color-primary-content"] || "#f6f6f2",
+    ["--recap-heading" as string]: "#3f5c12",
+    ["--recap-bg" as string]: "#f6f6f2",
+    ["--recap-surface" as string]: "#ffffff",
+    ["--recap-text" as string]: "#14160f",
+    ["--recap-muted" as string]: "#5c6154",
+    ["--recap-faint" as string]: "#7a7f70",
+    ["--recap-border" as string]: "#e2e4d8",
   };
   return (
     <div className={className} style={style} data-recap-brand="tenant">
@@ -45,7 +46,7 @@ export function ClientTenantRecapBrand({ children }: { children: ReactNode }) {
   const tenantId = useAuthStore((s) => s.tenantId);
   const data = useLazyLoadQuery<TenantThemeQueryType>(
     TenantThemeQuery,
-    { tenantId: tenantId ?? "", scheme: "DARK" },
+    { tenantId: tenantId ?? "", scheme: "LIGHT" },
     { fetchPolicy: "store-or-network" },
   );
   const vars = (data.tenantTheme?.cssVariables ?? null) as CssVariablesMap | null;
