@@ -44,6 +44,7 @@ import ReassignRecapModal from "./ReassignRecapModal";
 import { thumbUrl } from "@/utils/thumb";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
 import { RecapDocument } from "@/recap/RecapDocument";
+import { formatRecapProductName } from "@/recap/recapFieldLabel";
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
 import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
 
@@ -194,7 +195,7 @@ const ProductSampleEditor: React.FC<{
         className="mono text-[10px] block mb-2"
         style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
       >
-        PRODUCTS SAMPLED
+        Products sampled
       </label>
       <div className="space-y-2">
         {rows.length === 0 && (
@@ -1147,27 +1148,24 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         (recap.productSamples ?? []).filter(Boolean).length > 0 && (
           <div className="spark-card p-6">
             <p
-              className="mono text-[10px]"
-              style={{ letterSpacing: "0.18em", color: "var(--recap-muted, #5c6154)" }}
+              className="text-sm font-semibold"
+              style={{ color: "var(--recap-heading, #3f5c12)" }}
             >
-              PRODUCTS SAMPLED
+              Products sampled
             </p>
-            <div className="mt-3 space-y-1.5">
+            <div className="mt-3 flex flex-wrap gap-2">
               {(recap.productSamples ?? [])
                 .filter((s): s is NonNullable<typeof s> => Boolean(s))
                 .map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex items-center justify-between text-sm"
-                    style={{ color: "var(--recap-text, #14160f)" }}
-                  >
-                    <span>{s.product?.name ?? "Product"}</span>
-                    <span className="mono" style={{ color: "var(--spark-lime)" }}>
-                      {s.quantity != null
-                        ? `${s.quantity.toLocaleString()} units`
-                        : "—"}
-                    </span>
-                  </div>
+                  <span key={s.id} className="recap-choice-chip">
+                    {s.product?.name
+                      ? `${formatRecapProductName(s.product.name)}${
+                          s.quantity != null
+                            ? ` · ${s.quantity.toLocaleString()}`
+                            : ""
+                        }`
+                      : "Product"}
+                  </span>
                 ))}
             </div>
           </div>

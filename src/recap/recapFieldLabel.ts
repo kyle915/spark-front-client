@@ -27,3 +27,36 @@ export function formatRecapFieldLabel(raw: string | null | undefined): string {
   const fixed = raw.trim().replace(TASING, "tasting");
   return isShouting(fixed) ? sentenceCase(fixed) : fixed;
 }
+
+function titleCaseWords(raw: string): string {
+  return raw
+    .toLowerCase()
+    .replace(/\b([a-z])/g, (ch) => ch.toUpperCase());
+}
+
+/**
+ * Product / SKU names are often stored as shouting catalog strings
+ * ("SPARKLING WATER - STRAWBERRY TERROR"). Display as readable
+ * identity: "Sparkling water · Strawberry Terror".
+ */
+export function formatRecapProductName(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const s = raw.trim();
+  const parts = s.split(/\s+[-–—]\s+/);
+  if (parts.length === 1) {
+    return isShouting(s) ? titleCaseWords(s) : s;
+  }
+  const [kind, ...flavors] = parts;
+  const head = isShouting(kind) ? sentenceCase(kind) : kind;
+  const tail = flavors.map((part) =>
+    isShouting(part) ? titleCaseWords(part) : part,
+  );
+  return [head, ...tail].join(" · ");
+}
+
+export function recapLabelsMatch(a: string, b: string): boolean {
+  return (
+    formatRecapFieldLabel(a).toLowerCase() ===
+    formatRecapFieldLabel(b).toLowerCase()
+  );
+}

@@ -68,11 +68,17 @@ import { ClientTenantRecapBrand } from "@/recap/TenantBrandedRecap";
 import { RecapDocument } from "@/recap/RecapDocument";
 import { clientRecapKpis } from "@/recap/clientRecapKpis";
 import {
+  RecapChoiceChip,
   RecapFieldBlockLabel,
   RecapFieldRow,
   RecapFieldStack,
   RecapShareFieldSections,
 } from "@/recap/RecapFieldRows";
+import {
+  formatRecapFieldLabel,
+  formatRecapProductName,
+  recapLabelsMatch,
+} from "@/recap/recapFieldLabel";
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
 import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
 
@@ -166,11 +172,11 @@ const KpiCardContainer = ({
 }) => (
   <div className={`spark-card p-6 ${className ?? ""}`}>
     <p
-      className="mono text-[10px] mb-4 flex items-center gap-2"
-      style={{ letterSpacing: "0.18em", color: "var(--recap-heading, #3f5c12)" }}
+      className="text-sm font-semibold mb-4 flex items-center gap-2"
+      style={{ color: "var(--recap-heading, #3f5c12)" }}
     >
       {icon}
-      {title.toUpperCase()}
+      {formatRecapFieldLabel(title)}
     </p>
     {children}
   </div>
@@ -1599,7 +1605,7 @@ const RecapCustomViewInner = () => {
                             </div>
                           )}
                           <p className="font-semibold">
-                            {sale.product?.name ?? "—"}
+                            {formatRecapProductName(sale.product?.name ?? "—")}
                           </p>
                         </div>
                         <div className="flex justify-between text-sm">
@@ -1674,7 +1680,7 @@ const RecapCustomViewInner = () => {
                             </div>
                           )}
                           <p className="font-semibold">
-                            {sample.product?.name ?? "—"}
+                            {formatRecapProductName(sample.product?.name ?? "—")}
                           </p>
                         </div>
                         <div className="flex justify-between items-center text-sm pt-2">
@@ -1790,7 +1796,9 @@ const RecapCustomViewInner = () => {
                           className="rounded-xl p-4 space-y-3 xl:col-span-2"
                           style={inset}
                         >
-                          <RecapFieldBlockLabel label={field.name} />
+                          {!recapLabelsMatch(field.name, section.name) && (
+                            <RecapFieldBlockLabel label={field.name} />
+                          )}
                           {imgSrc ? (
                             <img
                               src={thumbUrl(imgSrc, 400) || imgSrc}
@@ -1894,7 +1902,9 @@ const RecapCustomViewInner = () => {
                           className="rounded-xl p-4 space-y-2"
                           style={inset}
                         >
-                          <RecapFieldBlockLabel label={field.name} />
+                          {!recapLabelsMatch(field.name, section.name) && (
+                            <RecapFieldBlockLabel label={field.name} />
+                          )}
                           {isEditingValues ? (
                             kind === "select" ? (
                               <select
@@ -1943,9 +1953,7 @@ const RecapCustomViewInner = () => {
                           ) : selected.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {selected.map((v) => (
-                                <span key={v} className="chip chip-lime">
-                                  {v}
-                                </span>
+                                <RecapChoiceChip key={v} label={v} />
                               ))}
                             </div>
                           ) : (
@@ -1971,7 +1979,9 @@ const RecapCustomViewInner = () => {
                         className={`rounded-xl p-4 space-y-2 ${isLongText ? "xl:col-span-2" : ""}`}
                         style={inset}
                       >
-                        <RecapFieldBlockLabel label={field.name} />
+                        {!recapLabelsMatch(field.name, section.name) && (
+                          <RecapFieldBlockLabel label={field.name} />
+                        )}
                         {isEditingValues ? (
                           useTextarea ? (
                             <textarea
