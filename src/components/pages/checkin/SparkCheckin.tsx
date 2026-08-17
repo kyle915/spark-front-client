@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type RefObject } from "react";
 import { useParams } from "react-router";
 import { bucketCountHint } from "./photoBuckets";
+import {
+  engagementsFromSamplesGiven,
+  templateHasConsumersSampledField,
+} from "@/recap/engagementsFromSamples";
 import { isHeicUpload } from "./heicUpload";
 import {
   CLOCK_FETCH_TIMEOUT_MS,
@@ -2091,6 +2095,14 @@ function RecapForm({
     () => (template?.sections ?? []).some((s) => s.fields.some((f) => isPhotoType(f.type))),
     [template],
   );
+  const templateFields = useMemo(
+    () => (template?.sections ?? []).flatMap((s) => s.fields),
+    [template],
+  );
+  // Torch (and most retail templates) already ask "total number of consumers
+  // sampled". That IS Spark's engagements metric — don't make the BA type it
+  // again in the native Total engagements box.
+  const hideEngagementsInput = templateHasConsumersSampledField(templateFields);
   // Labelled buckets replace the single generic grid outright. They also beat
   // `hasPhotoField`: that flag HIDES the grid whenever the template carries an
   // image field, which is how adding template fields produces prompts instead
@@ -2187,7 +2199,9 @@ function RecapForm({
     const productSamples = Object.entries(samples)
       .map(([productId, q]) => ({ productId, quantity: Number(q) }))
       .filter((s) => Number.isFinite(s.quantity) && s.quantity > 0);
-    const totalEngagements = engagements.trim() === "" ? null : Number(engagements);
+    const fromSamples = engagementsFromSamplesGiven(templateFields, values);
+    const typed = engagements.trim() === "" ? null : Number(engagements);
+    const totalEngagements = fromSamples ?? (Number.isFinite(typed) ? typed : null);
     const submittedAt = new Date().toISOString();
 
     const queueThisSubmit = async () => {
@@ -2350,12 +2364,17 @@ function RecapForm({
         </div>
       ) : null}
 
+      {!hideEngagementsInput || (buckets.length === 0 && !hasPhotoField) ? (
       <div style={card}>
-        <label style={label}>Total engagements</label>
-        <input style={input} inputMode="numeric" placeholder="e.g. 120" value={engagements} onChange={(e) => setEngagements(e.target.value)} />
+        {!hideEngagementsInput ? (
+          <>
+            <label style={label}>Total engagements</label>
+            <input style={input} inputMode="numeric" placeholder="e.g. 120" value={engagements} onChange={(e) => setEngagements(e.target.value)} />
+          </>
+        ) : null}
         {buckets.length === 0 && !hasPhotoField ? (
           <>
-            <label style={{ ...label, marginTop: 10 }}>
+            <label style={{ ...label, marginTop: hideEngagementsInput ? 0 : 10 }}>
               Photos <span style={{ color: "#EF5A2A" }}>*</span>
             </label>
             <PhotoGrid
@@ -2373,6 +2392,7 @@ function RecapForm({
           </>
         ) : null}
       </div>
+      ) : null}
 
       {buckets.length > 0 ? (
         <div style={card}>

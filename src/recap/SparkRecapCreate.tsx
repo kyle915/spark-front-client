@@ -20,6 +20,10 @@ import { useAlertStore } from "@/store/alertStore";
 import { useSparkRole } from "@/hooks/useSparkRole";
 import { useAuthStore } from "@/store/authStore";
 import { parseLocaleNumber } from "@/utils";
+import {
+  engagementsFromSamplesGiven,
+  templateHasConsumersSampledField,
+} from "./engagementsFromSamples";
 
 /**
  * Spark v2 — manual recap submission flow.
@@ -201,6 +205,11 @@ export default function SparkRecapCreate() {
   const selectedTemplate = useMemo(
     () => templates.find((t) => String(t.id) === templateId) ?? null,
     [templates, templateId],
+  );
+  const hideEngagementsInput = templateHasConsumersSampledField(
+    (selectedTemplate?.customField ?? [])
+      .filter((f): f is NonNullable<typeof f> => Boolean(f))
+      .map((f) => ({ name: f.name })),
   );
 
   // ─── Legacy fixed-form state (fallback for non-template tenants) ──
@@ -449,6 +458,13 @@ export default function SparkRecapCreate() {
           // optional int — send null when left blank rather than 0.
           usedCorpoCard: corpoCardUsed,
           totalEngagements: (() => {
+            const fromSamples = engagementsFromSamplesGiven(
+              (selectedTemplate.customField ?? [])
+                .filter((f): f is NonNullable<typeof f> => Boolean(f))
+                .map((f) => ({ id: String(f.id), name: f.name })),
+              fieldValues,
+            );
+            if (fromSamples != null) return fromSamples;
             const n = num(totalEngagements);
             return n != null && Number.isFinite(n) ? Math.round(n) : null;
           })(),
@@ -844,15 +860,17 @@ export default function SparkRecapCreate() {
           template is picked so it sits with the rest of the recap fields. */}
       {useCustomFlow && selectedTemplate && (
         <Card title="ENGAGEMENT + SPEND">
-          <Field label="Total Engagements">
-            <input
-              value={totalEngagements}
-              onChange={(e) => setTotalEngagements(e.target.value)}
-              className={inputCls}
-              inputMode="numeric"
-              placeholder="0"
-            />
-          </Field>
+          {!hideEngagementsInput ? (
+            <Field label="Total Engagements">
+              <input
+                value={totalEngagements}
+                onChange={(e) => setTotalEngagements(e.target.value)}
+                className={inputCls}
+                inputMode="numeric"
+                placeholder="0"
+              />
+            </Field>
+          ) : null}
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
