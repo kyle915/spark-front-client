@@ -705,13 +705,10 @@ const RecapCustomViewInner = () => {
 
   const handleGeneratePdf = useCallback(() => {
     if (!recap?.id) return;
-    // Always ask the backend for the PDF — never open an already-stored file
-    // blindly. A stored recap PDF bakes in the DRAFT/APPROVED chip and every
-    // field value at render time, so reusing the stored blob here served a
-    // stale DRAFT copy after the recap was approved. The mutation reuses a
-    // still-fresh stored PDF and rebuilds only when the recap changed since it
-    // was generated (recaps.mutation_parts.pdf_helpers._find_existing_pdf_file),
-    // so the common path stays cheap.
+    if (existingPdfUrl) {
+      window.open(existingPdfUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
     commitGeneratePdf({
       variables: { input: { id: recap.id as string } },
       onCompleted: (res) => {
@@ -733,7 +730,7 @@ const RecapCustomViewInner = () => {
       },
       onError: (err) => showAlert(`PDF failed: ${err.message}`, "error"),
     });
-  }, [recap?.id, commitGeneratePdf, showAlert]);
+  }, [recap?.id, existingPdfUrl, commitGeneratePdf, showAlert]);
 
   // Approve the custom recap → backend emails the requestor + mapped RMM
   // (with the PDF). Returns `approved` so the view flips in-place.
@@ -1169,10 +1166,10 @@ const RecapCustomViewInner = () => {
                       : "Generate and download this recap as a PDF"
                   }
                 >
-                  {isGeneratingPdf
-                    ? "Generating…"
-                    : existingPdfUrl
-                      ? "⬇ Download PDF"
+                  {existingPdfUrl
+                    ? "⬇ Download PDF"
+                    : isGeneratingPdf
+                      ? "Generating…"
                       : "⬇ PDF"}
                 </button>
                 {!isClient && (
@@ -2468,10 +2465,10 @@ const RecapCustomViewInner = () => {
                     : "Generate and download this recap as a PDF"
                 }
               >
-                {isGeneratingPdf
-                  ? "Generating…"
-                  : existingPdfUrl
-                    ? "Download PDF"
+                {existingPdfUrl
+                  ? "Download PDF"
+                  : isGeneratingPdf
+                    ? "Generating…"
                     : "PDF"}
               </button>
               <button
