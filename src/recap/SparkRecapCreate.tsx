@@ -147,7 +147,7 @@ export default function SparkRecapCreate() {
   const eventsData = useLazyLoadQuery<RecapEventOptionsQueryType>(
     RecapEventOptionsQuery,
     {
-      first: 30,
+      first: 200,
       q: deferredEventQ || null,
       tenantId: tenantId || null,
     },
@@ -1361,7 +1361,7 @@ const ProductSamplesSection: React.FC<{
   // across template switches.
   const data = useLazyLoadQuery<ProductsQueryType>(
     ProductsQuery,
-    { first: 100, filters: tenantId ? { tenantId } : null },
+    { first: 1000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
   const products = useMemo(

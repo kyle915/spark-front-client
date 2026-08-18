@@ -8,7 +8,7 @@ import { useAuthStore } from "@/store/authStore";
 /**
  * Data-driven "What needs you" engine.
  *
- * Reuses SidebarCountsQuery (first: 1000) — the same document
+ * Reuses SidebarCountsQuery (first: 2000) — the same document
  * useSidebarCounts already loaded — so Home does not fire a second
  * RequestsQuery for the first 500 rows.
  */
@@ -50,7 +50,7 @@ export const AttentionEngine: React.FC = () => {
 
   const data = useLazyLoadQuery<SidebarCountsQueryType>(
     SidebarCountsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { first: 2000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
 

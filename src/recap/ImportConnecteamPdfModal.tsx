@@ -133,7 +133,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
   const eventsData = useLazyLoadQuery<RecapEventOptionsQueryType>(
     RecapEventOptionsQuery,
     {
-      first: 25,
+      first: 200,
       q: deferredSearch || null,
       tenantId: tenantId || null,
     },

@@ -252,7 +252,7 @@ const ProductSamplesEditor = ({
 }) => {
   const data = useLazyLoadQuery<ProductsQueryType>(
     ProductsQuery,
-    { first: 100, filters: tenantId ? { tenantId } : null },
+    { first: 1000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
   const products = useMemo(
