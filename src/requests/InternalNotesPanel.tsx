@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import { formatNoteBodyHtml } from "./formatNoteBodyHtml";
 
 /**
  * Internal notes + @mention tagging for a Master Tracker row.
@@ -517,10 +518,7 @@ export const InternalNotesPanel: React.FC<{
                     className="text-sm mt-1 leading-relaxed"
                     style={{ color: "rgba(255,255,255,0.85)" }}
                     dangerouslySetInnerHTML={{
-                      __html: n.body.replace(
-                        /@([\w.-]+)/g,
-                        '<span style="color: var(--spark-lime); font-weight: 600;">@$1</span>',
-                      ),
+                      __html: formatNoteBodyHtml(n.body),
                     }}
                   />
                 )}
