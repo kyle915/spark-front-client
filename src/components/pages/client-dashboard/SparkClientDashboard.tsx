@@ -191,7 +191,7 @@ const ClientInner: React.FC = () => {
   // per-day buckets without paying another network round-trip.
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { first: 2000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
 

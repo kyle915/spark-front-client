@@ -9,7 +9,7 @@ import { isRecapDue } from "@/lib/recapDue";
  * Computes the live counts shown as chip badges in the sidebar so
  * everything stays in sync with the workspace state.
  *
- * Reuses the same 1000-request fetch the tracker uses; with Relay caching
+ * Reuses the same 2000-request fetch the tracker uses; with Relay caching
  * this is free after the first page load.
  */
 export type SidebarCounts = {
@@ -44,7 +44,7 @@ export function useSidebarCounts(): SidebarCounts {
   const { tenantId } = useAuthStore();
   const data = useLazyLoadQuery<SidebarCountsQueryType>(
     SidebarCountsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { first: 2000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
 

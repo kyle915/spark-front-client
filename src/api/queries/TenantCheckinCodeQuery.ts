@@ -11,7 +11,7 @@ import { graphql } from "react-relay";
  */
 export const TenantCheckinCodeQuery = graphql`
   query TenantCheckinCodeQuery($userUuid: ID) {
-    tenants(userUuid: $userUuid, first: 100) {
+    tenants(userUuid: $userUuid, first: 500) {
       edges {
         node {
           id

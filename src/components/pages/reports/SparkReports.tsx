@@ -53,7 +53,7 @@ const EventsPerWeekChart: React.FC = () => {
   const { tenantId } = useAuthStore();
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { first: 2000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
   const { labels, values } = useMemo(() => {
@@ -138,7 +138,7 @@ const ActivationMixChart: React.FC = () => {
   const { tenantId } = useAuthStore();
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { first: 2000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
   const { labels, values } = useMemo(() => {
@@ -212,7 +212,7 @@ const ConsumersSampledChart: React.FC = () => {
   const { tenantId } = useAuthStore();
   const data = useLazyLoadQuery<RecapsQueryType>(
     RecapsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { first: 2000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
   const { labels, values } = useMemo(() => {
@@ -309,7 +309,7 @@ const TopRetailersChart: React.FC = () => {
   const { tenantId } = useAuthStore();
   const data = useLazyLoadQuery<RecapsQueryType>(
     RecapsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { first: 2000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
   const { labels, values } = useMemo(() => {

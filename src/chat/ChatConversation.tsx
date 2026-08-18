@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { fetchQuery } from "relay-runtime";
+import environment from "@/api/relay/environment";
 import { ChatThreadQuery } from "@/api/queries/ChatThreadQuery";
 import type { ChatThreadQuery as ChatThreadQueryType } from "@api/queries/__generated__/ChatThreadQuery.graphql";
 import { SendChatMessageMutation } from "@/api/mutations/SendChatMessageMutation";
@@ -33,6 +35,7 @@ import {
  */
 
 const ACTIVE_THREAD_POLL_MS = 15 * 1000;
+const CHAT_PAGE = 200;
 
 function fmtTime(iso: string): string {
   try {
@@ -145,10 +148,20 @@ const ChatConversation: React.FC<{
   const showAlert = useAlertStore((s) => s.showAlert);
   const data = useLazyLoadQuery<ChatThreadQueryType>(
     ChatThreadQuery,
-    { uuid: threadUuid },
+    { uuid: threadUuid, first: CHAT_PAGE, beforeUuid: null },
     { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
   const thread = data?.chatThread;
+  const [older, setOlder] = useState<
+    NonNullable<ChatThreadQueryType["response"]["chatThread"]>["messages"]
+  >([]);
+  const [olderBusy, setOlderBusy] = useState(false);
+  const [olderHasMore, setOlderHasMore] = useState(true);
+
+  useEffect(() => {
+    setOlder([]);
+    setOlderHasMore(true);
+  }, [threadUuid]);
   const [commitSend, isSending] =
     useMutation<SendChatMessageMutationType>(SendChatMessageMutation);
   const [commitMarkRead] = useMutation<MarkChatThreadReadMutationType>(
@@ -260,9 +273,38 @@ const ChatConversation: React.FC<{
 
   // Messages from the API are newest-first; reverse so the UI
   // renders oldest at top → newest at bottom (chat-natural order).
-  const messages = [...(thread.messages ?? [])]
-    .filter(Boolean)
-    .reverse();
+  const page = thread.messages ?? [];
+  const seen = new Set(page.map((m) => m.uuid));
+  const olderUnique = older.filter((m) => m && !seen.has(m.uuid));
+  const messages = [...olderUnique, ...page].filter(Boolean).reverse();
+  const oldestUuid = messages[0]?.uuid;
+  const canLoadOlder =
+    olderHasMore && (page.length >= CHAT_PAGE || older.length >= CHAT_PAGE);
+
+  const loadOlder = async () => {
+    if (!oldestUuid || olderBusy) return;
+    setOlderBusy(true);
+    try {
+      const extra = await fetchQuery<ChatThreadQueryType>(
+        environment,
+        ChatThreadQuery,
+        { uuid: threadUuid, first: CHAT_PAGE, beforeUuid: oldestUuid },
+      ).toPromise();
+      const next = extra?.chatThread?.messages ?? [];
+      if (next.length === 0) {
+        setOlderHasMore(false);
+        return;
+      }
+      setOlder((prev) => {
+        const have = new Set(prev.map((m) => m.uuid));
+        const add = next.filter((m) => m && !have.has(m.uuid));
+        return add.length ? [...prev, ...add] : prev;
+      });
+      if (next.length < CHAT_PAGE) setOlderHasMore(false);
+    } finally {
+      setOlderBusy(false);
+    }
+  };
 
   return (
     <div className="flex flex-col" style={{ height }}>
@@ -291,6 +333,19 @@ const ChatConversation: React.FC<{
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+        {canLoadOlder ? (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => void loadOlder()}
+              disabled={olderBusy}
+              className="text-xs underline"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              {olderBusy ? "Loading…" : "Load earlier messages"}
+            </button>
+          </div>
+        ) : null}
         {messages.length === 0 ? (
           <p className="text-sm text-center" style={{ color: "rgba(255,255,255,0.45)" }}>
             No messages yet. Send the first one 👋

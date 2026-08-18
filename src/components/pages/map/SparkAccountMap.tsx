@@ -129,7 +129,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
 
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
-    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { first: 2000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
 

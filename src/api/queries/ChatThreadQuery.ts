@@ -1,7 +1,7 @@
 import { graphql } from "react-relay";
 
 export const ChatThreadQuery = graphql`
-  query ChatThreadQuery($uuid: ID!) {
+  query ChatThreadQuery($uuid: ID!, $first: Int!, $beforeUuid: String) {
     chatThread(uuid: $uuid) {
       id
       uuid
@@ -11,7 +11,7 @@ export const ChatThreadQuery = graphql`
       jobUuid
       jobName
       unreadForAdmin
-      messages(first: 100) {
+      messages(first: $first, beforeUuid: $beforeUuid) {
         id
         uuid
         body

@@ -51,7 +51,7 @@ const Inner: React.FC<Props> = ({
   // (which the general `events` query did for unrestricted roles).
   const data = useLazyLoadQuery<RecapEventOptionsQueryType>(
     RecapEventOptionsQuery,
-    { first: 50, q: search || null, tenantId: tenantId || null },
+    { first: 200, q: search || null, tenantId: tenantId || null },
     { fetchPolicy: "store-or-network" },
   );
 
