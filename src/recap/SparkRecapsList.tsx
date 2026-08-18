@@ -13,6 +13,7 @@ import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/
 // invisible on /recaps and only surfaced under /recaps/custom-list
 // — Kyle reported Dumbo Market and Austin Psych Fest missing.
 import { GetCustomRecapsQuery } from "@/api/queries/CustomRecapsQuery";
+import { ThirdPartyRecapBadge } from "@/recap/ThirdPartyRecapBadge";
 import type { CustomRecapsQuery as CustomRecapsQueryType } from "@api/queries/__generated__/CustomRecapsQuery.graphql";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
@@ -156,6 +157,9 @@ type Recap = {
   // Empty string when neither is set.
   baName: string;
   isExternalBa: boolean;
+  // Filed via the tenant's recap-only / 3rd-party agency check-in link.
+  // Distinct from isExternalBa (a write-in name). Drives the list badge.
+  isThirdParty: boolean;
   // Relay global id of the recap's PRIMARY ambassador (Recap.ambassador /
   // CustomRecap.ambassador), or null for external/unlinked BAs. Used by the
   // client-side BA filter mirror for instant feedback; the server-side
@@ -295,6 +299,7 @@ const mapLegacyRecap = (n: LegacyRecapNode): Recap => {
     requestType,
     shareToken: n.shareToken ?? null,
     sharedAt: n.sharedAt ?? null,
+    isThirdParty: false,
   };
 };
 
@@ -328,6 +333,7 @@ const mapCustomRecap = (n: CustomRecapNode): Recap => ({
   requestType: n.customRecapTemplate?.name ?? null,
   shareToken: n.shareToken ?? null,
   sharedAt: n.sharedAt ?? null,
+  isThirdParty: Boolean(n.isThirdParty),
 });
 
 const recapsFromConnection = <
@@ -500,12 +506,22 @@ const RecapCard: React.FC<{
       >
         ● <StatusMorph value={statusText} />
       </span>
+      {recap.isThirdParty ? (
+        <span className="absolute bottom-2 left-2">
+          <ThirdPartyRecapBadge />
+        </span>
+      ) : null}
     </div>
 
     <div className="p-4">
       <p className="font-bold text-sm truncate" title={recap.name}>
         {recap.name}
       </p>
+      {recap.isThirdParty ? (
+        <div className="mt-2">
+          <ThirdPartyRecapBadge />
+        </div>
+      ) : null}
       <p
         className="mono text-[10px] uppercase mt-1 truncate"
         style={{
@@ -696,6 +712,11 @@ const RecapCompactRow: React.FC<{
       </div>
       <div className="min-w-0 flex-1 relative z-10">
         <p className="text-sm font-semibold truncate">{recap.baName || "Unattributed"}</p>
+        {recap.isThirdParty ? (
+          <div className="mt-1">
+            <ThirdPartyRecapBadge compact />
+          </div>
+        ) : null}
         <p
           className="mono text-[10px] truncate"
           style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.45)" }}

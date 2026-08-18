@@ -18,6 +18,7 @@ import type { SetCustomRecapFileCategoryMutation as SetCustomRecapFileCategoryMu
 import { GenerateCustomRecapPdfMutation } from "@/api/mutations/GenerateCustomRecapPdfMutation";
 import type { GenerateCustomRecapPdfMutation as GenerateCustomRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateCustomRecapPdfMutation.graphql";
 import { RecapUploader } from "./RecapUploader";
+import { ThirdPartyRecapBadge } from "./ThirdPartyRecapBadge";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { AmbassadorPicker } from "./AmbassadorPicker";
 import { RecapDetailSkeleton } from "@/layout/PageSkeletons";
@@ -1268,6 +1269,7 @@ const RecapCustomViewInner = () => {
                   {recap.incomplete && (
                     <span className="chip chip-orange">INCOMPLETE</span>
                   )}
+                  {recap.isThirdParty ? <ThirdPartyRecapBadge /> : null}
                 </div>
                 {isEditingValues ? (
                   <input
@@ -1430,7 +1432,9 @@ const RecapCustomViewInner = () => {
                           {recap.ambassador?.user?.lastName}
                         </p>
                         <p className="text-sm" style={muted}>
-                          Ambassador
+                          {recap.isThirdParty
+                            ? "3rd-party agency"
+                            : "Ambassador"}
                         </p>
                       </div>
                     </>
@@ -1445,7 +1449,9 @@ const RecapCustomViewInner = () => {
                       <div>
                         <p className="font-medium">{recap.externalBaName}</p>
                         <p className="text-sm" style={muted}>
-                          Ambassador (external)
+                          {recap.isThirdParty
+                            ? "3rd-party agency"
+                            : "Ambassador (external)"}
                         </p>
                       </div>
                     </>
@@ -2475,6 +2481,11 @@ const RecapCustomViewInner = () => {
           <RecapDocument status={recap.approved ? "APPROVED" : "DRAFT"}>
           <div className="space-y-6">
           <div className="spark-card p-6">
+            {recap.isThirdParty ? (
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <ThirdPartyRecapBadge />
+              </div>
+            ) : null}
             <h1
               className="display text-3xl font-bold"
               style={{ letterSpacing: "-0.03em" }}
@@ -2482,7 +2493,7 @@ const RecapCustomViewInner = () => {
               {recap.name}
             </h1>
             <p className="mt-1 recap-doc-kicker">
-              Field recap
+              {recap.isThirdParty ? "3rd Party Recap" : "Field recap"}
               {" · "}
               {place || "—"}
               {" · "}
