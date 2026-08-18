@@ -5,7 +5,9 @@
  * brutal on mobile (24-hour analog dial). Activations are scheduled
  * on the half-hour in ~95% of cases, so a flat dropdown of 30-min
  * slots covers the workflow and renders as the native scrollable
- * wheel on iOS/Android.
+ * wheel on iOS/Android. The list is a full day (12:00 AM–11:30 PM),
+ * not a 6 AM business-hours window — overnight / early-morning
+ * starts are valid on the public request form.
  *
  * State contract: stores 24-hour "HH:MM" so the backend payload and
  * existing yup/zod validation are unchanged.
@@ -14,7 +16,7 @@ import React from "react";
 
 const TIME_SLOTS: { value: string; label: string }[] = (() => {
   const out: { value: string; label: string }[] = [];
-  for (let m = 6 * 60; m <= 23 * 60 + 30; m += 30) {
+  for (let m = 0; m <= 23 * 60 + 30; m += 30) {
     const h24 = Math.floor(m / 60);
     const min = m % 60;
     const h12 = ((h24 + 11) % 12) + 1;
