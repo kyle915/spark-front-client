@@ -120,6 +120,9 @@ export default function EventForm({
     isNationalRetailer: true,
     ...defaultValues,
   };
+  if (!safeDefaultValues.eventTypeId && eventTypes.length === 1) {
+    safeDefaultValues.eventTypeId = eventTypes[0].id;
+  }
 
   const navigate = useNavigate();
 
@@ -221,6 +224,16 @@ export default function EventForm({
       });
     }
   }, [mode, userIdLoggin, userUuidLoggin, rmmClients, setValue]);
+
+  useEffect(() => {
+    if (eventTypes.length !== 1) return;
+    const current = watch("eventTypeId");
+    if (current) return;
+    setValue("eventTypeId", eventTypes[0].id, {
+      shouldDirty: false,
+      shouldTouch: false,
+    });
+  }, [eventTypes, setValue, watch]);
 
   const extractRmmClients = useCallback(
     (data: RmmClientsQueryType["response"]) =>
@@ -1096,17 +1109,19 @@ export default function EventForm({
                 rules={{ required: "Name is required" }}
               />
 
-              <FormAutocomplete
-                name="eventTypeId"
-                control={control}
-                label="Event Type"
-                placeholder="Search event type..."
-                options={eventTypes.map((e) => ({
-                  value: e.id,
-                  label: e.name,
-                }))}
-                rules={{ required: "Event Type is required" }}
-              />
+              {eventTypes.length > 1 ? (
+                <FormAutocomplete
+                  name="eventTypeId"
+                  control={control}
+                  label="Event Type"
+                  placeholder="Search event type..."
+                  options={eventTypes.map((e) => ({
+                    value: e.id,
+                    label: e.name,
+                  }))}
+                  rules={{ required: "Event Type is required" }}
+                />
+              ) : null}
 
               <FormDatePicker
                 name="date"

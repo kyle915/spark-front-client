@@ -277,6 +277,9 @@ export default function RequestForm({
     entitiesLocationId: null,
     ...defaultValues,
   };
+  if (!safeDefaultValues.eventTypeId && eventTypes.length === 1) {
+    safeDefaultValues.eventTypeId = eventTypes[0].id;
+  }
 
   const { showAlert } = useAlertStore();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -288,6 +291,18 @@ export default function RequestForm({
     useForm<RequestFormValues>({ defaultValues: safeDefaultValues });
 
   const isDirty = formState.isDirty;
+
+  // One program is not a question — hide the picker (same rule as check-in)
+  // and stamp the sole EventType so submit still has a required id.
+  useEffect(() => {
+    if (eventTypes.length !== 1) return;
+    const current = watch("eventTypeId");
+    if (current) return;
+    setValue("eventTypeId", eventTypes[0].id, {
+      shouldDirty: false,
+      shouldTouch: false,
+    });
+  }, [eventTypes, setValue, watch]);
 
   // ========================
   // WATCHERS FOR COORDINATES & TIMEZONE AND HOOK
@@ -1217,7 +1232,7 @@ export default function RequestForm({
                 rules={{ required: "Request Type is required" }}
               />
 
-              {!hideEventTypeField && (
+              {!(hideEventTypeField || eventTypes.length <= 1) && (
                 <FormAutocomplete<RequestFormValues>
                   name="eventTypeId"
                   control={control}
