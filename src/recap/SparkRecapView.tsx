@@ -887,13 +887,10 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             <button
               disabled={isPdfRunning}
               onClick={() => {
-                // Always regenerate through the backend rather than opening a
-                // stored PDF blob directly. The stored file bakes in the
-                // DRAFT/APPROVED chip at render time, so reusing it here served
-                // a stale DRAFT copy after approval. The mutation reuses a
-                // still-fresh stored PDF and rebuilds only when the recap
-                // changed since (backend _find_existing_pdf_file), so the
-                // common path stays cheap.
+                if (existingPdfUrl) {
+                  window.open(existingPdfUrl, "_blank", "noopener,noreferrer");
+                  return;
+                }
                 commitPdf({
                   variables: { input: { id: recap.id } },
                   onCompleted: (res) => {
@@ -923,10 +920,10 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 opacity: isPdfRunning ? 0.5 : 1,
               }}
             >
-              {isPdfRunning
-                ? "Generating…"
-                : existingPdfUrl
-                  ? "⬇ Download PDF"
+              {existingPdfUrl
+                ? "⬇ Download PDF"
+                : isPdfRunning
+                  ? "Generating…"
                   : "⬇ PDF"}
             </button>
             <button
