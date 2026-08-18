@@ -723,6 +723,12 @@ input ApproveCustomRecapInput {
   approved: Boolean!
 }
 
+input MapCustomRecapStoreInput {
+  clientMutationId: ID = null
+  id: ID!
+  retailerId: ID!
+}
+
 input BulkApproveRecapsInput {
   clientMutationId: ID = null
   recapIds: [ID!] = null
@@ -2125,6 +2131,10 @@ type CustomRecap implements Node {
   ambassador: Ambassador
   externalBaName: String
   isThirdParty: Boolean!
+  typedStoreName: String!
+  typedStoreAddress: String!
+  storeMappingStatus: String!
+  storeSuggestions: JSON
   jobId: ID
   job: Job
   retailerId: ID
@@ -2270,6 +2280,7 @@ input CustomRecapFiltersInput {
   retailerName: String = null
   stateCode: String = null
   shared: Boolean = null
+  needsStoreMap: Boolean = null
 }
 
 """
@@ -4070,6 +4081,7 @@ type Mutation {
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
+  mapCustomRecapStore(input: MapCustomRecapStoreInput!): CustomRecapDetailResponse!
   bulkApproveRecaps(input: BulkApproveRecapsInput!): BulkRecapsResponse!
   markRecapsShared(input: MarkRecapsSharedInput!): BulkRecapsResponse!
   submitRecapClientSignoff(input: RecapClientSignoffInput!): RecapClientSignoffResponse!

@@ -35,6 +35,8 @@ export const GetCustomRecapsQuery = graphql`
           totalEngagements
           approved
           isThirdParty
+          typedStoreName
+          storeMappingStatus
           shareToken
           sharedAt
           event {
@@ -92,6 +94,10 @@ export const GetCustomRecapQuery = graphql`
       incomplete
       approved
       isThirdParty
+      typedStoreName
+      typedStoreAddress
+      storeMappingStatus
+      storeSuggestions
       shareToken
       sharedAt
       clientSignoffStatus

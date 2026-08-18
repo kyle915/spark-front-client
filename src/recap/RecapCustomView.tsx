@@ -19,6 +19,7 @@ import { GenerateCustomRecapPdfMutation } from "@/api/mutations/GenerateCustomRe
 import type { GenerateCustomRecapPdfMutation as GenerateCustomRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateCustomRecapPdfMutation.graphql";
 import { RecapUploader } from "./RecapUploader";
 import { ThirdPartyRecapBadge } from "./ThirdPartyRecapBadge";
+import { ThirdPartyStoreMap } from "./ThirdPartyStoreMap";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { AmbassadorPicker } from "./AmbassadorPicker";
 import { RecapDetailSkeleton } from "@/layout/PageSkeletons";
@@ -1336,6 +1337,19 @@ const RecapCustomViewInner = () => {
             <RecapQualityPanel recapId={recap.id} isCustom={true} />
           </Suspense>
           )}
+
+          {!isClient && recap.isThirdParty ? (
+            <Suspense fallback={null}>
+              <ThirdPartyStoreMap
+                recapId={recap.id}
+                typedName={recap.typedStoreName || recap.eventRetailer || ""}
+                typedAddress={recap.typedStoreAddress || recap.eventAddress || ""}
+                status={recap.storeMappingStatus || ""}
+                suggestions={recap.storeSuggestions}
+                mappedRetailerName={recap.retailer?.name ?? null}
+              />
+            </Suspense>
+          ) : null}
 
           {/* ======================================================
           KPI GRID
