@@ -1837,13 +1837,29 @@ function CheckedInFlow({
             {ctx.event.address ? ` · ${ctx.event.address}` : ""}
           </p>
         ) : null}
-        {/* Standing links (Feel Free) allow another recap the same day —
-            one event per market, several shifts. Per-event codes stay done. */}
+        {/* Standing clock links share one event per place/day. Gloria (Feel
+            Free Tampa) was stuck here after a 12-minute morning punch + recap:
+            "You're all set" hid Clock in, so the riverwalk shift could not
+            start or end. Clock in again on the same event. Recap-only stays
+            recap-only. Per-event codes stay done. */}
         {ctx.mode === "tenant" ? (
           <>
+            {!ctx.recapOnly ? (
+              <button
+                onClick={() => clock("in")}
+                disabled={busy !== ""}
+                style={{ ...primaryBtn(accent), marginTop: 18, width: "100%" }}
+              >
+                {busy === "in" ? "Clocking in…" : "Clock in"}
+              </button>
+            ) : null}
             <button
               onClick={() => openRecap(true)}
-              style={{ ...primaryBtn(accent), marginTop: 18, width: "100%" }}
+              style={{
+                ...(ctx.recapOnly ? primaryBtn(accent) : secondaryBtn),
+                marginTop: ctx.recapOnly ? 18 : 10,
+                width: "100%",
+              }}
             >
               File another recap
             </button>
@@ -1853,6 +1869,7 @@ function CheckedInFlow({
             >
               {ctx.recapOnly ? "File for another store / date" : "Log another event"}
             </button>
+            {msg ? <p style={{ ...errText, marginTop: 12 }}>{msg}</p> : null}
           </>
         ) : null}
       </div>
@@ -1995,7 +2012,12 @@ function CheckedInFlow({
               start today's. Hence the escape hatch below. */}
           {effectiveClock === "clocked_out" && !hasRecap ? (
             <>
-              <button style={primaryBtn(accent)} onClick={() => openRecap(false)}>
+              {ctx.mode === "tenant" && !ctx.recapOnly ? (
+                <button style={primaryBtn(accent)} disabled={busy !== ""} onClick={() => clock("in")}>
+                  {busy === "in" ? "Clocking in…" : "Clock in"}
+                </button>
+              ) : null}
+              <button style={secondaryBtn} onClick={() => openRecap(false)}>
                 File recap
               </button>
               {ctx.mode === "tenant" ? (
