@@ -1007,7 +1007,7 @@ function Header({ ctx }: { ctx: Context }) {
         <div style={{ marginBottom: 18 }}>
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>File a recap</h1>
           <div style={{ fontSize: 13, opacity: 0.6 }}>
-            Date, your name, the store, then the recap questions. No time clock.
+            Date, your name, the store, then the recap questions.
           </div>
         </div>
       );
@@ -1216,8 +1216,9 @@ function IdentifyStep({
       if (hasPrograms && !eventTypeId) return setErr("Pick the event you're working.");
       if (isMarket) {
         if (!mkt) return setErr("Pick your market.");
-      } else if (recapOnly && recentLocations.length > 0) {
-        if (!addr.trim()) return setErr("Pick the store from the list.");
+      } else if (recapOnly) {
+        if (!storeName.trim()) return setErr("Enter the store name.");
+        if (!addr.trim()) return setErr("Enter the store address.");
       } else if (!addr.trim()) {
         return setErr("Enter the store address.");
       }
@@ -1264,7 +1265,7 @@ function IdentifyStep({
 
   return (
     <div style={card}>
-      <h2 style={h2}>{recapOnly ? "Who's filing?" : "Who's working?"}</h2>
+      <h2 style={h2}>Who's working?</h2>
       <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
         {recapOnly
           ? "Your name on this recap. Phone is optional."
@@ -1328,24 +1329,25 @@ function IdentifyStep({
                 ))}
               </select>
             </>
-          ) : recapOnly && recentLocations.length > 0 ? (
+          ) : recapOnly ? (
             <>
           <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
-            Pick the Total Wine (store name and address). Required — this is
-            how the recap lands on the right account.
+            Type the store name and address. Required.
           </p>
-          <select
-            style={{ ...input, appearance: "none" }}
+          <input
+            style={input}
+            placeholder="Store name"
+            autoComplete="off"
+            value={storeName}
+            onChange={(e) => setStoreName(e.target.value)}
+          />
+          <input
+            style={input}
+            placeholder="Store address"
+            autoComplete="off"
             value={address}
-            onChange={(e) => pickStore(e.target.value)}
-          >
-            <option value="">Select the store…</option>
-            {recentLocations.map((l) => (
-              <option key={l.address} value={l.address}>
-                {l.name && l.name !== l.address ? `${l.name} — ${l.address}` : l.address}
-              </option>
-            ))}
-          </select>
+            onChange={(e) => setAddress(e.target.value)}
+          />
             </>
           ) : (
             <>

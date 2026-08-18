@@ -160,6 +160,7 @@ type Recap = {
   // Filed via the tenant's recap-only / 3rd-party agency check-in link.
   // Distinct from isExternalBa (a write-in name). Drives the list badge.
   isThirdParty: boolean;
+  storeMappingStatus: string;
   // Relay global id of the recap's PRIMARY ambassador (Recap.ambassador /
   // CustomRecap.ambassador), or null for external/unlinked BAs. Used by the
   // client-side BA filter mirror for instant feedback; the server-side
@@ -300,6 +301,7 @@ const mapLegacyRecap = (n: LegacyRecapNode): Recap => {
     shareToken: n.shareToken ?? null,
     sharedAt: n.sharedAt ?? null,
     isThirdParty: false,
+    storeMappingStatus: "",
   };
 };
 
@@ -334,6 +336,7 @@ const mapCustomRecap = (n: CustomRecapNode): Recap => ({
   shareToken: n.shareToken ?? null,
   sharedAt: n.sharedAt ?? null,
   isThirdParty: Boolean(n.isThirdParty),
+  storeMappingStatus: n.storeMappingStatus ?? "",
 });
 
 const recapsFromConnection = <
@@ -518,8 +521,13 @@ const RecapCard: React.FC<{
         {recap.name}
       </p>
       {recap.isThirdParty ? (
-        <div className="mt-2">
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
           <ThirdPartyRecapBadge />
+          {recap.storeMappingStatus === "unmatched" ? (
+            <span className="chip chip-orange">Map store</span>
+          ) : recap.storeMappingStatus === "mapped" ? (
+            <span className="chip chip-muted">Store mapped</span>
+          ) : null}
         </div>
       ) : null}
       <p
@@ -713,8 +721,11 @@ const RecapCompactRow: React.FC<{
       <div className="min-w-0 flex-1 relative z-10">
         <p className="text-sm font-semibold truncate">{recap.baName || "Unattributed"}</p>
         {recap.isThirdParty ? (
-          <div className="mt-1">
+          <div className="mt-1 flex items-center gap-1 flex-wrap">
             <ThirdPartyRecapBadge compact />
+            {recap.storeMappingStatus === "unmatched" ? (
+              <span className="chip chip-orange chip-sm">Map store</span>
+            ) : null}
           </div>
         ) : null}
         <p
@@ -828,7 +839,8 @@ const RecapsListInner: React.FC<{
   refreshKey: number;
   density: "cards" | "compact";
   focusedId: string | null;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId }) => {
+  needsStoreMap: boolean;
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId, needsStoreMap }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
@@ -892,6 +904,13 @@ const RecapsListInner: React.FC<{
       endDate,
     ],
   );
+  const customListFilters = useMemo(
+    () =>
+      listFilters
+        ? { ...listFilters, needsStoreMap: needsStoreMap || null }
+        : null,
+    [listFilters, needsStoreMap],
+  );
   const page1Vars = recapsListPageVariables(null);
   const environment = useRelayEnvironment();
 
@@ -916,7 +935,7 @@ const RecapsListInner: React.FC<{
       first: page1Vars.first,
       after: page1Vars.after,
       q: searchQ,
-      filters: listFilters,
+      filters: customListFilters,
     },
     { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
@@ -1007,7 +1026,7 @@ const RecapsListInner: React.FC<{
               {
                 ...next(customAfter),
                 q: searchQ,
-                filters: listFilters,
+                filters: customListFilters,
               },
               { fetchPolicy: "network-only" },
             ).toPromise()
@@ -1056,6 +1075,7 @@ const RecapsListInner: React.FC<{
     customAfter,
     searchQ,
     listFilters,
+    customListFilters,
   ]);
 
   const retailers = useMemo(
@@ -1110,7 +1130,10 @@ const RecapsListInner: React.FC<{
         (recapDay !== "" &&
           (!dateFrom || recapDay >= dateFrom) &&
           (!dateTo || recapDay <= dateTo));
-      return matchQ && matchR && matchS && matchBa && matchStatus && matchDate;
+      const matchMap =
+        !needsStoreMap ||
+        (r.isThirdParty && r.storeMappingStatus === "unmatched");
+      return matchQ && matchR && matchS && matchBa && matchStatus && matchDate && matchMap;
     });
 
     // Sort in-place on the copy.
@@ -1127,7 +1150,7 @@ const RecapsListInner: React.FC<{
           return (b.date || "").localeCompare(a.date || "");
       }
     });
-  }, [recaps, search, retailerFilter, stateFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, justApprovedIds, isClient, pipeline]);
+  }, [recaps, search, retailerFilter, stateFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, justApprovedIds, isClient, pipeline, needsStoreMap]);
 
   // We paint every loaded row that matches the client-side filters.
   // Pagination now lives at the FETCH layer (`limit` / "Load more"), so
@@ -1474,6 +1497,7 @@ export default function SparkRecapsList() {
   const [statusFilter, setStatusFilter] = useState<StatusKey>(() =>
     defaultRecapStatus(isClient, statusFromUrl),
   );
+  const [needsStoreMap, setNeedsStoreMap] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   // Work-queue default: last 30 days for admin AND client. "All published"
   // clears both bounds so the archive is an explicit choice. Clients used
@@ -2002,6 +2026,7 @@ export default function SparkRecapsList() {
     setRmmFilter("all");
     setBaFilter("all");
     setStatusFilter(isClient ? "approved" : "all");
+    setNeedsStoreMap(false);
     setDateFrom("");
     setDateTo("");
   };
@@ -2023,6 +2048,9 @@ export default function SparkRecapsList() {
     retailerFilter !== "all" ? { key: "client", label: retailerFilter } : null,
     stateFilter !== "all" ? { key: "state", label: stateFilter } : null,
     baFilter !== "all" ? { key: "ba", label: "BA" } : null,
+    !isClient && needsStoreMap
+      ? { key: "store-map", label: "Map store" }
+      : null,
     dateFrom || dateTo
       ? {
           key: "date",
@@ -2141,6 +2169,16 @@ export default function SparkRecapsList() {
               </button>
             ))}
           </div>
+          )}
+          {!isClient && (
+          <button
+            type="button"
+            onClick={() => setNeedsStoreMap((v) => !v)}
+            className="rounded-xl text-xs px-3 py-2 font-semibold"
+            style={needsStoreMap ? limeBtn : ghostBtn}
+          >
+            Map store
+          </button>
           )}
           {!isClient && (
           <button
@@ -2501,6 +2539,7 @@ export default function SparkRecapsList() {
             justApprovedIds={justApprovedIds}
             refreshKey={refreshKey}
             density={density}
+            needsStoreMap={needsStoreMap}
             focusedId={
               focusedIdx >= 0 ? visibleRecaps[focusedIdx]?.uuid ?? null : null
             }
