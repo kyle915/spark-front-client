@@ -2124,6 +2124,7 @@ type CustomRecap implements Node {
   ambassadorId: ID
   ambassador: Ambassador
   externalBaName: String
+  isThirdParty: Boolean!
   jobId: ID
   job: Job
   retailerId: ID

@@ -1007,6 +1007,11 @@ body { background: var(--spark-bg); }
   background: rgba(20, 22, 15, 0.04);
   border-color: #e2e4d8;
 }
+.recap-doc .chip-purple {
+  color: #5b3d8a;
+  background: rgba(201, 164, 255, 0.16);
+  border-color: rgba(91, 61, 138, 0.35);
+}
 .recap-doc .spark-card,
 .recap-doc .kpi {
   background: #ffffff;

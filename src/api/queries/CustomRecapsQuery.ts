@@ -34,6 +34,7 @@ export const GetCustomRecapsQuery = graphql`
           createdAt
           totalEngagements
           approved
+          isThirdParty
           shareToken
           sharedAt
           event {
@@ -90,6 +91,7 @@ export const GetCustomRecapQuery = graphql`
       late
       incomplete
       approved
+      isThirdParty
       shareToken
       sharedAt
       clientSignoffStatus
