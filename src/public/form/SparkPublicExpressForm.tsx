@@ -1,4 +1,4 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import SparkFormLayout, { PublicFormTenantContext } from "./layout/FormLayout";
 import {
@@ -17,9 +17,12 @@ import {
   isEventActivationRequestType,
   isOnPremiseRequestType,
   isTorchRequestForm,
+  selectedProductsInclude5mgAnd10mg,
   torchActivationFieldsComplete,
   torchActivationGraphqlFields,
   torchActivationNoteLines,
+  torchNonActiveGraphqlFields,
+  torchNonActiveNoteLines,
 } from "./torchRequestForm";
 
 /**
@@ -105,7 +108,11 @@ function ExpressFormBody() {
   // no approval-flow impact. "" until the requestor picks one.
   const [schedulingStatus, setSchedulingStatus] = useState<string>("");
   // Torch-only: "Is Non-Active Product Required?" Yes/No. "" until picked.
+  // Shown only when selected SKUs include both a 5MG and a 10MG product.
   const [nonActiveProductRequired, setNonActiveProductRequired] = useState<string>("");
+  const [casesToBeShipped, setCasesToBeShipped] = useState("");
+  // Names for selected product IDs survive product-type filters / pagination.
+  const [productNameById, setProductNameById] = useState<Record<string, string>>({});
   // Torch-only extras gated by the existing Request Type picker.
   const [accountSpendAmount, setAccountSpendAmount] = useState("");
   const [eventAssetsNeeded, setEventAssetsNeeded] = useState("");
@@ -122,10 +129,32 @@ function ExpressFormBody() {
     requestorName: string;
   } | null>(null);
 
-  const toggleProduct = (id: string) =>
+  const toggleProduct = (id: string) => {
+    const product = products.find((p) => p.id === id);
+    if (product?.name) {
+      setProductNameById((prev) =>
+        prev[id] === product.name ? prev : { ...prev, [id]: product.name },
+      );
+    }
     setProductIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
+  };
+
+  useEffect(() => {
+    if (products.length === 0) return;
+    setProductNameById((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const p of products) {
+        if (p.id && p.name && next[p.id] !== p.name) {
+          next[p.id] = p.name;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [products]);
 
   const allDates = useMemo(
     () => [date, ...extraDates].filter(Boolean),
@@ -146,6 +175,16 @@ function ExpressFormBody() {
   const torchActivationOk =
     !isTorch ||
     torchActivationFieldsComplete(selectedRequestTypeName, torchActivationValues);
+  const torchNonActiveValues = {
+    nonActiveProductRequired,
+    casesToBeShipped,
+  };
+  const showTorchNonActiveFields = useMemo(() => {
+    if (!isTorch) return false;
+    return selectedProductsInclude5mgAnd10mg(
+      productIds.map((id) => productNameById[id]),
+    );
+  }, [isTorch, productIds, productNameById]);
 
   // Require a FULL address — street, city, state, ZIP — not just a street
   // line. Google Places' formattedAddress always carries a 5-digit ZIP; a
@@ -167,7 +206,7 @@ function ExpressFormBody() {
     !!requestorName.trim() &&
     !!requestorEmail.trim() &&
     !!schedulingStatus &&
-    (!isTorch || !!nonActiveProductRequired) &&
+    (!showTorchNonActiveFields || !!nonActiveProductRequired) &&
     torchActivationOk &&
     !submitting;
 
@@ -178,7 +217,7 @@ function ExpressFormBody() {
         ? "Products"
         : !requestorName.trim() || !requestorEmail.trim() || !requestTypeId || !schedulingStatus
           ? "Client"
-          : isTorch && !nonActiveProductRequired
+          : showTorchNonActiveFields && !nonActiveProductRequired
             ? "Products"
             : isTorch && !torchActivationOk
               ? "Request"
@@ -195,9 +234,7 @@ function ExpressFormBody() {
     const notesPlus = [
       notes,
       `BA count: ${baCount}`,
-      isTorch && nonActiveProductRequired
-        ? `Is Non-Active Product Required?: ${nonActiveProductRequired === "yes" ? "Yes" : "No"}`
-        : null,
+      ...torchNonActiveNoteLines(showTorchNonActiveFields, torchNonActiveValues),
       ...(isTorch
         ? torchActivationNoteLines(selectedRequestTypeName, torchActivationValues)
         : []),
@@ -277,9 +314,10 @@ function ExpressFormBody() {
         requestTypeId,
         timezoneId,
         schedulingStatus,
-        ...(isTorch
-          ? { isNonActiveProductRequired: nonActiveProductRequired === "yes" }
-          : {}),
+        ...torchNonActiveGraphqlFields(
+          showTorchNonActiveFields,
+          torchNonActiveValues,
+        ),
         ...(isTorch
           ? torchActivationGraphqlFields(
               selectedRequestTypeName,
@@ -325,6 +363,7 @@ function ExpressFormBody() {
       setNotes("");
       setSchedulingStatus("");
       setNonActiveProductRequired("");
+      setCasesToBeShipped("");
     } else {
       setError(
         `Submitted ${successes} of ${allDates.length}. Failed: ${failures.join("; ")}`,
@@ -780,7 +819,7 @@ function ExpressFormBody() {
           )}
         </Card>
 
-        {isTorch && (
+        {showTorchNonActiveFields && (
           <Card title="NON-ACTIVE PRODUCT *">
             <Field label="Is Non-Active Product Required? *">
               <div className="grid grid-cols-1 gap-2">
@@ -829,6 +868,18 @@ function ExpressFormBody() {
                   );
                 })}
               </div>
+            </Field>
+            <Field label="How many cases to be shipped?">
+              <input
+                type="number"
+                min={0}
+                step={1}
+                inputMode="numeric"
+                value={casesToBeShipped}
+                onChange={(e) => setCasesToBeShipped(e.target.value)}
+                className={inputCls}
+                placeholder="Optional"
+              />
             </Field>
           </Card>
         )}
@@ -1123,6 +1174,8 @@ function ExpressFormBody() {
                     setBaCount(1);
                     setNotes("");
                     setSchedulingStatus("");
+                    setNonActiveProductRequired("");
+                    setCasesToBeShipped("");
                     setConfirmation(null);
                   }}
                   className="px-4 py-3 rounded-xl text-sm font-semibold"

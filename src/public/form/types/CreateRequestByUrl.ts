@@ -47,6 +47,9 @@ export interface CreateRequestInput {
   // Torch form: "Is Non-Active Product Required?" Yes → true, No → false
   isNonActiveProductRequired?: boolean | null;
 
+  // Torch form: optional "How many cases to be shipped?" (5MG+10MG gate)
+  casesToBeShipped?: string | null;
+
   // Torch On-Premise / Event Activation extras (slug keee-torch-thc only)
   accountSpendAmount?: string | null;
   eventAssetsNeeded?: string | null;

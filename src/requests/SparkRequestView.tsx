@@ -585,6 +585,8 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                 "isNonActiveProductRequired",
                 request.isNonActiveProductRequired ? "yes" : "no",
               );
+            if (request.casesToBeShipped)
+              params.set("casesToBeShipped", request.casesToBeShipped);
             if (request.accountSpendAmount)
               params.set("accountSpendAmount", request.accountSpendAmount);
             if (request.eventAssetsNeeded)
@@ -710,6 +712,11 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           {request.isNonActiveProductRequired != null && (
             <Field label="Is Non-Active Product Required?">
               {request.isNonActiveProductRequired ? "Yes" : "No"}
+            </Field>
+          )}
+          {request.casesToBeShipped && (
+            <Field label="How many cases to be shipped?">
+              {request.casesToBeShipped}
             </Field>
           )}
           {request.accountSpendAmount && (

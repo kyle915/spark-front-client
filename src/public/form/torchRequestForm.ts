@@ -106,3 +106,80 @@ export function torchActivationGraphqlFields(
   }
   return {};
 }
+
+/**
+ * Torch spark-form product picker is a multi-select of SKU cards.
+ * Match 5MG / 10MG in the product name (spacing and case ignored).
+ * Do not treat 15MG / 25MG / 50MG as 5MG.
+ */
+const MG_5 = /(?:^|[^0-9])5\s*-?\s*mg\b/i;
+const MG_10 = /(?:^|[^0-9])10\s*-?\s*mg\b/i;
+
+export function productNameIs5mg(name: string | null | undefined): boolean {
+  return MG_5.test(name ?? "");
+}
+
+export function productNameIs10mg(name: string | null | undefined): boolean {
+  return MG_10.test(name ?? "");
+}
+
+/** True when selected SKUs include at least one 5MG product and one 10MG product. */
+export function selectedProductsInclude5mgAnd10mg(
+  productNames: Array<string | null | undefined>,
+): boolean {
+  let has5 = false;
+  let has10 = false;
+  for (const name of productNames) {
+    if (!has5 && productNameIs5mg(name)) has5 = true;
+    if (!has10 && productNameIs10mg(name)) has10 = true;
+    if (has5 && has10) return true;
+  }
+  return false;
+}
+
+export type TorchNonActiveValues = {
+  nonActiveProductRequired: string;
+  casesToBeShipped: string;
+};
+
+/** Notes lines for the 5MG+10MG Non-Active block. Empty when the block is hidden. */
+export function torchNonActiveNoteLines(
+  show: boolean,
+  values: TorchNonActiveValues,
+): string[] {
+  if (!show) return [];
+  const lines: string[] = [];
+  if (values.nonActiveProductRequired) {
+    lines.push(
+      `Is Non-Active Product Required?: ${
+        values.nonActiveProductRequired === "yes" ? "Yes" : "No"
+      }`,
+    );
+  }
+  const cases = values.casesToBeShipped.trim();
+  if (cases) {
+    lines.push(`How many cases to be shipped?: ${cases}`);
+  }
+  return lines;
+}
+
+/** GraphQL fields for the 5MG+10MG Non-Active block. Empty when hidden. */
+export function torchNonActiveGraphqlFields(
+  show: boolean,
+  values: TorchNonActiveValues,
+): Partial<{
+  isNonActiveProductRequired: boolean;
+  casesToBeShipped: string;
+}> {
+  if (!show) return {};
+  const fields: {
+    isNonActiveProductRequired?: boolean;
+    casesToBeShipped?: string;
+  } = {};
+  if (values.nonActiveProductRequired) {
+    fields.isNonActiveProductRequired = values.nonActiveProductRequired === "yes";
+  }
+  const cases = values.casesToBeShipped.trim();
+  if (cases) fields.casesToBeShipped = cases;
+  return fields;
+}
