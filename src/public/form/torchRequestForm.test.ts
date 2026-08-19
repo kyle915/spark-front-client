@@ -3,9 +3,14 @@ import {
   isEventActivationRequestType,
   isOnPremiseRequestType,
   isTorchRequestForm,
+  productNameIs10mg,
+  productNameIs5mg,
+  selectedProductsInclude5mgAnd10mg,
   torchActivationFieldsComplete,
   torchActivationGraphqlFields,
   torchActivationNoteLines,
+  torchNonActiveGraphqlFields,
+  torchNonActiveNoteLines,
   TORCH_REQUEST_FORM_SLUG,
 } from "./torchRequestForm";
 
@@ -104,5 +109,75 @@ describe("Torch request-type extras", () => {
       onsitePoc: "Jordan Lee",
       additionalTeamDetails: "Park in the rear lot",
     });
+  });
+});
+
+describe("Torch 5MG + 10MG Non-Active gate", () => {
+  it("matches 5mg/10mg in product names without treating 15mg as 5mg", () => {
+    expect(productNameIs5mg("Torch 5MG Gummies")).toBe(true);
+    expect(productNameIs5mg("5 mg Live Resin")).toBe(true);
+    expect(productNameIs5mg("5-MG")).toBe(true);
+    expect(productNameIs5mg("15MG Gummies")).toBe(false);
+    expect(productNameIs5mg("25MG")).toBe(false);
+    expect(productNameIs5mg("Torch 10MG")).toBe(false);
+
+    expect(productNameIs10mg("Torch 10MG Gummies")).toBe(true);
+    expect(productNameIs10mg("10 mg")).toBe(true);
+    expect(productNameIs10mg("10-MG")).toBe(true);
+    expect(productNameIs10mg("110MG")).toBe(false);
+    expect(productNameIs10mg("Torch 5MG")).toBe(false);
+  });
+
+  it("requires both a 5MG SKU and a 10MG SKU among selected products", () => {
+    expect(
+      selectedProductsInclude5mgAnd10mg(["Torch 5MG", "Torch 10MG"]),
+    ).toBe(true);
+    expect(
+      selectedProductsInclude5mgAnd10mg([
+        "Torch 5MG Gummies",
+        "Torch 10 mg Live Resin",
+        "Other SKU",
+      ]),
+    ).toBe(true);
+    expect(selectedProductsInclude5mgAnd10mg(["Torch 5MG"])).toBe(false);
+    expect(selectedProductsInclude5mgAnd10mg(["Torch 10MG"])).toBe(false);
+    expect(selectedProductsInclude5mgAnd10mg(["15MG", "25MG"])).toBe(false);
+    expect(selectedProductsInclude5mgAnd10mg([])).toBe(false);
+  });
+
+  it("omits Non-Active notes and GraphQL when the block is hidden", () => {
+    const values = {
+      nonActiveProductRequired: "yes",
+      casesToBeShipped: "12",
+    };
+    expect(torchNonActiveNoteLines(false, values)).toEqual([]);
+    expect(torchNonActiveGraphqlFields(false, values)).toEqual({});
+  });
+
+  it("appends Non-Active answers and optional cases when shown", () => {
+    expect(
+      torchNonActiveNoteLines(true, {
+        nonActiveProductRequired: "no",
+        casesToBeShipped: " 4 ",
+      }),
+    ).toEqual([
+      "Is Non-Active Product Required?: No",
+      "How many cases to be shipped?: 4",
+    ]);
+    expect(
+      torchNonActiveGraphqlFields(true, {
+        nonActiveProductRequired: "yes",
+        casesToBeShipped: "4",
+      }),
+    ).toEqual({
+      isNonActiveProductRequired: true,
+      casesToBeShipped: "4",
+    });
+    expect(
+      torchNonActiveGraphqlFields(true, {
+        nonActiveProductRequired: "no",
+        casesToBeShipped: "",
+      }),
+    ).toEqual({ isNonActiveProductRequired: false });
   });
 });

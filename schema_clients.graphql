@@ -1913,6 +1913,7 @@ input CreateRequestInput {
   reviewed: Boolean = null
   schedulingStatus: String = null
   isNonActiveProductRequired: Boolean = null
+  casesToBeShipped: String = null
   accountSpendAmount: String = null
   eventAssetsNeeded: String = null
   loadInTime: String = null
@@ -1980,6 +1981,7 @@ input CreateRequestWithDependenciesInput {
   requestorEmail: String = null
   schedulingStatus: String = null
   isNonActiveProductRequired: Boolean = null
+  casesToBeShipped: String = null
   accountSpendAmount: String = null
   eventAssetsNeeded: String = null
   loadInTime: String = null
@@ -5489,6 +5491,7 @@ type Request implements Node {
   reviewed: Boolean!
   schedulingStatus: String
   isNonActiveProductRequired: Boolean
+  casesToBeShipped: String
   accountSpendAmount: String
   eventAssetsNeeded: String
   loadInTime: String

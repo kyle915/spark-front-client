@@ -23,9 +23,12 @@ import {
   isEventActivationRequestType,
   isOnPremiseRequestType,
   isTorchRequestForm,
+  selectedProductsInclude5mgAnd10mg,
   torchActivationFieldsComplete,
   torchActivationGraphqlFields,
   torchActivationNoteLines,
+  torchNonActiveGraphqlFields,
+  torchNonActiveNoteLines,
 } from "@/public/form/torchRequestForm";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
 import type { RequestMutation } from "@api/mutations/__generated__/RequestMutation.graphql";
@@ -335,6 +338,9 @@ const SparkRequestInner: React.FC = () => {
   const [nonActiveProductRequired, setNonActiveProductRequired] = useState(
     searchParams.get("isNonActiveProductRequired") ?? "",
   );
+  const [casesToBeShipped, setCasesToBeShipped] = useState(
+    searchParams.get("casesToBeShipped") ?? "",
+  );
   const [accountSpendAmount, setAccountSpendAmount] = useState(
     searchParams.get("accountSpendAmount") ?? "",
   );
@@ -377,10 +383,22 @@ const SparkRequestInner: React.FC = () => {
   const torchActivationOk =
     !isTorch ||
     torchActivationFieldsComplete(selectedRequestTypeName, torchActivationValues);
+  const torchNonActiveValues = {
+    nonActiveProductRequired,
+    casesToBeShipped,
+  };
   const [notes, setNotes] = useState(qpNotes);
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(
     new Set(qpProducts),
   );
+  const showTorchNonActiveFields = useMemo(() => {
+    if (!isTorch) return false;
+    return selectedProductsInclude5mgAnd10mg(
+      products
+        .filter((p) => selectedProducts.has(String(p.id)))
+        .map((p) => p.name),
+    );
+  }, [isTorch, products, selectedProducts]);
   // Form is now always flat (no "Add detail" expander).
   const [venueFocused, setVenueFocused] = useState(false);
   // Bulk mode — add multiple dates at the same venue in one shot.
@@ -436,6 +454,8 @@ const SparkRequestInner: React.FC = () => {
         setSchedulingStatus(draft.schedulingStatus);
       if (typeof draft.nonActiveProductRequired === "string")
         setNonActiveProductRequired(draft.nonActiveProductRequired);
+      if (typeof draft.casesToBeShipped === "string")
+        setCasesToBeShipped(draft.casesToBeShipped);
       if (typeof draft.rmmId === "string") setRmmId(draft.rmmId);
       if (typeof draft.storeNumber === "string")
         setStoreNumber(draft.storeNumber);
@@ -471,6 +491,7 @@ const SparkRequestInner: React.FC = () => {
         timezoneId,
         schedulingStatus,
         nonActiveProductRequired,
+        casesToBeShipped,
         rmmId,
         distributorId,
         storeNumber,
@@ -506,6 +527,7 @@ const SparkRequestInner: React.FC = () => {
     timezoneId,
     schedulingStatus,
     nonActiveProductRequired,
+    casesToBeShipped,
     rmmId,
     distributorId,
     storeNumber,
@@ -621,7 +643,7 @@ const SparkRequestInner: React.FC = () => {
       );
       return;
     }
-    if (isTorch && !nonActiveProductRequired) {
+    if (isTorch && showTorchNonActiveFields && !nonActiveProductRequired) {
       showAlert("Pick whether non-active product is required — Yes or No.", "warning");
       return;
     }
@@ -647,9 +669,7 @@ const SparkRequestInner: React.FC = () => {
         : null,
       notes,
       `BA count: ${baCount}`,
-      isTorch && nonActiveProductRequired
-        ? `Is Non-Active Product Required?: ${nonActiveProductRequired === "yes" ? "Yes" : "No"}`
-        : null,
+      ...torchNonActiveNoteLines(showTorchNonActiveFields, torchNonActiveValues),
       ...(isTorch
         ? torchActivationNoteLines(selectedRequestTypeName, torchActivationValues)
         : []),
@@ -704,9 +724,10 @@ const SparkRequestInner: React.FC = () => {
               timezoneId: resolvedTimezoneId,
               requestTypeId,
               schedulingStatus: schedulingStatus || undefined,
-              isNonActiveProductRequired: isTorch
-                ? nonActiveProductRequired === "yes"
-                : undefined,
+              ...torchNonActiveGraphqlFields(
+                showTorchNonActiveFields,
+                torchNonActiveValues,
+              ),
               ...(isTorch
                 ? torchActivationGraphqlFields(
                     selectedRequestTypeName,
@@ -1087,23 +1108,6 @@ const SparkRequestInner: React.FC = () => {
                 </option>
               </select>
             </div>
-            {isTorch && (
-              <div>
-                <label className="label-mini block mb-1.5">
-                  Is Non-Active Product Required? *
-                </label>
-                <select
-                  style={inputStyle}
-                  value={nonActiveProductRequired}
-                  onChange={(e) => setNonActiveProductRequired(e.target.value)}
-                  required
-                >
-                  <option value="">Select Yes or No</option>
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </div>
-            )}
             {isTorch && isOnPremiseRequestType(selectedRequestTypeName) && (
               <div>
                 <label className="label-mini block mb-1.5">
@@ -1595,6 +1599,41 @@ const SparkRequestInner: React.FC = () => {
           </div>
         )}
 
+        {showTorchNonActiveFields && (
+          <div className="space-y-4">
+            <div>
+              <label className="label-mini block mb-1.5">
+                Is Non-Active Product Required? *
+              </label>
+              <select
+                style={inputStyle}
+                value={nonActiveProductRequired}
+                onChange={(e) => setNonActiveProductRequired(e.target.value)}
+                required
+              >
+                <option value="">Select Yes or No</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
+            <div>
+              <label className="label-mini block mb-1.5">
+                How many cases to be shipped?
+              </label>
+              <input
+                style={inputStyle}
+                type="number"
+                min={0}
+                step={1}
+                inputMode="numeric"
+                value={casesToBeShipped}
+                onChange={(e) => setCasesToBeShipped(e.target.value)}
+                placeholder="Optional"
+              />
+            </div>
+          </div>
+        )}
+
         <div>
           <label className="label-mini block mb-1.5">Notes (optional)</label>
           <textarea
@@ -1685,7 +1724,7 @@ const SparkRequestInner: React.FC = () => {
               !venue ||
               !date ||
               !schedulingStatus ||
-              (isTorch && !nonActiveProductRequired) ||
+              (showTorchNonActiveFields && !nonActiveProductRequired) ||
               (isTorch && !torchActivationOk)
             }
             className="px-6 py-3 rounded-2xl text-sm font-semibold transition"
@@ -1696,7 +1735,7 @@ const SparkRequestInner: React.FC = () => {
                 !venue ||
                 !date ||
                 !schedulingStatus ||
-                (isTorch && !nonActiveProductRequired) ||
+                (showTorchNonActiveFields && !nonActiveProductRequired) ||
                 (isTorch && !torchActivationOk)
                   ? "none"
                   : "0 0 24px rgba(197,245,70,0.35)",
@@ -1705,7 +1744,7 @@ const SparkRequestInner: React.FC = () => {
                 !venue ||
                 !date ||
                 !schedulingStatus ||
-                (isTorch && !nonActiveProductRequired) ||
+                (showTorchNonActiveFields && !nonActiveProductRequired) ||
                 (isTorch && !torchActivationOk)
                   ? 0.5
                   : 1,

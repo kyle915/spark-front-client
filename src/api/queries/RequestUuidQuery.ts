@@ -15,6 +15,7 @@ export const RequestUuidQuery = graphql`
       coordinates
       schedulingStatus
       isNonActiveProductRequired
+      casesToBeShipped
       accountSpendAmount
       eventAssetsNeeded
       loadInTime
