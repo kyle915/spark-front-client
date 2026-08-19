@@ -842,9 +842,19 @@ export default function SparkCheckin() {
         setLoadErr(json.message || "This check-in link isn't active.");
         setCtx(null);
       } else {
-        setCtx(json);
+        // Session (clocked-in) payloads historically omitted locationMode.
+        // Keep the standing-link market mode so Feel Free still shows
+        // Log this stop after identify.
+        setCtx((prev) => {
+          const next = {
+            ...json,
+            locationMode: json.locationMode ?? prev?.locationMode,
+            markets: json.markets?.length ? json.markets : prev?.markets,
+          };
+          writeCachedContext(code, next);
+          return next;
+        });
         setLoadErr(null);
-        writeCachedContext(code, json);
         // Expired standing-link tokens fall through to tenant context with
         // no session. Drop the stale token so the BA can pick Friday again
         // instead of staring at a dead "You're all set" from cache.
@@ -2069,11 +2079,11 @@ function CheckedInFlow({
       {showStopCard ? (
         <div style={card}>
           <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>
-            Where are you sampling?
+            Log your stop
           </p>
           <p style={{ fontSize: 12, opacity: 0.55, margin: "4px 0 10px" }}>
-            Tap this at each spot. We grab the location for you — the name is
-            just so you recognise it later.
+            Where are you sampling? Tap this at each spot. We grab the
+            location for you — the name is just so you recognise it later.
           </p>
           <input
             style={input}
