@@ -234,3 +234,11 @@ export function writeCachedContext(
     /* private mode / quota */
   }
 }
+
+export function clearCachedContext(code: string, storage: StorageLike = liveStorage()): void {
+  try {
+    storage.removeItem(cachedContextKey(code));
+  } catch {
+    /* disposable */
+  }
+}

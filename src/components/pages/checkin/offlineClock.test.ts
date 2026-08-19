@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   cachedContextKey,
+  clearCachedContext,
   clearPendingClock,
   enqueueClockIn,
   flushPendingClock,
@@ -249,6 +250,8 @@ describe("cached check-in context", () => {
     expect(readCachedContext<{ brand: { name: string } }>("FF-1", storage)).toEqual({
       brand: { name: "Feel Free" },
     });
+    clearCachedContext("FF-1", storage);
+    expect(readCachedContext("FF-1", storage)).toBeNull();
   });
 });
 
