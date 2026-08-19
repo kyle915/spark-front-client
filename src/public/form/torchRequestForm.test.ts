@@ -5,7 +5,7 @@ import {
   isTorchRequestForm,
   productNameIs10mg,
   productNameIs5mg,
-  selectedProductsInclude5mgAnd10mg,
+  selectedProductsInclude5mgOr10mg,
   torchActivationFieldsComplete,
   torchActivationGraphqlFields,
   torchActivationNoteLines,
@@ -112,7 +112,7 @@ describe("Torch request-type extras", () => {
   });
 });
 
-describe("Torch 5MG + 10MG Non-Active gate", () => {
+describe("Torch 5MG / 10MG Non-Active gate", () => {
   it("matches 5mg/10mg in product names without treating 15mg as 5mg", () => {
     expect(productNameIs5mg("Torch 5MG Gummies")).toBe(true);
     expect(productNameIs5mg("5 mg Live Resin")).toBe(true);
@@ -128,21 +128,30 @@ describe("Torch 5MG + 10MG Non-Active gate", () => {
     expect(productNameIs10mg("Torch 5MG")).toBe(false);
   });
 
-  it("requires both a 5MG SKU and a 10MG SKU among selected products", () => {
+  it("shows when any selected SKU is 5MG or 10MG, without requiring both families", () => {
     expect(
-      selectedProductsInclude5mgAnd10mg(["Torch 5MG", "Torch 10MG"]),
+      selectedProductsInclude5mgOr10mg(["Torch 5MG", "Torch 10MG"]),
     ).toBe(true);
     expect(
-      selectedProductsInclude5mgAnd10mg([
+      selectedProductsInclude5mgOr10mg([
+        "Peach Iced Tea 5mg 4-Pack",
+        "Iced Tea Lemonade 5mg 12oz",
+      ]),
+    ).toBe(true);
+    expect(selectedProductsInclude5mgOr10mg(["Torch 5MG"])).toBe(true);
+    expect(selectedProductsInclude5mgOr10mg(["Torch 10MG"])).toBe(true);
+    expect(
+      selectedProductsInclude5mgOr10mg([
         "Torch 5MG Gummies",
         "Torch 10 mg Live Resin",
         "Other SKU",
       ]),
     ).toBe(true);
-    expect(selectedProductsInclude5mgAnd10mg(["Torch 5MG"])).toBe(false);
-    expect(selectedProductsInclude5mgAnd10mg(["Torch 10MG"])).toBe(false);
-    expect(selectedProductsInclude5mgAnd10mg(["15MG", "25MG"])).toBe(false);
-    expect(selectedProductsInclude5mgAnd10mg([])).toBe(false);
+    expect(selectedProductsInclude5mgOr10mg(["15MG", "25MG"])).toBe(false);
+    expect(selectedProductsInclude5mgOr10mg(["Blue Razz 25mg 12oz"])).toBe(
+      false,
+    );
+    expect(selectedProductsInclude5mgOr10mg([])).toBe(false);
   });
 
   it("omits Non-Active notes and GraphQL when the block is hidden", () => {
