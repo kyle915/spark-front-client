@@ -17,8 +17,6 @@ import { ThirdPartyRecapBadge } from "@/recap/ThirdPartyRecapBadge";
 import type { CustomRecapsQuery as CustomRecapsQueryType } from "@api/queries/__generated__/CustomRecapsQuery.graphql";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
-import { AmbassadorsListQuery } from "@/api/queries/AmbassadorsListQuery";
-import type { AmbassadorsListQuery as AmbassadorsListQueryType } from "@api/queries/__generated__/AmbassadorsListQuery.graphql";
 import { GenerateCampaignReportPdfMutation } from "@/api/mutations/GenerateCampaignReportPdfMutation";
 import type { GenerateCampaignReportPdfMutation as GenerateCampaignReportPdfMutationType } from "@api/mutations/__generated__/GenerateCampaignReportPdfMutation.graphql";
 import { BulkApproveRecapsMutation } from "@/api/mutations/BulkApproveRecapsMutation";
@@ -53,9 +51,11 @@ import {
   defaultRecapStatus,
   recapEmptyKind,
   recapListStatusWord,
+  recapMatchesBaName,
   recapMatchesPipeline,
   sharedQueryFilter,
 } from "./recapListFilters";
+import { BaNameFilter } from "./BaNameFilter";
 
 // Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
 // keeps the sticky action bar's button disabled with a friendly
@@ -162,9 +162,7 @@ type Recap = {
   isThirdParty: boolean;
   storeMappingStatus: string;
   // Relay global id of the recap's PRIMARY ambassador (Recap.ambassador /
-  // CustomRecap.ambassador), or null for external/unlinked BAs. Used by the
-  // client-side BA filter mirror for instant feedback; the server-side
-  // `ambassadorId` filter is the source of truth.
+  // CustomRecap.ambassador), or null for external/unlinked BAs.
   ambassadorId: string | null;
   // Deep-link back to the parent request on the Master Tracker so
   // ops can pivot from "what happened in the field" to "who asked
@@ -781,6 +779,7 @@ const RecapCompactRow: React.FC<{
 type Meta = {
   retailers: string[];
   states: string[];
+  baNames: string[];
   // The tenant's full server-side total (combined legacy + custom
   // totalCount, honouring any server-side date bounds) — drives the
   // header + stats cards and the "of {total}" in the count indicator.
@@ -811,11 +810,9 @@ const RecapsListInner: React.FC<{
   retailerFilter: string;
   stateFilter: string;
   rmmFilter: string;
-  // Filter by the recap's PRIMARY Ambassador (Recap.ambassador) — the BA
-  // shown on the card/PDF. "all" = no filter; otherwise the Ambassador's
-  // Relay global id, pushed server-side as `ambassadorId` (the resolver
-  // decodes it). Mirrors rmmFilter end-to-end.
-  baFilter: string;
+  // Typed BA name. Empty = no filter. Pushed server-side as
+  // `ambassadorName` (contains-match on linked BA + external write-in).
+  baName: string;
   statusFilter: StatusKey;
   // Inclusive ISO yyyy-mm-dd bounds; empty string = no bound on that
   // side. Filter strips at the day level — recap dates are stored as
@@ -840,7 +837,7 @@ const RecapsListInner: React.FC<{
   density: "cards" | "compact";
   focusedId: string | null;
   needsStoreMap: boolean;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId, needsStoreMap }) => {
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baName, statusFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId, needsStoreMap }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
@@ -876,13 +873,19 @@ const RecapsListInner: React.FC<{
   // case. Empty string = unbounded on that side → send null.
   const startDate = dateFrom || null;
   const endDate = dateTo || null;
+  const [baNameQuery, setBaNameQuery] = useState(baName.trim());
+  useEffect(() => {
+    const t = window.setTimeout(() => setBaNameQuery(baName.trim()), 250);
+    return () => window.clearTimeout(t);
+  }, [baName]);
   const listFilters = useMemo(
     () =>
       tenantId
         ? {
             tenantId,
             rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
-            ambassadorId: baFilter === "all" ? null : baFilter,
+            ambassadorId: null,
+            ambassadorName: baNameQuery || null,
             approved: approvedFilter,
             shared: sharedQueryFilter(isClient, pipeline),
             retailerName,
@@ -894,7 +897,7 @@ const RecapsListInner: React.FC<{
     [
       tenantId,
       rmmFilter,
-      baFilter,
+      baNameQuery,
       approvedFilter,
       isClient,
       pipeline,
@@ -964,7 +967,7 @@ const RecapsListInner: React.FC<{
     refreshKey,
     tenantId ?? "",
     rmmFilter,
-    baFilter,
+    baNameQuery,
     dateFrom,
     dateTo,
     statusFilter,
@@ -1093,6 +1096,14 @@ const RecapsListInner: React.FC<{
     [recaps],
   );
 
+  const baNames = useMemo(
+    () =>
+      Array.from(
+        new Set(recaps.map((r) => r.baName).filter(Boolean)),
+      ).sort((a, b) => a.localeCompare(b)),
+    [recaps],
+  );
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     const matched = recaps.filter((r) => {
@@ -1104,12 +1115,7 @@ const RecapsListInner: React.FC<{
       const matchR =
         retailerFilter === "all" || r.retailerName === retailerFilter;
       const matchS = stateFilter === "all" || r.stateCode === stateFilter;
-      // Mirror the server-side `ambassadorId` filter on the loaded rows so
-      // the grid updates instantly when the BA dropdown changes (Relay also
-      // re-fetches; the server result is the source of truth). Keyed on the
-      // row's PRIMARY ambassador id — external/unlinked BAs (ambassadorId
-      // null) drop out of a narrowed BA filter.
-      const matchBa = baFilter === "all" || r.ambassadorId === baFilter;
+      const matchBa = recapMatchesBaName(baName, r.baName);
       const matchStatus = recapMatchesPipeline({
         isClient,
         pipeline,
@@ -1150,7 +1156,7 @@ const RecapsListInner: React.FC<{
           return (b.date || "").localeCompare(a.date || "");
       }
     });
-  }, [recaps, search, retailerFilter, stateFilter, baFilter, statusFilter, dateFrom, dateTo, sortKey, justApprovedIds, isClient, pipeline, needsStoreMap]);
+  }, [recaps, search, retailerFilter, stateFilter, baName, statusFilter, dateFrom, dateTo, sortKey, justApprovedIds, isClient, pipeline, needsStoreMap]);
 
   // We paint every loaded row that matches the client-side filters.
   // Pagination now lives at the FETCH layer (`limit` / "Load more"), so
@@ -1180,6 +1186,7 @@ const RecapsListInner: React.FC<{
     onMeta({
       retailers,
       states,
+      baNames,
       total:
         (data?.recaps?.totalCount ?? 0) +
         (customData?.customRecaps?.totalCount ?? 0),
@@ -1194,6 +1201,7 @@ const RecapsListInner: React.FC<{
   }, [
     retailers,
     states,
+    baNames,
     data?.recaps?.totalCount,
     customData?.customRecaps?.totalCount,
     recaps,
@@ -1416,58 +1424,6 @@ const RmmFilterDropdown: React.FC<{
   );
 };
 
-// Brand Ambassador filter — mirrors RmmFilterDropdown. Populated from the
-// tenant-scoped `ambassadors` resolver (active BAs only). The dropdown
-// `value` is the Ambassador's Relay global id, which is exactly what the
-// `ambassadorId` recap filter expects (the resolver decodes it). Filters by
-// the recap's PRIMARY ambassador (the BA shown on the card/PDF).
-const BaFilterDropdown: React.FC<{
-  tenantId: string;
-  value: string;
-  onChange: (v: string) => void;
-}> = ({ tenantId, value, onChange }) => {
-  const data = useLazyLoadQuery<AmbassadorsListQueryType>(
-    AmbassadorsListQuery,
-    { filters: { tenantId, isActive: true }, first: 500 },
-    { fetchPolicy: "store-or-network" },
-  );
-  const ambassadors = (data?.ambassadors?.edges ?? []).filter(Boolean);
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="rounded-xl text-sm"
-      style={{
-        padding: "0.75rem 0.95rem",
-        background: "var(--spark-bg)",
-        border: "1px solid var(--spark-border)",
-        color: "var(--spark-text)",
-        maxWidth: 200,
-        outline: "none",
-      }}
-      title="Filter by Brand Ambassador"
-    >
-      <option value="all">All ambassadors</option>
-      {ambassadors.map((edge) => {
-        const node = edge?.node;
-        if (!node) return null;
-        const label =
-          [node.user?.firstName, node.user?.lastName]
-            .filter(Boolean)
-            .join(" ")
-            .trim() ||
-          node.user?.email ||
-          String(node.uuid);
-        return (
-          <option key={node.id} value={String(node.id)}>
-            {label}
-          </option>
-        );
-      })}
-    </select>
-  );
-};
-
 export default function SparkRecapsList() {
   const { tenantId } = useAuthStore();
   const { isClient } = useSparkRole();
@@ -1491,9 +1447,7 @@ export default function SparkRecapsList() {
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
   const [rmmFilter, setRmmFilter] = useState("all");
-  // Brand Ambassador filter. "all" = no filter; otherwise the Ambassador's
-  // Relay global id (pushed server-side as `ambassadorId`). Mirrors rmmFilter.
-  const [baFilter, setBaFilter] = useState("all");
+  const [baName, setBaName] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusKey>(() =>
     defaultRecapStatus(isClient, statusFromUrl),
   );
@@ -1526,6 +1480,7 @@ export default function SparkRecapsList() {
   const [meta, setMeta] = useState<Meta>({
     retailers: [],
     states: [],
+    baNames: [],
     total: 0,
     filteredTotal: 0,
     loaded: 0,
@@ -1782,7 +1737,7 @@ export default function SparkRecapsList() {
     search: string;
     retailerFilter: string;
     stateFilter: string;
-    baFilter: string;
+    baName: string;
     statusFilter: StatusKey;
     dateFrom: string;
     dateTo: string;
@@ -1810,7 +1765,7 @@ export default function SparkRecapsList() {
         search,
         retailerFilter,
         stateFilter,
-        baFilter,
+        baName,
         statusFilter,
         dateFrom,
         dateTo,
@@ -1821,7 +1776,7 @@ export default function SparkRecapsList() {
     setSearch(v.search);
     setRetailerFilter(v.retailerFilter);
     setStateFilter(v.stateFilter);
-    setBaFilter(v.baFilter);
+    setBaName(v.baName ?? "");
     setStatusFilter(v.statusFilter);
     setDateFrom(v.dateFrom);
     setDateTo(v.dateTo);
@@ -1996,7 +1951,7 @@ export default function SparkRecapsList() {
     retailerFilter === "all" &&
     stateFilter === "all" &&
     rmmFilter === "all" &&
-    baFilter === "all";
+    !baName.trim();
   const datePreset =
     !dateFrom && !dateTo
       ? "all"
@@ -2024,7 +1979,7 @@ export default function SparkRecapsList() {
     setRetailerFilter("all");
     setStateFilter("all");
     setRmmFilter("all");
-    setBaFilter("all");
+    setBaName("");
     setStatusFilter(isClient ? "approved" : "all");
     setNeedsStoreMap(false);
     setDateFrom("");
@@ -2047,7 +2002,7 @@ export default function SparkRecapsList() {
     search.trim() ? { key: "search", label: search.trim() } : null,
     retailerFilter !== "all" ? { key: "client", label: retailerFilter } : null,
     stateFilter !== "all" ? { key: "state", label: stateFilter } : null,
-    baFilter !== "all" ? { key: "ba", label: "BA" } : null,
+    baName.trim() ? { key: "ba", label: baName.trim() } : null,
     !isClient && needsStoreMap
       ? { key: "store-map", label: "Map store" }
       : null,
@@ -2402,13 +2357,12 @@ export default function SparkRecapsList() {
             </Suspense>
           )}
           {tenantId && (
-            <Suspense fallback={null}>
-              <BaFilterDropdown
-                tenantId={tenantId}
-                value={baFilter}
-                onChange={setBaFilter}
-              />
-            </Suspense>
+            <BaNameFilter
+              tenantId={tenantId}
+              value={baName}
+              knownNames={meta.baNames}
+              onChange={setBaName}
+            />
           )}
           <input
             type="date"
@@ -2523,7 +2477,7 @@ export default function SparkRecapsList() {
             retailerFilter={retailerFilter}
             stateFilter={stateFilter}
             rmmFilter={rmmFilter}
-            baFilter={baFilter}
+            baName={baName}
             statusFilter={statusFilter}
             queueEmpty={isQueueDefault}
             dateFrom={dateFrom}

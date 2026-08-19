@@ -92,6 +92,15 @@ export function recapListStatusWord(
 
 export type RecapEmptyKind = "queue" | "window" | "filters";
 
+export function recapMatchesBaName(
+  baQuery: string,
+  recapBaName: string,
+): boolean {
+  const q = baQuery.trim().toLowerCase();
+  if (!q) return true;
+  return recapBaName.toLowerCase().includes(q);
+}
+
 export function recapEmptyKind(opts: {
   isClient: boolean;
   queueEmpty: boolean;

@@ -2267,6 +2267,7 @@ input CustomRecapFiltersInput {
   eventType: ID = null
   rmmAsignedId: ID = null
   ambassadorId: ID = null
+  ambassadorName: String = null
   retailerId: ID = null
   locationId: ID = null
   stateId: ID = null
@@ -5310,6 +5311,7 @@ input RecapFiltersInput {
   eventType: ID = null
   rmmAsignedId: ID = null
   ambassadorId: ID = null
+  ambassadorName: String = null
   retailerId: ID = null
   locationId: ID = null
   stateId: ID = null
