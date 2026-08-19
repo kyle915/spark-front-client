@@ -8,6 +8,8 @@ import {
 import { isHeicUpload } from "./heicUpload";
 import {
   CLOCK_FETCH_TIMEOUT_MS,
+  clearCachedContext,
+  clearPendingClock,
   enqueueClockIn,
   flushPendingClock,
   isOfflineClockFailure,
@@ -19,6 +21,7 @@ import {
 } from "./offlineClock";
 import {
   RECAP_FETCH_TIMEOUT_MS,
+  clearPendingRecap,
   enqueueRecap,
   flushPendingRecap,
   offlineRecapBanner,
@@ -26,6 +29,7 @@ import {
   readPendingRecap,
   type PendingRecap,
 } from "./offlineRecap";
+import { isLeftoverCheckinSession } from "./leftoverCheckin";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { holdActionSuccess, type ActionPhase } from "@/motion/opsMotion";
 import { recapSubmitErrorMessage } from "./recapSubmitError";
@@ -917,13 +921,17 @@ export default function SparkCheckin() {
   const startAnother = useCallback(() => {
     try {
       window.localStorage.removeItem(storeKey);
+      clearPendingClock(code);
+      clearPendingRecap(code);
+      clearCachedContext(code);
+      if (token) clearDraft(code, token);
     } catch {
       /* private mode — clearing state below is enough for this session */
     }
     setToken(null);
     setCtx(null);
     setLoadErr(null);
-  }, [storeKey]);
+  }, [storeKey, code, token]);
 
   const accent = ctx?.brand.primaryColor || FALLBACK_ACCENT;
   const clockState = ctx?.session?.clock.state ?? "not_started";
@@ -1500,13 +1508,27 @@ function CheckedInFlow({
 }) {
   const [busy, setBusy] = useState<"" | "in" | "out">("");
   const [inPhase, setInPhase] = useState<ActionPhase>("idle");
-  const [showRecap, setShowRecap] = useState(() => Boolean(ctx.recapOnly) && !hasRecap);
+  const [showRecap, setShowRecap] = useState(
+    () =>
+      Boolean(ctx.recapOnly) &&
+      !hasRecap &&
+      !(
+        ctx.mode === "tenant" &&
+        isLeftoverCheckinSession(ctx.event?.date, todayISO())
+      ),
+  );
   const [recapAsNew, setRecapAsNew] = useState(false);
   const openRecap = (asNew: boolean) => {
     setRecapAsNew(asNew);
     setShowRecap(true);
   };
   const [msg, setMsg] = useState<string | null>(null);
+  const [keepLeftover, setKeepLeftover] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const leftover =
+    ctx.mode === "tenant" &&
+    !keepLeftover &&
+    isLeftoverCheckinSession(ctx.event?.date, todayISO());
   const [queuedClock, setQueuedClock] = useState<PendingClockIn | null>(() =>
     readPendingClock(code),
   );
@@ -1529,6 +1551,27 @@ function CheckedInFlow({
       },
       timeoutMs ?? CLOCK_FETCH_TIMEOUT_MS,
     );
+
+  const clearClockIn = async () => {
+    setMsg(null);
+    setClearing(true);
+    const mustClose = effectiveClock === "clocked_in";
+    try {
+      const res = await post("clear-clock", {});
+      if (mustClose && !res.ok && res.status !== 401) {
+        setMsg("Couldn't clear that clock-in. Check your connection and try again.");
+        setClearing(false);
+        return;
+      }
+    } catch {
+      if (mustClose) {
+        setMsg("Couldn't clear that clock-in. Check your connection and try again.");
+        setClearing(false);
+        return;
+      }
+    }
+    onStartAnother();
+  };
 
   const queueOfflineIn = (coords: { latitude?: number; longitude?: number }, tappedAt: string) => {
     const row = enqueueClockIn({
@@ -1805,7 +1848,7 @@ function CheckedInFlow({
 
   const pending = ctx.session?.pendingReview;
 
-  if (showRecap || (ctx.recapOnly && !hasRecap)) {
+  if (showRecap || (ctx.recapOnly && !hasRecap && !leftover)) {
     return (
       <RecapForm
         code={code}
@@ -1833,7 +1876,7 @@ function CheckedInFlow({
     );
   }
 
-  if (hasRecap && clockState !== "clocked_in") {
+  if (hasRecap && clockState !== "clocked_in" && !leftover) {
     return (
       <div style={{ ...card, textAlign: "center" }}>
         <div style={{ fontSize: 40, marginBottom: 6 }}>✓</div>
@@ -1888,6 +1931,55 @@ function CheckedInFlow({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {leftover ? (
+        <div
+          style={{
+            ...card,
+            borderColor: "rgba(239, 90, 42, 0.35)",
+            background: "#fffaf7",
+          }}
+        >
+          <div
+            style={{
+              fontSize: 12,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "#ef5a2a",
+            }}
+          >
+            This isn't today's shift
+          </div>
+          <p style={{ fontSize: 15, fontWeight: 700, margin: "6px 0 4px" }}>
+            {fmtDay(ctx.event?.date)}
+            {ctx.event?.address ? ` · ${ctx.event.address}` : ""}
+          </p>
+          <p style={{ fontSize: 13, opacity: 0.7, margin: "0 0 12px" }}>
+            {ctx.recapOnly
+              ? "This form is for that day, not today. Start a new recap to pick today's date."
+              : "Clocking in here files against that day, not today. Clear the leftover clock-in to start a new check-in."}
+          </p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button
+              style={primaryBtn(accent)}
+              disabled={clearing || busy !== ""}
+              onClick={() => void clearClockIn()}
+            >
+              {clearing
+                ? "Clearing…"
+                : ctx.recapOnly
+                  ? "Start a new recap"
+                  : "Clear clock-in"}
+            </button>
+            <button
+              style={secondaryBtn}
+              disabled={clearing}
+              onClick={() => setKeepLeftover(true)}
+            >
+              Keep this shift
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div style={card}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <div>
@@ -1969,7 +2061,7 @@ function CheckedInFlow({
             Nobody can get stranded on the clock: the auto-clock-out cron
             closes anything left open. */}
         <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-          {effectiveClock === "not_started" ? (
+          {effectiveClock === "not_started" && !leftover ? (
             <ActionMorphButton
               style={primaryBtn(accent)}
               disabled={busy !== ""}
@@ -2022,7 +2114,7 @@ function CheckedInFlow({
               start today's. Hence the escape hatch below. */}
           {effectiveClock === "clocked_out" && !hasRecap ? (
             <>
-              {ctx.mode === "tenant" && !ctx.recapOnly ? (
+              {ctx.mode === "tenant" && !ctx.recapOnly && !leftover ? (
                 <button style={primaryBtn(accent)} disabled={busy !== ""} onClick={() => clock("in")}>
                   {busy === "in" ? "Clocking in…" : "Clock in"}
                 </button>
@@ -2031,7 +2123,10 @@ function CheckedInFlow({
                 File recap
               </button>
               {ctx.mode === "tenant" ? (
-                <button style={secondaryBtn} onClick={onStartAnother}>
+                <button
+                  style={secondaryBtn}
+                  onClick={() => (leftover ? void clearClockIn() : onStartAnother())}
+                >
                   Log another event
                 </button>
               ) : null}
@@ -2058,7 +2153,7 @@ function CheckedInFlow({
           move to. */}
       {ctx.mode === "tenant" && (clockState === "clocked_in" || clockState === "not_started") ? (
         <button
-          onClick={onStartAnother}
+          onClick={() => (leftover ? void clearClockIn() : onStartAnother())}
           style={{
             background: "none",
             border: "none",
