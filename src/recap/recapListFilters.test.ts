@@ -3,6 +3,7 @@ import {
   defaultRecapStatus,
   recapEmptyKind,
   recapListStatusWord,
+  recapMatchesBaName,
   recapMatchesPipeline,
   sharedQueryFilter,
 } from "./recapListFilters";
@@ -120,6 +121,20 @@ describe("recapListStatusWord", () => {
     expect(recapListStatusWord(false, "shared")).toBe("SHARED");
     expect(recapListStatusWord(false, "approved")).toBe("APPROVED");
     expect(recapListStatusWord(false, "needs_review")).toBe("NEEDS REVIEW");
+  });
+});
+
+describe("recapMatchesBaName", () => {
+  it("passes every recap when the BA box is empty", () => {
+    expect(recapMatchesBaName("", "VANITA KHAN")).toBe(true);
+    expect(recapMatchesBaName("   ", "VANITA KHAN")).toBe(true);
+  });
+
+  it("matches a typed first name against the card BA line", () => {
+    expect(recapMatchesBaName("Vanita", "VANITA KHAN")).toBe(true);
+    expect(recapMatchesBaName("khan", "VANITA KHAN")).toBe(true);
+    expect(recapMatchesBaName("Vanita Khan", "VANITA KHAN")).toBe(true);
+    expect(recapMatchesBaName("Alex", "VANITA KHAN")).toBe(false);
   });
 });
 
