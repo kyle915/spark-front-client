@@ -23,7 +23,7 @@ import {
   isEventActivationRequestType,
   isOnPremiseRequestType,
   isTorchRequestForm,
-  selectedProductsInclude5mgAnd10mg,
+  selectedProductsInclude5mgOr10mg,
   torchActivationFieldsComplete,
   torchActivationGraphqlFields,
   torchActivationNoteLines,
@@ -393,7 +393,7 @@ const SparkRequestInner: React.FC = () => {
   );
   const showTorchNonActiveFields = useMemo(() => {
     if (!isTorch) return false;
-    return selectedProductsInclude5mgAnd10mg(
+    return selectedProductsInclude5mgOr10mg(
       products
         .filter((p) => selectedProducts.has(String(p.id)))
         .map((p) => p.name),

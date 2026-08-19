@@ -17,7 +17,7 @@ import {
   isEventActivationRequestType,
   isOnPremiseRequestType,
   isTorchRequestForm,
-  selectedProductsInclude5mgAnd10mg,
+  selectedProductsInclude5mgOr10mg,
   torchActivationFieldsComplete,
   torchActivationGraphqlFields,
   torchActivationNoteLines,
@@ -108,7 +108,7 @@ function ExpressFormBody() {
   // no approval-flow impact. "" until the requestor picks one.
   const [schedulingStatus, setSchedulingStatus] = useState<string>("");
   // Torch-only: "Is Non-Active Product Required?" Yes/No. "" until picked.
-  // Shown only when selected SKUs include both a 5MG and a 10MG product.
+  // Shown when any selected SKU is 5MG or 10MG (not both families required).
   const [nonActiveProductRequired, setNonActiveProductRequired] = useState<string>("");
   const [casesToBeShipped, setCasesToBeShipped] = useState("");
   // Names for selected product IDs survive product-type filters / pagination.
@@ -181,7 +181,7 @@ function ExpressFormBody() {
   };
   const showTorchNonActiveFields = useMemo(() => {
     if (!isTorch) return false;
-    return selectedProductsInclude5mgAnd10mg(
+    return selectedProductsInclude5mgOr10mg(
       productIds.map((id) => productNameById[id]),
     );
   }, [isTorch, productIds, productNameById]);

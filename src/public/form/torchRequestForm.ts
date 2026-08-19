@@ -123,18 +123,13 @@ export function productNameIs10mg(name: string | null | undefined): boolean {
   return MG_10.test(name ?? "");
 }
 
-/** True when selected SKUs include at least one 5MG product and one 10MG product. */
-export function selectedProductsInclude5mgAnd10mg(
+/** True when any selected SKU is a 5MG or 10MG product (not 15MG). */
+export function selectedProductsInclude5mgOr10mg(
   productNames: Array<string | null | undefined>,
 ): boolean {
-  let has5 = false;
-  let has10 = false;
-  for (const name of productNames) {
-    if (!has5 && productNameIs5mg(name)) has5 = true;
-    if (!has10 && productNameIs10mg(name)) has10 = true;
-    if (has5 && has10) return true;
-  }
-  return false;
+  return productNames.some(
+    (name) => productNameIs5mg(name) || productNameIs10mg(name),
+  );
 }
 
 export type TorchNonActiveValues = {
@@ -142,7 +137,7 @@ export type TorchNonActiveValues = {
   casesToBeShipped: string;
 };
 
-/** Notes lines for the 5MG+10MG Non-Active block. Empty when the block is hidden. */
+/** Notes lines for the 5MG/10MG Non-Active block. Empty when the block is hidden. */
 export function torchNonActiveNoteLines(
   show: boolean,
   values: TorchNonActiveValues,
@@ -163,7 +158,7 @@ export function torchNonActiveNoteLines(
   return lines;
 }
 
-/** GraphQL fields for the 5MG+10MG Non-Active block. Empty when hidden. */
+/** GraphQL fields for the 5MG/10MG Non-Active block. Empty when hidden. */
 export function torchNonActiveGraphqlFields(
   show: boolean,
   values: TorchNonActiveValues,
