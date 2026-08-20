@@ -45,6 +45,36 @@ type Account = {
   address: string;
 };
 
+/** City + ST from a US one-line address when Location FKs are empty. */
+function marketFromAddress(address: string | null | undefined): {
+  city: string;
+  state: string;
+} {
+  const raw = String(address || "").trim();
+  const m = raw.match(/^(.*?),\s*([A-Za-z]{2})\s+\d{5}(?:-\d{4})?\s*$/);
+  if (!m) return { city: "", state: "" };
+  const state = m[2].toUpperCase();
+  const head = m[1].trim();
+  const commaCity = head.match(/^(.*),\s*([^,]+)$/);
+  if (commaCity) return { city: commaCity[2].trim(), state };
+  const afterStreet = head.match(
+    /^(?:.*?\b(?:Rd\.|Ave\.|St\.|Hwy\.|Dr\.|Blvd\.|Pkwy\.?|Ln\.|Ct\.|Pl\.|Trail))\s+(.+)$/i,
+  );
+  if (afterStreet) return { city: afterStreet[1].trim(), state };
+  const words = head.split(/\s+/);
+  return { city: words.slice(-2).join(" "), state };
+}
+
+/**
+ * One pin per physical store. Bulk import (`_ensure_retailer_account`)
+ * links every banner row to a single Retailer uuid, so grouping by that
+ * uuid collapsed Binny's 33 Illinois stores into one pin. Name + coords
+ * keeps TWM's per-store pins and splits banner-account imports the same way.
+ */
+function venuePinKey(name: string, lat: number, lng: number): string {
+  return `${name}|${lat.toFixed(5)}|${lng.toFixed(5)}`;
+}
+
 // Google Maps "Aubergine" / dark-friendly style trimmed for Spark.
 // Typed loosely so we don't pull in the @types/google.maps namespace.
 type MapStyleRule = {
@@ -145,9 +175,12 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
       const [lat, lng] = [coords[0], coords[1]];
       if (lat === 0 && lng === 0) continue;
       const retailerName = r.retailer?.name ?? r.name ?? "—";
-      const key = String(r.retailer?.uuid ?? `${retailerName}_${lat}_${lng}`);
-      const stateCode = r.retailer?.location?.state?.code ?? r.state?.code ?? "";
-      const cityish = r.retailer?.location?.name ?? r.location?.name ?? "";
+      const key = venuePinKey(retailerName, lat, lng);
+      const parsed = marketFromAddress(r.address);
+      const stateCode =
+        r.retailer?.location?.state?.code ?? r.state?.code ?? parsed.state;
+      const cityish =
+        r.retailer?.location?.name ?? r.location?.name ?? parsed.city;
       const market = [cityish, stateCode].filter(Boolean).join(", ");
       const statusSlug = (r.status?.slug ?? r.status?.name ?? "")
         .toLowerCase();
