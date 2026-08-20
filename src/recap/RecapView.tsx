@@ -498,7 +498,8 @@ const RecapView = () => {
   const accountSpend = recap.accountSpendAmount;
   const statusLabel = recap.approved ? "APPROVED" : "DRAFT";
   const tenantSlug = recap.event?.tenant?.slug?.toLowerCase() ?? "";
-  const isTotalWirelessTenant = tenantSlug === "total-wireless";
+  const isBaEventRecapTenant =
+    tenantSlug === "total-wireless" || tenantSlug === "g7-entertainment";
   const canViewMarketContext =
     tenantSlug === "begoat" || tenantSlug === "zeroes";
   const hasMarketContext =
@@ -637,7 +638,7 @@ const RecapView = () => {
             KPI GRID
         ====================================================== */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {!isTotalWirelessTenant && (
+            {!isBaEventRecapTenant && (
               <KpiCardContainer
                 title="Store Managers"
                 icon={<Store className="text-primary" />}
@@ -717,7 +718,7 @@ const RecapView = () => {
               </div>
             </KpiCardContainer>
 
-            {!isTotalWirelessTenant && (
+            {!isBaEventRecapTenant && (
               <KpiCardContainer
                 title="KPIs "
                 icon={<Goal className="text-primary" />}
@@ -790,7 +791,7 @@ const RecapView = () => {
                     <span className="text-xl font-bold">{totalConsumers}</span>
                   </div>
 
-                  {!isTotalWirelessTenant && (
+                  {!isBaEventRecapTenant && (
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm border rounded-lg p-3">
                         <span>First-time Consumers</span>
@@ -820,7 +821,7 @@ const RecapView = () => {
               )}
             </KpiCardContainer>
 
-            {!isTotalWirelessTenant && (
+            {!isBaEventRecapTenant && (
               <KpiCardContainer
                 title="Sales Performance"
                 className="col-span-2"
@@ -866,7 +867,7 @@ const RecapView = () => {
               </KpiCardContainer>
             )}
 
-            {!isTotalWirelessTenant && (
+            {!isBaEventRecapTenant && (
               <KpiCardContainer
                 title="Product Samples"
                 className="col-span-2"
