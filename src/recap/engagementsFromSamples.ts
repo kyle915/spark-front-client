@@ -10,7 +10,7 @@
  */
 
 const CONSUMERS_SAMPLED_RE =
-  /consumers?\s+sampled|consumers?\s+did\s+you\s+sample/i;
+  /consumers?\s+sampled|consumers?\s+did\s+you\s+sample|consumers?\s+did\s+you\s+interact/i;
 const SAMPLED_DESC_EXCLUDE_RE = /demographic|age\s*range|ethnicit|gender/i;
 
 export function isConsumersSampledCountField(name: string): boolean {

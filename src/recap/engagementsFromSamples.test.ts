@@ -14,6 +14,9 @@ describe("isConsumersSampledCountField", () => {
     expect(
       isConsumersSampledCountField("How many TOTAL consumers did you sample?"),
     ).toBe(true);
+    expect(
+      isConsumersSampledCountField("How many consumers did you interact with?"),
+    ).toBe(true);
   });
 
   it("skips demographics that only mention consumers sampled", () => {
