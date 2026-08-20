@@ -207,7 +207,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             </p>
           </div>
         ) : (
-          <APIProvider apiKey={apiKey}>
+          <APIProvider apiKey={apiKey} libraries={["marker"]}>
             <GMap
               defaultCenter={center}
               defaultZoom={mappable.length === 1 ? 11 : 4}

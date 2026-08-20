@@ -7,6 +7,10 @@ import {
   InfoWindow,
 } from "@vis.gl/react-google-maps";
 import { SparkGoogleClusters } from "@/shared/map/SparkGoogleClusters";
+import {
+  isPlottableLatLng,
+  venuePinKey,
+} from "@/shared/map/accountMapPins";
 import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
@@ -63,16 +67,6 @@ function marketFromAddress(address: string | null | undefined): {
   if (afterStreet) return { city: afterStreet[1].trim(), state };
   const words = head.split(/\s+/);
   return { city: words.slice(-2).join(" "), state };
-}
-
-/**
- * One pin per physical store. Bulk import (`_ensure_retailer_account`)
- * links every banner row to a single Retailer uuid, so grouping by that
- * uuid collapsed Binny's 33 Illinois stores into one pin. Name + coords
- * keeps TWM's per-store pins and splits banner-account imports the same way.
- */
-function venuePinKey(name: string, lat: number, lng: number): string {
-  return `${name}|${lat.toFixed(5)}|${lng.toFixed(5)}`;
 }
 
 // Google Maps "Aubergine" / dark-friendly style trimmed for Spark.
@@ -172,8 +166,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     for (const r of requests) {
       const coords = r.coordinates;
       if (!coords || coords.length < 2) continue;
-      const [lat, lng] = [coords[0], coords[1]];
-      if (lat === 0 && lng === 0) continue;
+      const lat = Number(coords[0]);
+      const lng = Number(coords[1]);
+      if (!isPlottableLatLng(lat, lng)) continue;
       const retailerName = r.retailer?.name ?? r.name ?? "—";
       const key = venuePinKey(retailerName, lat, lng);
       const parsed = marketFromAddress(r.address);
@@ -218,11 +213,11 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     // or addresses we can later geocode. They show as "unvisited" by
     // default — admin/client schedules a demo to flip them to scheduled.
     for (const u of uploaded) {
-      const lat = u.lat;
-      const lng = u.lng;
+      const lat = Number(u.lat);
+      const lng = Number(u.lng);
       const key = `upload:${u.id}`;
       const market = [u.city, u.state].filter(Boolean).join(", ");
-      if (lat && lng && lat !== 0 && lng !== 0) {
+      if (isPlottableLatLng(lat, lng)) {
         if (!map.has(key)) {
           map.set(key, {
             key,
@@ -546,7 +541,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
               </div>
             </div>
           ) : (
-            <APIProvider apiKey={apiKey}>
+            <APIProvider apiKey={apiKey} libraries={["marker"]}>
               <GMap
                 defaultCenter={center}
                 defaultZoom={4}
