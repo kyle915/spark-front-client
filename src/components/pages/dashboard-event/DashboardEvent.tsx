@@ -14,8 +14,8 @@ import { DashboardSkeleton } from "@/layout/PageSkeletons";
  * breach call-out), upcoming events in the next 14d, and unread
  * alerts. Each tile is clickable and routes to the relevant page.
  *
- * Sourced from useSidebarCounts so it shares the same RequestsQuery
- * cache the sidebar already paid for — no extra network hit.
+ * Sourced from useSidebarCounts so tracker / approvals / recaps-due
+ * share the sidebar's server scalars — no extra 2,000-row fetch.
  */
 const TodaysSnapshot: React.FC = () => {
   const navigate = useNavigate();
