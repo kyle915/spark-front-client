@@ -4740,6 +4740,35 @@ type CampaignCostReport {
   totalCost: Float!
 }
 
+type SidebarRequestCounts {
+  tracker: Int!
+  approvals: Int!
+  approvalsSlaBreach: Int!
+  upcoming: Int!
+  done30d: Int!
+  recapsDue: Int!
+}
+
+type SidebarAlertCandidate {
+  id: ID!
+  createdAt: String!
+  updatedAt: String!
+  statusSlug: String!
+}
+
+type AccountMapPin {
+  id: ID!
+  name: String!
+  address: String!
+  lat: Float!
+  lng: Float!
+  statusSlug: String!
+  date: String
+  retailerName: String!
+  locationName: String!
+  stateCode: String!
+}
+
 input RebookLastCrewInput {
   eventId: ID!
   clientMutationId: ID = null
@@ -4756,6 +4785,9 @@ type Query {
   staffingBoard(startDate: String!, endDate: String!, tenantId: ID = null): [StaffingBoardShift!]!
   walkupShifts(status: String = null, tenantId: ID = null): [WalkupShiftType!]!
   pendingWalkupCount(tenantId: ID = null): Int!
+  sidebarRequestCounts(tenantId: ID = null): SidebarRequestCounts!
+  sidebarAlertCandidates(tenantId: ID = null): [SidebarAlertCandidate!]!
+  accountMapPins(tenantId: ID = null, first: Int = null): [AccountMapPin!]!
   briefingTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [BriefingTemplate!]!
   gigTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [GigTemplate!]!
   jobBriefing(jobId: ID!): JobBriefingPayload

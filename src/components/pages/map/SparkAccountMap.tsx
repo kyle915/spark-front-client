@@ -12,8 +12,8 @@ import {
   venuePinKey,
 } from "@/shared/map/accountMapPins";
 import Layout from "@/layout/Layout";
-import { RequestsQuery } from "@/api/queries/RequestsQuery";
-import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { AccountMapQuery } from "@/api/queries/AccountMapQuery";
+import type { AccountMapQuery as AccountMapQueryType } from "@api/queries/__generated__/AccountMapQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import {
@@ -131,12 +131,6 @@ const DARK_MAP_STYLE: MapStyleRule[] = [
 const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
-  // Client view gets own-tenant framing in the header copy. The data
-  // itself is already client-tenant-scoped server-side (RequestsQuery →
-  // resolve_tenant_id forces a client to their membership tenant), so
-  // there are no admin-only controls to hide here — the status/state/
-  // retailer filters, the per-tenant client-side uploader, and the
-  // "schedule a visit" CTA are all appropriate for a client too.
   const { isClient } = useSparkRole();
   const [filter, setFilter] = useState<"all" | Status>("all");
   const [search, setSearch] = useState("");
@@ -151,34 +145,28 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     if (tenantId) setUploaded(loadUploadedAccounts(tenantId));
   }, [tenantId]);
 
-  const data = useLazyLoadQuery<RequestsQueryType>(
-    RequestsQuery,
-    { first: 2000, filters: tenantId ? { tenantId } : null },
+  const data = useLazyLoadQuery<AccountMapQueryType>(
+    AccountMapQuery,
+    { first: 2000, tenantId: tenantId || null },
     { fetchPolicy: "store-or-network" },
   );
 
   const accounts: Account[] = useMemo(() => {
     const map = new Map<string, Account>();
-    const requests =
-      data?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
-    for (const r of requests) {
-      const coords = r.coordinates;
-      if (!coords || coords.length < 2) continue;
-      const lat = Number(coords[0]);
-      const lng = Number(coords[1]);
+    const pins = (data?.accountMapPins ?? []).filter(
+      (p): p is NonNullable<typeof p> => Boolean(p),
+    );
+    for (const r of pins) {
+      const lat = Number(r.lat);
+      const lng = Number(r.lng);
       if (!isPlottableLatLng(lat, lng)) continue;
-      const retailerName = r.retailer?.name ?? r.name ?? "—";
+      const retailerName = r.retailerName || r.name || "—";
       const key = venuePinKey(retailerName, lat, lng);
       const parsed = marketFromAddress(r.address);
-      const stateCode =
-        r.retailer?.location?.state?.code ?? r.state?.code ?? parsed.state;
-      const cityish =
-        r.retailer?.location?.name ?? r.location?.name ?? parsed.city;
+      const stateCode = r.stateCode || parsed.state;
+      const cityish = r.locationName || parsed.city;
       const market = [cityish, stateCode].filter(Boolean).join(", ");
-      const statusSlug = (r.status?.slug ?? r.status?.name ?? "")
-        .toLowerCase();
+      const statusSlug = (r.statusSlug ?? "").toLowerCase();
       const inferred: Status =
         statusSlug === "done" || statusSlug === "completed"
           ? "recent"

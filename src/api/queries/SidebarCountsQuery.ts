@@ -1,37 +1,30 @@
 import { graphql } from "react-relay";
 
 /**
- * Lightweight requests query for the sidebar badge counts ONLY.
+ * Integer sidebar badges + a tiny 48h alert-candidate list.
  *
- * The sidebar is mounted on every page, and it used to run the full fat
- * RequestsQuery with first:2000 just to tally a handful of integer badges —
- * pulling ~1,000 rows × deeply-nested event/retailer/client/products/openShifts
- * objects on every navigation, which blocked the main thread (the app felt
- * unclickable). useSidebarCounts only needs status + a few dates + the recap
- * scalars, so this selects exactly those and nothing else. Orders of magnitude
- * less JSON to transfer and normalize into the Relay store.
+ * The sidebar is mounted on every admin page. It used to download up to
+ * 2,000 Request rows (even a skinny selection) just to tally tracker /
+ * approvals / recaps-due. Those are server scalars now, matching
+ * pendingWalkupCount. Alerts still need per-row keys for localStorage
+ * read-state, so we fetch only the last-48h candidates — not the tenant.
  */
 export const SidebarCountsQuery = graphql`
-  query SidebarCountsQuery($first: Int, $filters: RequestFiltersInput) {
-    requests(first: $first, filters: $filters) {
-      edges {
-        node {
-          id
-          date
-          createdAt
-          updatedAt
-          recapsFiledCount
-          eventsCount
-          status {
-            id
-            slug
-            name
-          }
-        }
-      }
+  query SidebarCountsQuery($tenantId: ID) {
+    sidebarRequestCounts(tenantId: $tenantId) {
+      tracker
+      approvals
+      approvalsSlaBreach
+      upcoming
+      done30d
+      recapsDue
     }
-    # Walk-ups awaiting review — a light scalar for the sidebar badge (returns 0
-    # for callers with no accessible tenants, so it's safe on this shared query).
-    pendingWalkupCount
+    sidebarAlertCandidates(tenantId: $tenantId) {
+      id
+      createdAt
+      updatedAt
+      statusSlug
+    }
+    pendingWalkupCount(tenantId: $tenantId)
   }
 `;

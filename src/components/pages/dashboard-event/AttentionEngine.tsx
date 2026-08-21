@@ -1,16 +1,15 @@
 import { useMemo } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
-import { SidebarCountsQuery } from "@/api/queries/SidebarCountsQuery";
-import type { SidebarCountsQuery as SidebarCountsQueryType } from "@api/queries/__generated__/SidebarCountsQuery.graphql";
+import { HomeAttentionQuery } from "@/api/queries/HomeAttentionQuery";
+import type { HomeAttentionQuery as HomeAttentionQueryType } from "@api/queries/__generated__/HomeAttentionQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 
 /**
  * Data-driven "What needs you" engine.
  *
- * Reuses SidebarCountsQuery (first: 2000) — the same document
- * useSidebarCounts already loaded — so Home does not fire a second
- * RequestsQuery for the first 500 rows.
+ * Home "What needs you" engine. Dashboard-only skinny request fetch —
+ * the sidebar badges use server scalars instead of this document.
  */
 
 type AttentionItem = {
@@ -48,8 +47,8 @@ export const AttentionEngine: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
 
-  const data = useLazyLoadQuery<SidebarCountsQueryType>(
-    SidebarCountsQuery,
+  const data = useLazyLoadQuery<HomeAttentionQueryType>(
+    HomeAttentionQuery,
     { first: 2000, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );

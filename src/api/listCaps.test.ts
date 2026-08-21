@@ -15,10 +15,16 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(src("./queries/TenantCheckinCodeQuery.ts")).toContain("first: 500");
   });
 
-  it("sidebar / account map request fetches use the API ceiling of 2000", () => {
-    expect(src("../hooks/useSidebarCounts.ts")).toContain("first: 2000");
+  it("account map pin fetch uses the API ceiling of 2000", () => {
     expect(src("../components/pages/map/SparkAccountMap.tsx")).toContain(
       "first: 2000",
+    );
+  });
+
+  it("sidebar badges do not download the 2000-request list", () => {
+    expect(src("../hooks/useSidebarCounts.ts")).not.toContain("first: 2000");
+    expect(src("./queries/SidebarCountsQuery.ts")).toContain(
+      "sidebarRequestCounts",
     );
   });
 
