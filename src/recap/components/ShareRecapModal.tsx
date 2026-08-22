@@ -3,6 +3,7 @@ import { useMutation } from "react-relay/hooks";
 import { ShareRecapByEmailMutation } from "@/api/mutations/ShareRecapByEmailMutation";
 import type { ShareRecapByEmailMutation as ShareRecapByEmailMutationType } from "@/api/mutations/__generated__/ShareRecapByEmailMutation.graphql";
 import { recapShareUrl } from "@/utils/recapShare";
+import { EMAIL_RE, parseRecipients } from "@/utils/emailRecipients";
 import { useAlertStore } from "@/store/alertStore";
 
 /**
@@ -22,22 +23,6 @@ type Props = {
   recapName?: string | null;
   onClose: () => void;
 };
-
-const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-
-function parseRecipients(raw: string): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const token of raw.split(/[\s,;]+/)) {
-    const email = token.trim();
-    if (!email) continue;
-    const key = email.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(email);
-  }
-  return out;
-}
 
 export default function ShareRecapModal({
   recapId,

@@ -27,8 +27,8 @@ import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { recapFileUrl } from "@/utils/recapFileUrl";
-import { recapShareUrl } from "@/utils/recapShare";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
+import ShareRecapsBulkModal from "@/recap/components/ShareRecapsBulkModal";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import EmailCampaignReportModal from "./EmailCampaignReportModal";
 import ImportConnecteamButton from "./ImportConnecteamButton";
@@ -1591,6 +1591,22 @@ export default function SparkRecapsList() {
       return next;
     });
   const clearSelection = () => setSelectedIds(new Set());
+  // Select-all operates on the recaps currently on screen (loaded +
+  // filter-matching), matching how the campaign report reads the
+  // selection. Toggles: when everything visible is already ticked it
+  // unticks just those rows, leaving off-screen picks intact.
+  const allVisibleSelected =
+    visibleRecaps.length > 0 &&
+    visibleRecaps.every((r) => selectedIds.has(r.id));
+  const toggleSelectAllVisible = () =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const r of visibleRecaps) {
+        if (allVisibleSelected) next.delete(r.id);
+        else next.add(r.id);
+      }
+      return next;
+    });
   // Whether the "Email Report" compose modal is open. Lives at the
   // page level so the sticky bar can both open it and read the same
   // orderedSelectedIds the download button uses.
@@ -1712,21 +1728,28 @@ export default function SparkRecapsList() {
     });
   };
 
-  const shareSelected = async () => {
-    const tokens = visibleRecaps
-      .filter((r) => selectedIds.has(r.id) && r.shareToken)
-      .map((r) => recapShareUrl(r.shareToken!));
-    if (tokens.length === 0) {
-      showAlert("No share links on the selected recaps.", "warning");
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(tokens.join("\n"));
-      showAlert(`Shared with ${tokens.length}.`, "success");
-    } catch {
-      showAlert("Couldn't reach the clipboard.", "error");
-      return;
-    }
+  // Bulk Share / Email modal. The selected Recap objects (visible ∩
+  // selected — the same set the campaign report exports) feed the
+  // modal's list, the copy-links path, and the shareRecapsByEmail
+  // mutation.
+  const [bulkShareOpen, setBulkShareOpen] = useState(false);
+  const selectedShareRecaps = useMemo(
+    () =>
+      visibleRecaps
+        .filter((r) => selectedIds.has(r.id))
+        .map((r) => ({
+          id: r.id,
+          kind: r.kind,
+          name: r.name,
+          shareToken: r.shareToken,
+        })),
+    [visibleRecaps, selectedIds],
+  );
+
+  // Copy-links path inside the bulk modal: handing someone the public
+  // links IS sharing, so stamp Shared exactly like the old clipboard
+  // button did. (The email path stamps shared_at server-side instead.)
+  const markSelectedShared = () => {
     commitMarkShared({
       variables: {
         input: {
@@ -2145,16 +2168,15 @@ export default function SparkRecapsList() {
             Map store
           </button>
           )}
-          {!isClient && (
           <button
             type="button"
             onClick={() => setSelectMode((v) => !v)}
             className="rounded-xl text-xs px-3 py-2 font-semibold"
             style={selectMode ? limeBtn : ghostBtn}
+            title="Select multiple recaps for bulk actions"
           >
             {selectMode ? "Selecting" : "Select"}
           </button>
-          )}
           {!isClient && (
           <button
             type="button"
@@ -2571,6 +2593,18 @@ export default function SparkRecapsList() {
           >
             ✕ CLEAR
           </button>
+          <button
+            type="button"
+            onClick={toggleSelectAllVisible}
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              color: "rgba(255,255,255,0.75)",
+            }}
+            title="Select / unselect every recap currently on screen"
+          >
+            {allVisibleSelected ? "☒ UNSELECT ALL" : "☑ SELECT ALL"}
+          </button>
           {!isClient && (
             <ActionMorphButton
               phase={approvePhase}
@@ -2586,13 +2620,15 @@ export default function SparkRecapsList() {
           )}
           <button
             type="button"
-            onClick={shareSelected}
-            disabled={isMarkingShared}
+            onClick={() => setBulkShareOpen(true)}
+            disabled={isMarkingShared || selectedShareRecaps.length === 0}
             className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
             style={ghostBtn}
+            title="Copy the public links or email them in one digest"
           >
-            Share selected
+            ↗ Share / Email
           </button>
+          {!isClient && (
           <button
             type="button"
             onClick={() => setEmailReportOpen(true)}
@@ -2615,6 +2651,8 @@ export default function SparkRecapsList() {
           >
             ✉ Email
           </button>
+          )}
+          {!isClient && (
           <button
             type="button"
             onClick={generateReport}
@@ -2639,6 +2677,7 @@ export default function SparkRecapsList() {
               ? `Generating ${selectedIds.size}…`
               : `📄 Download (${selectedIds.size})`}
           </button>
+          )}
         </div>
       )}
 
@@ -2647,6 +2686,20 @@ export default function SparkRecapsList() {
           recapIds={orderedSelectedIds}
           onClose={() => setEmailReportOpen(false)}
           onSent={clearSelection}
+        />
+      )}
+
+      {bulkShareOpen && selectedShareRecaps.length > 0 && (
+        <ShareRecapsBulkModal
+          recaps={selectedShareRecaps}
+          onClose={() => setBulkShareOpen(false)}
+          onSent={() => {
+            clearSelection();
+            // Re-fetch so the pipeline column shows the Shared stamp
+            // the API just wrote.
+            setRefreshKey((k) => k + 1);
+          }}
+          onLinksCopied={markSelectedShared}
         />
       )}
 
