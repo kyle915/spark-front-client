@@ -758,6 +758,22 @@ type ShareRecapByEmailResponse {
   sentCount: Int!
 }
 
+input ShareRecapsByEmailInput {
+  clientMutationId: ID = null
+  recapIds: [ID!] = null
+  customRecapIds: [ID!] = null
+  recipients: [String!]!
+  message: String = null
+}
+
+type ShareRecapsByEmailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  sentCount: Int!
+  sharedCount: Int!
+}
+
 input RecapClientSignoffInput {
   clientMutationId: ID = null
   recapId: ID = null
@@ -4104,6 +4120,7 @@ type Mutation {
   bulkApproveRecaps(input: BulkApproveRecapsInput!): BulkRecapsResponse!
   markRecapsShared(input: MarkRecapsSharedInput!): BulkRecapsResponse!
   shareRecapByEmail(input: ShareRecapByEmailInput!): ShareRecapByEmailResponse!
+  shareRecapsByEmail(input: ShareRecapsByEmailInput!): ShareRecapsByEmailResponse!
   submitRecapClientSignoff(input: RecapClientSignoffInput!): RecapClientSignoffResponse!
   declineCustomRecap(input: DeclineCustomRecapInput!): CustomRecapDetailResponse!
   generateRecapPdf(input: GenerateRecapPdfInput!): RecapFileDetailResponse!
