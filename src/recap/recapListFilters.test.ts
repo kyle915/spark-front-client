@@ -34,8 +34,8 @@ describe("sharedQueryFilter", () => {
     expect(sharedQueryFilter(true, "all")).toBeNull();
   });
 
-  it("splits admin approved vs shared", () => {
-    expect(sharedQueryFilter(false, "approved")).toBe(false);
+  it("only gates shared_at for the admin Shared tab", () => {
+    expect(sharedQueryFilter(false, "approved")).toBeNull();
     expect(sharedQueryFilter(false, "shared")).toBe(true);
     expect(sharedQueryFilter(false, "needs_review")).toBeNull();
   });
@@ -85,7 +85,7 @@ describe("recapMatchesPipeline", () => {
     ).toBe(false);
   });
 
-  it("keeps admin approved as not-yet-shared", () => {
+  it("shows admin every approved recap, including shared ones", () => {
     expect(
       recapMatchesPipeline({
         isClient: false,
@@ -99,7 +99,7 @@ describe("recapMatchesPipeline", () => {
         pipeline: "approved",
         ...approvedShared,
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       recapMatchesPipeline({
         isClient: false,
@@ -107,6 +107,13 @@ describe("recapMatchesPipeline", () => {
         ...approvedShared,
       }),
     ).toBe(true);
+    expect(
+      recapMatchesPipeline({
+        isClient: false,
+        pipeline: "shared",
+        ...approvedUnshared,
+      }),
+    ).toBe(false);
   });
 });
 
