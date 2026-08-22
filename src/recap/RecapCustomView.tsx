@@ -63,7 +63,7 @@ import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import { useAlertStore } from "@/store/alertStore";
 import { recapDisplayUrl, recapFileUrl } from "@/utils/recapFileUrl";
 import { useRecapPageCrumb } from "@/layout/pageCrumb";
-import { shareRecapLink } from "@/utils/recapShare";
+import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import useSparkRole from "@/hooks/useSparkRole";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
 import { ClientTenantRecapBrand } from "@/recap/TenantBrandedRecap";
@@ -994,6 +994,7 @@ const RecapCustomViewInner = () => {
   // uploads come down as their server-converted JPG (viewable anywhere),
   // not an unopenable .heic.
   const [isZipping, setIsZipping] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const handleDownloadPhotos = useCallback(async () => {
     if (flatImages.length === 0) {
       showAlert("No photos to download.", "warning");
@@ -1189,17 +1190,12 @@ const RecapCustomViewInner = () => {
                 </button>
                 )}
                 <button
-                  onClick={async () => {
+                  onClick={() => {
                     if (!recap.shareToken) {
                       showAlert("Share link isn't ready yet.", "warning");
                       return;
                     }
-                    const result = await shareRecapLink({
-                      token: recap.shareToken,
-                      title: recap.name ?? "Spark recap",
-                    });
-                    if (result === "copied")
-                      showAlert("Link copied.", "success");
+                    setShareOpen(true);
                   }}
                   className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                   style={ghostBtn}
@@ -2434,6 +2430,16 @@ const RecapCustomViewInner = () => {
           onIndex={setPreviewIndex}
         />
       )}
+
+      {shareOpen && recap.shareToken && (
+        <ShareRecapModal
+          recapId={recap.id}
+          kind="custom"
+          shareToken={recap.shareToken}
+          recapName={recap.name}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </>
   );
 
@@ -2472,17 +2478,12 @@ const RecapCustomViewInner = () => {
                     : "PDF"}
               </button>
               <button
-                onClick={async () => {
+                onClick={() => {
                   if (!recap.shareToken) {
                     showAlert("Share link isn't ready yet.", "warning");
                     return;
                   }
-                  const result = await shareRecapLink({
-                    token: recap.shareToken,
-                    title: recap.name ?? "Spark recap",
-                  });
-                  if (result === "copied")
-                    showAlert("Link copied.", "success");
+                  setShareOpen(true);
                 }}
                 className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                 style={ghostBtn}
@@ -2642,6 +2643,16 @@ const RecapCustomViewInner = () => {
             index={previewIndex ?? 0}
             onClose={closePreview}
             onIndex={setPreviewIndex}
+          />
+        )}
+
+        {shareOpen && recap.shareToken && (
+          <ShareRecapModal
+            recapId={recap.id}
+            kind="custom"
+            shareToken={recap.shareToken}
+            recapName={recap.name}
+            onClose={() => setShareOpen(false)}
           />
         )}
       </>

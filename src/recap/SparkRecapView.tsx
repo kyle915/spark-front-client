@@ -36,7 +36,7 @@ import useSparkRole from "@/hooks/useSparkRole";
 import RateBaControl from "@/components/RateBaControl";
 import { recapDisplayUrl, recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
 import { useRecapPageCrumb } from "@/layout/pageCrumb";
-import { shareRecapLink } from "@/utils/recapShare";
+import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import { parseLocaleNumber } from "@/utils";
 import { useAlertStore } from "@/store/alertStore";
 import RecapUploader from "./RecapUploader";
@@ -417,6 +417,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const { isAdmin, isClient } = useSparkRole();
   const [isZipping, setIsZipping] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   // Admin-only inline number editor. `editingNumbers` toggles the panel;
   // `draft` holds the in-progress string values keyed by field.
   const [editingNumbers, setEditingNumbers] = useState(false);
@@ -989,16 +990,12 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 : `⬇ Download photos (${allFiles.length})`}
             </button>
             <button
-              onClick={async () => {
+              onClick={() => {
                 if (!recap.shareToken) {
                   showAlert("Share link isn't ready yet.", "warning");
                   return;
                 }
-                const result = await shareRecapLink({
-                  token: recap.shareToken,
-                  title: recap.name ?? "Spark recap",
-                });
-                if (result === "copied") showAlert("Link copied.", "success");
+                setShareOpen(true);
               }}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
@@ -1578,6 +1575,16 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             // the mutation's selection set (recap.event), which
             // bubbles back into the open view automatically.
           }}
+        />
+      )}
+
+      {shareOpen && recap.shareToken && (
+        <ShareRecapModal
+          recapId={recap.id}
+          kind="legacy"
+          shareToken={recap.shareToken}
+          recapName={recap.name}
+          onClose={() => setShareOpen(false)}
         />
       )}
 
