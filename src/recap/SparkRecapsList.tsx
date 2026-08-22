@@ -27,7 +27,8 @@ import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { recapFileUrl } from "@/utils/recapFileUrl";
-import { recapShareUrl, shareRecapLink } from "@/utils/recapShare";
+import { recapShareUrl } from "@/utils/recapShare";
+import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import EmailCampaignReportModal from "./EmailCampaignReportModal";
 import ImportConnecteamButton from "./ImportConnecteamButton";
@@ -367,6 +368,8 @@ const RecapCard: React.FC<{
   // in-app SPA navigation.
   href: string;
   onOpenRequest: ((uuid: string) => void) | null;
+  // Opens the on-platform Share modal (email + copy link) for this recap.
+  onShare: (recap: Recap) => void;
   // Multi-select for the campaign-report builder. When `selected` is
   // non-null the card shows a checkbox in the top-left and toggling
   // it calls `onToggleSelect` instead of opening the recap. The
@@ -376,7 +379,7 @@ const RecapCard: React.FC<{
   selectMode: boolean;
   showSla: boolean;
   forceApproved?: boolean;
-}> = ({ recap, href, onOpenRequest, selected, onToggleSelect, selectMode, showSla, forceApproved }) => {
+}> = ({ recap, href, onOpenRequest, onShare, selected, onToggleSelect, selectMode, showSla, forceApproved }) => {
   const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
@@ -587,16 +590,10 @@ const RecapCard: React.FC<{
         {recap.shareToken && (
           <button
             type="button"
-            onClick={async (e) => {
+            onClick={(e) => {
               e.stopPropagation();
               e.preventDefault();
-              const result = await shareRecapLink({
-                token: recap.shareToken!,
-                title: recap.name,
-              });
-              if (result === "copied") {
-                useAlertStore.getState().showAlert("Link copied.", "success");
-              }
+              onShare(recap);
             }}
             className="mono inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px]"
             style={{
@@ -605,7 +602,7 @@ const RecapCard: React.FC<{
               border: "1px solid var(--spark-border)",
               color: "rgba(255,255,255,0.75)",
             }}
-            title="Copy public /r/:token link"
+            title="Share the public /r/:token link"
           >
             ↗ SHARE
           </button>
@@ -874,6 +871,9 @@ const RecapsListInner: React.FC<{
   const startDate = dateFrom || null;
   const endDate = dateTo || null;
   const [baNameQuery, setBaNameQuery] = useState(baName.trim());
+  // The recap whose Share modal is open (null = closed). Held here so
+  // both the cards grid and the compact list can raise it.
+  const [shareTarget, setShareTarget] = useState<Recap | null>(null);
   useEffect(() => {
     const t = window.setTimeout(() => setBaNameQuery(baName.trim()), 250);
     return () => window.clearTimeout(t);
@@ -1373,6 +1373,7 @@ const RecapsListInner: React.FC<{
           showSla={pipeline === "needs_review"}
           href={recapHref(r)}
           forceApproved={justApprovedIds.has(r.id)}
+          onShare={setShareTarget}
           onOpenRequest={(reqUuid) =>
             navigate(`/request/view/${reqUuid}`, {
               state: { from: "/recaps/list" },
@@ -1382,6 +1383,15 @@ const RecapsListInner: React.FC<{
       ))}
     </div>
     {listFooter}
+    {shareTarget?.shareToken && (
+      <ShareRecapModal
+        recapId={shareTarget.id}
+        kind={shareTarget.kind}
+        shareToken={shareTarget.shareToken}
+        recapName={shareTarget.name}
+        onClose={() => setShareTarget(null)}
+      />
+    )}
     </>
   );
 };

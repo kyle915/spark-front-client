@@ -9,20 +9,3 @@ import { recapPublicUrl } from "@/utils/publicHosts";
 export function recapShareUrl(token: string): string {
   return recapPublicUrl(token);
 }
-
-export async function shareRecapLink(opts: {
-  token: string;
-  title: string;
-}): Promise<"shared" | "copied"> {
-  const url = recapShareUrl(opts.token);
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: opts.title, url });
-      return "shared";
-    } catch {
-      // cancelled or unsupported — fall through to clipboard
-    }
-  }
-  await navigator.clipboard.writeText(url);
-  return "copied";
-}
