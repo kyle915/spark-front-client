@@ -1133,7 +1133,13 @@ const InviteModal: React.FC<{
   const showAlert = useAlertStore((s) => s.showAlert);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [note, setNote] = useState("");
+  // Bulk invite is client-only (matches inviteClientUsers on the API).
+  const [tab, setTab] = useState<"single" | "bulk">("single");
+  const [bulkText, setBulkText] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkResults, setBulkResults] = useState<
+    { email: string; status: string; message: string }[] | null
+  >(null);
   // Client invites scope to a single tenant; admin invites are
   // cross-tenant (backend ignores tenantId for admin). Ambassadors
   // default to the inviter's current tenant.
@@ -1169,6 +1175,139 @@ const InviteModal: React.FC<{
     width: "100%",
   };
 
+  // Bulk paste parsing: "email, name" / "email<TAB>name" / "email name" /
+  // bare "email" — one per line.
+  const parsedRows = useMemo(
+    () =>
+      bulkText
+        .split(/\n+/)
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((line) => {
+          const parts = line
+            .split(/[,;\t]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+          if (parts.length > 1) {
+            return { email: parts[0], name: parts.slice(1).join(" ") };
+          }
+          const ws = (parts[0] ?? "").split(/\s+/);
+          return { email: ws[0] ?? "", name: ws.slice(1).join(" ") };
+        }),
+    [bulkText],
+  );
+
+  const postGraphql = async (query: string, variables: unknown) => {
+    const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+    const json = await res.json();
+    if (json.errors?.length) {
+      throw new Error(
+        json.errors.map((e: { message: string }) => e.message).join("; "),
+      );
+    }
+    return json;
+  };
+
+  const sendSingle = async () => {
+    if (!email.trim()) {
+      showAlert("Email required.", "warning");
+      return;
+    }
+    if (role === "client" && !pickedTenantId) {
+      showAlert("Pick a brand to assign this client to.", "warning");
+      return;
+    }
+    const [firstName, ...rest] = name.trim().split(/\s+/);
+    const lastName = rest.join(" ");
+    try {
+      const json = await postGraphql(
+        `mutation InviteUser($input: InviteUserInput!) {
+           inviteUser(input: $input) { success message }
+         }`,
+        {
+          input: {
+            email: email.trim(),
+            firstName: firstName || null,
+            lastName: lastName || null,
+            role,
+            tenantId:
+              role === "admin"
+                ? null
+                : role === "client"
+                  ? pickedTenantId
+                  : localStorage.getItem("@tenantId"),
+          },
+        },
+      );
+      const r = json?.data?.inviteUser;
+      if (!r?.success) {
+        throw new Error(r?.message ?? "Invite failed.");
+      }
+      showAlert(r.message, "success");
+      onClose();
+    } catch (e) {
+      showAlert(`Invite failed: ${(e as Error).message}`, "error");
+    }
+  };
+
+  const sendBulk = async () => {
+    if (!pickedTenantId) {
+      showAlert("Pick a brand to assign these clients to.", "warning");
+      return;
+    }
+    if (!parsedRows.length) {
+      showAlert("Paste at least one email.", "warning");
+      return;
+    }
+    setBulkBusy(true);
+    try {
+      const json = await postGraphql(
+        `mutation InviteClientUsers($input: InviteClientUsersInput!) {
+           inviteClientUsers(input: $input) {
+             success
+             message
+             invited
+             existing
+             invalid
+             results { email status message }
+           }
+         }`,
+        {
+          input: {
+            tenantId: pickedTenantId,
+            rows: parsedRows.map((r) => {
+              const [firstName, ...rest] = r.name.split(/\s+/).filter(Boolean);
+              return {
+                email: r.email,
+                firstName: firstName || null,
+                lastName: rest.join(" ") || null,
+              };
+            }),
+          },
+        },
+      );
+      const r = json?.data?.inviteClientUsers;
+      if (!r) {
+        throw new Error("Bulk invite failed.");
+      }
+      if (!r.success) {
+        throw new Error(r.message ?? "Bulk invite failed.");
+      }
+      setBulkResults(r.results ?? []);
+    } catch (e) {
+      showAlert(`Bulk invite failed: ${(e as Error).message}`, "error");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   return (
     <div
       onClick={onClose}
@@ -1198,168 +1337,265 @@ const InviteModal: React.FC<{
         >
           Invite a {role}.
         </h2>
-        <div className="space-y-3">
-          <div>
-            <label className="label-mini block mb-1.5">Name</label>
-            <input
-              style={inputStyle}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Maya R."
-            />
-          </div>
-          <div>
-            <label className="label-mini block mb-1.5">Email *</label>
-            <input
-              style={inputStyle}
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={
-                role === "client"
-                  ? "ross@liquid-death.com"
-                  : role === "ambassador"
-                    ? "maya@gmail.com"
-                    : "name@igniteproductions.co"
-              }
-              required
-            />
-          </div>
-          {role === "client" && (
-            <div>
-              <label className="label-mini block mb-1.5">
-                Assign to brand / tenant *
-              </label>
-              <select
-                style={inputStyle}
-                value={pickedTenantId}
-                onChange={(e) => setPickedTenantId(e.target.value)}
+        {bulkResults ? (
+          <BulkResults
+            results={bulkResults}
+            onInviteMore={() => {
+              setBulkResults(null);
+              setBulkText("");
+            }}
+            onClose={onClose}
+          />
+        ) : (
+          <>
+            {role === "client" && (
+              <div
+                className="flex gap-1 p-1 rounded-xl mb-4"
+                style={{ background: "var(--spark-bg)" }}
               >
-                <option value="">— Select a brand —</option>
-                {tenants.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
+                {(["single", "bulk"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className="mono flex-1 text-[10px] py-2 rounded-lg"
+                    style={{
+                      letterSpacing: "0.14em",
+                      background:
+                        tab === t ? "var(--spark-lime)" : "transparent",
+                      color: tab === t ? "#0a0d09" : "rgba(255,255,255,0.55)",
+                      fontWeight: tab === t ? 700 : 400,
+                    }}
+                  >
+                    {t === "single" ? "SINGLE" : "BULK · PASTE LIST"}
+                  </button>
                 ))}
-              </select>
-              <p
-                className="mono text-[10px] mt-1.5"
+              </div>
+            )}
+            <div className="space-y-3">
+              {role === "client" && (
+                <div>
+                  <label className="label-mini block mb-1.5">
+                    Assign to brand / tenant *
+                  </label>
+                  <select
+                    style={inputStyle}
+                    value={pickedTenantId}
+                    onChange={(e) => setPickedTenantId(e.target.value)}
+                  >
+                    <option value="">— Select a brand —</option>
+                    {tenants.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p
+                    className="mono text-[10px] mt-1.5"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "rgba(255,255,255,0.45)",
+                    }}
+                  >
+                    CLIENTS WILL ONLY SEE THIS TENANT'S DASHBOARD + REQUESTS
+                  </p>
+                </div>
+              )}
+              {tab === "single" || role !== "client" ? (
+                <>
+                  <div>
+                    <label className="label-mini block mb-1.5">Name</label>
+                    <input
+                      style={inputStyle}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Maya R."
+                    />
+                  </div>
+                  <div>
+                    <label className="label-mini block mb-1.5">Email *</label>
+                    <input
+                      style={inputStyle}
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder={
+                        role === "client"
+                          ? "ross@liquid-death.com"
+                          : role === "ambassador"
+                            ? "maya@gmail.com"
+                            : "name@igniteproductions.co"
+                      }
+                      required
+                    />
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="label-mini block mb-1.5">
+                    One per line: email, name (name optional)
+                  </label>
+                  <textarea
+                    style={{ ...inputStyle, resize: "vertical", minHeight: 140 }}
+                    value={bulkText}
+                    onChange={(e) => setBulkText(e.target.value)}
+                    placeholder={
+                      "ross@liquid-death.com, Ross Hudgens\nsarah@liquid-death.com\nmike@liquid-death.com, Mike Cessario"
+                    }
+                    rows={6}
+                  />
+                  <p
+                    className="mono text-[10px] mt-1.5"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "rgba(255,255,255,0.45)",
+                    }}
+                  >
+                    NEW EMAILS GET THE WELCOME INVITE · EXISTING ACCOUNTS JUST
+                    GET LINKED
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+        {!bulkResults && (
+          <div className="flex items-center justify-between gap-2 mt-5">
+            <button
+              onClick={onClose}
+              className="mono text-[11px]"
+              style={{
+                letterSpacing: "0.14em",
+                color: "rgba(255,255,255,0.55)",
+              }}
+            >
+              CANCEL
+            </button>
+            <button
+              onClick={role === "client" && tab === "bulk" ? sendBulk : sendSingle}
+              disabled={bulkBusy}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+              style={{
+                background: "var(--spark-lime)",
+                color: "#0a0d09",
+                boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                opacity: bulkBusy ? 0.6 : 1,
+              }}
+            >
+              {role === "client" && tab === "bulk"
+                ? bulkBusy
+                  ? "Sending…"
+                  : `Send ${parsedRows.length || ""} invite${parsedRows.length === 1 ? "" : "s"} →`
+                : "Send invite →"}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const BulkResults: React.FC<{
+  results: { email: string; status: string; message: string }[];
+  onInviteMore: () => void;
+  onClose: () => void;
+}> = ({ results, onInviteMore, onClose }) => {
+  const pillFor = (status: string) => {
+    switch (status) {
+      case "invited":
+        return { label: "INVITED", bg: "var(--spark-lime)", fg: "#0a0d09" };
+      case "existing":
+        return { label: "LINKED", bg: "rgba(59,123,219,0.2)", fg: "#7db3ff" };
+      case "invalid":
+        return { label: "INVALID", bg: "rgba(239,90,42,0.18)", fg: "#ef5a2a" };
+      default:
+        return { label: "ERROR", bg: "rgba(239,90,42,0.18)", fg: "#ef5a2a" };
+    }
+  };
+  const invited = results.filter((r) => r.status === "invited").length;
+  const existing = results.filter((r) => r.status === "existing").length;
+  const failed = results.length - invited - existing;
+  return (
+    <div>
+      <div className="flex gap-2 mb-4">
+        {[
+          { n: invited, label: "INVITED", color: "var(--spark-lime)" },
+          { n: existing, label: "LINKED", color: "#7db3ff" },
+          { n: failed, label: "NEEDS FIX", color: "#ef5a2a" },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="flex-1 rounded-xl p-3 text-center"
+            style={{ background: "var(--spark-bg)" }}
+          >
+            <p className="display text-2xl font-bold" style={{ color: s.color }}>
+              {s.n}
+            </p>
+            <p
+              className="mono text-[9px] mt-0.5"
+              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+            >
+              {s.label}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div
+        className="space-y-2 overflow-y-auto"
+        style={{ maxHeight: 260 }}
+      >
+        {results.map((r, i) => {
+          const pill = pillFor(r.status);
+          return (
+            <div
+              key={`${r.email}-${i}`}
+              className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5"
+              style={{ background: "var(--spark-bg)" }}
+            >
+              <div className="min-w-0">
+                <p className="text-sm truncate" style={{ color: "var(--spark-text)" }}>
+                  {r.email}
+                </p>
+                <p
+                  className="text-[11px] truncate"
+                  style={{ color: "rgba(255,255,255,0.45)" }}
+                >
+                  {r.message}
+                </p>
+              </div>
+              <span
+                className="mono text-[9px] px-2 py-1 rounded-md shrink-0"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.45)",
+                  background: pill.bg,
+                  color: pill.fg,
+                  fontWeight: 700,
                 }}
               >
-                CLIENT WILL ONLY SEE THIS TENANT'S DASHBOARD + REQUESTS
-              </p>
+                {pill.label}
+              </span>
             </div>
-          )}
-          <div>
-            <label className="label-mini block mb-1.5">
-              Personal note (optional)
-            </label>
-            <textarea
-              style={{ ...inputStyle, resize: "vertical", minHeight: 70 }}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder={
-                role === "client"
-                  ? "Excited to onboard the Liquid Death program."
-                  : "Welcome to the team!"
-              }
-              rows={3}
-            />
-          </div>
-        </div>
-        <div className="flex items-center justify-between gap-2 mt-5">
-          <button
-            onClick={onClose}
-            className="mono text-[11px]"
-            style={{
-              letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.55)",
-            }}
-          >
-            CANCEL
-          </button>
-          <button
-            onClick={async () => {
-              if (!email.trim()) {
-                showAlert("Email required.", "warning");
-                return;
-              }
-              if (role === "client" && !pickedTenantId) {
-                showAlert(
-                  "Pick a brand to assign this client to.",
-                  "warning",
-                );
-                return;
-              }
-              const [firstName, ...rest] = name.trim().split(/\s+/);
-              const lastName = rest.join(" ");
-              try {
-                const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
-                  },
-                  body: JSON.stringify({
-                    query: `
-                      mutation InviteUser($input: InviteUserInput!) {
-                        inviteUser(input: $input) {
-                          success
-                          message
-                        }
-                      }
-                    `,
-                    variables: {
-                      input: {
-                        email: email.trim(),
-                        firstName: firstName || null,
-                        lastName: lastName || null,
-                        role,
-                        tenantId:
-                          role === "admin"
-                            ? null
-                            : role === "client"
-                              ? pickedTenantId
-                              : localStorage.getItem("@tenantId"),
-                        note: note || null,
-                      },
-                    },
-                  }),
-                });
-                const json = await res.json();
-                if (json.errors?.length) {
-                  throw new Error(
-                    json.errors
-                      .map((e: { message: string }) => e.message)
-                      .join("; "),
-                  );
-                }
-                const r = json?.data?.inviteUser;
-                if (!r?.success) {
-                  throw new Error(r?.message ?? "Invite failed.");
-                }
-                showAlert(r.message, "success");
-                onClose();
-              } catch (e) {
-                showAlert(
-                  `Invite failed: ${(e as Error).message}`,
-                  "error",
-                );
-              }
-            }}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold"
-            style={{
-              background: "var(--spark-lime)",
-              color: "#0a0d09",
-              boxShadow: "0 0 18px rgba(197,245,70,0.35)",
-            }}
-          >
-            Send invite →
-          </button>
-        </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center justify-between gap-2 mt-5">
+        <button
+          onClick={onInviteMore}
+          className="mono text-[11px]"
+          style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.55)" }}
+        >
+          ← INVITE MORE
+        </button>
+        <button
+          onClick={onClose}
+          className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+          style={{
+            background: "var(--spark-lime)",
+            color: "#0a0d09",
+            boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+          }}
+        >
+          Done
+        </button>
       </div>
     </div>
   );

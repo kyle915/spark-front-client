@@ -170,7 +170,6 @@ export default function SparkNewClient() {
               lastName: rest.join(" ") || null,
               role: "client",
               tenantId: newTenantId,
-              note: draft.notes || null,
             },
           },
         );
