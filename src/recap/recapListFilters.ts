@@ -47,10 +47,10 @@ export function sharedQueryFilter(
   pipeline: RecapListStatus,
 ): boolean | null {
   // Clients see every approved recap, shared or not. Admin "Approved"
-  // still means approved-but-not-shared; "Shared" means shared_at set.
+  // is the full approved pile (shared or not). "Shared" narrows to
+  // shared_at set — a subset of approved, not a separate status.
   if (isClient) return null;
   if (pipeline === "shared") return true;
-  if (pipeline === "approved") return false;
   return null;
 }
 
@@ -65,7 +65,7 @@ export function recapMatchesPipeline(opts: {
   if (isClient) return approved || justApproved;
   if (pipeline === "all" || pipeline === "submitted") return true;
   if (pipeline === "needs_review") return !approved || justApproved;
-  if (pipeline === "approved") return approved && !sharedAt;
+  if (pipeline === "approved") return approved || justApproved;
   if (pipeline === "shared") return Boolean(sharedAt);
   return true;
 }
