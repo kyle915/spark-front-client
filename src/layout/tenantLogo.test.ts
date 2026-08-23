@@ -53,11 +53,11 @@ describe("officialFallbackSrc", () => {
   });
 
   it("maps Luckin Coffee and Grub Hub by name and slug", () => {
-    expect(officialFallbackSrc({ name: "Luckin Coffee" })).toContain(
-      "luckincdn.us",
+    expect(officialFallbackSrc({ name: "Luckin Coffee" })).toBe(
+      "/brands/luckin-coffee-logo.png",
     );
-    expect(officialFallbackSrc({ tenantSlug: "luckin-coffee" })).toContain(
-      "luckincdn.us",
+    expect(officialFallbackSrc({ tenantSlug: "luckin-coffee" })).toBe(
+      "/brands/luckin-coffee-logo.png",
     );
     expect(officialFallbackSrc({ name: "Grub Hub" })).toContain(
       "Grubhub_2025_logo.svg",
@@ -131,7 +131,7 @@ describe("tenantLogoCandidates", () => {
   it("gives Luckin Coffee and Grub Hub official marks without an API image", () => {
     expect(
       tenantLogoCandidates({ name: "Luckin Coffee", tenantSlug: "luckin-coffee" })[0],
-    ).toContain("luckincdn.us");
+    ).toBe("/brands/luckin-coffee-logo.png");
     expect(
       tenantLogoCandidates({ name: "Grub Hub", tenantSlug: "grub-hub" })[0],
     ).toContain("Grubhub_2025_logo.svg");
