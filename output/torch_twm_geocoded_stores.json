@@ -1,0 +1,294 @@
+{
+  "ok": 32,
+  "miss": 0,
+  "stores": [
+    {
+      "store_number": "1801",
+      "address": "13887 Manchester Road, TOWN AND COUNTRY, MO 63011",
+      "name": "Torch Sampling - TOTAL WINE & MORE (Town & Country)",
+      "count": 10,
+      "lat": 38.5983759,
+      "lng": -90.484567,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "1802",
+      "address": "90 Brentwood Promenede Court, BRENTWOOD, MO 63144",
+      "name": "Torch Sampling - Total Wine & More (Brentwood)",
+      "count": 8,
+      "lat": 38.6261864,
+      "lng": -90.341044,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "1803",
+      "address": "1781 Clarkson Road, CHESTERFIELD, MO 63017",
+      "name": "Torch Sampling - Total Wine & More (Chesterfield)",
+      "count": 4,
+      "lat": 38.6425528,
+      "lng": -90.5693737,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "1804",
+      "address": "2257 State Hwy K, O'Fallon, MO 63368",
+      "name": "Torch Sampling - Total Wine & More (O'Fallon)",
+      "count": 11,
+      "lat": 38.7734315,
+      "lng": -90.701864,
+      "geocode_meta": "Dogwood Social House O'Fallon"
+    },
+    {
+      "store_number": "1805",
+      "address": "8520 N Evanston Ave., KANSAS CITY, MO 64157",
+      "name": "Torch Sampling - Total Wine & More (Liberty)",
+      "count": 4,
+      "lat": 39.2477567,
+      "lng": -94.4608221,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "1806",
+      "address": "13657 Washington Street, KANSAS CITY, MO 64145",
+      "name": "Torch Sampling - Total Wine & More (State Line)",
+      "count": 5,
+      "lat": 38.9132507,
+      "lng": -94.5963198,
+      "geocode_meta": "Washington Street"
+    },
+    {
+      "store_number": "1807",
+      "address": "1648 NW Chipman Road, LEE'S SUMMIT, MO 64081",
+      "name": "Torch Sampling - Total Wine & More (Lee's Summit)",
+      "count": 6,
+      "lat": 38.9267837,
+      "lng": -94.4225665,
+      "geocode_meta": "Northwest Chipman Road"
+    },
+    {
+      "store_number": "1808",
+      "address": "4201 Main Street, KANSAS CITY, MO 64111",
+      "name": "Torch Sampling - Total Wine & More (Kansas City)",
+      "count": 7,
+      "lat": 39.0505493,
+      "lng": -94.5860147,
+      "geocode_meta": "Office Depot"
+    },
+    {
+      "store_number": "1809",
+      "address": "3308 S. GLENSTONE AVE, SPRINGFIELD, MO 65804",
+      "name": "Torch Sampling - Total Wine & More (Springfield)",
+      "count": 8,
+      "lat": 37.1530733,
+      "lng": -93.2603409,
+      "geocode_meta": "Bed Bath & Beyond"
+    },
+    {
+      "store_number": "501",
+      "address": "9350 N Central Expy, Dallas, TX 75231",
+      "name": "Torch Sampling - Total Wine / Park Lane Dallas",
+      "count": 6,
+      "lat": 32.8744604,
+      "lng": -96.7682142,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "505",
+      "address": "721 N Central Expy #200, Plano, TX 75075",
+      "name": "Torch Sampling - Total Wine & More (Collin Creek Dallas)",
+      "count": 6,
+      "lat": 33.0104142,
+      "lng": -96.7094523,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "509",
+      "address": "5601 Brodie Ln #800, Sunset Valley, TX 78745",
+      "name": "Torch Sampling - Total Wine & More (Sunset Valley Austin)",
+      "count": 6,
+      "lat": 30.2253837,
+      "lng": -97.8209392,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "510",
+      "address": "11066 Pecan Park Blvd Suite 117, Cedar Park, TX 78613",
+      "name": "Torch Sampling - Total Wine & More (Lakeline Austin)",
+      "count": 7,
+      "lat": 30.4698531,
+      "lng": -97.7992026,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "515",
+      "address": "18740 Gulf Fwy, Friendswood, TX 77546",
+      "name": "Torch Sampling - Total Wine & More (Baybrook Houston)",
+      "count": 6,
+      "lat": 29.5475708,
+      "lng": -95.1515454,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "522",
+      "address": "10001 Research Blvd #300, Austin, TX 78759",
+      "name": "Torch Sampling - Total Wine & More (Arboretum Austin)",
+      "count": 6,
+      "lat": 30.3917293,
+      "lng": -97.7444326,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "523",
+      "address": "3101 Texas Sage Trail, Fort Worth, TX 76177",
+      "name": "Torch Sampling - Total Wine & More (Alliance Dallas)",
+      "count": 6,
+      "lat": 32.9136209,
+      "lng": -97.3118574,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "528",
+      "address": "2501 Rio Grande Blvd, Euless, TX 76039",
+      "name": "Torch Sampling - Total Wine & More (Euless Dallas)",
+      "count": 6,
+      "lat": 32.8721983,
+      "lng": -97.1033875,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "530",
+      "address": "2857 Katy Fwy Ste 100, Houston, TX 77007",
+      "name": "Torch Sampling - Total Wine & More (The Heights Houston)",
+      "count": 6,
+      "lat": 29.7734436,
+      "lng": -95.3883728,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "531",
+      "address": "3810 Congress Ave, Dallas, TX 75219",
+      "name": "Torch Sampling - Total Wine & More (Oak Lawn Dallas)",
+      "count": 6,
+      "lat": 32.8073924,
+      "lng": -96.8109862,
+      "geocode_meta": "Dallas"
+    },
+    {
+      "store_number": "803",
+      "address": "124 PERIMETER CENTER WEST, , ATLANTA, GA 30346",
+      "name": "Torch Sampling - TOTAL WINE & MORE  ATLANTA",
+      "count": 5,
+      "lat": 33.9270777,
+      "lng": -84.3447482,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "804",
+      "address": "3954A PEACHTREE ROAD NE, , BROOKHAVEN, GA 30319",
+      "name": "Torch Sampling - TOTAL WINE & MORE BROOKHAVEN",
+      "count": 6,
+      "lat": 33.8589424,
+      "lng": -84.3420443,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "805",
+      "address": "2955 COBB PKWY NW STE 308, , ATLANTA, GA 30339",
+      "name": "Torch Sampling - TOTAL WINE & MORE",
+      "count": 6,
+      "lat": 33.8828686,
+      "lng": -84.4608027,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "902",
+      "address": "13711 S Tamiami Trl, Fort Myers, FL 33912",
+      "name": "Torch Sampling - Total Wine & More (Fort Myers)",
+      "count": 7,
+      "lat": 26.5442615,
+      "lng": -81.8687949,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "903",
+      "address": "11221 Legacy Ave, Palm Beach Gardens, FL 33410",
+      "name": "Torch Sampling - Total Wine & More (Palm Beach)",
+      "count": 9,
+      "lat": 26.8404085,
+      "lng": -80.0932074,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "907",
+      "address": "4413 Town Center Pkwy Ste 300, Jacksonville, FL 32246",
+      "name": "Torch Sampling - Total Wine & More (Jacksonville)",
+      "count": 6,
+      "lat": 30.2627623,
+      "lng": -81.5268641,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "909",
+      "address": "2712 E Colonial Dr, Orlando, FL 32803",
+      "name": "Torch Sampling - Total Wine & More (Orlando)",
+      "count": 6,
+      "lat": 28.5527675,
+      "lng": -81.3485958,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "924",
+      "address": "8280 S Tamiami Trail, Sarasota, FL 34238",
+      "name": "Torch Sampling - Total Wine & More (Sarasota)",
+      "count": 6,
+      "lat": 27.230653,
+      "lng": -82.4966982,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "925",
+      "address": "160 E Altamonte Dr, Altamonte Springs, FL 32701",
+      "name": "Torch Sampling - Total Wine & More (Altamonte)",
+      "count": 6,
+      "lat": 28.661234,
+      "lng": -81.3849008,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "928",
+      "address": "11211 Causeway Blvd, Brandon, FL 33511",
+      "name": "Torch Sampling - Total Wine & More (Brandon)",
+      "count": 6,
+      "lat": 27.9214109,
+      "lng": -82.3259932,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "934",
+      "address": "25535 Sierra Center Blvd, Lutz, FL 33559",
+      "name": "Torch Sampling - Total Wine & More (Wesley Chapel)",
+      "count": 6,
+      "lat": 28.1955582,
+      "lng": -82.3955595,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "937",
+      "address": "1660 Airport Blvd Unit 145, Pensacola, FL 32504",
+      "name": "Torch Sampling - Total Wine & More (Pensacola)",
+      "count": 6,
+      "lat": 30.4810929,
+      "lng": -87.2072024,
+      "geocode_meta": "Total Wine"
+    },
+    {
+      "store_number": "938",
+      "address": "1400-31 Village Square Blvd, Tallahassee, FL 32312",
+      "name": "Torch Sampling - Total Wine & More (Tallahassee)",
+      "count": 6,
+      "lat": 30.5120456,
+      "lng": -84.2478957,
+      "geocode_meta": "Total Wine"
+    }
+  ]
+}

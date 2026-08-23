@@ -1,0 +1,926 @@
+- generic:
+  - generic:
+    - region "Notifications alt+T"
+    - complementary:
+      - generic:
+        - link "Best Designs on X":
+          - /url: /
+      - navigation "Categories":
+        - generic:
+          - paragraph: Inspiration
+          - button "Best Designs"
+          - button "Instagram"
+          - button "Fonts"
+          - button "Dribbble"
+          - button "Behance"
+          - button "Saved Items"
+      - navigation "Community":
+        - paragraph: Community
+        - button "Feedback"
+        - button "Subscribe"
+        - link "Follow on X":
+          - /url: https://x.com/bestdesignsonx
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - menuitem: Sounds on
+          - button "Sign in"
+        - paragraph: © 2026 Best Designs on X
+    - generic:
+      - generic:
+        - generic:
+          - generic: Best
+          - generic: Designs
+          - generic: on X.com
+        - generic:
+          - search:
+            - generic:
+              - button "Search designs, creatives, or keywords..."
+              - generic:
+                - generic: ⌘
+                - text: K
+        - generic:
+          - text: Discover and follow new creatives on
+          - strong: 𝕏
+          - text: . Updated hourly.
+      - generic:
+        - tablist "View":
+          - tab "All 8751" [selected]:
+            - generic: All
+            - generic: "8751"
+          - tab "Saved 0":
+            - generic: Saved
+            - generic: "0"
+        - generic "2026-08-16T11:00:05.255+00:00": "Last updated: 5 hours ago"
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - link "@mickces":
+                    - /url: https://x.com/mickces
+                  - generic:
+                    - button "Save":
+                      - checkbox
+            - generic:
+              - generic:
+                - generic:
+                  - link "@areebadesigns":
+                    - /url: https://x.com/areebadesigns
+                  - generic:
+                    - button "Save":
+                      - checkbox
+            - generic:
+              - generic:
+                - generic:
+                  - link "@its_sslvr":
+                    - /url: https://x.com/its_sslvr
+                  - generic:
+                    - button "Save":
+                      - checkbox
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - button "Previous slide" [ref=e156] [cursor=pointer]
+                        - button "Next slide" [ref=e159] [cursor=pointer]
+                        - generic:
+                          - generic: "1"
+                          - text: /
+                          - generic: "2"
+                        - generic [ref=e164] [cursor=pointer]:
+                          - button "Go to slide 1" [ref=e165]
+                          - button "Go to slide 2" [ref=e167]
+                  - link "@piyushsphere":
+                    - /url: https://x.com/piyushsphere
+                  - generic:
+                    - button "Save":
+                      - checkbox
+            - generic:
+              - generic:
+                - generic:
+                  - link "@jeetnirnejak":
+                    - /url: https://x.com/jeetnirnejak
+                  - generic:
+                    - button "Save":
+                      - checkbox
+            - generic:
+              - generic:
+                - generic:
+                  - link "@YousufSoomroDev":
+                    - /url: https://x.com/YousufSoomroDev
+                  - generic:
+                    - button "Save":
+                      - checkbox
+            - generic:
+              - generic:
+                - generic:
+                  - link "@stas_plkv":
+                    - /url: https://x.com/stas_plkv
+                  - generic:
+                    - button "Save":
+                      - checkbox
+            - generic:
+              - generic:
+                - generic:
+                  - link "@Ahtasham_Design":
+                    - /url: https://x.com/Ahtasham_Design
+                  - generic:
+                    - button "Save":
+                      - checkbox
+            - generic:
+              - generic:
+                - generic:
+                  - link "@SubhanHQ":
+                    - /url: https://x.com/SubhanHQ
+                  - generic:
+                    - button "Save":
+                      - checkbox
+            - generic:
+              - generic:
+                - generic:
+                  - link "@moguzbulbul":
+                    - /url: https://x.com/moguzbulbul
+                  - generic:
+                    - button "Save":
+                      - checkbox
+            - generic:
+              - generic:
+                - generic:
+                  - link "@RalconStudio":
+                    - /url: https://x.com/RalconStudio
+                  - generic:
+                    - button "Save":
+                      - checkbox
+            - generic:
+              - generic:
+                - generic:
+                  - link "@basit_designs":
+                    - /url: https://x.com/basit_designs
+                  - generic:
+                    - button "Save":
+                      - checkbox
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - link "Play":
+                      - /url: https://createwithplay.com/
+                      - img "Play"
+                  - generic:
+                    - link "Raycast":
+                      - /url: https://www.raycast.com/
+                      - img "Raycast"
+                  - generic:
+                    - link "Mobbin":
+                      - /url: https://mobbin.com
+                      - img "Mobbin"
+                  - generic:
+                    - link "Sunrise Planner App":
+                      - /url: https://sunriseplanner.com
+                      - img "Sunrise Planner App"
+                  - generic:
+                    - link "Aura Build":
+                      - /url: https://aura.build
+                      - img "Aura Build"
+                  - generic:
+                    - link "Framer":
+                      - /url: https://framer.com
+                      - img "Framer"
+                  - generic:
+                    - link "ace.me":
+                      - /url: https://ace.me
+                      - img "ace.me"
+                  - generic:
+                    - link "Mockuuups":
+                      - /url: https://mockuuups.studio/
+                      - img "Mockuuups"
+            - generic:
+              - button "Go to slide 1"
+              - button "Go to slide 2"
+              - button "Go to slide 3"
+              - button "Go to slide 4"
+              - button "Go to slide 5"
+              - button "Go to slide 6"
+              - button "Go to slide 7"
+              - button "Go to slide 8"
+          - generic:
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - link "Framer":
+                      - /url: https://framer.com
+                      - img "Framer"
+                  - generic:
+                    - link "Aura Build":
+                      - /url: https://aura.build
+                      - img "Aura Build"
+                  - generic:
+                    - link "Play":
+                      - /url: https://createwithplay.com/
+                      - img "Play"
+                  - generic:
+                    - link "Raycast":
+                      - /url: https://www.raycast.com/
+                      - img "Raycast"
+                  - generic:
+                    - link "ace.me":
+                      - /url: https://ace.me
+                      - img "ace.me"
+                  - generic:
+                    - link "Mobbin":
+                      - /url: https://mobbin.com
+                      - img "Mobbin"
+                  - generic:
+                    - link "Sunrise Planner App":
+                      - /url: https://sunriseplanner.com
+                      - img "Sunrise Planner App"
+                  - generic:
+                    - link "Mockuuups":
+                      - /url: https://mockuuups.studio/
+                      - img "Mockuuups"
+            - generic:
+              - button "Go to slide 1"
+              - button "Go to slide 2"
+              - button "Go to slide 3"
+              - button "Go to slide 4"
+              - button "Go to slide 5"
+              - button "Go to slide 6"
+              - button "Go to slide 7"
+              - button "Go to slide 8"
+          - generic:
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+            - generic:
+              - generic:
+                - status "Loading"
+        - navigation "pagination":
+          - list:
+            - listitem:
+              - button "Go to previous page" [disabled]:
+                - generic: Previous
+            - listitem:
+              - button "Page 1": "1"
+            - listitem:
+              - button "Page 2": "2"
+            - listitem:
+              - button "Page 3": "3"
+            - listitem:
+              - button "Page 4": "4"
+            - listitem:
+              - generic: More pages
+            - listitem:
+              - button "Page 73": "73"
+            - listitem:
+              - button "Go to next page":
+                - generic: Next
+        - generic:
+          - generic:
+            - generic:
+              - generic: Network Sponsors
+              - generic:
+                - generic:
+                  - link "Get Featured":
+                    - /url: https://go.panda.network/advertise?ref=bestdesignsonx.com
+                  - button
+                  - button
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - link "Framer Web builder for professional designers. framer.com":
+                      - /url: https://framer.com
+                      - generic:
+                        - generic: Framer
+                        - paragraph: Web builder for professional designers.
+                      - generic: framer.com
+                    - link "Sunrise Planner Stay organized and build habits with this free weekly planner. sunriseplanner.com":
+                      - /url: https://sunriseplanner.com
+                      - generic:
+                        - generic: Sunrise Planner
+                        - paragraph: Stay organized and build habits with this free weekly planner.
+                      - generic: sunriseplanner.com
+                    - link "Readymag Build outstanding websites with Readymag. readymag.com":
+                      - /url: https://readymag.com
+                      - generic:
+                        - generic: Readymag
+                        - paragraph: Build outstanding websites with Readymag.
+                      - generic: readymag.com
+                    - link "Aura Build Professional Web Design with Gemini 3 aura.build":
+                      - /url: https://aura.build
+                      - generic:
+                        - generic: Aura Build
+                        - paragraph: Professional Web Design with Gemini 3
+                      - generic: aura.build
+                    - link "Mobbin Latest mobile design patterns. mobbin.com":
+                      - /url: https://mobbin.com
+                      - generic:
+                        - generic: Mobbin
+                        - paragraph: Latest mobile design patterns.
+                      - generic: mobbin.com
+                    - link "ACE Your new website & email address ace.me":
+                      - /url: https://ace.me/
+                      - generic:
+                        - generic: ACE
+                        - paragraph: Your new website & email address
+                      - generic: ace.me
+                    - link "Mockuuups Turn your designs into stunning mockups. mockuuups.studio":
+                      - /url: https://mockuuups.studio
+                      - generic:
+                        - generic: Mockuuups
+                        - paragraph: Turn your designs into stunning mockups.
+                      - generic: mockuuups.studio
+                    - link "Fontbase Too many fonts to handle? Try FontBase. fontba.se":
+                      - /url: https://fontba.se/
+                      - generic:
+                        - generic: Fontbase
+                        - paragraph: Too many fonts to handle? Try FontBase.
+                      - generic: fontba.se
+                - generic:
+                  - generic:
+                    - link "Adobe Adobe is changing the world through digital experiences. www.adobe.com":
+                      - /url: https://www.adobe.com/
+                      - generic:
+                        - generic: Adobe
+                        - paragraph: Adobe is changing the world through digital experiences.
+                      - generic: www.adobe.com
+                    - link "Play Native Prototypes. No App Install. createwithplay.com":
+                      - /url: https://createwithplay.com/
+                      - generic:
+                        - generic: Play
+                        - paragraph: Native Prototypes. No App Install.
+                      - generic: createwithplay.com
+                    - link "Faire Type Brooklyn-based type foundry. fairetype.com":
+                      - /url: https://fairetype.com/
+                      - generic:
+                        - generic: Faire Type
+                        - paragraph: Brooklyn-based type foundry.
+                      - generic: fairetype.com
+                    - link "Curated Supply Beautifully designed products, curated. curated.supply":
+                      - /url: https://curated.supply
+                      - generic:
+                        - generic: Curated Supply
+                        - paragraph: Beautifully designed products, curated.
+                      - generic: curated.supply
+          - generic:
+            - button "Go to slide 0"
+            - button "Go to slide 1"
+        - navigation "pagination":
+          - list:
+            - listitem:
+              - button "Go to previous page" [disabled]:
+                - generic: Previous
+            - listitem:
+              - button "Page 1": "1"
+            - listitem:
+              - button "Page 2": "2"
+            - listitem:
+              - button "Page 3": "3"
+            - listitem:
+              - button "Page 4": "4"
+            - listitem:
+              - generic: More pages
+            - listitem:
+              - button "Page 73": "73"
+            - listitem:
+              - button "Go to next page":
+                - generic: Next
+        - generic:
+          - generic:
+            - generic:
+              - heading "Network Directory" [level=2]
+              - generic:
+                - generic:
+                  - heading "Top Sponsors" [level=3]
+                  - generic:
+                    - link "Adobe Adobe · https://www.adobe.com/ ⭐":
+                      - /url: https://www.adobe.com/
+                      - generic:
+                        - img "Adobe"
+                      - generic:
+                        - generic: Adobe
+                        - generic: ·
+                        - generic: https://www.adobe.com/
+                        - generic: ⭐
+                    - link "Mobbin Mobbin · https://mobbin.com ⭐":
+                      - /url: https://mobbin.com
+                      - generic:
+                        - img "Mobbin"
+                      - generic:
+                        - generic: Mobbin
+                        - generic: ·
+                        - generic: https://mobbin.com
+                        - generic: ⭐
+                    - link "Framer Framer · https://framer.com ⭐":
+                      - /url: https://framer.com
+                      - generic:
+                        - img "Framer"
+                      - generic:
+                        - generic: Framer
+                        - generic: ·
+                        - generic: https://framer.com
+                        - generic: ⭐
+                    - link "ACE ACE · https://ace.me/ ⭐":
+                      - /url: https://ace.me/
+                      - generic:
+                        - img "ACE"
+                      - generic:
+                        - generic: ACE
+                        - generic: ·
+                        - generic: https://ace.me/
+                        - generic: ⭐
+                    - link "Mockuuups Mockuuups · https://mockuuups.studio":
+                      - /url: https://mockuuups.studio
+                      - generic:
+                        - img "Mockuuups"
+                      - generic:
+                        - generic: Mockuuups
+                        - generic: ·
+                        - generic: https://mockuuups.studio
+                    - link "Fontbase Fontbase · https://fontba.se/":
+                      - /url: https://fontba.se/
+                      - generic:
+                        - img "Fontbase"
+                      - generic:
+                        - generic: Fontbase
+                        - generic: ·
+                        - generic: https://fontba.se/
+                    - link "Play Play · https://createwithplay.com/":
+                      - /url: https://createwithplay.com/
+                      - generic:
+                        - img "Play"
+                      - generic:
+                        - generic: Play
+                        - generic: ·
+                        - generic: https://createwithplay.com/
+                    - link "Faire Type Faire Type · https://fairetype.com/":
+                      - /url: https://fairetype.com/
+                      - generic:
+                        - img "Faire Type"
+                      - generic:
+                        - generic: Faire Type
+                        - generic: ·
+                        - generic: https://fairetype.com/
+                    - link "Readymag Readymag · https://readymag.com":
+                      - /url: https://readymag.com
+                      - generic:
+                        - img "Readymag"
+                      - generic:
+                        - generic: Readymag
+                        - generic: ·
+                        - generic: https://readymag.com
+                    - link "Sunrise Planner Sunrise Planner · https://sunriseplanner.com":
+                      - /url: https://sunriseplanner.com
+                      - generic:
+                        - img "Sunrise Planner"
+                      - generic:
+                        - generic: Sunrise Planner
+                        - generic: ·
+                        - generic: https://sunriseplanner.com
+                    - link "Curated Supply Curated Supply · https://curated.supply":
+                      - /url: https://curated.supply
+                      - generic:
+                        - img "Curated Supply"
+                      - generic:
+                        - generic: Curated Supply
+                        - generic: ·
+                        - generic: https://curated.supply
+                    - link "Aura Build Aura Build · https://aura.build":
+                      - /url: https://aura.build
+                      - generic:
+                        - img "Aura Build"
+                      - generic:
+                        - generic: Aura Build
+                        - generic: ·
+                        - generic: https://aura.build
+                  - link "Add your site here 🙌 Get listed in 48h":
+                    - /url: https://go.panda.network/advertise?ref=bestdesignsonx.com
+                    - generic:
+                      - generic: Add your site here 🙌
+                      - generic: Get listed in 48h
+                - generic:
+                  - generic:
+                    - heading "Adobe Creative Cloud" [level=3]
+                    - generic:
+                      - link "Free AI Image Generative Fill":
+                        - /url: https://www.adobe.com/in/products/photoshop/generative-fill.html?utm_source=bestdesignsonx.com&utm_medium=referral&utm_campaign=sponsor
+                      - link "Edit photos online for Free":
+                        - /url: https://www.adobe.com/in/products/photoshop/edit-photos.html?utm_source=bestdesignsonx.com&utm_medium=referral&utm_campaign=sponsor
+                      - link "Online Photoshop Editor":
+                        - /url: https://www.adobe.com/in/products/photoshop/online.html?utm_source=bestdesignsonx.com&utm_medium=referral&utm_campaign=sponsor
+                  - generic:
+                    - heading "Panda Network" [level=3]
+                    - generic:
+                      - link "CollectUI · collectui.com 🔥":
+                        - /url: https://collectui.com
+                        - generic:
+                          - generic: CollectUI
+                          - generic: ·
+                          - generic: collectui.com
+                          - generic: 🔥
+                      - link "Best Designs On X · bestdesignsonx.com 🔥":
+                        - /url: https://bestdesignsonx.com
+                        - generic:
+                          - generic: Best Designs On X
+                          - generic: ·
+                          - generic: bestdesignsonx.com
+                          - generic: 🔥
+                      - link "DDR · designerdailyreport.com 🔥":
+                        - /url: https://designerdailyreport.com
+                        - generic:
+                          - generic: DDR
+                          - generic: ·
+                          - generic: designerdailyreport.com
+                          - generic: 🔥
+                      - link "Curations Supply · curations.supply 🔥":
+                        - /url: http://curations.supply/
+                        - generic:
+                          - generic: Curations Supply
+                          - generic: ·
+                          - generic: curations.supply
+                          - generic: 🔥
+                      - link "CurrencyX · currencyx.app":
+                        - /url: https://currencyx.app
+                        - generic:
+                          - generic: CurrencyX
+                          - generic: ·
+                          - generic: currencyx.app
+                      - link "Panda · usepanda.com":
+                        - /url: https://usepanda.com
+                        - generic:
+                          - generic: Panda
+                          - generic: ·
+                          - generic: usepanda.com
+                      - link "Flat UI Colors · flatuicolors.com":
+                        - /url: https://flatuicolors.com
+                        - generic:
+                          - generic: Flat UI Colors
+                          - generic: ·
+                          - generic: flatuicolors.com
+                      - link "The Stocks 3 · thestocks.im":
+                        - /url: https://thestocks.im
+                        - generic:
+                          - generic: The Stocks 3
+                          - generic: ·
+                          - generic: thestocks.im
+            - generic:
+              - generic:
+                - generic: Trusted by Framer, Adobe, Mobbin & 100+ design tools
+                - generic:
+                  - heading "Boost your visibility inside a trusted design network" [level=4]
+                  - paragraph: Get a dofollow backlink, exposure across 1M+ designers , and placement next to premium tools like Framer, Mobbin, Adobe.
+                - generic:
+                  - generic:
+                    - generic: 🔗
+                    - generic: High-authority backlinks (DA 60+)
+                  - generic:
+                    - generic: 👀
+                    - generic: 1M+ monthly impressions
+                  - generic:
+                    - generic: 🎯
+                    - generic: Design-focused audience
+                  - generic:
+                    - generic: ⚡
+                    - generic: 48h listing approval
+                - link "👉 Become a Sponsor":
+                  - /url: https://go.panda.network/advertise?ref=bestdesignsonx.com
+  - dialog [ref=e1181]:
+    - generic [ref=e1182]:
+      - heading "Subscribe" [level=2] [ref=e1183]
+      - generic [ref=e1184]: Get the best designs from 𝕏 delivered to your inbox.
+    - generic [ref=e1185]:
+      - generic [ref=e1186]:
+        - generic [ref=e1187]: Email
+        - textbox "Email" [active] [ref=e1188]:
+          - /placeholder: your@email.com
+      - generic [ref=e1189]:
+        - button "Cancel" [ref=e1190]
+        - button "Subscribe" [disabled]
+    - button "Close" [ref=e1191]

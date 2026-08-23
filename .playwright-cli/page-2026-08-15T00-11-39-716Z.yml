@@ -1,0 +1,649 @@
+- generic [ref=f1e2]:
+  - banner [ref=f1e3]:
+    - banner [ref=f1e4]:
+      - generic [ref=f1e5]:
+        - link "Ignite Productions — home" [ref=f1e6] [cursor=pointer]:
+          - /url: /
+          - img "Ignite" [ref=f1e7]
+        - navigation [ref=f1e8]:
+          - link "SPARK" [ref=f1e10] [cursor=pointer]:
+            - /url: /spark
+          - link "FRACTIONAL" [ref=f1e12] [cursor=pointer]:
+            - /url: /fractional
+          - generic [ref=f1e13]: ·
+          - link "SERVICES" [ref=f1e15] [cursor=pointer]:
+            - /url: /ignite-services
+          - link "INDUSTRIES" [ref=f1e19] [cursor=pointer]:
+            - /url: /industries
+          - link "MARKETS" [ref=f1e21] [cursor=pointer]:
+            - /url: /markets
+          - link "OUR WORK" [ref=f1e23] [cursor=pointer]:
+            - /url: /work
+          - button "ABOUT US" [ref=f1e25]
+        - button "Request staff now →" [ref=f1e30] [cursor=pointer]:
+          - text: Request staff now
+          - generic [ref=f1e31]: →
+      - menu "Services":
+        - generic:
+          - menu:
+            - menuitem "01 · Staffing & Talent"
+            - menuitem "02 · Sampling"
+            - menuitem "03 · Retail Programs"
+            - menuitem "04 · Trade & Distributor"
+            - menuitem "05 · Experiential"
+            - menuitem "06 · Hospitality & Events"
+            - menuitem "07 · Creative & Content"
+            - menuitem "08 · Sales & Distribution"
+            - menuitem "09 · Strategy & Growth"
+            - menuitem "10 · Reporting"
+          - generic:
+            - generic:
+              - generic: Staffing & Talent
+              - link "ALL CAPABILITIES →":
+                - /url: /ignite-services
+            - generic:
+              - menuitem "Brand Ambassador Agency 257K+ vetted ambassadors, all 50 states":
+                - text: Brand Ambassador Agency
+                - generic: 257K+ vetted ambassadors, all 50 states
+              - menuitem "Event Staffing 257K+ ambassadors, 50 states, 48hr rush":
+                - text: Event Staffing
+                - generic: 257K+ ambassadors, 50 states, 48hr rush
+              - menuitem "Bilingual Brand Ambassadors Spanish-language + multicultural BAs":
+                - text: Bilingual Brand Ambassadors
+                - generic: Spanish-language + multicultural BAs
+              - menuitem "BA Management Managed bench, not a marketplace":
+                - text: BA Management
+                - generic: Managed bench, not a marketplace
+              - menuitem "Best Agencies (2026 Guide) How to choose an experiential agency":
+                - text: Best Agencies (2026 Guide)
+                - generic: How to choose an experiential agency
+  - generic [ref=f1e34]:
+    - generic [ref=f1e35]:
+      - img "Spark by Ignite"
+      - generic [ref=f1e36]: "* PRODUCT OVERVIEW"
+      - generic [ref=f1e37]: 4,208 samples today
+    - heading "< Field marketing finally gets the intelligence it deserves▍ >" [level=1] [ref=f1e40]:
+      - generic [ref=f1e41]: <
+      - text: Field marketing finally gets the intelligence it deserves
+      - generic [ref=f1e42]: ▍
+      - generic [ref=f1e43]: ">"
+    - paragraph [ref=f1e44]: Spark is Ignite's real-time field marketing platform — designed to give clients instant visibility into every demo, event, tour, sample, and activation we run. It replaces inconsistent recaps, spreadsheet chaos, and vendor fragmentation with one centralized, agency-run system.
+    - generic [ref=f1e45]:
+      - link "Book a demo →" [ref=f1e46] [cursor=pointer]:
+        - /url: /contact
+        - text: Book a demo
+        - generic [ref=f1e47]: →
+      - link "See the dashboard" [ref=f1e48] [cursor=pointer]:
+        - /url: "#dashboard"
+    - generic [ref=f1e49]:
+      - generic [ref=f1e50]:
+        - generic [ref=f1e51]: STEP 01
+        - generic [ref=f1e52]: REQUESTS
+        - generic [ref=f1e53]: Submit activations from your team
+        - generic [ref=f1e54]: →
+      - generic [ref=f1e55]:
+        - generic [ref=f1e56]: STEP 02
+        - generic [ref=f1e57]: STAFFING
+        - generic [ref=f1e58]: GPS-verified check-ins, real ambassadors
+        - generic [ref=f1e59]: →
+      - generic [ref=f1e60]:
+        - generic [ref=f1e61]: STEP 03
+        - generic [ref=f1e62]: EXECUTION
+        - generic [ref=f1e63]: Live field ops, photo uploads
+        - generic [ref=f1e64]: →
+      - generic [ref=f1e65]:
+        - generic [ref=f1e66]: STEP 04
+        - generic [ref=f1e67]: RECAPS
+        - generic [ref=f1e68]: Auto-generated, in your inbox
+  - generic [ref=f1e71]:
+    - generic [ref=f1e72]: ● LIVE
+    - generic [ref=f1e73]: 4,228 SAMPLES TODAY
+    - generic [ref=f1e74]: 142 ON-SITE NOW
+    - generic [ref=f1e75]: 17 MARKETS ACTIVE
+    - generic [ref=f1e76]: ↑ 91% ON-TIME RATE
+    - generic [ref=f1e77]: 23 EVENTS / 6 STATES
+    - generic [ref=f1e78]: LIQUID DEATH · Q2 TOUR
+    - generic [ref=f1e79]: WHITE CLAW · RETAIL DEMOS
+    - generic [ref=f1e80]: MARK ANTHONY · SAMPLING
+    - generic [ref=f1e81]: DUDE WIPES · FESTIVALS
+    - generic [ref=f1e82]: ↑ +14% WoW
+    - generic [ref=f1e83]: GPS-VERIFIED CHECK-INS
+    - generic [ref=f1e84]: AUTO-GENERATED RECAPS
+    - generic [ref=f1e85]: ● LIVE
+    - generic [ref=f1e86]: 4,228 SAMPLES TODAY
+    - generic [ref=f1e87]: 142 ON-SITE NOW
+    - generic [ref=f1e88]: 17 MARKETS ACTIVE
+    - generic [ref=f1e89]: ↑ 91% ON-TIME RATE
+    - generic [ref=f1e90]: 23 EVENTS / 6 STATES
+    - generic [ref=f1e91]: LIQUID DEATH · Q2 TOUR
+    - generic [ref=f1e92]: WHITE CLAW · RETAIL DEMOS
+    - generic [ref=f1e93]: MARK ANTHONY · SAMPLING
+    - generic [ref=f1e94]: DUDE WIPES · FESTIVALS
+    - generic [ref=f1e95]: ↑ +14% WoW
+    - generic [ref=f1e96]: GPS-VERIFIED CHECK-INS
+    - generic [ref=f1e97]: AUTO-GENERATED RECAPS
+  - generic [ref=f1e100]:
+    - text: ">> THE DIFFERENCE"
+    - heading "How a recap used to look vs. how it lands now." [level=2] [ref=f1e101]: How a recap used to lookvs. how it lands now.
+    - generic [ref=f1e102]:
+      - generic [ref=f1e103]:
+        - generic [ref=f1e104]: ✕ BEFORE
+        - generic [ref=f1e105]: "From: vendor-recaps@gmail.comSubject: RE: Re: Re: Q2 Tour - Austin Recap (FINAL_v3_USE_THIS)9 days after event"
+        - generic [ref=f1e106]: "\"Hey team — attached is the recap deck for the Austin event. Some of the photos got lost, BA didn't submit her count sheet so I estimated ~250?. Manager said it went great. Will send full numbers next week.\""
+        - generic [ref=f1e107]:
+          - generic [ref=f1e108]: "✕ Sample count: unknown"
+          - generic [ref=f1e109]: "✕ Attendance: 'felt good'"
+          - generic [ref=f1e110]: "✕ Photos: 4 out of 60 sent"
+          - generic [ref=f1e111]: "✕ Spend per sample: ???"
+          - generic [ref=f1e112]: "✕ Comparable markets: in another inbox"
+        - generic [ref=f1e113]: // 9 days · 14 emails · 0 confidence
+      - generic [ref=f1e114]:
+        - generic [ref=f1e115]: BECOMES
+        - generic [ref=f1e116]: →
+      - generic [ref=f1e117]:
+        - generic [ref=f1e118]: ◉ WITH SPARK
+        - generic [ref=f1e119]:
+          - generic [ref=f1e120]:
+            - generic [ref=f1e125]: spark.ignite / recaps / austin · white claw
+            - generic [ref=f1e126]: LIVE
+          - generic [ref=f1e129]:
+            - generic [ref=f1e130]:
+              - generic [ref=f1e131]: RECAP · AUSTIN, TX
+              - generic [ref=f1e132]: White Claw · Q2 Tour
+            - generic [ref=f1e133]:
+              - generic [ref=f1e134]: READY
+              - generic [ref=f1e135]: 3h after event
+          - generic [ref=f1e136]:
+            - generic [ref=f1e137]:
+              - generic [ref=f1e138]: "327"
+              - generic [ref=f1e139]: samples
+            - generic [ref=f1e140]:
+              - generic [ref=f1e141]: "68"
+              - generic [ref=f1e142]: leads
+            - generic [ref=f1e143]:
+              - generic [ref=f1e144]: 1,240
+              - generic [ref=f1e145]: attendees
+            - generic [ref=f1e146]:
+              - generic [ref=f1e147]: $2.18
+              - generic [ref=f1e148]: $/sample
+          - generic [ref=f1e150]:
+            - generic [ref=f1e151]: SAMPLES / HOUR
+            - generic [ref=f1e152]: ↑ Peak 6PM · 84
+          - generic [ref=f1e157]:
+            - generic [ref=f1e158]:
+              - generic [ref=f1e159]: GPS-VERIFIED PHOTOS
+              - generic [ref=f1e160]: 62 · View all →
+            - generic [ref=f1e161]:
+              - generic [ref=f1e162]: ◉
+              - generic [ref=f1e164]: ◉
+              - generic [ref=f1e166]: ◉
+              - generic [ref=f1e168]: ◉
+              - generic [ref=f1e170]: ◉
+          - generic [ref=f1e172]:
+            - generic [ref=f1e173]:
+              - generic [ref=f1e174]: ✓ Per-SKU breakdown
+              - generic [ref=f1e175]: 5 variants
+            - generic [ref=f1e176]:
+              - generic [ref=f1e177]: ✓ Side-by-side vs Brooklyn
+              - generic [ref=f1e178]: +18% samples
+            - generic [ref=f1e179]:
+              - generic [ref=f1e180]: ✓ BA notes
+              - generic [ref=f1e181]: "\"long line, ran out\""
+            - generic [ref=f1e182]:
+              - generic [ref=f1e183]: ✓ Shared with
+              - generic [ref=f1e184]: 8 stakeholders
+        - generic [ref=f1e185]: // live in dashboard · 3h after event · 0 follow-ups
+  - generic [ref=f1e188]:
+    - text: ">> WHAT CLIENTS GET"
+    - heading "Stop waiting for post-event reports." [level=2] [ref=f1e189]: Stop waiting forpost-event reports.
+    - generic [ref=f1e190]:
+      - generic [ref=f1e191]:
+        - generic [ref=f1e192]: "* 01"
+        - heading "One centralized system" [level=3] [ref=f1e193]
+        - paragraph [ref=f1e194]: All field marketing data in one place. No more chasing recaps from 8 vendors or piecing together CSVs from 3 regions.
+      - generic [ref=f1e195]:
+        - generic [ref=f1e196]: "* 02"
+        - heading "Faster decisions, live dashboards" [level=3] [ref=f1e197]
+        - paragraph [ref=f1e198]: Real-time visibility across programs, markets, SKUs. Know what's working in the next market before the current one ends.
+      - generic [ref=f1e199]:
+        - generic [ref=f1e200]: "* 03"
+        - heading "True ROI visibility" [level=3] [ref=f1e201]
+        - paragraph [ref=f1e202]: Event-level cost, per-sample economics, market-by-market conversion. The numbers executives actually ask for.
+      - generic [ref=f1e203]:
+        - generic [ref=f1e204]: "* 04"
+        - heading "Zero client lift" [level=3] [ref=f1e205]
+        - paragraph [ref=f1e206]: Your team doesn't log into anything unless they want to. We run it; you watch it. Included free with every Ignite program.
+  - generic [ref=f1e209]:
+    - text: ">> WHAT IT REPLACES"
+    - heading "The eight things you can stop doing on day one." [level=2] [ref=f1e210]
+    - generic [ref=f1e211]:
+      - generic [ref=f1e212]:
+        - generic [ref=f1e213]: "01"
+        - generic [ref=f1e214]: Excel recap files
+        - generic [ref=f1e215]: → Live dashboard
+      - generic [ref=f1e216]:
+        - generic [ref=f1e217]: "02"
+        - generic [ref=f1e218]: Vendor PDF reports
+        - generic [ref=f1e219]: → Auto-generated recaps
+      - generic [ref=f1e220]:
+        - generic [ref=f1e221]: "03"
+        - generic [ref=f1e222]: Photo Slack channels
+        - generic [ref=f1e223]: → Geo-tagged uploads
+      - generic [ref=f1e224]:
+        - generic [ref=f1e225]: "04"
+        - generic [ref=f1e226]: Post-event surveys
+        - generic [ref=f1e227]: → Real-time field notes
+      - generic [ref=f1e228]:
+        - generic [ref=f1e229]: "05"
+        - generic [ref=f1e230]: Calling for status
+        - generic [ref=f1e231]: → Activity feed
+      - generic [ref=f1e232]:
+        - generic [ref=f1e233]: "06"
+        - generic [ref=f1e234]: Counting paper sign-ins
+        - generic [ref=f1e235]: → GPS check-ins
+      - generic [ref=f1e236]:
+        - generic [ref=f1e237]: "07"
+        - generic [ref=f1e238]: Chasing samples data
+        - generic [ref=f1e239]: → Per-event ROI
+      - generic [ref=f1e240]:
+        - generic [ref=f1e241]: "08"
+        - generic [ref=f1e242]: Quarterly readouts
+        - generic [ref=f1e243]: → Daily visibility
+  - generic [ref=f1e246]:
+    - generic [ref=f1e247]:
+      - text: ">> LIVE DASHBOARD"
+      - heading "The command center for every program you run." [level=2] [ref=f1e248]: The command center forevery program you run.
+    - generic [ref=f1e249]:
+      - generic [ref=f1e250]:
+        - generic [ref=f1e255]: spark.igniteproductions.co / dashboard
+        - generic [ref=f1e256]: LIVE
+      - generic [ref=f1e258]:
+        - generic [ref=f1e259]:
+          - text: ">> PROGRAMS"
+          - generic [ref=f1e260]:
+            - generic [ref=f1e261]:
+              - generic [ref=f1e262]: ◉
+              - text: Liquid Death / Q2 Tour
+            - generic [ref=f1e263]:
+              - generic [ref=f1e264]: ○
+              - text: White Claw / Retail
+            - generic [ref=f1e265]:
+              - generic [ref=f1e266]: ○
+              - text: Mark Anthony / Sampling
+            - generic [ref=f1e267]:
+              - generic [ref=f1e268]: ○
+              - text: Dude Wipes / Festivals
+        - generic [ref=f1e269]:
+          - generic [ref=f1e270]:
+            - generic [ref=f1e271]:
+              - generic [ref=f1e272]: 4,228
+              - generic [ref=f1e273]:
+                - generic [ref=f1e274]: Samples today
+                - generic [ref=f1e275]: +14%
+            - generic [ref=f1e276]:
+              - generic [ref=f1e277]: "142"
+              - generic [ref=f1e278]:
+                - generic [ref=f1e279]: On-site now
+                - generic [ref=f1e280]: live
+            - generic [ref=f1e281]:
+              - generic [ref=f1e282]: "23"
+              - generic [ref=f1e283]:
+                - generic [ref=f1e284]: Events
+                - generic [ref=f1e285]: 6 markets
+            - generic [ref=f1e286]:
+              - generic [ref=f1e287]: 91%
+              - generic [ref=f1e288]:
+                - generic [ref=f1e289]: On-time
+                - generic [ref=f1e290]: 7d avg
+          - generic [ref=f1e291]:
+            - generic [ref=f1e292]:
+              - generic [ref=f1e293]:
+                - generic [ref=f1e294]: ">> COVERAGE // LIVE"
+                - generic [ref=f1e295]: 17 MARKETS
+              - generic [ref=f1e296]:
+                - generic [ref=f1e299] [cursor=pointer]: SEATTLE · White Claw
+                - generic [ref=f1e302] [cursor=pointer]
+                - generic [ref=f1e304] [cursor=pointer]
+                - generic [ref=f1e306] [cursor=pointer]
+                - generic [ref=f1e308] [cursor=pointer]
+                - generic [ref=f1e310] [cursor=pointer]
+                - generic [ref=f1e312] [cursor=pointer]
+                - generic [ref=f1e314] [cursor=pointer]
+                - generic [ref=f1e316] [cursor=pointer]
+                - generic [ref=f1e318] [cursor=pointer]
+                - generic [ref=f1e320] [cursor=pointer]
+                - generic [ref=f1e322] [cursor=pointer]
+                - generic [ref=f1e324] [cursor=pointer]
+                - generic [ref=f1e326] [cursor=pointer]
+                - generic [ref=f1e328] [cursor=pointer]
+                - generic [ref=f1e330] [cursor=pointer]
+                - generic [ref=f1e332] [cursor=pointer]
+            - generic [ref=f1e334]:
+              - text: ">> ACTIVITY FEED"
+              - generic [ref=f1e336]:
+                - generic [ref=f1e337]:
+                  - generic [ref=f1e338]: 09:14
+                  - generic [ref=f1e339]:
+                    - generic [ref=f1e340]: AUSTIN, TX
+                    - generic [ref=f1e341]: White Claw
+                  - generic [ref=f1e342]: checked-in
+                - generic [ref=f1e343]:
+                  - generic [ref=f1e344]: 09:12
+                  - generic [ref=f1e345]:
+                    - generic [ref=f1e346]: BROOKLYN, NY
+                    - generic [ref=f1e347]: Liquid Death
+                  - generic [ref=f1e348]: on-site
+                - generic [ref=f1e349]:
+                  - generic [ref=f1e350]: 09:08
+                  - generic [ref=f1e351]:
+                    - generic [ref=f1e352]: DENVER, CO
+                    - generic [ref=f1e353]: Liquid Death
+                  - generic [ref=f1e354]: setup
+                - generic [ref=f1e355]:
+                  - generic [ref=f1e356]: 08:56
+                  - generic [ref=f1e357]:
+                    - generic [ref=f1e358]: MIAMI, FL
+                    - generic [ref=f1e359]: Mark Anthony
+                  - generic [ref=f1e360]: dispatched
+                - generic [ref=f1e361]:
+                  - generic [ref=f1e362]: 08:52
+                  - generic [ref=f1e363]:
+                    - generic [ref=f1e364]: CHICAGO, IL
+                    - generic [ref=f1e365]: Total Wireless
+                  - generic [ref=f1e366]: photo upload
+                - generic [ref=f1e367]:
+                  - generic [ref=f1e368]: 08:44
+                  - generic [ref=f1e369]:
+                    - generic [ref=f1e370]: LA, CA
+                    - generic [ref=f1e371]: Dude Wipes
+                  - generic [ref=f1e372]: recap sent
+              - generic [ref=f1e373]: ">> SAMPLES / HOUR"
+  - generic [ref=f1e396]:
+    - generic [ref=f1e397]:
+      - text: ">> FOR THE FIELD"
+      - heading "Ambassadors clock in from the actual venue." [level=2] [ref=f1e398]
+      - paragraph [ref=f1e399]: Spark's mobile app is what your brand ambassadors use in the field. GPS-verified check-in. One-tap photo upload. Event reports while the event is still happening. Built for loud venues, bad reception, and fast-moving crews.
+      - generic [ref=f1e400]:
+        - generic [ref=f1e401]:
+          - generic [ref=f1e402]: →
+          - text: GPS check-in on arrival (no paper sign-ins)
+        - generic [ref=f1e403]:
+          - generic [ref=f1e404]: →
+          - text: Photo + notes + counts during event
+        - generic [ref=f1e405]:
+          - generic [ref=f1e406]: →
+          - text: Auto-recap at clock-out
+        - generic [ref=f1e407]:
+          - generic [ref=f1e408]: →
+          - text: Works offline; syncs when back online
+    - generic [ref=f1e410]:
+      - generic [ref=f1e411]:
+        - generic [ref=f1e412]: 9:14
+        - generic [ref=f1e413]: ●●●
+      - generic [ref=f1e414]:
+        - text: ">> TODAY'S SHIFT"
+        - heading "White Claw" [level=4] [ref=f1e415]
+        - generic [ref=f1e416]: AUSTIN, TX · 12:00 – 8:00 PM
+        - generic [ref=f1e417]:
+          - generic [ref=f1e418]:
+            - generic [ref=f1e419]: ◉
+            - generic [ref=f1e420]: GPS VERIFIED
+          - generic [ref=f1e421]: You're at The Mohawk Patio
+          - button "Clock in" [ref=f1e422] [cursor=pointer]
+        - generic [ref=f1e423]:
+          - generic [ref=f1e424]:
+            - generic [ref=f1e425]: SAMPLES GOAL
+            - generic [ref=f1e426]: "320"
+          - generic [ref=f1e427]:
+            - generic [ref=f1e428]: BRIEF
+            - generic [ref=f1e429]: READY
+  - generic [ref=f1e433]:
+    - generic [ref=f1e434]:
+      - generic [ref=f1e435]: ">> READY WHEN YOU ARE"
+      - heading "Let's build the field team your brand deserves." [level=2] [ref=f1e436]
+      - generic [ref=f1e437]:
+        - link "Request a quote →" [ref=f1e438] [cursor=pointer]:
+          - /url: /contact
+          - text: Request a quote
+          - generic [ref=f1e439]: →
+        - link "Request staff now" [ref=f1e440] [cursor=pointer]:
+          - /url: /contact?urgent=1
+    - img "Ignite brand ambassador holding a phone"
+  - contentinfo [ref=f1e442]:
+    - contentinfo [ref=f1e443]:
+      - generic [ref=f1e444]:
+        - generic:
+          - img "IGNITE"
+        - generic [ref=f1e445]:
+          - generic [ref=f1e446]:
+            - generic [ref=f1e447]:
+              - generic [ref=f1e448]: ">> HEADQUARTERS"
+              - paragraph [ref=f1e449]: Veteran-owned field marketing agency. Nationwide coverage, boutique service. Founded 2018.
+              - generic [ref=f1e450]: ● Online Now
+            - generic [ref=f1e452]:
+              - text: ">> AGENCY"
+              - list [ref=f1e453]:
+                - listitem [ref=f1e454]:
+                  - link "Our Work" [ref=f1e455] [cursor=pointer]:
+                    - /url: /work
+                - listitem [ref=f1e456]:
+                  - link "About" [ref=f1e457] [cursor=pointer]:
+                    - /url: /about
+                - listitem [ref=f1e458]:
+                  - link "Request a Quote" [ref=f1e459] [cursor=pointer]:
+                    - /url: /contact
+                - listitem [ref=f1e460]:
+                  - link "Markets" [ref=f1e461] [cursor=pointer]:
+                    - /url: /markets
+                - listitem [ref=f1e462]:
+                  - link "Industries" [ref=f1e463] [cursor=pointer]:
+                    - /url: /industries
+                - listitem [ref=f1e464]:
+                  - link "Weddings" [ref=f1e465] [cursor=pointer]:
+                    - /url: /weddings
+                - listitem [ref=f1e466]:
+                  - link "Group Travel" [ref=f1e467] [cursor=pointer]:
+                    - /url: /travel
+                - listitem [ref=f1e468]:
+                  - link "Compare" [ref=f1e469] [cursor=pointer]:
+                    - /url: /compare
+                - listitem [ref=f1e470]:
+                  - link "Blog" [ref=f1e471] [cursor=pointer]:
+                    - /url: /blog
+                - listitem [ref=f1e472]:
+                  - link "Glossary" [ref=f1e473] [cursor=pointer]:
+                    - /url: /glossary
+                - listitem [ref=f1e474]:
+                  - link "Spark Platform" [ref=f1e475] [cursor=pointer]:
+                    - /url: /spark
+                - listitem [ref=f1e476]:
+                  - link "Fractional" [ref=f1e477] [cursor=pointer]:
+                    - /url: /fractional
+            - generic [ref=f1e478]:
+              - text: ">> TALENT"
+              - list [ref=f1e479]:
+                - listitem [ref=f1e480]:
+                  - link "Apply" [ref=f1e481] [cursor=pointer]:
+                    - /url: /contact?role=ambassador
+                - listitem [ref=f1e482]:
+                  - link "LinkedIn" [ref=f1e483] [cursor=pointer]:
+                    - /url: "#"
+                - listitem [ref=f1e484]:
+                  - link "Press" [ref=f1e485] [cursor=pointer]:
+                    - /url: "#"
+          - generic [ref=f1e486]:
+            - generic [ref=f1e487]: ">> SERVICES // 21 PAGES"
+            - generic [ref=f1e488]:
+              - generic [ref=f1e489]:
+                - generic [ref=f1e490]:
+                  - generic [ref=f1e491]: Staffing & Talent
+                  - list [ref=f1e492]:
+                    - listitem [ref=f1e493]:
+                      - link "Brand Ambassador Agency" [ref=f1e494] [cursor=pointer]:
+                        - /url: /brand-ambassador-agency
+                    - listitem [ref=f1e495]:
+                      - link "Event Staffing" [ref=f1e496] [cursor=pointer]:
+                        - /url: /services/event-staffing
+                    - listitem [ref=f1e497]:
+                      - link "Bilingual Brand Ambassadors" [ref=f1e498] [cursor=pointer]:
+                        - /url: /services/bilingual-brand-ambassadors
+                    - listitem [ref=f1e499]:
+                      - link "BA Management" [ref=f1e500] [cursor=pointer]:
+                        - /url: /services/brand-ambassador-management
+                    - listitem [ref=f1e501]:
+                      - link "Best Agencies (2026 Guide)" [ref=f1e502] [cursor=pointer]:
+                        - /url: /best-experiential-marketing-agencies
+                - generic [ref=f1e503]:
+                  - generic [ref=f1e504]: Trade & Distributor
+                  - list [ref=f1e505]:
+                    - listitem [ref=f1e506]:
+                      - link "Trade Show Support" [ref=f1e507] [cursor=pointer]:
+                        - /url: /services/trade-shows
+                    - listitem [ref=f1e508]:
+                      - link "Distributor Demo Programs" [ref=f1e509] [cursor=pointer]:
+                        - /url: /services/distributor-demo-programs
+                    - listitem [ref=f1e510]:
+                      - link "Sports Marketing" [ref=f1e511] [cursor=pointer]:
+                        - /url: /services/sports-marketing-activations
+                    - listitem [ref=f1e512]:
+                      - link "Collegiate Marketing" [ref=f1e513] [cursor=pointer]:
+                        - /url: /services/collegiate-marketing
+                    - listitem [ref=f1e514]:
+                      - link "Festival Brand Activations" [ref=f1e515] [cursor=pointer]:
+                        - /url: /services/festival-brand-activations
+                - generic [ref=f1e516]:
+                  - generic [ref=f1e517]: Creative & Content
+                  - list [ref=f1e518]:
+                    - listitem [ref=f1e519]:
+                      - link "Content & Capture Crews" [ref=f1e520] [cursor=pointer]:
+                        - /url: /services/content-capture
+                    - listitem [ref=f1e521]:
+                      - link "Creative & Design Studio" [ref=f1e522] [cursor=pointer]:
+                        - /url: /services/creative-design-studio
+                    - listitem [ref=f1e523]:
+                      - link "Influencer & Creator Marketing" [ref=f1e524] [cursor=pointer]:
+                        - /url: /services/influencer-creator
+                - generic [ref=f1e525]:
+                  - generic [ref=f1e526]: Reporting
+                  - list [ref=f1e527]:
+                    - listitem [ref=f1e528]:
+                      - link "Event Recap & Reporting" [ref=f1e529] [cursor=pointer]:
+                        - /url: /services/event-reporting-recaps
+                    - listitem [ref=f1e530]:
+                      - link "Spark Platform" [ref=f1e531] [cursor=pointer]:
+                        - /url: /spark
+                    - listitem [ref=f1e532]:
+                      - link "Spark Retail Execution" [ref=f1e533] [cursor=pointer]:
+                        - /url: /spark-retail
+                    - listitem [ref=f1e534]:
+                      - link "AI Management" [ref=f1e535] [cursor=pointer]:
+                        - /url: /services/ai-management
+              - generic [ref=f1e536]:
+                - generic [ref=f1e537]:
+                  - generic [ref=f1e538]: Sampling
+                  - list [ref=f1e539]:
+                    - listitem [ref=f1e540]:
+                      - link "Product Sampling" [ref=f1e541] [cursor=pointer]:
+                        - /url: /services/product-sampling
+                    - listitem [ref=f1e542]:
+                      - link "On-Premise Sampling" [ref=f1e543] [cursor=pointer]:
+                        - /url: /services/on-premise-sampling
+                    - listitem [ref=f1e544]:
+                      - link "Street Teams" [ref=f1e545] [cursor=pointer]:
+                        - /url: /services/street-teams
+                - generic [ref=f1e546]:
+                  - generic [ref=f1e547]: Experiential
+                  - list [ref=f1e548]:
+                    - listitem [ref=f1e549]:
+                      - link "Experiential Marketing" [ref=f1e550] [cursor=pointer]:
+                        - /url: /services/experiential-marketing
+                    - listitem [ref=f1e551]:
+                      - link "Mobile Marketing Tours" [ref=f1e552] [cursor=pointer]:
+                        - /url: /services/mobile-tours
+                    - listitem [ref=f1e553]:
+                      - link "Fabrication & Builds" [ref=f1e554] [cursor=pointer]:
+                        - /url: /services/fabrication-builds
+                - generic [ref=f1e555]:
+                  - generic [ref=f1e556]: Sales & Distribution
+                  - list [ref=f1e557]:
+                    - listitem [ref=f1e558]:
+                      - link "Fractional Sales Team" [ref=f1e559] [cursor=pointer]:
+                        - /url: /services/fractional-sales-team
+                    - listitem [ref=f1e560]:
+                      - link "Broker & Retail Sales Mgmt" [ref=f1e561] [cursor=pointer]:
+                        - /url: /services/retail-sales-broker-management
+                    - listitem [ref=f1e562]:
+                      - link "Buyer Pitch & Line Reviews" [ref=f1e563] [cursor=pointer]:
+                        - /url: /services/buyer-pitch-line-reviews
+                    - listitem [ref=f1e564]:
+                      - link "Trade Marketing" [ref=f1e565] [cursor=pointer]:
+                        - /url: /services/trade-marketing-management
+                    - listitem [ref=f1e566]:
+                      - link "Distribution Expansion" [ref=f1e567] [cursor=pointer]:
+                        - /url: /services/distribution-expansion
+                    - listitem [ref=f1e568]:
+                      - link "Retail Readiness & Margin" [ref=f1e569] [cursor=pointer]:
+                        - /url: /services/retail-readiness
+              - generic [ref=f1e570]:
+                - generic [ref=f1e571]:
+                  - generic [ref=f1e572]: Retail Programs
+                  - list [ref=f1e573]:
+                    - listitem [ref=f1e574]:
+                      - link "Retail Demo Programs" [ref=f1e575] [cursor=pointer]:
+                        - /url: /services/retail-demo-programs
+                    - listitem [ref=f1e576]:
+                      - link "Retail Merchandising" [ref=f1e577] [cursor=pointer]:
+                        - /url: /services/retail-merchandising
+                    - listitem [ref=f1e578]:
+                      - link "Shopper Marketing" [ref=f1e579] [cursor=pointer]:
+                        - /url: /services/shopper-marketing
+                    - listitem [ref=f1e580]:
+                      - link "QSR / Restaurant" [ref=f1e581] [cursor=pointer]:
+                        - /url: /services/qsr-restaurant-activations
+                - generic [ref=f1e582]:
+                  - generic [ref=f1e583]: Hospitality & Events
+                  - list [ref=f1e584]:
+                    - listitem [ref=f1e585]:
+                      - link "Weddings & Private Events" [ref=f1e586] [cursor=pointer]:
+                        - /url: /weddings
+                    - listitem [ref=f1e587]:
+                      - link "Group & Event Travel" [ref=f1e588] [cursor=pointer]:
+                        - /url: /travel
+                    - listitem [ref=f1e589]:
+                      - link "Pop-Up & Branded Retail" [ref=f1e590] [cursor=pointer]:
+                        - /url: /services/pop-up-retail
+                - generic [ref=f1e591]:
+                  - generic [ref=f1e592]: Strategy & Growth
+                  - list [ref=f1e593]:
+                    - listitem [ref=f1e594]:
+                      - link "Brand & Activation Strategy" [ref=f1e595] [cursor=pointer]:
+                        - /url: /services/brand-strategy
+                    - listitem [ref=f1e596]:
+                      - link "Field Marketing" [ref=f1e597] [cursor=pointer]:
+                        - /url: /services/field-marketing
+                    - listitem [ref=f1e598]:
+                      - link "Sponsorship & Partnerships" [ref=f1e599] [cursor=pointer]:
+                        - /url: /services/sponsorship-partnerships
+                    - listitem [ref=f1e600]:
+                      - link "Sweepstakes & Contests" [ref=f1e601] [cursor=pointer]:
+                        - /url: /services/sweepstakes-activations
+                    - listitem [ref=f1e602]:
+                      - link "CRM & Lifecycle" [ref=f1e603] [cursor=pointer]:
+                        - /url: /services/crm-lifecycle
+                    - listitem [ref=f1e604]:
+                      - link "Promotional Products" [ref=f1e605] [cursor=pointer]:
+                        - /url: /services/promotional-products
+                    - listitem [ref=f1e606]:
+                      - link "Logistics & Kitting" [ref=f1e607] [cursor=pointer]:
+                        - /url: /services/logistics-kitting
+        - generic [ref=f1e608]:
+          - generic [ref=f1e609]: © 2026 IGNITE PRODUCTIONS LLC · SINCE 2018
+          - generic [ref=f1e610]:
+            - link "PRIVACY" [ref=f1e611] [cursor=pointer]:
+              - /url: /privacy
+            - link "TERMS" [ref=f1e612] [cursor=pointer]:
+              - /url: /terms
+            - link "ACCESSIBILITY" [ref=f1e613] [cursor=pointer]:
+              - /url: /accessibility
+            - generic [ref=f1e614]: ★ IGNITEPRODUCTIONS.CO
+  - button "LIVE FEED" [ref=f1e615] [cursor=pointer]

@@ -1,0 +1,39 @@
+- generic [ref=e4]:
+  - generic [ref=e6]:
+    - img "Spark logo"
+    - heading "Login" [level=1] [ref=e7]
+    - generic [ref=e8]:
+      - button "Google logo Sign in with Google" [ref=e10]:
+        - img "Google logo" [ref=e11]
+        - generic [ref=e18]: Sign in with Google
+      - generic [ref=e19]: "\"or Sign in with Email\""
+      - generic [ref=e23]:
+        - generic [ref=e24]: Email
+        - generic [ref=e25]:
+          - generic [ref=e26]: Your Email
+          - textbox "Enter your email" [ref=e28]
+      - generic [ref=e29]:
+        - generic [ref=e30]: Password
+        - generic [ref=e31]:
+          - generic [ref=e32]: Your Password
+          - textbox "Enter your password" [ref=e34]
+      - generic [ref=e35]:
+        - generic [ref=e36] [cursor=pointer]:
+          - checkbox "Remember me" [ref=e37]
+          - generic [ref=e38]: Remember me
+        - link "Forgot password?" [ref=e39] [cursor=pointer]:
+          - /url: "#"
+      - button "Login" [ref=e40] [cursor=pointer]
+    - generic [ref=e41]:
+      - paragraph [ref=e42]: ©2026 Ignite Productions. All rights reserved.
+      - generic [ref=e43]:
+        - link "Privacy Policy" [ref=e44] [cursor=pointer]:
+          - /url: /privacy-policy
+        - generic [ref=e45]: •
+        - link "Terms of Service" [ref=e46] [cursor=pointer]:
+          - /url: /terms-of-service
+  - generic [ref=e47]:
+    - checkbox [checked] [ref=e53] [cursor=pointer]
+    - generic [ref=e58]:
+      - heading "Turn your ideas into reality." [level=2] [ref=e59]
+      - paragraph [ref=e60]: Consistent quality and experience across all platforms and devices.

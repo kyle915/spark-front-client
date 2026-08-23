@@ -1,0 +1,23 @@
+## Learned User Preferences
+- Auto-run implementation, PRs, deploys, and browser work; apply file edits, diffs, and patches automatically — never pause to ask Kyle to approve changes; only stop for credentials Kyle must type, irreversible git, or a true blocker.
+- Keep Spark branding: dark ops UI, lime `#c5f546`, orange `#ef5a2a`, DaisyUI. Steal motion for recaps, Jump, and Today; skip glitter, liquid metal, extra ⌘K hints, orbs, and restyles of igniteproductions.co.
+- Prefer magic-link login over Google SSO for clients and for Cursor's browser.
+- Walk-up recap photo fields must allow multiple uploads (library and camera), not camera-only "take picture."
+- Optimize the Spark admin/client app; do not edit the Ignite marketing homepage unless he explicitly asks. When marketing copy is in scope: public BA count is 257,000+ only; no invented rates; no Girl Beer; no Feel Free/kratom health claims.
+- Once a standing walk-up code is live, keep it; do not remint.
+- Request-form start/end time pickers must list full 24 hours in 30-minute steps (12:00 AM–11:30 PM); do not hide overnight or early-AM as business hours.
+- Recaps ambassador filter is a searchable typeahead by BA name, not a 50-cap dropdown.
+
+## Learned Workspace Facts
+- Spark is Ignite Productions' recap/ops platform. Frontend `spark-front-client` ships `main` → Firebase. API `spark-api` ships `develop` → Cloud Run `spark-api-new` (GCP `spark-479222`) with min-instances 1 (keep-warm); migrate/repair run on deploy, not every container boot. Admin sidebar badges use server count fields; Account Map uses a skinny pins query.
+- `admin.igniteproductions.co` is ops. `client.igniteproductions.co` is BA/client public pages (check-in, spark-form, `/r/:token`). `spark.igniteproductions.co` is a stale May 2026 Firebase build and should not keep field or login traffic.
+- BA/client recap, check-in, training, and share URLs mint `https://client.igniteproductions.co` because some phones fail DNS on admin. Admin login, `/today`, and staff tools stay on admin. Public recap Share is an on-platform modal (email + copy link) to `/r/:token` on client — not the native OS share sheet. Bulk share sends one digest email with multiple `/r/:token` links. Recap-submitted mailer CTAs open that brand's recap on client (document or tenant list), never admin. Client leave-behinds use tenant brand colors, admin stays Spark lime.
+- Client account invites: admin People → + Invite client (single or bulk paste) for an existing brand; Clients → + New client for a new brand plus primary-contact invite. Invite email offers set-password, Google SSO, and magic link.
+- Recap Approved filter is additive: sharing stamps `shared_at` but recaps stay approved — Approved shows all approved recaps including shared; Shared narrows to `shared_at` set.
+- Standing walk-up check-ins find-or-create the Event from typed or GPS location plus the picked calendar date (today and past dates in about 90 days) in the market timezone, without a pre-logged shift. Do not attach a new clock-in onto a leftover open event from another day. Clear clock-in abandons leftover open sessions; do not delete filed recaps. Empty clock-out Recap rows are not "filed."
+- Clients must not see unapproved custom recaps on request/event pages (same gate as `Event.recaps`).
+- Recap-approved client mail goes to RMM, client-role users, recap recipient emails, and the requestor — not Ignite internal review lists. Girl Beer skips that client recap-approved email.
+- Torch slug is `keee-torch-thc` (BA walk-up `/checkin/TH-2HRV3D`, request form `/spark-form/keee-torch-thc`). Public Torch spark-form requests auto-approve and append to the retail-schedule Google Sheet (public spark-form only; not admin tracker or bulk imports). Event Confirmation mirrors Liquid Death; confirmation links mint client. Torch walk-ups hide Log-your-stop once on the clock. Torch 3rd-party agency links are typed store with no clock. Non-Active Product and optional cases-to-ship show when any selected SKU is 5MG or 10MG (not 15MG).
+- Feel Free standing walk-up is `/checkin/FF-YMMK3Q` (`locationMode: market`): one market event per day, and Log your stop (spot name + GPS) stays on while clocked in. Feel Free recaps auto-approve on submit.
+- KKC (`/checkin/KKC-QC9Y58`, Event-only Field Sampling), G7 (`/checkin/G7-ATF2VZ`, `g7-entertainment-marketing`, BA Event Recap), and Sipli (`/checkin/SIP-PCHY9H`, Retail vs Event picker; retail adds Store Number and inventory) walk-ups stay human-reviewed.
+- Breakaway walk-up is `/checkin/BRK-BJBR6G` (Jimmy Johns vs Hiyo selector; Festival Location is open city/state text on both). Liquid Death walk-up is `/checkin/LD-TNBJ8K` (Retail vs Event picker). Total Wireless walk-up is `/checkin/TW-KZ4ATS`.

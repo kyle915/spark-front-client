@@ -1,0 +1,56 @@
+- generic [ref=f1e4]:
+  - generic [ref=f1e6]:
+    - img "Spark by Ignite" [ref=f1e7]
+    - paragraph [ref=f1e8]: Welcome Back
+    - heading "Sign in to Spark." [level=1] [ref=f1e9]
+    - generic [ref=f1e10]:
+      - button "Google logo Sign in with Google" [ref=f1e12]:
+        - img "Google logo" [ref=f1e13]
+        - generic [ref=f1e20]: Sign in with Google
+      - generic [ref=f1e21]: OR SIGN IN WITH EMAIL
+      - generic [ref=f1e26]:
+        - generic [ref=f1e27]: Your Email
+        - textbox "you@example.com" [ref=f1e29]
+      - generic [ref=f1e31]:
+        - generic [ref=f1e32]: Your Password
+        - textbox "••••••••" [ref=f1e34]
+      - generic [ref=f1e35]:
+        - generic [ref=f1e36] [cursor=pointer]:
+          - checkbox "Remember me" [ref=f1e37]
+          - generic [ref=f1e38]: Remember me
+        - link "Forgot password?" [ref=f1e39] [cursor=pointer]:
+          - /url: /forgot-password
+      - button "Sign in →" [ref=f1e40] [cursor=pointer]
+    - button "✦ EMAIL ME A SIGN-IN LINK INSTEAD" [ref=f1e41]
+    - generic [ref=f1e42]:
+      - paragraph [ref=f1e43]: © 2026 IGNITE PRODUCTIONS LLC
+      - generic [ref=f1e44]:
+        - link "PRIVACY" [ref=f1e45] [cursor=pointer]:
+          - /url: /privacy-policy
+        - generic [ref=f1e46]: ·
+        - link "TERMS" [ref=f1e47] [cursor=pointer]:
+          - /url: /terms-of-service
+  - generic [ref=f1e48]:
+    - generic: SPARK
+    - generic [ref=f1e74]:
+      - img "Spark by Ignite"
+    - generic [ref=f1e75]:
+      - generic [ref=f1e76]: FIELD MARKETING, FINALLY ↓
+      - generic [ref=f1e78]:
+        - generic [ref=f1e79]: Book staff quicker.
+        - generic [ref=f1e80]: Manage your field team.
+        - generic [ref=f1e81]: Sample faster.
+        - generic [ref=f1e82]: Get recaps quicker.
+        - generic [ref=f1e83]: Track every shift.
+        - generic [ref=f1e84]: See what's working.
+      - heading "The command center for field marketing." [level=3] [ref=f1e85]:
+        - generic [ref=f1e86]: The command center
+        - generic [ref=f1e87]: for field marketing.
+      - paragraph [ref=f1e88]: Live dashboards. GPS clock-ins. Auto-generated recaps. One platform, every program.
+    - generic [ref=f1e89]:
+      - generic [ref=f1e90]:
+        - generic [ref=f1e91]: POWERED BY
+        - img "Ignite Productions"
+      - generic [ref=f1e92]:
+        - generic [ref=f1e93]: ▲
+        - text: VETERAN-OWNED

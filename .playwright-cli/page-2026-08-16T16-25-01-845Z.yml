@@ -1,0 +1,54 @@
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - complementary [ref=e3]:
+    - link "Best Designs on X" [ref=e5] [cursor=pointer]:
+      - /url: /
+    - navigation "Categories" [ref=e6]:
+      - generic [ref=e7]:
+        - paragraph [ref=e8]: Inspiration
+        - button "Best Designs" [ref=e9] [cursor=pointer]
+        - button "Instagram" [ref=e12] [cursor=pointer]
+        - button "Fonts" [ref=e16] [cursor=pointer]
+        - button "Dribbble" [ref=e22] [cursor=pointer]
+        - button "Behance" [ref=e30] [cursor=pointer]
+        - button "Saved Items" [ref=e34] [cursor=pointer]
+    - navigation "Community" [ref=e37]:
+      - paragraph [ref=e38]: Community
+      - button "Feedback" [ref=e39] [cursor=pointer]
+      - button "Subscribe" [ref=e42] [cursor=pointer]
+      - link "Follow on X" [ref=e45] [cursor=pointer]:
+        - /url: https://x.com/bestdesignsonx
+    - generic [ref=e48]:
+      - generic [ref=e49]:
+        - generic:
+          - generic:
+            - menuitem: Sounds on
+        - button "Sign in" [ref=e50] [cursor=pointer]
+      - paragraph [ref=e54]: © 2026 Best Designs on X
+  - generic [ref=e55]:
+    - generic [ref=e56]:
+      - generic [ref=e57]:
+        - generic [ref=e58]: Best
+        - generic [ref=e59]: Designs
+        - generic [ref=e60]: on X.com
+      - search [ref=e62]:
+        - generic [ref=e63]:
+          - button "Search designs, creatives, or keywords..." [ref=e64] [cursor=pointer]
+          - generic [ref=e69]:
+            - generic [ref=e70]: ⌘
+            - text: K
+      - generic [ref=e71]:
+        - text: Discover and follow new creatives on
+        - strong [ref=e72]: 𝕏
+        - text: . Updated hourly.
+    - generic [ref=e73]:
+      - tablist "View" [ref=e74]:
+        - tab "All 0" [selected] [ref=e75] [cursor=pointer]:
+          - generic [ref=e76]: All
+          - generic [ref=e77]: "0"
+        - tab "Saved 0" [ref=e78] [cursor=pointer]:
+          - generic [ref=e79]: Saved
+          - generic [ref=e80]: "0"
+      - status "Loading" [ref=e81]:
+        - generic [ref=e86]: Loading…
+    - status "Loading" [ref=e89]

@@ -1,0 +1,940 @@
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - complementary [ref=e3]:
+    - link "Best Designs on X" [ref=e5] [cursor=pointer]:
+      - /url: /
+    - navigation "Categories" [ref=e6]:
+      - generic [ref=e7]:
+        - paragraph [ref=e8]: Inspiration
+        - button "Best Designs" [ref=e9] [cursor=pointer]
+        - button "Instagram" [ref=e12] [cursor=pointer]
+        - button "Fonts" [active] [ref=e16] [cursor=pointer]
+        - button "Dribbble" [ref=e22] [cursor=pointer]
+        - button "Behance" [ref=e30] [cursor=pointer]
+        - button "Saved Items" [ref=e34] [cursor=pointer]
+    - navigation "Community" [ref=e37]:
+      - paragraph [ref=e38]: Community
+      - button "Feedback" [ref=e39] [cursor=pointer]
+      - button "Subscribe" [ref=e42] [cursor=pointer]
+      - link "Follow on X" [ref=e45] [cursor=pointer]:
+        - /url: https://x.com/bestdesignsonx
+    - generic [ref=e48]:
+      - generic [ref=e49]:
+        - generic:
+          - generic:
+            - menuitem: Sounds on
+        - button "Sign in" [ref=e50] [cursor=pointer]
+      - paragraph [ref=e54]: © 2026 Best Designs on X
+  - generic [ref=e55]:
+    - generic [ref=e1193]:
+      - heading "Best Fonts" [level=1] [ref=e1195]
+      - paragraph [ref=e1196]: Discover the best typefaces and font inspiration for designers.
+    - generic [ref=e1198]:
+      - tablist "View" [ref=e1200]:
+        - tab "All 1931" [selected] [ref=e1201] [cursor=pointer]:
+          - generic [ref=e1202]: All
+          - generic [ref=e1203]: "1931"
+        - tab "Free 121" [ref=e1204] [cursor=pointer]:
+          - generic [ref=e1205]: Free
+          - generic [ref=e1206]: "121"
+        - tab "Paid 1810" [ref=e1207] [cursor=pointer]:
+          - generic [ref=e1208]: Paid
+          - generic [ref=e1209]: "1810"
+        - tab "Saved 0" [ref=e1210] [cursor=pointer]:
+          - generic [ref=e1211]: Saved
+          - generic [ref=e1212]: "0"
+      - generic [ref=e1215]:
+        - button "Category" [ref=e1216] [cursor=pointer]:
+          - generic [ref=e1217]: All categories
+        - listbox:
+          - generic:
+            - generic:
+              - textbox:
+                - /placeholder: Search…
+          - generic:
+            - option [selected]:
+              - generic: All categories
+            - option:
+              - generic: Serif
+            - option:
+              - generic: Sans-Serif
+            - option:
+              - generic: Script
+            - option:
+              - generic: Monospace
+            - option:
+              - generic: Display
+            - option:
+              - generic: Bold
+            - option:
+              - generic: Modern
+            - option:
+              - generic: Geometric
+            - option:
+              - generic: Elegant
+            - option:
+              - generic: Decorative
+            - option:
+              - generic: Retro
+            - option:
+              - generic: Rounded
+            - option:
+              - generic: Vintage
+            - option:
+              - generic: Handwritten
+            - option:
+              - generic: Stylish
+            - option:
+              - generic: Clean
+            - option:
+              - generic: Condensed
+            - option:
+              - generic: Variable
+            - option:
+              - generic: Grotesque
+            - option:
+              - generic: Playful
+            - option:
+              - generic: Pixel
+            - option:
+              - generic: Classic
+            - option:
+              - generic: Minimalist
+            - option:
+              - generic: Casual
+            - option:
+              - generic: Grotesk
+            - option:
+              - generic: Ligature
+            - option:
+              - generic: Groovy
+            - option:
+              - generic: Professional
+            - option:
+              - generic: Futuristic
+            - option:
+              - generic: Blackletter
+            - option:
+              - generic: Luxury
+            - option:
+              - generic: Brush
+            - option:
+              - generic: Contemporary
+            - option:
+              - generic: Fun
+            - option:
+              - generic: Slab Serif
+            - option:
+              - generic: Unique
+            - option:
+              - generic: All Caps
+            - option:
+              - generic: Cursive
+            - option:
+              - generic: Experimental
+            - option:
+              - generic: Headline
+            - option:
+              - generic: Humanist
+            - option:
+              - generic: Ligatures
+            - option:
+              - generic: Logo
+            - option:
+              - generic: Neo-Grotesque
+            - option:
+              - generic: Stencil
+            - option:
+              - generic: Versatile
+            - option:
+              - generic: Art Deco
+            - option:
+              - generic: Industrial
+            - option:
+              - generic: Minimal
+            - option:
+              - generic: Multilingual
+            - option:
+              - generic: Psychedelic
+            - option:
+              - generic: Classy
+            - option:
+              - generic: Creative
+            - option:
+              - generic: Expressive
+            - option:
+              - generic: Gothic
+            - option:
+              - generic: Heavy
+            - option:
+              - generic: Alternates
+            - option:
+              - generic: Calligraphy
+            - option:
+              - generic: Chic
+            - option:
+              - generic: Distressed
+            - option:
+              - generic: Expanded
+            - option:
+              - generic: High-Contrast
+            - option:
+              - generic: Italic
+            - option:
+              - generic: Organic
+            - option:
+              - generic: Stylized
+            - option:
+              - generic: Technical
+            - option:
+              - generic: 3D
+            - option:
+              - generic: All-Caps
+            - option:
+              - generic: Alternate
+            - option:
+              - generic: Art Nouveau
+            - option:
+              - generic: Artistic
+            - option:
+              - generic: Branding
+            - option:
+              - generic: Chunky
+            - option:
+              - generic: Colorful
+            - option:
+              - generic: Compressed
+            - option:
+              - generic: Editorial
+            - option:
+              - generic: Fancy
+            - option:
+              - generic: Formal
+            - option:
+              - generic: Grunge
+            - option:
+              - generic: Hand-Drawn
+            - option:
+              - generic: Handmade
+            - option:
+              - generic: Isometric
+            - option:
+              - generic: Italics
+            - option:
+              - generic: Mid-Century
+            - option:
+              - generic: Neo Grotesk
+            - option:
+              - generic: Outline
+            - option:
+              - generic: Quirky
+            - option:
+              - generic: Reverse Contrast
+            - option:
+              - generic: Rough
+            - option:
+              - generic: Rustic
+            - option:
+              - generic: Tech
+            - option:
+              - generic: Techno
+            - option:
+              - generic: Wide
+            - option:
+              - generic: 1970s
+            - option:
+              - generic: 80s
+            - option:
+              - generic: Abstract Typeface
+            - option:
+              - generic: Aesthetic
+            - option:
+              - generic: Balanced
+            - option:
+              - generic: Bitmap
+            - option:
+              - generic: Block
+            - option:
+              - generic: Brutalist
+            - option:
+              - generic: Bubble
+            - option:
+              - generic: Calligraphic
+            - option:
+              - generic: Calligraphy-Inspired
+            - option:
+              - generic: Cartoon
+            - option:
+              - generic: Comic
+            - option:
+              - generic: Contrast
+            - option:
+              - generic: Contrasting
+            - option:
+              - generic: Corporate
+            - option:
+              - generic: Craft
+            - option:
+              - generic: Cross-Stitch
+            - option:
+              - generic: Curved
+            - option:
+              - generic: Cyrillic
+            - option:
+              - generic: Didone
+            - option:
+              - generic: Doodle
+            - option:
+              - generic: Extrude
+            - option:
+              - generic: Fairytale
+            - option:
+              - generic: Font Duo
+            - option:
+              - generic: Friendly
+            - option:
+              - generic: Funky
+            - option:
+              - generic: Gaming
+            - option:
+              - generic: Glamour
+            - option:
+              - generic: Greek
+            - option:
+              - generic: Half-Serif
+            - option:
+              - generic: Hand Drawn
+            - option:
+              - generic: Handdrawn
+            - option:
+              - generic: Handwriting
+            - option:
+              - generic: Header
+            - option:
+              - generic: Heading
+            - option:
+              - generic: High Contrast
+            - option:
+              - generic: Hybrid
+            - option:
+              - generic: Inktrap
+            - option:
+              - generic: Latin
+            - option:
+              - generic: Latin Support
+            - option:
+              - generic: Legible
+            - option:
+              - generic: Machined
+            - option:
+              - generic: Medieval
+            - option:
+              - generic: Mixed
+            - option:
+              - generic: Modular
+            - option:
+              - generic: Mono
+            - option:
+              - generic: Monoline
+            - option:
+              - generic: Multicolor
+            - option:
+              - generic: Neo Grotesque
+            - option:
+              - generic: Neo-Blackletter
+            - option:
+              - generic: Neo-Grotesk
+            - option:
+              - generic: Nineties
+            - option:
+              - generic: Nostalgic
+            - option:
+              - generic: Oblique
+            - option:
+              - generic: Old Style
+            - option:
+              - generic: Old-Style
+            - option:
+              - generic: Open Source
+            - option:
+              - generic: Open-Source
+            - option:
+              - generic: Optical Sizes
+            - option:
+              - generic: Pixelated
+            - option:
+              - generic: Pop
+            - option:
+              - generic: Premium
+            - option:
+              - generic: Press
+            - option:
+              - generic: Print
+            - option:
+              - generic: Punk
+            - option:
+              - generic: Raw
+            - option:
+              - generic: Round
+            - option:
+              - generic: Rugged
+            - option:
+              - generic: Semi Condensed
+            - option:
+              - generic: Semi-Condensed
+            - option:
+              - generic: Signature
+            - option:
+              - generic: Simple
+            - option:
+              - generic: Slab
+            - option:
+              - generic: Soft
+            - option:
+              - generic: Solid
+            - option:
+              - generic: Sophisticated
+            - option:
+              - generic: Sporty
+            - option:
+              - generic: Squared
+            - option:
+              - generic: Stamp
+            - option:
+              - generic: Stretch
+            - option:
+              - generic: Strong
+            - option:
+              - generic: Stylistic Alternates
+            - option:
+              - generic: Swash
+            - option:
+              - generic: Swashes
+            - option:
+              - generic: Tall
+            - option:
+              - generic: Textured
+            - option:
+              - generic: Thai Support
+            - option:
+              - generic: Thin
+            - option:
+              - generic: True Italics
+            - option:
+              - generic: Typewriter
+            - option:
+              - generic: Typography
+            - option:
+              - generic: Ultra Wide
+            - option:
+              - generic: Uppercase
+            - option:
+              - generic: Wavy
+            - option:
+              - generic: Web
+            - option:
+              - generic: Western Style
+            - option:
+              - generic: Y2K
+      - generic "2026-08-15T00:00:00.000Z" [ref=e1220]: "Last updated: 1 day ago"
+    - generic [ref=e87]:
+      - generic [ref=e1223]:
+        - generic [ref=e1226]:
+          - button [ref=e1227] [cursor=pointer]:
+            - img "Mosher" [ref=e1229]
+            - generic:
+              - generic:
+                - generic: Mosher
+                - generic: Pixelbuddha
+          - generic [ref=e1230]:
+            - button "Save":
+              - checkbox
+        - generic [ref=e1233]:
+          - button [ref=e1234] [cursor=pointer]:
+            - img "Sfizia" [ref=e1236]
+            - generic:
+              - generic:
+                - generic: Sfizia
+                - generic: Atipo
+          - generic [ref=e1237]:
+            - button "Save":
+              - checkbox
+        - generic [ref=e1240]:
+          - button [ref=e1241] [cursor=pointer]:
+            - img "Glooma" [ref=e1243]
+            - generic:
+              - generic:
+                - generic: Glooma
+                - generic: Vadova Studio
+          - generic [ref=e1244]:
+            - button "Save":
+              - checkbox
+        - generic [ref=e1247]:
+          - button [ref=e1248] [cursor=pointer]:
+            - img "Penlore (Free)" [ref=e1250]
+            - generic:
+              - generic:
+                - generic: Penlore (Free)
+                - generic: VPcreativeshop
+          - generic [ref=e1251]:
+            - button "Save":
+              - checkbox
+        - generic [ref=e1254]:
+          - button [ref=e1255] [cursor=pointer]:
+            - img "PP Palma" [ref=e1257]
+            - generic:
+              - generic:
+                - generic: PP Palma
+                - generic: Pangram Pangram
+          - generic [ref=e1258]:
+            - button "Save":
+              - checkbox
+        - generic [ref=e1261]:
+          - button [ref=e1262] [cursor=pointer]:
+            - img "Clavoso" [ref=e1264]
+            - generic:
+              - generic:
+                - generic: Clavoso
+                - generic: True Story Letterworks
+          - generic [ref=e1265]:
+            - button "Save":
+              - checkbox
+        - generic [ref=e1268]:
+          - button [ref=e1269] [cursor=pointer]:
+            - img "Gergoria Sans" [ref=e1271]
+            - generic:
+              - generic:
+                - generic: Gergoria Sans
+                - generic: Syafbe
+          - generic [ref=e1272]:
+            - button "Save":
+              - checkbox
+        - generic [ref=e1275]:
+          - button [ref=e1276] [cursor=pointer]:
+            - img "HESPERA" [ref=e1278]
+            - generic:
+              - generic:
+                - generic: HESPERA
+                - generic: HESPERA
+          - generic [ref=e1279]:
+            - button "Save":
+              - checkbox
+        - generic [ref=e1282]:
+          - button [ref=e1283] [cursor=pointer]:
+            - img "Monaro" [ref=e1285]
+            - generic:
+              - generic:
+                - generic: Monaro
+                - generic: Khoir Typework
+          - generic [ref=e1286]:
+            - button "Save":
+              - checkbox
+        - generic [ref=e1289]:
+          - button [ref=e1290] [cursor=pointer]:
+            - img "ID Kaizaro" [ref=e1292]
+            - generic:
+              - generic:
+                - generic: ID Kaizaro
+                - generic: Ekaunik Dz
+          - generic [ref=e1293]:
+            - button "Save":
+              - checkbox
+        - generic [ref=e1296]:
+          - button [ref=e1297] [cursor=pointer]:
+            - img "TF Bragado" [ref=e1299]
+            - generic:
+              - generic:
+                - generic: TF Bragado
+                - generic: Type Flock
+          - generic [ref=e1300]:
+            - button "Save":
+              - checkbox
+        - generic [ref=e1303]:
+          - button [ref=e1304] [cursor=pointer]:
+            - img "TBJ Neuetra" [ref=e1306]
+            - generic:
+              - generic:
+                - generic: TBJ Neuetra
+                - generic: Taboja Studio
+          - generic [ref=e1307]:
+            - button "Save":
+              - checkbox
+        - status "Loading" [ref=e1310]
+        - status "Loading" [ref=e1315]
+        - status "Loading" [ref=e1320]
+        - status "Loading" [ref=e1325]
+        - status "Loading" [ref=e1330]
+        - status "Loading" [ref=e1335]
+        - status "Loading" [ref=e1340]
+        - status "Loading" [ref=e1345]
+        - status "Loading" [ref=e1350]
+        - status "Loading" [ref=e1355]
+        - status "Loading" [ref=e1360]
+        - status "Loading" [ref=e1365]
+        - status "Loading" [ref=e1370]
+        - status "Loading" [ref=e1375]
+        - status "Loading" [ref=e1380]
+        - status "Loading" [ref=e1385]
+        - status "Loading" [ref=e1390]
+        - status "Loading" [ref=e1395]
+        - status "Loading" [ref=e1400]
+        - status "Loading" [ref=e1405]
+        - status "Loading" [ref=e1410]
+        - status "Loading" [ref=e1415]
+        - status "Loading" [ref=e1420]
+        - status "Loading" [ref=e1425]
+        - status "Loading" [ref=e1430]
+        - status "Loading" [ref=e1435]
+        - status "Loading" [ref=e1440]
+        - status "Loading" [ref=e1445]
+        - status "Loading" [ref=e1450]
+        - status "Loading" [ref=e1455]
+        - status "Loading" [ref=e1460]
+        - status "Loading" [ref=e1465]
+        - status "Loading" [ref=e1470]
+        - status "Loading" [ref=e1475]
+        - status "Loading" [ref=e1480]
+        - status "Loading" [ref=e1485]
+        - status "Loading" [ref=e1490]
+        - status "Loading" [ref=e1495]
+        - status "Loading" [ref=e1500]
+        - status "Loading" [ref=e1505]
+        - status "Loading" [ref=e1510]
+        - status "Loading" [ref=e1515]
+        - status "Loading" [ref=e1520]
+        - status "Loading" [ref=e1525]
+        - status "Loading" [ref=e1530]
+        - status "Loading" [ref=e1535]
+        - status "Loading" [ref=e1540]
+        - status "Loading" [ref=e1545]
+        - status "Loading" [ref=e1550]
+        - status "Loading" [ref=e1555]
+        - status "Loading" [ref=e1560]
+        - status "Loading" [ref=e1565]
+        - status "Loading" [ref=e1570]
+        - status "Loading" [ref=e1575]
+        - status "Loading" [ref=e1580]
+        - status "Loading" [ref=e1585]
+        - status "Loading" [ref=e1590]
+        - status "Loading" [ref=e1595]
+        - status "Loading" [ref=e1600]
+        - status "Loading" [ref=e1605]
+        - status "Loading" [ref=e1610]
+        - status "Loading" [ref=e1615]
+        - status "Loading" [ref=e1620]
+        - status "Loading" [ref=e1625]
+        - status "Loading" [ref=e1630]
+        - status "Loading" [ref=e1635]
+        - status "Loading" [ref=e1640]
+        - status "Loading" [ref=e1645]
+      - navigation "pagination" [ref=e1648]:
+        - list [ref=e1649]:
+          - listitem [ref=e1650]:
+            - button "Go to previous page" [disabled]:
+              - generic: Previous
+          - listitem [ref=e1651]:
+            - button "Page 1" [ref=e1652]: "1"
+          - listitem [ref=e1653]:
+            - button "Page 2" [ref=e1654]: "2"
+          - listitem [ref=e1655]:
+            - button "Page 3" [ref=e1656]: "3"
+          - listitem [ref=e1657]:
+            - button "Page 4" [ref=e1658]: "4"
+          - listitem [ref=e1659]:
+            - generic [ref=e1660]: More pages
+          - listitem [ref=e1663]:
+            - button "Page 25" [ref=e1664]: "25"
+          - listitem [ref=e1665]:
+            - button "Go to next page" [ref=e1666]:
+              - generic [ref=e1667]: Next
+      - generic [ref=e1668]:
+        - generic [ref=e1670]:
+          - generic [ref=e1671]: Network Sponsors
+          - generic [ref=e1673]:
+            - link "Get Featured" [ref=e1674] [cursor=pointer]:
+              - /url: https://go.panda.network/advertise?ref=bestdesignsonx.com
+            - button [ref=e1676]
+            - button [ref=e1677]
+        - generic [ref=e1680]:
+          - generic [ref=e1682]:
+            - link "Framer Web builder for professional designers. framer.com" [ref=e1683] [cursor=pointer]:
+              - /url: https://framer.com
+              - generic [ref=e1684]:
+                - generic [ref=e1685]: Framer
+                - paragraph [ref=e1687]: Web builder for professional designers.
+              - generic [ref=e1688]: framer.com
+            - link "Sunrise Planner Stay organized and build habits with this free weekly planner. sunriseplanner.com" [ref=e1693] [cursor=pointer]:
+              - /url: https://sunriseplanner.com
+              - generic [ref=e1694]:
+                - generic [ref=e1695]: Sunrise Planner
+                - paragraph [ref=e1697]: Stay organized and build habits with this free weekly planner.
+              - generic [ref=e1698]: sunriseplanner.com
+            - link "Readymag Build outstanding websites with Readymag. readymag.com" [ref=e1703] [cursor=pointer]:
+              - /url: https://readymag.com
+              - generic [ref=e1704]:
+                - generic [ref=e1705]: Readymag
+                - paragraph [ref=e1707]: Build outstanding websites with Readymag.
+              - generic [ref=e1708]: readymag.com
+            - link "Aura Build Professional Web Design with Gemini 3 aura.build" [ref=e1713] [cursor=pointer]:
+              - /url: https://aura.build
+              - generic [ref=e1714]:
+                - generic [ref=e1715]: Aura Build
+                - paragraph [ref=e1717]: Professional Web Design with Gemini 3
+              - generic [ref=e1718]: aura.build
+            - link "Mobbin Latest mobile design patterns. mobbin.com" [ref=e1723] [cursor=pointer]:
+              - /url: https://mobbin.com
+              - generic [ref=e1724]:
+                - generic [ref=e1725]: Mobbin
+                - paragraph [ref=e1727]: Latest mobile design patterns.
+              - generic [ref=e1728]: mobbin.com
+            - link "ACE Your new website & email address ace.me" [ref=e1733] [cursor=pointer]:
+              - /url: https://ace.me/
+              - generic [ref=e1734]:
+                - generic [ref=e1735]: ACE
+                - paragraph [ref=e1737]: Your new website & email address
+              - generic [ref=e1738]: ace.me
+            - link "Mockuuups Turn your designs into stunning mockups. mockuuups.studio" [ref=e1743] [cursor=pointer]:
+              - /url: https://mockuuups.studio
+              - generic [ref=e1744]:
+                - generic [ref=e1745]: Mockuuups
+                - paragraph [ref=e1747]: Turn your designs into stunning mockups.
+              - generic [ref=e1748]: mockuuups.studio
+            - link "Fontbase Too many fonts to handle? Try FontBase. fontba.se" [ref=e1753] [cursor=pointer]:
+              - /url: https://fontba.se/
+              - generic [ref=e1754]:
+                - generic [ref=e1755]: Fontbase
+                - paragraph [ref=e1757]: Too many fonts to handle? Try FontBase.
+              - generic [ref=e1758]: fontba.se
+          - generic [ref=e1764]:
+            - link "Adobe Adobe is changing the world through digital experiences. www.adobe.com" [ref=e1765] [cursor=pointer]:
+              - /url: https://www.adobe.com/
+              - generic [ref=e1766]:
+                - generic [ref=e1767]: Adobe
+                - paragraph [ref=e1769]: Adobe is changing the world through digital experiences.
+              - generic [ref=e1770]: www.adobe.com
+            - link "Play Native Prototypes. No App Install. createwithplay.com" [ref=e1775] [cursor=pointer]:
+              - /url: https://createwithplay.com/
+              - generic [ref=e1776]:
+                - generic [ref=e1777]: Play
+                - paragraph [ref=e1779]: Native Prototypes. No App Install.
+              - generic [ref=e1780]: createwithplay.com
+            - link "Faire Type Brooklyn-based type foundry. fairetype.com" [ref=e1785] [cursor=pointer]:
+              - /url: https://fairetype.com/
+              - generic [ref=e1786]:
+                - generic [ref=e1787]: Faire Type
+                - paragraph [ref=e1789]: Brooklyn-based type foundry.
+              - generic [ref=e1790]: fairetype.com
+            - link "Curated Supply Beautifully designed products, curated. curated.supply" [ref=e1795] [cursor=pointer]:
+              - /url: https://curated.supply
+              - generic [ref=e1796]:
+                - generic [ref=e1797]: Curated Supply
+                - paragraph [ref=e1799]: Beautifully designed products, curated.
+              - generic [ref=e1800]: curated.supply
+        - generic [ref=e1805]:
+          - button "Go to slide 0" [ref=e1806] [cursor=pointer]
+          - button "Go to slide 1" [ref=e1807] [cursor=pointer]
+      - navigation "pagination" [ref=e1808]:
+        - list [ref=e1809]:
+          - listitem [ref=e1810]:
+            - button "Go to previous page" [disabled]:
+              - generic: Previous
+          - listitem [ref=e1811]:
+            - button "Page 1" [ref=e1812]: "1"
+          - listitem [ref=e1813]:
+            - button "Page 2" [ref=e1814]: "2"
+          - listitem [ref=e1815]:
+            - button "Page 3" [ref=e1816]: "3"
+          - listitem [ref=e1817]:
+            - button "Page 4" [ref=e1818]: "4"
+          - listitem [ref=e1819]:
+            - generic [ref=e1820]: More pages
+          - listitem [ref=e1823]:
+            - button "Page 25" [ref=e1824]: "25"
+          - listitem [ref=e1825]:
+            - button "Go to next page" [ref=e1826]:
+              - generic [ref=e1827]: Next
+      - generic [ref=e1829]:
+        - generic [ref=e1830]:
+          - heading "Network Directory" [level=2] [ref=e1831]
+          - generic [ref=e1832]:
+            - generic [ref=e1833]:
+              - heading "Top Sponsors" [level=3] [ref=e1834]
+              - generic [ref=e1835]:
+                - link "Adobe Adobe · https://www.adobe.com/ ⭐" [ref=e1836] [cursor=pointer]:
+                  - /url: https://www.adobe.com/
+                  - img "Adobe" [ref=e1838]
+                  - generic [ref=e1839]:
+                    - generic [ref=e1840]: Adobe
+                    - generic [ref=e1841]: ·
+                    - generic [ref=e1842]: https://www.adobe.com/
+                    - generic [ref=e1843]: ⭐
+                - link "Mobbin Mobbin · https://mobbin.com ⭐" [ref=e1844] [cursor=pointer]:
+                  - /url: https://mobbin.com
+                  - img "Mobbin" [ref=e1846]
+                  - generic [ref=e1847]:
+                    - generic [ref=e1848]: Mobbin
+                    - generic [ref=e1849]: ·
+                    - generic [ref=e1850]: https://mobbin.com
+                    - generic [ref=e1851]: ⭐
+                - link "Framer Framer · https://framer.com ⭐" [ref=e1852] [cursor=pointer]:
+                  - /url: https://framer.com
+                  - img "Framer" [ref=e1854]
+                  - generic [ref=e1855]:
+                    - generic [ref=e1856]: Framer
+                    - generic [ref=e1857]: ·
+                    - generic [ref=e1858]: https://framer.com
+                    - generic [ref=e1859]: ⭐
+                - link "ACE ACE · https://ace.me/ ⭐" [ref=e1860] [cursor=pointer]:
+                  - /url: https://ace.me/
+                  - img "ACE" [ref=e1862]
+                  - generic [ref=e1863]:
+                    - generic [ref=e1864]: ACE
+                    - generic [ref=e1865]: ·
+                    - generic [ref=e1866]: https://ace.me/
+                    - generic [ref=e1867]: ⭐
+                - link "Mockuuups Mockuuups · https://mockuuups.studio" [ref=e1868] [cursor=pointer]:
+                  - /url: https://mockuuups.studio
+                  - img "Mockuuups" [ref=e1870]
+                  - generic [ref=e1871]:
+                    - generic [ref=e1872]: Mockuuups
+                    - generic [ref=e1873]: ·
+                    - generic [ref=e1874]: https://mockuuups.studio
+                - link "Fontbase Fontbase · https://fontba.se/" [ref=e1875] [cursor=pointer]:
+                  - /url: https://fontba.se/
+                  - img "Fontbase" [ref=e1877]
+                  - generic [ref=e1878]:
+                    - generic [ref=e1879]: Fontbase
+                    - generic [ref=e1880]: ·
+                    - generic [ref=e1881]: https://fontba.se/
+                - link "Play Play · https://createwithplay.com/" [ref=e1882] [cursor=pointer]:
+                  - /url: https://createwithplay.com/
+                  - img "Play" [ref=e1884]
+                  - generic [ref=e1885]:
+                    - generic [ref=e1886]: Play
+                    - generic [ref=e1887]: ·
+                    - generic [ref=e1888]: https://createwithplay.com/
+                - link "Faire Type Faire Type · https://fairetype.com/" [ref=e1889] [cursor=pointer]:
+                  - /url: https://fairetype.com/
+                  - img "Faire Type" [ref=e1891]
+                  - generic [ref=e1892]:
+                    - generic [ref=e1893]: Faire Type
+                    - generic [ref=e1894]: ·
+                    - generic [ref=e1895]: https://fairetype.com/
+                - link "Readymag Readymag · https://readymag.com" [ref=e1896] [cursor=pointer]:
+                  - /url: https://readymag.com
+                  - img "Readymag" [ref=e1898]
+                  - generic [ref=e1899]:
+                    - generic [ref=e1900]: Readymag
+                    - generic [ref=e1901]: ·
+                    - generic [ref=e1902]: https://readymag.com
+                - link "Sunrise Planner Sunrise Planner · https://sunriseplanner.com" [ref=e1903] [cursor=pointer]:
+                  - /url: https://sunriseplanner.com
+                  - img "Sunrise Planner" [ref=e1905]
+                  - generic [ref=e1906]:
+                    - generic [ref=e1907]: Sunrise Planner
+                    - generic [ref=e1908]: ·
+                    - generic [ref=e1909]: https://sunriseplanner.com
+                - link "Curated Supply Curated Supply · https://curated.supply" [ref=e1910] [cursor=pointer]:
+                  - /url: https://curated.supply
+                  - img "Curated Supply" [ref=e1912]
+                  - generic [ref=e1913]:
+                    - generic [ref=e1914]: Curated Supply
+                    - generic [ref=e1915]: ·
+                    - generic [ref=e1916]: https://curated.supply
+                - link "Aura Build Aura Build · https://aura.build" [ref=e1917] [cursor=pointer]:
+                  - /url: https://aura.build
+                  - img "Aura Build" [ref=e1919]
+                  - generic [ref=e1920]:
+                    - generic [ref=e1921]: Aura Build
+                    - generic [ref=e1922]: ·
+                    - generic [ref=e1923]: https://aura.build
+              - link "Add your site here 🙌 Get listed in 48h" [ref=e1924] [cursor=pointer]:
+                - /url: https://go.panda.network/advertise?ref=bestdesignsonx.com
+                - generic [ref=e1928]:
+                  - generic [ref=e1929]: Add your site here 🙌
+                  - generic [ref=e1930]: Get listed in 48h
+            - generic [ref=e1931]:
+              - generic [ref=e1932]:
+                - heading "Adobe Creative Cloud" [level=3] [ref=e1933]
+                - generic [ref=e1934]:
+                  - link "Online Photoshop Editor" [ref=e1935] [cursor=pointer]:
+                    - /url: https://www.adobe.com/in/products/photoshop/online.html?utm_source=bestdesignsonx.com&utm_medium=referral&utm_campaign=sponsor
+                  - link "Free AI Image Generative Fill" [ref=e1939] [cursor=pointer]:
+                    - /url: https://www.adobe.com/in/products/photoshop/generative-fill.html?utm_source=bestdesignsonx.com&utm_medium=referral&utm_campaign=sponsor
+                  - link "Edit photos online for Free" [ref=e1943] [cursor=pointer]:
+                    - /url: https://www.adobe.com/in/products/photoshop/edit-photos.html?utm_source=bestdesignsonx.com&utm_medium=referral&utm_campaign=sponsor
+              - generic [ref=e1947]:
+                - heading "Panda Network" [level=3] [ref=e1948]
+                - generic [ref=e1949]:
+                  - link "CollectUI · collectui.com 🔥" [ref=e1950] [cursor=pointer]:
+                    - /url: https://collectui.com
+                    - generic [ref=e1952]:
+                      - generic [ref=e1953]: CollectUI
+                      - generic [ref=e1954]: ·
+                      - generic [ref=e1955]: collectui.com
+                      - generic [ref=e1956]: 🔥
+                  - link "Best Designs On X · bestdesignsonx.com 🔥" [ref=e1957] [cursor=pointer]:
+                    - /url: https://bestdesignsonx.com
+                    - generic [ref=e1959]:
+                      - generic [ref=e1960]: Best Designs On X
+                      - generic [ref=e1961]: ·
+                      - generic [ref=e1962]: bestdesignsonx.com
+                      - generic [ref=e1963]: 🔥
+                  - link "DDR · designerdailyreport.com 🔥" [ref=e1964] [cursor=pointer]:
+                    - /url: https://designerdailyreport.com
+                    - generic [ref=e1966]:
+                      - generic [ref=e1967]: DDR
+                      - generic [ref=e1968]: ·
+                      - generic [ref=e1969]: designerdailyreport.com
+                      - generic [ref=e1970]: 🔥
+                  - link "Curations Supply · curations.supply 🔥" [ref=e1971] [cursor=pointer]:
+                    - /url: http://curations.supply/
+                    - generic [ref=e1973]:
+                      - generic [ref=e1974]: Curations Supply
+                      - generic [ref=e1975]: ·
+                      - generic [ref=e1976]: curations.supply
+                      - generic [ref=e1977]: 🔥
+                  - link "CurrencyX · currencyx.app" [ref=e1978] [cursor=pointer]:
+                    - /url: https://currencyx.app
+                    - generic [ref=e1980]:
+                      - generic [ref=e1981]: CurrencyX
+                      - generic [ref=e1982]: ·
+                      - generic [ref=e1983]: currencyx.app
+                  - link "Panda · usepanda.com" [ref=e1984] [cursor=pointer]:
+                    - /url: https://usepanda.com
+                    - generic [ref=e1986]:
+                      - generic [ref=e1987]: Panda
+                      - generic [ref=e1988]: ·
+                      - generic [ref=e1989]: usepanda.com
+                  - link "Flat UI Colors · flatuicolors.com" [ref=e1990] [cursor=pointer]:
+                    - /url: https://flatuicolors.com
+                    - generic [ref=e1992]:
+                      - generic [ref=e1993]: Flat UI Colors
+                      - generic [ref=e1994]: ·
+                      - generic [ref=e1995]: flatuicolors.com
+                  - link "The Stocks 3 · thestocks.im" [ref=e1996] [cursor=pointer]:
+                    - /url: https://thestocks.im
+                    - generic [ref=e1998]:
+                      - generic [ref=e1999]: The Stocks 3
+                      - generic [ref=e2000]: ·
+                      - generic [ref=e2001]: thestocks.im
+        - generic [ref=e2003]:
+          - generic [ref=e2004]: Trusted by Framer, Adobe, Mobbin & 100+ design tools
+          - generic [ref=e2009]:
+            - heading "Boost your visibility inside a trusted design network" [level=4] [ref=e2010]
+            - paragraph [ref=e2011]: Get a dofollow backlink, exposure across 1M+ designers , and placement next to premium tools like Framer, Mobbin, Adobe.
+          - generic [ref=e2012]:
+            - generic [ref=e2013]:
+              - generic [ref=e2014]: 🔗
+              - generic [ref=e2015]: High-authority backlinks (DA 60+)
+            - generic [ref=e2016]:
+              - generic [ref=e2017]: 👀
+              - generic [ref=e2018]: 1M+ monthly impressions
+            - generic [ref=e2019]:
+              - generic [ref=e2020]: 🎯
+              - generic [ref=e2021]: Design-focused audience
+            - generic [ref=e2022]:
+              - generic [ref=e2023]: ⚡
+              - generic [ref=e2024]: 48h listing approval
+          - link "👉 Become a Sponsor" [ref=e2025] [cursor=pointer]:
+            - /url: https://go.panda.network/advertise?ref=bestdesignsonx.com
