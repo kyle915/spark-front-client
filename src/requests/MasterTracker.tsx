@@ -1,16 +1,18 @@
 import React, {
   Suspense,
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
-  useTransition,
 } from "react";
 import DuplicateEventsButton from "./DuplicateEventsButton";
 import TrackerSavedViews, {
   type TrackerViewSnapshot,
 } from "./TrackerSavedViews";
-import { useLazyLoadQuery } from "react-relay/hooks";
-import { useNavigate } from "react-router";
+import { useLazyLoadQuery, useRelayEnvironment } from "react-relay/hooks";
+import { fetchQuery } from "relay-runtime";
+import { Link, useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
@@ -23,6 +25,11 @@ import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
+import {
+  trackerDateRangeToServer,
+  trackerSortToServer,
+  trackerStatusToServer,
+} from "@/requests/masterTrackerFilters";
 
 /**
  * Spark v2 — Master Tracker
@@ -64,12 +71,7 @@ const SCHEDULING_LABEL: Record<string, string> = {
 };
 
 // "Active" = anything not yet completed. Default landing for admins.
-const ACTIVE_STATUSES = new Set([
-  "pending",
-  "queue",
-  "approved",
-  "scheduled",
-]);
+// Status slugs sent server-side via masterTrackerFilters.ts.
 
 const STATUS_FILTERS: { key: string; label: string; chip: string }[] = [
   { key: "active", label: "Active", chip: "chip chip-lime" },
@@ -825,6 +827,8 @@ const TrackerTable: React.FC<{
  */
 const reqCodeOf = (id: string): string => id.slice(-4).toUpperCase();
 
+const TRACKER_PAGE_SIZE = 100;
+
 const MasterTrackerInner: React.FC<{
   activeStatus: string;
   search: string;
@@ -861,232 +865,243 @@ const MasterTrackerInner: React.FC<{
   onDelete,
 }) => {
   const { tenantId } = useAuthStore();
+  const environment = useRelayEnvironment();
 
-  // Detect a "search by REQ number" query — what the user sees in the
-  // request view + approval emails (e.g. "REQ-925", "req 925", "REQ925").
-  // Normalize to the bare code; null for ordinary text search. The anchored
-  // pattern (REQ + up to 4 alphanumerics, whole string) keeps a venue named
-  // "Req…" from being mistaken for a req-number lookup.
   const reqNeedle = useMemo(() => {
     const m = search.trim().match(/^req[-\s]*([a-z0-9]{1,4})$/i);
     return m ? m[1].toUpperCase() : null;
   }, [search]);
 
-  // Progressive ("streamed") load. The tracker pages the WHOLE tenant in one
-  // query — it buckets by status, tallies counts and groups by date entirely
-  // client-side — which for a big tenant is ~1,000 rows and several seconds of
-  // backend time. Suspending the whole page until all of them arrive is what
-  // made the tab feel frozen (and sometimes unclickable) for ~1 min.
-  //
-  // Instead: fetch a small first page so the table paints almost immediately,
-  // then widen to the full page inside a React transition. startTransition
-  // keeps the first-page rows committed on screen (no Suspense fallback / no
-  // blank table) while the rest stream in behind them. The full set still
-  // arrives — search, counts and date grouping operate on it once loaded —
-  // it just no longer blocks first paint.
-  const FIRST_PAINT_ROWS = 250;
-  const FULL_PAGE_ROWS = 1000;
-  const [pageSize, setPageSize] = useState(FIRST_PAINT_ROWS);
-  const [isStreamingRest, startStreamingRest] = useTransition();
-  useEffect(() => {
-    if (pageSize >= FULL_PAGE_ROWS) return;
-    const widen = () => startStreamingRest(() => setPageSize(FULL_PAGE_ROWS));
-    // Wait for an idle frame so the first paint commits before we kick off
-    // the (heavier) full fetch; fall back to a short timer where rIC is absent.
-    if ("requestIdleCallback" in window) {
-      const id = window.requestIdleCallback(widen, { timeout: 800 });
-      return () => window.cancelIdleCallback(id);
-    } else {
-      const id = setTimeout(widen, 120);
-      return () => clearTimeout(id);
-    }
-  }, [pageSize]);
+  const serverFilters = useMemo(() => {
+    if (!tenantId) return null;
+    const dateBounds = reqNeedle ? {} : trackerDateRangeToServer(dateRange);
+    const statusBounds = reqNeedle ? {} : trackerStatusToServer(activeStatus);
+    const sortBounds = reqNeedle ? {} : trackerSortToServer(sortMode);
+    return {
+      tenantId,
+      rmmAsigned: rmmFilter === "all" ? null : rmmFilter,
+      ...dateBounds,
+      ...statusBounds,
+      ...sortBounds,
+      schedulingStatus:
+        reqNeedle || schedulingFilter === "all" ? null : schedulingFilter,
+      stateCode: reqNeedle || marketFilter === "all" ? null : marketFilter,
+    };
+  }, [
+    tenantId,
+    rmmFilter,
+    dateRange,
+    activeStatus,
+    sortMode,
+    schedulingFilter,
+    marketFilter,
+    reqNeedle,
+  ]);
 
-  // Tenant scoping is REQUIRED — without it the query returns nothing.
-  // For a REQ-number lookup we send q=null so the full set loads and the
-  // match happens client-side — the backend `q` only searches venue/address/
-  // etc. and would exclude the row before we could match its id.
+  const filterKey = useMemo(
+    () =>
+      [
+        tenantId,
+        rmmFilter,
+        dateRange,
+        activeStatus,
+        sortMode,
+        schedulingFilter,
+        marketFilter,
+        search,
+      ].join("|"),
+    [
+      tenantId,
+      rmmFilter,
+      dateRange,
+      activeStatus,
+      sortMode,
+      schedulingFilter,
+      marketFilter,
+      search,
+    ],
+  );
+
   const data = useLazyLoadQuery<RequestsQueryType>(
     RequestsQuery,
     {
-      first: pageSize,
+      first: TRACKER_PAGE_SIZE,
+      after: null,
       q: reqNeedle ? null : search || null,
-      filters: tenantId
-        ? { tenantId, rmmAsigned: rmmFilter === "all" ? null : rmmFilter }
-        : null,
+      filters: serverFilters,
     },
-    // store-and-network (not store-or-network): after a delete / clone / post
-    // the parent bumps `refetchTick`, which remounts this component. With
-    // store-or-network the remount just replayed the cached list (so a deleted
-    // gig lingered until a hard refresh); store-and-network always re-hits the
-    // network on mount, so the row drops off on its own.
-    { fetchPolicy: "store-and-network" },
+    { fetchPolicy: "store-and-network", fetchKey: filterKey },
   );
 
-  const allRows: Row[] = useMemo(() => {
+  type RequestNode = NonNullable<
+    NonNullable<
+      NonNullable<RequestsQueryType["response"]["requests"]>["edges"]
+    >[number]
+  >["node"];
+
+  const mapNodeToRow = useCallback((n: RequestNode | null | undefined): Row | null => {
+      if (!n) return null;
+      const stateCode = n.retailer?.location?.state?.code ?? n.state?.code;
+      const cityish = n.retailer?.location?.name ?? n.location?.name ?? "";
+      const market = [cityish, stateCode].filter(Boolean).join(", ");
+      const recapCount = n.recapsFiledCount ?? 0;
+      const recapStatus: RecapStatus =
+        (n.eventsCount ?? 0) === 0
+          ? "none"
+          : recapCount > 0
+            ? "submitted"
+            : isRecapDue(n.date, 30)
+              ? "due"
+              : "none";
+      return {
+        uuid: String(n.uuid),
+        id: String(n.id),
+        date: n.date ?? "",
+        dateLabel: fmtDateLabel(n.date),
+        timeLabel: fmtTimeRange(n.startTime, n.endTime),
+        statusSlug: (n.status?.slug ?? n.status?.name ?? "pending")
+          .toString()
+          .toLowerCase(),
+        market: market || "—",
+        venue: n.retailer?.name ?? n.name ?? "—",
+        address: n.address ?? "",
+        type: n.requestType?.name ?? "—",
+        skus: Array.from(
+          new Set(
+            (n.products ?? [])
+              .map((p) => (p?.name ?? "").trim())
+              .filter((s) => s.length > 0),
+          ),
+        ),
+        openShiftsOpen: (n.openShifts ?? []).filter(
+          (s) => s?.status === "open",
+        ).length,
+        openShiftsTotal: (n.openShifts ?? []).length,
+        openShiftsTooltip: (n.openShifts ?? [])
+          .map((s) => {
+            const who = s?.releasedByName || "A BA";
+            return s?.status === "claimed"
+              ? `${who} dropped${
+                  s?.claimedByName ? ` → claimed by ${s.claimedByName}` : " → claimed"
+                }`
+              : `${who} dropped — still open`;
+          })
+          .join(" · "),
+        eventUuid: n.event?.uuid ? String(n.event.uuid) : null,
+        eventId: n.event?.id ? String(n.event.id) : null,
+        eventDate: (n.startTime ?? n.date) ? String(n.startTime ?? n.date) : null,
+        eventAddress: n.address ? String(n.address) : null,
+        recapEventUuid: n.recapEventUuid ? String(n.recapEventUuid) : null,
+        recapStatus,
+        recapCount,
+        schedulingStatus: n.schedulingStatus ?? "",
+        isNonActiveProductRequired: n.isNonActiveProductRequired ?? null,
+        assignedBa: n.event?.assignedAmbassadorsCount ?? 0,
+        confirmedBa: n.event?.confirmedAmbassadorsCount ?? 0,
+      };
+  }, []);
+
+  const page1Rows: Row[] = useMemo(() => {
     return (
       data?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
-        ?.map((n) => {
-          const stateCode = n.retailer?.location?.state?.code ?? n.state?.code;
-          const cityish = n.retailer?.location?.name ?? n.location?.name ?? "";
-          const market = [cityish, stateCode].filter(Boolean).join(", ");
-          // Recap rollups now arrive as flat server-computed scalars
-          // (recapsFiledCount / recapEventUuid / eventsCount) instead of the
-          // full per-event recaps/customRecaps arrays — same semantics, a
-          // fraction of the payload. recapsFiledCount counts BOTH legacy and
-          // custom-template recaps; recapEventUuid is the event that actually
-          // holds one (n.event is the lowest-id event, which may be recap-less).
-          const recapCount = n.recapsFiledCount ?? 0;
-          const recapStatus: RecapStatus =
-            (n.eventsCount ?? 0) === 0
-              ? "none"
-              : recapCount > 0
-                ? "submitted"
-                : // Same 30-day due window as Recaps / sidebar — one queue.
-                  isRecapDue(n.date, 30)
-                  ? "due"
-                  : "none";
-          return {
-            uuid: String(n.uuid),
-            id: String(n.id),
-            date: n.date ?? "",
-            dateLabel: fmtDateLabel(n.date),
-            timeLabel: fmtTimeRange(n.startTime, n.endTime),
-            statusSlug: (n.status?.slug ?? n.status?.name ?? "pending")
-              .toString()
-              .toLowerCase(),
-            market: market || "—",
-            venue: n.retailer?.name ?? n.name ?? "—",
-            address: n.address ?? "",
-            type: n.requestType?.name ?? "—",
-            skus: Array.from(
-              new Set(
-                (n.products ?? [])
-                  .map((p) => (p?.name ?? "").trim())
-                  .filter((s) => s.length > 0),
-              ),
-            ),
-            openShiftsOpen: (n.openShifts ?? []).filter(
-              (s) => s?.status === "open",
-            ).length,
-            openShiftsTotal: (n.openShifts ?? []).length,
-            openShiftsTooltip: (n.openShifts ?? [])
-              .map((s) => {
-                const who = s?.releasedByName || "A BA";
-                return s?.status === "claimed"
-                  ? `${who} dropped${
-                      s?.claimedByName ? ` → claimed by ${s.claimedByName}` : " → claimed"
-                    }`
-                  : `${who} dropped — still open`;
-              })
-              .join(" · "),
-            eventUuid: n.event?.uuid ? String(n.event.uuid) : null,
-            eventId: n.event?.id ? String(n.event.id) : null,
-            eventDate: (n.startTime ?? n.date) ? String(n.startTime ?? n.date) : null,
-            eventAddress: n.address ? String(n.address) : null,
-            recapEventUuid: n.recapEventUuid ? String(n.recapEventUuid) : null,
-            recapStatus,
-            recapCount,
-            schedulingStatus: n.schedulingStatus ?? "",
-            isNonActiveProductRequired:
-              n.isNonActiveProductRequired ?? null,
-            assignedBa: n.event?.assignedAmbassadorsCount ?? 0,
-            confirmedBa: n.event?.confirmedAmbassadorsCount ?? 0,
-          };
-        }) ?? []
+        ?.map((e) => mapNodeToRow(e?.node ?? null))
+        ?.filter((r): r is Row => Boolean(r)) ?? []
     );
-  }, [data, tenantId]);
+  }, [data, mapNodeToRow]);
 
-  // Apply status filter client-side. "active" maps to anything not done.
-  const statusFiltered = useMemo(() => {
-    if (activeStatus === "all") return allRows;
-    if (activeStatus === "active")
-      return allRows.filter((r) => ACTIVE_STATUSES.has(r.statusSlug));
-    return allRows.filter((r) => r.statusSlug === activeStatus);
-  }, [allRows, activeStatus]);
+  const [extraRows, setExtraRows] = useState<Row[]>([]);
+  const [endCursor, setEndCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreRef = useRef(false);
 
-  // Date-range filter. All ranges are relative to "now" using the
-  // row's `date` field (ISO string).
-  const dateFiltered = useMemo(() => {
-    if (dateRange === "all") return statusFiltered;
-    const now = Date.now();
-    const day = 86_400_000;
-    return statusFiltered.filter((r) => {
-      if (!r.date) return false;
-      const t = new Date(r.date).getTime();
-      if (!Number.isFinite(t)) return false;
-      switch (dateRange) {
-        case "next7":
-          return t >= now && t <= now + 7 * day;
-        case "next30":
-          return t >= now && t <= now + 30 * day;
-        case "past7":
-          return t >= now - 7 * day && t <= now;
-        case "past30":
-          return t >= now - 30 * day && t <= now;
-        case "month": {
-          const d = new Date(t);
-          const cur = new Date();
-          return (
-            d.getFullYear() === cur.getFullYear() &&
-            d.getMonth() === cur.getMonth()
-          );
-        }
-        default:
-          return true;
-      }
-    });
-  }, [statusFiltered, dateRange]);
+  useEffect(() => {
+    setExtraRows([]);
+    setEndCursor(data?.requests?.pageInfo?.endCursor ?? null);
+    setHasMore(Boolean(data?.requests?.pageInfo?.hasNextPage));
+  }, [filterKey, data?.requests?.pageInfo?.endCursor, data?.requests?.pageInfo?.hasNextPage]);
 
-  // Market filter — derived from the row's "market" string, which
-  // already includes the state code. We split on ", " to grab the
-  // trailing state code so admins can pick a single state cleanly.
-  const marketFiltered = useMemo(() => {
-    if (marketFilter === "all") return dateFiltered;
-    return dateFiltered.filter((r) => {
-      const parts = (r.market ?? "").split(",").map((s) => s.trim());
-      return parts[parts.length - 1] === marketFilter;
-    });
-  }, [dateFiltered, marketFilter]);
+  const allRows = useMemo(
+    () => [...page1Rows, ...extraRows],
+    [page1Rows, extraRows],
+  );
 
-  // Scheduling-status filter — client-side, on the two-value metadata.
-  const schedulingFiltered = useMemo(() => {
-    if (schedulingFilter === "all") return marketFiltered;
-    return marketFiltered.filter(
-      (r) => r.schedulingStatus === schedulingFilter,
+  const loadMore = useCallback(async () => {
+    if (!endCursor || loadingMoreRef.current || !hasMore) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    try {
+      const next = await fetchQuery<RequestsQueryType>(
+        environment,
+        RequestsQuery,
+        {
+          first: TRACKER_PAGE_SIZE,
+          after: endCursor,
+          q: reqNeedle ? null : search || null,
+          filters: serverFilters,
+        },
+        { fetchPolicy: "network-only" },
+      ).toPromise();
+      const edges = next?.requests?.edges ?? [];
+      const mapped = edges
+        .map((e) => mapNodeToRow(e?.node ?? null))
+        .filter((r): r is Row => Boolean(r));
+      setExtraRows((prev) => {
+        const seen = new Set(prev.map((r) => r.id));
+        return [...prev, ...mapped.filter((r) => !seen.has(r.id))];
+      });
+      setEndCursor(next?.requests?.pageInfo?.endCursor ?? null);
+      setHasMore(Boolean(next?.requests?.pageInfo?.hasNextPage));
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
+    }
+  }, [
+    endCursor,
+    environment,
+    hasMore,
+    mapNodeToRow,
+    reqNeedle,
+    search,
+    serverFilters,
+  ]);
+
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el || !hasMore) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) void loadMore();
+      },
+      { rootMargin: "200px" },
     );
-  }, [marketFiltered, schedulingFilter]);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasMore, loadMore, filterKey]);
 
-  // Sort applied last so it operates on the post-filter set.
+  // REQ-number search is client-side only (backend q doesn't match id suffix).
   const rows = useMemo(() => {
-    // A REQ-number search jumps straight to that request and ignores the
-    // status/date/market/scheduling chips, so it's found no matter which tab
-    // or date range is active. Ordinary search keeps the full filter chain.
     const base = reqNeedle
       ? allRows.filter((r) => reqCodeOf(r.id).includes(reqNeedle))
-      : schedulingFiltered;
+      : allRows;
     const out = [...base];
+    if (reqNeedle) return out;
     switch (sortMode) {
       case "date-desc":
         out.sort(
           (a, b) =>
-            new Date(b.date || 0).getTime() -
-            new Date(a.date || 0).getTime(),
+            new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime(),
         );
         break;
       case "date-asc":
         out.sort(
           (a, b) =>
-            new Date(a.date || 0).getTime() -
-            new Date(b.date || 0).getTime(),
+            new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime(),
         );
         break;
       case "venue":
-        out.sort((a, b) =>
-          (a.venue ?? "").localeCompare(b.venue ?? ""),
-        );
+        out.sort((a, b) => (a.venue ?? "").localeCompare(b.venue ?? ""));
         break;
       case "status": {
         const rank: Record<string, number> = {
@@ -1108,10 +1123,8 @@ const MasterTrackerInner: React.FC<{
       }
     }
     return out;
-  }, [schedulingFiltered, sortMode, reqNeedle, allRows]);
+  }, [allRows, sortMode, reqNeedle]);
 
-  // Bubble the unique market codes up so the page chrome can render
-  // a dropdown with just the markets actually present in the data.
   useEffect(() => {
     if (!onMarketsChange) return;
     const set = new Set<string>();
@@ -1123,9 +1136,7 @@ const MasterTrackerInner: React.FC<{
     onMarketsChange([...set].sort());
   }, [allRows, onMarketsChange]);
 
-  // Tally counts off the unfiltered rows so chips show consistent totals
-  // regardless of which status is currently active.
-  useMemo(() => {
+  useEffect(() => {
     const counts: Record<string, number> = {};
     allRows.forEach((r) => {
       counts[r.statusSlug] = (counts[r.statusSlug] ?? 0) + 1;
@@ -1134,8 +1145,6 @@ const MasterTrackerInner: React.FC<{
     onCountsChange(counts, total);
   }, [allRows, data?.requests?.totalCount, onCountsChange]);
 
-  // Bubble the currently-visible rows up so the outer page can wire
-  // them to the CSV export button.
   useEffect(() => {
     if (onVisibleRowsChange) onVisibleRowsChange(rows);
   }, [rows, onVisibleRowsChange]);
@@ -1151,20 +1160,15 @@ const MasterTrackerInner: React.FC<{
         onPostBoard={onPostBoard}
         onDelete={onDelete}
       />
-      {/* Thin "rest is loading" hint while the full-tenant page streams in
-          behind the first paint. Only shown once the first page is on screen
-          so it reads as "loading more", never as the initial empty state. */}
-      {isStreamingRest && rows.length > 0 && (
-        <p
-          className="mono text-[10px] flex items-center gap-2"
-          style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.4)" }}
-        >
-          <span
-            className="inline-block w-2 h-2 rounded-full animate-pulse"
-            style={{ background: "var(--spark-lime)" }}
-          />
-          LOADING THE REST OF THE TENANT…
-        </p>
+      {hasMore && (
+        <div ref={loadMoreRef} className="py-3 text-center">
+          <p
+            className="mono text-[10px]"
+            style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.4)" }}
+          >
+            {loadingMore ? "LOADING MORE…" : "SCROLL FOR MORE"}
+          </p>
+        </div>
       )}
     </div>
   );
@@ -2068,8 +2072,12 @@ export default function MasterTracker() {
               Paste the full Google Sheets URL for this brand's
               tracker. The whole team will see the deep-link in the
               tracker header. To push fresh data to the sheet, use{" "}
-              <strong>Export CSV</strong> and File → Import in Sheets
-              (a real auto-sync lands when the Sheets backend ships).
+              <strong>Export CSV</strong> and File → Import in Sheets.
+              Auto-append status (last sync, errors) lives in{" "}
+              <Link to="/settings" className="underline" style={{ color: "var(--spark-lime)" }}>
+                Settings
+              </Link>
+              .
             </p>
             <input
               autoFocus

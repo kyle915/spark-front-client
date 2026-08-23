@@ -61,10 +61,6 @@ export const RecapsQuery = graphql`
               lastName
             }
           }
-          event {
-            name
-            date
-          }
         }
       }
     }

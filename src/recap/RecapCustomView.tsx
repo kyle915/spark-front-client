@@ -367,6 +367,17 @@ const RecapCustomViewInner = () => {
   // workflow instead of discovering the gap later. We surface a prompt in
   // the Evidences section and scroll it into view. Dismissible per-view.
   const needPhotos = searchParams.get("needPhotos") === "1";
+
+  useEffect(() => {
+    if (!isClient) return;
+    const root = document.documentElement;
+    const prev = root.getAttribute("data-theme");
+    root.setAttribute("data-theme", "spark-v2");
+    return () => {
+      if (prev) root.setAttribute("data-theme", prev);
+      else root.removeAttribute("data-theme");
+    };
+  }, [isClient]);
   const [photoPromptDismissed, setPhotoPromptDismissed] = useState(false);
   const showPhotoPrompt = needPhotos && !photoPromptDismissed;
   const evidenceRef = useRef<HTMLDivElement>(null);

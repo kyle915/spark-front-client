@@ -4,6 +4,7 @@ import environment from "@/api/relay/environment";
 import { UploadUrlQuery } from "@/api/queries/UploadUrlQuery";
 import type { UploadUrlQuery as UploadUrlQueryType } from "@/api/queries/__generated__/UploadUrlQuery.graphql";
 import { useAlertStore } from "@/store/alertStore";
+import { prepareImageForUpload } from "@/utils/compressImageForUpload";
 
 /**
  * Spark v2 — Recap photo / receipt uploader.
@@ -38,8 +39,8 @@ const PHOTO_CAP = 20;
 // NOTE: keep photo accept as the broad `image/*`. iOS Safari falls back
 // to the Files-app picker (no multi-select) when accept lists specific
 // MIME types like image/heic; image/* keeps the native camera-roll
-// picker, which supports multi-select. Server-side conversion handles
-// any weird format that sneaks through (HEIC → JPG runs at upload time).
+// picker, which supports multi-select. HEIC → JPEG + downscale runs
+// client-side before PUT so BAs on LTE upload smaller blobs.
 const ACCEPT: Record<NonNullable<Props["category"]>, string> = {
   photo: "image/*",
   receipt: "image/*,application/pdf",
@@ -85,10 +86,14 @@ export const RecapUploader: React.FC<Props> = ({
     let done = 0;
     let failed = 0;
     for (const item of batch) {
-      const contentType = item.file.type || "application/octet-stream";
+      const prepared =
+        category === "photo"
+          ? await prepareImageForUpload(item.file)
+          : item.file;
+      const contentType = prepared.type || "application/octet-stream";
       const stamp = Date.now();
       const prefix = category === "receipt" ? "recaps/receipts" : "recaps";
-      const path = `${prefix}/${recapUuid}/${stamp}-${safeFilename(item.file.name)}`;
+      const path = `${prefix}/${recapUuid}/${stamp}-${safeFilename(prepared.name)}`;
       try {
         const data = await fetchQuery<UploadUrlQueryType>(
           environment,
@@ -101,7 +106,7 @@ export const RecapUploader: React.FC<Props> = ({
         const res = await fetch(url, {
           method: "PUT",
           headers: { "Content-Type": contentType },
-          body: item.file,
+          body: prepared,
         });
         if (!res.ok) throw new Error(`Upload failed (${res.status})`);
         onUploaded(blobName, category);
