@@ -2146,6 +2146,8 @@ type CustomRecap implements Node {
   late: Boolean!
   incomplete: Boolean!
   approved: Boolean!
+  approvedAt: String
+  approvedBy: SparkUserType
   shareToken: String!
   sharedAt: String
   clientSignoffStatus: String!
@@ -5194,6 +5196,8 @@ type Recap implements Node {
   uuid: String!
   name: String!
   approved: Boolean!
+  approvedAt: String
+  approvedBy: SparkUserType
   shareToken: String!
   sharedAt: String
   clientSignoffStatus: String!

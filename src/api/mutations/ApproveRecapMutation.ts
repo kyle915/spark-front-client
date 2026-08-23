@@ -14,6 +14,12 @@ export const ApproveRecapMutation = graphql`
                 # Return approved so Relay updates the status chip on the
                 # recap view in-place (no reload) after approve/decline.
                 approved
+                approvedAt
+                approvedBy {
+                    firstName
+                    lastName
+                    email
+                }
             }
         }
     }
