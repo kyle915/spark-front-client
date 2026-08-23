@@ -1914,13 +1914,13 @@ function CheckedInFlow({
                 width: "100%",
               }}
             >
-              File another recap
+              {ctx.recapOnly ? "File another recap" : "File another recap (same store)"}
             </button>
             <button
               onClick={onStartAnother}
               style={{ ...secondaryBtn, marginTop: 10, width: "100%" }}
             >
-              {ctx.recapOnly ? "File for another store / date" : "Log another event"}
+              {ctx.recapOnly ? "File for another store / date" : "Different store? Log another event"}
             </button>
             {msg ? <p style={{ ...errText, marginTop: 12 }}>{msg}</p> : null}
           </>
