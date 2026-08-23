@@ -45,6 +45,30 @@ describe("check-in brand logo matches spark-form", () => {
     expect(walkup).toEqual(form);
   });
 
+  it("Luckin Coffee and Grub Hub use the same marks on walk-up and spark-form", () => {
+    const luckinWalkup = tenantLogoCandidates({
+      name: "Luckin Coffee",
+      tenantSlug: "luckin-coffee",
+    });
+    const luckinForm = tenantLogoCandidates({
+      name: "Luckin Coffee",
+      requestUrlName: "luckin-coffee",
+    });
+    expect(luckinWalkup[0]).toContain("luckincdn.us");
+    expect(luckinWalkup).toEqual(luckinForm);
+
+    const grubWalkup = tenantLogoCandidates({
+      name: "Grub Hub",
+      tenantSlug: "grub-hub",
+    });
+    const grubForm = tenantLogoCandidates({
+      name: "Grub Hub",
+      requestUrlName: "grub-hub",
+    });
+    expect(grubWalkup[0]).toContain("Grubhub_2025_logo.svg");
+    expect(grubWalkup).toEqual(grubForm);
+  });
+
   it("prefers the tenant image/logoUrl the check-in API now sends", () => {
     const api =
       "https://storage.googleapis.com/sparkio-production/tenants/images/girl-beer.png";

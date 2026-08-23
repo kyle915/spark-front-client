@@ -58,6 +58,16 @@ const OFFICIAL_FALLBACKS: Record<string, string> = {
   brewdrkombucha: "https://upload.wikimedia.org/wikipedia/commons/4/47/Brew_Dr._Kombucha_logo.png",
   brewdr: "https://upload.wikimedia.org/wikipedia/commons/4/47/Brew_Dr._Kombucha_logo.png",
 
+  // Official Luckin Coffee USA CDN header mark.
+  // https://www.luckincoffee.us/
+  luckincoffee: "https://web.luckincdn.us/us/assets/logo2-9d412147.svg",
+  luckin: "https://web.luckincdn.us/us/assets/logo2-9d412147.svg",
+
+  // Wikimedia Commons — current Grubhub orange wordmark (2025).
+  // https://commons.wikimedia.org/wiki/File:Grubhub_2025_logo.svg
+  grubhub: "https://upload.wikimedia.org/wikipedia/commons/8/87/Grubhub_2025_logo.svg",
+  grub: "https://upload.wikimedia.org/wikipedia/commons/8/87/Grubhub_2025_logo.svg",
+
   // Wikimedia Commons, sourced from dudeproducts.com.
   // https://commons.wikimedia.org/wiki/File:Dude_Wipes_logo.svg
   dudewipes: "https://upload.wikimedia.org/wikipedia/commons/e/e4/Dude_Wipes_logo.svg",
