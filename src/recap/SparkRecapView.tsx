@@ -44,6 +44,7 @@ import ReassignRecapModal from "./ReassignRecapModal";
 import { thumbUrl } from "@/utils/thumb";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
 import { RecapDocument } from "@/recap/RecapDocument";
+import { recapApprovalMeta } from "@/recap/recapApprovalMeta";
 import { formatRecapProductName } from "@/recap/recapFieldLabel";
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
 import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
@@ -460,6 +461,17 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   );
 
   const recap = data?.recap;
+  const approvalMeta = useMemo(
+    () =>
+      recap
+        ? recapApprovalMeta(
+            Boolean(recap.approved),
+            recap.approvedBy,
+            recap.approvedAt ?? null,
+          )
+        : null,
+    [recap],
+  );
   const crumbTitle = useMemo(() => {
     if (!recap) return null;
     const venue =
@@ -868,6 +880,17 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               >
                 <StatusMorph value={recapReviewStatus(Boolean(recap.approved))} />
               </span>
+              {approvalMeta ? (
+                <span
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.1em",
+                    color: "rgba(92,97,84,0.9)",
+                  }}
+                >
+                  {approvalMeta}
+                </span>
+              ) : null}
             </div>
             <h1
               className="display text-3xl font-bold"

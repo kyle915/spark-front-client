@@ -44,6 +44,7 @@ import {
   type ActionPhase,
 } from "@/motion/opsMotion";
 import { formatDate, parseLocaleNumber } from "@/utils";
+import { recapApprovalMeta } from "@/recap/recapApprovalMeta";
 import { thumbUrl } from "@/utils/thumb";
 import {
   Calendar,
@@ -405,6 +406,17 @@ const RecapCustomViewInner = () => {
   );
 
   const recap = data?.customRecap;
+  const approvalMeta = useMemo(
+    () =>
+      recap
+        ? recapApprovalMeta(
+            Boolean(recap.approved),
+            recap.approvedBy,
+            recap.approvedAt ?? null,
+          )
+        : null,
+    [recap],
+  );
   const recapFiles = useMemo(() => recap?.customRecapFiles ?? [], [recap]);
 
   // ----- Field-level inline edit (admin) -----
@@ -1146,9 +1158,22 @@ const RecapCustomViewInner = () => {
             {!isEditingValues ? (
               <div className="flex items-center gap-2 flex-wrap">
                 {recap.approved ? (
-                  <span className="chip chip-lime">
-                    <StatusMorph value="Approved" />
-                  </span>
+                  <>
+                    <span className="chip chip-lime">
+                      <StatusMorph value="Approved" />
+                    </span>
+                    {approvalMeta ? (
+                      <span
+                        className="mono text-[10px]"
+                        style={{
+                          letterSpacing: "0.1em",
+                          color: "rgba(255,255,255,0.55)",
+                        }}
+                      >
+                        {approvalMeta}
+                      </span>
+                    ) : null}
+                  </>
                 ) : !isClient ? (
                   <ActionMorphButton
                     onClick={handleApprove}

@@ -14,6 +14,7 @@ import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/
 // — Kyle reported Dumbo Market and Austin Psych Fest missing.
 import { GetCustomRecapsQuery } from "@/api/queries/CustomRecapsQuery";
 import { ThirdPartyRecapBadge } from "@/recap/ThirdPartyRecapBadge";
+import { recapApprovalMeta } from "@/recap/recapApprovalMeta";
 import type { CustomRecapsQuery as CustomRecapsQueryType } from "@api/queries/__generated__/CustomRecapsQuery.graphql";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
@@ -135,6 +136,7 @@ type Recap = {
   retailerName: string;
   stateCode: string | null;
   approved: boolean;
+  approvalMeta: string | null;
   heroImage: string | null;
   fileCount: number;
   engagements: number | null;
@@ -281,6 +283,11 @@ const mapLegacyRecap = (n: LegacyRecapNode): Recap => {
     retailerName,
     stateCode,
     approved: Boolean(n.approved),
+    approvalMeta: recapApprovalMeta(
+      Boolean(n.approved),
+      n.approvedBy,
+      n.approvedAt ?? null,
+    ),
     heroImage: hero,
     fileCount,
     engagements: n.totalEngagements ?? null,
@@ -314,6 +321,11 @@ const mapCustomRecap = (n: CustomRecapNode): Recap => ({
   retailerName: n.eventRetailer || "—",
   stateCode: toStateCode(n.eventState) ?? toStateCode(n.eventAddress),
   approved: Boolean(n.approved),
+  approvalMeta: recapApprovalMeta(
+    Boolean(n.approved),
+    n.approvedBy,
+    n.approvedAt ?? null,
+  ),
   heroImage: n.heroImageUrl ?? null,
   fileCount: n.customRecapFilesCount ?? 0,
   engagements: n.totalEngagements ?? n.consumersSampled ?? null,
@@ -558,6 +570,17 @@ const RecapCard: React.FC<{
       >
         {completeness}
       </p>
+      {recap.approvalMeta ? (
+        <p
+          className="mono text-[10px] mt-1"
+          style={{
+            letterSpacing: "0.1em",
+            color: "rgba(197,245,70,0.75)",
+          }}
+        >
+          {recap.approvalMeta}
+        </p>
+      ) : null}
       {emptyShell ? (
         <p
           className="text-[12px] mt-1"

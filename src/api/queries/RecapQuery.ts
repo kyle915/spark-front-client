@@ -9,6 +9,12 @@ export const RecapQuery = graphql`
       createdAt
       updatedAt
       approved
+      approvedAt
+      approvedBy {
+        firstName
+        lastName
+        email
+      }
       shareToken
       sharedAt
       clientSignoffStatus

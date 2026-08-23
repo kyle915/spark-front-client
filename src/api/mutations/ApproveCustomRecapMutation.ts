@@ -17,6 +17,12 @@ export const ApproveCustomRecapMutation = graphql`
         uuid
         name
         approved
+        approvedAt
+        approvedBy {
+          firstName
+          lastName
+          email
+        }
       }
     }
   }

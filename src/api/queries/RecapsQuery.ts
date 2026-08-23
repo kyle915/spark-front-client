@@ -35,6 +35,12 @@ export const RecapsQuery = graphql`
           uuid
           name
           approved
+          approvedAt
+          approvedBy {
+            firstName
+            lastName
+            email
+          }
           shareToken
           sharedAt
           createdAt

@@ -34,6 +34,12 @@ export const GetCustomRecapsQuery = graphql`
           createdAt
           totalEngagements
           approved
+          approvedAt
+          approvedBy {
+            firstName
+            lastName
+            email
+          }
           isThirdParty
           typedStoreName
           storeMappingStatus
@@ -93,6 +99,12 @@ export const GetCustomRecapQuery = graphql`
       late
       incomplete
       approved
+      approvedAt
+      approvedBy {
+        firstName
+        lastName
+        email
+      }
       isThirdParty
       typedStoreName
       typedStoreAddress
