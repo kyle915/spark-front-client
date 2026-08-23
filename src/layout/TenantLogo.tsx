@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  officialFallbackPlate,
   shortTenantName,
   tenantInitials,
   tenantLogoCandidates,
@@ -34,6 +35,12 @@ export function TenantLogo({
 
   const src = candidates[index] ?? null;
   const label = shortTenantName(input.name);
+  const api = (input.logoUrl ?? input.image)?.trim() ?? "";
+  const usingOfficialFallback = !api || src !== api;
+  const headerPlate =
+    usingOfficialFallback && officialFallbackPlate(input) === "dark"
+      ? "dark"
+      : "light";
 
   if (variant === "header") {
     if (!src) {
@@ -49,10 +56,13 @@ export function TenantLogo({
       );
     }
 
-    // Full-color mark on a compact light plate — no invert, so dark
-    // wordmarks still read on the form chrome.
     return (
-      <span className="h-9 max-w-[10rem] px-2 rounded-md bg-white overflow-hidden shrink-0 flex items-center justify-center">
+      <span
+        className={[
+          "h-9 max-w-[10rem] px-2 rounded-md overflow-hidden shrink-0 flex items-center justify-center",
+          headerPlate === "dark" ? "bg-black" : "bg-white",
+        ].join(" ")}
+      >
         <img
           src={src}
           alt={label}
@@ -82,7 +92,14 @@ export function TenantLogo({
   }
 
   return (
-    <span className="w-5 h-5 rounded-sm bg-white/95 overflow-hidden shrink-0 flex items-center justify-center">
+    <span
+      className={[
+        "w-5 h-5 rounded-sm overflow-hidden shrink-0 flex items-center justify-center",
+        usingOfficialFallback && officialFallbackPlate(input) === "dark"
+          ? "bg-black"
+          : "bg-white/95",
+      ].join(" ")}
+    >
       <img
         src={src}
         alt=""

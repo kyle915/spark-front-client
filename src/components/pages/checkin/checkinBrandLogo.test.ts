@@ -54,7 +54,7 @@ describe("check-in brand logo matches spark-form", () => {
       name: "Luckin Coffee",
       requestUrlName: "luckin-coffee",
     });
-    expect(luckinWalkup[0]).toContain("luckincdn.us");
+    expect(luckinWalkup[0]).toBe("/brands/luckin-coffee-logo.png");
     expect(luckinWalkup).toEqual(luckinForm);
 
     const grubWalkup = tenantLogoCandidates({
