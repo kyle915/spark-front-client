@@ -5668,6 +5668,10 @@ input RequestFiltersInput {
   tenantUuid: ID = null
   rmmAsigned: ID = null
   statusId: ID = null
+  statusSlug: String = null
+  statusSlugs: [String!] = null
+  schedulingStatus: String = null
+  stateCode: String = null
   clientId: ID = null
   billingEntityId: ID = null
   retailerId: ID = null
@@ -6341,6 +6345,9 @@ type TenantType implements Node {
   requestUrlName: String
   image: String
   linkedSheetUrl: String
+  linkedSheetLastSyncAt: String
+  linkedSheetLastSyncError: String
+  linkedSheetLastRequestId: String
   defaultExternalRmm: SparkUserType
   recapRecipientEmails: String!
   scheduledReportEnabled: Boolean!

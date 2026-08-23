@@ -58,6 +58,8 @@ type PublicRecapPayload = {
   brand?: PublicBrand | null;
   clientSignoff?: PublicSignoff | null;
   sharedAt?: string | null;
+  viewCount?: number | null;
+  lastViewedAt?: string | null;
 };
 
 function apiOrigin(): string {
@@ -155,6 +157,8 @@ const PublicRecap: React.FC = () => {
           if (payload) {
             setRecap(payload);
             setLoadErr(null);
+            // Fire-and-forget view analytics — optional token tracking.
+            fetch(`${endpoint}/view`, { method: "POST" }).catch(() => {});
           } else {
             setLoadErr({ error: "invalid", message: errorCopy(400, "invalid") });
           }
@@ -294,6 +298,18 @@ const PublicRecap: React.FC = () => {
                 {recap.ambassadorName.toUpperCase()}
               </p>
             )}
+            {typeof recap.viewCount === "number" && recap.viewCount > 0 && (
+              <p
+                className="mono text-[9px] mt-2"
+                style={{ letterSpacing: "0.12em", color: "var(--recap-muted, #5c6154)" }}
+              >
+                VIEWED {recap.viewCount.toLocaleString()} TIME
+                {recap.viewCount === 1 ? "" : "S"}
+                {recap.lastViewedAt
+                  ? ` · LAST ${new Date(recap.lastViewedAt).toLocaleDateString()}`
+                  : ""}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -390,7 +406,7 @@ const PublicRecap: React.FC = () => {
         rel="noreferrer"
         className="px-4 py-2 rounded-xl text-sm font-semibold"
         style={{ ...recapBrandBtn(), textDecoration: "none" }}
-        title="Download this recap as a PDF"
+        title="Download branded PDF matching this recap"
       >
         Download PDF
       </a>

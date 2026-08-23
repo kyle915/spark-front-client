@@ -19,3 +19,17 @@ export function isLeftoverCheckinSession(
   const cal = eventCalendarDate(eventDate);
   return Boolean(cal && today && cal !== today);
 }
+
+/** True when a restored session token exists but the event date is not today. */
+export function isStaleWalkupSession(
+  hasSessionToken: boolean,
+  mode: string | null | undefined,
+  eventDate: string | null | undefined,
+  today: string,
+): boolean {
+  return (
+    Boolean(hasSessionToken) &&
+    mode === "tenant" &&
+    isLeftoverCheckinSession(eventDate, today)
+  );
+}

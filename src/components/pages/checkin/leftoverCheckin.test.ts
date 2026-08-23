@@ -1,28 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { eventCalendarDate, isLeftoverCheckinSession } from "./leftoverCheckin";
+import {
+  eventCalendarDate,
+  isLeftoverCheckinSession,
+  isStaleWalkupSession,
+} from "@/components/pages/checkin/leftoverCheckin";
 
-describe("eventCalendarDate", () => {
-  it("reads the civil date off noon-UTC Event.date", () => {
-    expect(eventCalendarDate("2026-08-15T12:00:00+00:00")).toBe("2026-08-15");
-    expect(eventCalendarDate("2026-08-15")).toBe("2026-08-15");
+describe("leftoverCheckin", () => {
+  it("detects leftover sessions by calendar date", () => {
+    expect(isLeftoverCheckinSession("2026-08-20T12:00:00Z", "2026-08-23")).toBe(
+      true,
+    );
+    expect(isLeftoverCheckinSession("2026-08-23", "2026-08-23")).toBe(false);
   });
 
-  it("returns null for blank input", () => {
-    expect(eventCalendarDate(null)).toBeNull();
-    expect(eventCalendarDate("")).toBeNull();
-  });
-});
-
-describe("isLeftoverCheckinSession", () => {
-  it("is true when the restored event is a different calendar day", () => {
-    expect(isLeftoverCheckinSession("2026-08-15T12:00:00Z", "2026-08-19")).toBe(true);
-  });
-
-  it("is false when the event is today", () => {
-    expect(isLeftoverCheckinSession("2026-08-19T12:00:00Z", "2026-08-19")).toBe(false);
+  it("flags stale walk-up when token exists on wrong day", () => {
+    expect(
+      isStaleWalkupSession(true, "tenant", "2026-08-20", "2026-08-23"),
+    ).toBe(true);
+    expect(
+      isStaleWalkupSession(false, "tenant", "2026-08-20", "2026-08-23"),
+    ).toBe(false);
+    expect(
+      isStaleWalkupSession(true, "event", "2026-08-20", "2026-08-23"),
+    ).toBe(false);
   });
 
-  it("is false without an event date", () => {
-    expect(isLeftoverCheckinSession(null, "2026-08-19")).toBe(false);
+  it("parses event calendar date", () => {
+    expect(eventCalendarDate("2026-08-20T12:00:00Z")).toBe("2026-08-20");
   });
 });

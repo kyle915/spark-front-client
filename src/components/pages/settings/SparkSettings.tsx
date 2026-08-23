@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { Link } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
+import LinkedSheetIntegrationPanel from "@/components/integrations/LinkedSheetIntegrationPanel";
 import { MyPreferencesQuery } from "@/api/queries/MyPreferencesQuery";
 import type { MyPreferencesQuery as MyPreferencesQueryType } from "@api/queries/__generated__/MyPreferencesQuery.graphql";
 import { SetMyPreferencesMutation } from "@/api/mutations/SetMyPreferencesMutation";
@@ -406,6 +407,17 @@ export default function SparkSettings() {
               Manage →
             </Link>
           </div>
+
+          {/* Google Sheet append observability — last sync, errors, REQ link */}
+          <Suspense
+            fallback={
+              <div className="spark-card p-5 text-sm text-base-content/60">
+                Loading integration status…
+              </div>
+            }
+          >
+            <LinkedSheetIntegrationPanel />
+          </Suspense>
 
           {/* Linked Google Sheet for this tenant. URL is set/edited
               from the Master Tracker header; this row is read-only

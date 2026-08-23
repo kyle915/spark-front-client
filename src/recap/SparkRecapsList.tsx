@@ -276,8 +276,8 @@ const mapLegacyRecap = (n: LegacyRecapNode): Recap => {
     kind: "legacy" as const,
     id: String(n.id),
     uuid: String(n.uuid),
-    name: n.name ?? n.event?.name ?? "Untitled recap",
-    date: n.eventDate ?? n.event?.date ?? n.createdAt ?? "",
+    name: n.name ?? "Untitled recap",
+    date: n.eventDate ?? n.createdAt ?? "",
     retailerName,
     stateCode,
     approved: Boolean(n.approved),
@@ -929,7 +929,7 @@ const RecapsListInner: React.FC<{
       q: searchQ,
       filters: listFilters,
     },
-    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+    { fetchPolicy: "store-or-network", fetchKey: refreshKey },
   );
 
   const customData = useLazyLoadQuery<CustomRecapsQueryType>(
@@ -940,7 +940,7 @@ const RecapsListInner: React.FC<{
       q: searchQ,
       filters: customListFilters,
     },
-    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+    { fetchPolicy: "store-or-network", fetchKey: refreshKey },
   );
 
   const page1Legacy = useMemo(
