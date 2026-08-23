@@ -35,6 +35,10 @@ import { holdActionSuccess, type ActionPhase } from "@/motion/opsMotion";
 import { recapSubmitErrorMessage } from "./recapSubmitError";
 import { TenantLogo } from "@/layout/TenantLogo";
 import { shouldShowSamplingStopCard } from "./samplingStops";
+import {
+  eventTypeDescription,
+  eventTypesUseDescriptorPicker,
+} from "./eventTypeDescriptor";
 
 /**
  * Public, no-login web check-in for a BA working a specific event.
@@ -1306,18 +1310,77 @@ function IdentifyStep({
           <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
             This sets up the right recap for your shift.
           </p>
-          <select
-            style={{ ...input, appearance: "none" }}
-            value={eventTypeId}
-            onChange={(e) => setEventTypeId(e.target.value)}
-          >
-            <option value="">Select your event…</option>
-            {eventTypes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+          {eventTypesUseDescriptorPicker(eventTypes) ? (
+            <div
+              role="radiogroup"
+              aria-label="What event are you working?"
+              style={{ display: "flex", flexDirection: "column", gap: 10 }}
+            >
+              {eventTypes.map((t) => {
+                const selected = eventTypeId === t.id;
+                const description = eventTypeDescription(t.name);
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setEventTypeId(t.id)}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      border: selected
+                        ? `2px solid ${accent}`
+                        : "1px solid #e7e5e4",
+                      background: selected ? "rgba(255,255,255,0.95)" : "#fff",
+                      boxShadow: selected
+                        ? "0 0 0 1px rgba(0,0,0,0.04)"
+                        : "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 15,
+                        fontWeight: 700,
+                        color: "#1c1917",
+                        marginBottom: description ? 4 : 0,
+                      }}
+                    >
+                      {t.name}
+                    </div>
+                    {description ? (
+                      <div
+                        style={{
+                          fontSize: 13,
+                          lineHeight: 1.45,
+                          color: "#57534e",
+                        }}
+                      >
+                        {description}
+                      </div>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <select
+              style={{ ...input, appearance: "none" }}
+              value={eventTypeId}
+              onChange={(e) => setEventTypeId(e.target.value)}
+            >
+              <option value="">Select your event…</option>
+              {eventTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          )}
         </>
       ) : null}
 
