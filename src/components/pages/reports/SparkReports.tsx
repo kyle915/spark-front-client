@@ -238,7 +238,7 @@ const ConsumersSampledChart: React.FC = () => {
     const idxByKey = new Map(buckets.map((b, i) => [b.key, i]));
 
     for (const r of rows) {
-      const raw = r.eventDate ?? r.event?.date ?? r.createdAt;
+      const raw = r.eventDate ?? r.createdAt;
       if (!raw) continue;
       const d = new Date(raw);
       if (d < cutoff || d > today) continue;
@@ -320,7 +320,7 @@ const TopRetailersChart: React.FC = () => {
     const cutoff = Date.now() - 90 * 86_400_000;
     const totals = new Map<string, number>();
     for (const r of rows) {
-      const raw = r.eventDate ?? r.event?.date ?? r.createdAt;
+      const raw = r.eventDate ?? r.createdAt;
       const t = raw ? new Date(raw).getTime() : NaN;
       if (!Number.isFinite(t) || t < cutoff) continue;
       const name = r.eventRetailer || "Unknown";

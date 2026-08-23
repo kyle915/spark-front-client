@@ -340,16 +340,16 @@ const ClientApprovalsInner: React.FC = () => {
         ?.map((n) => {
           const venue = n.eventRetailer || null;
           const st = n.eventState || null;
-          const date = n.eventDate ?? n.event?.date ?? n.createdAt ?? "";
+          const date = n.eventDate ?? n.createdAt ?? "";
           return {
             kind: "legacy" as const,
             id: String(n.id),
             uuid: String(n.uuid),
-            name: n.name ?? n.event?.name ?? "Untitled recap",
+            name: n.name ?? "Untitled recap",
             date,
             where: joinWhere(venue, null, st),
             typeLabel: n.requestTypeName ?? null,
-            sortMs: toMs(n.eventDate) || toMs(n.event?.date) || toMs(n.createdAt),
+            sortMs: toMs(n.eventDate) || toMs(n.createdAt),
             heroImage: n.heroFile?.file
               ? thumbUrl(recapFileUrl(n.heroFile.file), 400)
               : null,
