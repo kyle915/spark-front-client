@@ -42,7 +42,7 @@ export type ResolvedPlace = {
  *   "7-Eleven #25448"                  → "7-Eleven"
  *   "Costco Wholesale (La Quinta)"     → "Costco Wholesale"
  */
-const canonicalRetailerName = (raw: string): string => {
+export const canonicalRetailerName = (raw: string): string => {
   let s = raw.trim();
   // Strip everything after an em/en/hyphen separator
   s = s.split(/\s+[-–—]\s+/)[0];
@@ -53,6 +53,55 @@ const canonicalRetailerName = (raw: string): string => {
   s = s.replace(/\s*\b(store|location|unit)\s+[\w-]+.*$/i, "");
   // Final pass — drop trailing whitespace + punctuation
   return s.replace(/[\s,]+$/, "").trim();
+};
+
+/**
+ * Loose compare key for typed vs predicted labels. Keeps letters/digits,
+ * collapses punctuation (including `&`) to spaces so
+ * "Castle Heights Liquors & Wine" ≈ "Castle Heights Liquors Wine".
+ * Does NOT mutate the value shown in the input — comparison only.
+ */
+export const normalizeForMatch = (s: string): string =>
+  s
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+/**
+ * Should blur auto-resolve the typed string to a Google prediction?
+ *
+ * The old path always bound preds[0], so "USE AS TYPED" for an unknown
+ * independent (e.g. "Castle Heights Liquors & Wine") was overwritten by a
+ * fuzzy neighbor ("New Castle Liquors"). Require a close match on the
+ * prediction's main label before auto-picking.
+ */
+export const shouldAutoResolveTyped = (
+  typed: string,
+  predictionMain: string,
+  threshold = 0.7,
+): boolean => {
+  const a = normalizeForMatch(typed);
+  const b = normalizeForMatch(predictionMain);
+  if (!a || !b) return false;
+  if (a === b) return true;
+
+  // Typed is a prefix of the prediction — common while finishing an
+  // address. Require enough typed mass so "Cas" / "New C" do not bind.
+  if (b.startsWith(a) && a.length >= 8) return true;
+  // Prediction is a short prefix of a longer typed string.
+  if (a.startsWith(b) && b.length / a.length >= threshold) return true;
+
+  // Shared starting characters as a fraction of the longer string
+  // (matches the documented ">=70% of the same starting chars" gate).
+  let shared = 0;
+  const minLen = Math.min(a.length, b.length);
+  for (let i = 0; i < minLen; i++) {
+    if (a[i] === b[i]) shared += 1;
+    else break;
+  }
+  return shared / Math.max(a.length, b.length) >= threshold;
 };
 
 type Props = {
@@ -267,6 +316,10 @@ export default function GooglePlacesInput({
   const debounceRef = useRef<number | null>(null);
   const inputId = useId();
   const attrEl = useRef<HTMLDivElement | null>(null);
+  // Set when the user explicitly picks "USE … AS TYPED". Blocks blur
+  // auto-resolve so a fuzzy Google neighbor cannot overwrite free text
+  // (incl. names with `&` / punctuation). Cleared on the next keystroke.
+  const freeTextChosenRef = useRef(false);
 
   useEffect(() => {
     loadMapsSdk()
@@ -374,23 +427,26 @@ export default function GooglePlacesInput({
     );
   };
 
-  // Fallback resolver — fires when the user types an address but never
-  // taps a suggestion. We geocode the raw string via the Maps SDK so
-  // onResolved still gets called (and the parent form's timezone
-  // auto-pick still runs).
+  // Fallback resolver — fires when the user types an *address* but never
+  // taps a suggestion. We geocode via the Maps SDK so onResolved still
+  // runs (timezone auto-pick). Venue/establishment fields never
+  // auto-resolve: free-text independents must stay exactly as typed.
   const resolveTyped = (raw: string) => {
     if (!ready || !raw || raw.length < 4) return;
+    if (freeTextChosenRef.current) return;
+    if (bias === "establishment") return;
     if (!attrEl.current) attrEl.current = document.createElement("div");
-    // Use the predictions to find the best match, then resolve.
     const svc = new window.google!.maps!.places!.AutocompleteService();
     svc.getPlacePredictions(
-      { input: raw, types: bias === "establishment" ? ["establishment"] : ["address"] },
+      { input: raw, types: ["address"] },
       (preds) => {
         const best = preds?.[0];
         if (!best) return;
-        // Only run if the user's typed text matches the top prediction
-        // closely (>=70% of the same starting chars) — avoid false
-        // positives when they're still mid-type.
+        const main =
+          best.structured_formatting?.main_text ?? best.description;
+        // Only auto-pick when typed text closely matches the top hit —
+        // otherwise free-text / mid-type blur would bind a fuzzy neighbor.
+        if (!shouldAutoResolveTyped(raw, main)) return;
         pick(best.place_id, best.description);
       },
     );
@@ -402,14 +458,15 @@ export default function GooglePlacesInput({
         id={inputId}
         value={value}
         onChange={(e) => {
+          freeTextChosenRef.current = false;
           onChange(e.target.value);
           setOpen(true);
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => {
           window.setTimeout(() => setOpen(false), 120);
-          // If the user typed an address but never picked a suggestion,
-          // still try to resolve so timezone auto-fill works.
+          // Address fields only: try to resolve so timezone auto-fill
+          // works. Skipped after "USE AS TYPED" and for venue names.
           resolveTyped(value);
         }}
         placeholder={placeholder}
@@ -417,7 +474,7 @@ export default function GooglePlacesInput({
         style={style}
         autoComplete="off"
       />
-      {open && suggestions.length > 0 && (
+      {open && (suggestions.length > 0 || value.trim().length >= 3) && (
         <div
           className="absolute left-0 right-0 z-30 mt-1 rounded-xl overflow-hidden"
           style={{
@@ -432,6 +489,7 @@ export default function GooglePlacesInput({
               key={s.place_id}
               onMouseDown={(e) => {
                 e.preventDefault();
+                freeTextChosenRef.current = false;
                 pick(s.place_id, `${s.main}${s.sub ? ", " + s.sub : ""}`);
               }}
               className="block w-full text-left px-3 py-2.5 transition"
@@ -455,13 +513,16 @@ export default function GooglePlacesInput({
               )}
             </button>
           ))}
-          {/* Free-form fallback: keep what the user typed. Useful when
-              the activation is at an independent that Google doesn't
-              list. Closes the dropdown without picking a Place. */}
+          {/* Free-form fallback: persist exactly what the user typed
+              (incl. `&` and punctuation). Do not call pick()/onResolved. */}
           <button
             type="button"
             onMouseDown={(e) => {
               e.preventDefault();
+              freeTextChosenRef.current = true;
+              // Re-assert the exact typed string so parent state cannot
+              // race with a stale Places resolve.
+              onChange(value);
               setOpen(false);
               setSuggestions([]);
             }}
@@ -482,7 +543,7 @@ export default function GooglePlacesInput({
               className="mono text-[10px]"
               style={{ letterSpacing: "0.18em" }}
             >
-              ✎ USE “{value}” AS TYPED
+              + USE “{value}” AS TYPED
             </div>
             <div
               className="text-[11px] mt-0.5"
