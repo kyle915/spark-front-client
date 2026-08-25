@@ -67,6 +67,13 @@ describe("officialFallbackSrc", () => {
     );
   });
 
+  it("maps Anthropic by name and slug to the Claude symbol", () => {
+    const byName = officialFallbackSrc({ name: "Anthropic" });
+    const bySlug = officialFallbackSrc({ tenantSlug: "anthropic" });
+    expect(byName).toContain("Claude_AI_symbol.svg");
+    expect(bySlug).toBe(byName);
+  });
+
   it("returns null when we have no official file", () => {
     expect(officialFallbackSrc({ name: "Resort Beverage" })).toBeNull();
   });
@@ -135,6 +142,15 @@ describe("tenantLogoCandidates", () => {
     expect(
       tenantLogoCandidates({ name: "Grub Hub", tenantSlug: "grub-hub" })[0],
     ).toContain("Grubhub_2025_logo.svg");
+  });
+
+  it("gives Anthropic the Claude symbol without an API image", () => {
+    const candidates = tenantLogoCandidates({
+      name: "Anthropic",
+      tenantSlug: "anthropic",
+      image: null,
+    });
+    expect(candidates[0]).toContain("Claude_AI_symbol.svg");
   });
 
   it("still prefers a tenant image/logoUrl over the KKC Wikipedia mark", () => {

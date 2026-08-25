@@ -118,6 +118,15 @@ const OFFICIAL_FALLBACKS: Record<string, OfficialFallback> = {
     src: "https://upload.wikimedia.org/wikipedia/en/b/b3/Krispy_Krunchy_Chicken_logo.jpg",
   },
 
+  // Wikimedia Commons — Claude starburst symbol (Anthropic).
+  // https://commons.wikimedia.org/wiki/File:Claude_AI_symbol.svg
+  anthropic: {
+    src: "https://upload.wikimedia.org/wikipedia/commons/b/b0/Claude_AI_symbol.svg",
+  },
+  claude: {
+    src: "https://upload.wikimedia.org/wikipedia/commons/b/b0/Claude_AI_symbol.svg",
+  },
+
   // Resort Beverage has no official public mark we can hotlink without
   // inventing a trademark. Initials until tenant.image / logoUrl is set.
 };
