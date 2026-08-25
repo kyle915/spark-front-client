@@ -69,6 +69,19 @@ describe("check-in brand logo matches spark-form", () => {
     expect(grubWalkup).toEqual(grubForm);
   });
 
+  it("Anthropic uses the Claude symbol on walk-up and spark-form", () => {
+    const walkup = tenantLogoCandidates({
+      name: "Anthropic",
+      tenantSlug: "anthropic",
+    });
+    const form = tenantLogoCandidates({
+      name: "Anthropic",
+      requestUrlName: "anthropic",
+    });
+    expect(walkup[0]).toContain("Claude_AI_symbol.svg");
+    expect(walkup).toEqual(form);
+  });
+
   it("prefers the tenant image/logoUrl the check-in API now sends", () => {
     const api =
       "https://storage.googleapis.com/sparkio-production/tenants/images/girl-beer.png";
