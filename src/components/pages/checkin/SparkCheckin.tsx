@@ -36,6 +36,11 @@ import { recapSubmitErrorMessage } from "./recapSubmitError";
 import { TenantLogo } from "@/layout/TenantLogo";
 import { shouldShowSamplingStopCard } from "./samplingStops";
 import {
+  SECOND_SHIFT_LABEL,
+  SECOND_SHIFT_PROMPT,
+  supportsStandingSecondShift,
+} from "./secondShift";
+import {
   eventTypeDescription,
   eventTypesUseDescriptorPicker,
 } from "./eventTypeDescriptor";
@@ -1585,6 +1590,11 @@ function CheckedInFlow({
     setRecapAsNew(asNew);
     setShowRecap(true);
   };
+  const secondShiftOk = supportsStandingSecondShift({
+    mode: ctx.mode,
+    brand: ctx.brand,
+    recapOnly: ctx.recapOnly,
+  });
   const [msg, setMsg] = useState<string | null>(null);
   const [keepLeftover, setKeepLeftover] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -1922,6 +1932,11 @@ function CheckedInFlow({
         brandName={ctx.brand.name || ""}
         eventDate={ctx.event?.date}
         forceNew={(recapAsNew || Boolean(ctx.recapOnly && hasRecap)) && ctx.mode === "tenant"}
+        shiftLabel={
+          recapAsNew && secondShiftOk
+            ? SECOND_SHIFT_LABEL
+            : undefined
+        }
         onCancel={() => {
           if (ctx.recapOnly && !hasRecap) onStartAnother();
           else setShowRecap(false);
@@ -1960,30 +1975,78 @@ function CheckedInFlow({
             recap-only. Per-event codes stay done. */}
         {ctx.mode === "tenant" ? (
           <>
-            {!ctx.recapOnly ? (
-              <button
-                onClick={() => clock("in")}
-                disabled={busy !== ""}
-                style={{ ...primaryBtn(accent), marginTop: 18, width: "100%" }}
+            {secondShiftOk ? (
+              <div
+                style={{
+                  marginTop: 18,
+                  textAlign: "left",
+                  padding: "14px 14px 4px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(0,0,0,0.12)",
+                  background: "rgba(0,0,0,0.02)",
+                }}
               >
-                {busy === "in" ? "Clocking in…" : "Clock in"}
-              </button>
-            ) : null}
-            <button
-              onClick={() => openRecap(true)}
-              style={{
-                ...(ctx.recapOnly ? primaryBtn(accent) : secondaryBtn),
-                marginTop: ctx.recapOnly ? 18 : 10,
-                width: "100%",
-              }}
-            >
-              {ctx.recapOnly ? "File another recap" : "File another recap (same store)"}
-            </button>
+                <p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px" }}>
+                  {SECOND_SHIFT_PROMPT}
+                </p>
+                <p style={{ fontSize: 13, opacity: 0.65, margin: "0 0 12px" }}>
+                  Same market, same day — your second filing is labeled{" "}
+                  {SECOND_SHIFT_LABEL} so it doesn’t overwrite the first.
+                </p>
+                {!ctx.recapOnly ? (
+                  <button
+                    onClick={() => clock("in")}
+                    disabled={busy !== ""}
+                    style={{ ...primaryBtn(accent), width: "100%", marginBottom: 8 }}
+                  >
+                    {busy === "in" ? "Clocking in…" : "Yes — start second shift"}
+                  </button>
+                ) : null}
+                <button
+                  onClick={() => openRecap(true)}
+                  style={{
+                    ...(ctx.recapOnly ? primaryBtn(accent) : secondaryBtn),
+                    width: "100%",
+                    marginBottom: 8,
+                  }}
+                >
+                  {ctx.recapOnly
+                    ? `Yes — file ${SECOND_SHIFT_LABEL.toLowerCase()} recap`
+                    : `File ${SECOND_SHIFT_LABEL.toLowerCase()} recap`}
+                </button>
+              </div>
+            ) : (
+              <>
+                {!ctx.recapOnly ? (
+                  <button
+                    onClick={() => clock("in")}
+                    disabled={busy !== ""}
+                    style={{ ...primaryBtn(accent), marginTop: 18, width: "100%" }}
+                  >
+                    {busy === "in" ? "Clocking in…" : "Clock in"}
+                  </button>
+                ) : null}
+                <button
+                  onClick={() => openRecap(true)}
+                  style={{
+                    ...(ctx.recapOnly ? primaryBtn(accent) : secondaryBtn),
+                    marginTop: ctx.recapOnly ? 18 : 10,
+                    width: "100%",
+                  }}
+                >
+                  {ctx.recapOnly ? "File another recap" : "File another recap (same store)"}
+                </button>
+              </>
+            )}
             <button
               onClick={onStartAnother}
               style={{ ...secondaryBtn, marginTop: 10, width: "100%" }}
             >
-              {ctx.recapOnly ? "File for another store / date" : "Different store? Log another event"}
+              {ctx.recapOnly
+                ? "File for another store / date"
+                : secondShiftOk
+                  ? "Different market? Start over"
+                  : "Different store? Log another event"}
             </button>
             {msg ? <p style={{ ...errText, marginTop: 12 }}>{msg}</p> : null}
           </>
@@ -2162,7 +2225,11 @@ function CheckedInFlow({
               <button style={secondaryBtn} onClick={() => openRecap(false)}>
                 Edit recap
               </button>
-              {ctx.mode === "tenant" ? (
+              {secondShiftOk ? (
+                <button style={secondaryBtn} onClick={() => openRecap(true)}>
+                  File {SECOND_SHIFT_LABEL.toLowerCase()}
+                </button>
+              ) : ctx.mode === "tenant" ? (
                 <button style={secondaryBtn} onClick={() => openRecap(true)}>
                   File another
                 </button>
@@ -2359,6 +2426,7 @@ function RecapForm({
   brandName,
   eventDate,
   forceNew = false,
+  shiftLabel,
   onCancel,
   onSubmitted,
   onQueued,
@@ -2371,6 +2439,7 @@ function RecapForm({
   brandName: string;
   eventDate?: string | null;
   forceNew?: boolean;
+  shiftLabel?: string;
   onCancel: () => void;
   onSubmitted: () => Promise<void>;
   onQueued: () => void;
@@ -2566,6 +2635,8 @@ function RecapForm({
         productSamples,
         totalEngagements,
         forceNew,
+        shiftLabel: forceNew ? shiftLabel : undefined,
+        secondShift: Boolean(forceNew && shiftLabel),
         submittedAt,
         photoFiles,
       });
@@ -2597,6 +2668,9 @@ function RecapForm({
         productSamples,
         totalEngagements,
         forceNew,
+        ...(forceNew && shiftLabel
+          ? { shiftLabel, secondShift: true }
+          : {}),
       };
       const posted = await postCheckinRecap(code, recapBody);
       if (!posted.ok && !posted.already) {
@@ -2647,7 +2721,11 @@ function RecapForm({
       {eventDate ? (
         <p style={{ fontSize: 13, opacity: 0.65, margin: 0 }}>
           Recap for {fmtDay(eventDate)}
-          {forceNew ? " · additional filing" : ""}
+          {forceNew && shiftLabel
+            ? ` · ${shiftLabel}`
+            : forceNew
+              ? " · additional filing"
+              : ""}
         </p>
       ) : null}
       {pendingClock ? (
