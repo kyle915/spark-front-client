@@ -41,6 +41,8 @@ export type PendingRecap = {
   productSamples: { productId: string; quantity: number }[];
   totalEngagements: number | null;
   forceNew?: boolean;
+  shiftLabel?: string;
+  secondShift?: boolean;
 };
 
 export type PhotoBlobStore = {
@@ -225,6 +227,8 @@ export async function enqueueRecap(
     productSamples: PendingRecap["productSamples"];
     totalEngagements: number | null;
     forceNew?: boolean;
+    shiftLabel?: string;
+    secondShift?: boolean;
     submittedAt?: string;
     nowMs?: number;
     photoFiles?: Record<string, File>;
@@ -247,6 +251,8 @@ export async function enqueueRecap(
     productSamples: args.productSamples,
     totalEngagements: args.totalEngagements,
     forceNew: args.forceNew,
+    shiftLabel: args.shiftLabel,
+    secondShift: args.secondShift,
   };
   writePendingRecap(pending, storage);
   if (args.photoFiles) {
@@ -369,6 +375,9 @@ export async function flushPendingRecap(
       productSamples: pending.productSamples,
       totalEngagements: pending.totalEngagements,
       forceNew: pending.forceNew,
+      ...(pending.forceNew && pending.shiftLabel
+        ? { shiftLabel: pending.shiftLabel, secondShift: pending.secondShift ?? true }
+        : {}),
     });
     if (res.ok || res.already || res.status === 409) {
       try {
