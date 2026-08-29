@@ -1,6 +1,8 @@
 import Layout from "@/layout/Layout";
 import { GetCustomRecapQuery } from "@/api/queries/CustomRecapsQuery";
 import type { CustomRecapsQueryDetailsQuery as CustomRecapsQueryDetailsQueryType } from "@/api/queries/__generated__/CustomRecapsQueryDetailsQuery.graphql";
+import { FileRecapCategoriesQuery } from "@/api/queries/FileRecapCategoriesQuery";
+import type { FileRecapCategoriesQuery as FileRecapCategoriesQueryType } from "@/api/queries/__generated__/FileRecapCategoriesQuery.graphql";
 import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import type { ProductsQuery as ProductsQueryType } from "@/api/queries/__generated__/ProductsQuery.graphql";
 import { UpdateCustomRecapMutation } from "@/api/mutations/UpdateCustomRecapMutation";
@@ -82,6 +84,12 @@ import {
   formatRecapProductName,
   recapLabelsMatch,
 } from "@/recap/recapFieldLabel";
+import {
+  buildFileRecapCategoryOptions,
+  defaultUploadCategoryName,
+  isReceiptLikeCategory,
+  FALLBACK_FILE_CATEGORY_PHOTOS,
+} from "@/recap/fileRecapCategoryOptions";
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
 import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
 
@@ -102,9 +110,6 @@ function customFieldKind(
   if (name === "select" || name.includes("dropdown")) return "select";
   return "other";
 }
-
-const FILE_CATEGORY_PHOTOS = "Sampling photos";
-const FILE_CATEGORY_RECEIPTS = "Receipts";
 
 // A multiselect answer is persisted as a JSON array of the chosen option
 // strings; a single-select answer is the plain option string. Parse either
@@ -361,7 +366,9 @@ const RecapCustomViewInner = () => {
   // Section a new Evidences upload lands in. Send the category NAME so
   // it never collides with a real FileRecapCategory PK (LD "Table Set
   // Up" is PK 2). "" = Uncategorized.
-  const [uploadCategory, setUploadCategory] = useState(FILE_CATEGORY_PHOTOS);
+  const [uploadCategory, setUploadCategory] = useState(
+    FALLBACK_FILE_CATEGORY_PHOTOS,
+  );
 
   // A Connecteam import routes here with ?needPhotos=1 when the PDF carried
   // no usable photos — so the admin lands directly in the photo-upload
@@ -406,6 +413,26 @@ const RecapCustomViewInner = () => {
   );
 
   const recap = data?.customRecap;
+  const tenantId = recap?.customRecapTemplate?.tenant?.id ?? "0";
+  const categoriesData = useLazyLoadQuery<FileRecapCategoriesQueryType>(
+    FileRecapCategoriesQuery,
+    { filters: { tenantId } },
+    { fetchPolicy: "store-and-network" },
+  );
+  const fileCategoryOptions = useMemo(
+    () =>
+      buildFileRecapCategoryOptions(
+        categoriesData.fileRecapCategories.edges.map((e) => e?.node),
+      ),
+    [categoriesData],
+  );
+  useEffect(() => {
+    setUploadCategory((prev) => {
+      if (fileCategoryOptions.some((o) => o.name === prev)) return prev;
+      return defaultUploadCategoryName(fileCategoryOptions);
+    });
+  }, [fileCategoryOptions]);
+
   const approvalMeta = useMemo(
     () =>
       recap
@@ -2152,14 +2179,17 @@ const RecapCustomViewInner = () => {
                     title="Section for new uploads"
                     className="spark-input text-sm rounded-full"
                   >
-                    <option value={FILE_CATEGORY_PHOTOS}>Sampling photos</option>
-                    <option value={FILE_CATEGORY_RECEIPTS}>Receipts</option>
+                    {fileCategoryOptions.map((opt) => (
+                      <option key={opt.id} value={opt.name}>
+                        {opt.name}
+                      </option>
+                    ))}
                     <option value="">Uncategorized</option>
                   </select>
                   <RecapUploader
                     recapUuid={recap.uuid}
                     category={
-                      uploadCategory === FILE_CATEGORY_RECEIPTS
+                      isReceiptLikeCategory(uploadCategory)
                         ? "receipt"
                         : "photo"
                     }
@@ -2380,12 +2410,11 @@ const RecapCustomViewInner = () => {
                                     className="spark-input mt-0.5 w-full px-1 py-0.5 text-[10px]"
                                   >
                                     <option value="">Move to…</option>
-                                    <option value={FILE_CATEGORY_RECEIPTS}>
-                                      Receipts
-                                    </option>
-                                    <option value={FILE_CATEGORY_PHOTOS}>
-                                      Sampling photos
-                                    </option>
+                                    {fileCategoryOptions.map((opt) => (
+                                      <option key={opt.id} value={opt.name}>
+                                        {opt.name}
+                                      </option>
+                                    ))}
                                     <option value="__none__">
                                       Uncategorized
                                     </option>
