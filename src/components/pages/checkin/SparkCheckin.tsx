@@ -30,6 +30,10 @@ import {
   type PendingRecap,
 } from "./offlineRecap";
 import { isLeftoverCheckinSession } from "./leftoverCheckin";
+import {
+  shouldDropSessionToken,
+  shouldKeepCachedSession,
+} from "./checkinSession";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { holdActionSuccess, type ActionPhase } from "@/motion/opsMotion";
 import { recapSubmitErrorMessage } from "./recapSubmitError";
@@ -218,6 +222,9 @@ type Context = {
   // a fallback (see `checkinResources`) so this page keeps working against an
   // API that predates the list.
   trainingUrl?: string;
+  // Standing GET with a bearer that failed: expired / bad_session / …
+  // Absent on a clean landing (no token) and on a restored session.
+  sessionError?: string;
   error?: string;
   message?: string;
 };
@@ -644,12 +651,45 @@ const normalizePlace = (value: string): string =>
  * them retype their name and cell for every event is the difference between a
  * tool they use and one they avoid. Stored per code, on their own device.
  *
- * Name and cell only — deliberately nothing that could identify a store, a
- * client or a shift, so a shared or borrowed phone leaks nothing about the
- * work.
+ * Name and cell only for PII — plus the last market/store they used on this
+ * link so a lost session can re-identify and resume today's open punch without
+ * retyping (Michelle / Feel Free: left for the release QR, came back blank).
  */
-type Identity = { firstName: string; lastName: string; phone: string; email: string };
+type Identity = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  /** Last market or store address submitted on identify for this code. */
+  lastPlace?: string;
+};
 const IDENTITY_KEY = (code: string) => `@spark.checkin.who/${code}`;
+
+const readIdentity = (code: string): Identity => {
+  const empty: Identity = { firstName: "", lastName: "", phone: "", email: "" };
+  try {
+    const raw = window.localStorage.getItem(IDENTITY_KEY(code));
+    if (!raw) return empty;
+    const p = JSON.parse(raw) as Partial<Identity>;
+    return {
+      firstName: p.firstName || "",
+      lastName: p.lastName || "",
+      phone: p.phone || "",
+      email: p.email || "",
+      lastPlace: (p.lastPlace || "").trim() || undefined,
+    };
+  } catch {
+    return empty;
+  }
+};
+
+const writeIdentity = (code: string, who: Identity): void => {
+  try {
+    window.localStorage.setItem(IDENTITY_KEY(code), JSON.stringify(who));
+  } catch {
+    /* private mode / quota — prefill is a convenience, never required */
+  }
+};
 
 // Draft of the recap answers, so a BA never retypes a shift's worth of notes.
 //
@@ -787,31 +827,6 @@ async function flushQueuedRecap(code: string) {
   return result;
 }
 
-const readIdentity = (code: string): Identity => {
-  const empty: Identity = { firstName: "", lastName: "", phone: "", email: "" };
-  try {
-    const raw = window.localStorage.getItem(IDENTITY_KEY(code));
-    if (!raw) return empty;
-    const p = JSON.parse(raw) as Partial<Identity>;
-    return {
-      firstName: p.firstName || "",
-      lastName: p.lastName || "",
-      phone: p.phone || "",
-      email: p.email || "",
-    };
-  } catch {
-    return empty;
-  }
-};
-
-const writeIdentity = (code: string, who: Identity): void => {
-  try {
-    window.localStorage.setItem(IDENTITY_KEY(code), JSON.stringify(who));
-  } catch {
-    /* private mode / quota — prefill is a convenience, never required */
-  }
-};
-
 const fmtTime = (iso: string | null): string => {
   if (!iso) return "";
   const d = new Date(iso);
@@ -840,6 +855,8 @@ export default function SparkCheckin() {
       return null;
     }
   });
+  // One silent resume per page life — reset when the BA taps Start over.
+  const resumeAttempted = useRef(false);
 
   // ── Load / refresh context (with the session token if we have one) ─────────
   const refresh = useCallback(async () => {
@@ -858,20 +875,47 @@ export default function SparkCheckin() {
         // Session (clocked-in) payloads historically omitted locationMode.
         // Keep the standing-link market mode so Feel Free still shows
         // Log this stop after identify.
-        setCtx((prev) => {
-          const next = {
-            ...json,
-            locationMode: json.locationMode ?? prev?.locationMode,
-            markets: json.markets?.length ? json.markets : prev?.markets,
-          };
-          writeCachedContext(code, next);
-          return next;
+        const prior = readCachedContext<Context>(code);
+        const keepCache = shouldKeepCachedSession({
+          incomingHasSession: Boolean(json.session),
+          cachedHasSession: Boolean(prior?.session),
+          cachedEventDate: prior?.event?.date,
+          today: todayISO(),
+          isLeftover: isLeftoverCheckinSession,
         });
+        if (keepCache && prior?.session) {
+          // Bare tenant landing after a soft miss — keep showing today's
+          // clocked-in shell instead of flashing identify / wiping cache.
+          setCtx({
+            ...prior,
+            locationMode: json.locationMode ?? prior.locationMode,
+            markets: json.markets?.length ? json.markets : prior.markets,
+            brand: json.brand ?? prior.brand,
+            resources: json.resources?.length ? json.resources : prior.resources,
+          });
+        } else {
+          setCtx((prev) => {
+            const next = {
+              ...json,
+              locationMode: json.locationMode ?? prev?.locationMode,
+              markets: json.markets?.length ? json.markets : prev?.markets,
+            };
+            writeCachedContext(code, next);
+            return next;
+          });
+        }
         setLoadErr(null);
-        // Expired standing-link tokens fall through to tenant context with
-        // no session. Drop the stale token so the BA can pick Friday again
-        // instead of staring at a dead "You're all set" from cache.
-        if (json.mode === "tenant" && token && !json.session) {
+        // Only drop a bearer the API named dead. Wiping on every bare tenant
+        // payload is what made a BA look "not clocked in" after leaving for
+        // the photo-release QR while Attendance still had their punch.
+        if (
+          shouldDropSessionToken({
+            mode: json.mode,
+            hasToken: Boolean(token),
+            hasSession: Boolean(json.session),
+            sessionError: json.sessionError,
+          })
+        ) {
           try {
             window.localStorage.removeItem(storeKey);
           } catch {
@@ -891,11 +935,75 @@ export default function SparkCheckin() {
         setLoadErr("Couldn't load this check-in. Check your connection and reload.");
       }
     }
-  }, [code, token]);
+  }, [code, token, storeKey]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Lost local session but still on this phone for the same shift: re-identify
+  // with saved name/phone + last market so open_shift_event_for restores the
+  // server punch (Michelle — release QR → "not clocked in" while Attendance
+  // still had 6pm). Skips when Start over cleared the cache intentionally.
+  useEffect(() => {
+    if (!ctx || ctx.mode !== "tenant" || ctx.recapOnly) return;
+    if (token && ctx.session) return;
+    if (resumeAttempted.current) return;
+
+    const who = readIdentity(code);
+    if (!who.firstName.trim() || !who.phone.trim()) return;
+
+    const cached = readCachedContext<Context>(code);
+    const pending = readPendingClock(code);
+    const place =
+      (who.lastPlace || "").trim() ||
+      (cached?.event?.address || "").trim();
+    const evidence =
+      Boolean(pending) ||
+      cached?.session?.clock?.state === "clocked_in" ||
+      Boolean(token);
+    if (!place || !evidence) return;
+
+    resumeAttempted.current = true;
+    const isMarket = (ctx.locationMode || "address") === "market";
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(
+          `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/identify`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              firstName: who.firstName,
+              lastName: who.lastName,
+              phone: who.phone,
+              email: who.email,
+              eventDate: todayISO(),
+              ...(isMarket ? { market: place } : { address: place }),
+            }),
+          },
+        );
+        const json = (await res.json()) as {
+          sessionToken?: string;
+          session?: Context["session"];
+        };
+        if (cancelled || !res.ok || !json.sessionToken) return;
+        try {
+          window.localStorage.setItem(storeKey, json.sessionToken);
+        } catch {
+          /* private mode */
+        }
+        writeIdentity(code, { ...who, lastPlace: place });
+        setToken(json.sessionToken);
+      } catch {
+        /* leave them on identify — manual Start check-in still works */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [ctx, token, code, storeKey]);
 
   // Flush clock-in + recap queues even if the BA is still on identify
   // (they started over) or the recap form is closed. Idempotent.
@@ -928,6 +1036,7 @@ export default function SparkCheckin() {
   // step for a fresh event; their NAME is kept (see IDENTITY_KEY) so a repeat
   // BA only answers "which store, what day".
   const startAnother = useCallback(() => {
+    resumeAttempted.current = false;
     try {
       window.localStorage.removeItem(storeKey);
       clearPendingClock(code);
@@ -1281,8 +1390,16 @@ function IdentifyStep({
       } catch {
         /* private mode — token still held in memory for this session */
       }
-      // Remember them for the next event on this same link.
-      writeIdentity(code, { firstName, lastName, phone, email });
+      // Remember them for the next event on this same link — including the
+      // market/store so a lost session can resume today's open punch.
+      const place = isMarket ? mkt : addr;
+      writeIdentity(code, {
+        firstName,
+        lastName,
+        phone,
+        email,
+        ...(place.trim() ? { lastPlace: place.trim() } : {}),
+      });
       onDone(json.sessionToken);
     } catch {
       setErr("No service. Stay on this page and tap again when you have a bar.");
