@@ -3,10 +3,10 @@ import { Link } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
-import { RecapsQuery } from "@/api/queries/RecapsQuery";
-import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/RecapsQuery.graphql";
-import { GetCustomRecapsQuery } from "@/api/queries/CustomRecapsQuery";
-import type { CustomRecapsQuery as CustomRecapsQueryType } from "@api/queries/__generated__/CustomRecapsQuery.graphql";
+import { RecapsListQuery } from "@/api/queries/RecapsListQuery";
+import type { RecapsListQuery as RecapsListQueryType } from "@api/queries/__generated__/RecapsListQuery.graphql";
+import { CustomRecapsListQuery } from "@/api/queries/CustomRecapsListQuery";
+import type { CustomRecapsListQuery as CustomRecapsListQueryType } from "@api/queries/__generated__/CustomRecapsListQuery.graphql";
 import { ApproveRecapMutation } from "@/api/mutations/ApproveRecapMutation";
 import type { ApproveRecapMutation as ApproveRecapMutationType } from "@api/mutations/__generated__/ApproveRecapMutation.graphql";
 import { ApproveCustomRecapMutation } from "@/api/mutations/ApproveCustomRecapMutation";
@@ -311,8 +311,8 @@ const ClientApprovalsInner: React.FC = () => {
   // Pending legacy recaps — tenant-scoped (event__tenant_id) + approved=false.
   // store-and-network so a recap that just got approved elsewhere drops off
   // the list on the next paint without a manual reload.
-  const data = useLazyLoadQuery<RecapsQueryType>(
-    RecapsQuery,
+  const data = useLazyLoadQuery<RecapsListQueryType>(
+    RecapsListQuery,
     {
       first: 200,
       filters: tenantId ? { tenantId, approved: false } : null,
@@ -323,8 +323,8 @@ const ClientApprovalsInner: React.FC = () => {
   // Pending custom-template recaps (Borjomi, Girl Beer, …). Same tenant
   // scope + approved=false. Tenants typically use legacy XOR custom; a
   // tenant on both just sees both lists merged below.
-  const customData = useLazyLoadQuery<CustomRecapsQueryType>(
-    GetCustomRecapsQuery,
+  const customData = useLazyLoadQuery<CustomRecapsListQueryType>(
+    CustomRecapsListQuery,
     {
       first: 200,
       filters: tenantId ? { tenantId, approved: false } : null,
@@ -362,14 +362,13 @@ const ClientApprovalsInner: React.FC = () => {
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
         ?.map((n) => {
-          const date = n.event?.date ?? n.createdAt ?? "";
+          const date = n.eventDate ?? n.createdAt ?? "";
           return {
             kind: "custom" as const,
             id: String(n.id),
             uuid: String(n.uuid),
             name:
               n.name ??
-              n.event?.name ??
               n.customRecapTemplate?.name ??
               "Custom recap",
             date,
@@ -379,7 +378,7 @@ const ClientApprovalsInner: React.FC = () => {
               n.eventState || null,
             ),
             typeLabel: n.customRecapTemplate?.name ?? null,
-            sortMs: toMs(n.event?.date) || toMs(n.createdAt),
+            sortMs: toMs(n.eventDate) || toMs(n.createdAt),
             heroImage: n.heroImageUrl ? thumbUrl(n.heroImageUrl, 400) : null,
             fileCount: n.customRecapFilesCount ?? 0,
           };
