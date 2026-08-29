@@ -156,6 +156,12 @@ export const GetCustomRecapQuery = graphql`
       customRecapTemplate {
         id
         name
+        # Tenant scope for FileRecapCategoriesQuery — Evidences upload /
+        # "Move to…" must list THIS brand's buckets (e.g. Torch THC
+        # "Product Spend"), not a hard-coded Sampling photos / Receipts pair.
+        tenant {
+          id
+        }
       }
       customRecapProductSample {
         id
