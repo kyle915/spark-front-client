@@ -4785,6 +4785,17 @@ type SidebarRequestCounts {
   recapsDue: Int!
 }
 
+type TrackerStatusBucket {
+  slug: String!
+  count: Int!
+}
+
+type TrackerStatusCounts {
+  total: Int!
+  buckets: [TrackerStatusBucket!]!
+  marketCodes: [String!]!
+}
+
 type SidebarAlertCandidate {
   id: ID!
   createdAt: String!
@@ -4822,6 +4833,7 @@ type Query {
   walkupShifts(status: String = null, tenantId: ID = null): [WalkupShiftType!]!
   pendingWalkupCount(tenantId: ID = null): Int!
   sidebarRequestCounts(tenantId: ID = null): SidebarRequestCounts!
+  trackerStatusCounts(filters: RequestFiltersInput = null, q: String = null): TrackerStatusCounts!
   sidebarAlertCandidates(tenantId: ID = null): [SidebarAlertCandidate!]!
   accountMapPins(tenantId: ID = null, first: Int = null): [AccountMapPin!]!
   briefingTemplates(tenantId: ID = null, includeArchived: Boolean! = false): [BriefingTemplate!]!
