@@ -413,10 +413,13 @@ const RecapCustomViewInner = () => {
   );
 
   const recap = data?.customRecap;
-  const tenantId = recap?.customRecapTemplate?.tenant?.id ?? "0";
+  // Prefer the recap's own tenant over the auth-store dashboard tenant
+  // (admins can be switched to another brand while viewing Torch).
+  const fileCategoryTenantId =
+    recap?.customRecapTemplate?.tenant?.id ?? "0";
   const categoriesData = useLazyLoadQuery<FileRecapCategoriesQueryType>(
     FileRecapCategoriesQuery,
-    { filters: { tenantId } },
+    { filters: { tenantId: fileCategoryTenantId } },
     { fetchPolicy: "store-and-network" },
   );
   const fileCategoryOptions = useMemo(
