@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildFileRecapCategoryOptions,
+  defaultReceiptCategoryName,
   defaultUploadCategoryName,
   isReceiptLikeCategory,
   FALLBACK_FILE_CATEGORY_PHOTOS,
@@ -56,5 +57,26 @@ describe("defaultUploadCategoryName", () => {
         { id: "2", name: "Receipts" },
       ]),
     ).toBe("Sampling photos");
+  });
+});
+
+describe("defaultReceiptCategoryName", () => {
+  it("prefers Receipts when present", () => {
+    expect(
+      defaultReceiptCategoryName([
+        { id: "1", name: "Sampling photos" },
+        { id: "2", name: "Receipts" },
+        { id: "3", name: "Product Spend" },
+      ]),
+    ).toBe("Receipts");
+  });
+
+  it("falls back to Product Spend when Receipts is gone", () => {
+    expect(
+      defaultReceiptCategoryName([
+        { id: "1", name: "Sampling photos" },
+        { id: "3", name: "Product Spend" },
+      ]),
+    ).toBe("Product Spend");
   });
 });

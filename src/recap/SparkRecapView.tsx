@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { StatusMorph } from "@/motion/StatusMorph";
 import {
@@ -40,6 +40,14 @@ import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import { parseLocaleNumber } from "@/utils";
 import { useAlertStore } from "@/store/alertStore";
 import RecapUploader from "./RecapUploader";
+import { FileRecapCategoriesQuery } from "@/api/queries/FileRecapCategoriesQuery";
+import type { FileRecapCategoriesQuery as FileRecapCategoriesQueryType } from "@/api/queries/__generated__/FileRecapCategoriesQuery.graphql";
+import {
+  buildFileRecapCategoryOptions,
+  defaultUploadCategoryName,
+  isReceiptLikeCategory,
+  FALLBACK_FILE_CATEGORY_PHOTOS,
+} from "@/recap/fileRecapCategoryOptions";
 import ReassignRecapModal from "./ReassignRecapModal";
 import { thumbUrl } from "@/utils/thumb";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
@@ -461,6 +469,30 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   );
 
   const recap = data?.recap;
+  const fileCategoryTenantId =
+    recap?.event?.tenant?.id ?? recap?.event?.tenantId ?? "0";
+  const categoriesData = useLazyLoadQuery<FileRecapCategoriesQueryType>(
+    FileRecapCategoriesQuery,
+    { filters: { tenantId: String(fileCategoryTenantId) } },
+    { fetchPolicy: "store-and-network" },
+  );
+  const fileCategoryOptions = useMemo(
+    () =>
+      buildFileRecapCategoryOptions(
+        categoriesData.fileRecapCategories.edges.map((e) => e?.node),
+      ),
+    [categoriesData],
+  );
+  const [uploadCategory, setUploadCategory] = useState(
+    FALLBACK_FILE_CATEGORY_PHOTOS,
+  );
+  useEffect(() => {
+    setUploadCategory((prev) => {
+      if (fileCategoryOptions.some((o) => o.name === prev)) return prev;
+      return defaultUploadCategoryName(fileCategoryOptions);
+    });
+  }, [fileCategoryOptions]);
+
   const approvalMeta = useMemo(
     () =>
       recap
@@ -1925,7 +1957,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 color: "var(--spark-lime)",
               }}
             >
-              UPLOAD · CAPTURES + RECEIPTS
+              UPLOAD · TENANT PHOTO SECTIONS
             </p>
             <h3
               className="display font-bold mt-1"
@@ -1934,44 +1966,25 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
               Add files to this recap
             </h3>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
+            <select
+              value={uploadCategory}
+              onChange={(e) => setUploadCategory(e.target.value)}
+              title="Section for new uploads"
+              className="spark-input text-sm rounded-full"
+            >
+              {fileCategoryOptions.map((opt) => (
+                <option key={opt.id} value={opt.name}>
+                  {opt.name}
+                </option>
+              ))}
+            </select>
             <RecapUploader
               recapUuid={uuid}
-              category="photo"
-              onUploaded={(blobName) => {
-                // Attach the just-uploaded blob to this recap via the
-                // dedicated addRecapFile mutation, then bump refreshKey
-                // so the Files grid re-queries and shows it. fileTypeId
-                // "1" / fileRecapCategoryId "1" mirror the recap-create
-                // form's photo defaults.
-                commitAddFile({
-                  variables: {
-                    input: {
-                      recapId: recap.id,
-                      file: blobName,
-                      fileTypeId: "1",
-                      fileRecapCategoryId: "Sampling photos",
-                    },
-                  },
-                  onCompleted: (res) => {
-                    if (res.addRecapFile?.success) {
-                      showAlert("Photo attached to recap.", "success");
-                      setRefreshKey((k) => k + 1);
-                    } else {
-                      showAlert(
-                        res.addRecapFile?.message ?? "Couldn't attach photo.",
-                        "error",
-                      );
-                    }
-                  },
-                  onError: (err) =>
-                    showAlert(`Attach failed: ${err.message}`, "error"),
-                });
-              }}
-            />
-            <RecapUploader
-              recapUuid={uuid}
-              category="receipt"
+              category={
+                isReceiptLikeCategory(uploadCategory) ? "receipt" : "photo"
+              }
+              label={`Upload · ${uploadCategory}`}
               onUploaded={(blobName) => {
                 commitAddFile({
                   variables: {
@@ -1979,16 +1992,16 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                       recapId: recap.id,
                       file: blobName,
                       fileTypeId: "1",
-                      fileRecapCategoryId: "Receipts",
+                      fileRecapCategoryId: uploadCategory,
                     },
                   },
                   onCompleted: (res) => {
                     if (res.addRecapFile?.success) {
-                      showAlert("Receipt attached to recap.", "success");
+                      showAlert(`${uploadCategory} attached to recap.`, "success");
                       setRefreshKey((k) => k + 1);
                     } else {
                       showAlert(
-                        res.addRecapFile?.message ?? "Couldn't attach receipt.",
+                        res.addRecapFile?.message ?? "Couldn't attach file.",
                         "error",
                       );
                     }
@@ -2004,9 +2017,9 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           className="text-xs"
           style={{ color: "var(--recap-muted, #5c6154)" }}
         >
-          Photos and receipts upload directly to GCS via signed URL, then
-          attach to this recap automatically — they appear in the Files
-          grid above as soon as the upload completes.
+          Pick a tenant photo section, then upload. Files go to GCS via
+          signed URL and attach to this recap automatically — they appear
+          in the Files grid above as soon as the upload completes.
         </p>
       </div>
 
