@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  SECOND_SHIFT_HINT,
   SECOND_SHIFT_LABEL,
+  SECOND_SHIFT_PROMPT,
   supportsStandingSecondShift,
 } from "./secondShift";
 
@@ -44,5 +46,11 @@ describe("supportsStandingSecondShift", () => {
 
   it("keeps the admin label stable", () => {
     expect(SECOND_SHIFT_LABEL).toBe("Second shift");
+  });
+
+  it("distinguishes same-day second shift from leftover prior-day copy", () => {
+    expect(SECOND_SHIFT_PROMPT).toContain("second shift today");
+    expect(SECOND_SHIFT_HINT.toLowerCase()).toContain("same day");
+    expect(SECOND_SHIFT_HINT.toLowerCase()).toContain("not a leftover");
   });
 });
