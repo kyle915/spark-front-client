@@ -14,7 +14,7 @@ describe("isHeicUpload", () => {
     );
   });
 
-  it("leaves JPEG / PNG on the canvas-compress path", () => {
+  it("leaves JPEG / PNG for canvas downscale (not HEIC decode)", () => {
     expect(isHeicUpload({ name: "table.jpg", type: "image/jpeg" })).toBe(false);
     expect(isHeicUpload({ name: "crowd.png", type: "image/png" })).toBe(false);
   });

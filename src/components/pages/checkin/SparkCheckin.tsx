@@ -10,7 +10,10 @@ import {
   matchProductForSampleOption,
   productSamplesFromSelections,
 } from "@/recap/productsSampledQty";
-import { isHeicUpload } from "./heicUpload";
+import {
+  FIELD_PHOTO_PREP,
+  prepareImageForUpload,
+} from "@/utils/compressImageForUpload";
 import {
   CLOCK_FETCH_TIMEOUT_MS,
   clearCachedContext,
@@ -278,64 +281,13 @@ function telHref(phone: string): string {
   return cleaned ? `tel:${cleaned}` : "";
 }
 
-// A BA on store LTE uploading 20 straight-off-the-camera iPhone photos is
-// pushing ~80MB. Downscaling to a long edge of 1600px at JPEG 0.82 lands each
-// one around 200-400KB with no visible loss in the recap PDF or the gallery.
-const MAX_IMAGE_EDGE = 1600;
-const JPEG_QUALITY = 0.82;
-// Below this, re-encoding costs more than it saves.
-const COMPRESS_MIN_BYTES = 400 * 1024;
 // Enough to use the connection, few enough that one stalled PUT doesn't hold
 // up the rest. Serial uploads were the other half of "photos won't upload".
 const UPLOAD_CONCURRENCY = 3;
 
-/**
- * Downscale + re-encode an image for upload. Best-effort by design: on ANY
- * failure — unsupported codec, canvas tainted, out of memory on an old phone —
- * it returns the original file rather than losing the photo.
- */
-async function compressImage(file: File): Promise<File> {
-  // Safari cannot decode HEIC in canvas. Skip the doomed Image() attempt
-  // and upload the original — the API converts after File recap commits.
-  if (isHeicUpload(file)) return file;
-  if (!file.type.startsWith("image/") || file.size < COMPRESS_MIN_BYTES) return file;
-
-  let url: string | null = null;
-  try {
-    url = URL.createObjectURL(file);
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image();
-      el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error("decode failed"));
-      el.src = url as string;
-    });
-
-    const longest = Math.max(img.naturalWidth, img.naturalHeight);
-    if (!longest) return file;
-    const scale = Math.min(1, MAX_IMAGE_EDGE / longest);
-    const w = Math.round(img.naturalWidth * scale);
-    const h = Math.round(img.naturalHeight * scale);
-
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return file;
-    ctx.drawImage(img, 0, 0, w, h);
-
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY),
-    );
-    // If the re-encode didn't actually help, keep the original.
-    if (!blob || blob.size >= file.size) return file;
-
-    const base = file.name.replace(/\.[^.]+$/, "") || "photo";
-    return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
-  } catch {
-    return file;
-  } finally {
-    if (url) URL.revokeObjectURL(url);
-  }
+/** HEIC→JPEG + field downscale (see FIELD_PHOTO_PREP). */
+function compressImage(file: File): Promise<File> {
+  return prepareImageForUpload(file, FIELD_PHOTO_PREP);
 }
 
 /** Run `fn` over `items` with at most `limit` in flight. */

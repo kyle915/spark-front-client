@@ -2,6 +2,7 @@ import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import { UploadUrlQuery } from "@/api/queries/UploadUrlQuery";
 import type { UploadUrlQuery as UploadUrlQueryType } from "@/api/queries/__generated__/UploadUrlQuery.graphql";
+import { prepareImageForUpload } from "@/utils/compressImageForUpload";
 
 /**
  * Shared helpers for chat attachments on the admin web.
@@ -56,9 +57,10 @@ export async function uploadChatAttachment(
   file: File,
   scope: string,
 ): Promise<PendingAttachment> {
-  const contentType = file.type || "application/octet-stream";
+  const prepared = await prepareImageForUpload(file);
+  const contentType = prepared.type || "application/octet-stream";
   const stamp = Date.now();
-  const path = `chat_attachments/${scope}/${stamp}-${safeFilename(file.name)}`;
+  const path = `chat_attachments/${scope}/${stamp}-${safeFilename(prepared.name)}`;
 
   const data = await fetchQuery<UploadUrlQueryType>(environment, UploadUrlQuery, {
     filePath: path,
@@ -72,19 +74,19 @@ export async function uploadChatAttachment(
   const res = await fetch(url, {
     method: "PUT",
     headers: { "Content-Type": contentType },
-    body: file,
+    body: prepared,
   });
   if (!res.ok) throw new Error(`Upload failed (${res.status})`);
 
-  const kind = kindForFile(file);
+  const kind = kindForFile(prepared);
   return {
     localId: `${stamp}-${Math.random().toString(36).slice(2, 8)}`,
     blobName,
     kind,
-    originalFilename: file.name,
+    originalFilename: prepared.name,
     contentType,
-    byteSize: file.size,
-    previewUrl: kind === "image" ? URL.createObjectURL(file) : undefined,
+    byteSize: prepared.size,
+    previewUrl: kind === "image" ? URL.createObjectURL(prepared) : undefined,
   };
 }
 

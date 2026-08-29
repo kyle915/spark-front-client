@@ -1,20 +1,40 @@
 import { isHeicUpload } from "@/components/pages/checkin/heicUpload";
 
-/** Long edge cap for recap uploads — balances quality vs LTE upload size. */
-const MAX_IMAGE_EDGE = 2048;
-const JPEG_QUALITY = 0.85;
-/** Below this, re-encoding costs more than it saves. */
-const COMPRESS_MIN_BYTES = 200 * 1024;
+/** Admin/recap uploads — keep detail for gallery + PDF. */
+const DEFAULT_MAX_EDGE = 2048;
+const DEFAULT_JPEG_QUALITY = 0.85;
+const DEFAULT_MIN_BYTES = 200 * 1024;
+
+/**
+ * Walk-up / check-in field photos on store LTE. More aggressive than
+ * admin recap so 20 iPhone shots finish before the BA clocks out.
+ */
+export const FIELD_PHOTO_PREP = {
+  maxEdge: 1600,
+  quality: 0.82,
+  minBytes: 400 * 1024,
+} as const;
+
+export type PrepareImageOptions = {
+  maxEdge?: number;
+  quality?: number;
+  minBytes?: number;
+};
 
 async function convertHeicToJpeg(file: File): Promise<File> {
   const { default: heic2any } = await import("heic2any");
-  const out = (await heic2any({ blob: file, toType: "image/jpeg" })) as Blob;
+  const out = await heic2any({ blob: file, toType: "image/jpeg" });
+  const blob = Array.isArray(out) ? out[0] : out;
+  if (!blob) throw new Error("HEIC conversion produced no frames");
   const base = file.name.replace(/\.[^.]+$/, "") || "photo";
-  return new File([out], `${base}.jpg`, { type: "image/jpeg" });
+  return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
 }
 
-async function downscaleImage(file: File): Promise<File> {
-  if (!file.type.startsWith("image/") || file.size < COMPRESS_MIN_BYTES) {
+async function downscaleImage(
+  file: File,
+  opts: Required<PrepareImageOptions>,
+): Promise<File> {
+  if (!file.type.startsWith("image/") || file.size < opts.minBytes) {
     return file;
   }
 
@@ -30,7 +50,7 @@ async function downscaleImage(file: File): Promise<File> {
 
     const longest = Math.max(img.naturalWidth, img.naturalHeight);
     if (!longest) return file;
-    const scale = Math.min(1, MAX_IMAGE_EDGE / longest);
+    const scale = Math.min(1, opts.maxEdge / longest);
     const w = Math.round(img.naturalWidth * scale);
     const h = Math.round(img.naturalHeight * scale);
 
@@ -42,7 +62,7 @@ async function downscaleImage(file: File): Promise<File> {
     ctx.drawImage(img, 0, 0, w, h);
 
     const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY),
+      canvas.toBlob(resolve, "image/jpeg", opts.quality),
     );
     if (!blob || blob.size >= file.size) return file;
 
@@ -57,10 +77,20 @@ async function downscaleImage(file: File): Promise<File> {
 
 /**
  * Prepare a photo for GCS upload: HEIC/HEIF → JPEG, then downscale.
- * Best-effort — returns the original file on any failure.
+ * Best-effort — returns the original file on any failure so a flaky
+ * decoder never blocks the BA from filing the shot.
  */
-export async function prepareImageForUpload(file: File): Promise<File> {
+export async function prepareImageForUpload(
+  file: File,
+  options: PrepareImageOptions = {},
+): Promise<File> {
   if (file.type === "application/pdf") return file;
+
+  const opts: Required<PrepareImageOptions> = {
+    maxEdge: options.maxEdge ?? DEFAULT_MAX_EDGE,
+    quality: options.quality ?? DEFAULT_JPEG_QUALITY,
+    minBytes: options.minBytes ?? DEFAULT_MIN_BYTES,
+  };
 
   let prepared = file;
   if (isHeicUpload(file)) {
@@ -72,7 +102,7 @@ export async function prepareImageForUpload(file: File): Promise<File> {
   }
 
   try {
-    return await downscaleImage(prepared);
+    return await downscaleImage(prepared, opts);
   } catch {
     return prepared;
   }
