@@ -5,6 +5,11 @@ import {
   engagementsFromSamplesGiven,
   templateHasConsumersSampledField,
 } from "@/recap/engagementsFromSamples";
+import {
+  isProductsSampledMultiselect,
+  matchProductForSampleOption,
+  productSamplesFromSelections,
+} from "@/recap/productsSampledQty";
 import { isHeicUpload } from "./heicUpload";
 import {
   CLOCK_FETCH_TIMEOUT_MS,
@@ -73,7 +78,13 @@ type TemplateField = {
   options: string[];
 };
 type TemplateSection = { id: string; name: string; fields: TemplateField[] };
-type TemplateProduct = { id: string; name: string; imageUrl: string | null };
+type TemplateProduct = {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  /** ProductType name when the API includes it (for Category — Name match). */
+  category?: string | null;
+};
 type Template = {
   id: string;
   name: string;
@@ -2625,6 +2636,10 @@ function RecapForm({
     () => (template?.sections ?? []).flatMap((s) => s.fields),
     [template],
   );
+  const hasProductsSampledMultiselect = useMemo(
+    () => templateFields.some((f) => isProductsSampledMultiselect(f)),
+    [templateFields],
+  );
   // Torch (and most retail templates) already ask "total number of consumers
   // sampled". That IS Spark's engagements metric — don't make the BA type it
   // again in the native Total engagements box.
@@ -2722,9 +2737,36 @@ function RecapForm({
     const fieldValues = Object.entries(values)
       .map(([id, v]) => ({ customFieldId: id, value: Array.isArray(v) ? JSON.stringify(v) : String(v) }))
       .filter((fv) => fv.value !== "" && fv.value !== "[]");
-    const productSamples = Object.entries(samples)
+    // Prefer pill selections → catalog Product ids when the template has a
+    // Products Sampled multiselect (Liquid Death). Fall back to the plain
+    // per-SKU qty map used by productSamples-flag templates.
+    const fromPills = (() => {
+      if (!hasProductsSampledMultiselect) return [] as { productId: string; quantity: number }[];
+      const selected: string[] = [];
+      for (const f of templateFields) {
+        if (!isProductsSampledMultiselect(f)) continue;
+        const raw = values[f.id];
+        if (Array.isArray(raw)) selected.push(...raw.map(String));
+      }
+      return productSamplesFromSelections(
+        selected,
+        samples,
+        template?.products ?? [],
+        (raw) => {
+          const n = Number(raw);
+          return Number.isFinite(n) ? n : null;
+        },
+      );
+    })();
+    const fromGrid = Object.entries(samples)
       .map(([productId, q]) => ({ productId, quantity: Number(q) }))
       .filter((s) => Number.isFinite(s.quantity) && s.quantity > 0);
+    const productSamples =
+      fromPills.length > 0
+        ? fromPills
+        : hasProductsSampledMultiselect
+          ? []
+          : fromGrid;
     const fromSamples = engagementsFromSamplesGiven(templateFields, values);
     const typed = engagements.trim() === "" ? null : Number(engagements);
     const totalEngagements = fromSamples ?? (Number.isFinite(typed) ? typed : null);
@@ -2870,13 +2912,22 @@ function RecapForm({
                 onAddPhotos={uploadFiles}
                 photos={loosePhotos}
                 onRemovePhoto={removePhoto}
+                products={template.products}
+                sampleQtys={samples}
+                onSampleQtyChange={(productId, qty) =>
+                  setSamples((s) => ({ ...s, [productId]: qty }))
+                }
               />
             ))}
           </div>
         </div>
       ))}
 
-      {template.productSamples && template.products.length > 0 ? (
+      {/* Full per-SKU qty grid only when there is no Products Sampled
+          multiselect — LD (and clones) use pills + qty on that field instead. */}
+      {template.productSamples &&
+      template.products.length > 0 &&
+      !hasProductsSampledMultiselect ? (
         <div style={card}>
           <h2 style={h2}>Products sampled</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
@@ -3015,6 +3066,9 @@ function FieldInput({
   onAddPhotos,
   photos,
   onRemovePhoto,
+  products = [],
+  sampleQtys = {},
+  onSampleQtyChange,
 }: {
   field: TemplateField;
   value: string | string[] | undefined;
@@ -3023,6 +3077,9 @@ function FieldInput({
   onAddPhotos: (files: FileList | null) => void;
   photos: Photo[];
   onRemovePhoto: (id: string) => void;
+  products?: TemplateProduct[];
+  sampleQtys?: Record<string, string>;
+  onSampleQtyChange?: (productId: string, qty: string) => void;
 }) {
   const libraryRef = useRef<HTMLInputElement | null>(null);
   const cameraRef = useRef<HTMLInputElement | null>(null);
@@ -3072,13 +3129,43 @@ function FieldInput({
   }
   if (kind === "multiselect") {
     const arr = Array.isArray(value) ? value : [];
-    const toggle = (o: string) => onChange(arr.includes(o) ? arr.filter((x) => x !== o) : [...arr, o]);
+    const qtyMode =
+      isProductsSampledMultiselect(field) &&
+      Boolean(onSampleQtyChange) &&
+      products.length > 0;
+    const toggle = (o: string) => {
+      const next = arr.includes(o) ? arr.filter((x) => x !== o) : [...arr, o];
+      onChange(next);
+      if (!qtyMode || !onSampleQtyChange) return;
+      const product = matchProductForSampleOption(o, products);
+      if (!product) return;
+      if (next.includes(o)) {
+        if (sampleQtys[product.id] == null) onSampleQtyChange(product.id, "");
+      } else {
+        onSampleQtyChange(product.id, "");
+      }
+    };
+    const selectedWithProduct = qtyMode
+      ? arr
+          .map((o) => {
+            const product = matchProductForSampleOption(o, products);
+            return product ? { option: o, product } : null;
+          })
+          .filter((row): row is { option: string; product: TemplateProduct } =>
+            Boolean(row),
+          )
+      : [];
     return (
       <div>
         <label style={label}>
           {field.name}
           {req}
         </label>
+        {qtyMode ? (
+          <p style={{ fontSize: 13, opacity: 0.6, margin: "4px 0 0" }}>
+            Tap each SKU you handed out, then enter how many cans.
+          </p>
+        ) : null}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
           {field.options.map((o) => {
             const on = arr.includes(o);
@@ -3102,6 +3189,51 @@ function FieldInput({
             );
           })}
         </div>
+        {selectedWithProduct.length > 0 ? (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              marginTop: 12,
+            }}
+          >
+            {selectedWithProduct.map(({ option, product }) => (
+              <div
+                key={product.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                {product.imageUrl ? (
+                  <img
+                    src={product.imageUrl}
+                    alt=""
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 8,
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : null}
+                <span style={{ flex: 1, fontSize: 14, minWidth: 0 }} title={option}>
+                  {product.name}
+                </span>
+                <input
+                  style={{ ...input, width: 88, margin: 0 }}
+                  inputMode="numeric"
+                  placeholder="cans"
+                  aria-label={`Cans sampled — ${product.name}`}
+                  value={sampleQtys[product.id] ?? ""}
+                  onChange={(e) => onSampleQtyChange?.(product.id, e.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -3131,6 +3263,7 @@ function FieldInput({
     </div>
   );
 }
+
 
 /**
  * One labelled dropzone. Its own hidden input and its own slice of `photos`,

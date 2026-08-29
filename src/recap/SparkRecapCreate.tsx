@@ -24,6 +24,10 @@ import {
   engagementsFromSamplesGiven,
   templateHasConsumersSampledField,
 } from "./engagementsFromSamples";
+import {
+  isProductsSampledMultiselect,
+  matchProductForSampleOption,
+} from "./productsSampledQty";
 
 /**
  * Spark v2 — manual recap submission flow.
@@ -411,18 +415,32 @@ export default function SparkRecapCreate() {
     // positive int and blanks / zeros / NaN are dropped so we never
     // persist a "0 units" sample. No-op (undefined) when the template
     // doesn't track samples, so the backend leaves samples untouched.
-    const productSamples = selectedTemplate.productSamples
-      ? Object.entries(sampleQtys)
-          .map(([productId, raw]) => ({
-            productId,
-            quantity: parseLocaleNumber(raw),
-          }))
-          .filter(
-            (s): s is { productId: string; quantity: number } =>
-              s.quantity != null && Number.isFinite(s.quantity) && s.quantity > 0,
-          )
-          .map((s) => ({ productId: s.productId, quantity: Math.round(s.quantity) }))
-      : [];
+    const hasPills = (selectedTemplate.customField ?? []).some(
+      (f) =>
+        f &&
+        isProductsSampledMultiselect({
+          name: f.name,
+          type: f.customFieldType?.name ?? "",
+        }),
+    );
+    const productSamples =
+      selectedTemplate.productSamples || hasPills
+        ? Object.entries(sampleQtys)
+            .map(([productId, raw]) => ({
+              productId,
+              quantity: parseLocaleNumber(raw),
+            }))
+            .filter(
+              (s): s is { productId: string; quantity: number } =>
+                s.quantity != null &&
+                Number.isFinite(s.quantity) &&
+                s.quantity > 0,
+            )
+            .map((s) => ({
+              productId: s.productId,
+              quantity: Math.round(s.quantity),
+            }))
+        : [];
 
     const files = [
       ...photoBlobs.map((blob) => ({
@@ -815,6 +833,9 @@ export default function SparkRecapCreate() {
           template={selectedTemplate}
           values={fieldValues}
           onChange={setFieldValue}
+          tenantId={tenantId || selectedTemplate.tenant?.id || null}
+          sampleQtys={sampleQtys}
+          onSampleQtyChange={setSampleQty}
         />
       )}
       {useCustomFlow && !selectedTemplate && (
@@ -832,7 +853,16 @@ export default function SparkRecapCreate() {
           the values flow into productSamples on submit. Scope to the
           active dashboard tenant, falling back to the template's own
           tenant so it still works when no dashboard tenant is set. */}
-      {useCustomFlow && selectedTemplate?.productSamples && (
+      {useCustomFlow &&
+        selectedTemplate?.productSamples &&
+        !(selectedTemplate.customField ?? []).some(
+          (f) =>
+            f &&
+            isProductsSampledMultiselect({
+              name: f.name,
+              type: f.customFieldType?.name ?? "",
+            }),
+        ) && (
         <Suspense
           fallback={
             <Card title="PRODUCTS SAMPLED">
@@ -1185,7 +1215,10 @@ const CustomTemplateFields: React.FC<{
   template: TemplateNode;
   values: Record<string, string>;
   onChange: (id: string, v: string) => void;
-}> = ({ template, values, onChange }) => {
+  tenantId: string | null;
+  sampleQtys: Record<string, string>;
+  onSampleQtyChange: (productId: string, v: string) => void;
+}> = ({ template, values, onChange, tenantId, sampleQtys, onSampleQtyChange }) => {
   const sections = useMemo(() => {
     const fields = (template.customField ?? []).filter(
       (f): f is NonNullable<typeof f> => Boolean(f),
@@ -1286,12 +1319,44 @@ const CustomTemplateFields: React.FC<{
                 } catch {
                   selected = [];
                 }
+                const pillsWithQty = isProductsSampledMultiselect({
+                  name: f.name,
+                  type: f.customFieldType?.name ?? "",
+                });
                 const toggle = (o: string) => {
                   const next = selected.includes(o)
                     ? selected.filter((x) => x !== o)
                     : [...selected, o];
                   onChange(id, JSON.stringify(next));
                 };
+                if (pillsWithQty) {
+                  return (
+                    <div key={id} className="sm:col-span-2">
+                      <Suspense
+                        fallback={
+                          <Field label={label}>
+                            <p
+                              className="text-sm"
+                              style={{ color: "rgba(255,255,255,0.6)" }}
+                            >
+                              Loading products…
+                            </p>
+                          </Field>
+                        }
+                      >
+                        <ProductsSampledPillsField
+                          label={label}
+                          options={opts}
+                          selected={selected}
+                          onToggle={toggle}
+                          tenantId={tenantId}
+                          quantities={sampleQtys}
+                          onQtyChange={onSampleQtyChange}
+                        />
+                      </Suspense>
+                    </div>
+                  );
+                }
                 return (
                   <div key={id} className="sm:col-span-2">
                     <Field label={label}>
@@ -1339,6 +1404,147 @@ const CustomTemplateFields: React.FC<{
         </Card>
       ))}
     </>
+  );
+};
+
+// Products Sampled pills + per-selection can qty. Loads the tenant catalog
+// so each selected option maps to a Product id for productSamples submit.
+const ProductsSampledPillsField: React.FC<{
+  label: string;
+  options: readonly string[];
+  selected: string[];
+  onToggle: (option: string) => void;
+  tenantId: string | null;
+  quantities: Record<string, string>;
+  onQtyChange: (productId: string, v: string) => void;
+}> = ({
+  label,
+  options,
+  selected,
+  onToggle,
+  tenantId,
+  quantities,
+  onQtyChange,
+}) => {
+  const data = useLazyLoadQuery<ProductsQueryType>(
+    ProductsQuery,
+    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+  const products = useMemo(
+    () =>
+      (data.products?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n))
+        .map((p) => ({
+          id: String(p.id),
+          name: p.name,
+          category: p.productType?.name ?? null,
+          image: p.image ?? null,
+        })),
+    [data],
+  );
+
+  const selectedRows = selected
+    .map((option) => {
+      const product = matchProductForSampleOption(option, products);
+      return product ? { option, product } : null;
+    })
+    .filter(
+      (
+        row,
+      ): row is {
+        option: string;
+        product: (typeof products)[number];
+      } => Boolean(row),
+    );
+
+  return (
+    <Field label={label}>
+      <p className="text-sm mb-2" style={{ color: "rgba(255,255,255,0.6)" }}>
+        Tap each SKU you handed out, then enter how many cans.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {options.map((o) => {
+          const on = selected.includes(o);
+          return (
+            <button
+              type="button"
+              key={o}
+              onClick={() => {
+                const nextOn = !selected.includes(o);
+                onToggle(o);
+                const product = matchProductForSampleOption(o, products);
+                if (!product) return;
+                if (nextOn) {
+                  if (quantities[product.id] == null) onQtyChange(product.id, "");
+                } else {
+                  onQtyChange(product.id, "");
+                }
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs border transition-colors"
+              style={{
+                borderColor: on
+                  ? "var(--spark-lime)"
+                  : "rgba(255,255,255,0.15)",
+                background: on ? "var(--spark-lime)" : "transparent",
+                color: on ? "#0a0d09" : "rgba(255,255,255,0.8)",
+              }}
+            >
+              {o}
+            </button>
+          );
+        })}
+      </div>
+      {selectedRows.length > 0 ? (
+        <div className="mt-3 space-y-2">
+          {selectedRows.map(({ option, product }) => (
+            <div
+              key={product.id}
+              className="rounded-xl p-3 flex items-center gap-3"
+              style={{
+                background: "var(--spark-surface-2)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              <div
+                className="w-12 h-12 rounded-lg shrink-0 grid place-items-center overflow-hidden"
+                style={{ background: "rgba(255,255,255,0.9)" }}
+              >
+                {product.image ? (
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <span
+                    className="mono text-[9px]"
+                    style={{ letterSpacing: "0.12em", color: "#0a0d09" }}
+                  >
+                    SKU
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate" title={option}>
+                  {product.name}
+                </p>
+              </div>
+              <input
+                value={quantities[product.id] ?? ""}
+                onChange={(e) => onQtyChange(product.id, e.target.value)}
+                className="w-20 rounded-lg px-2.5 py-2 text-sm text-right bg-transparent focus:outline-none focus:ring-2 shrink-0"
+                style={{ border: "1px solid var(--spark-border)" }}
+                inputMode="numeric"
+                placeholder="cans"
+                aria-label={`Cans sampled — ${product.name}`}
+              />
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </Field>
   );
 };
 
