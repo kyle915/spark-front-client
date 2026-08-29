@@ -19,9 +19,11 @@ const fmtWhen = (raw: string | null | undefined): string => {
   }
 };
 
-const reqLink = (requestId: string | null | undefined): string | null => {
-  if (!requestId) return null;
-  return `/request/view/${requestId}`;
+const reqLink = (
+  requestId: string | number | null | undefined,
+): string | null => {
+  if (requestId == null || requestId === "") return null;
+  return `/request/view/${String(requestId)}`;
 };
 
 /**
