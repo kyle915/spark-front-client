@@ -6,6 +6,9 @@
  * Product catalog ids + quantity. These helpers match an option to a Product
  * (by `Category — Name` or SKU name) so the submit path can send
  * `productSamples: [{ productId, quantity }]`.
+ *
+ * Pill labels prefer the live Product catalog (`catalogSampleOptions`) so a
+ * SKU added in /products appears without re-seeding CustomField.options.
  */
 
 export type SampleProductRef = {
@@ -27,6 +30,33 @@ export function isProductsSampledMultiselect(field: {
 }
 
 /**
+ * Pill labels from the tenant Product catalog — same `Type — Name` shape the
+ * API resolves for Products Sampled. Empty catalog → caller keeps field.options.
+ */
+export function catalogSampleOptions(
+  products: readonly SampleProductRef[],
+): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const sorted = [...products].sort((a, b) => {
+    const ca = (a.category ?? "").localeCompare(b.category ?? "");
+    if (ca !== 0) return ca;
+    return a.name.localeCompare(b.name);
+  });
+  for (const p of sorted) {
+    const name = (p.name ?? "").trim();
+    if (!name) continue;
+    const cat = (p.category ?? "").trim();
+    const label = cat ? `${cat} — ${name}` : name;
+    const key = label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(label);
+  }
+  return out;
+}
+
+/**
  * SKU name from an option label. LD uses an em dash (`—`); also accept en
  * dash / spaced hyphen so hand-edited options still match.
  */
@@ -41,6 +71,19 @@ export function optionSkuName(option: string): string {
 
 function norm(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/** True when `selected` already contains this pill (exact or same SKU name). */
+export function sampleOptionSelected(
+  option: string,
+  selected: readonly string[],
+): boolean {
+  if (selected.includes(option)) return true;
+  const sku = norm(optionSkuName(option));
+  return selected.some((s) => {
+    if (s === option) return true;
+    return norm(optionSkuName(s)) === sku || norm(s) === sku;
+  });
 }
 
 /**

@@ -33,8 +33,10 @@ import {
   templateHasConsumersSampledField,
 } from "./engagementsFromSamples";
 import {
+  catalogSampleOptions,
   isProductsSampledMultiselect,
   matchProductForSampleOption,
+  sampleOptionSelected,
 } from "./productsSampledQty";
 
 type PendingRecapFile = { blob: string; categoryName: string };
@@ -1346,6 +1348,9 @@ const CustomTemplateFields: React.FC<{
                     : [...selected, o];
                   onChange(id, JSON.stringify(next));
                 };
+                const setSelected = (next: string[]) => {
+                  onChange(id, JSON.stringify(next));
+                };
                 if (pillsWithQty) {
                   return (
                     <div key={id} className="sm:col-span-2">
@@ -1365,7 +1370,7 @@ const CustomTemplateFields: React.FC<{
                           label={label}
                           options={opts}
                           selected={selected}
-                          onToggle={toggle}
+                          onSelectedChange={setSelected}
                           tenantId={tenantId}
                           quantities={sampleQtys}
                           onQtyChange={onSampleQtyChange}
@@ -1430,7 +1435,7 @@ const ProductsSampledPillsField: React.FC<{
   label: string;
   options: readonly string[];
   selected: string[];
-  onToggle: (option: string) => void;
+  onSelectedChange: (next: string[]) => void;
   tenantId: string | null;
   quantities: Record<string, string>;
   onQtyChange: (productId: string, v: string) => void;
@@ -1438,7 +1443,7 @@ const ProductsSampledPillsField: React.FC<{
   label,
   options,
   selected,
-  onToggle,
+  onSelectedChange,
   tenantId,
   quantities,
   onQtyChange,
@@ -1462,7 +1467,15 @@ const ProductsSampledPillsField: React.FC<{
     [data],
   );
 
-  const selectedRows = selected
+  // Live catalog wins over frozen CustomField.options so a SKU added in
+  // /products shows on the pills without a second seed (API does the same).
+  const pillOptions = useMemo(() => {
+    const fromCatalog = catalogSampleOptions(products);
+    return fromCatalog.length > 0 ? fromCatalog : [...options];
+  }, [products, options]);
+
+  const selectedRows = pillOptions
+    .filter((option) => sampleOptionSelected(option, selected))
     .map((option) => {
       const product = matchProductForSampleOption(option, products);
       return product ? { option, product } : null;
@@ -1482,21 +1495,28 @@ const ProductsSampledPillsField: React.FC<{
         Tap each SKU you handed out, then enter how many cans.
       </p>
       <div className="flex flex-wrap gap-2">
-        {options.map((o) => {
-          const on = selected.includes(o);
+        {pillOptions.map((o) => {
+          const on = sampleOptionSelected(o, selected);
           return (
             <button
               type="button"
               key={o}
               onClick={() => {
-                const nextOn = !selected.includes(o);
-                onToggle(o);
                 const product = matchProductForSampleOption(o, products);
-                if (!product) return;
-                if (nextOn) {
-                  if (quantities[product.id] == null) onQtyChange(product.id, "");
+                if (on) {
+                  // Deselect this SKU — drop catalog label and any legacy alias.
+                  onSelectedChange(
+                    selected.filter((s) => !sampleOptionSelected(o, [s])),
+                  );
+                  if (product) onQtyChange(product.id, "");
                 } else {
-                  onQtyChange(product.id, "");
+                  const withoutAlias = selected.filter(
+                    (s) => !sampleOptionSelected(o, [s]),
+                  );
+                  onSelectedChange([...withoutAlias, o]);
+                  if (product && quantities[product.id] == null) {
+                    onQtyChange(product.id, "");
+                  }
                 }
               }}
               className="px-3 py-1.5 rounded-lg text-xs border transition-colors"
