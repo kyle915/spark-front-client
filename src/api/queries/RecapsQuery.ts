@@ -1,9 +1,10 @@
 import { graphql } from "react-relay";
 
-// Slim card query for /recaps/list. Keep this to scalars + heroFile.file —
-// do not restore per-row file/field arrays here (that payload is what made
-// the client list hang, then render empty). Detail views have their own
-// queries. Pagination is `first` (50, then more), same as admin.
+// Shared legacy connection used by RecapsList table / reports.
+// SparkRecapsList + client approvals use RecapsListQuery (same slim
+// selection, dedicated operation + store-and-network). Keep this to
+// scalars + heroFile.file — do not restore per-row file/field arrays.
+// Detail views have their own queries.
 export const RecapsQuery = graphql`
   query RecapsQuery(
     $first: Int
