@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canAttemptOpenPunchResume,
   shouldDropSessionToken,
   shouldKeepCachedSession,
 } from "@/components/pages/checkin/checkinSession";
@@ -46,6 +47,20 @@ describe("shouldDropSessionToken", () => {
       }),
     ).toBe(false);
   });
+
+  it("applies to every standing tenant code (not Feel Free only)", () => {
+    // Soft miss on LD / Torch / Brew Dr must keep the bearer — same as FF.
+    for (const _code of ["LD-ABC123", "TH-2HRV3D", "BD-AQRACD", "FF-YMMK3Q"]) {
+      expect(
+        shouldDropSessionToken({
+          mode: "tenant",
+          hasToken: true,
+          hasSession: false,
+          sessionError: null,
+        }),
+      ).toBe(false);
+    }
+  });
 });
 
 describe("shouldKeepCachedSession", () => {
@@ -71,5 +86,59 @@ describe("shouldKeepCachedSession", () => {
         isLeftover: isLeftoverCheckinSession,
       }),
     ).toBe(false);
+  });
+});
+
+describe("canAttemptOpenPunchResume", () => {
+  const base = {
+    mode: "tenant" as const,
+    recapOnly: false,
+    hasLiveSession: false,
+    firstName: "Joy",
+    phone: "5550100",
+    place: "100 Main St",
+    hasToken: true,
+    hasPendingClock: false,
+    cachedClockedIn: false,
+  };
+
+  it("resumes on address-mode standing links (LD / Torch / Brew Dr)", () => {
+    expect(canAttemptOpenPunchResume(base)).toBe(true);
+    expect(
+      canAttemptOpenPunchResume({
+        ...base,
+        place: "Total Wine & More, Austin",
+        hasToken: false,
+        cachedClockedIn: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("resumes on market-mode standing links (Feel Free)", () => {
+    expect(
+      canAttemptOpenPunchResume({
+        ...base,
+        place: "Tampa / St. Pete, FL",
+        hasToken: false,
+        hasPendingClock: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("does not resume without evidence or identity", () => {
+    expect(
+      canAttemptOpenPunchResume({
+        ...base,
+        hasToken: false,
+        hasPendingClock: false,
+        cachedClockedIn: false,
+      }),
+    ).toBe(false);
+    expect(canAttemptOpenPunchResume({ ...base, place: "" })).toBe(false);
+    expect(canAttemptOpenPunchResume({ ...base, phone: "" })).toBe(false);
+    expect(
+      canAttemptOpenPunchResume({ ...base, hasLiveSession: true }),
+    ).toBe(false);
+    expect(canAttemptOpenPunchResume({ ...base, mode: "event" })).toBe(false);
   });
 });

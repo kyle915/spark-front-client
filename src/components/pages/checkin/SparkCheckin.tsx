@@ -49,6 +49,7 @@ import {
   START_OVER_LINK,
 } from "./leftoverCheckin";
 import {
+  canAttemptOpenPunchResume,
   shouldDropSessionToken,
   shouldKeepCachedSession,
 } from "./checkinSession";
@@ -967,27 +968,34 @@ export default function SparkCheckin() {
   }, [refresh]);
 
   // Lost local session but still on this phone for the same shift: re-identify
-  // with saved name/phone + last market so open_shift_event_for restores the
-  // server punch (Michelle — release QR → "not clocked in" while Attendance
-  // still had 6pm). Skips when Start over cleared the cache intentionally.
+  // with saved name/phone + last market/store so open_shift_event_for restores
+  // the server punch on ANY standing code (FF / LD / TH / BD / …). Skips when
+  // Start over cleared the cache intentionally.
   useEffect(() => {
-    if (!ctx || ctx.mode !== "tenant" || ctx.recapOnly) return;
-    if (token && ctx.session) return;
+    if (!ctx) return;
     if (resumeAttempted.current) return;
 
     const who = readIdentity(code);
-    if (!who.firstName.trim() || !who.phone.trim()) return;
-
     const cached = readCachedContext<Context>(code);
     const pending = readPendingClock(code);
     const place =
       (who.lastPlace || "").trim() ||
       (cached?.event?.address || "").trim();
-    const evidence =
-      Boolean(pending) ||
-      cached?.session?.clock?.state === "clocked_in" ||
-      Boolean(token);
-    if (!place || !evidence) return;
+    if (
+      !canAttemptOpenPunchResume({
+        mode: ctx.mode,
+        recapOnly: ctx.recapOnly,
+        hasLiveSession: Boolean(token && ctx.session),
+        firstName: who.firstName,
+        phone: who.phone,
+        place,
+        hasToken: Boolean(token),
+        hasPendingClock: Boolean(pending),
+        cachedClockedIn: cached?.session?.clock?.state === "clocked_in",
+      })
+    ) {
+      return;
+    }
 
     resumeAttempted.current = true;
     const isMarket = (ctx.locationMode || "address") === "market";
@@ -1732,18 +1740,26 @@ function CheckedInFlow({
     setRecapAsNew(asNew);
     setShowRecap(true);
   };
+  const [msg, setMsg] = useState<string | null>(null);
+  const [keepLeftover, setKeepLeftover] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const today = todayISO();
+  // Prior-day leftover banner (any standing code). Hidden only after the BA
+  // explicitly chooses "Stay on that day".
+  const leftover =
+    ctx.mode === "tenant" &&
+    !keepLeftover &&
+    isLeftoverCheckinSession(ctx.event?.date, today);
+  // Second shift is Feel Free + same calendar day only. Gate on the event
+  // date (not keepLeftover) so "Stay on that day" never shows "second shift
+  // today" on a prior-day session.
   const secondShiftOk = supportsStandingSecondShift({
     mode: ctx.mode,
     brand: ctx.brand,
     recapOnly: ctx.recapOnly,
+    eventDate: ctx.event?.date,
+    today,
   });
-  const [msg, setMsg] = useState<string | null>(null);
-  const [keepLeftover, setKeepLeftover] = useState(false);
-  const [clearing, setClearing] = useState(false);
-  const leftover =
-    ctx.mode === "tenant" &&
-    !keepLeftover &&
-    isLeftoverCheckinSession(ctx.event?.date, todayISO());
   const [queuedClock, setQueuedClock] = useState<PendingClockIn | null>(() =>
     readPendingClock(code),
   );
