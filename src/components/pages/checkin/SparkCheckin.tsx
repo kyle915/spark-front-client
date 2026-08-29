@@ -34,7 +34,20 @@ import {
   readPendingRecap,
   type PendingRecap,
 } from "./offlineRecap";
-import { isLeftoverCheckinSession } from "./leftoverCheckin";
+import {
+  CHECK_IN_SOMEWHERE_ELSE,
+  CLEAR_LEFTOVER_ERROR,
+  isLeftoverCheckinSession,
+  LEFTOVER_BANNER_BODY,
+  LEFTOVER_BANNER_BODY_RECAP,
+  LEFTOVER_BANNER_TITLE,
+  LEFTOVER_ESCAPE_LINK,
+  LEFTOVER_PRIMARY_BUSY,
+  LEFTOVER_PRIMARY_CTA,
+  LEFTOVER_PRIMARY_CTA_RECAP,
+  LEFTOVER_SECONDARY_CTA,
+  START_OVER_LINK,
+} from "./leftoverCheckin";
 import {
   shouldDropSessionToken,
   shouldKeepCachedSession,
@@ -45,6 +58,7 @@ import { recapSubmitErrorMessage } from "./recapSubmitError";
 import { TenantLogo } from "@/layout/TenantLogo";
 import { shouldShowSamplingStopCard } from "./samplingStops";
 import {
+  SECOND_SHIFT_HINT,
   SECOND_SHIFT_LABEL,
   SECOND_SHIFT_PROMPT,
   supportsStandingSecondShift,
@@ -1760,13 +1774,13 @@ function CheckedInFlow({
     try {
       const res = await post("clear-clock", {});
       if (mustClose && !res.ok && res.status !== 401) {
-        setMsg("Couldn't clear that clock-in. Check your connection and try again.");
+        setMsg(CLEAR_LEFTOVER_ERROR);
         setClearing(false);
         return;
       }
     } catch {
       if (mustClose) {
-        setMsg("Couldn't clear that clock-in. Check your connection and try again.");
+        setMsg(CLEAR_LEFTOVER_ERROR);
         setClearing(false);
         return;
       }
@@ -2118,8 +2132,7 @@ function CheckedInFlow({
                   {SECOND_SHIFT_PROMPT}
                 </p>
                 <p style={{ fontSize: 13, opacity: 0.65, margin: "0 0 12px" }}>
-                  Same market, same day — your second filing is labeled{" "}
-                  {SECOND_SHIFT_LABEL} so it doesn’t overwrite the first.
+                  {SECOND_SHIFT_HINT}
                 </p>
                 {!ctx.recapOnly ? (
                   <button
@@ -2174,7 +2187,7 @@ function CheckedInFlow({
                 ? "File for another store / date"
                 : secondShiftOk
                   ? "Different market? Start over"
-                  : "Different store? Log another event"}
+                  : "Check in at a different store"}
             </button>
             {msg ? <p style={{ ...errText, marginTop: 12 }}>{msg}</p> : null}
           </>
@@ -2201,16 +2214,14 @@ function CheckedInFlow({
               color: "#ef5a2a",
             }}
           >
-            This isn't today's shift
+            {LEFTOVER_BANNER_TITLE}
           </div>
           <p style={{ fontSize: 15, fontWeight: 700, margin: "6px 0 4px" }}>
             {fmtDay(ctx.event?.date)}
             {ctx.event?.address ? ` · ${ctx.event.address}` : ""}
           </p>
           <p style={{ fontSize: 13, opacity: 0.7, margin: "0 0 12px" }}>
-            {ctx.recapOnly
-              ? "This form is for that day, not today. Start a new recap to pick today's date."
-              : "Clocking in here files against that day, not today. Clear the leftover clock-in to start a new check-in."}
+            {ctx.recapOnly ? LEFTOVER_BANNER_BODY_RECAP : LEFTOVER_BANNER_BODY}
           </p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button
@@ -2219,17 +2230,17 @@ function CheckedInFlow({
               onClick={() => void clearClockIn()}
             >
               {clearing
-                ? "Clearing…"
+                ? LEFTOVER_PRIMARY_BUSY
                 : ctx.recapOnly
-                  ? "Start a new recap"
-                  : "Clear clock-in"}
+                  ? LEFTOVER_PRIMARY_CTA_RECAP
+                  : LEFTOVER_PRIMARY_CTA}
             </button>
             <button
               style={secondaryBtn}
               disabled={clearing}
               onClick={() => setKeepLeftover(true)}
             >
-              Keep this shift
+              {LEFTOVER_SECONDARY_CTA}
             </button>
           </div>
         </div>
@@ -2380,12 +2391,12 @@ function CheckedInFlow({
               <button style={secondaryBtn} onClick={() => openRecap(false)}>
                 File recap
               </button>
-              {ctx.mode === "tenant" ? (
+              {ctx.mode === "tenant" && !leftover ? (
                 <button
                   style={secondaryBtn}
-                  onClick={() => (leftover ? void clearClockIn() : onStartAnother())}
+                  onClick={() => onStartAnother()}
                 >
-                  Log another event
+                  {CHECK_IN_SOMEWHERE_ELSE}
                 </button>
               ) : null}
             </>
@@ -2423,7 +2434,7 @@ function CheckedInFlow({
             alignSelf: "center",
           }}
         >
-          Wrong store or date? Start over
+          {leftover ? LEFTOVER_ESCAPE_LINK : START_OVER_LINK}
         </button>
       ) : null}
 

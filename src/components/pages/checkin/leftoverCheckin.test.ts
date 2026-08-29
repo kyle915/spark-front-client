@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  CHECK_IN_SOMEWHERE_ELSE,
   eventCalendarDate,
   isLeftoverCheckinSession,
   isStaleWalkupSession,
+  LEFTOVER_BANNER_BODY,
+  LEFTOVER_PRIMARY_CTA,
+  LEFTOVER_SECONDARY_CTA,
 } from "@/components/pages/checkin/leftoverCheckin";
 
 describe("leftoverCheckin", () => {
@@ -27,5 +31,13 @@ describe("leftoverCheckin", () => {
 
   it("parses event calendar date", () => {
     expect(eventCalendarDate("2026-08-20T12:00:00Z")).toBe("2026-08-20");
+  });
+
+  it("uses outcome-first CTA copy (not clear/delete language)", () => {
+    expect(LEFTOVER_PRIMARY_CTA).toBe("Start today's shift");
+    expect(LEFTOVER_SECONDARY_CTA).toBe("Stay on that day");
+    expect(LEFTOVER_BANNER_BODY.toLowerCase()).toContain("stay on the record");
+    expect(LEFTOVER_PRIMARY_CTA.toLowerCase()).not.toContain("clear");
+    expect(CHECK_IN_SOMEWHERE_ELSE.toLowerCase()).not.toContain("log another");
   });
 });
