@@ -86,10 +86,8 @@ export const RecapUploader: React.FC<Props> = ({
     let done = 0;
     let failed = 0;
     for (const item of batch) {
-      const prepared =
-        category === "photo"
-          ? await prepareImageForUpload(item.file)
-          : item.file;
+      // Photos + image receipts: HEIC→JPEG + downscale. PDFs pass through.
+      const prepared = await prepareImageForUpload(item.file);
       const contentType = prepared.type || "application/octet-stream";
       const stamp = Date.now();
       const prefix = category === "receipt" ? "recaps/receipts" : "recaps";
