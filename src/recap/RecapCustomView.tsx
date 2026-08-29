@@ -2138,7 +2138,7 @@ const RecapCustomViewInner = () => {
                     The imported Connecteam PDF didn't include any usable event
                     photos. Upload them here before approving — use the{" "}
                     <b>Upload</b> button on the right (pick the right section
-                    first: Sampling photos or Receipts).
+                    first — any of this brand's photo sections).
                   </p>
                 </div>
                 <button
@@ -2175,7 +2175,7 @@ const RecapCustomViewInner = () => {
               {recap.uuid && !isClient && (
                 <div className="flex items-center gap-2">
                   {/* Pick the section a new upload lands in, so receipts go
-                      straight to Receipts instead of clumping with photos. */}
+                      straight into the right tenant section. */}
                   <select
                     value={uploadCategory}
                     onChange={(e) => setUploadCategory(e.target.value)}

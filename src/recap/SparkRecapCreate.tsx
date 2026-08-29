@@ -16,6 +16,14 @@ import type { CreateRecapMutation as CreateRecapMutationType } from "@/api/mutat
 import type { CreateCustomRecapMutation as CreateCustomRecapMutationType } from "@/api/mutations/__generated__/CreateCustomRecapMutation.graphql";
 import type { ParseConnecteamRecapPdfMutation as ParseConnecteamRecapPdfMutationType } from "@/api/mutations/__generated__/ParseConnecteamRecapPdfMutation.graphql";
 import RecapUploader from "./RecapUploader";
+import { FileRecapCategoriesQuery } from "@/api/queries/FileRecapCategoriesQuery";
+import type { FileRecapCategoriesQuery as FileRecapCategoriesQueryType } from "@/api/queries/__generated__/FileRecapCategoriesQuery.graphql";
+import {
+  buildFileRecapCategoryOptions,
+  defaultUploadCategoryName,
+  isReceiptLikeCategory,
+  FALLBACK_FILE_CATEGORY_PHOTOS,
+} from "@/recap/fileRecapCategoryOptions";
 import { useAlertStore } from "@/store/alertStore";
 import { useSparkRole } from "@/hooks/useSparkRole";
 import { useAuthStore } from "@/store/authStore";
@@ -28,6 +36,8 @@ import {
   isProductsSampledMultiselect,
   matchProductForSampleOption,
 } from "./productsSampledQty";
+
+type PendingRecapFile = { blob: string; categoryName: string };
 
 /**
  * Spark v2 — manual recap submission flow.
@@ -269,9 +279,31 @@ export default function SparkRecapCreate() {
   const setSampleQty = (productId: string, v: string) =>
     setSampleQtys((prev) => ({ ...prev, [productId]: v }));
 
-  // Files
-  const [photoBlobs, setPhotoBlobs] = useState<string[]>([]);
-  const [receiptBlobs, setReceiptBlobs] = useState<string[]>([]);
+  // Files — each blob tagged with a tenant FileRecapCategory NAME so Torch
+  // "Product Spend" (and any other bucket) is targetable, not just the
+  // classic Sampling photos / Receipts pair.
+  const [pendingFiles, setPendingFiles] = useState<PendingRecapFile[]>([]);
+  const [uploadCategory, setUploadCategory] = useState(
+    FALLBACK_FILE_CATEGORY_PHOTOS,
+  );
+  const categoriesData = useLazyLoadQuery<FileRecapCategoriesQueryType>(
+    FileRecapCategoriesQuery,
+    { filters: { tenantId: tenantId || "0" } },
+    { fetchPolicy: "store-and-network" },
+  );
+  const fileCategoryOptions = useMemo(
+    () =>
+      buildFileRecapCategoryOptions(
+        categoriesData.fileRecapCategories.edges.map((e) => e?.node),
+      ),
+    [categoriesData],
+  );
+  useEffect(() => {
+    setUploadCategory((prev) => {
+      if (fileCategoryOptions.some((o) => o.name === prev)) return prev;
+      return defaultUploadCategoryName(fileCategoryOptions);
+    });
+  }, [fileCategoryOptions]);
 
   // Admin-only ambassador override (Relay-encoded global id, not uuid —
   // the createRecap mutation runs ambassadorId through resolve_id_to_int
@@ -442,18 +474,11 @@ export default function SparkRecapCreate() {
             }))
         : [];
 
-    const files = [
-      ...photoBlobs.map((blob) => ({
-        file: blob,
-        fileTypeId: "1",
-        fileRecapCategoryId: "Sampling photos",
-      })),
-      ...receiptBlobs.map((blob) => ({
-        file: blob,
-        fileTypeId: "1",
-        fileRecapCategoryId: "Receipts",
-      })),
-    ];
+    const files = pendingFiles.map(({ blob, categoryName }) => ({
+      file: blob,
+      fileTypeId: "1",
+      fileRecapCategoryId: categoryName,
+    }));
 
     commitCustom({
       variables: {
@@ -521,10 +546,11 @@ export default function SparkRecapCreate() {
       showAlert("Pick the event this recap is for.", "warning");
       return;
     }
-    const files = [
-      ...photoBlobs.map((blob) => ({ file: blob, fileTypeId: "1", fileRecapCategoryId: "Sampling photos" })),
-      ...receiptBlobs.map((blob) => ({ file: blob, fileTypeId: "1", fileRecapCategoryId: "Receipts" })),
-    ];
+    const files = pendingFiles.map(({ blob, categoryName }) => ({
+      file: blob,
+      fileTypeId: "1",
+      fileRecapCategoryId: categoryName,
+    }));
     // Per-SKU samples (product + units), same shape as the custom flow.
     // Sent only when at least one product got a positive quantity.
     const productSamples = Object.entries(sampleQtys)
@@ -1069,27 +1095,42 @@ export default function SparkRecapCreate() {
           before submit — earlier UI only showed an "N PHOTOS READY"
           counter which made it impossible to tell whether a multi-file
           pick actually landed or only the last one stuck. */}
-      <Card title="PHOTOS + RECEIPTS">
-        <div className="flex flex-wrap gap-3">
+      <Card title="PHOTOS + FILES">
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={uploadCategory}
+            onChange={(e) => setUploadCategory(e.target.value)}
+            title="Section for new uploads"
+            className="spark-input text-sm rounded-full"
+          >
+            {fileCategoryOptions.map((opt) => (
+              <option key={opt.id} value={opt.name}>
+                {opt.name}
+              </option>
+            ))}
+          </select>
           <RecapUploader
             recapUuid={stubUuid}
-            category="photo"
-            onUploaded={(blob) => setPhotoBlobs((p) => [...p, blob])}
-          />
-          <RecapUploader
-            recapUuid={stubUuid}
-            category="receipt"
-            onUploaded={(blob) => setReceiptBlobs((p) => [...p, blob])}
+            category={
+              isReceiptLikeCategory(uploadCategory) ? "receipt" : "photo"
+            }
+            label={`Upload · ${uploadCategory}`}
+            onUploaded={(blob) =>
+              setPendingFiles((p) => [
+                ...p,
+                { blob, categoryName: uploadCategory },
+              ])
+            }
           />
         </div>
         <p className="mono text-[10px] mt-3" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.55)" }}>
-          {photoBlobs.length} PHOTO{photoBlobs.length === 1 ? "" : "S"} · {receiptBlobs.length} RECEIPT{receiptBlobs.length === 1 ? "" : "S"} READY
+          {pendingFiles.length} FILE{pendingFiles.length === 1 ? "" : "S"} READY
         </p>
-        {photoBlobs.length > 0 && (
+        {pendingFiles.length > 0 && (
           <div className="mt-3 space-y-1.5">
-            {photoBlobs.map((blob, i) => (
+            {pendingFiles.map((item, i) => (
               <div
-                key={`${blob}-${i}`}
+                key={`${item.blob}-${i}`}
                 className="flex items-center justify-between gap-3 rounded-lg px-3 py-2"
                 style={{
                   background: "var(--spark-surface-2)",
@@ -1097,11 +1138,18 @@ export default function SparkRecapCreate() {
                 }}
               >
                 <span className="mono text-[11px] truncate" style={{ color: "rgba(255,255,255,0.75)" }}>
-                  📷 {blob.split("/").pop()}
+                  {isReceiptLikeCategory(item.categoryName) ? "📎" : "📷"}{" "}
+                  {item.blob.split("/").pop()}
+                  <span style={{ color: "rgba(255,255,255,0.45)" }}>
+                    {" "}
+                    · {item.categoryName}
+                  </span>
                 </span>
                 <button
                   type="button"
-                  onClick={() => setPhotoBlobs((p) => p.filter((_, idx) => idx !== i))}
+                  onClick={() =>
+                    setPendingFiles((p) => p.filter((_, idx) => idx !== i))
+                  }
                   className="mono text-[10px] px-2 py-1 rounded-full shrink-0"
                   style={{
                     letterSpacing: "0.14em",
@@ -1116,40 +1164,9 @@ export default function SparkRecapCreate() {
             ))}
           </div>
         )}
-        {receiptBlobs.length > 0 && (
-          <div className="mt-3 space-y-1.5">
-            {receiptBlobs.map((blob, i) => (
-              <div
-                key={`${blob}-${i}`}
-                className="flex items-center justify-between gap-3 rounded-lg px-3 py-2"
-                style={{
-                  background: "var(--spark-surface-2)",
-                  border: "1px solid var(--spark-border)",
-                }}
-              >
-                <span className="mono text-[11px] truncate" style={{ color: "rgba(255,255,255,0.75)" }}>
-                  📎 {blob.split("/").pop()}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setReceiptBlobs((p) => p.filter((_, idx) => idx !== i))}
-                  className="mono text-[10px] px-2 py-1 rounded-full shrink-0"
-                  style={{
-                    letterSpacing: "0.14em",
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "rgba(255,255,255,0.65)",
-                  }}
-                >
-                  REMOVE
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        {(photoBlobs.length > 0 || receiptBlobs.length > 0) && (
+        {pendingFiles.length > 0 && (
           <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.45)" }}>
-            Files upload to GCS as you pick them — they only get attached to the recap when you submit. Tap the Upload button again to add more.
+            Files upload to GCS as you pick them — they only get attached to the recap when you submit. Tap Upload again to add more into the selected section.
           </p>
         )}
       </Card>
@@ -1270,7 +1287,7 @@ const CustomTemplateFields: React.FC<{
                   <div key={id} className="sm:col-span-2">
                     <Field label={label}>
                       <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>
-                        Attach this in “Photos + Receipts” below.
+                        Attach this in “Photos + Files” below.
                       </p>
                     </Field>
                   </div>
