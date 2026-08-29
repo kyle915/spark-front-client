@@ -16,6 +16,8 @@ import { Link, useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { TrackerStatusCountsQuery } from "@/api/queries/TrackerStatusCountsQuery";
+import type { TrackerStatusCountsQuery as TrackerStatusCountsQueryType } from "@api/queries/__generated__/TrackerStatusCountsQuery.graphql";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { UsersQuery } from "@/api/queries/UsersQuery";
@@ -29,6 +31,7 @@ import {
   trackerDateRangeToServer,
   trackerSortToServer,
   trackerStatusToServer,
+  type TrackerDateRange,
 } from "@/requests/masterTrackerFilters";
 
 /**
@@ -829,19 +832,107 @@ const reqCodeOf = (id: string): string => id.slice(-4).toUpperCase();
 
 const TRACKER_PAGE_SIZE = 100;
 
+/**
+ * Server status-chip + market totals. Independent of the paged rows query
+ * so chips stay accurate past page 1 and while a status filter is active.
+ */
+const TrackerStatusCountsLoader: React.FC<{
+  tenantId: string;
+  search: string;
+  rmmFilter: string;
+  dateRange: TrackerDateRange;
+  marketFilter: string;
+  schedulingFilter: string;
+  onCounts: (counts: Record<string, number>, total: number) => void;
+  onMarkets: (markets: string[]) => void;
+}> = ({
+  tenantId,
+  search,
+  rmmFilter,
+  dateRange,
+  marketFilter,
+  schedulingFilter,
+  onCounts,
+  onMarkets,
+}) => {
+  const reqNeedle = useMemo(() => {
+    const m = search.trim().match(/^req[-\s]*([a-z0-9]{1,4})$/i);
+    return m ? m[1].toUpperCase() : null;
+  }, [search]);
+
+  const filters = useMemo(() => {
+    const dateBounds = reqNeedle ? {} : trackerDateRangeToServer(dateRange);
+    return {
+      tenantId,
+      rmmAsigned: rmmFilter === "all" ? null : rmmFilter,
+      ...dateBounds,
+      // Status intentionally omitted — trackerStatusCounts ignores it
+      // server-side too, but don't send a chip filter that could confuse
+      // future schema changes.
+      schedulingStatus:
+        reqNeedle || schedulingFilter === "all" ? null : schedulingFilter,
+      stateCode: reqNeedle || marketFilter === "all" ? null : marketFilter,
+    };
+  }, [
+    tenantId,
+    rmmFilter,
+    dateRange,
+    schedulingFilter,
+    marketFilter,
+    reqNeedle,
+  ]);
+
+  const filterKey = useMemo(
+    () =>
+      [
+        tenantId,
+        rmmFilter,
+        dateRange,
+        schedulingFilter,
+        marketFilter,
+        search,
+      ].join("|"),
+    [tenantId, rmmFilter, dateRange, schedulingFilter, marketFilter, search],
+  );
+
+  const data = useLazyLoadQuery<TrackerStatusCountsQueryType>(
+    TrackerStatusCountsQuery,
+    {
+      filters,
+      q: reqNeedle ? null : search || null,
+    },
+    { fetchPolicy: "store-and-network", fetchKey: filterKey },
+  );
+
+  useEffect(() => {
+    const buckets = data?.trackerStatusCounts?.buckets ?? [];
+    const next: Record<string, number> = {};
+    for (const b of buckets) {
+      if (!b?.slug) continue;
+      next[b.slug.toLowerCase()] = b.count ?? 0;
+    }
+    onCounts(next, data?.trackerStatusCounts?.total ?? 0);
+    onMarkets(
+      (data?.trackerStatusCounts?.marketCodes ?? []).filter(
+        (c): c is string => Boolean(c),
+      ),
+    );
+  }, [data, onCounts, onMarkets]);
+
+  return null;
+};
+
 const MasterTrackerInner: React.FC<{
   activeStatus: string;
   search: string;
   rmmFilter: string;
   groupBy: "none" | "date";
-  dateRange: "all" | "next7" | "next30" | "past7" | "past30" | "month";
+  dateRange: TrackerDateRange;
   sortMode: "date-desc" | "date-asc" | "venue" | "status";
   marketFilter: string;
   schedulingFilter: string;
   mentionables: Mentionable[];
-  onCountsChange: (counts: Record<string, number>, total: number) => void;
   onVisibleRowsChange?: (rows: Row[]) => void;
-  onMarketsChange?: (markets: string[]) => void;
   onClone?: (row: Row) => void;
   onAssignBa?: (row: Row) => void;
   onPostBoard?: (row: Row) => void;
@@ -856,9 +947,7 @@ const MasterTrackerInner: React.FC<{
   marketFilter,
   schedulingFilter,
   mentionables,
-  onCountsChange,
   onVisibleRowsChange,
-  onMarketsChange,
   onClone,
   onAssignBa,
   onPostBoard,
@@ -1126,26 +1215,6 @@ const MasterTrackerInner: React.FC<{
   }, [allRows, sortMode, reqNeedle]);
 
   useEffect(() => {
-    if (!onMarketsChange) return;
-    const set = new Set<string>();
-    for (const r of allRows) {
-      const parts = (r.market ?? "").split(",").map((s) => s.trim());
-      const code = parts[parts.length - 1];
-      if (code && code !== "—") set.add(code);
-    }
-    onMarketsChange([...set].sort());
-  }, [allRows, onMarketsChange]);
-
-  useEffect(() => {
-    const counts: Record<string, number> = {};
-    allRows.forEach((r) => {
-      counts[r.statusSlug] = (counts[r.statusSlug] ?? 0) + 1;
-    });
-    const total = data?.requests?.totalCount ?? allRows.length;
-    onCountsChange(counts, total);
-  }, [allRows, data?.requests?.totalCount, onCountsChange]);
-
-  useEffect(() => {
     if (onVisibleRowsChange) onVisibleRowsChange(rows);
   }, [rows, onVisibleRowsChange]);
 
@@ -1270,24 +1339,17 @@ export default function MasterTracker() {
   const [rmmList, setRmmList] = useState<Mentionable[]>([]);
   const [adminList, setAdminList] = useState<Mentionable[]>([]);
   const [visibleRows, setVisibleRows] = useState<Row[]>([]);
-  // Date-range filter applied client-side to the already-loaded rows.
-  // "all" = no date constraint. "next7" / "next30" — future window.
-  // "past7" / "past30" — recent window. "month" — calendar-month.
-  const [dateRange, setDateRange] = useState<
-    "all" | "next7" | "next30" | "past7" | "past30" | "month"
-  >("all");
-  // Client-side sort. Default keeps the existing "newest first by
-  // date" behavior; the other options let kyle sort by venue
-  // alphabetically or by status urgency.
+  // Date-range / scheduling filters are applied server-side via
+  // RequestFiltersInput (see masterTrackerFilters.ts + trackerStatusCounts).
+  const [dateRange, setDateRange] = useState<TrackerDateRange>("all");
+  // Client-side sort for venue / status urgency; date sort is server-side.
   const [sortMode, setSortMode] = useState<
     "date-desc" | "date-asc" | "venue" | "status"
   >("date-desc");
-  // Market filter — derives from the unique state codes in the
-  // currently-loaded rows. "all" means no filter.
+  // Market filter — options come from trackerStatusCounts.marketCodes.
   const [marketFilter, setMarketFilter] = useState<string>("all");
   const [markets, setMarkets] = useState<string[]>([]);
-  // Scheduling-status filter — "all" | "already_scheduled" |
-  // "needs_scheduling". Applied client-side to the loaded rows.
+  // Scheduling-status filter — server-side via schedulingStatus.
   const [schedulingFilter, setSchedulingFilter] = useState<string>("all");
 
   // Saved views — everything a "view" captures, and how to re-apply one.
@@ -1897,6 +1959,21 @@ export default function MasterTracker() {
           </Suspense>
         )}
 
+        {tenantId && (
+          <Suspense fallback={null}>
+            <TrackerStatusCountsLoader
+              tenantId={tenantId}
+              search={search}
+              rmmFilter={rmmFilter}
+              dateRange={dateRange}
+              marketFilter={marketFilter}
+              schedulingFilter={schedulingFilter}
+              onCounts={handleCounts}
+              onMarkets={setMarkets}
+            />
+          </Suspense>
+        )}
+
         {/* Table */}
         <Suspense
           fallback={
@@ -1922,9 +1999,7 @@ export default function MasterTracker() {
               ...rmmList,
               ...(adminList.length > 0 ? adminList : ADMIN_ROSTER_FALLBACK),
             ]}
-            onCountsChange={handleCounts}
             onVisibleRowsChange={setVisibleRows}
-            onMarketsChange={setMarkets}
             onClone={(row) =>
               setCloneSource({
                 id: row.uuid,
