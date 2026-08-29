@@ -3,6 +3,11 @@
  * (`spark.checkin.FF-YMMK3Q`) and tenant tokens last 90 days. Reopening the
  * Feel Free link on Wednesday restores Saturday's event. Clock in then
  * punches that leftover day — the Alicia identify date-gate never runs.
+ *
+ * ``isStaleWalkupSession`` detects that leftover token+date case for tests /
+ * callers. Do NOT auto-wipe localStorage on date mismatch: that fights
+ * mid-shift recovery. The leftover banner + Clear clock-in is the BA-facing
+ * path; same-day open punches must survive temporary navigation (release QR).
  */
 
 /** Civil YYYY-MM-DD from Event.date (noon-UTC ISO). Matches API event_calendar_date. */
