@@ -3,6 +3,7 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import { LiveShiftBoardQuery } from "@/api/queries/LiveShiftBoardQuery";
 import type { LiveShiftBoardQuery as LiveShiftBoardQueryType } from "@api/queries/__generated__/LiveShiftBoardQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
+import AdminPunchControls from "@/components/staffing/AdminPunchControls";
 
 /**
  * Live "on the clock" board — today's shifts and who's actually working right
@@ -61,7 +62,11 @@ const clockLabel = (ba: BA): string => {
   return "";
 };
 
-const BARow: React.FC<{ ba: BA }> = ({ ba }) => {
+const BARow: React.FC<{
+  ba: BA;
+  eventUuid: string;
+  onPunchChange: () => void;
+}> = ({ ba, eventUuid, onPunchChange }) => {
   const s = STATUS[ba.status] ?? STATUS.upcoming;
   const times = clockLabel(ba);
   const hasFix = ba.lat != null && ba.lng != null;
@@ -153,13 +158,27 @@ const BARow: React.FC<{ ba: BA }> = ({ ba }) => {
           PENDING RECAP
         </span>
       )}
+
+      <AdminPunchControls
+        eventUuid={eventUuid}
+        ambassadorUuid={ba.ambassadorUuid}
+        status={ba.status}
+        clockInAt={ba.clockInAt}
+        clockOutAt={ba.clockOutAt}
+        onDone={onPunchChange}
+      />
     </div>
   );
 };
 
-const Inner: React.FC<{ refreshKey: number; tenantId: string }> = ({
+const Inner: React.FC<{
+  refreshKey: number;
+  tenantId: string;
+  bump: () => void;
+}> = ({
   refreshKey,
   tenantId,
+  bump,
 }) => {
   const data = useLazyLoadQuery<LiveShiftBoardQueryType>(
     LiveShiftBoardQuery,
@@ -262,7 +281,12 @@ const Inner: React.FC<{ refreshKey: number; tenantId: string }> = ({
               </div>
               <div className="flex flex-col">
                 {s.assigned.map((ba) => (
-                  <BARow key={ba.ambassadorUuid} ba={ba} />
+                  <BARow
+                    key={ba.ambassadorUuid}
+                    ba={ba}
+                    eventUuid={s.eventUuid}
+                    onPunchChange={bump}
+                  />
                 ))}
               </div>
             </div>
@@ -339,7 +363,11 @@ export default function SparkLiveBoard() {
             </p>
           }
         >
-          <Inner refreshKey={refreshKey} tenantId={tenantId} />
+          <Inner
+            refreshKey={refreshKey}
+            tenantId={tenantId}
+            bump={() => setRefreshKey((k) => k + 1)}
+          />
         </Suspense>
       )}
     </div>
