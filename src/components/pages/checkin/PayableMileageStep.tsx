@@ -420,6 +420,11 @@ export default function PayableMileageStep({
         >
           <strong>Payable miles: {formatPayableMiles(claim.payableMiles)}</strong>
           <div style={{ fontSize: 12, marginTop: 4, opacity: 0.9 }}>
+            {claim.routeSource === "google_route"
+              ? "Google Maps driving route through your stops. "
+              : claim.routeSource === "osrm_route"
+                ? "Road route through your stops. "
+                : ""}
             Opening your recap…
           </div>
         </div>
