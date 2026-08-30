@@ -128,8 +128,6 @@ export const GetCustomRecapQuery = graphql`
       eventRetailer
       eventCity
       eventState
-      # Feel Free storage→stops itinerary miles (auto-filled into Mileage field).
-      payableMiles
       event {
         id
         name
