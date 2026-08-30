@@ -1,5 +1,6 @@
 /**
- * Helpers for Evidences upload / "Move to…" category picks on RecapCustomView.
+ * Helpers for Evidences upload / "Move to…" category picks across recap UIs
+ * (RecapCustomView, SparkRecapCreate, SparkRecapView).
  *
  * The dropdowns used to hard-code only "Sampling photos" + "Receipts", which
  * left tenant buckets like Torch THC "Product Spend" visible (files already
@@ -67,4 +68,21 @@ export function defaultUploadCategoryName(
     (o) => o.name.toLowerCase() === FALLBACK_FILE_CATEGORY_PHOTOS.toLowerCase(),
   );
   return photos?.name ?? options[0]?.name ?? FALLBACK_FILE_CATEGORY_PHOTOS;
+}
+
+/**
+ * Default receipt / spend section for dual-uploader flows: prefer an exact
+ * "Receipts" row, else the first receipt-like name (e.g. Torch "Product Spend"),
+ * else the classic Receipts fallback.
+ */
+export function defaultReceiptCategoryName(
+  options: ReadonlyArray<FileRecapCategoryOption>,
+): string {
+  const exact = options.find(
+    (o) =>
+      o.name.toLowerCase() === FALLBACK_FILE_CATEGORY_RECEIPTS.toLowerCase(),
+  );
+  if (exact) return exact.name;
+  const receiptLike = options.find((o) => isReceiptLikeCategory(o.name));
+  return receiptLike?.name ?? FALLBACK_FILE_CATEGORY_RECEIPTS;
 }

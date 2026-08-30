@@ -4,18 +4,15 @@ import { fetchQuery } from "relay-runtime";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapsListSkeleton } from "@/layout/PageSkeletons";
-import { RecapsQuery } from "@/api/queries/RecapsQuery";
+import { RecapsListQuery } from "@/api/queries/RecapsListQuery";
 import { thumbUrl } from "@/utils/thumb";
-import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/RecapsQuery.graphql";
-// Pulled in so the unified /recaps view can list CustomRecap rows
-// alongside the legacy Recap rows. Without this, custom-template
-// tenants (Liquid Death, Borjomi, Girl Beer, …) had their recaps
-// invisible on /recaps and only surfaced under /recaps/custom-list
-// — Kyle reported Dumbo Market and Austin Psych Fest missing.
-import { GetCustomRecapsQuery } from "@/api/queries/CustomRecapsQuery";
+import type { RecapsListQuery as RecapsListQueryType } from "@api/queries/__generated__/RecapsListQuery.graphql";
+// Slim list ops for the unified /recaps card grid. Detail keeps
+// RecapQuery / CustomRecapsQueryDetailsQuery (full file/field arrays).
+import { CustomRecapsListQuery } from "@/api/queries/CustomRecapsListQuery";
 import { ThirdPartyRecapBadge } from "@/recap/ThirdPartyRecapBadge";
 import { recapApprovalMeta } from "@/recap/recapApprovalMeta";
-import type { CustomRecapsQuery as CustomRecapsQueryType } from "@api/queries/__generated__/CustomRecapsQuery.graphql";
+import type { CustomRecapsListQuery as CustomRecapsListQueryType } from "@api/queries/__generated__/CustomRecapsListQuery.graphql";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { GenerateCampaignReportPdfMutation } from "@/api/mutations/GenerateCampaignReportPdfMutation";
@@ -250,9 +247,10 @@ const limeBtn: React.CSSProperties = {
   boxShadow: "0 0 24px rgba(197,245,70,0.35)",
 };
 
-type LegacyRecapNode = RecapsQueryType["response"]["recaps"]["edges"][number]["node"];
+type LegacyRecapNode =
+  RecapsListQueryType["response"]["recaps"]["edges"][number]["node"];
 type CustomRecapNode =
-  CustomRecapsQueryType["response"]["customRecaps"]["edges"][number]["node"];
+  CustomRecapsListQueryType["response"]["customRecaps"]["edges"][number]["node"];
 
 const mapLegacyRecap = (n: LegacyRecapNode): Recap => {
   const retailerName = n.eventRetailer || "—";
@@ -315,9 +313,8 @@ const mapCustomRecap = (n: CustomRecapNode): Recap => ({
   kind: "custom" as const,
   id: String(n.id),
   uuid: String(n.uuid),
-  name:
-    n.name ?? n.event?.name ?? n.customRecapTemplate?.name ?? "Custom recap",
-  date: n.eventDate ?? n.event?.date ?? n.createdAt ?? "",
+  name: n.name ?? n.customRecapTemplate?.name ?? "Custom recap",
+  date: n.eventDate ?? n.createdAt ?? "",
   retailerName: n.eventRetailer || "—",
   stateCode: toStateCode(n.eventState) ?? toStateCode(n.eventAddress),
   approved: Boolean(n.approved),
@@ -944,26 +941,30 @@ const RecapsListInner: React.FC<{
   // (50) re-fetched the same 50 rows, the sentinel stayed in view, and
   // Relay aborted the in-flight request → "Failed to fetch". Later pages
   // use fetchQuery + after:endCursor so this hook never remounts.
-  const data = useLazyLoadQuery<RecapsQueryType>(
-    RecapsQuery,
+  //
+  // store-and-network = store-first paint + background refresh (Apollo
+  // cache-and-network). Revisits paint from the Relay store immediately
+  // while a network round-trip refreshes the page.
+  const data = useLazyLoadQuery<RecapsListQueryType>(
+    RecapsListQuery,
     {
       first: page1Vars.first,
       after: page1Vars.after,
       q: searchQ,
       filters: listFilters,
     },
-    { fetchPolicy: "store-or-network", fetchKey: refreshKey },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
 
-  const customData = useLazyLoadQuery<CustomRecapsQueryType>(
-    GetCustomRecapsQuery,
+  const customData = useLazyLoadQuery<CustomRecapsListQueryType>(
+    CustomRecapsListQuery,
     {
       first: page1Vars.first,
       after: page1Vars.after,
       q: searchQ,
       filters: customListFilters,
     },
-    { fetchPolicy: "store-or-network", fetchKey: refreshKey },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
 
   const page1Legacy = useMemo(
@@ -1039,16 +1040,16 @@ const RecapsListInner: React.FC<{
     try {
       const [legacyPage, customPage] = await Promise.all([
         legacyHasMore
-          ? fetchQuery<RecapsQueryType>(environment, RecapsQuery, {
+          ? fetchQuery<RecapsListQueryType>(environment, RecapsListQuery, {
               ...next(legacyAfter),
               q: searchQ,
               filters: listFilters,
             }, { fetchPolicy: "network-only" }).toPromise()
           : Promise.resolve(null),
         customHasMore
-          ? fetchQuery<CustomRecapsQueryType>(
+          ? fetchQuery<CustomRecapsListQueryType>(
               environment,
-              GetCustomRecapsQuery,
+              CustomRecapsListQuery,
               {
                 ...next(customAfter),
                 q: searchQ,

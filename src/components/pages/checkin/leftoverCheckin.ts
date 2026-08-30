@@ -1,18 +1,21 @@
 /**
  * Standing walk-up sessions live in localStorage keyed only by the code
- * (`spark.checkin.FF-YMMK3Q`) and tenant tokens last 90 days. Reopening the
- * Feel Free link on Wednesday restores Saturday's event. Clock in then
- * punches that leftover day — the Alicia identify date-gate never runs.
+ * (`spark.checkin.FF-…`, `LD-…`, `TH-…`, `BD-…`, …) and tenant tokens last
+ * 90 days. Reopening any standing link on Wednesday can restore Saturday's
+ * event. Clock in then punches that leftover day — the Alicia identify
+ * date-gate never runs.
  *
- * ``isStaleWalkupSession`` detects that leftover token+date case for tests /
- * callers. Do NOT auto-wipe localStorage on date mismatch: that fights
- * mid-shift recovery. The leftover banner + "Start today's shift" is the
- * BA-facing path; same-day open punches must survive temporary navigation
- * (release QR / PR #577).
+ * ``isStaleWalkupSession`` / ``walkupDayKind`` detect that leftover
+ * token+date case. Do NOT auto-wipe localStorage on date mismatch: that
+ * fights mid-shift recovery. The leftover banner + "Start today's shift"
+ * is the BA-facing path; same-day open punches must survive temporary
+ * navigation (release QR / PR #577).
  *
- * Second shift (same calendar day, Feel Free) is a different flow — see
- * ``secondShift.ts``. Leftover = prior day still restored; second shift =
- * already finished today's first filing and starting another on the same day.
+ * Second shift (same calendar day, Feel Free market) is a different flow —
+ * see ``secondShift.ts``. These must never look alike:
+ *   leftover     = prior calendar day still restored
+ *   second shift = already finished today's first filing, starting another
+ *                  on the same day
  */
 
 /** Banner title when the restored session's event date is not today. */
@@ -56,12 +59,24 @@ export function eventCalendarDate(iso: string | null | undefined): string | null
   return m?.[1] ?? null;
 }
 
+/** How a restored standing session relates to "today". */
+export type WalkupDayKind = "leftover_prior_day" | "same_day" | "unknown";
+
+export function walkupDayKind(
+  eventDate: string | null | undefined,
+  today: string,
+): WalkupDayKind {
+  const cal = eventCalendarDate(eventDate);
+  if (!cal || !today) return "unknown";
+  if (cal !== today) return "leftover_prior_day";
+  return "same_day";
+}
+
 export function isLeftoverCheckinSession(
   eventDate: string | null | undefined,
   today: string,
 ): boolean {
-  const cal = eventCalendarDate(eventDate);
-  return Boolean(cal && today && cal !== today);
+  return walkupDayKind(eventDate, today) === "leftover_prior_day";
 }
 
 /** True when a restored session token exists but the event date is not today. */

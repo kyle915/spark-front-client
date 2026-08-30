@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  catalogSampleOptions,
   isProductsSampledMultiselect,
   matchProductForSampleOption,
   optionSkuName,
   productSamplesFromSelections,
+  sampleOptionSelected,
 } from "./productsSampledQty";
 
 const products = [
@@ -85,5 +87,36 @@ describe("productSamplesFromSelections", () => {
       },
     );
     expect(rows).toEqual([{ productId: "1", quantity: 12 }]);
+  });
+});
+
+describe("catalogSampleOptions", () => {
+  it("builds Type — Name labels from the product catalog", () => {
+    expect(catalogSampleOptions(products)).toEqual([
+      "Mountain Water — Sparkling Water",
+      "Sparkling Water — Feastables Peanut Butter Cup",
+      "Sparkling Water — Killer Cola",
+      "Sparkling Water — Mt. Death",
+    ]);
+  });
+
+  it("returns empty when the catalog is empty", () => {
+    expect(catalogSampleOptions([])).toEqual([]);
+  });
+});
+
+describe("sampleOptionSelected", () => {
+  it("matches exact catalog labels", () => {
+    expect(
+      sampleOptionSelected("Sparkling Water — Mt. Death", [
+        "Sparkling Water — Mt. Death",
+      ]),
+    ).toBe(true);
+  });
+
+  it("matches a legacy bare SKU name to the catalog pill", () => {
+    expect(
+      sampleOptionSelected("Sparkling Water — Mt. Death", ["Mt. Death"]),
+    ).toBe(true);
   });
 });
