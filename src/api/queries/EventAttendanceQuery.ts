@@ -16,6 +16,8 @@ export const EventAttendanceQuery = graphql`
       clockInCoordinates
       clockOutCoordinates
       hoursOnSite
+      clockInAttendanceUuid
+      clockOutAttendanceUuid
     }
   }
 `;

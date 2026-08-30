@@ -1,13 +1,15 @@
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { EventAttendanceQuery } from "@/api/queries/EventAttendanceQuery";
 import type { EventAttendanceQuery as EventAttendanceQueryType } from "@api/queries/__generated__/EventAttendanceQuery.graphql";
+import AdminPunchControls from "@/components/staffing/AdminPunchControls";
 
 /**
  * Attendance table for an event — the actual clock log behind the GPS
  * replay: each BA's arrive / clock-in / clock-out times, on-site hours,
- * and a map link to the coords captured at each punch. Renders nothing
- * when no one clocked anything, so unmonitored shifts stay clean.
+ * and a map link to the coords captured at each punch. Admins can
+ * manually clock in, clock out open punches, or edit times when a BA's
+ * check-in fails.
  *
  * Sits beside ShiftReplayPanel on /request/view + the Event detail page.
  */
@@ -59,11 +61,15 @@ const Cell: React.FC<{
   );
 };
 
-const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
+const Inner: React.FC<{ eventUuid: string; refreshKey: number; bump: () => void }> = ({
+  eventUuid,
+  refreshKey,
+  bump,
+}) => {
   const data = useLazyLoadQuery<EventAttendanceQueryType>(
     EventAttendanceQuery,
     { eventUuid },
-    { fetchPolicy: "store-or-network" },
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
   const rows = data.eventAttendance ?? [];
   if (rows.length === 0) return null;
@@ -89,7 +95,8 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
               <th className="text-left py-2 pr-3 font-normal">Arrived</th>
               <th className="text-left py-2 pr-3 font-normal">Clock in</th>
               <th className="text-left py-2 pr-3 font-normal">Clock out</th>
-              <th className="text-right py-2 font-normal">Hrs</th>
+              <th className="text-right py-2 pr-3 font-normal">Hrs</th>
+              <th className="text-left py-2 font-normal">Fix</th>
             </tr>
           </thead>
           <tbody>
@@ -115,10 +122,21 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
                   />
                 </td>
                 <td
-                  className="py-2 text-right mono"
+                  className="py-2 pr-3 text-right mono"
                   style={{ color: "var(--spark-lime, #c5f546)" }}
                 >
                   {r.hoursOnSite != null ? r.hoursOnSite.toFixed(2) : "—"}
+                </td>
+                <td className="py-2">
+                  <AdminPunchControls
+                    eventUuid={eventUuid}
+                    ambassadorUuid={r.ambassadorUuid}
+                    clockInAt={r.clockInAt}
+                    clockOutAt={r.clockOutAt}
+                    clockInAttendanceUuid={r.clockInAttendanceUuid}
+                    clockOutAttendanceUuid={r.clockOutAttendanceUuid}
+                    onDone={bump}
+                  />
                 </td>
               </tr>
             ))}
@@ -129,15 +147,18 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
   );
 };
 
-// Suspense-isolated so a slow attendance fetch can't block the page; an
-// error/empty result renders nothing (the GPS map still shows).
 const EventAttendanceTable: React.FC<{ eventUuid: string }> = ({
   eventUuid,
 }) => {
+  const [refreshKey, setRefreshKey] = useState(0);
   if (!eventUuid) return null;
   return (
     <Suspense fallback={null}>
-      <Inner eventUuid={eventUuid} />
+      <Inner
+        eventUuid={eventUuid}
+        refreshKey={refreshKey}
+        bump={() => setRefreshKey((k) => k + 1)}
+      />
     </Suspense>
   );
 };

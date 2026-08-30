@@ -26,6 +26,33 @@ type AcceptInvitationResponse {
   activationToken: String
 }
 
+type AdminAttendanceResponse {
+  success: Boolean!
+  message: String!
+  clockInAt: String
+  clockOutAt: String
+  attendanceUuid: String
+  clientMutationId: ID
+}
+
+input AdminClockPunchInput {
+  eventUuid: ID!
+  ambassadorUuid: ID!
+  clockTime: String = null
+  note: String = null
+  clientMutationId: ID = null
+}
+
+input AdminEditPunchInput {
+  clockTime: String!
+  attendanceUuid: ID = null
+  eventUuid: ID = null
+  ambassadorUuid: ID = null
+  kind: String = null
+  note: String = null
+  clientMutationId: ID = null
+}
+
 """
 AccountFeedback(id, uuid, do_differently_feedback, feedback, corpo_card, was_corpo_card_used, recap, created_by, updated_by, created_at, updated_at)
 """
@@ -2793,6 +2820,8 @@ type EventAttendanceRow {
   clockInCoordinates: [Float!]
   clockOutCoordinates: [Float!]
   hoursOnSite: Float
+  clockInAttendanceUuid: ID
+  clockOutAttendanceUuid: ID
 }
 
 type MileageSessionType {
@@ -4236,6 +4265,9 @@ type Mutation {
   rejectWalkupShift(input: RejectWalkupShiftInput!): WalkupActionResponse!
   bulkConfirmWalkupShifts(input: BulkWalkupShiftsInput!): BulkWalkupActionResponse!
   bulkRejectWalkupShifts(input: BulkWalkupShiftsInput!): BulkWalkupActionResponse!
+  adminManualClockIn(input: AdminClockPunchInput!): AdminAttendanceResponse!
+  adminManualClockOut(input: AdminClockPunchInput!): AdminAttendanceResponse!
+  adminEditPunch(input: AdminEditPunchInput!): AdminAttendanceResponse!
   approvePayrollHours(input: ApprovePayrollInput!): PayrollActionResponse!
   markPayrollPaid(input: ApprovePayrollInput!): PayrollActionResponse!
   unapprovePayrollHours(input: ApprovePayrollInput!): PayrollActionResponse!
