@@ -1701,6 +1701,14 @@ function CheckedInFlow({
   const [payableMileage, setPayableMileage] = useState<PayableMileageState | null>(
     () => ctx.session?.payableMileage ?? null,
   );
+  // Locked in when mileage step saves — avoids RecapForm mounting before
+  // setPayableMileage commits (Alicia had to re-type required Mileage).
+  const [confirmedPayableMiles, setConfirmedPayableMiles] = useState<number | null>(
+    () => {
+      const c = ctx.session?.payableMileage?.claim;
+      return c?.completed && Number.isFinite(c.payableMiles) ? c.payableMiles : null;
+    },
+  );
   const [recapAsNew, setRecapAsNew] = useState(false);
   const openRecap = (asNew: boolean) => {
     setRecapAsNew(asNew);
@@ -2086,7 +2094,10 @@ function CheckedInFlow({
         shiftLabel={mileageShiftLabel}
         busy={busy !== ""}
         onBack={() => setShowMileageStep(false)}
-        onContinue={() => {
+        onContinue={(miles) => {
+          if (miles != null && Number.isFinite(miles)) {
+            setConfirmedPayableMiles(miles);
+          }
           setShowMileageStep(false);
           setShowRecap(true);
         }}
@@ -2119,6 +2130,9 @@ function CheckedInFlow({
                 error: "Mileage saved but we couldn't open the recap. Try again.",
               };
             }
+            if (Number.isFinite(claim.payableMiles)) {
+              setConfirmedPayableMiles(claim.payableMiles);
+            }
             return { claim };
           } catch {
             const error = "Couldn't save mileage. Check your signal.";
@@ -2146,7 +2160,11 @@ function CheckedInFlow({
             ? SECOND_SHIFT_LABEL
             : undefined
         }
-        payableMiles={activePayable?.claim?.payableMiles ?? null}
+        payableMiles={
+          confirmedPayableMiles ??
+          activePayable?.claim?.payableMiles ??
+          null
+        }
         onCancel={() => {
           if (ctx.recapOnly && !hasRecap) onStartAnother();
           else setShowRecap(false);
@@ -2653,7 +2671,7 @@ function RecapForm({
   eventDate?: string | null;
   forceNew?: boolean;
   shiftLabel?: string;
-  /** When set, pre-fills / locks the Mileage custom field (Feel Free itinerary). */
+  /** When set, pre-fills the Mileage field from the itinerary (editable for detours). */
   payableMiles?: number | null;
   onCancel: () => void;
   onSubmitted: () => Promise<void>;
@@ -2730,6 +2748,32 @@ function RecapForm({
     }, 500);
     return () => window.clearTimeout(t);
   }, [code, token, values, samples, engagements]);
+
+  // Mileage step → RecapForm can race: lock miles into required field values
+  // whenever the itinerary claim arrives (or updates).
+  useEffect(() => {
+    if (payableMiles == null || !Number.isFinite(payableMiles)) return;
+    const miles = String(payableMiles);
+    setValues((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const section of template?.sections ?? []) {
+        for (const f of section.fields) {
+          if (!isMileageCustomFieldName(f.name) || isPhotoType(f.type)) continue;
+          const cur = next[f.id];
+          const empty =
+            cur == null ||
+            (Array.isArray(cur) ? cur.length === 0 : String(cur).trim() === "");
+          // Only fill when empty — don't clobber a detour bump the BA typed.
+          if (empty) {
+            next[f.id] = miles;
+            changed = true;
+          }
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [payableMiles, template]);
 
   const uploadingCount = photos.filter((p) => p.state === "uploading").length;
   const failedCount = photos.filter((p) => p.state === "failed").length;
@@ -2810,11 +2854,24 @@ function RecapForm({
 
   const submit = async () => {
     setErr(null);
+    // Ensure itinerary miles are in values before required-field checks
+    // (covers any race where the mileage step → recap handoff lagged).
+    const valuesForSubmit = { ...values };
+    if (payableMiles != null && Number.isFinite(payableMiles)) {
+      for (const f of templateFields) {
+        if (!isMileageCustomFieldName(f.name) || isPhotoType(f.type)) continue;
+        const cur = valuesForSubmit[f.id];
+        const empty =
+          cur == null ||
+          (Array.isArray(cur) ? cur.length === 0 : String(cur).trim() === "");
+        if (empty) valuesForSubmit[f.id] = String(payableMiles);
+      }
+    }
     // Required non-photo fields must be answered.
     for (const s of template?.sections ?? []) {
       for (const f of s.fields) {
         if (!f.required || isPhotoType(f.type)) continue;
-        const v = values[f.id];
+        const v = valuesForSubmit[f.id];
         const empty = v == null || (Array.isArray(v) ? v.length === 0 : String(v).trim() === "");
         if (empty) return setErr(`Please fill in "${f.name}".`);
       }
@@ -2840,7 +2897,7 @@ function RecapForm({
       }
     }
 
-    const fieldValues = Object.entries(values)
+    const fieldValues = Object.entries(valuesForSubmit)
       .map(([id, v]) => ({ customFieldId: id, value: Array.isArray(v) ? JSON.stringify(v) : String(v) }))
       .filter((fv) => fv.value !== "" && fv.value !== "[]");
     // Prefer pill selections → catalog Product ids when the template has a
@@ -3013,10 +3070,11 @@ function RecapForm({
             color: "#065f46",
           }}
         >
-          <strong>Payable mileage: {formatPayableMiles(payableMiles)}</strong>
+          <strong>Route miles: {formatPayableMiles(payableMiles)}</strong>
           <p style={{ margin: "6px 0 0", fontSize: 13, opacity: 0.9 }}>
-            From your storage / sampling stops. This fills the Mileage field —
-            you don&apos;t need to type it.
+            Pre-filled from storage → your stops (shortest driving route). If
+            construction or detours added distance, bump the Mileage field
+            below before you submit.
           </p>
         </div>
       ) : null}
@@ -3034,11 +3092,27 @@ function RecapForm({
                     {f.required ? <span style={{ color: "#EF5A2A" }}> *</span> : null}
                   </label>
                   <input
-                    style={{ ...input, background: "#f3f4f6", color: "#065f46", fontWeight: 600 }}
-                    value={String(payableMiles)}
-                    readOnly
-                    aria-readonly="true"
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="0.1"
+                    style={{
+                      ...input,
+                      background: "#fff",
+                      color: "#065f46",
+                      fontWeight: 600,
+                    }}
+                    value={
+                      values[f.id] != null && !Array.isArray(values[f.id])
+                        ? String(values[f.id])
+                        : String(payableMiles)
+                    }
+                    onChange={(e) => setVal(f.id, e.target.value)}
                   />
+                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>
+                    Suggested {formatPayableMiles(payableMiles)}. Increase if
+                    detours / construction added miles.
+                  </p>
                 </div>
               ) : (
               <FieldInput

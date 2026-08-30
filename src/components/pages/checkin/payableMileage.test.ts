@@ -14,6 +14,7 @@ const torch = { name: "Torch", requestUrlName: "keee-torch-thc" };
 describe("isMileageCustomFieldName", () => {
   it("matches Mileage / Miles driven variants", () => {
     expect(isMileageCustomFieldName("Mileage")).toBe(true);
+    expect(isMileageCustomFieldName("Insert your mileage")).toBe(true);
     expect(isMileageCustomFieldName("Miles driven")).toBe(true);
     expect(isMileageCustomFieldName("miles")).toBe(true);
     expect(isMileageCustomFieldName("Sampling Timeframe?")).toBe(false);

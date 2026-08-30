@@ -28,7 +28,7 @@ type Props = {
     storageMarket?: string;
     shiftLabel?: string;
   }) => Promise<PayableMileageSaveResult>;
-  onContinue: () => void;
+  onContinue: (miles?: number) => void;
   onBack: () => void;
 };
 
@@ -170,8 +170,8 @@ export default function PayableMileageStep({
         return;
       }
       setClaim(result.claim);
-      // Advance immediately — Alicia's team was stuck on the extra Continue step.
-      onContinue();
+      // Pass miles through so RecapForm doesn't race setState and open empty.
+      onContinue(result.claim.payableMiles);
     } finally {
       setSaving(false);
     }
