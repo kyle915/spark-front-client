@@ -1568,6 +1568,12 @@ const RecapCustomViewInner = () => {
                       formatDate(recap.eventDate ?? recap.event?.date ?? null),
                     ],
                     [
+                      "Payable miles",
+                      recap.payableMiles != null && Number.isFinite(recap.payableMiles)
+                        ? `${Number(recap.payableMiles).toFixed(2)} mi`
+                        : null,
+                    ],
+                    [
                       "Submitted At",
                       formatDate(recap.submittedAt ?? recap.createdAt ?? null),
                     ],
