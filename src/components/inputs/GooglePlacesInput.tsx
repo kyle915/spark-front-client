@@ -111,9 +111,19 @@ type Props = {
   placeholder?: string;
   className?: string;
   style?: React.CSSProperties;
-  /** Bias predictions toward Account/Venue names instead of street
-   *  addresses. When true we use the "establishment" type. */
-  bias?: "address" | "establishment";
+  /**
+   * Prediction bias:
+   * - `address` — street addresses only
+   * - `establishment` — venue/account names; collapses same-chain
+   *   branches and hides street lines (Spark request forms)
+   * - `place` — name OR address, keeps every location distinct with
+   *   secondary address text (payable mileage stops)
+   */
+  bias?: "address" | "establishment" | "place";
+  /** Hide "+ USE … AS TYPED" (mileage needs a resolved lat/lng). */
+  allowFreeText?: boolean;
+  /** Suggestion panel colors. Check-in cards use `light`. */
+  suggestionTheme?: "dark" | "light";
 };
 
 declare global {
@@ -307,6 +317,8 @@ export default function GooglePlacesInput({
   className,
   style,
   bias = "address",
+  allowFreeText = true,
+  suggestionTheme = "dark",
 }: Props) {
   const [suggestions, setSuggestions] = useState<
     Array<{ place_id: string; main: string; sub: string }>
@@ -336,42 +348,44 @@ export default function GooglePlacesInput({
     }
     debounceRef.current = window.setTimeout(() => {
       const svc = new window.google!.maps!.places!.AutocompleteService();
-      svc.getPlacePredictions(
-        {
-          input: value,
-          types: bias === "establishment" ? ["establishment"] : ["address"],
-        },
-        (preds) => {
-          const mapped = (preds ?? []).map((p) => ({
-            place_id: p.place_id,
-            main: p.structured_formatting?.main_text ?? p.description,
-            sub: p.structured_formatting?.secondary_text ?? "",
-          }));
-          // When biased to establishments, collapse multiple branches
-          // of the same chain into ONE suggestion keyed by the
-          // canonical retailer brand. Kyle wants "national names"
-          // (Whole Foods Market, 7-Eleven, Target) — not "Whole Foods
-          // Market – South Virginia Street" repeated for every
-          // location in the city.
-          if (bias === "establishment") {
-            const seen = new Map<string, typeof mapped[number]>();
-            for (const s of mapped) {
-              const canon = canonicalRetailerName(s.main).toLowerCase();
-              if (!canon) continue;
-              if (!seen.has(canon)) {
-                seen.set(canon, {
-                  ...s,
-                  main: canonicalRetailerName(s.main),
-                  sub: "", // hide the street, keep the brand clean
-                });
-              }
+      // `place` omits `types` so both establishments and street addresses
+      // surface — BAs often type a store name OR a street for mileage.
+      const req: { input: string; types?: string[] } = { input: value };
+      if (bias === "establishment") req.types = ["establishment"];
+      else if (bias === "address") req.types = ["address"];
+      svc.getPlacePredictions(req, (preds) => {
+        const mapped = (preds ?? []).map((p) => ({
+          place_id: p.place_id,
+          main: p.structured_formatting?.main_text ?? p.description,
+          sub: p.structured_formatting?.secondary_text ?? "",
+        }));
+        // When biased to establishments, collapse multiple branches
+        // of the same chain into ONE suggestion keyed by the
+        // canonical retailer brand. Kyle wants "national names"
+        // (Whole Foods Market, 7-Eleven, Target) — not "Whole Foods
+        // Market – South Virginia Street" repeated for every
+        // location in the city.
+        //
+        // `place` (mileage) deliberately skips this — each branch needs
+        // its own address so BAs can pick the store they actually drove to.
+        if (bias === "establishment") {
+          const seen = new Map<string, (typeof mapped)[number]>();
+          for (const s of mapped) {
+            const canon = canonicalRetailerName(s.main).toLowerCase();
+            if (!canon) continue;
+            if (!seen.has(canon)) {
+              seen.set(canon, {
+                ...s,
+                main: canonicalRetailerName(s.main),
+                sub: "", // hide the street, keep the brand clean
+              });
             }
-            setSuggestions(Array.from(seen.values()));
-          } else {
-            setSuggestions(mapped);
           }
-        },
-      );
+          setSuggestions(Array.from(seen.values()));
+        } else {
+          setSuggestions(mapped);
+        }
+      });
     }, 200);
   }, [value, ready, bias]);
 
@@ -407,9 +421,17 @@ export default function GooglePlacesInput({
         const tz = await timezoneForLatLng(lat, lng);
         // Default onChange (no onResolved override) → write the place
         // name when biased to establishments (so the venue field shows
-        // "Whole Foods Market"), otherwise write the formatted address.
-        // Callers can override via onResolved.
-        onChange(bias === "establishment" ? retailerName || fa : fa);
+        // "Whole Foods Market"), place mode shows "Name — address" so
+        // the BA can confirm which location they picked, otherwise the
+        // formatted address. Callers can override via onResolved.
+        if (bias === "establishment") {
+          onChange(retailerName || fa);
+        } else if (bias === "place") {
+          const label = placeName && placeName !== fa ? `${placeName} — ${fa}` : fa;
+          onChange(label);
+        } else {
+          onChange(fa);
+        }
         setOpen(false);
         setSuggestions([]);
         onResolved?.({
@@ -452,6 +474,13 @@ export default function GooglePlacesInput({
     );
   };
 
+  const light = suggestionTheme === "light";
+  const showPanel =
+    open &&
+    (suggestions.length > 0 ||
+      (allowFreeText && value.trim().length >= 3) ||
+      (!allowFreeText && value.trim().length >= 3 && suggestions.length === 0));
+
   return (
     <div className="relative" style={{ width: "100%" }}>
       <input
@@ -474,13 +503,17 @@ export default function GooglePlacesInput({
         style={style}
         autoComplete="off"
       />
-      {open && (suggestions.length > 0 || value.trim().length >= 3) && (
+      {showPanel ? (
         <div
           className="absolute left-0 right-0 z-30 mt-1 rounded-xl overflow-hidden"
           style={{
-            background: "var(--spark-surface, #11140e)",
-            border: "1px solid var(--spark-border, #1f2418)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+            background: light ? "#fff" : "var(--spark-surface, #11140e)",
+            border: light
+              ? "1px solid #e5e7eb"
+              : "1px solid var(--spark-border, #1f2418)",
+            boxShadow: light
+              ? "0 10px 28px rgba(15,23,42,0.12)"
+              : "0 8px 24px rgba(0,0,0,0.4)",
           }}
         >
           {suggestions.map((s) => (
@@ -494,66 +527,95 @@ export default function GooglePlacesInput({
               }}
               className="block w-full text-left px-3 py-2.5 transition"
               style={{
-                color: "var(--spark-text, #f2f3ee)",
-                borderTop: "1px solid rgba(255,255,255,0.04)",
+                color: light ? "#111827" : "var(--spark-text, #f2f3ee)",
+                borderTop: light
+                  ? "1px solid #f3f4f6"
+                  : "1px solid rgba(255,255,255,0.04)",
+                background: "transparent",
               }}
               onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "rgba(197,245,70,0.06)")
+                (e.currentTarget.style.background = light
+                  ? "#f3f4f6"
+                  : "rgba(197,245,70,0.06)")
               }
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = "transparent")
+              }
             >
               <div className="text-sm font-semibold">{s.main}</div>
-              {s.sub && (
+              {s.sub ? (
                 <div
-                  className="mono text-[10px] mt-0.5"
-                  style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.5)" }}
+                  className="text-[12px] mt-0.5"
+                  style={{
+                    color: light ? "#4b5563" : "rgba(255,255,255,0.55)",
+                    lineHeight: 1.35,
+                  }}
                 >
-                  {s.sub.toUpperCase()}
+                  {s.sub}
                 </div>
-              )}
+              ) : null}
             </button>
           ))}
+          {!allowFreeText &&
+          suggestions.length === 0 &&
+          value.trim().length >= 3 ? (
+            <div
+              className="px-3 py-2.5 text-[12px]"
+              style={{ color: light ? "#6b7280" : "rgba(255,255,255,0.55)" }}
+            >
+              Keep typing, then pick a suggestion so we can map the miles.
+            </div>
+          ) : null}
           {/* Free-form fallback: persist exactly what the user typed
               (incl. `&` and punctuation). Do not call pick()/onResolved. */}
-          <button
-            type="button"
-            onMouseDown={(e) => {
-              e.preventDefault();
-              freeTextChosenRef.current = true;
-              // Re-assert the exact typed string so parent state cannot
-              // race with a stale Places resolve.
-              onChange(value);
-              setOpen(false);
-              setSuggestions([]);
-            }}
-            className="block w-full text-left px-3 py-2.5"
-            style={{
-              background: "rgba(255,255,255,0.02)",
-              borderTop: "1px solid rgba(255,255,255,0.06)",
-              color: "var(--spark-lime, #c5f546)",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "rgba(197,245,70,0.08)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "rgba(255,255,255,0.02)")
-            }
-          >
-            <div
-              className="mono text-[10px]"
-              style={{ letterSpacing: "0.18em" }}
+          {allowFreeText ? (
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                freeTextChosenRef.current = true;
+                // Re-assert the exact typed string so parent state cannot
+                // race with a stale Places resolve.
+                onChange(value);
+                setOpen(false);
+                setSuggestions([]);
+              }}
+              className="block w-full text-left px-3 py-2.5"
+              style={{
+                background: light ? "#f9fafb" : "rgba(255,255,255,0.02)",
+                borderTop: light
+                  ? "1px solid #e5e7eb"
+                  : "1px solid rgba(255,255,255,0.06)",
+                color: light ? "#166534" : "var(--spark-lime, #c5f546)",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = light
+                  ? "#ecfdf5"
+                  : "rgba(197,245,70,0.08)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = light
+                  ? "#f9fafb"
+                  : "rgba(255,255,255,0.02)")
+              }
             >
-              + USE “{value}” AS TYPED
-            </div>
-            <div
-              className="text-[11px] mt-0.5"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Don't see your account? We'll save it exactly as you wrote it.
-            </div>
-          </button>
+              <div
+                className="mono text-[10px]"
+                style={{ letterSpacing: "0.18em" }}
+              >
+                + USE “{value}” AS TYPED
+              </div>
+              <div
+                className="text-[11px] mt-0.5"
+                style={{ color: light ? "#6b7280" : "rgba(255,255,255,0.55)" }}
+              >
+                Don&apos;t see your account? We&apos;ll save it exactly as you
+                wrote it.
+              </div>
+            </button>
+          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
