@@ -2090,14 +2090,25 @@ function CheckedInFlow({
               message?: string;
             };
             if (!res.ok) {
-              setMsg(data.message || data.error || "Couldn't save mileage.");
-              return null;
+              const error =
+                data.message || data.error || "Couldn't save mileage.";
+              setMsg(error);
+              return { claim: null, error };
             }
             if (data.payableMileage) setPayableMileage(data.payableMileage);
-            return data.claim ?? data.payableMileage?.claim ?? null;
+            const claim =
+              data.claim ?? data.payableMileage?.claim ?? null;
+            if (!claim) {
+              return {
+                claim: null,
+                error: "Mileage saved but we couldn't open the recap. Try again.",
+              };
+            }
+            return { claim };
           } catch {
-            setMsg("Couldn't save mileage. Check your signal.");
-            return null;
+            const error = "Couldn't save mileage. Check your signal.";
+            setMsg(error);
+            return { claim: null, error };
           }
         }}
       />
