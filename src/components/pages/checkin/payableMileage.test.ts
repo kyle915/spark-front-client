@@ -3,6 +3,7 @@ import {
   formatPayableMiles,
   isMileageCustomFieldName,
   payableMileageComplete,
+  claimForShiftLabel,
   shouldCollectPayableMileage,
   validatePayableMileageDraft,
 } from "./payableMileage";
@@ -104,6 +105,33 @@ describe("payableMileageComplete / format", () => {
         },
       }),
     ).toBe(true);
+  });
+});
+
+describe("claimForShiftLabel", () => {
+  const first = {
+    uuid: "1",
+    startedFromStorage: true,
+    storageMarket: "Austin, TX",
+    storageAddress: "x",
+    stops: [],
+    payableMiles: 12.4,
+    completed: true,
+    shiftLabel: "",
+  };
+
+  it("keeps unlabeled claim for first shift", () => {
+    expect(claimForShiftLabel(first, undefined)?.uuid).toBe("1");
+    expect(claimForShiftLabel(first, "")?.uuid).toBe("1");
+  });
+
+  it("ignores first-shift claim when filing Second shift", () => {
+    expect(claimForShiftLabel(first, "Second shift")).toBeNull();
+  });
+
+  it("keeps a matching second-shift claim", () => {
+    const second = { ...first, uuid: "2", shiftLabel: "Second shift" };
+    expect(claimForShiftLabel(second, "Second shift")?.uuid).toBe("2");
   });
 });
 
