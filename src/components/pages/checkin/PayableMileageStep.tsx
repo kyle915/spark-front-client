@@ -4,6 +4,7 @@ import GooglePlacesInput, {
 } from "@/components/inputs/GooglePlacesInput";
 import {
   formatPayableMiles,
+  claimForShiftLabel,
   validatePayableMileageDraft,
   type PayableMileageClaim,
   type PayableMileageState,
@@ -70,7 +71,9 @@ export default function PayableMileageStep({
   onContinue,
   onBack,
 }: Props) {
-  const existing = payableMileage.claim;
+  // Session may still carry the *first* shift claim. A second-shift filing
+  // (shiftLabel set) must start blank so we don't skip or reuse morning miles.
+  const existing = claimForShiftLabel(payableMileage.claim, shiftLabel);
   const [started, setStarted] = useState<boolean | null>(
     existing ? existing.startedFromStorage : null,
   );

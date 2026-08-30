@@ -76,6 +76,18 @@ export function formatPayableMiles(miles: number | null | undefined): string {
   return `${Number(miles).toFixed(2)} mi`;
 }
 
+/** Prefer a claim that matches this shift label; ignore a prior shift's claim. */
+export function claimForShiftLabel(
+  claim: PayableMileageClaim | null | undefined,
+  shiftLabel?: string | null,
+): PayableMileageClaim | null {
+  if (!claim) return null;
+  const want = (shiftLabel || "").trim();
+  const got = (claim.shiftLabel || "").trim();
+  if (want && want !== got) return null;
+  return claim;
+}
+
 export function validatePayableMileageDraft(opts: {
   startedFromStorage: boolean | null;
   stops: PayableMileageStop[];
