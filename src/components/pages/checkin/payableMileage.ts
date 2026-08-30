@@ -47,9 +47,10 @@ export type PayableMileageState = {
 
 export function isMileageCustomFieldName(name: string | null | undefined): boolean {
   const n = (name || "").trim();
-  return /^\s*mileage\s*$|^\s*miles?\s*(driven|traveled|travelled|reimbursed)?\s*$/i.test(
-    n,
-  );
+  if (!n) return false;
+  // "Mileage", "Insert your mileage", "Miles driven", …
+  if (/mileage/i.test(n)) return true;
+  return /^\s*miles?\s*(driven|traveled|travelled|reimbursed)?\s*$/i.test(n);
 }
 
 /** Gate: Feel Free + server enabled payableMileage (storage units seeded). */
