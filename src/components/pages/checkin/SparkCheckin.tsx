@@ -1900,6 +1900,14 @@ function CheckedInFlow({
     setBusy(kind);
     if (kind === "in") setInPhase("pending");
     const tappedAt = new Date().toISOString();
+    // Second shift (or any new punch after a filed recap): never reuse a
+    // leftover offline queue — that idempotency key can no-op the clock-in
+    // and leave the BA stuck on "You're all set".
+    const startingFreshShift = kind === "in" && hasRecap;
+    if (startingFreshShift && queuedClock) {
+      clearPendingClock(code);
+      setQueuedClock(null);
+    }
     // Best-effort geolocation — clocking works even if it's denied/unavailable.
     const withCoords = async (coords: { latitude?: number; longitude?: number }) => {
       try {
@@ -1910,11 +1918,15 @@ function CheckedInFlow({
             return;
           }
         }
+        const useQueued = kind === "in" && !startingFreshShift && queuedClock;
         const res = await post("clock", {
           kind,
           ...coords,
           ...(kind === "in"
-            ? { clockedInAt: queuedClock?.clockedInAt ?? tappedAt, idempotencyKey: queuedClock?.id }
+            ? {
+                clockedInAt: useQueued ? queuedClock.clockedInAt : tappedAt,
+                ...(useQueued ? { idempotencyKey: queuedClock.id } : {}),
+              }
             : {}),
         });
         let json: { message?: string; alreadyIn?: boolean; clock?: Clock } = {};
@@ -1935,7 +1947,10 @@ function CheckedInFlow({
           return;
         }
         if (kind === "in") {
-          setQueuedClock(readPendingClock(code));
+          // Online success must drop any pending row so a later second-shift
+          // clock-in cannot replay the first shift's idempotency key.
+          clearPendingClock(code);
+          setQueuedClock(null);
           setInPhase("success");
           await holdActionSuccess();
         }
@@ -2189,7 +2204,12 @@ function CheckedInFlow({
                 </p>
                 {!ctx.recapOnly ? (
                   <button
-                    onClick={() => clock("in")}
+                    onClick={() => {
+                      // Drop any stale offline queue before starting shift 2.
+                      clearPendingClock(code);
+                      setQueuedClock(null);
+                      void clock("in");
+                    }}
                     disabled={busy !== ""}
                     style={{ ...primaryBtn(accent), width: "100%", marginBottom: 8 }}
                   >
