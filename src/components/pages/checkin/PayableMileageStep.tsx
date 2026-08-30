@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import GooglePlacesInput, {
   type ResolvedPlace,
 } from "@/components/inputs/GooglePlacesInput";
@@ -11,6 +11,11 @@ import {
   type StorageUnit,
 } from "./payableMileage";
 
+export type PayableMileageSaveResult = {
+  claim: PayableMileageClaim | null;
+  error?: string | null;
+};
+
 type Props = {
   accent: string;
   payableMileage: PayableMileageState;
@@ -21,7 +26,7 @@ type Props = {
     stops: PayableMileageStop[];
     storageMarket?: string;
     shiftLabel?: string;
-  }) => Promise<PayableMileageClaim | null>;
+  }) => Promise<PayableMileageSaveResult>;
   onContinue: () => void;
   onBack: () => void;
 };
@@ -54,7 +59,7 @@ const btnBase: CSSProperties = {
 
 /**
  * Pre-recap step: yes/no started at storage + multi-stop Places itinerary.
- * Shows computed payable miles for confirmation before the BA files the recap.
+ * On a successful save we advance straight to the recap (no extra Continue tap).
  */
 export default function PayableMileageStep({
   accent,
@@ -76,12 +81,37 @@ export default function PayableMileageStep({
   const [err, setErr] = useState<string | null>(null);
   const [claim, setClaim] = useState<PayableMileageClaim | null>(existing);
   const [saving, setSaving] = useState(false);
+  const [pickedMarket, setPickedMarket] = useState<string>(
+    () =>
+      existing?.storageMarket ||
+      payableMileage.matchedStorage?.market ||
+      payableMileage.marketHint ||
+      "",
+  );
 
-  const storage: StorageUnit | null =
+  const matched: StorageUnit | null =
     payableMileage.matchedStorage ??
     (payableMileage.storageUnits.length === 1
       ? payableMileage.storageUnits[0]
       : null);
+
+  const storage: StorageUnit | null = useMemo(() => {
+    if (matched) return matched;
+    const want = pickedMarket.trim().toLowerCase();
+    if (!want) return null;
+    return (
+      payableMileage.storageUnits.find(
+        (u) => u.market.trim().toLowerCase() === want,
+      ) ?? null
+    );
+  }, [matched, pickedMarket, payableMileage.storageUnits]);
+
+  const needStoragePick =
+    started === true && !matched && payableMileage.storageUnits.length > 1;
+
+  const minStops = started === true ? 1 : started === false ? 2 : 0;
+  const stopsReady = started !== null && stops.length >= minStops;
+  const draftPending = draft.trim().length >= 3;
 
   const addResolved = (place: ResolvedPlace) => {
     const stop: PayableMileageStop = {
@@ -102,6 +132,16 @@ export default function PayableMileageStep({
   };
 
   const save = async () => {
+    if (draftPending) {
+      setErr(
+        "Tap a suggestion under the search box to add that stop — typing alone doesn't save it.",
+      );
+      return;
+    }
+    if (needStoragePick && !storage) {
+      setErr("Pick which storage unit you started from.");
+      return;
+    }
     const problem = validatePayableMileageDraft({
       startedFromStorage: started,
       stops,
@@ -113,17 +153,22 @@ export default function PayableMileageStep({
     setSaving(true);
     setErr(null);
     try {
-      const saved = await onSave({
+      const result = await onSave({
         startedFromStorage: started,
         stops,
-        storageMarket: storage?.market || payableMileage.marketHint,
+        storageMarket: storage?.market || pickedMarket || payableMileage.marketHint,
         shiftLabel,
       });
-      if (!saved) {
-        setErr("Couldn't save mileage. Check your signal and try again.");
+      if (!result.claim) {
+        setErr(
+          result.error ||
+            "Couldn't save mileage. Check your signal and try again.",
+        );
         return;
       }
-      setClaim(saved);
+      setClaim(result.claim);
+      // Advance immediately — Alicia's team was stuck on the extra Continue step.
+      onContinue();
     } finally {
       setSaving(false);
     }
@@ -143,11 +188,6 @@ export default function PayableMileageStep({
       {storage ? (
         <p style={{ margin: "0 0 14px", fontSize: 13, color: "#374151" }}>
           <strong>Storage ({storage.market}):</strong> {storage.address}
-        </p>
-      ) : payableMileage.storageUnits.length > 1 ? (
-        <p style={{ margin: "0 0 14px", fontSize: 13, color: "#92400e" }}>
-          Couldn&apos;t match this shift to one storage unit — confirm your market
-          with your lead if miles look wrong.
         </p>
       ) : null}
 
@@ -178,6 +218,37 @@ export default function PayableMileageStep({
         })}
       </div>
 
+      {needStoragePick ? (
+        <div style={{ marginBottom: 16 }}>
+          <span style={labelStyle}>Which storage unit?</span>
+          <select
+            value={pickedMarket}
+            onChange={(e) => {
+              setPickedMarket(e.target.value);
+              setClaim(null);
+              setErr(null);
+            }}
+            disabled={busy || saving}
+            style={{
+              width: "100%",
+              padding: "12px 14px",
+              borderRadius: 10,
+              border: "1px solid #d1d5db",
+              fontSize: 15,
+              background: "#fff",
+              boxSizing: "border-box",
+            }}
+          >
+            <option value="">Select storage market…</option>
+            {payableMileage.storageUnits.map((u) => (
+              <option key={u.market} value={u.market}>
+                {u.market} — {u.address}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
       {started !== null ? (
         <>
           <span style={labelStyle}>
@@ -189,12 +260,14 @@ export default function PayableMileageStep({
             {started
               ? "Add every stop after leaving storage. Miles = storage → these stops."
               : "Storage is not included. Miles = between these stops only."}{" "}
-            Search by store name or street — pick a suggestion so the full
-            address shows.
+            Search, then tap a suggestion — each stop appears as a card below.
           </p>
           <GooglePlacesInput
             value={draft}
-            onChange={setDraft}
+            onChange={(v) => {
+              setDraft(v);
+              setErr(null);
+            }}
             onResolved={addResolved}
             bias="place"
             allowFreeText={false}
@@ -210,7 +283,29 @@ export default function PayableMileageStep({
               boxSizing: "border-box",
             }}
           />
-          {stops.length > 0 ? (
+          {draftPending && stops.length === 0 ? (
+            <p style={{ margin: "0 0 10px", fontSize: 13, color: "#92400e" }}>
+              Still typing — tap a suggestion to lock in stop #{stops.length + 1}.
+            </p>
+          ) : null}
+          {stops.length === 0 ? (
+            <p
+              style={{
+                margin: "0 0 14px",
+                padding: "10px 12px",
+                borderRadius: 10,
+                background: "#f9fafb",
+                border: "1px dashed #d1d5db",
+                fontSize: 13,
+                color: "#6b7280",
+              }}
+            >
+              No stops yet
+              {started === false
+                ? " — add at least two places you drove between."
+                : " — add each place you sampled after storage."}
+            </p>
+          ) : (
             <ul
               style={{
                 listStyle: "none",
@@ -304,7 +399,7 @@ export default function PayableMileageStep({
                 );
               })}
             </ul>
-          ) : null}
+          )}
         </>
       ) : null}
 
@@ -322,10 +417,7 @@ export default function PayableMileageStep({
         >
           <strong>Payable miles: {formatPayableMiles(claim.payableMiles)}</strong>
           <div style={{ fontSize: 12, marginTop: 4, opacity: 0.9 }}>
-            {claim.startedFromStorage
-              ? "Includes storage → your stops"
-              : "Between your sampling stops only (no storage)"}
-            . This fills the Mileage field on your recap.
+            Opening your recap…
           </div>
         </div>
       ) : null}
@@ -343,42 +435,30 @@ export default function PayableMileageStep({
         >
           Back
         </button>
-        {!claim ? (
-          <button
-            type="button"
-            style={{ ...btnBase, background: accent, color: "#fff" }}
-            onClick={() => void save()}
-            disabled={busy || saving}
-          >
-            {saving ? "Calculating…" : "Calculate miles"}
-          </button>
-        ) : (
-          <button
-            type="button"
-            style={{ ...btnBase, background: accent, color: "#fff" }}
-            onClick={onContinue}
-            disabled={busy}
-          >
-            Continue to recap
-          </button>
-        )}
-      </div>
-      {claim ? (
         <button
           type="button"
-          onClick={() => setClaim(null)}
           style={{
-            marginTop: 10,
-            border: "none",
-            background: "transparent",
-            color: "#6b7280",
-            fontSize: 13,
-            cursor: "pointer",
-            textDecoration: "underline",
+            ...btnBase,
+            background: accent,
+            color: "#fff",
+            opacity: !stopsReady || saving || busy ? 0.55 : 1,
           }}
+          onClick={() => void save()}
+          disabled={busy || saving || !stopsReady}
         >
-          Edit stops
+          {saving
+            ? "Saving miles…"
+            : claim
+              ? "Continue to recap"
+              : "Save miles & continue"}
         </button>
+      </div>
+      {!stopsReady && started !== null ? (
+        <p style={{ margin: "8px 0 0", fontSize: 12, color: "#6b7280" }}>
+          {started
+            ? "Add at least one sampling stop (tap a suggestion) to continue."
+            : "Add at least two stops (tap suggestions) to continue."}
+        </p>
       ) : null}
     </div>
   );
