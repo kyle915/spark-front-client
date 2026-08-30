@@ -61,6 +61,15 @@ import { holdActionSuccess, type ActionPhase } from "@/motion/opsMotion";
 import { recapSubmitErrorMessage } from "./recapSubmitError";
 import { TenantLogo } from "@/layout/TenantLogo";
 import { shouldShowSamplingStopCard } from "./samplingStops";
+import PayableMileageStep from "./PayableMileageStep";
+import {
+  formatPayableMiles,
+  isMileageCustomFieldName,
+  payableMileageComplete,
+  shouldCollectPayableMileage,
+  type PayableMileageClaim,
+  type PayableMileageState,
+} from "./payableMileage";
 import {
   SECOND_SHIFT_HINT,
   SECOND_SHIFT_LABEL,
@@ -217,6 +226,7 @@ type Context = {
     pendingReview: boolean;
     mileage?: Mileage;
     stops?: SamplingStop[];
+    payableMileage?: PayableMileageState;
   };
   // Tenant-link mode — ONE durable link shared across every activation, so BAs
   // never type an event code. `needsEventDetails` means ask for store + date on
@@ -1687,9 +1697,27 @@ function CheckedInFlow({
         isLeftoverCheckinSession(ctx.event?.date, todayISO())
       ),
   );
+  const [showMileageStep, setShowMileageStep] = useState(false);
+  const [payableMileage, setPayableMileage] = useState<PayableMileageState | null>(
+    () => ctx.session?.payableMileage ?? null,
+  );
   const [recapAsNew, setRecapAsNew] = useState(false);
   const openRecap = (asNew: boolean) => {
     setRecapAsNew(asNew);
+    const needMiles = shouldCollectPayableMileage({
+      brand: ctx.brand,
+      payableMileage: payableMileage ?? ctx.session?.payableMileage,
+    });
+    // Second shift always re-collects; first shift reuses a saved claim.
+    const complete =
+      !asNew &&
+      payableMileageComplete(payableMileage ?? ctx.session?.payableMileage);
+    if (needMiles && !complete) {
+      setShowMileageStep(true);
+      setShowRecap(false);
+      return;
+    }
+    setShowMileageStep(false);
     setShowRecap(true);
   };
   const [msg, setMsg] = useState<string | null>(null);
@@ -2030,6 +2058,51 @@ function CheckedInFlow({
   };
 
   const pending = ctx.session?.pendingReview;
+  const mileageShiftLabel =
+    recapAsNew && secondShiftOk ? SECOND_SHIFT_LABEL : undefined;
+  const activePayable =
+    payableMileage ?? ctx.session?.payableMileage ?? null;
+
+  if (showMileageStep && activePayable) {
+    return (
+      <PayableMileageStep
+        accent={accent}
+        payableMileage={activePayable}
+        shiftLabel={mileageShiftLabel}
+        busy={busy !== ""}
+        onBack={() => setShowMileageStep(false)}
+        onContinue={() => {
+          setShowMileageStep(false);
+          setShowRecap(true);
+        }}
+        onSave={async (body) => {
+          try {
+            const res = await post("payable-mileage", {
+              startedFromStorage: body.startedFromStorage,
+              stops: body.stops,
+              storageMarket: body.storageMarket,
+              shiftLabel: body.shiftLabel || mileageShiftLabel,
+            });
+            const data = (await res.json().catch(() => ({}))) as {
+              payableMileage?: PayableMileageState;
+              claim?: PayableMileageClaim;
+              error?: string;
+              message?: string;
+            };
+            if (!res.ok) {
+              setMsg(data.message || data.error || "Couldn't save mileage.");
+              return null;
+            }
+            if (data.payableMileage) setPayableMileage(data.payableMileage);
+            return data.claim ?? data.payableMileage?.claim ?? null;
+          } catch {
+            setMsg("Couldn't save mileage. Check your signal.");
+            return null;
+          }
+        }}
+      />
+    );
+  }
 
   if (showRecap || (ctx.recapOnly && !hasRecap && !leftover)) {
     return (
@@ -2047,6 +2120,7 @@ function CheckedInFlow({
             ? SECOND_SHIFT_LABEL
             : undefined
         }
+        payableMiles={activePayable?.claim?.payableMiles ?? null}
         onCancel={() => {
           if (ctx.recapOnly && !hasRecap) onStartAnother();
           else setShowRecap(false);
@@ -2534,6 +2608,7 @@ function RecapForm({
   eventDate,
   forceNew = false,
   shiftLabel,
+  payableMiles = null,
   onCancel,
   onSubmitted,
   onQueued,
@@ -2547,6 +2622,8 @@ function RecapForm({
   eventDate?: string | null;
   forceNew?: boolean;
   shiftLabel?: string;
+  /** When set, pre-fills / locks the Mileage custom field (Feel Free itinerary). */
+  payableMiles?: number | null;
   onCancel: () => void;
   onSubmitted: () => Promise<void>;
   onQueued: () => void;
@@ -2575,7 +2652,26 @@ function RecapForm({
         }
       }
     }
-    return { ...seed, ...(restored.current?.values ?? {}) };
+    // Feel Free payable miles — lock the Mileage field to the itinerary value.
+    if (payableMiles != null && Number.isFinite(payableMiles)) {
+      for (const section of template?.sections ?? []) {
+        for (const f of section.fields) {
+          if (isMileageCustomFieldName(f.name) && !isPhotoType(f.type)) {
+            seed[f.id] = String(payableMiles);
+          }
+        }
+      }
+    }
+    return { ...seed, ...(restored.current?.values ?? {}), ...(
+      payableMiles != null && Number.isFinite(payableMiles)
+        ? Object.fromEntries(
+            (template?.sections ?? [])
+              .flatMap((s) => s.fields)
+              .filter((f) => isMileageCustomFieldName(f.name))
+              .map((f) => [f.id, String(payableMiles)]),
+          )
+        : {}
+    ) };
   });
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [samples, setSamples] = useState<Record<string, string>>(
@@ -2877,11 +2973,43 @@ function RecapForm({
           {offlineRecapBanner(pendingRecap.submittedAt)}
         </p>
       ) : null}
+      {payableMiles != null && Number.isFinite(payableMiles) ? (
+        <div
+          style={{
+            ...card,
+            background: "#ecfdf5",
+            border: "1px solid #a7f3d0",
+            color: "#065f46",
+          }}
+        >
+          <strong>Payable mileage: {formatPayableMiles(payableMiles)}</strong>
+          <p style={{ margin: "6px 0 0", fontSize: 13, opacity: 0.9 }}>
+            From your storage / sampling stops. This fills the Mileage field —
+            you don&apos;t need to type it.
+          </p>
+        </div>
+      ) : null}
       {template.sections.map((section) => (
         <div key={section.id} style={card}>
           <h2 style={h2}>{section.name}</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 4 }}>
-            {section.fields.map((f) => (
+            {section.fields.map((f) =>
+              payableMiles != null &&
+              Number.isFinite(payableMiles) &&
+              isMileageCustomFieldName(f.name) ? (
+                <div key={f.id}>
+                  <label style={label}>
+                    {f.name}
+                    {f.required ? <span style={{ color: "#EF5A2A" }}> *</span> : null}
+                  </label>
+                  <input
+                    style={{ ...input, background: "#f3f4f6", color: "#065f46", fontWeight: 600 }}
+                    value={String(payableMiles)}
+                    readOnly
+                    aria-readonly="true"
+                  />
+                </div>
+              ) : (
               <FieldInput
                 key={f.id}
                 field={f}
@@ -2897,7 +3025,8 @@ function RecapForm({
                   setSamples((s) => ({ ...s, [productId]: qty }))
                 }
               />
-            ))}
+              ),
+            )}
           </div>
         </div>
       ))}
