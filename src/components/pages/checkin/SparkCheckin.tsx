@@ -3072,9 +3072,9 @@ function RecapForm({
         >
           <strong>Route miles: {formatPayableMiles(payableMiles)}</strong>
           <p style={{ margin: "6px 0 0", fontSize: 13, opacity: 0.9 }}>
-            Pre-filled from storage → your stops (shortest driving route). If
-            construction or detours added distance, bump the Mileage field
-            below before you submit.
+            Pre-filled from Google Maps driving directions through your stops
+            (when available). If construction or detours added distance, bump
+            the Mileage field below before you submit.
           </p>
         </div>
       ) : null}
