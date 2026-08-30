@@ -188,14 +188,18 @@ export default function PayableMileageStep({
           <p style={{ margin: "0 0 8px", fontSize: 12, color: "#6b7280" }}>
             {started
               ? "Add every stop after leaving storage. Miles = storage → these stops."
-              : "Storage is not included. Miles = between these stops only."}
+              : "Storage is not included. Miles = between these stops only."}{" "}
+            Search by store name or street — pick a suggestion so the full
+            address shows.
           </p>
           <GooglePlacesInput
             value={draft}
             onChange={setDraft}
             onResolved={addResolved}
-            bias="establishment"
-            placeholder="Search a place (Whole Foods, park, …)"
+            bias="place"
+            allowFreeText={false}
+            suggestionTheme="light"
+            placeholder="Store name or address…"
             style={{
               width: "100%",
               padding: "12px 14px",
@@ -207,14 +211,78 @@ export default function PayableMileageStep({
             }}
           />
           {stops.length > 0 ? (
-            <ol style={{ margin: "0 0 14px", paddingLeft: 20, fontSize: 14 }}>
-              {stops.map((s, i) => (
-                <li key={`${s.lat}-${s.lng}-${i}`} style={{ marginBottom: 6 }}>
-                  <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                    <span style={{ flex: 1 }}>
-                      {s.name ? <strong>{s.name}</strong> : null}
-                      {s.name ? <br /> : null}
-                      <span style={{ color: "#4b5563" }}>{s.address}</span>
+            <ul
+              style={{
+                listStyle: "none",
+                margin: "0 0 14px",
+                padding: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}
+            >
+              {stops.map((s, i) => {
+                const title =
+                  s.name?.trim() &&
+                  s.name.trim().toLowerCase() !== s.address.trim().toLowerCase()
+                    ? s.name.trim()
+                    : null;
+                return (
+                  <li
+                    key={`${s.lat}-${s.lng}-${i}`}
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "flex-start",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid #e5e7eb",
+                      background: "#f9fafb",
+                    }}
+                  >
+                    <span
+                      aria-hidden
+                      style={{
+                        flexShrink: 0,
+                        width: 26,
+                        height: 26,
+                        borderRadius: 999,
+                        background: accent,
+                        color: "#fff",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginTop: 1,
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      {title ? (
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            fontSize: 14,
+                            color: "#111827",
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {title}
+                        </div>
+                      ) : null}
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#374151",
+                          lineHeight: 1.4,
+                          marginTop: title ? 2 : 0,
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {s.address}
+                      </div>
                     </span>
                     <button
                       type="button"
@@ -224,15 +292,18 @@ export default function PayableMileageStep({
                         background: "transparent",
                         color: "#b91c1c",
                         fontSize: 13,
+                        fontWeight: 600,
                         cursor: "pointer",
+                        flexShrink: 0,
+                        padding: "2px 0",
                       }}
                     >
                       Remove
                     </button>
-                  </div>
-                </li>
-              ))}
-            </ol>
+                  </li>
+                );
+              })}
+            </ul>
           ) : null}
         </>
       ) : null}
