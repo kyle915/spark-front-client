@@ -66,10 +66,64 @@ export function shouldCollectPayableMileage(opts: {
   return true;
 }
 
+/** True when a completed claim exists for this filing.
+
+``forceNew`` always needs a fresh itinerary. Otherwise match ``shiftLabel``
+via ``claimForShiftLabel`` so Edit doesn't treat morning miles as done for
+Second / Third shift.
+*/
 export function payableMileageComplete(
   state: PayableMileageState | null | undefined,
+  opts?: { forceNew?: boolean; shiftLabel?: string | null },
 ): boolean {
-  return Boolean(state?.claim?.completed);
+  if (opts?.forceNew) return false;
+  const claim = claimForShiftLabel(state?.claim, opts?.shiftLabel);
+  return Boolean(claim?.completed);
+}
+
+const EARTH_MI = 3958.7613;
+
+function haversineMiles(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number },
+): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * EARTH_MI * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+/** Offline provisional total — same waypoints as the server, straight-line. */
+export function estimatePayableMilesHaversine(opts: {
+  startedFromStorage: boolean;
+  storage: StorageUnit | null | undefined;
+  stops: PayableMileageStop[];
+}): number {
+  const points: { lat: number; lng: number }[] = [];
+  if (
+    opts.startedFromStorage &&
+    opts.storage &&
+    Number.isFinite(opts.storage.lat) &&
+    Number.isFinite(opts.storage.lng)
+  ) {
+    points.push({ lat: opts.storage.lat as number, lng: opts.storage.lng as number });
+  }
+  for (const s of opts.stops) {
+    if (Number.isFinite(s.lat) && Number.isFinite(s.lng)) {
+      points.push({ lat: s.lat, lng: s.lng });
+    }
+  }
+  if (points.length < 2) return 0;
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    total += haversineMiles(points[i - 1], points[i]);
+  }
+  return Math.round(total * 100) / 100;
 }
 
 export function formatPayableMiles(miles: number | null | undefined): string {
