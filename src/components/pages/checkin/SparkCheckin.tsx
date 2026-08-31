@@ -1688,16 +1688,26 @@ function CheckedInFlow({
 }) {
   const [busy, setBusy] = useState<"" | "in" | "out">("");
   const [inPhase, setInPhase] = useState<ActionPhase>("idle");
+  // Recap-only first landing must still go through payable mileage when enabled
+  // — jumping straight to RecapForm used to 400 with needs_payable_mileage.
+  const bootRecapOnly =
+    Boolean(ctx.recapOnly) &&
+    !hasRecap &&
+    !(
+      ctx.mode === "tenant" &&
+      isLeftoverCheckinSession(ctx.event?.date, todayISO())
+    );
+  const bootNeedMiles =
+    bootRecapOnly &&
+    shouldCollectPayableMileage({
+      brand: ctx.brand,
+      payableMileage: ctx.session?.payableMileage,
+    }) &&
+    !payableMileageComplete(ctx.session?.payableMileage);
   const [showRecap, setShowRecap] = useState(
-    () =>
-      Boolean(ctx.recapOnly) &&
-      !hasRecap &&
-      !(
-        ctx.mode === "tenant" &&
-        isLeftoverCheckinSession(ctx.event?.date, todayISO())
-      ),
+    () => bootRecapOnly && !bootNeedMiles,
   );
-  const [showMileageStep, setShowMileageStep] = useState(false);
+  const [showMileageStep, setShowMileageStep] = useState(() => bootNeedMiles);
   const [payableMileage, setPayableMileage] = useState<PayableMileageState | null>(
     () => ctx.session?.payableMileage ?? null,
   );
@@ -1705,6 +1715,7 @@ function CheckedInFlow({
   // setPayableMileage commits (Alicia had to re-type required Mileage).
   const [confirmedPayableMiles, setConfirmedPayableMiles] = useState<number | null>(
     () => {
+      if (bootNeedMiles) return null;
       const c = ctx.session?.payableMileage?.claim;
       return c?.completed && Number.isFinite(c.payableMiles) ? c.payableMiles : null;
     },
@@ -1712,11 +1723,12 @@ function CheckedInFlow({
   const [recapAsNew, setRecapAsNew] = useState(false);
   const openRecap = (asNew: boolean) => {
     setRecapAsNew(asNew);
+    if (asNew) setConfirmedPayableMiles(null);
     const needMiles = shouldCollectPayableMileage({
       brand: ctx.brand,
       payableMileage: payableMileage ?? ctx.session?.payableMileage,
     });
-    // Second shift always re-collects; first shift reuses a saved claim.
+    // Second / another filing always re-collects; first shift reuses a saved claim.
     const complete =
       !asNew &&
       payableMileageComplete(payableMileage ?? ctx.session?.payableMileage);
@@ -2081,8 +2093,9 @@ function CheckedInFlow({
   };
 
   const pending = ctx.session?.pendingReview;
-  const mileageShiftLabel =
-    recapAsNew && secondShiftOk ? SECOND_SHIFT_LABEL : undefined;
+  // Never hardcode "Second shift" for forceNew — API resolves Second / Third /
+  // Shift N from filed count. An explicit front label was overwriting shift-2
+  // claims on third filings and prefilling leftover "file another" drafts.
   const activePayable =
     payableMileage ?? ctx.session?.payableMileage ?? null;
 
@@ -2091,7 +2104,6 @@ function CheckedInFlow({
       <PayableMileageStep
         accent={accent}
         payableMileage={activePayable}
-        shiftLabel={mileageShiftLabel}
         forceNew={recapAsNew && ctx.mode === "tenant"}
         busy={busy !== ""}
         onBack={() => setShowMileageStep(false)}
@@ -2108,7 +2120,6 @@ function CheckedInFlow({
               startedFromStorage: body.startedFromStorage,
               stops: body.stops,
               storageMarket: body.storageMarket,
-              shiftLabel: body.shiftLabel || mileageShiftLabel,
               forceNew: Boolean(body.forceNew),
               noMileage: Boolean(body.noMileage),
             });
@@ -2147,7 +2158,7 @@ function CheckedInFlow({
     );
   }
 
-  if (showRecap || (ctx.recapOnly && !hasRecap && !leftover)) {
+  if (showRecap) {
     return (
       <RecapForm
         code={code}
@@ -2158,14 +2169,9 @@ function CheckedInFlow({
         brandName={ctx.brand.name || ""}
         eventDate={ctx.event?.date}
         forceNew={(recapAsNew || Boolean(ctx.recapOnly && hasRecap)) && ctx.mode === "tenant"}
-        shiftLabel={
-          recapAsNew && secondShiftOk
-            ? SECOND_SHIFT_LABEL
-            : undefined
-        }
         payableMiles={
           confirmedPayableMiles ??
-          activePayable?.claim?.payableMiles ??
+          (recapAsNew ? null : activePayable?.claim?.payableMiles) ??
           null
         }
         onCancel={() => {
