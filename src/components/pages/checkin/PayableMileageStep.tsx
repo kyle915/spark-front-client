@@ -21,12 +21,16 @@ type Props = {
   accent: string;
   payableMileage: PayableMileageState;
   shiftLabel?: string;
+  /** When filing another / late second recap — server stamps the shift label. */
+  forceNew?: boolean;
   busy: boolean;
   onSave: (body: {
     startedFromStorage: boolean;
     stops: PayableMileageStop[];
     storageMarket?: string;
     shiftLabel?: string;
+    forceNew?: boolean;
+    noMileage?: boolean;
   }) => Promise<PayableMileageSaveResult>;
   onContinue: (miles?: number) => void;
   onBack: () => void;
@@ -66,6 +70,7 @@ export default function PayableMileageStep({
   accent,
   payableMileage,
   shiftLabel,
+  forceNew = false,
   busy,
   onSave,
   onContinue,
@@ -161,6 +166,7 @@ export default function PayableMileageStep({
         stops,
         storageMarket: storage?.market || pickedMarket || payableMileage.marketHint,
         shiftLabel,
+        forceNew,
       });
       if (!result.claim) {
         setErr(
@@ -172,6 +178,31 @@ export default function PayableMileageStep({
       setClaim(result.claim);
       // Pass miles through so RecapForm doesn't race setState and open empty.
       onContinue(result.claim.payableMiles);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const waiveMileage = async () => {
+    setSaving(true);
+    setErr(null);
+    try {
+      const result = await onSave({
+        startedFromStorage: false,
+        stops: [],
+        shiftLabel,
+        forceNew,
+        noMileage: true,
+      });
+      if (!result.claim) {
+        setErr(
+          result.error ||
+            "Couldn't save. Check your signal and try again.",
+        );
+        return;
+      }
+      setClaim(result.claim);
+      onContinue(0);
     } finally {
       setSaving(false);
     }
@@ -461,6 +492,27 @@ export default function PayableMileageStep({
               : "Save miles & continue"}
         </button>
       </div>
+      <button
+        type="button"
+        onClick={() => void waiveMileage()}
+        disabled={busy || saving}
+        style={{
+          display: "block",
+          width: "100%",
+          marginTop: 12,
+          padding: "10px 12px",
+          border: "none",
+          background: "transparent",
+          color: "#4b5563",
+          fontSize: 14,
+          fontWeight: 600,
+          textDecoration: "underline",
+          cursor: busy || saving ? "default" : "pointer",
+          opacity: busy || saving ? 0.55 : 1,
+        }}
+      >
+        I don&apos;t have any mileage
+      </button>
       {!stopsReady && started !== null ? (
         <p style={{ margin: "8px 0 0", fontSize: 12, color: "#6b7280" }}>
           {started
