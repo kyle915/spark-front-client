@@ -4,6 +4,7 @@ import {
   isMileageCustomFieldName,
   payableMileageComplete,
   claimForShiftLabel,
+  estimatePayableMilesHaversine,
   shouldCollectPayableMileage,
   validatePayableMileageDraft,
 } from "./payableMileage";
@@ -89,23 +90,70 @@ describe("payableMileageComplete / format", () => {
     expect(formatPayableMiles(12.4)).toBe("12.40 mi");
   });
 
+  const baseState = {
+    enabled: true,
+    storageUnits: [] as { market: string; address: string }[],
+    matchedStorage: null,
+    claim: {
+      uuid: "1",
+      startedFromStorage: true,
+      storageMarket: "Austin, TX",
+      storageAddress: "x",
+      stops: [],
+      payableMiles: 12.4,
+      completed: true,
+      shiftLabel: "",
+    },
+  };
+
   it("detects completed claim", () => {
+    expect(payableMileageComplete(baseState)).toBe(true);
+  });
+
+  it("forceNew is never complete", () => {
+    expect(payableMileageComplete(baseState, { forceNew: true })).toBe(false);
+  });
+
+  it("ignores first-shift claim when asking for Second shift", () => {
     expect(
-      payableMileageComplete({
-        enabled: true,
-        storageUnits: [],
-        matchedStorage: null,
-        claim: {
-          uuid: "1",
-          startedFromStorage: true,
-          storageMarket: "Austin, TX",
-          storageAddress: "x",
-          stops: [],
-          payableMiles: 12.4,
-          completed: true,
+      payableMileageComplete(baseState, { shiftLabel: "Second shift" }),
+    ).toBe(false);
+  });
+
+  it("accepts matching second-shift claim", () => {
+    expect(
+      payableMileageComplete(
+        {
+          ...baseState,
+          claim: { ...baseState.claim, shiftLabel: "Second shift" },
         },
-      }),
+        { shiftLabel: "Second shift" },
+      ),
     ).toBe(true);
+  });
+});
+
+describe("estimatePayableMilesHaversine", () => {
+  it("sums storage → stop straight-line miles", () => {
+    const miles = estimatePayableMilesHaversine({
+      startedFromStorage: true,
+      storage: {
+        market: "Austin, TX",
+        address: "6330 Harold Ct",
+        lat: 30.267,
+        lng: -97.671,
+      },
+      stops: [
+        {
+          name: "Whole Foods",
+          address: "525 N Lamar",
+          lat: 30.271,
+          lng: -97.753,
+        },
+      ],
+    });
+    expect(miles).toBeGreaterThan(4);
+    expect(miles).toBeLessThan(8);
   });
 });
 

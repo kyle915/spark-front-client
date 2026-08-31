@@ -38,6 +38,15 @@ import {
   type PendingRecap,
 } from "./offlineRecap";
 import {
+  clearPendingMileage,
+  enqueueMileage,
+  flushPendingMileage,
+  offlineMileageBanner,
+  provisionalClaimFromPending,
+  readPendingMileage,
+  type PendingMileage,
+} from "./offlineMileage";
+import {
   CHECK_IN_SOMEWHERE_ELSE,
   CLEAR_LEFTOVER_ERROR,
   isLeftoverCheckinSession,
@@ -759,6 +768,43 @@ async function postCheckinClock(
   return { ok: res.ok, status: res.status, alreadyIn };
 }
 
+async function postCheckinPayableMileage(
+  code: string,
+  body: Record<string, unknown>,
+): Promise<{
+  ok: boolean;
+  status: number;
+  claim?: PayableMileageClaim | null;
+  payableMileage?: PayableMileageState | null;
+  message?: string;
+}> {
+  const res = await fetchWithTimeout(
+    `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/payable-mileage`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  let claim: PayableMileageClaim | null | undefined;
+  let payableMileage: PayableMileageState | null | undefined;
+  let message: string | undefined;
+  try {
+    const json = (await res.clone().json()) as {
+      claim?: PayableMileageClaim;
+      payableMileage?: PayableMileageState;
+      message?: string;
+      error?: string;
+    };
+    claim = json.claim ?? json.payableMileage?.claim ?? null;
+    payableMileage = json.payableMileage;
+    message = json.message || json.error;
+  } catch {
+    /* gateway / empty */
+  }
+  return { ok: res.ok, status: res.status, claim, payableMileage, message };
+}
+
 async function postCheckinRecap(
   code: string,
   body: Record<string, unknown>,
@@ -1008,8 +1054,15 @@ export default function SparkCheckin() {
       void flushPendingClock({
         code,
         postClock: (body) => postCheckinClock(code, body),
-      });
-      void flushQueuedRecap(code).then((result) => {
+      }).then(() =>
+        flushPendingMileage({
+          code,
+          postMileage: (body) => postCheckinPayableMileage(code, body),
+        }),
+      ).then((result) => {
+        if (result === "flushed" || result === "already") void refresh();
+        return flushQueuedRecap(code);
+      }).then((result) => {
         if (result === "flushed" || result === "already") void refresh();
       });
     };
@@ -1036,6 +1089,7 @@ export default function SparkCheckin() {
       window.localStorage.removeItem(storeKey);
       clearPendingClock(code);
       clearPendingRecap(code);
+      clearPendingMileage(code);
       clearCachedContext(code);
       if (token) clearDraft(code, token);
     } catch {
@@ -1703,19 +1757,27 @@ function CheckedInFlow({
       brand: ctx.brand,
       payableMileage: ctx.session?.payableMileage,
     }) &&
-    !payableMileageComplete(ctx.session?.payableMileage);
+    !payableMileageComplete(ctx.session?.payableMileage) &&
+    !readPendingMileage(code);
   const [showRecap, setShowRecap] = useState(
     () => bootRecapOnly && !bootNeedMiles,
   );
   const [showMileageStep, setShowMileageStep] = useState(() => bootNeedMiles);
   const [payableMileage, setPayableMileage] = useState<PayableMileageState | null>(
-    () => ctx.session?.payableMileage ?? null,
+    () => {
+      const base = ctx.session?.payableMileage ?? null;
+      const pending = readPendingMileage(code);
+      if (!pending || !base) return base;
+      return { ...base, claim: provisionalClaimFromPending(pending) };
+    },
   );
   // Locked in when mileage step saves — avoids RecapForm mounting before
   // setPayableMileage commits (Alicia had to re-type required Mileage).
   const [confirmedPayableMiles, setConfirmedPayableMiles] = useState<number | null>(
     () => {
       if (bootNeedMiles) return null;
+      const pending = readPendingMileage(code);
+      if (pending) return pending.provisionalMiles;
       const c = ctx.session?.payableMileage?.claim;
       return c?.completed && Number.isFinite(c.payableMiles) ? c.payableMiles : null;
     },
@@ -1723,15 +1785,23 @@ function CheckedInFlow({
   const [recapAsNew, setRecapAsNew] = useState(false);
   const openRecap = (asNew: boolean) => {
     setRecapAsNew(asNew);
-    if (asNew) setConfirmedPayableMiles(null);
+    if (asNew) {
+      setConfirmedPayableMiles(null);
+      clearPendingMileage(code);
+      setQueuedMileage(null);
+    }
     const needMiles = shouldCollectPayableMileage({
       brand: ctx.brand,
       payableMileage: payableMileage ?? ctx.session?.payableMileage,
     });
-    // Second / another filing always re-collects; first shift reuses a saved claim.
+    // Second / another filing always re-collects; first shift reuses a saved claim
+    // (or an offline provisional still waiting to flush).
     const complete =
       !asNew &&
-      payableMileageComplete(payableMileage ?? ctx.session?.payableMileage);
+      (Boolean(readPendingMileage(code)) ||
+        payableMileageComplete(payableMileage ?? ctx.session?.payableMileage, {
+          forceNew: false,
+        }));
     if (needMiles && !complete) {
       setShowMileageStep(true);
       setShowRecap(false);
@@ -1765,6 +1835,9 @@ function CheckedInFlow({
   );
   const [queuedRecap, setQueuedRecap] = useState<PendingRecap | null>(() =>
     readPendingRecap(code),
+  );
+  const [queuedMileage, setQueuedMileage] = useState<PendingMileage | null>(() =>
+    readPendingMileage(code),
   );
   // A queued clock-in is the shift they already started. Treat it as on the
   // clock so they can fill the recap offline instead of staring at Clock in.
@@ -1839,6 +1912,33 @@ function CheckedInFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, token, onRefresh]);
 
+  const tryFlushMileage = useCallback(async () => {
+    const result = await flushPendingMileage({
+      code,
+      postMileage: async (body) => {
+        const res = await post("payable-mileage", body);
+        let claim: PayableMileageClaim | null | undefined;
+        try {
+          const json = (await res.clone().json()) as {
+            claim?: PayableMileageClaim;
+            payableMileage?: PayableMileageState;
+          };
+          claim = json.claim ?? json.payableMileage?.claim ?? null;
+          if (json.payableMileage) setPayableMileage(json.payableMileage);
+        } catch {
+          /* gateway */
+        }
+        return { ok: res.ok, status: res.status, claim };
+      },
+    });
+    setQueuedMileage(readPendingMileage(code));
+    if (result === "flushed" || result === "already") {
+      await onRefresh();
+    }
+    return result;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, token, onRefresh]);
+
   const tryFlushRecap = useCallback(async () => {
     const result = await flushQueuedRecap(code);
     if (result === "flushed" || result === "already") {
@@ -1849,25 +1949,33 @@ function CheckedInFlow({
   }, [code, onRefresh]);
 
   useEffect(() => {
-    if (!queuedClock && !queuedRecap) return;
-    const onOnline = () => {
-      if (queuedClock) void tryFlushPending();
-      if (queuedRecap) void tryFlushRecap();
+    if (!queuedClock && !queuedRecap && !queuedMileage) return;
+    const run = () => {
+      void (async () => {
+        if (queuedClock) await tryFlushPending();
+        if (queuedMileage) await tryFlushMileage();
+        if (queuedRecap) await tryFlushRecap();
+      })();
     };
+    const onOnline = () => run();
     window.addEventListener("online", onOnline);
     const onVis = () => {
-      if (document.visibilityState !== "visible") return;
-      if (queuedClock) void tryFlushPending();
-      if (queuedRecap) void tryFlushRecap();
+      if (document.visibilityState === "visible") run();
     };
     document.addEventListener("visibilitychange", onVis);
-    if (queuedClock) void tryFlushPending();
-    if (queuedRecap) void tryFlushRecap();
+    run();
     return () => {
       window.removeEventListener("online", onOnline);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [queuedClock, queuedRecap, tryFlushPending, tryFlushRecap]);
+  }, [
+    queuedClock,
+    queuedRecap,
+    queuedMileage,
+    tryFlushPending,
+    tryFlushMileage,
+    tryFlushRecap,
+  ]);
 
   // While the BA is ON THE CLOCK and this page is open, drop a location pin
   // every few minutes so ops can see they're on site rather than only having
@@ -2115,6 +2223,35 @@ function CheckedInFlow({
           setShowRecap(true);
         }}
         onSave={async (body) => {
+          const storage =
+            activePayable.matchedStorage ??
+            activePayable.storageUnits.find(
+              (u) =>
+                u.market.trim().toLowerCase() ===
+                (body.storageMarket || "").trim().toLowerCase(),
+            ) ??
+            null;
+          const queueOffline = () => {
+            if (!token) return { claim: null as PayableMileageClaim | null, error: "Session expired." };
+            const pending = enqueueMileage({
+              code,
+              token,
+              startedFromStorage: body.startedFromStorage,
+              stops: body.stops,
+              storageMarket: body.storageMarket,
+              forceNew: Boolean(body.forceNew),
+              noMileage: Boolean(body.noMileage),
+              storage,
+            });
+            const claim = provisionalClaimFromPending(pending);
+            setPayableMileage((prev) =>
+              prev ? { ...prev, claim } : { ...activePayable, claim },
+            );
+            setConfirmedPayableMiles(claim.payableMiles);
+            setQueuedMileage(pending);
+            setMsg(offlineMileageBanner());
+            return { claim };
+          };
           try {
             const res = await post("payable-mileage", {
               startedFromStorage: body.startedFromStorage,
@@ -2130,11 +2267,16 @@ function CheckedInFlow({
               message?: string;
             };
             if (!res.ok) {
+              if (isOfflineClockFailure({ status: res.status })) {
+                return queueOffline();
+              }
               const error =
                 data.message || data.error || "Couldn't save mileage.";
               setMsg(error);
               return { claim: null, error };
             }
+            clearPendingMileage(code);
+            setQueuedMileage(null);
             if (data.payableMileage) setPayableMileage(data.payableMileage);
             const claim =
               data.claim ?? data.payableMileage?.claim ?? null;
@@ -2148,10 +2290,13 @@ function CheckedInFlow({
               setConfirmedPayableMiles(claim.payableMiles);
             }
             return { claim };
-          } catch {
-            const error = "Couldn't save mileage. Check your signal.";
-            setMsg(error);
-            return { claim: null, error };
+          } catch (error) {
+            if (isOfflineClockFailure({ error })) {
+              return queueOffline();
+            }
+            const errMsg = "Couldn't save mileage. Check your signal.";
+            setMsg(errMsg);
+            return { claim: null, error: errMsg };
           }
         }}
       />
@@ -2507,12 +2652,19 @@ function CheckedInFlow({
             {offlineClockBanner(queuedClock.clockedInAt)}
           </p>
         ) : null}
+        {queuedMileage ? (
+          <p style={{ ...errText, color: "#92400e" }}>
+            {offlineMileageBanner()}
+          </p>
+        ) : null}
         {queuedRecap ? (
           <p style={{ ...errText, color: "#92400e" }}>
             {offlineRecapBanner(queuedRecap.submittedAt)}
           </p>
         ) : null}
-        {msg && !queuedClock && !queuedRecap ? <p style={errText}>{msg}</p> : null}
+        {msg && !queuedClock && !queuedMileage && !queuedRecap ? (
+          <p style={errText}>{msg}</p>
+        ) : null}
       </div>
 
       {/* Wrong store or wrong day is easy to do on a shared link, and the
@@ -2984,6 +3136,11 @@ function RecapForm({
         code,
         postClock: (body) => postCheckinClock(code, { session: token, ...body }),
       });
+      await flushPendingMileage({
+        code,
+        postMileage: (body) =>
+          postCheckinPayableMileage(code, { session: token, ...body }),
+      });
       if (offlineNow) {
         await queueThisSubmit();
         setSubmitPhase("success");
@@ -3046,6 +3203,7 @@ function RecapForm({
 
   const pendingClock = readPendingClock(code);
   const pendingRecap = readPendingRecap(code);
+  const pendingMileage = readPendingMileage(code);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -3063,6 +3221,11 @@ function RecapForm({
         <p style={{ ...errText, color: "#92400e", margin: 0 }}>
           {offlineClockBanner(pendingClock.clockedInAt)} You can still fill this
           recap — it stays on this device until it sends.
+        </p>
+      ) : null}
+      {pendingMileage ? (
+        <p style={{ ...errText, color: "#92400e", margin: 0 }}>
+          {offlineMileageBanner()}
         </p>
       ) : null}
       {pendingRecap ? (
