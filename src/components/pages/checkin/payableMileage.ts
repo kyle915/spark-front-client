@@ -77,7 +77,12 @@ export function formatPayableMiles(miles: number | null | undefined): string {
   return `${Number(miles).toFixed(2)} mi`;
 }
 
-/** Prefer a claim that matches this shift label; ignore a prior shift's claim. */
+/** Prefer a claim that matches this shift label; ignore a prior shift's claim.
+
+When ``want`` is empty, returns the claim as-is (first-shift unlabeled). Callers
+filing another shift should pass forceNew and blank the draft instead of
+relying on this helper alone.
+*/
 export function claimForShiftLabel(
   claim: PayableMileageClaim | null | undefined,
   shiftLabel?: string | null,
