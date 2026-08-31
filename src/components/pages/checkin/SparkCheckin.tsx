@@ -2092,6 +2092,7 @@ function CheckedInFlow({
         accent={accent}
         payableMileage={activePayable}
         shiftLabel={mileageShiftLabel}
+        forceNew={recapAsNew && ctx.mode === "tenant"}
         busy={busy !== ""}
         onBack={() => setShowMileageStep(false)}
         onContinue={(miles) => {
@@ -2108,6 +2109,8 @@ function CheckedInFlow({
               stops: body.stops,
               storageMarket: body.storageMarket,
               shiftLabel: body.shiftLabel || mileageShiftLabel,
+              forceNew: Boolean(body.forceNew),
+              noMileage: Boolean(body.noMileage),
             });
             const data = (await res.json().catch(() => ({}))) as {
               payableMileage?: PayableMileageState;
@@ -3072,9 +3075,9 @@ function RecapForm({
         >
           <strong>Route miles: {formatPayableMiles(payableMiles)}</strong>
           <p style={{ margin: "6px 0 0", fontSize: 13, opacity: 0.9 }}>
-            Pre-filled from Google Maps driving directions through your stops
-            (when available). If construction or detours added distance, bump
-            the Mileage field below before you submit.
+            {Number(payableMiles) === 0
+              ? "No reimbursable mileage for this shift. You can still bump the Mileage field below if needed."
+              : "Pre-filled from Google Maps driving directions through your stops (when available). If construction or detours added distance, bump the Mileage field below before you submit."}
           </p>
         </div>
       ) : null}
