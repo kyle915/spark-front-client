@@ -76,9 +76,12 @@ export default function PayableMileageStep({
   onContinue,
   onBack,
 }: Props) {
-  // Session may still carry the *first* shift claim. A second-shift filing
-  // (shiftLabel set) must start blank so we don't skip or reuse morning miles.
-  const existing = claimForShiftLabel(payableMileage.claim, shiftLabel);
+  // Session may still carry the *first* shift claim. A second / another filing
+  // (forceNew) must start blank so we don't skip or reuse morning miles —
+  // including leftover prior-day "file another" where secondShiftOk is false.
+  const existing = forceNew
+    ? null
+    : claimForShiftLabel(payableMileage.claim, shiftLabel);
   const [started, setStarted] = useState<boolean | null>(
     existing ? existing.startedFromStorage : null,
   );
