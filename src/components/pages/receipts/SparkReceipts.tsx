@@ -35,6 +35,7 @@ import type { UploadUrlQuery as UploadUrlQueryType } from "@/api/queries/__gener
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import SparkConfirm from "@/shared/SparkConfirm";
+import { receiptCampaignPublicUrl } from "@/utils/publicHosts";
 
 /**
  * Upload a single File to GCS and return its blob name, or throw. Mirrors
@@ -94,7 +95,7 @@ const FETCH_ALL = 1000;
 
 // Public share link for a campaign — the no-login upload page route.
 const campaignShareUrl = (slug: string): string =>
-  `${window.location.origin}/c/${slug}`;
+  receiptCampaignPublicUrl(slug);
 
 type Campaign = ReceiptCampaignsQuery$data["receiptCampaigns"][number];
 

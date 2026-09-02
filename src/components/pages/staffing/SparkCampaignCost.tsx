@@ -5,6 +5,7 @@ import { CampaignCostQuery } from "@/api/queries/CampaignCostQuery";
 import type { CampaignCostQuery as CampaignCostQueryType } from "@api/queries/__generated__/CampaignCostQuery.graphql";
 import { ClientLiveTokenQuery } from "@/api/queries/ClientLiveTokenQuery";
 import type { ClientLiveTokenQuery as ClientLiveTokenQueryType } from "@api/queries/__generated__/ClientLiveTokenQuery.graphql";
+import { clientLivePublicUrl } from "@/utils/publicHosts";
 
 /**
  * Campaign cost & margin — what each brand's program cost over a date range
@@ -47,7 +48,7 @@ const Inner: React.FC<{ startDate: string; endDate: string }> = ({
       .then((res) => {
         const token = res?.clientLiveToken;
         if (!token) return;
-        const url = `${window.location.origin}/live/${token}`;
+        const url = clientLivePublicUrl(token);
         navigator.clipboard?.writeText(url).catch(() => {});
         setCopied(tenantId);
         window.setTimeout(() => setCopied((c) => (c === tenantId ? null : c)), 2500);
