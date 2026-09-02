@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { useParams } from "react-router";
 import { bucketCountHint } from "./photoBuckets";
 import {
@@ -3442,6 +3442,164 @@ function RecapForm({
   );
 }
 
+// ── Multiselect (Products Sampled gets search when the SKU list is long) ──
+function MultiselectFieldInput({
+  field,
+  value,
+  accent,
+  onChange,
+  products,
+  sampleQtys,
+  onSampleQtyChange,
+  req,
+  labelStyle,
+}: {
+  field: TemplateField;
+  value: string | string[] | undefined;
+  accent: string;
+  onChange: (v: string[]) => void;
+  products: TemplateProduct[];
+  sampleQtys: Record<string, string>;
+  onSampleQtyChange?: (productId: string, qty: string) => void;
+  req: ReactNode;
+  labelStyle: CSSProperties;
+}) {
+  const [skuFilter, setSkuFilter] = useState("");
+  const arr = Array.isArray(value) ? value : [];
+  const qtyMode =
+    isProductsSampledMultiselect(field) &&
+    Boolean(onSampleQtyChange) &&
+    products.length > 0;
+  const searchable = field.options.length > 24;
+  const visibleOptions = useMemo(() => {
+    const q = skuFilter.trim().toLowerCase();
+    if (!q) return field.options;
+    return field.options.filter((o) => o.toLowerCase().includes(q));
+  }, [field.options, skuFilter]);
+
+  const toggle = (o: string) => {
+    const next = arr.includes(o) ? arr.filter((x) => x !== o) : [...arr, o];
+    onChange(next);
+    if (!qtyMode || !onSampleQtyChange) return;
+    const product = matchProductForSampleOption(o, products);
+    if (!product) return;
+    if (next.includes(o)) {
+      if (sampleQtys[product.id] == null) onSampleQtyChange(product.id, "");
+    } else {
+      onSampleQtyChange(product.id, "");
+    }
+  };
+  const selectedWithProduct = qtyMode
+    ? arr
+        .map((o) => {
+          const product = matchProductForSampleOption(o, products);
+          return product ? { option: o, product } : null;
+        })
+        .filter((row): row is { option: string; product: TemplateProduct } =>
+          Boolean(row),
+        )
+    : [];
+
+  return (
+    <div>
+      <label style={labelStyle}>
+        {field.name}
+        {req}
+      </label>
+      {qtyMode ? (
+        <p style={{ fontSize: 13, opacity: 0.6, margin: "4px 0 0" }}>
+          Tap each SKU you handed out, then enter how many cans.
+          {searchable ? ` Search filters the list (${arr.length} selected).` : null}
+        </p>
+      ) : null}
+      {searchable ? (
+        <input
+          style={{ ...input, marginTop: 8 }}
+          type="search"
+          value={skuFilter}
+          onChange={(e) => setSkuFilter(e.target.value)}
+          placeholder="Search SKUs or brand line…"
+          enterKeyHint="search"
+          autoComplete="off"
+        />
+      ) : null}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+        {visibleOptions.map((o) => {
+          const on = arr.includes(o);
+          return (
+            <button
+              key={o}
+              type="button"
+              onClick={() => toggle(o)}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 999,
+                fontSize: 13,
+                cursor: "pointer",
+                border: on ? "none" : "1px solid rgba(0,0,0,0.15)",
+                background: on ? accent : "transparent",
+                color: on ? "#0a0d09" : "inherit",
+              }}
+            >
+              {o}
+            </button>
+          );
+        })}
+      </div>
+      {searchable && visibleOptions.length === 0 ? (
+        <p style={{ fontSize: 13, opacity: 0.5, marginTop: 8 }}>
+          No SKUs match “{skuFilter.trim()}”.
+        </p>
+      ) : null}
+      {selectedWithProduct.length > 0 ? (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            marginTop: 12,
+          }}
+        >
+          {selectedWithProduct.map(({ option, product }) => (
+            <div
+              key={product.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              {product.imageUrl ? (
+                <img
+                  src={product.imageUrl}
+                  alt=""
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 8,
+                    objectFit: "cover",
+                  }}
+                />
+              ) : null}
+              <span style={{ flex: 1, fontSize: 14, minWidth: 0 }} title={option}>
+                {product.name}
+              </span>
+              <input
+                style={{ ...input, width: 88, margin: 0 }}
+                inputMode="numeric"
+                placeholder="cans"
+                aria-label={`Cans sampled — ${product.name}`}
+                value={sampleQtys[product.id] ?? ""}
+                onChange={(e) => onSampleQtyChange?.(product.id, e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 // ── One template field ───────────────────────────────────────────────────────
 function FieldInput({
   field,
@@ -3513,113 +3671,18 @@ function FieldInput({
     );
   }
   if (kind === "multiselect") {
-    const arr = Array.isArray(value) ? value : [];
-    const qtyMode =
-      isProductsSampledMultiselect(field) &&
-      Boolean(onSampleQtyChange) &&
-      products.length > 0;
-    const toggle = (o: string) => {
-      const next = arr.includes(o) ? arr.filter((x) => x !== o) : [...arr, o];
-      onChange(next);
-      if (!qtyMode || !onSampleQtyChange) return;
-      const product = matchProductForSampleOption(o, products);
-      if (!product) return;
-      if (next.includes(o)) {
-        if (sampleQtys[product.id] == null) onSampleQtyChange(product.id, "");
-      } else {
-        onSampleQtyChange(product.id, "");
-      }
-    };
-    const selectedWithProduct = qtyMode
-      ? arr
-          .map((o) => {
-            const product = matchProductForSampleOption(o, products);
-            return product ? { option: o, product } : null;
-          })
-          .filter((row): row is { option: string; product: TemplateProduct } =>
-            Boolean(row),
-          )
-      : [];
     return (
-      <div>
-        <label style={label}>
-          {field.name}
-          {req}
-        </label>
-        {qtyMode ? (
-          <p style={{ fontSize: 13, opacity: 0.6, margin: "4px 0 0" }}>
-            Tap each SKU you handed out, then enter how many cans.
-          </p>
-        ) : null}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-          {field.options.map((o) => {
-            const on = arr.includes(o);
-            return (
-              <button
-                key={o}
-                type="button"
-                onClick={() => toggle(o)}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 999,
-                  fontSize: 13,
-                  cursor: "pointer",
-                  border: on ? "none" : "1px solid rgba(0,0,0,0.15)",
-                  background: on ? accent : "transparent",
-                  color: on ? "#0a0d09" : "inherit",
-                }}
-              >
-                {o}
-              </button>
-            );
-          })}
-        </div>
-        {selectedWithProduct.length > 0 ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              marginTop: 12,
-            }}
-          >
-            {selectedWithProduct.map(({ option, product }) => (
-              <div
-                key={product.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                {product.imageUrl ? (
-                  <img
-                    src={product.imageUrl}
-                    alt=""
-                    style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 8,
-                      objectFit: "cover",
-                    }}
-                  />
-                ) : null}
-                <span style={{ flex: 1, fontSize: 14, minWidth: 0 }} title={option}>
-                  {product.name}
-                </span>
-                <input
-                  style={{ ...input, width: 88, margin: 0 }}
-                  inputMode="numeric"
-                  placeholder="cans"
-                  aria-label={`Cans sampled — ${product.name}`}
-                  value={sampleQtys[product.id] ?? ""}
-                  onChange={(e) => onSampleQtyChange?.(product.id, e.target.value)}
-                />
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </div>
+      <MultiselectFieldInput
+        field={field}
+        value={value}
+        accent={accent}
+        onChange={onChange}
+        products={products}
+        sampleQtys={sampleQtys}
+        onSampleQtyChange={onSampleQtyChange}
+        req={req}
+        labelStyle={label}
+      />
     );
   }
 

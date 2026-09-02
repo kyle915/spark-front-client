@@ -1474,6 +1474,14 @@ const ProductsSampledPillsField: React.FC<{
     return fromCatalog.length > 0 ? fromCatalog : [...options];
   }, [products, options]);
 
+  const [skuFilter, setSkuFilter] = useState("");
+  const searchable = pillOptions.length > 24;
+  const visiblePills = useMemo(() => {
+    const q = skuFilter.trim().toLowerCase();
+    if (!q) return pillOptions;
+    return pillOptions.filter((o) => o.toLowerCase().includes(q));
+  }, [pillOptions, skuFilter]);
+
   const selectedRows = pillOptions
     .filter((option) => sampleOptionSelected(option, selected))
     .map((option) => {
@@ -1493,9 +1501,28 @@ const ProductsSampledPillsField: React.FC<{
     <Field label={label}>
       <p className="text-sm mb-2" style={{ color: "rgba(255,255,255,0.6)" }}>
         Tap each SKU you handed out, then enter how many cans.
+        {searchable
+          ? ` Search filters the list (${selected.length} selected).`
+          : null}
       </p>
+      {searchable ? (
+        <input
+          type="search"
+          value={skuFilter}
+          onChange={(e) => setSkuFilter(e.target.value)}
+          placeholder="Search SKUs or brand line…"
+          className="w-full mb-2 px-3 py-2 rounded-lg text-sm"
+          style={{
+            background: "var(--spark-surface-2)",
+            border: "1px solid var(--spark-border)",
+            color: "inherit",
+          }}
+          enterKeyHint="search"
+          autoComplete="off"
+        />
+      ) : null}
       <div className="flex flex-wrap gap-2">
-        {pillOptions.map((o) => {
+        {visiblePills.map((o) => {
           const on = sampleOptionSelected(o, selected);
           return (
             <button
@@ -1533,6 +1560,11 @@ const ProductsSampledPillsField: React.FC<{
           );
         })}
       </div>
+      {searchable && visiblePills.length === 0 ? (
+        <p className="text-sm mt-2" style={{ color: "rgba(255,255,255,0.5)" }}>
+          No SKUs match “{skuFilter.trim()}”.
+        </p>
+      ) : null}
       {selectedRows.length > 0 ? (
         <div className="mt-3 space-y-2">
           {selectedRows.map(({ option, product }) => (
