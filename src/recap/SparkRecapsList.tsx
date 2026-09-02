@@ -53,6 +53,7 @@ import {
   recapMatchesBaName,
   recapMatchesPipeline,
   sharedQueryFilter,
+  withRecapListReturn,
 } from "./recapListFilters";
 import { BaNameFilter } from "./BaNameFilter";
 
@@ -663,8 +664,11 @@ const RecapCard: React.FC<{
   );
 };
 
-const recapHref = (r: Recap) =>
-  r.kind === "custom" ? `/recap/view-custom/${r.uuid}` : `/recap/view/${r.uuid}`;
+const recapHref = (r: Recap, listStatus?: StatusKey) =>
+  withRecapListReturn(
+    r.kind === "custom" ? `/recap/view-custom/${r.uuid}` : `/recap/view/${r.uuid}`,
+    listStatus,
+  );
 
 const RecapCompactRow: React.FC<{
   recap: Recap;
@@ -1369,7 +1373,7 @@ const RecapsListInner: React.FC<{
             <RecapCompactRow
               key={r.uuid}
               recap={r}
-              href={recapHref(r)}
+              href={recapHref(r, statusFilter)}
               selected={selectedIds.has(r.id)}
               focused={focusedId === r.uuid}
               selectMode={selectMode}
@@ -1395,7 +1399,7 @@ const RecapsListInner: React.FC<{
           onToggleSelect={() => onToggleSelected(r.id)}
           selectMode={selectMode}
           showSla={pipeline === "needs_review"}
-          href={recapHref(r)}
+          href={recapHref(r, statusFilter)}
           forceApproved={justApprovedIds.has(r.id)}
           onShare={setShareTarget}
           onOpenRequest={(reqUuid) =>
@@ -1462,7 +1466,7 @@ export default function SparkRecapsList() {
   const { tenantId } = useAuthStore();
   const { isClient } = useSparkRole();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const statusFromUrl = searchParams.get("status");
   const rangeFromUrl = searchParams.get("range");
   const [search, setSearch] = useState("");
@@ -1482,8 +1486,20 @@ export default function SparkRecapsList() {
   const [stateFilter, setStateFilter] = useState("all");
   const [rmmFilter, setRmmFilter] = useState("all");
   const [baName, setBaName] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusKey>(() =>
+  const [statusFilter, setStatusFilterState] = useState<StatusKey>(() =>
     defaultRecapStatus(isClient, statusFromUrl),
+  );
+  /** User-driven tab change — keep `?status=` in sync so Back restores it. */
+  const setStatusFilter = useCallback(
+    (next: StatusKey) => {
+      setStatusFilterState(next);
+      const pipeline = next === "draft" ? "needs_review" : next;
+      if (searchParams.get("status") === pipeline) return;
+      const params = new URLSearchParams(searchParams);
+      params.set("status", pipeline);
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
   );
   const [needsStoreMap, setNeedsStoreMap] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
@@ -1498,9 +1514,9 @@ export default function SparkRecapsList() {
   useEffect(() => {
     const status = searchParams.get("status");
     if (status) {
-      setStatusFilter(defaultRecapStatus(isClient, status));
+      setStatusFilterState(defaultRecapStatus(isClient, status));
     } else if (isClient) {
-      setStatusFilter((s) =>
+      setStatusFilterState((s) =>
         s === "all" || s === "approved" ? s : "approved",
       );
     }
@@ -1590,7 +1606,7 @@ export default function SparkRecapsList() {
         setFocusedIdx((i) => Math.max(0, (i < 0 ? 0 : i) - 1));
       } else if (e.key === "Enter" && focused) {
         e.preventDefault();
-        navigate(recapHref(focused));
+        navigate(recapHref(focused, statusFilter));
       } else if (e.key === "Escape" && focusedIdx !== -1) {
         e.preventDefault();
         setFocusedIdx(-1);
@@ -1598,7 +1614,7 @@ export default function SparkRecapsList() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [focusedIdx, navigate, showHelp, visibleRecaps]);
+  }, [focusedIdx, navigate, showHelp, statusFilter, visibleRecaps]);
 
   // ─── Campaign report multi-select ────────────────────────────
   // Set of recap.id (relay id) the user has ticked. Survives filter

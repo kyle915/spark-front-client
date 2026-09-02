@@ -5,7 +5,9 @@ import {
   recapListStatusWord,
   recapMatchesBaName,
   recapMatchesPipeline,
+  recapsListHrefFromReturn,
   sharedQueryFilter,
+  withRecapListReturn,
 } from "./recapListFilters";
 
 describe("defaultRecapStatus", () => {
@@ -24,6 +26,39 @@ describe("defaultRecapStatus", () => {
     expect(defaultRecapStatus(false)).toBe("needs_review");
     expect(defaultRecapStatus(false, "approved")).toBe("approved");
     expect(defaultRecapStatus(false, "shared")).toBe("shared");
+  });
+});
+
+describe("recap list return href", () => {
+  it("stashes fromStatus on detail links", () => {
+    expect(withRecapListReturn("/recap/view-custom/abc", "approved")).toBe(
+      "/recap/view-custom/abc?fromStatus=approved",
+    );
+    expect(withRecapListReturn("/recap/view/x?x=1", "shared")).toBe(
+      "/recap/view/x?x=1&fromStatus=shared",
+    );
+    expect(withRecapListReturn("/recap/view/x", "draft")).toBe(
+      "/recap/view/x?fromStatus=needs_review",
+    );
+  });
+
+  it("rebuilds the list tab from fromStatus", () => {
+    const params = new URLSearchParams("fromStatus=approved&fromPage=3");
+    expect(recapsListHrefFromReturn({ searchParams: params })).toBe(
+      "/recaps/list?status=approved&page=3",
+    );
+  });
+
+  it("falls back when fromStatus is missing", () => {
+    expect(
+      recapsListHrefFromReturn({
+        searchParams: new URLSearchParams(),
+        fallbackStatus: "shared",
+      }),
+    ).toBe("/recaps/list?status=shared");
+    expect(
+      recapsListHrefFromReturn({ searchParams: new URLSearchParams() }),
+    ).toBe("/recaps/list");
   });
 });
 

@@ -38,6 +38,7 @@ import {
   useState,
   Suspense,
 } from "react";
+import { recapsListHrefFromReturn } from "./recapListFilters";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { StatusMorph } from "@/motion/StatusMorph";
 import {
@@ -919,6 +920,17 @@ const RecapCustomViewInner = () => {
   // freeing the event for a fresh recap. window.confirm keeps this a
   // one-file change; the recaps list refetches on mount (store-or-network)
   // so the deleted row is gone when we land there.
+  const backToListUrl = useMemo(
+    () =>
+      recapsListHrefFromReturn({
+        searchParams,
+        // Deep links / Jump-to without fromStatus: land on the tab that
+        // matches this recap instead of always Needs review.
+        fallbackStatus: recap?.approved ? "approved" : "needs_review",
+      }),
+    [searchParams, recap?.approved],
+  );
+
   const handleDelete = useCallback(() => {
     if (!recap?.id) return;
     const ok = window.confirm(
@@ -932,30 +944,14 @@ const RecapCustomViewInner = () => {
         const payload = res.deleteCustomRecap;
         if (payload?.success) {
           showAlert("Recap deleted.", "success");
-          navigate("/recaps/list");
+          navigate(backToListUrl);
         } else {
           showAlert(payload?.message ?? "Delete failed.", "error");
         }
       },
       onError: (err) => showAlert(`Delete failed: ${err.message}`, "error"),
     });
-  }, [recap?.id, commitDelete, showAlert, navigate]);
-
-  const backToListUrl = useMemo(() => {
-    const pageRaw = Number(searchParams.get("fromPage") ?? "1");
-    const page =
-      Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
-    const after = searchParams.get("fromAfter");
-
-    const params = new URLSearchParams();
-    params.set("page", String(page));
-    if (after) params.set("after", after);
-
-    // Point at the workspace Recaps list (SparkRecapsList). The old
-    // /recaps/custom-list page is gone in new Spark, so "Back to list"
-    // dead-ended there. The page/after params are kept (harmless).
-    return `/recaps/list?${params.toString()}`;
-  }, [searchParams]);
+  }, [recap?.id, commitDelete, showAlert, navigate, backToListUrl]);
 
   const isPdfFile = useCallback((file: (typeof recapFiles)[number]) => {
     const typeName = file.fileType?.name?.toLowerCase() ?? "";

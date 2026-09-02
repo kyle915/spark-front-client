@@ -7,7 +7,7 @@ import {
   type ActionPhase,
 } from "@/motion/opsMotion";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { Navigate, useNavigate, useParams } from "react-router";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapDetailSkeleton } from "@/layout/PageSkeletons";
 import { RecapQuery } from "@/api/queries/RecapQuery";
@@ -28,6 +28,7 @@ import { DeleteRecapMutation } from "@/api/mutations/DeleteRecapMutation";
 import type { DeleteRecapMutation as DeleteRecapMutationType } from "@/api/mutations/__generated__/DeleteRecapMutation.graphql";
 import { AmbassadorSearchQuery } from "@/api/queries/AmbassadorSearchQuery";
 import type { AmbassadorSearchQuery as AmbassadorSearchQueryType } from "@/api/queries/__generated__/AmbassadorSearchQuery.graphql";
+import { recapsListHrefFromReturn } from "./recapListFilters";
 import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import type { ProductsQuery as ProductsQueryType } from "@/api/queries/__generated__/ProductsQuery.graphql";
 import { CreateProductMutation } from "@/api/mutations/CreateProductMutation";
@@ -405,6 +406,7 @@ const BaSearch: React.FC<{
 
 const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const showAlert = useAlertStore((s) => s.showAlert);
   const [commitPdf, isPdfRunning] = useMutation<GenerateRecapPdfMutationType>(
     GenerateRecapPdfMutation,
@@ -818,6 +820,15 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   // Confirms first, then navigates back to the recaps list — which frees
   // the event for a fresh recap. The list refetches on mount so the row
   // is gone when we land there.
+  const backToListUrl = useMemo(
+    () =>
+      recapsListHrefFromReturn({
+        searchParams,
+        fallbackStatus: recap?.approved ? "approved" : "needs_review",
+      }),
+    [searchParams, recap?.approved],
+  );
+
   const deleteRecap = () => {
     if (isDeleting) return;
     const ok = window.confirm(
@@ -830,7 +841,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       onCompleted: (res) => {
         if (res.deleteRecap?.success) {
           showAlert("Recap deleted.", "success");
-          navigate("/recaps/list");
+          navigate(backToListUrl);
         } else {
           showAlert(res.deleteRecap?.message ?? "Delete failed.", "error");
         }
@@ -872,7 +883,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   return (
     <div className="space-y-6 max-w-7xl">
       <button
-        onClick={() => navigate("/recap/list")}
+        onClick={() => navigate(backToListUrl)}
         className="mono text-[11px] transition"
         style={{
           letterSpacing: "0.14em",

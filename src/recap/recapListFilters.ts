@@ -92,6 +92,56 @@ export function recapListStatusWord(
 
 export type RecapEmptyKind = "queue" | "window" | "filters";
 
+/**
+ * Detail → list return path.
+ *
+ * Admin back used to hard-link `/recaps/list`, which re-defaults to
+ * Needs review even when you opened the recap from Approved / Shared /
+ * Submitted. List cards stash `fromStatus` on the detail URL; back
+ * rebuilds `/recaps/list?status=…` from that (or a fallback).
+ */
+export function normalizeRecapListStatus(
+  status?: string | null,
+): RecapListStatus | null {
+  if (!status) return null;
+  if (status === "draft") return "needs_review";
+  if (URL_STATUSES.has(status)) return status as RecapListStatus;
+  return null;
+}
+
+export function withRecapListReturn(
+  href: string,
+  listStatus?: string | null,
+): string {
+  const status = normalizeRecapListStatus(listStatus);
+  if (!status) return href;
+  const [path, query = ""] = href.split("?");
+  const params = new URLSearchParams(query);
+  params.set("fromStatus", status);
+  const q = params.toString();
+  return q ? `${path}?${q}` : path;
+}
+
+export function recapsListHrefFromReturn(opts: {
+  searchParams: { get: (key: string) => string | null };
+  fallbackStatus?: string | null;
+}): string {
+  const fromStatus = normalizeRecapListStatus(
+    opts.searchParams.get("fromStatus") ?? opts.fallbackStatus,
+  );
+  const pageRaw = Number(opts.searchParams.get("fromPage") ?? "");
+  const page =
+    Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : null;
+  const after = opts.searchParams.get("fromAfter");
+
+  const params = new URLSearchParams();
+  if (fromStatus) params.set("status", fromStatus);
+  if (page && page > 1) params.set("page", String(page));
+  if (after) params.set("after", after);
+  const q = params.toString();
+  return q ? `/recaps/list?${q}` : "/recaps/list";
+}
+
 export function recapMatchesBaName(
   baQuery: string,
   recapBaName: string,
