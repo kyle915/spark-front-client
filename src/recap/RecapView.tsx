@@ -26,6 +26,7 @@ import {
 import { useAlertStore } from "@store/alertStore";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import { RecapDocument } from "@/recap/RecapDocument";
+import { recapsListHrefFromReturn } from "./recapListFilters";
 
 type HeifDecodedImage = {
   get_width: () => number;
@@ -147,18 +148,14 @@ const RecapView = () => {
   const recap = recapData?.recap ?? null;
   const recapFiles = useMemo(() => recap?.recapFiles ?? [], [recap]);
 
-  const backToListUrl = useMemo(() => {
-    const pageRaw = Number(searchParams.get("fromPage") ?? "1");
-    const page =
-      Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : 1;
-    const after = searchParams.get("fromAfter");
-
-    const params = new URLSearchParams();
-    params.set("page", String(page));
-    if (after) params.set("after", after);
-
-    return `/recap/list?${params.toString()}`;
-  }, [searchParams]);
+  const backToListUrl = useMemo(
+    () =>
+      recapsListHrefFromReturn({
+        searchParams,
+        fallbackStatus: recap?.approved ? "approved" : "needs_review",
+      }),
+    [searchParams, recap?.approved],
+  );
 
   // ======================================================
   // FILE HELPERS
