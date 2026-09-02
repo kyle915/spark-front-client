@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CLIENT_ORIGIN,
   adminOrigin,
+  campaignReportPublicUrl,
   checkinUrl,
   clientOrigin,
   isPublicFieldPath,
@@ -27,10 +28,11 @@ afterEach(() => {
 });
 
 describe("isPublicFieldPath", () => {
-  it("matches check-in, public form, and recap share", () => {
+  it("matches check-in, public form, recap share, and campaign report", () => {
     expect(isPublicFieldPath("/checkin/abc")).toBe(true);
     expect(isPublicFieldPath("/spark-form/liquid-death")).toBe(true);
     expect(isPublicFieldPath("/r/tok.en")).toBe(true);
+    expect(isPublicFieldPath("/report/tok.en")).toBe(true);
     expect(isPublicFieldPath("/training/LD-FZUWXT")).toBe(true);
   });
   it("does not match admin or login", () => {
@@ -115,5 +117,21 @@ describe("recap share origin", () => {
     mockLocation("spark.igniteproductions.co");
     expect(recapShareOrigin()).toBe(CLIENT_ORIGIN);
     expect(recapPublicUrl("tok")).toBe(`${CLIENT_ORIGIN}/r/tok`);
+  });
+});
+
+describe("campaign report share origin", () => {
+  it("mints client. /report even from admin", () => {
+    mockLocation("admin.igniteproductions.co");
+    expect(campaignReportPublicUrl("abc.tok")).toBe(
+      `${CLIENT_ORIGIN}/report/abc.tok`,
+    );
+  });
+
+  it("never mints spark. for a leftover spark tab", () => {
+    mockLocation("spark.igniteproductions.co");
+    expect(campaignReportPublicUrl("abc.tok")).toBe(
+      `${CLIENT_ORIGIN}/report/abc.tok`,
+    );
   });
 });

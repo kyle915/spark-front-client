@@ -97,7 +97,12 @@ export function recapPublicUrl(token: string): string {
   return withPath(recapShareOrigin(), `/r/${encodeURIComponent(token)}`);
 }
 
+/** Public campaign report leave-behind — same client. host as /r/:token. */
+export function campaignReportPublicUrl(token: string): string {
+  return withPath(recapShareOrigin(), `/report/${encodeURIComponent(token)}`);
+}
+
 /** True when this first paint should boot the public field entry (no GSI / shell). */
 export function isPublicFieldPath(pathname: string): boolean {
-  return /^\/(checkin|spark-form|r|training)(\/|$)/.test(pathname);
+  return /^\/(checkin|spark-form|r|report|training)(\/|$)/.test(pathname);
 }

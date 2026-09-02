@@ -14,14 +14,14 @@ import { RecapDocument } from "@/recap/RecapDocument";
 import type { CampaignReportData } from "./CampaignReportView";
 import AiMarkdown from "@/components/ai/AiMarkdown";
 import AiChartView, { type AiChart } from "@/components/ai/AiChartView";
+import { campaignReportPublicUrl } from "@/utils/publicHosts";
 
 /**
  * Authenticated admin campaign-report view — /report-view/:requestId.
  *
  * Runs the `campaignReport` query for a Request and renders the shared
  * <CampaignReportView>. Adds two report-level actions:
- *   • Copy public link → `${origin}/report/<shareToken>` (the no-login
- *     shareable page), and
+ *   • Copy public link → client. /report/<shareToken> (never window.origin),
  *   • Download PDF → opens `${API_ORIGIN}/api/public/report/<shareToken>/pdf`.
  *
  * Lives INSIDE the normal authed + tenant-guarded app (registered as a
@@ -231,7 +231,7 @@ const ReportLoaded: React.FC<{ requestId: string }> = ({ requestId }) => {
   }, [report]);
 
   const shareUrl = report
-    ? `${window.location.origin}/report/${report.shareToken}`
+    ? campaignReportPublicUrl(report.shareToken)
     : "";
   const pdfUrl = report
     ? `${apiOrigin()}/api/public/report/${report.shareToken}/pdf`
