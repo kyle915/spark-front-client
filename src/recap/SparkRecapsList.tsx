@@ -1,7 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapsListSkeleton } from "@/layout/PageSkeletons";
 import { RecapsListQuery } from "@/api/queries/RecapsListQuery";
@@ -1459,6 +1459,7 @@ export default function SparkRecapsList() {
   const { isClient } = useSparkRole();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const statusFromUrl = searchParams.get("status");
   const rangeFromUrl = searchParams.get("range");
   const [search, setSearch] = useState("");
@@ -1477,7 +1478,11 @@ export default function SparkRecapsList() {
   const [retailerFilter, setRetailerFilter] = useState("all");
   const [stateFilter, setStateFilter] = useState("all");
   const [rmmFilter, setRmmFilter] = useState("all");
-  const [baName, setBaName] = useState("");
+  const baFromNav =
+    typeof (location.state as { baName?: unknown } | null)?.baName === "string"
+      ? String((location.state as { baName: string }).baName)
+      : "";
+  const [baName, setBaName] = useState(baFromNav);
   const [statusFilter, setStatusFilterState] = useState<StatusKey>(() =>
     defaultRecapStatus(isClient, statusFromUrl),
   );
@@ -1517,6 +1522,9 @@ export default function SparkRecapsList() {
       setDateTo(TODAY_ISO);
     }
   }, [searchParams, isClient]);
+  useEffect(() => {
+    if (baFromNav) setBaName(baFromNav);
+  }, [baFromNav]);
   const [opsOpen, setOpsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");

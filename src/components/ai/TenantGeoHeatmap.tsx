@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
+import { useNavigate } from "react-router";
 import { geoAlbersUsa, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import statesTopoJson from "us-atlas/states-10m.json";
@@ -258,7 +259,20 @@ const Tooltip: React.FC<{ tip: NonNullable<TooltipState> }> = ({ tip }) => {
 
 /* ─────────────────────── panel ─────────────────────── */
 
-const TenantGeoHeatmap: React.FC<{ tenantId: string }> = ({ tenantId }) => {
+const TenantGeoHeatmap: React.FC<{
+  tenantId: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  rangeLabel?: string;
+  onStateSelect?: (stateCode: string) => void;
+}> = ({
+  tenantId,
+  startDate = null,
+  endDate = null,
+  rangeLabel,
+  onStateSelect,
+}) => {
+  const navigate = useNavigate();
   const [metricKey, setMetricKey] = useState<MetricKey>("consumersReached");
   const [tip, setTip] = useState<TooltipState>(null);
   // Which state path the cursor is over — drives the lime hover fill that RSM's
@@ -267,9 +281,19 @@ const TenantGeoHeatmap: React.FC<{ tenantId: string }> = ({ tenantId }) => {
 
   const data = useLazyLoadQuery<TenantMarketPerformanceQueryType>(
     TenantMarketPerformanceQuery,
-    { tenantId },
+    {
+      tenantId,
+      startDate: startDate || null,
+      endDate: endDate || null,
+    },
     { fetchPolicy: "store-or-network" },
   );
+
+  const selectState = (code: string) => {
+    onStateSelect?.(code);
+    // Tracker market filter is a 2-letter state code when available.
+    navigate(`/requests/list?market=${encodeURIComponent(code)}`);
+  };
 
   const rows = useMemo(
     () => data?.tenantMarketPerformance ?? [],
@@ -340,7 +364,8 @@ const TenantGeoHeatmap: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             className="mono text-[10px]"
             style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
           >
-            {ranked.length} {ranked.length === 1 ? "STATE" : "STATES"} · ALL TIME
+            {ranked.length} {ranked.length === 1 ? "STATE" : "STATES"}
+            {rangeLabel ? ` · ${rangeLabel.toUpperCase()}` : " · ALL TIME"}
           </p>
           {/* KPI selector — which metric colors the map + drives the ranking.
               Same compact dark <select> chrome as the KPI panel's year dropdown
@@ -434,6 +459,9 @@ const TenantGeoHeatmap: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                       setHoverId((prev) => (prev === feat.id ? null : prev));
                       setTip(null);
                     }}
+                    onClick={() => {
+                      if (code && row) selectState(code);
+                    }}
                   />
                 );
               })}
@@ -507,11 +535,21 @@ const TenantGeoHeatmap: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 const name = STATE_BY_CODE[code]?.name ?? code;
                 const value = r[metricKey];
                 const pct = maxValue > 0 ? value / maxValue : 0;
-                return (
+                    return (
                   <li
                     key={code}
-                    className="relative rounded-lg overflow-hidden"
+                    className="relative rounded-lg overflow-hidden cursor-pointer"
                     style={{ border: "1px solid var(--spark-border)" }}
+                    onClick={() => selectState(code)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        selectState(code);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    title={`Filter tracker to ${name}`}
                   >
                     {/* Mini inline bar so the list reads as a ranking, not just
                         rows — width tracks the value vs. the leader. */}

@@ -1,21 +1,31 @@
 import { lazy, Suspense, useMemo, useState } from "react";
+import { fetchQuery } from "relay-runtime";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
+import { useAlertStore } from "@/store/alertStore";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
-import PaceWidget from "@/components/pages/dashboard-event/PaceWidget";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import BelowFold from "@/components/insights/BelowFold";
+import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
+import ProgramHealthTile from "@/components/insights/ProgramHealthTile";
+import AskAiButton from "@/components/ai/AskAiButton";
 import { TenantActivationBreakdownQuery } from "@/api/queries/TenantActivationBreakdownQuery";
 import type { TenantActivationBreakdownQuery as TenantActivationBreakdownQueryType } from "@api/queries/__generated__/TenantActivationBreakdownQuery.graphql";
+import { ExecutiveSummaryQuery } from "@/api/queries/ExecutiveSummaryQuery";
+import type { ExecutiveSummaryQuery as ExecutiveSummaryQueryType } from "@api/queries/__generated__/ExecutiveSummaryQuery.graphql";
+import { TenantGoalsQuery } from "@/api/queries/TenantGoalsQuery";
+import type { TenantGoalsQuery as TenantGoalsQueryType } from "@api/queries/__generated__/TenantGoalsQuery.graphql";
+import { TenantProgramHealthQuery } from "@/api/queries/TenantProgramHealthQuery";
+import type { TenantProgramHealthQuery as TenantProgramHealthQueryType } from "@api/queries/__generated__/TenantProgramHealthQuery.graphql";
+import environment from "@/api/relay/environment";
 
 const TenantKpiCharts = lazy(() => import("@/components/ai/TenantKpiCharts"));
 const TenantKpiComparison = lazy(
   () => import("@/components/ai/TenantKpiComparison"),
 );
-const TenantGoalsPanel = lazy(() => import("@/components/ai/TenantGoalsPanel"));
 const TenantInsightsPanel = lazy(
   () => import("@/components/ai/TenantInsightsPanel"),
 );
@@ -134,10 +144,84 @@ const ActivationBreakdown: React.FC<{
   );
 };
 
+async function buildInsightsSummaryCopy(opts: {
+  tenantId: string;
+  startDate: string;
+  endDate: string;
+  rangeLabel: string;
+}): Promise<string> {
+  const { tenantId, startDate, endDate, rangeLabel } = opts;
+  const [pace, goals, health] = await Promise.all([
+    fetchQuery<ExecutiveSummaryQueryType>(
+      environment,
+      ExecutiveSummaryQuery,
+      { tenantId, windowDays: 7 },
+      { fetchPolicy: "store-or-network" },
+    ).toPromise(),
+    fetchQuery<TenantGoalsQueryType>(
+      environment,
+      TenantGoalsQuery,
+      { tenantId, year: null },
+      { fetchPolicy: "store-or-network" },
+    ).toPromise(),
+    fetchQuery<TenantProgramHealthQueryType>(
+      environment,
+      TenantProgramHealthQuery,
+      { tenantId, startDate, endDate },
+      { fetchPolicy: "store-or-network" },
+    ).toPromise(),
+  ]);
+
+  const summary = pace?.executiveSummary;
+  const goalItems = goals?.tenantGoals?.items ?? [];
+  const ph = health?.tenantProgramHealth;
+  const lines: string[] = [
+    `*Insights summary — ${rangeLabel.toUpperCase()} (${startDate} → ${endDate})*`,
+    "",
+  ];
+
+  if (ph) {
+    lines.push(
+      `*Program health*`,
+      `• Scheduled: ${ph.scheduled}`,
+      `• Filed (photos/metrics): ${ph.filed}`,
+      `• Approved: ${ph.approved}`,
+      `• Missing: ${ph.missing}`,
+      "",
+    );
+  }
+
+  if (summary) {
+    lines.push(
+      `*Last 7 days* (${summary.periodLabel})`,
+      `• Recaps: ${summary.recapCount}${summary.recapCountDeltaChip ? ` · ${summary.recapCountDeltaChip}` : ""}`,
+      `• Consumers: ${(summary.consumerReach || summary.samplesDistributed).toLocaleString()}${summary.consumerReachDeltaChip ? ` · ${summary.consumerReachDeltaChip}` : ""}`,
+      "",
+    );
+  }
+
+  const withTargets = goalItems.filter((i) => i.target > 0);
+  if (withTargets.length > 0) {
+    lines.push(`*Pace to goal · ${goals?.tenantGoals?.year ?? ""}*`);
+    for (const item of withTargets) {
+      lines.push(
+        `• ${item.label}: ${item.current.toLocaleString()} / ${item.target.toLocaleString()} (${Math.round(item.pacePct)}%)`,
+      );
+    }
+    lines.push("");
+  }
+
+  lines.push("Open /insights or /reports for the full view.");
+  return lines.join("\n");
+}
+
 function InsightsInner() {
   const { tenantId } = useAuthStore();
   const navigate = useNavigate();
+  const showAlert = useAlertStore((s) => s.showAlert);
   const [range, setRange] = useState<RangeKey>("30d");
+  const [selectedState, setSelectedState] = useState<string | null>(null);
+  const [copying, setCopying] = useState(false);
 
   const { startDate, endDate, filters } = useMemo(() => {
     const today = new Date();
@@ -168,6 +252,36 @@ function InsightsInner() {
   const comparisonPeriod = comparisonPeriodForRange(range);
   const kpiYear = new Date().getFullYear();
 
+  const timelineRows = useMemo(() => {
+    if (!selectedState) return recent;
+    const needle = selectedState.toUpperCase();
+    return recent.filter((e) =>
+      (e.location ?? "").toUpperCase().includes(needle),
+    );
+  }, [recent, selectedState]);
+
+  const onCopySummary = async () => {
+    if (!tenantId || copying) return;
+    setCopying(true);
+    try {
+      const text = await buildInsightsSummaryCopy({
+        tenantId,
+        startDate,
+        endDate,
+        rangeLabel,
+      });
+      await navigator.clipboard.writeText(text);
+      showAlert("Insights summary copied.", "success");
+    } catch (err) {
+      showAlert(
+        `Couldn't copy: ${(err as Error).message || "clipboard blocked"}`,
+        "error",
+      );
+    } finally {
+      setCopying(false);
+    }
+  };
+
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl">
       <div className="flex items-end justify-between flex-wrap gap-4">
@@ -191,21 +305,54 @@ function InsightsInner() {
             className="mt-3 text-base"
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            Page range scopes Timeline, Activation, and period comparison.
-            Program KPIs stay calendar-year (API is year-based).
+            Page range scopes Timeline, Activation, geo, BA, and program
+            health. Program KPIs stay calendar-year.
           </p>
         </div>
-        <div className="pill-group">
-          {RANGES.map((r) => (
-            <button
-              key={r.key}
-              type="button"
-              onClick={() => setRange(r.key)}
-              className={`pill-btn ${r.key === range ? "on" : ""}`}
-            >
-              {r.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="pill-group">
+            {RANGES.map((r) => (
+              <button
+                key={r.key}
+                type="button"
+                onClick={() => {
+                  setRange(r.key);
+                  setSelectedState(null);
+                }}
+                className={`pill-btn ${r.key === range ? "on" : ""}`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <AskAiButton tenantId={tenantId} />
+          <button
+            type="button"
+            onClick={onCopySummary}
+            disabled={!tenantId || copying}
+            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+              opacity: !tenantId || copying ? 0.5 : 1,
+            }}
+            title="Copy a Slack-friendly summary for this range"
+          >
+            {copying ? "Copying…" : "Copy summary"}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/reports")}
+            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{
+              background: "rgba(197,245,70,0.12)",
+              color: "var(--spark-lime)",
+              border: "1px solid rgba(197,245,70,0.35)",
+            }}
+          >
+            Open reports
+          </button>
         </div>
       </div>
 
@@ -217,9 +364,19 @@ function InsightsInner() {
         }}
       >
         SHOWING {rangeLabel.toUpperCase()} · {startDate} → {endDate}
+        {selectedState ? ` · STATE ${selectedState}` : ""}
       </p>
 
-      <PaceWidget />
+      {tenantId && <PaceToGoalHero tenantId={tenantId} />}
+
+      {tenantId && (
+        <ProgramHealthTile
+          tenantId={tenantId}
+          startDate={startDate}
+          endDate={endDate}
+          rangeLabel={rangeLabel}
+        />
+      )}
 
       {tenantId && (
         <Suspense
@@ -246,12 +403,6 @@ function InsightsInner() {
             period={comparisonPeriod}
             scopeNote={`Aligned to ${rangeLabel} (nearest complete period)`}
           />
-        </Suspense>
-      )}
-
-      {tenantId && (
-        <Suspense fallback={null}>
-          <TenantGoalsPanel tenantId={tenantId} />
         </Suspense>
       )}
 
@@ -291,10 +442,21 @@ function InsightsInner() {
         >
           <div className="space-y-6 lg:space-y-8">
             <Suspense fallback={null}>
-              <TenantGeoHeatmap tenantId={tenantId} />
+              <TenantGeoHeatmap
+                tenantId={tenantId}
+                startDate={startDate}
+                endDate={endDate}
+                rangeLabel={rangeLabel}
+                onStateSelect={(code) => setSelectedState(code)}
+              />
             </Suspense>
             <Suspense fallback={null}>
-              <TenantBaLeaderboard tenantId={tenantId} />
+              <TenantBaLeaderboard
+                tenantId={tenantId}
+                startDate={startDate}
+                endDate={endDate}
+                rangeLabel={rangeLabel}
+              />
             </Suspense>
             <Suspense fallback={null}>
               <MetroBreakdownCard tenantId={tenantId} />
@@ -310,18 +472,34 @@ function InsightsInner() {
             style={{ letterSpacing: "-0.02em" }}
           >
             Timeline
+            {selectedState ? ` · ${selectedState}` : ""}
           </h2>
-          <button
-            type="button"
-            onClick={() => navigate("/requests/list")}
-            className="mono text-[10px] transition"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.55)",
-            }}
-          >
-            ALL EVENTS →
-          </button>
+          <div className="flex items-center gap-3">
+            {selectedState && (
+              <button
+                type="button"
+                onClick={() => setSelectedState(null)}
+                className="mono text-[10px]"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "var(--spark-orange)",
+                }}
+              >
+                CLEAR STATE
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => navigate("/requests/list")}
+              className="mono text-[10px] transition"
+              style={{
+                letterSpacing: "0.18em",
+                color: "rgba(255,255,255,0.55)",
+              }}
+            >
+              ALL EVENTS →
+            </button>
+          </div>
         </div>
         <p
           className="mono text-[10px] mb-4"
@@ -331,18 +509,21 @@ function InsightsInner() {
           }}
         >
           SHOWING {rangeLabel.toUpperCase()}
+          {selectedState ? ` · ${selectedState}` : ""}
         </p>
 
-        {recent.length === 0 ? (
+        {timelineRows.length === 0 ? (
           <p
             className="text-sm py-10 text-center"
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            No data yet. New events show up here as they&apos;re scheduled.
+            {selectedState
+              ? `No timeline rows for ${selectedState} in this range.`
+              : "No data yet. New events show up here as they're scheduled."}
           </p>
         ) : (
           <div>
-            {recent.slice(0, 10).map((e, i) => {
+            {timelineRows.slice(0, 10).map((e, i) => {
               const dateStr = e.date ?? "";
               const isToday =
                 dateStr &&
@@ -364,7 +545,7 @@ function InsightsInner() {
                   className="flex items-center gap-4 py-3 cursor-pointer"
                   style={{
                     borderBottom:
-                      i < Math.min(recent.length, 10) - 1
+                      i < Math.min(timelineRows.length, 10) - 1
                         ? "1px solid var(--spark-border)"
                         : "none",
                     opacity: isPast ? 0.72 : 1,
