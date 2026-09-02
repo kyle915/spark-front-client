@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   defaultRecapStatus,
   recapEmptyKind,
+  recapIsEmptyShell,
   recapListStatusWord,
   recapMatchesBaName,
   recapMatchesPipeline,
@@ -149,6 +150,42 @@ describe("recapMatchesPipeline", () => {
         ...approvedUnshared,
       }),
     ).toBe(false);
+  });
+
+  it("hides empty Not filed shells from Needs review but keeps them in Submitted", () => {
+    expect(
+      recapMatchesPipeline({
+        isClient: false,
+        pipeline: "needs_review",
+        ...draft,
+        emptyShell: true,
+      }),
+    ).toBe(false);
+    expect(
+      recapMatchesPipeline({
+        isClient: false,
+        pipeline: "needs_review",
+        ...draft,
+        emptyShell: false,
+      }),
+    ).toBe(true);
+    expect(
+      recapMatchesPipeline({
+        isClient: false,
+        pipeline: "submitted",
+        ...draft,
+        emptyShell: true,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("recapIsEmptyShell", () => {
+  it("treats no photos and no metrics as an empty shell", () => {
+    expect(recapIsEmptyShell({ fileCount: 0 })).toBe(true);
+    expect(recapIsEmptyShell({ fileCount: 2 })).toBe(false);
+    expect(recapIsEmptyShell({ engagements: 0 })).toBe(false);
+    expect(recapIsEmptyShell({ heroImage: "https://x/y.jpg" })).toBe(false);
   });
 });
 
