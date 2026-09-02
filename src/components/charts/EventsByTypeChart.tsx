@@ -1,11 +1,27 @@
 import "@/lib/chartSetup";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-import { Pie } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
 import { memo } from "react";
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 type EventsByTypeAnalytics = Record<string, number>;
+
+const SPARK_PALETTE = [
+  "rgba(197,245,70,0.90)", // lime
+  "rgba(95,184,239,0.90)", // sky
+  "rgba(239,90,42,0.90)", // orange
+  "rgba(245,200,66,0.90)", // gold
+  "rgba(255,255,255,0.35)",
+  "rgba(197,245,70,0.45)",
+];
 
 function EventsByTypeChart({ analytics }: { analytics: EventsByTypeAnalytics }) {
   const labels = Object.keys(analytics);
@@ -17,19 +33,33 @@ function EventsByTypeChart({ analytics }: { analytics: EventsByTypeAnalytics }) 
       {
         label: "Events by Type",
         data: dataValues,
-        backgroundColor: [
-          "#6366f1",
-          "#10b981",
-          "#f97316",
-          "#ef4444",
-          "#06b6d4",
-          "#8b5cf6"
-        ]
-      }
-    ]
+        backgroundColor: labels.map(
+          (_, i) => SPARK_PALETTE[i % SPARK_PALETTE.length],
+        ),
+        borderRadius: 6,
+      },
+    ],
   };
 
-  return <Pie data={data} />;
+  const options = {
+    responsive: true,
+    indexAxis: "y" as const,
+    plugins: {
+      legend: { display: false },
+    },
+    scales: {
+      x: {
+        ticks: { color: "rgba(255,255,255,0.55)" },
+        grid: { color: "rgba(255,255,255,0.08)" },
+      },
+      y: {
+        ticks: { color: "rgba(255,255,255,0.75)" },
+        grid: { display: false },
+      },
+    },
+  };
+
+  return <Bar data={data} options={options} />;
 }
 
 export default memo(EventsByTypeChart);

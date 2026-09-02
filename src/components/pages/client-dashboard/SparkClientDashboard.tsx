@@ -40,21 +40,6 @@ const AccountMapBody = lazy(() =>
     default: m.AccountMapBody,
   })),
 );
-const TenantKpiCharts = lazy(() => import("@/components/ai/TenantKpiCharts"));
-const TenantKpiComparison = lazy(
-  () => import("@/components/ai/TenantKpiComparison"),
-);
-const TenantGoalsPanel = lazy(() => import("@/components/ai/TenantGoalsPanel"));
-const TenantInsightsPanel = lazy(
-  () => import("@/components/ai/TenantInsightsPanel"),
-);
-const TenantSentimentCard = lazy(
-  () => import("@/components/ai/TenantSentimentCard"),
-);
-const TenantGeoHeatmap = lazy(() => import("@/components/ai/TenantGeoHeatmap"));
-const TenantBaLeaderboard = lazy(
-  () => import("@/components/ai/TenantBaLeaderboard"),
-);
 
 type TabKey = "overview" | "approvals" | "map";
 
@@ -229,10 +214,8 @@ const ClientInner: React.FC = () => {
     return buckets;
   }, [data]);
 
-  // Recap-completion %: requests whose date has passed and that
-  // have at least one event with at least one recap filed, divided
-  // by total past-dated requests. Computed over the entire visible
-  // cache (last 1000 requests).
+  // Recap-completion %: past-dated requests with filed content
+  // (recapsFiledCount already excludes empty clock-out shells).
   const completionPct = useMemo(() => {
     const rows =
       data?.requests?.edges
@@ -248,8 +231,6 @@ const ClientInner: React.FC = () => {
       const ms = new Date(y, mo - 1, d).getTime();
       if (!Number.isFinite(ms) || ms > now) continue;
       pastEvents += 1;
-      // Filed = any recap (legacy OR custom) across the request's events,
-      // read from the flat server scalar instead of the per-event arrays.
       if ((r.recapsFiledCount ?? 0) > 0) withRecaps += 1;
     }
     if (pastEvents === 0) return null;
@@ -415,8 +396,8 @@ const ClientInner: React.FC = () => {
           value={completionPct == null ? "—" : `${completionPct}%`}
           sub={
             counts.recapsDue > 0
-              ? `${counts.recapsDue} recap${counts.recapsDue === 1 ? "" : "s"} still open`
-              : "All caught up"
+              ? `${counts.recapsDue} still open · filed = photos/metrics`
+              : "Filed content · all caught up"
           }
           tone={completionPct != null && completionPct < 80 ? "orange" : "lime"}
           onClick={() => navigate("/recaps/list")}
@@ -443,143 +424,38 @@ const ClientInner: React.FC = () => {
         />
       </div>
 
-      {/* Aggregated program KPIs + 12-month trend for this client's own
-          tenant. Scoped to useAuthStore().tenantId (the same id the Ask-AI
-          button above uses); renders nothing when no tenant is in scope.
-          Own Suspense so the tiles/week-bars above paint without waiting on
-          the KPI fetch. */}
-      {tenantId && (
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading program KPIs…
-            </div>
-          }
+      <div
+        className="spark-card p-5 flex items-center justify-between flex-wrap gap-3"
+        style={{ borderRadius: 16 }}
+      >
+        <div>
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            DEEP ANALYTICS
+          </p>
+          <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.7)" }}>
+            KPIs, map, sentiment, and BA leaderboard live on Insights — kept off
+            Today so this page stays light.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate("/insights")}
+          className="px-4 py-2.5 rounded-xl text-sm font-semibold"
+          style={{
+            background: "rgba(197,245,70,0.12)",
+            color: "var(--spark-lime)",
+            border: "1px solid rgba(197,245,70,0.35)",
+          }}
         >
-          <TenantKpiCharts tenantId={tenantId} />
-        </Suspense>
-      )}
-
-      {/* Period comparison — each headline KPI this-period vs last-period with
-          up/down deltas. Mounted right after the KPI panel, scoped to the same
-          useAuthStore().tenantId; renders nothing when no tenant is in scope
-          (and the card itself renders nothing when there's no data for the
-          period). Own Suspense so the tiles above paint without waiting on the
-          comparison fetch. */}
-      {tenantId && (
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading period comparison…
-            </div>
-          }
-        >
-          <TenantKpiComparison tenantId={tenantId} />
-        </Suspense>
-      )}
-
-      {/* Goals & pace-to-target for this client's own tenant. Scoped to the
-          same useAuthStore().tenantId as the KPI panel above; renders nothing
-          when no tenant is in scope. Own Suspense so the tiles above paint
-          without waiting on the goals fetch. */}
-      {tenantId && (
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading goals…
-            </div>
-          }
-        >
-          <TenantGoalsPanel tenantId={tenantId} />
-        </Suspense>
-      )}
-
-      {/* Proactive insight cards for this client's own tenant. Scoped to the
-          same useAuthStore().tenantId as the KPI panel above; renders nothing
-          when no tenant is in scope. Own Suspense so the tiles above paint
-          without waiting on the insights fetch. */}
-      {tenantId && (
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading insights…
-            </div>
-          }
-        >
-          <TenantInsightsPanel tenantId={tenantId} />
-        </Suspense>
-      )}
-
-      {/* "What people are saying" — consumer-sentiment card for this client's
-          own tenant. Mounted right after Insights, scoped to the same
-          useAuthStore().tenantId; renders nothing when no tenant is in scope
-          (and the card itself renders nothing when there's no feedback text
-          yet). Own Suspense so the tiles above paint without waiting on the
-          sentiment fetch. */}
-      {tenantId && (
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading sentiment…
-            </div>
-          }
-        >
-          <TenantSentimentCard tenantId={tenantId} />
-        </Suspense>
-      )}
-
-      {/* Geographic performance heatmap (US choropleth) for this client's own
-          tenant. Scoped to the same useAuthStore().tenantId as the KPI panel
-          above; renders nothing when no tenant is in scope. Own Suspense so the
-          tiles above paint without waiting on the geo fetch. */}
-      {tenantId && (
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading geographic performance…
-            </div>
-          }
-        >
-          <TenantGeoHeatmap tenantId={tenantId} />
-        </Suspense>
-      )}
-
-      {/* "Top performers" BA leaderboard for this client's own tenant. Scoped to
-          the same useAuthStore().tenantId as the KPI panel above; renders
-          nothing when no tenant is in scope. Own Suspense so the tiles above
-          paint without waiting on the leaderboard fetch. */}
-      {tenantId && (
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading top performers…
-            </div>
-          }
-        >
-          <TenantBaLeaderboard tenantId={tenantId} />
-        </Suspense>
-      )}
+          Full insights →
+        </button>
+      </div>
 
       {/* Week-ahead bars */}
       <div className="spark-card p-5">

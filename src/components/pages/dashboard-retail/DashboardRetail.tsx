@@ -329,7 +329,7 @@ export default function DashboardRetail() {
           <ChartCard
             title="Monthly Performance Trends"
             icon={CalendarDays}
-            iconColor="text-blue-600"
+            iconColor="text-[var(--spark-sky)]"
             fixedHeight
           >
             <MonthlyTrendsSection data={monthlyTrends} />
@@ -349,10 +349,10 @@ export default function DashboardRetail() {
         </section>
 
         <section className="w-full">
-          <ChartCard
+            <ChartCard
             title="RMM Performance"
             icon={UsersRound}
-            iconColor="text-blue-600"
+            iconColor="text-[var(--spark-lime)]"
             fixedHeight
           >
             <RmmPerformanceChart data={rmmPerformance} />

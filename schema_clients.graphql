@@ -4894,6 +4894,7 @@ type Query {
   campaignReportAiAnswer(requestId: ID!, question: String!): CampaignReportAiAnswer!
   tenantAiAnswer(tenantId: ID!, question: String!): TenantAiAnswer!
   tenantKpis(tenantId: ID!, year: Int): TenantKpis!
+  tenantActivationBreakdown(tenantId: ID!, startDate: String = null, endDate: String = null): TenantActivationBreakdown!
   tenantInsights(tenantId: ID!): TenantInsights!
   tenantSentiment(tenantId: ID!, year: Int): TenantSentiment
   tenantKpiComparison(tenantId: ID!, period: String! = "month"): TenantKpiComparison
@@ -7390,6 +7391,9 @@ type AiChart { type: String!  title: String  labels: [String!]!  series: [AiChar
 type CampaignReportAiAnswer { ok: Boolean!  answer: String!  reason: String  chart: AiChart }
 type TenantAiAnswer { ok: Boolean!  answer: String!  reason: String  chart: AiChart }
 type TenantKpis { events: Int!  recaps: Int!  consumersReached: Int!  samplesDistributed: Int!  productsSold: Int!  cansSold: Int!  packsSold: Int!  totalEngagements: Int!  firstTimeConsumers: Int!  brandAwareConsumers: Int!  willingToPurchase: Int!  monthlyTrend: [TenantKpiMonth!]! }
+type TenantActivationBucket { key: String!  label: String!  count: Int! }
+type TenantActivationTypeCount { requestTypeId: String  name: String!  count: Int! }
+type TenantActivationBreakdown { buckets: [TenantActivationBucket!]!  byType: [TenantActivationTypeCount!]!  startDate: String  endDate: String }
 type TenantKpiMonth { month: String!  recaps: Int!  engagements: Int!  samples: Int! }
 type TenantInsightItem { title: String!  detail: String!  sentiment: String!  metric: String  key: String }
 type TenantInsights { generatedAt: String  items: [TenantInsightItem!]! }

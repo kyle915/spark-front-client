@@ -95,7 +95,7 @@ const TrendChart: React.FC<{ data: readonly MonthRow[] }> = ({ data }) => {
         type: "bar",
         label: "Samples",
         data: data.map((d) => d.samples),
-        backgroundColor: "rgb(109,78,195)",
+        backgroundColor: "rgba(239,90,42,0.85)",
         borderRadius: 6,
         yAxisID: "y1",
       },
@@ -212,7 +212,11 @@ const useYearOptions = () =>
 
 /* ───────────────────────── panel ───────────────────────── */
 
-const TenantKpiCharts: React.FC<{ tenantId: string }> = ({ tenantId }) => {
+const TenantKpiCharts: React.FC<{
+  tenantId: string;
+  /** Honest label when a page-level range does not drive this year API. */
+  scopeNote?: string;
+}> = ({ tenantId, scopeNote }) => {
   const yearOptions = useYearOptions();
   // Default = This year (current calendar year). The selected value drives the
   // query variable below, so changing it refetches via useLazyLoadQuery.
@@ -290,11 +294,13 @@ const TenantKpiCharts: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             className="mono text-[10px]"
             style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
           >
-            {kpis.events > 0
-              ? `${fmt(kpis.events)} EVENTS · ${fmt(kpis.recaps)} RECAPS`
-              : selectedYear === null
-                ? "ALL TIME"
-                : `${selectedYear}`}
+            {scopeNote
+              ? scopeNote.toUpperCase()
+              : kpis.events > 0
+                ? `${fmt(kpis.events)} EVENTS · ${fmt(kpis.recaps)} RECAPS`
+                : selectedYear === null
+                  ? "ALL TIME"
+                  : `${selectedYear}`}
           </p>
           {/* Compact year dropdown — drives the $year query variable above, so
               selecting a year refetches the KPI rollup. Default = This year. */}

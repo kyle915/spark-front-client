@@ -109,6 +109,10 @@ const chipForDelta = (d: Delta): ChipStyle => {
       return { label: "New", ...MUTED };
     case "none":
       return { label: "—", ...MUTED };
+    default: {
+      const _exhaustive: never = d;
+      return _exhaustive;
+    }
   }
 };
 
@@ -258,10 +262,16 @@ const PERIOD_OPTIONS = [
 
 /* ───────────────────────── card ───────────────────────── */
 
-const TenantKpiComparison: React.FC<{ tenantId: string }> = ({ tenantId }) => {
+const TenantKpiComparison: React.FC<{
+  tenantId: string;
+  /** When set by Insights page range, locks the comparison period. */
+  period?: "month" | "quarter" | "year";
+  scopeNote?: string;
+}> = ({ tenantId, period: periodProp, scopeNote }) => {
   // Default = "month". The selected value drives the $period query variable
   // below, so changing it refetches via useLazyLoadQuery.
-  const [period, setPeriod] = useState<string>("month");
+  const [periodLocal, setPeriodLocal] = useState<string>("month");
+  const period = periodProp ?? periodLocal;
 
   const data = useLazyLoadQuery<TenantKpiComparisonQueryType>(
     TenantKpiComparisonQuery,
@@ -327,29 +337,33 @@ const TenantKpiComparison: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
             {comparison.currentLabel} vs {comparison.previousLabel}
+            {scopeNote ? ` · ${scopeNote}` : ""}
           </p>
         </div>
         {/* Compact period toggle — drives the $period query variable above, so
             switching refetches the comparison. Default = Month. Styled like the
-            year dropdown in <TenantKpiCharts>. */}
-        <select
-          aria-label="Comparison period"
-          value={period}
-          onChange={(e) => setPeriod(e.target.value)}
-          className="mono text-[11px] rounded-lg px-2.5 py-1.5 cursor-pointer"
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid var(--spark-border)",
-            color: "var(--spark-text)",
-            letterSpacing: "0.06em",
-          }}
-        >
-          {PERIOD_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+            year dropdown in <TenantKpiCharts>. Hidden when Insights locks the
+            period from the page range. */}
+        {!periodProp && (
+          <select
+            aria-label="Comparison period"
+            value={period}
+            onChange={(e) => setPeriodLocal(e.target.value)}
+            className="mono text-[11px] rounded-lg px-2.5 py-1.5 cursor-pointer"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+              letterSpacing: "0.06em",
+            }}
+          >
+            {PERIOD_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Headline KPIs — prominent comparison tiles. */}
