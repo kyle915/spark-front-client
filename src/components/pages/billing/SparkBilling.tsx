@@ -23,6 +23,7 @@ import type { DeleteInvoiceMutation as DeleteInvoiceMutationType } from "@api/mu
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import SparkConfirm from "@/shared/SparkConfirm";
+import { invoicePublicUrl } from "@/utils/publicHosts";
 
 /**
  * Spark v2 — Billing.
@@ -42,8 +43,7 @@ type Invoice = InvoicesQuery$data["invoices"][number];
 type LineItem = Invoice["lineItems"][number];
 
 // Public client share link for an invoice — the no-login invoice page.
-const invoiceShareUrl = (token: string): string =>
-  `${window.location.origin}/invoice/${token}`;
+const invoiceShareUrl = (token: string): string => invoicePublicUrl(token);
 
 // Derive the REST API origin from the GraphQL endpoint env var (scheme +
 // host), exactly like the public pages. The PDF is served off this origin.

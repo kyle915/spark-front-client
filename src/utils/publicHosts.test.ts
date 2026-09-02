@@ -1,11 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CLIENT_ORIGIN,
+  ADMIN_ORIGIN,
   adminOrigin,
+  adminRequestUrl,
   campaignReportPublicUrl,
   checkinUrl,
+  clientLivePublicUrl,
   clientOrigin,
+  invoicePublicUrl,
   isPublicFieldPath,
+  receiptCampaignPublicUrl,
   recapPublicUrl,
   recapShareOrigin,
   sparkFormUrl,
@@ -28,12 +33,15 @@ afterEach(() => {
 });
 
 describe("isPublicFieldPath", () => {
-  it("matches check-in, public form, recap share, and campaign report", () => {
+  it("matches public field and leave-behind routes", () => {
     expect(isPublicFieldPath("/checkin/abc")).toBe(true);
     expect(isPublicFieldPath("/spark-form/liquid-death")).toBe(true);
     expect(isPublicFieldPath("/r/tok.en")).toBe(true);
     expect(isPublicFieldPath("/report/tok.en")).toBe(true);
     expect(isPublicFieldPath("/training/LD-FZUWXT")).toBe(true);
+    expect(isPublicFieldPath("/c/campaign-slug")).toBe(true);
+    expect(isPublicFieldPath("/invoice/tok")).toBe(true);
+    expect(isPublicFieldPath("/live/tok")).toBe(true);
   });
   it("does not match admin or login", () => {
     expect(isPublicFieldPath("/")).toBe(false);
@@ -132,6 +140,40 @@ describe("campaign report share origin", () => {
     mockLocation("spark.igniteproductions.co");
     expect(campaignReportPublicUrl("abc.tok")).toBe(
       `${CLIENT_ORIGIN}/report/abc.tok`,
+    );
+  });
+});
+
+describe("receipt / invoice / live / admin request URLs", () => {
+  it("mints client. for public leave-behinds from admin", () => {
+    mockLocation("admin.igniteproductions.co");
+    expect(receiptCampaignPublicUrl("acme")).toBe(`${CLIENT_ORIGIN}/c/acme`);
+    expect(invoicePublicUrl("inv.tok")).toBe(
+      `${CLIENT_ORIGIN}/invoice/inv.tok`,
+    );
+    expect(clientLivePublicUrl("live.tok")).toBe(
+      `${CLIENT_ORIGIN}/live/live.tok`,
+    );
+  });
+
+  it("mints admin. for staff request mention links", () => {
+    mockLocation("client.igniteproductions.co");
+    expect(adminRequestUrl("req-uuid")).toBe(
+      `${ADMIN_ORIGIN}/request/view/req-uuid`,
+    );
+  });
+
+  it("never mints spark. for leftover spark tabs", () => {
+    mockLocation("spark.igniteproductions.co");
+    expect(receiptCampaignPublicUrl("acme")).toBe(`${CLIENT_ORIGIN}/c/acme`);
+    expect(invoicePublicUrl("inv.tok")).toBe(
+      `${CLIENT_ORIGIN}/invoice/inv.tok`,
+    );
+    expect(clientLivePublicUrl("live.tok")).toBe(
+      `${CLIENT_ORIGIN}/live/live.tok`,
+    );
+    expect(adminRequestUrl("req-uuid")).toBe(
+      `${ADMIN_ORIGIN}/request/view/req-uuid`,
     );
   });
 });

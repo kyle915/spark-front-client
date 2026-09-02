@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import { adminRequestUrl } from "@/utils/publicHosts";
 import { formatNoteBodyHtml } from "./formatNoteBodyHtml";
 
 /**
@@ -223,7 +224,7 @@ export const InternalNotesPanel: React.FC<{
               requestId: requestUuid,
               noteBody: body,
               recipientEmails: emails,
-              requestUrl: `${window.location.origin}/request/view/${requestUuid}`,
+              requestUrl: adminRequestUrl(requestUuid),
             },
           },
         }),

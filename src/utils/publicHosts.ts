@@ -102,7 +102,29 @@ export function campaignReportPublicUrl(token: string): string {
   return withPath(recapShareOrigin(), `/report/${encodeURIComponent(token)}`);
 }
 
+/** Public consumer rebate / receipt upload — /c/:slug. */
+export function receiptCampaignPublicUrl(slug: string): string {
+  return withPath(clientOrigin(), `/c/${encodeURIComponent(slug)}`);
+}
+
+/** Public client invoice leave-behind — /invoice/:token. */
+export function invoicePublicUrl(token: string): string {
+  return withPath(clientOrigin(), `/invoice/${encodeURIComponent(token)}`);
+}
+
+/** Public client-live board — /live/:token. */
+export function clientLivePublicUrl(token: string): string {
+  return withPath(clientOrigin(), `/live/${encodeURIComponent(token)}`);
+}
+
+/** Staff request deep link for mention emails — always admin. in prod. */
+export function adminRequestUrl(requestUuid: string): string {
+  return withPath(adminOrigin(), `/request/view/${encodeURIComponent(requestUuid)}`);
+}
+
 /** True when this first paint should boot the public field entry (no GSI / shell). */
 export function isPublicFieldPath(pathname: string): boolean {
-  return /^\/(checkin|spark-form|r|report|training)(\/|$)/.test(pathname);
+  return /^\/(checkin|spark-form|r|report|training|c|invoice|live)(\/|$)/.test(
+    pathname,
+  );
 }
