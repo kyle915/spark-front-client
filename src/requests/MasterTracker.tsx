@@ -12,7 +12,7 @@ import TrackerSavedViews, {
 } from "./TrackerSavedViews";
 import { useLazyLoadQuery, useRelayEnvironment } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
@@ -1347,7 +1347,15 @@ export default function MasterTracker() {
     "date-desc" | "date-asc" | "venue" | "status"
   >("date-desc");
   // Market filter — options come from trackerStatusCounts.marketCodes.
-  const [marketFilter, setMarketFilter] = useState<string>("all");
+  // `?market=CA` from Insights geo drill pre-selects a state.
+  const [searchParams] = useSearchParams();
+  const marketFromUrl = (searchParams.get("market") || "").toUpperCase();
+  const [marketFilter, setMarketFilter] = useState<string>(
+    marketFromUrl || "all",
+  );
+  useEffect(() => {
+    if (marketFromUrl) setMarketFilter(marketFromUrl);
+  }, [marketFromUrl]);
   const [markets, setMarkets] = useState<string[]>([]);
   // Scheduling-status filter — server-side via schedulingStatus.
   const [schedulingFilter, setSchedulingFilter] = useState<string>("all");

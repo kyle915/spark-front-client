@@ -4895,14 +4895,15 @@ type Query {
   tenantAiAnswer(tenantId: ID!, question: String!): TenantAiAnswer!
   tenantKpis(tenantId: ID!, year: Int): TenantKpis!
   tenantActivationBreakdown(tenantId: ID!, startDate: String = null, endDate: String = null): TenantActivationBreakdown!
+  tenantProgramHealth(tenantId: ID!, startDate: String = null, endDate: String = null): TenantProgramHealth!
   tenantInsights(tenantId: ID!): TenantInsights!
   tenantSentiment(tenantId: ID!, year: Int): TenantSentiment
   tenantKpiComparison(tenantId: ID!, period: String! = "month"): TenantKpiComparison
   tenantGoals(tenantId: ID!, year: Int): TenantGoals!
-  tenantMarketPerformance(tenantId: ID!, year: Int): [MarketPerformance!]!
+  tenantMarketPerformance(tenantId: ID!, year: Int = null, startDate: String = null, endDate: String = null): [MarketPerformance!]!
   tenantMetroBreakdown(tenantId: ID!, startDate: String!, endDate: String!, eventTypeId: ID = null): TenantMetroBreakdown!
   tenantFieldSamplingReport(tenantId: ID!, startDate: String!, endDate: String!, eventTypeId: ID = null, market: String = null): FieldSamplingReport!
-  tenantBaLeaderboard(tenantId: ID!, year: Int): [BaLeaderboardEntry!]!
+  tenantBaLeaderboard(tenantId: ID!, year: Int = null, startDate: String = null, endDate: String = null): [BaLeaderboardEntry!]!
   eventStaffing(eventId: ID!, limit: Int): EventStaffing
   staffingSuggestions(eventId: ID!, limit: Int = 20): [StaffingSuggestion!]!
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
@@ -7393,6 +7394,7 @@ type TenantAiAnswer { ok: Boolean!  answer: String!  reason: String  chart: AiCh
 type TenantKpis { events: Int!  recaps: Int!  consumersReached: Int!  samplesDistributed: Int!  productsSold: Int!  cansSold: Int!  packsSold: Int!  totalEngagements: Int!  firstTimeConsumers: Int!  brandAwareConsumers: Int!  willingToPurchase: Int!  monthlyTrend: [TenantKpiMonth!]! }
 type TenantActivationBucket { key: String!  label: String!  count: Int! }
 type TenantActivationTypeCount { requestTypeId: String  name: String!  count: Int! }
+type TenantProgramHealth { scheduled: Int!  filed: Int!  approved: Int!  missing: Int!  startDate: String  endDate: String }
 type TenantActivationBreakdown { buckets: [TenantActivationBucket!]!  byType: [TenantActivationTypeCount!]!  startDate: String  endDate: String }
 type TenantKpiMonth { month: String!  recaps: Int!  engagements: Int!  samples: Int! }
 type TenantInsightItem { title: String!  detail: String!  sentiment: String!  metric: String  key: String }
@@ -7417,7 +7419,7 @@ type FieldCallout { market: String  corridor: String  date: String  text: String
 type FieldSamplingReport { samplesPerHour: SamplesPerHour!  ytdSkuBreakdown: SkuBreakdown!  weekSkuBreakdown: SkuBreakdown!  locationsHit: [LocationVisit!]!  upcoming: UpcomingShifts!  callouts: [FieldCallout!]! }
 type FieldSamplingCalloutSummary { summary: String }
 type TenantMetroBreakdown { metros: [String!]!  weeks: [MetroWeek!]! }
-type BaLeaderboardEntry { baId: ID!  name: String!  shiftsWorked: Int!  recapsFiled: Int!  avgRating: Float  ratingsCount: Int!  reliabilityPct: Int }
+type BaLeaderboardEntry { baId: ID!  name: String!  shiftsWorked: Int!  recapsFiled: Int!  consumersReached: Int!  samplesDistributed: Int!  avgRating: Float  ratingsCount: Int!  reliabilityPct: Int }
 
 type InvoiceLineItem { id: ID!  description: String!  quantity: String!  unitPrice: String!  amount: String!  eventId: ID  sortOrder: Int! }
 type Invoice implements Node { id: ID!  uuid: String!  number: String!  status: String!  clientName: String!  issueDate: String  dueDate: String  currency: String!  notes: String  subtotal: String!  taxRate: String!  taxAmount: String!  total: String!  lineItems: [InvoiceLineItem!]!  sentAt: String  paidAt: String  shareToken: String!  createdAt: String!  updatedAt: String! }

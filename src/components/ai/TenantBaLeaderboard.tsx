@@ -1,59 +1,24 @@
 import { useMemo } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
+import { useNavigate } from "react-router";
 import { TenantBaLeaderboardQuery } from "@/api/queries/TenantBaLeaderboardQuery";
 import type { TenantBaLeaderboardQuery as TenantBaLeaderboardQueryType } from "@api/queries/__generated__/TenantBaLeaderboardQuery.graphql";
 
 /**
- * "Top performers" BA leaderboard card for the dashboards.
- *
- * Loads `tenantBaLeaderboard` for ONE client (tenant) and renders a compact
- * ranked list of the brand ambassadors who worked that tenant's program. The
- * backend returns the rows already sorted (avgRating desc → recapsFiled desc →
- * shiftsWorked desc) and capped, so we just render: a rank number, the BA
- * `name`, an avg-rating display (★ + "4.6 (12)", or "—" when unrated), and the
- * BA's `shiftsWorked` / `recapsFiled` as small muted stats. Dark-theme styled
- * with the same `spark-card` chrome / fonts / spark CSS vars as
- * <TenantKpiCharts> and <TenantInsightsPanel> so the analytics cards read as one
- * surface.
- *
- * Mounted on both dashboards (admin DashboardEvent and the client
- * SparkClientDashboard) near the other analytics cards, scoped to the active
- * tenant via `useAuthStore().tenantId`, the same id every per-tenant surface
- * uses. The caller renders nothing when no tenant is in scope; this component is
- * wrapped in a <Suspense> by the dashboard (same as the other lazy-loaded
- * dashboard cards) so it loads the data the app's usual way and doesn't block
- * first paint.
- *
- * To stay scannable the card shows at most the top {VISIBLE_LIMIT}; if the
- * backend returns more, a muted "+N more" line stands in for the tail rather
- * than rendering a giant list, and the list itself is height-bounded with an
- * internal scroll.
- *
- * `reliabilityPct` is reserved for a future on-time/reliability score and is
- * currently always null from the backend, so we hide that stat entirely unless
- * at least one entry has a non-null value (future-proofing for when the data
- * lands).
- *
- * Empty state: when `tenantBaLeaderboard` is [] we show a quiet
- * "No BA performance data yet" card instead of an empty list.
+ * "Top performers" BA leaderboard. Range-scoped when start/end are passed.
+ * Shows consumers/samples when available; hides reliabilityPct until filled.
+ * Row click → /recaps/list filtered by BA name (via location state).
  */
 
-// Keep the card compact so it doesn't dominate the dashboard: render the top N
-// rows inline and collapse any remainder into a single muted "+N more" line.
 const VISIBLE_LIMIT = 10;
 
 const STAR = "★";
 const GOLD = "var(--spark-gold)";
 const STAR_EMPTY = "rgba(255,255,255,0.18)";
 
-type Entry = TenantBaLeaderboardQueryType["response"]["tenantBaLeaderboard"][number];
+type Entry =
+  TenantBaLeaderboardQueryType["response"]["tenantBaLeaderboard"][number];
 
-/* ───────────────────────── rating display ───────────────────────── */
-
-// Compact avg-rating cell: five stars filled up to the rounded average, then the
-// numeric average and its ratings count in parens ("4.6 (12)"). When the BA is
-// unrated (`avgRating` null) we render a quiet "—" instead of an all-empty star
-// row so unrated BAs read as "no data", not "zero stars".
 const RatingCell: React.FC<{
   avgRating: number | null | undefined;
   ratingsCount: number;
@@ -102,23 +67,32 @@ const RatingCell: React.FC<{
   );
 };
 
-/* ───────────────────────── leaderboard row ───────────────────────── */
-
 const LeaderboardRow: React.FC<{
   rank: number;
   entry: Entry;
   showReliability: boolean;
+  showReach: boolean;
   isFirst: boolean;
-}> = ({ rank, entry, showReliability, isFirst }) => (
+  onClick: () => void;
+}> = ({ rank, entry, showReliability, showReach, isFirst, onClick }) => (
   <li
-    className="flex items-center gap-3 py-2.5"
+    className="flex items-center gap-3 py-2.5 cursor-pointer"
     style={
       isFirst
         ? undefined
         : { borderTop: "1px solid rgba(255,255,255,0.06)" }
     }
+    onClick={onClick}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onClick();
+      }
+    }}
+    role="button"
+    tabIndex={0}
+    title={`Open recaps for ${entry.name}`}
   >
-    {/* Rank — fixed-width tab-num so the column stays aligned 1→10. */}
     <span
       className="mono tab-num text-[12px] shrink-0 text-right"
       style={{ width: "1.6rem", color: "rgba(255,255,255,0.45)" }}
@@ -126,7 +100,6 @@ const LeaderboardRow: React.FC<{
       {rank}
     </span>
 
-    {/* Name + the small muted shift/recap (and optional reliability) stats. */}
     <div className="min-w-0 flex-1">
       <p
         className="text-[14px] font-medium truncate"
@@ -145,6 +118,27 @@ const LeaderboardRow: React.FC<{
         </span>
         <span className="tab-num">{entry.recapsFiled}</span>
         {entry.recapsFiled === 1 ? " recap" : " recaps"}
+        {showReach && (entry.consumersReached > 0 || entry.samplesDistributed > 0) && (
+          <>
+            <span aria-hidden="true" className="mx-1.5">
+              ·
+            </span>
+            <span className="tab-num">{entry.consumersReached.toLocaleString()}</span>{" "}
+            consumers
+            {entry.samplesDistributed > 0 &&
+              entry.samplesDistributed !== entry.consumersReached && (
+                <>
+                  <span aria-hidden="true" className="mx-1.5">
+                    ·
+                  </span>
+                  <span className="tab-num">
+                    {entry.samplesDistributed.toLocaleString()}
+                  </span>{" "}
+                  samples
+                </>
+              )}
+          </>
+        )}
         {showReliability && entry.reliabilityPct != null && (
           <>
             <span aria-hidden="true" className="mx-1.5">
@@ -156,19 +150,26 @@ const LeaderboardRow: React.FC<{
       </p>
     </div>
 
-    {/* Rating, right-aligned so the eye scans a clean rating column. */}
     <div className="shrink-0 text-right">
       <RatingCell avgRating={entry.avgRating} ratingsCount={entry.ratingsCount} />
     </div>
   </li>
 );
 
-/* ───────────────────────── card ───────────────────────── */
-
-const TenantBaLeaderboard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
+const TenantBaLeaderboard: React.FC<{
+  tenantId: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  rangeLabel?: string;
+}> = ({ tenantId, startDate = null, endDate = null, rangeLabel }) => {
+  const navigate = useNavigate();
   const data = useLazyLoadQuery<TenantBaLeaderboardQueryType>(
     TenantBaLeaderboardQuery,
-    { tenantId },
+    {
+      tenantId,
+      startDate: startDate || null,
+      endDate: endDate || null,
+    },
     { fetchPolicy: "store-or-network" },
   );
 
@@ -177,10 +178,15 @@ const TenantBaLeaderboard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
     [data],
   );
 
-  // Future-proof: reliability is always null today, so only surface the stat
-  // once the backend actually populates it for at least one BA.
   const showReliability = useMemo(
     () => items.some((i) => i.reliabilityPct != null),
+    [items],
+  );
+  const showReach = useMemo(
+    () =>
+      items.some(
+        (i) => (i.consumersReached ?? 0) > 0 || (i.samplesDistributed ?? 0) > 0,
+      ),
     [items],
   );
 
@@ -201,7 +207,9 @@ const TenantBaLeaderboard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             className="mono text-[10px]"
             style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
           >
-            BA LEADERBOARD · BY RATING
+            BA LEADERBOARD
+            {rangeLabel ? ` · ${rangeLabel.toUpperCase()}` : ""}
+            {showReach ? " · BY REACH" : " · BY RATING"}
           </p>
         )}
       </div>
@@ -215,19 +223,20 @@ const TenantBaLeaderboard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         </p>
       ) : (
         <>
-          {/* Height-bounded so a long roster scrolls inside the card instead of
-              stretching the dashboard; short lists just size to content. */}
-          <ul
-            className="overflow-y-auto pr-1"
-            style={{ maxHeight: 360 }}
-          >
+          <ul className="overflow-y-auto pr-1" style={{ maxHeight: 360 }}>
             {visible.map((entry, i) => (
               <LeaderboardRow
                 key={entry.baId}
                 rank={i + 1}
                 entry={entry}
                 showReliability={showReliability}
+                showReach={showReach}
                 isFirst={i === 0}
+                onClick={() =>
+                  navigate("/recaps/list", {
+                    state: { baName: entry.name },
+                  })
+                }
               />
             ))}
           </ul>
