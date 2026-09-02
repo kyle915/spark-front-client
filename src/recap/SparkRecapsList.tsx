@@ -49,6 +49,7 @@ import {
 import {
   defaultRecapStatus,
   recapEmptyKind,
+  recapIsEmptyShell,
   recapListStatusWord,
   recapMatchesBaName,
   recapMatchesPipeline,
@@ -359,16 +360,6 @@ const recapsFromConnection = <
     ?.map((e) => e?.node)
     ?.filter((n): n is TNode => Boolean(n))
     ?.map(mapNode) ?? [];
-
-const recapIsEmptyShell = (r: Recap): boolean => {
-  const hasPhotos = Boolean(r.heroImage) || (r.fileCount ?? 0) > 0;
-  const hasMetrics =
-    r.engagements != null ||
-    r.productsSold != null ||
-    r.cansSold != null ||
-    r.packsSold != null;
-  return !hasPhotos && !hasMetrics;
-};
 
 const RecapCard: React.FC<{
   recap: Recap;
@@ -1150,6 +1141,7 @@ const RecapsListInner: React.FC<{
         approved: r.approved,
         sharedAt: r.sharedAt,
         justApproved: justApprovedIds.has(r.id),
+        emptyShell: recapIsEmptyShell(r),
       });
       // Date range: compare on the yyyy-mm-dd prefix. Each bound is
       // inclusive — `dateFrom` = "2026-05-01" passes recaps from May 1
@@ -1302,9 +1294,9 @@ const RecapsListInner: React.FC<{
               You’re caught up.
             </p>
             <p className="mt-2">
-              No recaps need review in the last 30 days. Switch to{" "}
-              <span className="font-semibold">Submitted</span> to browse
-              the full archive.
+              No filed recaps need review in the last 30 days. Empty
+              clock-out stubs stay under{" "}
+              <span className="font-semibold">Submitted</span>.
             </p>
           </>
         ) : emptyKind === "window" ? (

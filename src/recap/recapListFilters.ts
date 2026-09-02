@@ -60,14 +60,41 @@ export function recapMatchesPipeline(opts: {
   approved: boolean;
   sharedAt: string | null;
   justApproved: boolean;
+  /** Clock-out draft with no photos/metrics — hide from Needs review. */
+  emptyShell?: boolean;
 }): boolean {
-  const { isClient, pipeline, approved, sharedAt, justApproved } = opts;
+  const { isClient, pipeline, approved, sharedAt, justApproved, emptyShell } =
+    opts;
   if (isClient) return approved || justApproved;
   if (pipeline === "all" || pipeline === "submitted") return true;
-  if (pipeline === "needs_review") return !approved || justApproved;
+  if (pipeline === "needs_review") {
+    // Filed content only. Empty shells (no photos, no metrics) still live
+    // under Submitted / All — they are not an approve queue.
+    if (emptyShell) return false;
+    return !approved || justApproved;
+  }
   if (pipeline === "approved") return approved || justApproved;
   if (pipeline === "shared") return Boolean(sharedAt);
   return true;
+}
+
+/** True when a recap row exists but nothing was filed (clock-out stub). */
+export function recapIsEmptyShell(opts: {
+  heroImage?: string | null;
+  fileCount?: number | null;
+  engagements?: number | null;
+  productsSold?: number | null;
+  cansSold?: number | null;
+  packsSold?: number | null;
+}): boolean {
+  const hasPhotos =
+    Boolean(opts.heroImage) || (opts.fileCount ?? 0) > 0;
+  const hasMetrics =
+    opts.engagements != null ||
+    opts.productsSold != null ||
+    opts.cansSold != null ||
+    opts.packsSold != null;
+  return !hasPhotos && !hasMetrics;
 }
 
 export function recapListStatusWord(
