@@ -1526,6 +1526,7 @@ export default function SparkRecapsList() {
     }
   }, [searchParams, isClient]);
   const [opsOpen, setOpsOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
   const [meta, setMeta] = useState<Meta>({
     retailers: [],
@@ -2105,264 +2106,548 @@ export default function SparkRecapsList() {
     <Layout>
       <div className="space-y-4 max-w-7xl">
         <div
-          className="sticky top-0 z-20 spark-card p-3 flex flex-wrap gap-2 items-center"
+          className="sticky top-0 z-20 spark-card p-3 flex flex-col gap-2"
           style={{
             background: "rgba(10,13,9,0.92)",
             backdropFilter: "blur(10px)",
           }}
         >
-          <div className="min-w-[140px] mr-1">
-            <p
-              className="mono text-[10px]"
-              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
-            >
-              RECAPS · {windowLabel}
-            </p>
-            <p
-              className="tab-num text-2xl font-bold leading-none mt-0.5"
-              style={{ color: "var(--spark-lime)" }}
-            >
-              <CountReel value={meta.total} />
-            </p>
-          </div>
-          <input
-            ref={searchRef}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search venue, retailer, R-ID…"
-            className="rounded-xl text-sm"
-            style={{ ...filterStyle, flex: 1, minWidth: 180, maxWidth: 260 }}
-          />
-          <div
-            className="flex overflow-hidden"
-            style={{ border: "1px solid var(--spark-border)", borderRadius: 12 }}
-          >
-            {([
-              ["cards", "Cards"],
-              ["compact", "Scan"],
-            ] as const).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setDensity(key)}
-                className="px-2.5 py-2 text-xs font-semibold"
-                style={{
-                  background:
-                    density === key ? "rgba(197,245,70,0.16)" : "transparent",
-                  color:
-                    density === key
-                      ? "var(--spark-lime)"
-                      : "rgba(255,255,255,0.65)",
-                }}
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="min-w-[120px] mr-1 shrink-0">
+              <p
+                className="mono text-[10px]"
+                style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
               >
-                {label}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={(e) => dispatchOpenJump(e.currentTarget)}
-            className="rounded-xl text-xs px-3 py-2 font-semibold"
-            style={ghostBtn}
-            title="Jump to a recap"
-          >
-            Jump to a recap
-            <span className="mono ml-2 text-[10px]" style={{ letterSpacing: "0.12em", opacity: 0.65 }}>
-              ⌘K
-            </span>
-          </button>
-          {!isClient && (
-          <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--spark-border)" }}>
-            {([
-              ["needs_review", "Needs review"],
-              ["approved", "Approved"],
-              ["shared", "Shared"],
-              ["submitted", "Submitted"],
-            ] as const).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setStatusFilter(key)}
-                className="px-2.5 py-2 text-xs font-semibold"
-                style={{
-                  background:
-                    pipelineKey === key ? "rgba(197,245,70,0.16)" : "transparent",
-                  color:
-                    pipelineKey === key
-                      ? "var(--spark-lime)"
-                      : "rgba(255,255,255,0.65)",
-                }}
+                RECAPS · {windowLabel}
+              </p>
+              <p
+                className="tab-num text-2xl font-bold leading-none mt-0.5"
+                style={{ color: "var(--spark-lime)" }}
               >
-                {label}
-              </button>
-            ))}
-          </div>
-          )}
-          {!isClient && (
-          <button
-            type="button"
-            onClick={() => setNeedsStoreMap((v) => !v)}
-            className="rounded-xl text-xs px-3 py-2 font-semibold"
-            style={needsStoreMap ? limeBtn : ghostBtn}
-          >
-            Map store
-          </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setSelectMode((v) => !v)}
-            className="rounded-xl text-xs px-3 py-2 font-semibold"
-            style={selectMode ? limeBtn : ghostBtn}
-            title="Select multiple recaps for bulk actions"
-          >
-            {selectMode ? "Selecting" : "Select"}
-          </button>
-          {!isClient && (
-          <button
-            type="button"
-            onClick={pinCurrentView}
-            className="rounded-xl text-xs px-3 py-2 font-semibold"
-            style={ghostBtn}
-            title="Save the current filters as a named view"
-          >
-            Pin view
-          </button>
-          )}
-          {savedViews.length > 0 && (
-            <select
-              defaultValue=""
-              onChange={(e) => {
-                const v = savedViews.find((x) => x.name === e.target.value);
-                if (v) applyView(v);
-                e.currentTarget.value = "";
-              }}
+                <CountReel value={meta.total} />
+              </p>
+            </div>
+            <input
+              ref={searchRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search venue, retailer, R-ID…"
               className="rounded-xl text-sm"
-              style={{ ...filterStyle, maxWidth: 180 }}
-            >
-              <option value="">Saved views…</option>
-              {savedViews.map((v) => (
-                <option key={v.name} value={v.name}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
-          )}
-          {!isClient && (
-            <button
-              type="button"
-              onClick={() => navigate("/recaps/missing")}
-              className="rounded-xl text-xs px-3 py-2 font-semibold"
-              style={ghostBtn}
-              title="Events in the last 30 days with no recap filed"
-            >
-              Missing
-            </button>
-          )}
-          <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid var(--spark-border)" }}>
-            {(["30d", "90d", "all"] as const).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => applyDatePreset(p)}
-                className="px-2.5 py-2 text-xs font-semibold"
-                style={{
-                  background:
-                    datePreset === p ? "rgba(197,245,70,0.16)" : "transparent",
-                  color:
-                    datePreset === p
-                      ? "var(--spark-lime)"
-                      : "rgba(255,255,255,0.65)",
-                }}
-              >
-                {p === "all" ? "All dates" : p.toUpperCase()}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={showAllPublished}
-            className="rounded-xl text-xs px-3 py-2 font-semibold"
-            style={ghostBtn}
-            title="Show every published recap, all dates"
-          >
-            All published
-          </button>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setOpsOpen((v) => !v)}
-              className="px-4 py-2 rounded-xl text-sm font-semibold"
-              style={ghostBtn}
-            >
-              Export / Import ▾
-            </button>
-            {opsOpen && (
+              style={{ ...filterStyle, flex: 1, minWidth: 140, maxWidth: 320 }}
+            />
+            {!isClient && (
               <div
-                className="absolute right-0 top-full mt-2 z-40 flex flex-col gap-1 p-2 min-w-[240px] rounded-2xl"
-                style={{
-                  background: "rgba(10,13,9,0.98)",
-                  border: "1px solid var(--spark-border)",
-                  boxShadow: "0 14px 40px rgba(0,0,0,0.55)",
-                }}
+                className="flex rounded-xl overflow-x-auto max-w-full"
+                style={{ border: "1px solid var(--spark-border)" }}
               >
-                <LinkedSheetChip />
-                <button
-                  type="button"
-                  onClick={() => {
-                    exportCsv();
-                    setOpsOpen(false);
+                {(
+                  [
+                    ["needs_review", "Needs review"],
+                    ["approved", "Approved"],
+                    ["shared", "Shared"],
+                    ["submitted", "Submitted"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setStatusFilter(key)}
+                    className="px-2.5 py-2 text-xs font-semibold whitespace-nowrap"
+                    style={{
+                      background:
+                        pipelineKey === key
+                          ? "rgba(197,245,70,0.16)"
+                          : "transparent",
+                      color:
+                        pipelineKey === key
+                          ? "var(--spark-lime)"
+                          : "rgba(255,255,255,0.65)",
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {!isClient && (
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "/recap/create";
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-semibold shrink-0"
+                style={limeBtn}
+              >
+                + New recap
+              </button>
+            )}
+            {/* Phone: collapse density / Jump / Map / Select / Pin / dates / export */}
+            <div className="relative md:hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpsOpen(false);
+                  setToolsOpen((v) => !v);
+                }}
+                className="rounded-xl text-xs px-3 py-2 font-semibold"
+                style={toolsOpen ? limeBtn : ghostBtn}
+                aria-expanded={toolsOpen}
+                aria-haspopup="menu"
+              >
+                More{toolsOpen ? " ▴" : " ▾"}
+              </button>
+              {toolsOpen && (
+                <div
+                  className="absolute right-0 top-full mt-2 z-40 flex flex-col gap-1 p-2 min-w-[220px] rounded-2xl"
+                  style={{
+                    background: "rgba(10,13,9,0.98)",
+                    border: "1px solid var(--spark-border)",
+                    boxShadow: "0 14px 40px rgba(0,0,0,0.55)",
                   }}
-                  disabled={visibleRecaps.length === 0}
-                  className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
-                  style={{ ...ghostBtn, opacity: visibleRecaps.length === 0 ? 0.5 : 1 }}
+                  role="menu"
                 >
-                  ↓ Export CSV
-                  {visibleRecaps.length > 0 ? ` (${visibleRecaps.length})` : ""}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void copyForSheets();
-                    setOpsOpen(false);
-                  }}
-                  disabled={
-                    visibleRecaps.length === 0 || recapCopyState === "copying"
-                  }
-                  className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
-                  style={ghostBtn}
-                >
-                  {recapCopyState === "copied"
-                    ? `✓ Copied (${visibleRecaps.length})`
-                    : "Copy for Sheets"}
-                </button>
-                <ExportReceiptsButton variant="ghost" />
-                <ImportConnecteamButton variant="ghost" />
-                {!isClient && (
+                  <div
+                    className="flex overflow-hidden rounded-xl"
+                    style={{ border: "1px solid var(--spark-border)" }}
+                  >
+                    {(
+                      [
+                        ["cards", "Cards"],
+                        ["compact", "Scan"],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setDensity(key)}
+                        className="flex-1 px-2.5 py-2 text-xs font-semibold"
+                        style={{
+                          background:
+                            density === key
+                              ? "rgba(197,245,70,0.16)"
+                              : "transparent",
+                          color:
+                            density === key
+                              ? "var(--spark-lime)"
+                              : "rgba(255,255,255,0.65)",
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      window.location.href = "/recaps/templates";
+                    onClick={(e) => {
+                      dispatchOpenJump(e.currentTarget);
+                      setToolsOpen(false);
                     }}
                     className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
                     style={ghostBtn}
                   >
-                    + Build template
+                    Jump to a recap
                   </button>
-                )}
-              </div>
-            )}
+                  {!isClient && (
+                    <button
+                      type="button"
+                      onClick={() => setNeedsStoreMap((v) => !v)}
+                      className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                      style={needsStoreMap ? limeBtn : ghostBtn}
+                    >
+                      Map store
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setSelectMode((v) => !v)}
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={selectMode ? limeBtn : ghostBtn}
+                  >
+                    {selectMode ? "Selecting" : "Select"}
+                  </button>
+                  {!isClient && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        pinCurrentView();
+                        setToolsOpen(false);
+                      }}
+                      className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                      style={ghostBtn}
+                    >
+                      Pin view
+                    </button>
+                  )}
+                  {savedViews.length > 0 && (
+                    <select
+                      defaultValue=""
+                      onChange={(e) => {
+                        const v = savedViews.find(
+                          (x) => x.name === e.target.value,
+                        );
+                        if (v) applyView(v);
+                        e.currentTarget.value = "";
+                        setToolsOpen(false);
+                      }}
+                      className="rounded-xl text-sm"
+                      style={{ ...filterStyle, maxWidth: "100%" }}
+                    >
+                      <option value="">Saved views…</option>
+                      {savedViews.map((v) => (
+                        <option key={v.name} value={v.name}>
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {!isClient && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigate("/recaps/missing");
+                        setToolsOpen(false);
+                      }}
+                      className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                      style={ghostBtn}
+                    >
+                      Missing
+                    </button>
+                  )}
+                  <div
+                    className="flex overflow-hidden rounded-xl"
+                    style={{ border: "1px solid var(--spark-border)" }}
+                  >
+                    {(["30d", "90d", "all"] as const).map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => applyDatePreset(p)}
+                        className="flex-1 px-2.5 py-2 text-xs font-semibold"
+                        style={{
+                          background:
+                            datePreset === p
+                              ? "rgba(197,245,70,0.16)"
+                              : "transparent",
+                          color:
+                            datePreset === p
+                              ? "var(--spark-lime)"
+                              : "rgba(255,255,255,0.65)",
+                        }}
+                      >
+                        {p === "all" ? "All" : p.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      showAllPublished();
+                      setToolsOpen(false);
+                    }}
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={ghostBtn}
+                  >
+                    All published
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setToolsOpen(false);
+                      setOpsOpen(true);
+                    }}
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={ghostBtn}
+                  >
+                    Export / Import…
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-          {!isClient && (
+
+          {/* Desktop: full control strip (unchanged tools, minus status / New which sit above) */}
+          <div className="hidden md:flex flex-wrap gap-2 items-center">
+            <div
+              className="flex overflow-hidden"
+              style={{ border: "1px solid var(--spark-border)", borderRadius: 12 }}
+            >
+              {(
+                [
+                  ["cards", "Cards"],
+                  ["compact", "Scan"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setDensity(key)}
+                  className="px-2.5 py-2 text-xs font-semibold"
+                  style={{
+                    background:
+                      density === key ? "rgba(197,245,70,0.16)" : "transparent",
+                    color:
+                      density === key
+                        ? "var(--spark-lime)"
+                        : "rgba(255,255,255,0.65)",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
-              onClick={() => {
-                window.location.href = "/recap/create";
-              }}
-              className="px-4 py-2 rounded-xl text-sm font-semibold"
-              style={limeBtn}
+              onClick={(e) => dispatchOpenJump(e.currentTarget)}
+              className="rounded-xl text-xs px-3 py-2 font-semibold"
+              style={ghostBtn}
+              title="Jump to a recap"
             >
-              + New recap
+              Jump to a recap
+              <span
+                className="mono ml-2 text-[10px]"
+                style={{ letterSpacing: "0.12em", opacity: 0.65 }}
+              >
+                ⌘K
+              </span>
             </button>
+            {!isClient && (
+              <button
+                type="button"
+                onClick={() => setNeedsStoreMap((v) => !v)}
+                className="rounded-xl text-xs px-3 py-2 font-semibold"
+                style={needsStoreMap ? limeBtn : ghostBtn}
+              >
+                Map store
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelectMode((v) => !v)}
+              className="rounded-xl text-xs px-3 py-2 font-semibold"
+              style={selectMode ? limeBtn : ghostBtn}
+              title="Select multiple recaps for bulk actions"
+            >
+              {selectMode ? "Selecting" : "Select"}
+            </button>
+            {!isClient && (
+              <button
+                type="button"
+                onClick={pinCurrentView}
+                className="rounded-xl text-xs px-3 py-2 font-semibold"
+                style={ghostBtn}
+                title="Save the current filters as a named view"
+              >
+                Pin view
+              </button>
+            )}
+            {savedViews.length > 0 && (
+              <select
+                defaultValue=""
+                onChange={(e) => {
+                  const v = savedViews.find((x) => x.name === e.target.value);
+                  if (v) applyView(v);
+                  e.currentTarget.value = "";
+                }}
+                className="rounded-xl text-sm"
+                style={{ ...filterStyle, maxWidth: 180 }}
+              >
+                <option value="">Saved views…</option>
+                {savedViews.map((v) => (
+                  <option key={v.name} value={v.name}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {!isClient && (
+              <button
+                type="button"
+                onClick={() => navigate("/recaps/missing")}
+                className="rounded-xl text-xs px-3 py-2 font-semibold"
+                style={ghostBtn}
+                title="Events in the last 30 days with no recap filed"
+              >
+                Missing
+              </button>
+            )}
+            <div
+              className="flex rounded-xl overflow-hidden"
+              style={{ border: "1px solid var(--spark-border)" }}
+            >
+              {(["30d", "90d", "all"] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => applyDatePreset(p)}
+                  className="px-2.5 py-2 text-xs font-semibold"
+                  style={{
+                    background:
+                      datePreset === p ? "rgba(197,245,70,0.16)" : "transparent",
+                    color:
+                      datePreset === p
+                        ? "var(--spark-lime)"
+                        : "rgba(255,255,255,0.65)",
+                  }}
+                >
+                  {p === "all" ? "All dates" : p.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={showAllPublished}
+              className="rounded-xl text-xs px-3 py-2 font-semibold"
+              style={ghostBtn}
+              title="Show every published recap, all dates"
+            >
+              All published
+            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setToolsOpen(false);
+                  setOpsOpen((v) => !v);
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                style={ghostBtn}
+              >
+                Export / Import ▾
+              </button>
+              {opsOpen && (
+                <div
+                  className="absolute right-0 top-full mt-2 z-40 flex flex-col gap-1 p-2 min-w-[240px] rounded-2xl"
+                  style={{
+                    background: "rgba(10,13,9,0.98)",
+                    border: "1px solid var(--spark-border)",
+                    boxShadow: "0 14px 40px rgba(0,0,0,0.55)",
+                  }}
+                >
+                  <LinkedSheetChip />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      exportCsv();
+                      setOpsOpen(false);
+                    }}
+                    disabled={visibleRecaps.length === 0}
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={{
+                      ...ghostBtn,
+                      opacity: visibleRecaps.length === 0 ? 0.5 : 1,
+                    }}
+                  >
+                    ↓ Export CSV
+                    {visibleRecaps.length > 0 ? ` (${visibleRecaps.length})` : ""}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void copyForSheets();
+                      setOpsOpen(false);
+                    }}
+                    disabled={
+                      visibleRecaps.length === 0 || recapCopyState === "copying"
+                    }
+                    className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                    style={ghostBtn}
+                  >
+                    {recapCopyState === "copied"
+                      ? `✓ Copied (${visibleRecaps.length})`
+                      : "Copy for Sheets"}
+                  </button>
+                  <ExportReceiptsButton variant="ghost" />
+                  <ImportConnecteamButton variant="ghost" />
+                  {!isClient && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.location.href = "/recaps/templates";
+                      }}
+                      className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                      style={ghostBtn}
+                    >
+                      + Build template
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile: Export menu when opened from More */}
+          {opsOpen && (
+            <div
+              className="md:hidden flex flex-col gap-1 p-2 rounded-2xl"
+              style={{
+                background: "rgba(10,13,9,0.98)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              <div className="flex items-center justify-between px-1 pb-1">
+                <span
+                  className="mono text-[10px]"
+                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+                >
+                  EXPORT / IMPORT
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setOpsOpen(false)}
+                  className="text-xs px-2 py-1 rounded-lg"
+                  style={ghostBtn}
+                >
+                  Close
+                </button>
+              </div>
+              <LinkedSheetChip />
+              <button
+                type="button"
+                onClick={() => {
+                  exportCsv();
+                  setOpsOpen(false);
+                }}
+                disabled={visibleRecaps.length === 0}
+                className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                style={{
+                  ...ghostBtn,
+                  opacity: visibleRecaps.length === 0 ? 0.5 : 1,
+                }}
+              >
+                ↓ Export CSV
+                {visibleRecaps.length > 0 ? ` (${visibleRecaps.length})` : ""}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void copyForSheets();
+                  setOpsOpen(false);
+                }}
+                disabled={
+                  visibleRecaps.length === 0 || recapCopyState === "copying"
+                }
+                className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                style={ghostBtn}
+              >
+                {recapCopyState === "copied"
+                  ? `✓ Copied (${visibleRecaps.length})`
+                  : "Copy for Sheets"}
+              </button>
+              <ExportReceiptsButton variant="ghost" />
+              <ImportConnecteamButton variant="ghost" />
+              {!isClient && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.href = "/recaps/templates";
+                  }}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold text-left"
+                  style={ghostBtn}
+                >
+                  + Build template
+                </button>
+              )}
+            </div>
           )}
         </div>
 
