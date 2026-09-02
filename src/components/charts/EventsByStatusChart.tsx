@@ -5,7 +5,7 @@ import {
   LinearScale,
   BarElement,
   Tooltip,
-  Legend
+  Legend,
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { memo } from "react";
@@ -14,7 +14,11 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 type EventsByStatusAnalytics = Record<string, number>;
 
-function EventsByStatusChart({ analytics }: { analytics: EventsByStatusAnalytics }) {
+function EventsByStatusChart({
+  analytics,
+}: {
+  analytics: EventsByStatusAnalytics;
+}) {
   const labels = Object.keys(analytics);
   const dataValues = Object.values(analytics);
 
@@ -24,12 +28,26 @@ function EventsByStatusChart({ analytics }: { analytics: EventsByStatusAnalytics
       {
         label: "Events by Status",
         data: dataValues,
-        backgroundColor: "#3b82f6"
-      }
-    ]
+        backgroundColor: "rgba(95,184,239,0.90)",
+        borderRadius: 6,
+      },
+    ],
   };
 
-  const options = { responsive: true };
+  const options = {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: {
+        ticks: { color: "rgba(255,255,255,0.55)" },
+        grid: { color: "rgba(255,255,255,0.08)" },
+      },
+      y: {
+        ticks: { color: "rgba(255,255,255,0.75)" },
+        grid: { color: "rgba(255,255,255,0.08)" },
+      },
+    },
+  };
 
   return <Bar data={data} options={options} />;
 }

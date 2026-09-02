@@ -196,17 +196,25 @@ export default function FiltersPanel({ onApplyFilters }: FiltersPanelProps) {
   return (
     <div className="w-full relative z-20">
       {/* Card wrapper */}
-      <div className="bg-base-100/50 rounded-xl border border-base-300 shadow-sm">
+      <div className="bg-[rgba(255,255,255,0.02)] rounded-xl border border-[var(--spark-border)]">
         {/* HEADER */}
         <div
           onClick={handleToggle}
           className="flex items-center justify-between py-4 px-6 cursor-pointer select-none"
         >
           <div className="flex items-center gap-3">
-            <div className="bg-primary/10 p-2 rounded-lg">
-              <Funnel size={18} className="text-primary" />
+            <div
+              className="p-2 rounded-lg"
+              style={{ background: "rgba(197,245,70,0.10)" }}
+            >
+              <Funnel size={18} style={{ color: "var(--spark-lime)" }} />
             </div>
-            <h3 className="text-lg font-semibold text-base-content">Filters</h3>
+            <h3
+              className="text-lg font-semibold"
+              style={{ color: "var(--spark-text)" }}
+            >
+              Filters
+            </h3>
           </div>
 
           <ChevronDown
@@ -251,12 +259,43 @@ export default function FiltersPanel({ onApplyFilters }: FiltersPanelProps) {
                 name="quarter"
                 label="Quarter"
                 placeholder="Select Quarter"
-                options={[
-                  { value: "Q1", label: "Q1 - Jan, Feb, Mar" },
-                  { value: "Q2", label: "Q2 - Apr, May, Jun" },
-                  { value: "Q3", label: "Q3 - Jul, Aug, Sep" },
-                  { value: "Q4", label: "Q4 - Oct, Nov, Dec" },
-                ]}
+                options={(() => {
+                  const year = new Date().getFullYear();
+                  return [
+                    {
+                      value: `Q1 ${year}`,
+                      label: `Q1 ${year} · Jan–Mar`,
+                    },
+                    {
+                      value: `Q2 ${year}`,
+                      label: `Q2 ${year} · Apr–Jun`,
+                    },
+                    {
+                      value: `Q3 ${year}`,
+                      label: `Q3 ${year} · Jul–Sep`,
+                    },
+                    {
+                      value: `Q4 ${year}`,
+                      label: `Q4 ${year} · Oct–Dec`,
+                    },
+                    {
+                      value: `Q1 ${year - 1}`,
+                      label: `Q1 ${year - 1}`,
+                    },
+                    {
+                      value: `Q2 ${year - 1}`,
+                      label: `Q2 ${year - 1}`,
+                    },
+                    {
+                      value: `Q3 ${year - 1}`,
+                      label: `Q3 ${year - 1}`,
+                    },
+                    {
+                      value: `Q4 ${year - 1}`,
+                      label: `Q4 ${year - 1}`,
+                    },
+                  ];
+                })()}
                 showClear
               />
 
@@ -274,7 +313,12 @@ export default function FiltersPanel({ onApplyFilters }: FiltersPanelProps) {
             <div className="flex justify-end pt-4">
               <button
                 type="button"
-                className="btn btn-primary btn-sm"
+                className="px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "rgba(197,245,70,0.14)",
+                  color: "var(--spark-lime)",
+                  border: "1px solid rgba(197,245,70,0.35)",
+                }}
                 onClick={handleApply}
               >
                 Apply Filters

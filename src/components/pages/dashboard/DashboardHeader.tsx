@@ -5,31 +5,52 @@ interface DashboardHeaderProps {
 
 const DashboardHeader = ({ quarterLabel, title }: DashboardHeaderProps) => {
   const readableRange = quarterLabel
-    ? quarterLabel // en Spark no usamos getQuarterDateRangeLabel aún
-    : "January - December 2026";
+    ? quarterLabel
+    : "Filtered by the panel below · or open Insights";
 
   return (
-    <div className="space-y-6">
-      {/* Title */}
-      <div className="flex items-center justify-center gap-4 text-center">
-        <h1
-          className="
-              text-3xl md:text-4xl font-extrabold tracking-tight
-              text-base-content 
-              transition-colors duration-300
-            "
+    <div className="space-y-3">
+      <div className="flex items-end justify-between flex-wrap gap-3">
+        <div>
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            RETAIL PERFORMANCE
+          </p>
+          <h1
+            className="display text-2xl lg:text-3xl font-bold mt-2 leading-[1.1]"
+            style={{ letterSpacing: "-0.03em", color: "var(--spark-text)" }}
+          >
+            {title}
+          </h1>
+          <p
+            className="mt-2 text-sm"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            {readableRange}
+          </p>
+        </div>
+        <a
+          href="/insights"
+          className="px-3 py-2 rounded-xl text-sm font-semibold"
+          style={{
+            background: "rgba(197,245,70,0.10)",
+            color: "var(--spark-lime)",
+            border: "1px solid rgba(197,245,70,0.35)",
+            textDecoration: "none",
+          }}
         >
-          {title}
-        </h1>
+          Full insights →
+        </a>
       </div>
-
-      {/* Subtitle */}
-      <p className="font-medium text-center text-md md:text-lg mb-2 text-gray-600 dark:text-gray-400">
-        {readableRange}
-      </p>
-
-      {/* Line */}
-      <div className="w-40 h-1 bg-linear-to-r from-blue-500 to-purple-600 mx-auto rounded-full"></div>
+      <div
+        className="h-px w-full"
+        style={{ background: "var(--spark-border)" }}
+      />
     </div>
   );
 };

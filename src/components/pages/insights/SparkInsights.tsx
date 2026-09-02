@@ -4,11 +4,12 @@ import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
-import { RequestsQuery } from "@/api/queries/RequestsQuery";
-import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import PaceWidget from "@/components/pages/dashboard-event/PaceWidget";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
+import BelowFold from "@/components/insights/BelowFold";
+import { TenantActivationBreakdownQuery } from "@/api/queries/TenantActivationBreakdownQuery";
+import type { TenantActivationBreakdownQuery as TenantActivationBreakdownQueryType } from "@api/queries/__generated__/TenantActivationBreakdownQuery.graphql";
 
 const TenantKpiCharts = lazy(() => import("@/components/ai/TenantKpiCharts"));
 const TenantKpiComparison = lazy(
@@ -38,62 +39,51 @@ const RANGES: { key: RangeKey; label: string }[] = [
   { key: "ytd", label: "YTD" },
 ];
 
-const TYPE_CONFIG: Array<{
-  match: RegExp;
-  label: string;
-  color: string;
-}> = [
-  { match: /retail/i, label: "Retail samplings", color: "var(--spark-lime)" },
-  { match: /on[-\s]?prem|bar|venue/i, label: "On-premise", color: "var(--spark-purple)" },
-  { match: /event|activation|festival|pop[-\s]?up/i, label: "Events", color: "var(--spark-sky)" },
-];
-
-const classifyType = (name: string | null | undefined): string => {
-  if (!name) return "Other";
-  for (const t of TYPE_CONFIG) {
-    if (t.match.test(name)) return t.label;
-  }
-  return "Other";
+const BUCKET_COLORS: Record<string, string> = {
+  retail: "var(--spark-lime)",
+  onprem: "var(--spark-orange)",
+  event: "var(--spark-sky)",
+  other: "rgba(255,255,255,0.45)",
 };
 
-const ActivationBreakdown: React.FC = () => {
-  const { tenantId } = useAuthStore();
-  const data = useLazyLoadQuery<RequestsQueryType>(
-    RequestsQuery,
-    { first: 2000, filters: tenantId ? { tenantId } : null },
+/** Map page range → comparison period the year/month API can express. */
+const comparisonPeriodForRange = (
+  range: RangeKey,
+): "month" | "quarter" | "year" => {
+  switch (range) {
+    case "7d":
+    case "30d":
+      return "month";
+    case "qtd":
+      return "quarter";
+    case "ytd":
+      return "year";
+    default: {
+      const _exhaustive: never = range;
+      return _exhaustive;
+    }
+  }
+};
+
+const ActivationBreakdown: React.FC<{
+  tenantId: string;
+  startDate: string;
+  endDate: string;
+  rangeLabel: string;
+}> = ({ tenantId, startDate, endDate, rangeLabel }) => {
+  const data = useLazyLoadQuery<TenantActivationBreakdownQueryType>(
+    TenantActivationBreakdownQuery,
+    { tenantId, startDate, endDate },
     { fetchPolicy: "store-or-network" },
   );
 
-  const counts = useMemo(() => {
-    const buckets: Record<string, number> = {};
-    const edges = data?.requests?.edges ?? [];
-    for (const e of edges) {
-      const n = e?.node;
-      if (!n) continue;
-      const slug = (n.status?.slug ?? n.status?.name ?? "")
-        .toString()
-        .toLowerCase();
-      const counted =
-        slug.includes("done") ||
-        slug.includes("complete") ||
-        slug.includes("scheduled") ||
-        slug.includes("approved");
-      if (!counted) continue;
-      const label = classifyType(n.requestType?.name);
-      buckets[label] = (buckets[label] ?? 0) + 1;
-    }
-    return buckets;
-  }, [data]);
-
-  const display = TYPE_CONFIG.map((t) => ({
-    label: t.label,
-    color: t.color,
-    value: counts[t.label] ?? 0,
-  }));
+  const display = (data.tenantActivationBreakdown?.buckets ?? []).filter(
+    (b) => b.key !== "other" || b.count > 0,
+  );
 
   return (
     <div className="spark-card p-6 lg:p-8" style={{ borderRadius: 22 }}>
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
         <h2
           className="display text-lg lg:text-xl font-bold"
           style={{ letterSpacing: "-0.02em" }}
@@ -107,35 +97,38 @@ const ActivationBreakdown: React.FC = () => {
             color: "rgba(255,255,255,0.45)",
           }}
         >
-          CONFIRMED + COMPLETED
+          CONFIRMED + COMPLETED · {rangeLabel.toUpperCase()}
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        {display.map((s) => (
-          <div key={s.label}>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span
-                className="spark-dot"
+        {display.map((s) => {
+          const color = BUCKET_COLORS[s.key] ?? BUCKET_COLORS.other;
+          return (
+            <div key={s.key}>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span
+                  className="spark-dot"
+                  style={{
+                    background: color,
+                    boxShadow: `0 0 8px ${color}`,
+                  }}
+                />
+                <p className="label-mini">{s.label.toUpperCase()}</p>
+              </div>
+              <p
+                className="display tab-num font-bold"
                 style={{
-                  background: s.color,
-                  boxShadow: `0 0 8px ${s.color}`,
+                  fontSize: "2.5rem",
+                  letterSpacing: "-0.04em",
+                  lineHeight: 1,
+                  color,
                 }}
-              />
-              <p className="label-mini">{s.label.toUpperCase()}</p>
+              >
+                {s.count.toLocaleString()}
+              </p>
             </div>
-            <p
-              className="display tab-num font-bold"
-              style={{
-                fontSize: "2.5rem",
-                letterSpacing: "-0.04em",
-                lineHeight: 1,
-                color: s.color,
-              }}
-            >
-              {s.value.toLocaleString()}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -146,7 +139,7 @@ function InsightsInner() {
   const navigate = useNavigate();
   const [range, setRange] = useState<RangeKey>("30d");
 
-  const filters: DashboardFilters = useMemo(() => {
+  const { startDate, endDate, filters } = useMemo(() => {
     const today = new Date();
     const start = new Date(today);
     if (range === "ytd") {
@@ -157,45 +150,74 @@ function InsightsInner() {
       start.setDate(today.getDate() - daysBack);
     }
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
-    return {
+    const startDate = fmt(start);
+    const endDate = fmt(today);
+    const filters: DashboardFilters = {
       distributorIds: [],
       rmmAsignedId: null,
       quarter: null,
-      startDate: fmt(start),
-      endDate: fmt(today),
+      startDate,
+      endDate,
     };
+    return { startDate, endDate, filters };
   }, [range]);
 
   const { dashboard } = useEventDashboardData(tenantId || "", filters, 0);
   const recent = dashboard.recentEvents ?? [];
   const rangeLabel = RANGES.find((r) => r.key === range)?.label ?? range;
+  const comparisonPeriod = comparisonPeriodForRange(range);
+  const kpiYear = new Date().getFullYear();
 
   return (
     <div className="space-y-6 lg:space-y-8 max-w-7xl">
-      <div>
-        <p
-          className="mono text-[10px]"
-          style={{
-            letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
-          }}
-        >
-          PROGRAM ANALYTICS
-        </p>
-        <h1
-          className="display text-2xl lg:text-3xl font-bold mt-2 leading-[1.1]"
-          style={{ letterSpacing: "-0.03em" }}
-        >
-          Insights
-        </h1>
-        <p
-          className="mt-3 text-base"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          KPIs, map, and what people are saying. Timeline range lives on
-          that card — Program KPIs keep their own year control.
-        </p>
+      <div className="flex items-end justify-between flex-wrap gap-4">
+        <div>
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            PROGRAM ANALYTICS
+          </p>
+          <h1
+            className="display text-2xl lg:text-3xl font-bold mt-2 leading-[1.1]"
+            style={{ letterSpacing: "-0.03em" }}
+          >
+            Insights
+          </h1>
+          <p
+            className="mt-3 text-base"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            Page range scopes Timeline, Activation, and period comparison.
+            Program KPIs stay calendar-year (API is year-based).
+          </p>
+        </div>
+        <div className="pill-group">
+          {RANGES.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              onClick={() => setRange(r.key)}
+              className={`pill-btn ${r.key === range ? "on" : ""}`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      <p
+        className="mono text-[10px] -mt-2"
+        style={{
+          letterSpacing: "0.16em",
+          color: "rgba(255,255,255,0.45)",
+        }}
+      >
+        SHOWING {rangeLabel.toUpperCase()} · {startDate} → {endDate}
+      </p>
 
       <PaceWidget />
 
@@ -210,13 +232,20 @@ function InsightsInner() {
             </div>
           }
         >
-          <TenantKpiCharts tenantId={tenantId} />
+          <TenantKpiCharts
+            tenantId={tenantId}
+            scopeNote={`Calendar ${kpiYear} · not scoped to ${rangeLabel}`}
+          />
         </Suspense>
       )}
 
       {tenantId && (
         <Suspense fallback={null}>
-          <TenantKpiComparison tenantId={tenantId} />
+          <TenantKpiComparison
+            tenantId={tenantId}
+            period={comparisonPeriod}
+            scopeNote={`Aligned to ${rangeLabel} (nearest complete period)`}
+          />
         </Suspense>
       )}
 
@@ -234,31 +263,45 @@ function InsightsInner() {
 
       {tenantId && (
         <Suspense fallback={null}>
+          <ActivationBreakdown
+            tenantId={tenantId}
+            startDate={startDate}
+            endDate={endDate}
+            rangeLabel={rangeLabel}
+          />
+        </Suspense>
+      )}
+
+      {tenantId && (
+        <Suspense fallback={null}>
           <TenantSentimentCard tenantId={tenantId} />
         </Suspense>
       )}
 
       {tenantId && (
-        <Suspense fallback={null}>
-          <TenantGeoHeatmap tenantId={tenantId} />
-        </Suspense>
+        <BelowFold
+          fallback={
+            <div
+              className="spark-card p-6 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.35)" }}
+            >
+              Map & leaderboard load as you scroll…
+            </div>
+          }
+        >
+          <div className="space-y-6 lg:space-y-8">
+            <Suspense fallback={null}>
+              <TenantGeoHeatmap tenantId={tenantId} />
+            </Suspense>
+            <Suspense fallback={null}>
+              <TenantBaLeaderboard tenantId={tenantId} />
+            </Suspense>
+            <Suspense fallback={null}>
+              <MetroBreakdownCard tenantId={tenantId} />
+            </Suspense>
+          </div>
+        </BelowFold>
       )}
-
-      {tenantId && (
-        <Suspense fallback={null}>
-          <TenantBaLeaderboard tenantId={tenantId} />
-        </Suspense>
-      )}
-
-      {tenantId && (
-        <Suspense fallback={null}>
-          <MetroBreakdownCard tenantId={tenantId} />
-        </Suspense>
-      )}
-
-      <Suspense fallback={null}>
-        <ActivationBreakdown />
-      </Suspense>
 
       <div className="spark-card p-6 lg:p-8">
         <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
@@ -268,29 +311,17 @@ function InsightsInner() {
           >
             Timeline
           </h2>
-          <div className="flex items-center gap-3">
-            <div className="pill-group">
-              {RANGES.map((r) => (
-                <button
-                  key={r.key}
-                  onClick={() => setRange(r.key)}
-                  className={`pill-btn ${r.key === range ? "on" : ""}`}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => navigate("/requests/list")}
-              className="mono text-[10px] transition"
-              style={{
-                letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.55)",
-              }}
-            >
-              ALL EVENTS →
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/requests/list")}
+            className="mono text-[10px] transition"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.55)",
+            }}
+          >
+            ALL EVENTS →
+          </button>
         </div>
         <p
           className="mono text-[10px] mb-4"
@@ -299,7 +330,7 @@ function InsightsInner() {
             color: "rgba(255,255,255,0.45)",
           }}
         >
-          SHOWING {rangeLabel}
+          SHOWING {rangeLabel.toUpperCase()}
         </p>
 
         {recent.length === 0 ? (
