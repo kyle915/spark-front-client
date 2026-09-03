@@ -144,7 +144,13 @@ const Tile: React.FC<{
 
 function ClientPublicFormPill() {
   const publicForm = usePublicFormLink();
-  return <PublicFormPill slug={publicForm?.slug} url={publicForm?.url} />;
+  return (
+    <PublicFormPill
+      slug={publicForm?.slug}
+      url={publicForm?.url}
+      kind={publicForm?.kind}
+    />
+  );
 }
 
 const ClientInner: React.FC = () => {

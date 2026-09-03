@@ -1,19 +1,42 @@
 import { ClipboardIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import { useAlertStore } from "@/store/alertStore";
-import { sparkFormUrl } from "@/utils/publicHosts";
+import { sparkFormUrl, type PublicFormLink } from "@/utils/publicHosts";
+
+type PublicFormKind = PublicFormLink["kind"];
 
 /**
- * Compact public-form chip: muted label, lime mono slug, copy + open.
+ * Label for the topbar / client-dashboard CTA.
+ * Spark-form tenants → event request; check-in-only (e.g. Feel Free) → walk-up.
+ */
+export function publicFormCtaLabel(kind?: PublicFormKind | null): string {
+  switch (kind) {
+    case "checkin":
+      return "Open check-in";
+    case "spark-form":
+    case null:
+    case undefined:
+      return "Submit Event Request";
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+/**
+ * Prominent public-link CTA: bold label, lime accent, slug + copy + open.
  * URL is always the client host — spark-form or standing check-in —
  * never admin.
  */
 export function PublicFormPill({
   slug,
   url,
+  kind,
   className = "",
 }: {
   slug?: string | null;
   url?: string | null;
+  kind?: PublicFormKind | null;
   className?: string;
 }) {
   const trimmed = slug?.trim() ?? "";
@@ -21,6 +44,10 @@ export function PublicFormPill({
   if (!trimmed) return null;
 
   const href = url?.trim() || sparkFormUrl(trimmed);
+  const label = publicFormCtaLabel(kind);
+  const isCheckin = kind === "checkin";
+  const copyTitle = isCheckin ? "Copy check-in link" : "Copy event request link";
+  const openTitle = isCheckin ? "Open check-in" : "Open event request form";
 
   const copy = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -41,16 +68,17 @@ export function PublicFormPill({
 
   return (
     <div
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs ${className}`}
+      className={`inline-flex items-center gap-2.5 px-3.5 py-2 rounded-full text-sm font-semibold ${className}`}
       style={{
-        background: "rgba(255,255,255,0.04)",
-        border: "1px solid var(--spark-border)",
+        background: "rgba(197, 245, 70, 0.12)",
+        border: "1px solid rgba(197, 245, 70, 0.5)",
+        boxShadow: "0 4px 14px rgba(0,0,0,0.22)",
       }}
     >
-      <span style={{ color: "rgba(255,255,255,0.55)" }}>Public form</span>
+      <span style={{ color: "var(--spark-lime)" }}>{label}</span>
       <span
-        className="mono font-medium truncate max-w-[160px]"
-        style={{ color: "var(--spark-lime)" }}
+        className="mono font-medium truncate max-w-[160px] text-xs"
+        style={{ color: "rgba(255,255,255,0.72)" }}
         title={href}
       >
         {trimmed}
@@ -58,22 +86,22 @@ export function PublicFormPill({
       <button
         type="button"
         onClick={copy}
-        className="transition"
+        className="transition hover:opacity-80"
         style={{ color: "var(--spark-lime)" }}
-        title="Copy public form link"
-        aria-label="Copy public form link"
+        title={copyTitle}
+        aria-label={copyTitle}
       >
-        <ClipboardIcon className="w-3.5 h-3.5" />
+        <ClipboardIcon className="w-4 h-4" />
       </button>
       <button
         type="button"
         onClick={open}
-        className="transition"
+        className="transition hover:opacity-80"
         style={{ color: "var(--spark-lime)" }}
-        title="Open public form"
-        aria-label="Open public form"
+        title={openTitle}
+        aria-label={openTitle}
       >
-        <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
+        <ArrowTopRightOnSquareIcon className="w-4 h-4" />
       </button>
     </div>
   );
