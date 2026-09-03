@@ -10,6 +10,7 @@ describe("eventTypeDescription", () => {
     expect(eventTypeDescription("Event Activation")).toContain(
       "music festivals",
     );
+    expect(eventTypeDescription("Product Seeding")).toContain("cases");
   });
 
   it("matches prefixed Liquid Death labels", () => {
@@ -18,6 +19,9 @@ describe("eventTypeDescription", () => {
     );
     expect(eventTypeDescription("Liquid Death-Event Activation")).toContain(
       "street samplings",
+    );
+    expect(eventTypeDescription("Liquid Death-Product Seeding")).toContain(
+      "Dropping off",
     );
   });
 

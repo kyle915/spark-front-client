@@ -8,6 +8,8 @@ import {
 import {
   isProductsSampledMultiselect,
   matchProductForSampleOption,
+  productSampleQtyHelper,
+  productSampleQtyUnit,
   productSamplesFromSelections,
 } from "@/recap/productsSampledQty";
 import {
@@ -3301,6 +3303,7 @@ function RecapForm({
                 onSampleQtyChange={(productId, qty) =>
                   setSamples((s) => ({ ...s, [productId]: qty }))
                 }
+                qtyContextName={template.name}
               />
               ),
             )}
@@ -3453,6 +3456,7 @@ function MultiselectFieldInput({
   onSampleQtyChange,
   req,
   labelStyle,
+  qtyContextName,
 }: {
   field: TemplateField;
   value: string | string[] | undefined;
@@ -3463,6 +3467,7 @@ function MultiselectFieldInput({
   onSampleQtyChange?: (productId: string, qty: string) => void;
   req: ReactNode;
   labelStyle: CSSProperties;
+  qtyContextName?: string | null;
 }) {
   const [skuFilter, setSkuFilter] = useState("");
   const arr = Array.isArray(value) ? value : [];
@@ -3470,6 +3475,7 @@ function MultiselectFieldInput({
     isProductsSampledMultiselect(field) &&
     Boolean(onSampleQtyChange) &&
     products.length > 0;
+  const qtyUnit = productSampleQtyUnit(qtyContextName ?? field.name);
   const searchable = field.options.length > 24;
   const visibleOptions = useMemo(() => {
     const q = skuFilter.trim().toLowerCase();
@@ -3508,7 +3514,7 @@ function MultiselectFieldInput({
       </label>
       {qtyMode ? (
         <p style={{ fontSize: 13, opacity: 0.6, margin: "4px 0 0" }}>
-          Tap each SKU you handed out, then enter how many cans.
+          {productSampleQtyHelper(qtyContextName ?? field.name)}
           {searchable ? ` Search filters the list (${arr.length} selected).` : null}
         </p>
       ) : null}
@@ -3587,8 +3593,8 @@ function MultiselectFieldInput({
               <input
                 style={{ ...input, width: 88, margin: 0 }}
                 inputMode="numeric"
-                placeholder="cans"
-                aria-label={`Cans sampled — ${product.name}`}
+                placeholder={qtyUnit}
+                aria-label={`${qtyUnit === "cases" ? "Cases" : "Cans"} — ${product.name}`}
                 value={sampleQtys[product.id] ?? ""}
                 onChange={(e) => onSampleQtyChange?.(product.id, e.target.value)}
               />
@@ -3612,6 +3618,7 @@ function FieldInput({
   products = [],
   sampleQtys = {},
   onSampleQtyChange,
+  qtyContextName,
 }: {
   field: TemplateField;
   value: string | string[] | undefined;
@@ -3623,6 +3630,7 @@ function FieldInput({
   products?: TemplateProduct[];
   sampleQtys?: Record<string, string>;
   onSampleQtyChange?: (productId: string, qty: string) => void;
+  qtyContextName?: string | null;
 }) {
   const libraryRef = useRef<HTMLInputElement | null>(null);
   const cameraRef = useRef<HTMLInputElement | null>(null);
@@ -3682,6 +3690,7 @@ function FieldInput({
         onSampleQtyChange={onSampleQtyChange}
         req={req}
         labelStyle={label}
+        qtyContextName={qtyContextName}
       />
     );
   }

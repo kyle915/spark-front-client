@@ -24,9 +24,39 @@ export function isProductsSampledMultiselect(field: {
   type?: string | null;
 }): boolean {
   const name = (field.name ?? "").trim().toLowerCase();
-  if (name !== "products sampled") return false;
+  const aliases = new Set([
+    "products sampled",
+    "cases dropped by sku",
+    "cases by sku",
+  ]);
+  if (!aliases.has(name)) return false;
   const t = (field.type ?? "").toLowerCase();
   return t === "multiselect" || t.includes("multi");
+}
+
+/** True when template/program name is Product Seeding (cases, not cans). */
+export function isProductSeedingContext(
+  name: string | null | undefined,
+): boolean {
+  return /product\s*seeding/i.test(name ?? "");
+}
+
+/** Qty unit label for Products Sampled / Cases-by-SKU pills. */
+export function productSampleQtyUnit(
+  contextName?: string | null,
+): "cases" | "cans" {
+  return isProductSeedingContext(contextName) ? "cases" : "cans";
+}
+
+/**
+ * Helper line under the SKU pills. Seeding asks for cases; sampling for cans.
+ */
+export function productSampleQtyHelper(
+  contextName?: string | null,
+): string {
+  return isProductSeedingContext(contextName)
+    ? "Tap each SKU you dropped off, then enter how many cases."
+    : "Tap each SKU you handed out, then enter how many cans.";
 }
 
 /**
