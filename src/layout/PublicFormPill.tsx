@@ -4,6 +4,9 @@ import { sparkFormUrl, type PublicFormLink } from "@/utils/publicHosts";
 
 type PublicFormKind = PublicFormLink["kind"];
 
+const PUBLIC_PILL_HINT =
+  "Public / external requests — for people who aren’t logged into Spark (non-Spark accounts)";
+
 /**
  * Scannable topbar label for the tenant’s external public link
  * (spark-form or standing check-in) — not the in-app Create Request.
@@ -15,7 +18,7 @@ export function publicFormCtaLabel(kind?: PublicFormKind | null): string {
     case "spark-form":
     case null:
     case undefined:
-      return "Public request link";
+      return "External request link";
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -25,7 +28,7 @@ export function publicFormCtaLabel(kind?: PublicFormKind | null): string {
 
 /**
  * Compact share control for the tenant’s public spark-form / check-in URL.
- * Copy or open for people who aren’t logged into Spark — not Create Request.
+ * Copy or open for non-Spark accounts — not Create Request.
  */
 export function PublicFormPill({
   slug,
@@ -46,11 +49,11 @@ export function PublicFormPill({
   const label = publicFormCtaLabel(kind);
   const isCheckin = kind === "checkin";
   const copyTitle = isCheckin
-    ? "Copy the public check-in link for people who aren’t logged into Spark"
-    : "Copy the public request link for people who aren’t logged into Spark";
+    ? "Copy public check-in link for non-Spark accounts (no login)"
+    : "Copy external request link for non-Spark accounts (no login)";
   const openTitle = isCheckin
-    ? "Open the public check-in page (no Spark login)"
-    : "Open the public request form (no Spark login)";
+    ? "Open public check-in for non-Spark accounts (no login)"
+    : "Open external request form for non-Spark accounts (no login)";
 
   const copy = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -76,7 +79,7 @@ export function PublicFormPill({
         background: "rgba(255,255,255,0.05)",
         border: "1px solid var(--spark-border)",
       }}
-      title="Share the public link for people who aren’t logged into Spark"
+      title={PUBLIC_PILL_HINT}
     >
       <span className="font-medium" style={{ color: "rgba(255,255,255,0.7)" }}>
         {label}

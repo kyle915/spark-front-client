@@ -131,20 +131,24 @@ export const SparkTopbar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        {!isClient && (
-          <button
-            onClick={() => navigate("/requests/create")}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition active:scale-[0.98]"
-            style={{
-              background: "var(--spark-lime)",
-              color: "#0a0d09",
-              boxShadow: "0 8px 20px rgba(0,0,0,0.28)",
-            }}
-          >
-            <span aria-hidden>+</span>
-            <span>Create Request</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => navigate("/requests/create")}
+          className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition active:scale-[0.98]"
+          style={{
+            background: "var(--spark-lime)",
+            color: "#0a0d09",
+            boxShadow: "0 8px 20px rgba(0,0,0,0.28)",
+          }}
+          title={
+            isClient
+              ? "Create a request in Spark for the current client tenant"
+              : "Create a request in Spark"
+          }
+        >
+          <span aria-hidden>+</span>
+          <span>Create Request</span>
+        </button>
 
         <button
           data-spark-jump
