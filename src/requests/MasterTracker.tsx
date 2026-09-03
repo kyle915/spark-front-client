@@ -14,8 +14,8 @@ import { useLazyLoadQuery, useRelayEnvironment } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
-import { RequestsQuery } from "@/api/queries/RequestsQuery";
-import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { TrackerListQuery } from "@/api/queries/TrackerListQuery";
+import type { TrackerListQuery as TrackerListQueryType } from "@api/queries/__generated__/TrackerListQuery.graphql";
 import { TrackerStatusCountsQuery } from "@/api/queries/TrackerStatusCountsQuery";
 import type { TrackerStatusCountsQuery as TrackerStatusCountsQueryType } from "@api/queries/__generated__/TrackerStatusCountsQuery.graphql";
 import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
@@ -287,6 +287,7 @@ const TrackerTable: React.FC<{
   onAssignBa?: (row: Row) => void;
   onPostBoard?: (row: Row) => void;
   onDelete?: (row: Row) => void;
+  onNotesOpened?: () => void;
 }> = ({
   rows,
   mentionables,
@@ -295,6 +296,7 @@ const TrackerTable: React.FC<{
   onAssignBa,
   onPostBoard,
   onDelete,
+  onNotesOpened,
 }) => {
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
@@ -445,7 +447,10 @@ const TrackerTable: React.FC<{
                 setExpanded((prev) => {
                   const next = new Set(prev);
                   if (next.has(r.uuid)) next.delete(r.uuid);
-                  else next.add(r.uuid);
+                  else {
+                    next.add(r.uuid);
+                    onNotesOpened?.();
+                  }
                   return next;
                 });
               };
@@ -830,7 +835,7 @@ const TrackerTable: React.FC<{
  */
 const reqCodeOf = (id: string): string => id.slice(-4).toUpperCase();
 
-const TRACKER_PAGE_SIZE = 100;
+const TRACKER_PAGE_SIZE = 50;
 
 /**
  * Server status-chip + market totals. Independent of the paged rows query
@@ -901,7 +906,7 @@ const TrackerStatusCountsLoader: React.FC<{
       filters,
       q: reqNeedle ? null : search || null,
     },
-    { fetchPolicy: "store-and-network", fetchKey: filterKey },
+    { fetchPolicy: "store-or-network", fetchKey: filterKey },
   );
 
   useEffect(() => {
@@ -932,6 +937,8 @@ const MasterTrackerInner: React.FC<{
   marketFilter: string;
   schedulingFilter: string;
   mentionables: Mentionable[];
+  listRefreshKey: number;
+  onNotesOpened?: () => void;
   onVisibleRowsChange?: (rows: Row[]) => void;
   onClone?: (row: Row) => void;
   onAssignBa?: (row: Row) => void;
@@ -947,6 +954,8 @@ const MasterTrackerInner: React.FC<{
   marketFilter,
   schedulingFilter,
   mentionables,
+  listRefreshKey,
+  onNotesOpened,
   onVisibleRowsChange,
   onClone,
   onAssignBa,
@@ -998,6 +1007,7 @@ const MasterTrackerInner: React.FC<{
         schedulingFilter,
         marketFilter,
         search,
+        listRefreshKey,
       ].join("|"),
     [
       tenantId,
@@ -1008,23 +1018,27 @@ const MasterTrackerInner: React.FC<{
       schedulingFilter,
       marketFilter,
       search,
+      listRefreshKey,
     ],
   );
 
-  const data = useLazyLoadQuery<RequestsQueryType>(
-    RequestsQuery,
+  const data = useLazyLoadQuery<TrackerListQueryType>(
+    TrackerListQuery,
     {
       first: TRACKER_PAGE_SIZE,
       after: null,
       q: reqNeedle ? null : search || null,
       filters: serverFilters,
     },
-    { fetchPolicy: "store-and-network", fetchKey: filterKey },
+    {
+      fetchPolicy: listRefreshKey > 0 ? "network-only" : "store-or-network",
+      fetchKey: filterKey,
+    },
   );
 
   type RequestNode = NonNullable<
     NonNullable<
-      NonNullable<RequestsQueryType["response"]["requests"]>["edges"]
+      NonNullable<TrackerListQueryType["response"]["requests"]>["edges"]
     >[number]
   >["node"];
 
@@ -1121,9 +1135,9 @@ const MasterTrackerInner: React.FC<{
     loadingMoreRef.current = true;
     setLoadingMore(true);
     try {
-      const next = await fetchQuery<RequestsQueryType>(
+      const next = await fetchQuery<TrackerListQueryType>(
         environment,
-        RequestsQuery,
+        TrackerListQuery,
         {
           first: TRACKER_PAGE_SIZE,
           after: endCursor,
@@ -1228,6 +1242,7 @@ const MasterTrackerInner: React.FC<{
         onAssignBa={onAssignBa}
         onPostBoard={onPostBoard}
         onDelete={onDelete}
+        onNotesOpened={onNotesOpened}
       />
       {hasMore && (
         <div ref={loadMoreRef} className="py-3 text-center">
@@ -1338,6 +1353,9 @@ export default function MasterTracker() {
   const [rmmFilter, setRmmFilter] = useState<string>("all");
   const [rmmList, setRmmList] = useState<Mentionable[]>([]);
   const [adminList, setAdminList] = useState<Mentionable[]>([]);
+  // Defer UsersQuery until someone expands Notes — most tracker visits
+  // never open the @-mention panel.
+  const [needAdminRoster, setNeedAdminRoster] = useState(false);
   const [visibleRows, setVisibleRows] = useState<Row[]>([]);
   // Date-range / scheduling filters are applied server-side via
   // RequestFiltersInput (see masterTrackerFilters.ts + trackerStatusCounts).
@@ -1955,10 +1973,9 @@ export default function MasterTracker() {
         </div>
 
         {/* Background loader: populates the @-mention roster with the
-            tenant's real admins. Suspends inside its own boundary so a
-            slow Users query doesn't block the events table from
-            rendering. */}
-        {tenantId && (
+            tenant's real admins. Only mounts after Notes is expanded so
+            cold tracker visits skip the Users query. */}
+        {tenantId && needAdminRoster && (
           <Suspense fallback={null}>
             <AdminMentionablesLoader
               tenantId={tenantId}
@@ -1995,6 +2012,7 @@ export default function MasterTracker() {
         >
           <MasterTrackerInner
             key={refetchTick}
+            listRefreshKey={refetchTick}
             activeStatus={activeStatus}
             search={search}
             rmmFilter={rmmFilter}
@@ -2007,6 +2025,7 @@ export default function MasterTracker() {
               ...rmmList,
               ...(adminList.length > 0 ? adminList : ADMIN_ROSTER_FALLBACK),
             ]}
+            onNotesOpened={() => setNeedAdminRoster(true)}
             onVisibleRowsChange={setVisibleRows}
             onClone={(row) =>
               setCloneSource({

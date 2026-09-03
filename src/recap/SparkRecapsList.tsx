@@ -1,4 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
@@ -10,6 +11,8 @@ import type { RecapsListQuery as RecapsListQueryType } from "@api/queries/__gene
 // Slim list ops for the unified /recaps card grid. Detail keeps
 // RecapQuery / CustomRecapsQueryDetailsQuery (full file/field arrays).
 import { CustomRecapsListQuery } from "@/api/queries/CustomRecapsListQuery";
+import { RecapListKindsProbeQuery } from "@/api/queries/RecapListKindsProbeQuery";
+import type { RecapListKindsProbeQuery as RecapListKindsProbeQueryType } from "@api/queries/__generated__/RecapListKindsProbeQuery.graphql";
 import { ThirdPartyRecapBadge } from "@/recap/ThirdPartyRecapBadge";
 import { recapApprovalMeta } from "@/recap/recapApprovalMeta";
 import type { CustomRecapsListQuery as CustomRecapsListQueryType } from "@api/queries/__generated__/CustomRecapsListQuery.graphql";
@@ -325,7 +328,7 @@ const mapCustomRecap = (n: CustomRecapNode): Recap => ({
     n.approvedBy,
     n.approvedAt ?? null,
   ),
-  heroImage: n.heroImageUrl ?? null,
+  heroImage: thumbUrl(n.heroImageUrl, 400) || n.heroImageUrl || null,
   fileCount: n.customRecapFilesCount ?? 0,
   engagements: n.totalEngagements ?? n.consumersSampled ?? null,
   consumersSampled: n.consumersSampled ?? null,
@@ -821,6 +824,102 @@ type Meta = {
 type SortKey = "date-desc" | "date-asc" | "eng-desc" | "sold-desc";
 type StatusKey = "submitted" | "needs_review" | "approved" | "shared" | "all" | "draft";
 
+type RecapsListFetchPolicy = "store-or-network" | "store-and-network";
+
+const EMPTY_LEGACY_PAGE: RecapsListQueryType["response"] = {
+  recaps: {
+    edges: [],
+    pageInfo: {
+      hasNextPage: false,
+      hasPreviousPage: false,
+      endCursor: null,
+      startCursor: null,
+    },
+    totalCount: 0,
+  },
+};
+
+const EMPTY_CUSTOM_PAGE: CustomRecapsListQueryType["response"] = {
+  customRecaps: {
+    edges: [],
+    pageInfo: {
+      hasNextPage: false,
+      hasPreviousPage: false,
+      endCursor: null,
+      startCursor: null,
+    },
+    totalCount: 0,
+  },
+};
+
+/** Runs RecapsListQuery, or returns an empty stub when this kind is unused. */
+const RecapsLegacyGate: React.FC<{
+  enabled: boolean;
+  variables: RecapsListQueryType["variables"];
+  fetchPolicy: RecapsListFetchPolicy;
+  fetchKey: number;
+  children: (data: RecapsListQueryType["response"]) => ReactNode;
+}> = ({ enabled, variables, fetchPolicy, fetchKey, children }) => {
+  if (!enabled) return <>{children(EMPTY_LEGACY_PAGE)}</>;
+  return (
+    <RecapsLegacyLive
+      variables={variables}
+      fetchPolicy={fetchPolicy}
+      fetchKey={fetchKey}
+    >
+      {children}
+    </RecapsLegacyLive>
+  );
+};
+
+const RecapsLegacyLive: React.FC<{
+  variables: RecapsListQueryType["variables"];
+  fetchPolicy: RecapsListFetchPolicy;
+  fetchKey: number;
+  children: (data: RecapsListQueryType["response"]) => ReactNode;
+}> = ({ variables, fetchPolicy, fetchKey, children }) => {
+  const data = useLazyLoadQuery<RecapsListQueryType>(
+    RecapsListQuery,
+    variables,
+    { fetchPolicy, fetchKey },
+  );
+  return <>{children(data)}</>;
+};
+
+/** Runs CustomRecapsListQuery, or empty stub when this kind is unused. */
+const RecapsCustomGate: React.FC<{
+  enabled: boolean;
+  variables: CustomRecapsListQueryType["variables"];
+  fetchPolicy: RecapsListFetchPolicy;
+  fetchKey: number;
+  children: (data: CustomRecapsListQueryType["response"]) => ReactNode;
+}> = ({ enabled, variables, fetchPolicy, fetchKey, children }) => {
+  if (!enabled) return <>{children(EMPTY_CUSTOM_PAGE)}</>;
+  return (
+    <RecapsCustomLive
+      variables={variables}
+      fetchPolicy={fetchPolicy}
+      fetchKey={fetchKey}
+    >
+      {children}
+    </RecapsCustomLive>
+  );
+};
+
+const RecapsCustomLive: React.FC<{
+  variables: CustomRecapsListQueryType["variables"];
+  fetchPolicy: RecapsListFetchPolicy;
+  fetchKey: number;
+  children: (data: CustomRecapsListQueryType["response"]) => ReactNode;
+}> = ({ variables, fetchPolicy, fetchKey, children }) => {
+  const data = useLazyLoadQuery<CustomRecapsListQueryType>(
+    CustomRecapsListQuery,
+    variables,
+    { fetchPolicy, fetchKey },
+  );
+  return <>{children(data)}</>;
+};
+
 const RecapsListInner: React.FC<{
   search: string;
   retailerFilter: string;
@@ -854,7 +953,6 @@ const RecapsListInner: React.FC<{
   focusedId: string | null;
   needsStoreMap: boolean;
 }> = ({ search, retailerFilter, stateFilter, rmmFilter, baName, statusFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId, needsStoreMap }) => {
-  const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
   // client login) must NOT see unapproved drafts — only approved recaps.
@@ -936,35 +1034,271 @@ const RecapsListInner: React.FC<{
   const page1Vars = recapsListPageVariables(null);
   const environment = useRelayEnvironment();
 
-  // Page 1 only: first:50, after:null. Growing `first` past the API cap
-  // (50) re-fetched the same 50 rows, the sentinel stayed in view, and
-  // Relay aborted the in-flight request → "Failed to fetch". Later pages
-  // use fetchQuery + after:endCursor so this hook never remounts.
-  //
-  // store-and-network = store-first paint + background refresh (Apollo
-  // cache-and-network). Revisits paint from the Relay store immediately
-  // while a network round-trip refreshes the page.
+  // Cheap totalCount probe so we skip the unused legacy OR custom page-1
+  // query (don't always pay 50+50 on tenants that only use one kind).
+  const probe = useLazyLoadQuery<RecapListKindsProbeQueryType>(
+    RecapListKindsProbeQuery,
+    {
+      q: searchQ,
+      legacyFilters: listFilters,
+      customFilters: customListFilters,
+    },
+    {
+      fetchPolicy: refreshKey === 0 ? "store-or-network" : "store-and-network",
+      fetchKey: refreshKey,
+    },
+  );
+  const enableLegacy = (probe.recaps?.totalCount ?? 0) > 0;
+  const enableCustom = (probe.customRecaps?.totalCount ?? 0) > 0;
+  const listFetchPolicy: RecapsListFetchPolicy =
+    refreshKey === 0 ? "store-or-network" : "store-and-network";
+
+  const legacyVars = {
+    first: page1Vars.first,
+    after: page1Vars.after,
+    q: searchQ,
+    filters: listFilters,
+  };
+  const customVars = {
+    first: page1Vars.first,
+    after: page1Vars.after,
+    q: searchQ,
+    filters: customListFilters,
+  };
+  const fetchedRest = {
+    search,
+    retailerFilter,
+    stateFilter,
+    rmmFilter,
+    baName,
+    baNameQuery,
+    statusFilter,
+    dateFrom,
+    dateTo,
+    sortKey,
+    onMeta,
+    onVisibleRecapsChange,
+    selectedIds,
+    onToggleSelected,
+    selectMode,
+    queueEmpty,
+    filterChips,
+    onClearFilters,
+    justApprovedIds,
+    refreshKey,
+    density,
+    focusedId,
+    needsStoreMap,
+    searchQ,
+    listFilters,
+    customListFilters,
+    pipeline,
+    isClient,
+    tenantId,
+    environment,
+    shareTarget,
+    setShareTarget,
+  } as const;
+
+  // Mount both page queries in one component when both kinds exist so
+  // they suspend/fetch in parallel (nested gates would waterfall).
+  if (enableLegacy && enableCustom) {
+    return (
+      <RecapsBothLive
+        legacyVariables={legacyVars}
+        customVariables={customVars}
+        fetchPolicy={listFetchPolicy}
+        fetchKey={refreshKey}
+        {...fetchedRest}
+      />
+    );
+  }
+  if (enableLegacy) {
+    return (
+      <RecapsLegacyGate
+        enabled
+        variables={legacyVars}
+        fetchPolicy={listFetchPolicy}
+        fetchKey={refreshKey}
+      >
+        {(data) => (
+          <RecapsListFetched
+            data={data}
+            customData={EMPTY_CUSTOM_PAGE}
+            enableLegacy
+            enableCustom={false}
+            {...fetchedRest}
+          />
+        )}
+      </RecapsLegacyGate>
+    );
+  }
+  if (enableCustom) {
+    return (
+      <RecapsCustomGate
+        enabled
+        variables={customVars}
+        fetchPolicy={listFetchPolicy}
+        fetchKey={refreshKey}
+      >
+        {(customData) => (
+          <RecapsListFetched
+            data={EMPTY_LEGACY_PAGE}
+            customData={customData}
+            enableLegacy={false}
+            enableCustom
+            {...fetchedRest}
+          />
+        )}
+      </RecapsCustomGate>
+    );
+  }
+  return (
+    <RecapsListFetched
+      data={EMPTY_LEGACY_PAGE}
+      customData={EMPTY_CUSTOM_PAGE}
+      enableLegacy={false}
+      enableCustom={false}
+      {...fetchedRest}
+    />
+  );
+};
+
+const RecapsBothLive: React.FC<{
+  legacyVariables: RecapsListQueryType["variables"];
+  customVariables: CustomRecapsListQueryType["variables"];
+  fetchPolicy: RecapsListFetchPolicy;
+  fetchKey: number;
+  search: string;
+  retailerFilter: string;
+  stateFilter: string;
+  rmmFilter: string;
+  baName: string;
+  baNameQuery: string;
+  statusFilter: StatusKey;
+  dateFrom: string;
+  dateTo: string;
+  sortKey: SortKey;
+  onMeta: (m: Meta) => void;
+  onVisibleRecapsChange?: (recaps: Recap[]) => void;
+  selectedIds: Set<string>;
+  onToggleSelected: (id: string) => void;
+  selectMode: boolean;
+  queueEmpty: boolean;
+  filterChips: { key: string; label: string }[];
+  onClearFilters: () => void;
+  justApprovedIds: Set<string>;
+  refreshKey: number;
+  density: "cards" | "compact";
+  focusedId: string | null;
+  needsStoreMap: boolean;
+  searchQ: string | null;
+  listFilters: RecapsListQueryType["variables"]["filters"];
+  customListFilters: CustomRecapsListQueryType["variables"]["filters"];
+  pipeline: StatusKey;
+  isClient: boolean;
+  tenantId: string | null | undefined;
+  environment: ReturnType<typeof useRelayEnvironment>;
+  shareTarget: Recap | null;
+  setShareTarget: Dispatch<SetStateAction<Recap | null>>;
+}> = ({ legacyVariables, customVariables, fetchPolicy, fetchKey, ...rest }) => {
   const data = useLazyLoadQuery<RecapsListQueryType>(
     RecapsListQuery,
-    {
-      first: page1Vars.first,
-      after: page1Vars.after,
-      q: searchQ,
-      filters: listFilters,
-    },
-    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+    legacyVariables,
+    { fetchPolicy, fetchKey },
   );
-
   const customData = useLazyLoadQuery<CustomRecapsListQueryType>(
     CustomRecapsListQuery,
-    {
-      first: page1Vars.first,
-      after: page1Vars.after,
-      q: searchQ,
-      filters: customListFilters,
-    },
-    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+    customVariables,
+    { fetchPolicy, fetchKey },
   );
+  return (
+    <RecapsListFetched
+      data={data}
+      customData={customData}
+      enableLegacy
+      enableCustom
+      {...rest}
+    />
+  );
+};
+
+const RecapsListFetched: React.FC<{
+  data: RecapsListQueryType["response"];
+  customData: CustomRecapsListQueryType["response"];
+  enableLegacy: boolean;
+  enableCustom: boolean;
+  search: string;
+  retailerFilter: string;
+  stateFilter: string;
+  rmmFilter: string;
+  baName: string;
+  baNameQuery: string;
+  statusFilter: StatusKey;
+  dateFrom: string;
+  dateTo: string;
+  sortKey: SortKey;
+  onMeta: (m: Meta) => void;
+  onVisibleRecapsChange?: (recaps: Recap[]) => void;
+  selectedIds: Set<string>;
+  onToggleSelected: (id: string) => void;
+  selectMode: boolean;
+  queueEmpty: boolean;
+  filterChips: { key: string; label: string }[];
+  onClearFilters: () => void;
+  justApprovedIds: Set<string>;
+  refreshKey: number;
+  density: "cards" | "compact";
+  focusedId: string | null;
+  needsStoreMap: boolean;
+  searchQ: string | null;
+  listFilters: RecapsListQueryType["variables"]["filters"];
+  customListFilters: CustomRecapsListQueryType["variables"]["filters"];
+  pipeline: StatusKey;
+  isClient: boolean;
+  tenantId: string | null | undefined;
+  environment: ReturnType<typeof useRelayEnvironment>;
+  shareTarget: Recap | null;
+  setShareTarget: Dispatch<SetStateAction<Recap | null>>;
+}> = ({
+  data,
+  customData,
+  enableLegacy,
+  enableCustom,
+  search,
+  retailerFilter,
+  stateFilter,
+  rmmFilter,
+  baName,
+  baNameQuery,
+  statusFilter,
+  dateFrom,
+  dateTo,
+  sortKey,
+  onMeta,
+  onVisibleRecapsChange,
+  selectedIds,
+  onToggleSelected,
+  selectMode,
+  queueEmpty,
+  filterChips,
+  onClearFilters,
+  justApprovedIds,
+  refreshKey,
+  density,
+  focusedId,
+  needsStoreMap,
+  searchQ,
+  listFilters,
+  customListFilters,
+  pipeline,
+  isClient,
+  tenantId,
+  environment,
+  shareTarget,
+  setShareTarget,
+}) => {
+  const navigate = useNavigate();
 
   const page1Legacy = useMemo(
     () => recapsFromConnection(data?.recaps?.edges, mapLegacyRecap),
@@ -1031,21 +1365,22 @@ const RecapsListInner: React.FC<{
 
   const loadMore = useCallback(async () => {
     if (loadingMoreRef.current) return;
-    if (!legacyHasMore && !customHasMore) return;
+    if (!(enableLegacy && legacyHasMore) && !(enableCustom && customHasMore))
+      return;
     loadingMoreRef.current = true;
     setLoadingMore(true);
     setLoadMoreError(null);
     const next = recapsListPageVariables;
     try {
       const [legacyPage, customPage] = await Promise.all([
-        legacyHasMore
+        enableLegacy && legacyHasMore
           ? fetchQuery<RecapsListQueryType>(environment, RecapsListQuery, {
               ...next(legacyAfter),
               q: searchQ,
               filters: listFilters,
             }, { fetchPolicy: "network-only" }).toPromise()
           : Promise.resolve(null),
-        customHasMore
+        enableCustom && customHasMore
           ? fetchQuery<CustomRecapsListQueryType>(
               environment,
               CustomRecapsListQuery,
@@ -1095,6 +1430,8 @@ const RecapsListInner: React.FC<{
     }
   }, [
     environment,
+    enableLegacy,
+    enableCustom,
     legacyHasMore,
     customHasMore,
     legacyAfter,

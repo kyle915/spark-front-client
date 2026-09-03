@@ -6,6 +6,7 @@ import SparkTopbar from "./SparkTopbar";
 import CommandPalette from "./CommandPalette";
 import UpdateBanner from "@/components/UpdateBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { useInLayoutShell } from "./LayoutShellContext";
 
 /**
  * Spark v2 layout shell. SparkSidebar + SparkTopbar render the wireframe
@@ -15,13 +16,19 @@ import ErrorBoundary from "@/components/ErrorBoundary";
  * the spark-v2 theme tokens (e.g. lime primary) with per-tenant brand colors
  * (Liquid Death's blue). The admin shell should always be Spark v2 lime —
  * tenant-brand theming is for client-facing content panels, not the chrome.
+ *
+ * When AuthenticatedShell already mounts chrome (LayoutShellContext=true),
+ * page-level `<Layout>` is a passthrough so nav does not remount sidebar /
+ * topbar or restart chat polling.
  */
 
 interface LayoutProps {
   children?: ReactNode;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+/** Actual sidebar + topbar chrome. Used by AuthenticatedShell and by Layout
+ *  when not already inside a shell. */
+export const LayoutChrome: React.FC<LayoutProps> = ({ children }) => {
   // Key the boundary by route so navigating to a working page clears a
   // stuck error automatically (a remount resets its caught-error state).
   const location = useLocation();
@@ -48,6 +55,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </div>
     </div>
   );
+};
+
+const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const inShell = useInLayoutShell();
+  if (inShell) {
+    return <>{children}</>;
+  }
+  return <LayoutChrome>{children}</LayoutChrome>;
 };
 
 export default Layout;

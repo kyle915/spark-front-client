@@ -215,6 +215,175 @@ async function buildInsightsSummaryCopy(opts: {
   return lines.join("\n");
 }
 
+/** Heavy eventDashboard fetch isolated so above-fold KPIs paint first. */
+function InsightsTimeline({
+  tenantId,
+  filters,
+  rangeLabel,
+  selectedState,
+  onClearState,
+}: {
+  tenantId: string;
+  filters: DashboardFilters;
+  rangeLabel: string;
+  selectedState: string | null;
+  onClearState: () => void;
+}) {
+  const navigate = useNavigate();
+  const { dashboard } = useEventDashboardData(tenantId, filters, 0);
+  const recent = dashboard.recentEvents ?? [];
+
+  const timelineRows = useMemo(() => {
+    if (!selectedState) return recent;
+    const needle = selectedState.toUpperCase();
+    return recent.filter((e) =>
+      (e.location ?? "").toUpperCase().includes(needle),
+    );
+  }, [recent, selectedState]);
+
+  return (
+    <div className="spark-card p-6 lg:p-8">
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <h2
+          className="display text-lg lg:text-xl font-bold"
+          style={{ letterSpacing: "-0.02em" }}
+        >
+          Timeline
+          {selectedState ? ` · ${selectedState}` : ""}
+        </h2>
+        <div className="flex items-center gap-3">
+          {selectedState && (
+            <button
+              type="button"
+              onClick={onClearState}
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.14em",
+                color: "var(--spark-orange)",
+              }}
+            >
+              CLEAR STATE
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => navigate("/requests/list")}
+            className="mono text-[10px] transition"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.55)",
+            }}
+          >
+            ALL EVENTS →
+          </button>
+        </div>
+      </div>
+      <p
+        className="mono text-[10px] mb-4"
+        style={{
+          letterSpacing: "0.16em",
+          color: "rgba(255,255,255,0.45)",
+        }}
+      >
+        SHOWING {rangeLabel.toUpperCase()}
+        {selectedState ? ` · ${selectedState}` : ""}
+      </p>
+
+      {timelineRows.length === 0 ? (
+        <p
+          className="text-sm py-10 text-center"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+        >
+          {selectedState
+            ? `No timeline rows for ${selectedState} in this range.`
+            : "No data yet. New events show up here as they're scheduled."}
+        </p>
+      ) : (
+        <div>
+          {timelineRows.slice(0, 10).map((e, i) => {
+            const dateStr = e.date ?? "";
+            const isToday =
+              dateStr &&
+              new Date(dateStr).toDateString() === new Date().toDateString();
+            const isPast = dateStr && new Date(dateStr) < new Date();
+            const dot = isToday
+              ? "var(--spark-lime)"
+              : isPast
+                ? "rgba(255,255,255,0.3)"
+                : "var(--spark-sky)";
+            return (
+              <div
+                key={i}
+                onClick={() =>
+                  isPast
+                    ? navigate("/recaps/list")
+                    : navigate("/requests/list")
+                }
+                className="flex items-center gap-4 py-3 cursor-pointer"
+                style={{
+                  borderBottom:
+                    i < Math.min(timelineRows.length, 10) - 1
+                      ? "1px solid var(--spark-border)"
+                      : "none",
+                  opacity: isPast ? 0.72 : 1,
+                }}
+              >
+                <span
+                  className="spark-dot shrink-0"
+                  style={{
+                    background: dot,
+                    boxShadow: `0 0 8px ${dot}`,
+                  }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">
+                    {e.name ?? "Untitled"}
+                  </p>
+                  <p
+                    className="mono text-[10px] mt-0.5 truncate"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: "rgba(255,255,255,0.45)",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {e.location ?? ""}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p
+                    className="text-sm"
+                    style={{ color: "rgba(255,255,255,0.85)" }}
+                  >
+                    {dateStr || "—"}
+                  </p>
+                  <p
+                    className="mono text-[10px]"
+                    style={{
+                      letterSpacing: "0.14em",
+                      color: isToday
+                        ? "var(--spark-lime)"
+                        : isPast
+                          ? "rgba(255,255,255,0.45)"
+                          : "var(--spark-sky)",
+                    }}
+                  >
+                    {isToday
+                      ? "TODAY"
+                      : isPast
+                        ? (e.status ?? "DONE").toUpperCase()
+                        : (e.status ?? "SCHEDULED").toUpperCase()}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function InsightsInner() {
   const { tenantId } = useAuthStore();
   const navigate = useNavigate();
@@ -246,19 +415,9 @@ function InsightsInner() {
     return { startDate, endDate, filters };
   }, [range]);
 
-  const { dashboard } = useEventDashboardData(tenantId || "", filters, 0);
-  const recent = dashboard.recentEvents ?? [];
   const rangeLabel = RANGES.find((r) => r.key === range)?.label ?? range;
   const comparisonPeriod = comparisonPeriodForRange(range);
   const kpiYear = new Date().getFullYear();
-
-  const timelineRows = useMemo(() => {
-    if (!selectedState) return recent;
-    const needle = selectedState.toUpperCase();
-    return recent.filter((e) =>
-      (e.location ?? "").toUpperCase().includes(needle),
-    );
-  }, [recent, selectedState]);
 
   const onCopySummary = async () => {
     if (!tenantId || copying) return;
@@ -465,145 +624,24 @@ function InsightsInner() {
         </BelowFold>
       )}
 
-      <div className="spark-card p-6 lg:p-8">
-        <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-          <h2
-            className="display text-lg lg:text-xl font-bold"
-            style={{ letterSpacing: "-0.02em" }}
-          >
-            Timeline
-            {selectedState ? ` · ${selectedState}` : ""}
-          </h2>
-          <div className="flex items-center gap-3">
-            {selectedState && (
-              <button
-                type="button"
-                onClick={() => setSelectedState(null)}
-                className="mono text-[10px]"
-                style={{
-                  letterSpacing: "0.14em",
-                  color: "var(--spark-orange)",
-                }}
-              >
-                CLEAR STATE
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => navigate("/requests/list")}
-              className="mono text-[10px] transition"
-              style={{
-                letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.55)",
-              }}
-            >
-              ALL EVENTS →
-            </button>
-          </div>
-        </div>
-        <p
-          className="mono text-[10px] mb-4"
-          style={{
-            letterSpacing: "0.16em",
-            color: "rgba(255,255,255,0.45)",
-          }}
-        >
-          SHOWING {rangeLabel.toUpperCase()}
-          {selectedState ? ` · ${selectedState}` : ""}
-        </p>
-
-        {timelineRows.length === 0 ? (
-          <p
-            className="text-sm py-10 text-center"
+      <Suspense
+        fallback={
+          <div
+            className="spark-card p-6 text-center text-sm"
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            {selectedState
-              ? `No timeline rows for ${selectedState} in this range.`
-              : "No data yet. New events show up here as they're scheduled."}
-          </p>
-        ) : (
-          <div>
-            {timelineRows.slice(0, 10).map((e, i) => {
-              const dateStr = e.date ?? "";
-              const isToday =
-                dateStr &&
-                new Date(dateStr).toDateString() === new Date().toDateString();
-              const isPast = dateStr && new Date(dateStr) < new Date();
-              const dot = isToday
-                ? "var(--spark-lime)"
-                : isPast
-                  ? "rgba(255,255,255,0.3)"
-                  : "var(--spark-sky)";
-              return (
-                <div
-                  key={i}
-                  onClick={() =>
-                    isPast
-                      ? navigate("/recaps/list")
-                      : navigate("/requests/list")
-                  }
-                  className="flex items-center gap-4 py-3 cursor-pointer"
-                  style={{
-                    borderBottom:
-                      i < Math.min(timelineRows.length, 10) - 1
-                        ? "1px solid var(--spark-border)"
-                        : "none",
-                    opacity: isPast ? 0.72 : 1,
-                  }}
-                >
-                  <span
-                    className="spark-dot shrink-0"
-                    style={{
-                      background: dot,
-                      boxShadow: `0 0 8px ${dot}`,
-                    }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">
-                      {e.name ?? "Untitled"}
-                    </p>
-                    <p
-                      className="mono text-[10px] mt-0.5 truncate"
-                      style={{
-                        letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.45)",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {e.location ?? ""}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p
-                      className="text-sm"
-                      style={{ color: "rgba(255,255,255,0.85)" }}
-                    >
-                      {dateStr || "—"}
-                    </p>
-                    <p
-                      className="mono text-[10px]"
-                      style={{
-                        letterSpacing: "0.14em",
-                        color: isToday
-                          ? "var(--spark-lime)"
-                          : isPast
-                            ? "rgba(255,255,255,0.45)"
-                            : "var(--spark-sky)",
-                      }}
-                    >
-                      {isToday
-                        ? "TODAY"
-                        : isPast
-                          ? (e.status ?? "DONE").toUpperCase()
-                          : (e.status ?? "SCHEDULED").toUpperCase()}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+            Loading timeline…
           </div>
-        )}
-      </div>
+        }
+      >
+        <InsightsTimeline
+          tenantId={tenantId || ""}
+          filters={filters}
+          rangeLabel={rangeLabel}
+          selectedState={selectedState}
+          onClearState={() => setSelectedState(null)}
+        />
+      </Suspense>
     </div>
   );
 }
