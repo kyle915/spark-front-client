@@ -39,6 +39,19 @@ describe("collapseSamplingKpis", () => {
       "samplesDistributed",
       "totalEngagements",
     ]);
+    expect(tiles[1].label).toBe("Samples handed out");
+  });
+
+  it("never labels the consumers mirror as samples handed out", () => {
+    const tiles = collapseSamplingKpis({
+      consumersReached: 152526,
+      samplesDistributed: 152526,
+      totalEngagements: 90000,
+    });
+    expect(tiles.map((t) => t.label)).toEqual([
+      "Consumers sampled",
+      "Total engagements",
+    ]);
   });
 
   it("uses samples as the sampled count when reach is zero", () => {

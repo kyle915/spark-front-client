@@ -47,6 +47,7 @@ const ICON_FOR_KEY: Record<string, string> = {
   sales: "🛒",
   new_audience: "✨",
   momentum: "📈",
+  consumers_sampled: "👥",
 };
 
 const iconFor = (key: string | null | undefined): string =>

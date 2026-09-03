@@ -52,8 +52,8 @@ type MetricKey =
   | "eventCount";
 
 const METRICS: { key: MetricKey; label: string }[] = [
-  { key: "consumersReached", label: "Consumers reached" },
-  { key: "samplesDistributed", label: "Samples distributed" },
+  { key: "consumersReached", label: "Consumers sampled" },
+  { key: "samplesDistributed", label: "Samples handed out" },
   { key: "productsSold", label: "Products sold" },
   { key: "totalEngagements", label: "Total engagements" },
   { key: "eventCount", label: "Events" },
@@ -203,8 +203,8 @@ const Tooltip: React.FC<{ tip: NonNullable<TooltipState> }> = ({ tip }) => {
   const rows: { label: string; value: number }[] = [
     { label: "Events", value: tip.row.eventCount },
     { label: "Recaps", value: tip.row.recapCount },
-    { label: "Consumers reached", value: tip.row.consumersReached },
-    { label: "Samples distributed", value: tip.row.samplesDistributed },
+    { label: "Consumers sampled", value: tip.row.consumersReached },
+    { label: "Samples handed out", value: tip.row.samplesDistributed },
     { label: "Products sold", value: tip.row.productsSold },
     { label: "Engagements", value: tip.row.totalEngagements },
   ];

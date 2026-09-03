@@ -33,7 +33,8 @@ export function collapseSamplingKpis(k: SamplingTotals): SamplingTile[] {
   if (samplesDistinct) {
     tiles.push({
       key: "samplesDistributed",
-      label: "Samples distributed",
+      // Distinct unit count only — never the consumers-sampled mirror.
+      label: "Samples handed out",
       value: samples,
     });
   }
