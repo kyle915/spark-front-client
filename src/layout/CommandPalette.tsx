@@ -91,7 +91,7 @@ const ENTRIES: CommandEntry[] = [
   { id: "alerts", label: "Alerts", hint: "Notifications feed", to: "/alerts", Icon: Bell, keywords: "notifications" },
   { id: "settings", label: "Settings", hint: "Workspace + integrations", to: "/settings", Icon: Settings, keywords: "preferences workspace" },
   { id: "cal-sync", label: "Calendar Sync", hint: "Google Calendar integration", to: "/settings/calendar", Icon: CalendarClock, keywords: "google sync" },
-  { id: "create", label: "Create Request", hint: "Submit a new request", to: "/requests/create", Icon: Plus, keywords: "new request submit", adminOnly: true },
+  { id: "create", label: "Create Request", hint: "Submit a new request for the current tenant", to: "/requests/create", Icon: Plus, keywords: "new request submit" },
 ];
 
 const score = (entry: CommandEntry, q: string) => {
