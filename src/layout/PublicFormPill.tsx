@@ -5,17 +5,17 @@ import { sparkFormUrl, type PublicFormLink } from "@/utils/publicHosts";
 type PublicFormKind = PublicFormLink["kind"];
 
 /**
- * Label for the topbar / client-dashboard CTA.
- * Spark-form tenants → event request; check-in-only (e.g. Feel Free) → walk-up.
+ * Scannable topbar label for the tenant’s external public link
+ * (spark-form or standing check-in) — not the in-app Create Request.
  */
 export function publicFormCtaLabel(kind?: PublicFormKind | null): string {
   switch (kind) {
     case "checkin":
-      return "Open check-in";
+      return "Public check-in link";
     case "spark-form":
     case null:
     case undefined:
-      return "Submit Event Request";
+      return "Public request link";
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -24,9 +24,8 @@ export function publicFormCtaLabel(kind?: PublicFormKind | null): string {
 }
 
 /**
- * Prominent public-link CTA: bold label, lime accent, slug + copy + open.
- * URL is always the client host — spark-form or standing check-in —
- * never admin.
+ * Compact share control for the tenant’s public spark-form / check-in URL.
+ * Copy or open for people who aren’t logged into Spark — not Create Request.
  */
 export function PublicFormPill({
   slug,
@@ -46,15 +45,19 @@ export function PublicFormPill({
   const href = url?.trim() || sparkFormUrl(trimmed);
   const label = publicFormCtaLabel(kind);
   const isCheckin = kind === "checkin";
-  const copyTitle = isCheckin ? "Copy check-in link" : "Copy event request link";
-  const openTitle = isCheckin ? "Open check-in" : "Open event request form";
+  const copyTitle = isCheckin
+    ? "Copy the public check-in link for people who aren’t logged into Spark"
+    : "Copy the public request link for people who aren’t logged into Spark";
+  const openTitle = isCheckin
+    ? "Open the public check-in page (no Spark login)"
+    : "Open the public request form (no Spark login)";
 
   const copy = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     try {
       await navigator.clipboard.writeText(href);
-      showAlert("Link copied to clipboard", "success");
+      showAlert("Public link copied to clipboard", "success");
     } catch {
       showAlert("Error copying link", "error");
     }
@@ -68,17 +71,19 @@ export function PublicFormPill({
 
   return (
     <div
-      className={`inline-flex items-center gap-2.5 px-3.5 py-2 rounded-full text-sm font-semibold ${className}`}
+      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs ${className}`}
       style={{
-        background: "rgba(197, 245, 70, 0.12)",
-        border: "1px solid rgba(197, 245, 70, 0.5)",
-        boxShadow: "0 4px 14px rgba(0,0,0,0.22)",
+        background: "rgba(255,255,255,0.05)",
+        border: "1px solid var(--spark-border)",
       }}
+      title="Share the public link for people who aren’t logged into Spark"
     >
-      <span style={{ color: "var(--spark-lime)" }}>{label}</span>
+      <span className="font-medium" style={{ color: "rgba(255,255,255,0.7)" }}>
+        {label}
+      </span>
       <span
-        className="mono font-medium truncate max-w-[160px] text-xs"
-        style={{ color: "rgba(255,255,255,0.72)" }}
+        className="mono font-medium truncate max-w-[160px]"
+        style={{ color: "var(--spark-lime)" }}
         title={href}
       >
         {trimmed}
@@ -91,7 +96,7 @@ export function PublicFormPill({
         title={copyTitle}
         aria-label={copyTitle}
       >
-        <ClipboardIcon className="w-4 h-4" />
+        <ClipboardIcon className="w-3.5 h-3.5" />
       </button>
       <button
         type="button"
@@ -101,7 +106,7 @@ export function PublicFormPill({
         title={openTitle}
         aria-label={openTitle}
       >
-        <ArrowTopRightOnSquareIcon className="w-4 h-4" />
+        <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
       </button>
     </div>
   );
