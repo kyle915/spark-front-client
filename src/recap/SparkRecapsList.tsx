@@ -61,6 +61,7 @@ import {
 } from "./recapListFilters";
 import {
   normalizeRecapActivationFilter,
+  recapActivationFilterLabel,
   recapMatchesActivationFilter,
   type RecapActivationFilter,
 } from "@/lib/activationBucket";
@@ -2479,7 +2480,7 @@ export default function SparkRecapsList() {
     activationFilter !== "all"
       ? {
           key: "activation",
-          label: activationFilter === "retail" ? "Retail" : "Event",
+          label: recapActivationFilterLabel(activationFilter),
         }
       : null,
     search.trim() ? { key: "search", label: search.trim() } : null,
@@ -2589,6 +2590,7 @@ export default function SparkRecapsList() {
                   ["all", "View all"],
                   ["retail", "Retail"],
                   ["event", "Event"],
+                  ["seeding", "Product Seeding"],
                 ] as const
               ).map(([key, label]) => (
                 <button
@@ -2657,13 +2659,14 @@ export default function SparkRecapsList() {
                         ["all", "All"],
                         ["retail", "Retail"],
                         ["event", "Event"],
+                        ["seeding", "Seeding"],
                       ] as const
                     ).map(([key, label]) => (
                       <button
                         key={key}
                         type="button"
                         onClick={() => setActivationFilter(key)}
-                        className="flex-1 px-2.5 py-2 text-xs font-semibold"
+                        className="flex-1 px-2 py-2 text-[11px] font-semibold"
                         style={{
                           background:
                             activationFilter === key
