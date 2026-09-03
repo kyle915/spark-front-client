@@ -8,6 +8,9 @@
 
 export type ActivationBucketKey = "retail" | "onprem" | "event" | "other";
 
+/** Recaps list chip: Retail (includes On-prem) / Event / View all. */
+export type RecapActivationFilter = "all" | "retail" | "event";
+
 const BUCKETS: { key: ActivationBucketKey; pattern: RegExp }[] = [
   { key: "retail", pattern: /retail/i },
   { key: "onprem", pattern: /on[-\s]?prem|bar|venue/i },
@@ -34,4 +37,34 @@ export function countsTowardConversion(
 ): boolean {
   const key = activationBucketForTypeName(requestType);
   return key === "retail" || key === "onprem";
+}
+
+/** Normalize `?activation=` from the Recaps list URL. */
+export function normalizeRecapActivationFilter(
+  value?: string | null,
+): RecapActivationFilter {
+  if (value === "retail" || value === "event") return value;
+  return "all";
+}
+
+/**
+ * Client-side match for the Recaps list activation chip.
+ * Retail folds On-premise in (same as server `activationBucket=retail`).
+ */
+export function recapMatchesActivationFilter(
+  requestType: string | null | undefined,
+  filter: RecapActivationFilter,
+): boolean {
+  if (filter === "all") return true;
+  const key = activationBucketForTypeName(requestType);
+  switch (filter) {
+    case "retail":
+      return key === "retail" || key === "onprem";
+    case "event":
+      return key === "event";
+    default: {
+      const _exhaustive: never = filter;
+      return _exhaustive;
+    }
+  }
 }

@@ -2345,6 +2345,7 @@ input CustomRecapFiltersInput {
   stateCode: String = null
   shared: Boolean = null
   needsStoreMap: Boolean = null
+  activationBucket: String = null
 }
 
 """
@@ -5443,6 +5444,7 @@ input RecapFiltersInput {
   retailerName: String = null
   stateCode: String = null
   shared: Boolean = null
+  activationBucket: String = null
 }
 
 type RecapGlobalKPIByRMM {

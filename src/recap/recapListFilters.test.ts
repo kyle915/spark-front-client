@@ -43,10 +43,28 @@ describe("recap list return href", () => {
     );
   });
 
+  it("stashes fromActivation alongside fromStatus", () => {
+    expect(
+      withRecapListReturn("/recap/view/x", "approved", "retail"),
+    ).toBe("/recap/view/x?fromStatus=approved&fromActivation=retail");
+    expect(withRecapListReturn("/recap/view/x", null, "event")).toBe(
+      "/recap/view/x?fromActivation=event",
+    );
+  });
+
   it("rebuilds the list tab from fromStatus", () => {
     const params = new URLSearchParams("fromStatus=approved&fromPage=3");
     expect(recapsListHrefFromReturn({ searchParams: params })).toBe(
       "/recaps/list?status=approved&page=3",
+    );
+  });
+
+  it("restores activation from fromActivation", () => {
+    const params = new URLSearchParams(
+      "fromStatus=approved&fromActivation=event",
+    );
+    expect(recapsListHrefFromReturn({ searchParams: params })).toBe(
+      "/recaps/list?status=approved&activation=event",
     );
   });
 
