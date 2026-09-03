@@ -405,11 +405,7 @@ const BaSearch: React.FC<{
   );
 };
 
-const SparkRecapInner: React.FC<{
-  uuid: string;
-  refreshKey: number;
-  onRefresh: () => void;
-}> = ({ uuid, refreshKey, onRefresh }) => {
+const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -454,6 +450,9 @@ const SparkRecapInner: React.FC<{
   const [pickedBa, setPickedBa] = useState<{ id: string; name: string } | null>(
     null,
   );
+  // Bumped after a file is attached so the query refetches and the new
+  // photo/receipt shows up in the grid without a full page reload.
+  const [refreshKey, setRefreshKey] = useState(0);
   // Per-BA optimistic rating average, keyed by ambassador global id, so
   // the Team card's "★ avg" updates the instant a rating is saved
   // (rateAmbassador returns the recomputed caller-visible average).
@@ -463,14 +462,13 @@ const SparkRecapInner: React.FC<{
   const data = useLazyLoadQuery<RecapQueryType>(
     RecapQuery,
     { uuid },
-    // refreshKey lives ABOVE the Suspense boundary so a network refetch
-    // that suspends doesn't remount this tree and reset the key to 0
-    // (which re-served the stale pre-save store). network-only after the
-    // first bump bypasses store data that updateRecap used to leave stale.
-    {
-      fetchPolicy: refreshKey === 0 ? "store-and-network" : "network-only",
-      fetchKey: refreshKey,
-    },
+    // store-and-network (not store-or-network) so bumping refreshKey
+    // after a mutation that doesn't return every field (updateRecap
+    // returns only id/name/eventId — not the numbers or ambassadors)
+    // actually re-fetches from the network. With store-or-network the
+    // bump served the stale store and edits/BA didn't show until a
+    // manual reload — the same "silly workflow" Nevena hit on photos.
+    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
 
   const recap = data?.recap;
@@ -767,10 +765,7 @@ const SparkRecapInner: React.FC<{
         if (res.updateRecap?.success) {
           showAlert("Recap numbers updated.", "success");
           setEditingNumbers(false);
-          // Mutation selection updates the store; bump fetchKey as a
-          // network-only safety net so nested lists (samples / BA) that
-          // were replaced server-side can't linger as stale linked IDs.
-          onRefresh();
+          setRefreshKey((k) => k + 1);
         } else {
           showAlert(
             res.updateRecap?.message ?? "Couldn't save changes.",

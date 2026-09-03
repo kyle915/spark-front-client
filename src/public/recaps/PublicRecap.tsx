@@ -329,7 +329,7 @@ const PublicRecap: React.FC = () => {
                   }}
                 >
                   <img
-                    src={thumbUrl(hero.url, 1200) || hero.url}
+                    src={thumbUrl(hero.url, 800) || hero.url}
                     alt={hero.name ?? "Recap photo"}
                     className="w-full object-cover"
                     style={{
