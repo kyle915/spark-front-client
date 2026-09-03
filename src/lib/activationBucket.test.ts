@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   activationBucketForTypeName,
   countsTowardConversion,
+  normalizeRecapActivationFilter,
+  recapMatchesActivationFilter,
 } from "./activationBucket";
 
 describe("activationBucketForTypeName", () => {
@@ -30,5 +32,34 @@ describe("countsTowardConversion", () => {
     expect(countsTowardConversion("On-Premise Sampling")).toBe(true);
     expect(countsTowardConversion("Event Activation")).toBe(false);
     expect(countsTowardConversion(null)).toBe(false);
+  });
+});
+
+describe("recapMatchesActivationFilter", () => {
+  it("folds on-premise into Retail and leaves Other for View all", () => {
+    expect(recapMatchesActivationFilter("Retail Sampling", "retail")).toBe(
+      true,
+    );
+    expect(recapMatchesActivationFilter("On-Premise Sampling", "retail")).toBe(
+      true,
+    );
+    expect(recapMatchesActivationFilter("Event Activation", "retail")).toBe(
+      false,
+    );
+    expect(recapMatchesActivationFilter("Event Activation", "event")).toBe(
+      true,
+    );
+    expect(recapMatchesActivationFilter("Demo Table", "event")).toBe(false);
+    expect(recapMatchesActivationFilter("Demo Table", "all")).toBe(true);
+    expect(recapMatchesActivationFilter(null, "retail")).toBe(false);
+  });
+});
+
+describe("normalizeRecapActivationFilter", () => {
+  it("accepts retail/event and defaults everything else to all", () => {
+    expect(normalizeRecapActivationFilter("retail")).toBe("retail");
+    expect(normalizeRecapActivationFilter("event")).toBe("event");
+    expect(normalizeRecapActivationFilter("onprem")).toBe("all");
+    expect(normalizeRecapActivationFilter(null)).toBe("all");
   });
 });

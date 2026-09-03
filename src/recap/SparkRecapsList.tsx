@@ -59,6 +59,11 @@ import {
   sharedQueryFilter,
   withRecapListReturn,
 } from "./recapListFilters";
+import {
+  normalizeRecapActivationFilter,
+  recapMatchesActivationFilter,
+  type RecapActivationFilter,
+} from "@/lib/activationBucket";
 import { BaNameFilter } from "./BaNameFilter";
 
 // Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
@@ -658,10 +663,15 @@ const RecapCard: React.FC<{
   );
 };
 
-const recapHref = (r: Recap, listStatus?: StatusKey) =>
+const recapHref = (
+  r: Recap,
+  listStatus?: StatusKey,
+  listActivation?: RecapActivationFilter,
+) =>
   withRecapListReturn(
     r.kind === "custom" ? `/recap/view-custom/${r.uuid}` : `/recap/view/${r.uuid}`,
     listStatus,
+    listActivation,
   );
 
 const RecapCompactRow: React.FC<{
@@ -929,6 +939,7 @@ const RecapsListInner: React.FC<{
   // `ambassadorName` (contains-match on linked BA + external write-in).
   baName: string;
   statusFilter: StatusKey;
+  activationFilter: RecapActivationFilter;
   // Inclusive ISO yyyy-mm-dd bounds; empty string = no bound on that
   // side. Filter strips at the day level — recap dates are stored as
   // yyyy-mm-dd or yyyy-mm-ddTHH:MM:SS so a lexicographic compare on
@@ -952,7 +963,7 @@ const RecapsListInner: React.FC<{
   density: "cards" | "compact";
   focusedId: string | null;
   needsStoreMap: boolean;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, baName, statusFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId, needsStoreMap }) => {
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baName, statusFilter, activationFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId, needsStoreMap }) => {
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
   // client login) must NOT see unapproved drafts — only approved recaps.
@@ -1009,6 +1020,8 @@ const RecapsListInner: React.FC<{
             stateCode,
             startDate,
             endDate,
+            activationBucket:
+              activationFilter === "all" ? null : activationFilter,
           }
         : null,
     [
@@ -1022,6 +1035,7 @@ const RecapsListInner: React.FC<{
       stateCode,
       startDate,
       endDate,
+      activationFilter,
     ],
   );
   const customListFilters = useMemo(
@@ -1073,6 +1087,7 @@ const RecapsListInner: React.FC<{
     baName,
     baNameQuery,
     statusFilter,
+    activationFilter,
     dateFrom,
     dateTo,
     sortKey,
@@ -1176,6 +1191,7 @@ const RecapsBothLive: React.FC<{
   baName: string;
   baNameQuery: string;
   statusFilter: StatusKey;
+  activationFilter: RecapActivationFilter;
   dateFrom: string;
   dateTo: string;
   sortKey: SortKey;
@@ -1235,6 +1251,7 @@ const RecapsListFetched: React.FC<{
   baName: string;
   baNameQuery: string;
   statusFilter: StatusKey;
+  activationFilter: RecapActivationFilter;
   dateFrom: string;
   dateTo: string;
   sortKey: SortKey;
@@ -1272,6 +1289,7 @@ const RecapsListFetched: React.FC<{
   baName,
   baNameQuery,
   statusFilter,
+  activationFilter,
   dateFrom,
   dateTo,
   sortKey,
@@ -1328,6 +1346,7 @@ const RecapsListFetched: React.FC<{
     dateFrom,
     dateTo,
     statusFilter,
+    activationFilter,
     retailerFilter,
     stateFilter,
     search,
@@ -1484,6 +1503,10 @@ const RecapsListFetched: React.FC<{
         justApproved: justApprovedIds.has(r.id),
         emptyShell: recapIsEmptyShell(r),
       });
+      const matchActivation = recapMatchesActivationFilter(
+        r.requestType,
+        activationFilter,
+      );
       // Date range: compare on the yyyy-mm-dd prefix. Each bound is
       // inclusive — `dateFrom` = "2026-05-01" passes recaps from May 1
       // onwards, `dateTo` = "2026-05-31" passes recaps up to and
@@ -1500,7 +1523,16 @@ const RecapsListFetched: React.FC<{
       const matchMap =
         !needsStoreMap ||
         (r.isThirdParty && r.storeMappingStatus === "unmatched");
-      return matchQ && matchR && matchS && matchBa && matchStatus && matchDate && matchMap;
+      return (
+        matchQ &&
+        matchR &&
+        matchS &&
+        matchBa &&
+        matchStatus &&
+        matchActivation &&
+        matchDate &&
+        matchMap
+      );
     });
 
     // Sort in-place on the copy.
@@ -1517,7 +1549,7 @@ const RecapsListFetched: React.FC<{
           return (b.date || "").localeCompare(a.date || "");
       }
     });
-  }, [recaps, search, retailerFilter, stateFilter, baName, statusFilter, dateFrom, dateTo, sortKey, justApprovedIds, isClient, pipeline, needsStoreMap]);
+  }, [recaps, search, retailerFilter, stateFilter, baName, statusFilter, activationFilter, dateFrom, dateTo, sortKey, justApprovedIds, isClient, pipeline, needsStoreMap]);
 
   // We paint every loaded row that matches the client-side filters.
   // Pagination now lives at the FETCH layer (`limit` / "Load more"), so
@@ -1709,7 +1741,7 @@ const RecapsListFetched: React.FC<{
             <RecapCompactRow
               key={r.uuid}
               recap={r}
-              href={recapHref(r, statusFilter)}
+              href={recapHref(r, statusFilter, activationFilter)}
               selected={selectedIds.has(r.id)}
               focused={focusedId === r.uuid}
               selectMode={selectMode}
@@ -1735,7 +1767,7 @@ const RecapsListFetched: React.FC<{
           onToggleSelect={() => onToggleSelected(r.id)}
           selectMode={selectMode}
           showSla={pipeline === "needs_review"}
-          href={recapHref(r, statusFilter)}
+          href={recapHref(r, statusFilter, activationFilter)}
           forceApproved={justApprovedIds.has(r.id)}
           onShare={setShareTarget}
           onOpenRequest={(reqUuid) =>
@@ -1805,6 +1837,7 @@ export default function SparkRecapsList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const statusFromUrl = searchParams.get("status");
+  const activationFromUrl = searchParams.get("activation");
   const rangeFromUrl = searchParams.get("range");
   const [search, setSearch] = useState("");
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -1830,6 +1863,10 @@ export default function SparkRecapsList() {
   const [statusFilter, setStatusFilterState] = useState<StatusKey>(() =>
     defaultRecapStatus(isClient, statusFromUrl),
   );
+  const [activationFilter, setActivationFilterState] =
+    useState<RecapActivationFilter>(() =>
+      normalizeRecapActivationFilter(activationFromUrl),
+    );
   /** User-driven tab change — keep `?status=` in sync so Back restores it. */
   const setStatusFilter = useCallback(
     (next: StatusKey) => {
@@ -1838,6 +1875,18 @@ export default function SparkRecapsList() {
       if (searchParams.get("status") === pipeline) return;
       const params = new URLSearchParams(searchParams);
       params.set("status", pipeline);
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+  /** Keep `?activation=` in sync (omit when View all). */
+  const setActivationFilter = useCallback(
+    (next: RecapActivationFilter) => {
+      setActivationFilterState(next);
+      const params = new URLSearchParams(searchParams);
+      if (next === "all") params.delete("activation");
+      else params.set("activation", next);
+      if (params.toString() === searchParams.toString()) return;
       setSearchParams(params, { replace: true });
     },
     [searchParams, setSearchParams],
@@ -1861,6 +1910,9 @@ export default function SparkRecapsList() {
         s === "all" || s === "approved" ? s : "approved",
       );
     }
+    setActivationFilterState(
+      normalizeRecapActivationFilter(searchParams.get("activation")),
+    );
     if (searchParams.get("range") === "week") {
       setDateFrom(DAYS_7_ISO);
       setDateTo(TODAY_ISO);
@@ -1953,7 +2005,7 @@ export default function SparkRecapsList() {
         setFocusedIdx((i) => Math.max(0, (i < 0 ? 0 : i) - 1));
       } else if (e.key === "Enter" && focused) {
         e.preventDefault();
-        navigate(recapHref(focused, statusFilter));
+        navigate(recapHref(focused, statusFilter, activationFilter));
       } else if (e.key === "Escape" && focusedIdx !== -1) {
         e.preventDefault();
         setFocusedIdx(-1);
@@ -1961,7 +2013,7 @@ export default function SparkRecapsList() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [focusedIdx, navigate, showHelp, statusFilter, visibleRecaps]);
+  }, [focusedIdx, navigate, showHelp, statusFilter, activationFilter, visibleRecaps]);
 
   // ─── Campaign report multi-select ────────────────────────────
   // Set of recap.id (relay id) the user has ticked. Survives filter
@@ -2159,6 +2211,7 @@ export default function SparkRecapsList() {
     stateFilter: string;
     baName: string;
     statusFilter: StatusKey;
+    activationFilter: RecapActivationFilter;
     dateFrom: string;
     dateTo: string;
   };
@@ -2187,6 +2240,7 @@ export default function SparkRecapsList() {
         stateFilter,
         baName,
         statusFilter,
+        activationFilter,
         dateFrom,
         dateTo,
       },
@@ -2198,6 +2252,7 @@ export default function SparkRecapsList() {
     setStateFilter(v.stateFilter);
     setBaName(v.baName ?? "");
     setStatusFilter(v.statusFilter);
+    setActivationFilter(v.activationFilter ?? "all");
     setDateFrom(v.dateFrom);
     setDateTo(v.dateTo);
   };
@@ -2371,7 +2426,8 @@ export default function SparkRecapsList() {
     retailerFilter === "all" &&
     stateFilter === "all" &&
     rmmFilter === "all" &&
-    !baName.trim();
+    !baName.trim() &&
+    activationFilter === "all";
   const datePreset =
     !dateFrom && !dateTo
       ? "all"
@@ -2401,6 +2457,7 @@ export default function SparkRecapsList() {
     setRmmFilter("all");
     setBaName("");
     setStatusFilter(isClient ? "approved" : "all");
+    setActivationFilter("all");
     setNeedsStoreMap(false);
     setDateFrom("");
     setDateTo("");
@@ -2417,6 +2474,12 @@ export default function SparkRecapsList() {
                 : statusFilter === "shared"
                   ? "Shared"
                   : "Submitted",
+        }
+      : null,
+    activationFilter !== "all"
+      ? {
+          key: "activation",
+          label: activationFilter === "retail" ? "Retail" : "Event",
         }
       : null,
     search.trim() ? { key: "search", label: search.trim() } : null,
@@ -2515,6 +2578,39 @@ export default function SparkRecapsList() {
                 ))}
               </div>
             )}
+            {/* Desktop: activation program chips next to status */}
+            <div
+              className="hidden md:flex rounded-xl overflow-x-auto max-w-full"
+              style={{ border: "1px solid var(--spark-border)" }}
+              title="Filter by activation program (Retail includes On-premise)"
+            >
+              {(
+                [
+                  ["all", "View all"],
+                  ["retail", "Retail"],
+                  ["event", "Event"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActivationFilter(key)}
+                  className="px-2.5 py-2 text-xs font-semibold whitespace-nowrap"
+                  style={{
+                    background:
+                      activationFilter === key
+                        ? "rgba(197,245,70,0.16)"
+                        : "transparent",
+                    color:
+                      activationFilter === key
+                        ? "var(--spark-lime)"
+                        : "rgba(255,255,255,0.65)",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             {!isClient && (
               <button
                 type="button"
@@ -2552,6 +2648,37 @@ export default function SparkRecapsList() {
                   }}
                   role="menu"
                 >
+                  <div
+                    className="flex overflow-hidden rounded-xl"
+                    style={{ border: "1px solid var(--spark-border)" }}
+                  >
+                    {(
+                      [
+                        ["all", "All"],
+                        ["retail", "Retail"],
+                        ["event", "Event"],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setActivationFilter(key)}
+                        className="flex-1 px-2.5 py-2 text-xs font-semibold"
+                        style={{
+                          background:
+                            activationFilter === key
+                              ? "rgba(197,245,70,0.16)"
+                              : "transparent",
+                          color:
+                            activationFilter === key
+                              ? "var(--spark-lime)"
+                              : "rgba(255,255,255,0.65)",
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                   <div
                     className="flex overflow-hidden rounded-xl"
                     style={{ border: "1px solid var(--spark-border)" }}
@@ -3184,6 +3311,7 @@ export default function SparkRecapsList() {
             rmmFilter={rmmFilter}
             baName={baName}
             statusFilter={statusFilter}
+            activationFilter={activationFilter}
             queueEmpty={isQueueDefault}
             dateFrom={dateFrom}
             dateTo={dateTo}

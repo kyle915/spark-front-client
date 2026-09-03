@@ -1,3 +1,6 @@
+import type { RecapActivationFilter } from "@/lib/activationBucket";
+import { normalizeRecapActivationFilter } from "@/lib/activationBucket";
+
 /**
  * Recaps list filter defaults.
  *
@@ -124,8 +127,9 @@ export type RecapEmptyKind = "queue" | "window" | "filters";
  *
  * Admin back used to hard-link `/recaps/list`, which re-defaults to
  * Needs review even when you opened the recap from Approved / Shared /
- * Submitted. List cards stash `fromStatus` on the detail URL; back
- * rebuilds `/recaps/list?status=…` from that (or a fallback).
+ * Submitted. List cards stash `fromStatus` / `fromActivation` on the
+ * detail URL; back rebuilds `/recaps/list?status=…&activation=…` from
+ * those (or fallbacks).
  */
 export function normalizeRecapListStatus(
   status?: string | null,
@@ -139,12 +143,15 @@ export function normalizeRecapListStatus(
 export function withRecapListReturn(
   href: string,
   listStatus?: string | null,
+  listActivation?: string | null,
 ): string {
   const status = normalizeRecapListStatus(listStatus);
-  if (!status) return href;
+  const activation = normalizeRecapActivationFilter(listActivation);
+  if (!status && activation === "all") return href;
   const [path, query = ""] = href.split("?");
   const params = new URLSearchParams(query);
-  params.set("fromStatus", status);
+  if (status) params.set("fromStatus", status);
+  if (activation !== "all") params.set("fromActivation", activation);
   const q = params.toString();
   return q ? `${path}?${q}` : path;
 }
@@ -152,9 +159,13 @@ export function withRecapListReturn(
 export function recapsListHrefFromReturn(opts: {
   searchParams: { get: (key: string) => string | null };
   fallbackStatus?: string | null;
+  fallbackActivation?: string | null;
 }): string {
   const fromStatus = normalizeRecapListStatus(
     opts.searchParams.get("fromStatus") ?? opts.fallbackStatus,
+  );
+  const fromActivation = normalizeRecapActivationFilter(
+    opts.searchParams.get("fromActivation") ?? opts.fallbackActivation,
   );
   const pageRaw = Number(opts.searchParams.get("fromPage") ?? "");
   const page =
@@ -163,11 +174,14 @@ export function recapsListHrefFromReturn(opts: {
 
   const params = new URLSearchParams();
   if (fromStatus) params.set("status", fromStatus);
+  if (fromActivation !== "all") params.set("activation", fromActivation);
   if (page && page > 1) params.set("page", String(page));
   if (after) params.set("after", after);
   const q = params.toString();
   return q ? `/recaps/list?${q}` : "/recaps/list";
 }
+
+export type { RecapActivationFilter };
 
 export function recapMatchesBaName(
   baQuery: string,
