@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  Outlet,
   useLocation,
 } from "react-router";
 import { useAuthStore } from "@store/authStore";
@@ -15,6 +16,8 @@ import TenantRoute from "@/layout/TenantGuard";
 import GoogleCalendarCallback from "@/auth/GoogleCalendarCallback";
 import VerifyAccount from "@/auth/VerifyAccount";
 import { AppShellSkeleton } from "@/layout/PageSkeletons";
+import { LayoutChrome } from "@/layout/Layout";
+import { LayoutShellContext } from "@/layout/LayoutShellContext";
 
 const rootPath = "/";
 
@@ -26,6 +29,21 @@ const rootPath = "/";
 // dashboard / recaps navigations.
 const RouteFallback = () => <AppShellSkeleton />;
 
+/**
+ * Persistent chrome for every private route. LayoutShellContext tells
+ * page-level `<Layout>` to passthrough so sidebar / topbar / chat
+ * polling survive client-side navigations.
+ */
+const AuthenticatedShell = () => (
+  <LayoutShellContext.Provider value={true}>
+    <LayoutChrome>
+      <Suspense fallback={<RouteFallback />}>
+        <Outlet />
+      </Suspense>
+    </LayoutChrome>
+  </LayoutShellContext.Provider>
+);
+
 const AppRouter = () => {
   // Warm the hot-path chunks (tracker / dashboard / request views) during
   // browser idle — typically while the user is still on the login screen —
@@ -33,6 +51,9 @@ const AppRouter = () => {
   useEffect(() => {
     prefetchHotRoutes();
   }, []);
+
+  const publicRoutes = appRoutes.filter((r) => r.isPublic);
+  const privateRoutes = appRoutes.filter((r) => !r.isPublic);
 
   return (
   <BrowserRouter>
@@ -56,21 +77,32 @@ const AppRouter = () => {
           path="/verify-account"
           element={<VerifyAccount />}
         />
-        {appRoutes.map((props, key) => (
+        {publicRoutes.map((props, key) => (
           <Route
-            key={key}
+            key={`public-${key}`}
             path={props.path}
-            element={
-              props.isPublic ? (
-                props.component
-              ) : (
-                <PrivateRoute
-                  component={<TenantRoute component={props.component} />}
-                />
-              )
-            }
+            element={props.component}
           />
         ))}
+        {/* Private routes share one LayoutChrome via AuthenticatedShell so
+            navigating between pages does not remount sidebar / topbar. */}
+        <Route
+          element={
+            <PrivateRoute
+              component={
+                <TenantRoute component={<AuthenticatedShell />} />
+              }
+            />
+          }
+        >
+          {privateRoutes.map((props, key) => (
+            <Route
+              key={`private-${key}`}
+              path={props.path}
+              element={props.component}
+            />
+          ))}
+        </Route>
       </Routes>
     </Suspense>
   </BrowserRouter>

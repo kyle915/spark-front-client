@@ -125,7 +125,7 @@ const TodayView: React.FC<{
   const data = useLazyLoadQuery<LiveShiftBoardQueryType>(
     LiveShiftBoardQuery,
     { tenantId },
-    { fetchPolicy: "network-only" },
+    { fetchPolicy: "store-or-network" },
   );
   const shifts = (data?.liveShiftBoard ?? []).filter(Boolean);
 

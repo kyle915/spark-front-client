@@ -11,14 +11,10 @@
  *   3. What do I need to look at right now?
  *   4. Where are my BAs on the ground?
  *
- * Sources every metric from the existing RequestsQuery + Relay
- * cache via `useSidebarCounts`, plus a lightweight per-day rollup
- * we compute here. Zero new GraphQL fields — same cost as the
- * sidebar paint after first load.
- *
- * The page renders for any role but is most useful in client mode;
- * SparkSidebar links here when isClient and to /dashboard when
- * isAdmin.
+ * Week-ahead + completion use the slim ClientWeekAheadQuery (date +
+ * filed count + retailer name over a 90d→+7d window). Sidebar badge
+ * counts come from useSidebarCounts. Approvals / map tabs lazy-load
+ * their bodies like AccountMapBody.
  */
 
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
@@ -28,16 +24,19 @@ import Layout from "@/layout/Layout";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import { useAuthStore } from "@/store/authStore";
 import { useSidebarCounts } from "@/hooks/useSidebarCounts";
-import { RequestsQuery } from "@/api/queries/RequestsQuery";
-import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { ClientWeekAheadQuery } from "@/api/queries/ClientWeekAheadQuery";
+import type { ClientWeekAheadQuery as ClientWeekAheadQueryType } from "@api/queries/__generated__/ClientWeekAheadQuery.graphql";
 import AskAiButton from "@/components/ai/AskAiButton";
-import { PublicFormPill } from "@/layout/PublicFormPill";
-import { usePublicFormLink } from "@/hooks/usePublicFormLink";
-import { ApprovalsBody } from "@/components/pages/approvals/SparkApprovals";
 
 const AccountMapBody = lazy(() =>
   import("@/components/pages/map/SparkAccountMap").then((m) => ({
     default: m.AccountMapBody,
+  })),
+);
+
+const ApprovalsBody = lazy(() =>
+  import("@/components/pages/approvals/SparkApprovals").then((m) => ({
+    default: m.ApprovalsBody,
   })),
 );
 
@@ -82,6 +81,8 @@ const dayKey = (d: Date) => {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 };
+
+const isoDay = (d: Date) => dayKey(d);
 
 // ────────────────────────────────────────────────────────────
 // Tile components
@@ -142,17 +143,6 @@ const Tile: React.FC<{
   );
 };
 
-function ClientPublicFormPill() {
-  const publicForm = usePublicFormLink();
-  return (
-    <PublicFormPill
-      slug={publicForm?.slug}
-      url={publicForm?.url}
-      kind={publicForm?.kind}
-    />
-  );
-}
-
 const ClientInner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
@@ -178,20 +168,32 @@ const ClientInner: React.FC = () => {
     window.history.replaceState(null, "", url.toString());
   };
 
-  // Pull the same RequestsQuery the sidebar uses so we can roll up
-  // per-day buckets without paying another network round-trip.
-  const data = useLazyLoadQuery<RequestsQueryType>(
-    RequestsQuery,
-    { first: 2000, filters: tenantId ? { tenantId } : null },
+  // Slim week-ahead window: 90d back (completion %) → +7d forward.
+  // Intentionally NOT RequestsQuery first:2000 — that pulls products,
+  // openShifts, nested location trees the Today page never renders.
+  const dateWindow = useMemo(() => {
+    const today = startOfDay(new Date());
+    const start = new Date(today);
+    start.setDate(today.getDate() - 90);
+    const end = new Date(today);
+    end.setDate(today.getDate() + 7);
+    return { startDate: isoDay(start), endDate: isoDay(end) };
+  }, []);
+
+  const data = useLazyLoadQuery<ClientWeekAheadQueryType>(
+    ClientWeekAheadQuery,
+    {
+      first: 200,
+      filters: tenantId
+        ? {
+            tenantId,
+            startDate: dateWindow.startDate,
+            endDate: dateWindow.endDate,
+          }
+        : null,
+    },
     { fetchPolicy: "store-or-network" },
   );
-
-  // The RequestsQuery exposes `date` (string YYYY-MM-DD) and a list
-  // of scheduled `events[]` (with `recaps[]`) per request. We use:
-  //   - r.date for forward bucketing (clients care about the
-  //     scheduled date, not the request-create timestamp)
-  //   - r.events[].recaps[].length for the completion %
-  //   - r.startTime for time-of-day display elsewhere
 
   // 7-day forward bucket. Today + next 6 days.
   const weekAhead: DayBucket[] = useMemo(() => {
@@ -300,11 +302,6 @@ const ClientInner: React.FC = () => {
           >
             Due recaps and this week&apos;s program.
           </p>
-          <div className="mt-3">
-            <Suspense fallback={null}>
-              <ClientPublicFormPill />
-            </Suspense>
-          </div>
         </div>
         {/* Ask AI about this client's own program — scoped to the client's
             own tenant (useAuthStore().tenantId), the same tenant id every

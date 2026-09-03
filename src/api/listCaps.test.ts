@@ -32,4 +32,25 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(src("../recap/RecapCustomView.tsx")).toContain("first: 1000");
     expect(src("../recap/SparkRecapCreate.tsx")).toContain("first: 1000");
   });
+
+  it("Client Today does not pull RequestsQuery first:2000", () => {
+    const dash = src(
+      "../components/pages/client-dashboard/SparkClientDashboard.tsx",
+    );
+    expect(dash).not.toContain("first: 2000");
+    expect(dash).not.toContain('from "@/api/queries/RequestsQuery"');
+    expect(dash).toContain("ClientWeekAheadQuery");
+    expect(src("./queries/ClientWeekAheadQuery.ts")).toContain(
+      "ClientWeekAheadQuery",
+    );
+  });
+
+  it("Master Tracker rows use slim TrackerListQuery", () => {
+    const tracker = src("../requests/MasterTracker.tsx");
+    expect(tracker).toContain("TrackerListQuery");
+    expect(tracker).toContain("TRACKER_PAGE_SIZE = 50");
+    // Row page must not keep the fat RequestsQuery import.
+    expect(tracker).not.toContain('from "@/api/queries/RequestsQuery"');
+    expect(src("./queries/TrackerListQuery.ts")).toContain("TrackerListQuery");
+  });
 });
