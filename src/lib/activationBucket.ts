@@ -22,6 +22,10 @@ export function activationBucketForTypeName(
   name: string | null | undefined,
 ): ActivationBucketKey {
   const text = name ?? "";
+  // Product Seeding (and similar) must NOT fall into Event via "activation"
+  // substrings — keep unclassified so Recaps chips only show them under
+  // View all. Name check first so "…Product Seeding…" never matches later.
+  if (/product\s*seeding|\bseeding\b/i.test(text)) return "other";
   for (const { key, pattern } of BUCKETS) {
     if (pattern.test(text)) return key;
   }

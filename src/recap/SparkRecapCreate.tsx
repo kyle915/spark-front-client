@@ -36,6 +36,8 @@ import {
   catalogSampleOptions,
   isProductsSampledMultiselect,
   matchProductForSampleOption,
+  productSampleQtyHelper,
+  productSampleQtyUnit,
   sampleOptionSelected,
 } from "./productsSampledQty";
 
@@ -1374,6 +1376,7 @@ const CustomTemplateFields: React.FC<{
                           tenantId={tenantId}
                           quantities={sampleQtys}
                           onQtyChange={onSampleQtyChange}
+                          qtyContextName={template.name}
                         />
                       </Suspense>
                     </div>
@@ -1439,6 +1442,7 @@ const ProductsSampledPillsField: React.FC<{
   tenantId: string | null;
   quantities: Record<string, string>;
   onQtyChange: (productId: string, v: string) => void;
+  qtyContextName?: string | null;
 }> = ({
   label,
   options,
@@ -1447,6 +1451,7 @@ const ProductsSampledPillsField: React.FC<{
   tenantId,
   quantities,
   onQtyChange,
+  qtyContextName,
 }) => {
   const data = useLazyLoadQuery<ProductsQueryType>(
     ProductsQuery,
@@ -1500,7 +1505,7 @@ const ProductsSampledPillsField: React.FC<{
   return (
     <Field label={label}>
       <p className="text-sm mb-2" style={{ color: "rgba(255,255,255,0.6)" }}>
-        Tap each SKU you handed out, then enter how many cans.
+        {productSampleQtyHelper(qtyContextName ?? label)}
         {searchable
           ? ` Search filters the list (${selected.length} selected).`
           : null}
@@ -1606,8 +1611,8 @@ const ProductsSampledPillsField: React.FC<{
                 className="w-20 rounded-lg px-2.5 py-2 text-sm text-right bg-transparent focus:outline-none focus:ring-2 shrink-0"
                 style={{ border: "1px solid var(--spark-border)" }}
                 inputMode="numeric"
-                placeholder="cans"
-                aria-label={`Cans sampled — ${product.name}`}
+                placeholder={productSampleQtyUnit(qtyContextName ?? label)}
+                aria-label={`${productSampleQtyUnit(qtyContextName ?? label)} — ${product.name}`}
               />
             </div>
           ))}

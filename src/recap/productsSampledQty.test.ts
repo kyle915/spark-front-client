@@ -35,6 +35,15 @@ describe("isProductsSampledMultiselect", () => {
     ).toBe(true);
   });
 
+  it("matches Product Seeding Cases Dropped by SKU", () => {
+    expect(
+      isProductsSampledMultiselect({
+        name: "Cases Dropped by SKU",
+        type: "multiselect",
+      }),
+    ).toBe(true);
+  });
+
   it("ignores other multiselects", () => {
     expect(
       isProductsSampledMultiselect({

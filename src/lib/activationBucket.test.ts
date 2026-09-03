@@ -24,6 +24,21 @@ describe("activationBucketForTypeName", () => {
     expect(activationBucketForTypeName(null)).toBe("other");
     expect(activationBucketForTypeName("Demo Table")).toBe("other");
   });
+
+  it("keeps Product Seeding under View all (not Event)", () => {
+    expect(activationBucketForTypeName("Product Seeding")).toBe("other");
+    expect(activationBucketForTypeName("Liquid Death-Product Seeding")).toBe(
+      "other",
+    );
+    expect(countsTowardConversion("Product Seeding")).toBe(false);
+    expect(recapMatchesActivationFilter("Product Seeding", "event")).toBe(
+      false,
+    );
+    expect(recapMatchesActivationFilter("Product Seeding", "retail")).toBe(
+      false,
+    );
+    expect(recapMatchesActivationFilter("Product Seeding", "all")).toBe(true);
+  });
 });
 
 describe("countsTowardConversion", () => {

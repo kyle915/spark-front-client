@@ -2,9 +2,10 @@
  * Short BA-facing copy for standing-link program pickers.
  *
  * Liquid Death (and any brand with the same event-type names) offers Retail
- * Sampling vs Event Activation on one check-in link. The names alone are easy
- * to mis-pick — retail demos filed as activations miss fields like Account
- * Spendings. These lines sit under each option on the walk-up identify step.
+ * Sampling vs Event Activation vs Product Seeding on one check-in link. The
+ * names alone are easy to mis-pick — retail demos filed as activations miss
+ * fields like Account Spendings. These lines sit under each option on the
+ * walk-up identify step.
  */
 
 export function normalizeEventTypeName(name: string | null | undefined): string {
@@ -16,6 +17,8 @@ const DESCRIPTORS: Record<string, string> = {
     "All sampling demos done at gas stations, grocery stores or retail chains.",
   "event activation":
     "All music festivals, street samplings, or similar events.",
+  "product seeding":
+    "Dropping off cases at a venue or retailer — not a sampling shift.",
 };
 
 /** Return helper text for a known program name, else null. */
