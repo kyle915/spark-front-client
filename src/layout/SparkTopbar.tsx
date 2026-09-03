@@ -45,6 +45,7 @@ function PublicFormPillSlot({ className = "" }: { className?: string }) {
     <PublicFormPill
       slug={publicForm?.slug}
       url={publicForm?.url}
+      kind={publicForm?.kind}
       className={className}
     />
   );
@@ -115,7 +116,7 @@ export const SparkTopbar: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-30 bg-base-200/50 backdrop-blur-2xl border-b border-base-300 px-6 py-3 flex items-center justify-between gap-3 flex-wrap" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.18)" }}>
-      {/* Left: breadcrumb + (optional) public form chip */}
+      {/* Left: breadcrumb + (optional) public share-link pill */}
       <div className="flex items-center gap-3 min-w-0">
         <span className="mono text-[11px] tracking-[0.18em] text-base-content/40">
           spark.app /
