@@ -11,8 +11,9 @@
  *   3. What do I need to look at right now?
  *   4. Where are my BAs on the ground?
  *
- * Week-ahead + completion use the slim ClientWeekAheadQuery (date +
- * filed count + retailer name over a 90d→+7d window). Sidebar badge
+ * Week-ahead uses slim ClientWeekAheadQuery (date + retailer over
+ * today→+7d). Completion % uses clientTodayCompletion scalars
+ * (filed / scheduled) — not a capped 90d request list. Sidebar badge
  * counts come from useSidebarCounts. Approvals / map tabs lazy-load
  * their bodies like AccountMapBody.
  */
@@ -168,22 +169,23 @@ const ClientInner: React.FC = () => {
     window.history.replaceState(null, "", url.toString());
   };
 
-  // Slim week-ahead window: 90d back (completion %) → +7d forward.
+  // Slim week-ahead only: today → +7d. Completion % is a separate
+  // server scalar (clientTodayCompletion), not row tallies.
   // Intentionally NOT RequestsQuery first:2000 — that pulls products,
   // openShifts, nested location trees the Today page never renders.
   const dateWindow = useMemo(() => {
     const today = startOfDay(new Date());
-    const start = new Date(today);
-    start.setDate(today.getDate() - 90);
     const end = new Date(today);
     end.setDate(today.getDate() + 7);
-    return { startDate: isoDay(start), endDate: isoDay(end) };
+    return { startDate: isoDay(today), endDate: isoDay(end) };
   }, []);
 
   const data = useLazyLoadQuery<ClientWeekAheadQueryType>(
     ClientWeekAheadQuery,
     {
       first: 200,
+      tenantId: tenantId || "0",
+      lookbackDays: 90,
       filters: tenantId
         ? {
             tenantId,
@@ -222,28 +224,17 @@ const ClientInner: React.FC = () => {
     return buckets;
   }, [data]);
 
-  // Recap-completion %: past-dated requests with filed content
-  // (recapsFiledCount already excludes empty clock-out shells).
+  // Recap-completion % from uncapped server rollup (filed / scheduled).
+  // Empty clock-out shells are already excluded by the API filed definition.
   const completionPct = useMemo(() => {
-    const rows =
-      data?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
-    let pastEvents = 0;
-    let withRecaps = 0;
-    const now = startOfDay(new Date()).getTime();
-    for (const r of rows) {
-      if (!r.date) continue;
-      const [y, mo, d] = r.date.split("-").map(Number);
-      if (!y || !mo || !d) continue;
-      const ms = new Date(y, mo - 1, d).getTime();
-      if (!Number.isFinite(ms) || ms > now) continue;
-      pastEvents += 1;
-      if ((r.recapsFiledCount ?? 0) > 0) withRecaps += 1;
-    }
-    if (pastEvents === 0) return null;
-    return Math.round((withRecaps / pastEvents) * 100);
+    const scheduled = data?.clientTodayCompletion?.scheduled ?? 0;
+    const filed = data?.clientTodayCompletion?.filed ?? 0;
+    if (scheduled <= 0) return null;
+    return Math.round((filed / scheduled) * 100);
   }, [data]);
+
+  const completionFiled = data?.clientTodayCompletion?.filed ?? 0;
+  const completionScheduled = data?.clientTodayCompletion?.scheduled ?? 0;
 
   // Top retailers in the next 7 days (count of scheduled requests
   // grouped by retailer.name). Empty when retailer FK isn't
@@ -398,9 +389,15 @@ const ClientInner: React.FC = () => {
           label="Recap completion"
           value={completionPct == null ? "—" : `${completionPct}%`}
           sub={
-            counts.recapsDue > 0
-              ? `${counts.recapsDue} still open · filed = photos/metrics`
-              : "Filed content · all caught up"
+            completionScheduled > 0
+              ? `${completionFiled} of ${completionScheduled} filed · ${
+                  counts.recapsDue > 0
+                    ? `${counts.recapsDue} still open`
+                    : "caught up"
+                }`
+              : counts.recapsDue > 0
+                ? `${counts.recapsDue} still open · filed = photos/metrics`
+                : "No past events in window"
           }
           tone={completionPct != null && completionPct < 80 ? "orange" : "lime"}
           onClick={() => navigate("/recaps/list")}

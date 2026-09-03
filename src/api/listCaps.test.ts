@@ -40,9 +40,14 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(dash).not.toContain("first: 2000");
     expect(dash).not.toContain('from "@/api/queries/RequestsQuery"');
     expect(dash).toContain("ClientWeekAheadQuery");
-    expect(src("./queries/ClientWeekAheadQuery.ts")).toContain(
-      "ClientWeekAheadQuery",
-    );
+    expect(dash).toContain("clientTodayCompletion");
+    const weekAhead = src("./queries/ClientWeekAheadQuery.ts");
+    expect(weekAhead).toContain("ClientWeekAheadQuery");
+    expect(weekAhead).toContain("clientTodayCompletion");
+    expect(weekAhead).toContain("scheduled");
+    expect(weekAhead).toContain("filed");
+    // Completion is server scalars — not a 90d capped request list.
+    expect(weekAhead).not.toContain("recapsFiledCount");
   });
 
   it("Master Tracker rows use slim TrackerListQuery", () => {
