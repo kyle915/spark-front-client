@@ -1376,7 +1376,7 @@ const CustomTemplateFields: React.FC<{
                           tenantId={tenantId}
                           quantities={sampleQtys}
                           onQtyChange={onSampleQtyChange}
-                          qtyContextName={selectedTemplate?.name}
+                          qtyContextName={template.name}
                         />
                       </Suspense>
                     </div>
