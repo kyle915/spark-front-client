@@ -6,6 +6,11 @@ import {
   collapseSamplingKpis,
   previousForSamplingTile,
 } from "@/lib/collapseSamplingKpis";
+import {
+  computePeriodDelta,
+  periodDeltaNote,
+  type PeriodDelta,
+} from "@/lib/periodDelta";
 
 /**
  * "Period comparison" card for the dashboards — each headline KPI this-period
@@ -15,19 +20,15 @@ import {
  * renders, dark-theme styled to match <TenantKpiCharts> / <TenantSentimentCard>
  * so it reads as one dashboard: a header ("Period comparison") with a muted
  * sub showing the two periods being compared ("May 2026 vs Apr 2026"), then the
- * HEADLINE KPIs (consumers reached, samples distributed, products sold, total
- * engagements) as prominent comparison tiles, and the secondary KPIs (events,
- * recaps, first-time, brand-aware, willing to purchase) in a compact grid below.
+ * HEADLINE KPIs (consumers sampled, samples handed out when distinct, products
+ * sold, total engagements) as prominent comparison tiles, and the secondary
+ * KPIs (events, recaps, first-time, brand-aware, willing to purchase) in a
+ * compact grid below.
  *
- * Each tile shows the KPI label, the CURRENT value (prominent, thousands-
- * formatted), the PREVIOUS value (muted/smaller), and a delta chip computed as
- * `prev > 0 ? Math.round((cur - prev) / prev * 100) : null`:
- *   • up move   → "↑ 12%"  (brand lime)
- *   • down move → "↓ 8%"   (calm spark-orange — NOT an alarm red; a KPI dipping
- *                            isn't a crisis)
- *   • flat      → "→ 0%"   (muted neutral)
- *   • prev == 0 && cur > 0 → "New" (muted neutral)
- *   • both 0    → "—"      (muted neutral)
+ * Deltas use {@link computePeriodDelta}: honest up/down/flat chips for normal
+ * moves, "New" off a zero base, and suppress/cap when the prior period is
+ * sparse or the swing is absurd (collection change / bulk import) so we never
+ * print trust-destroying 2000%+ figures.
  *
  * A compact period toggle (a <select>, styled like the year dropdown in
  * <TenantKpiCharts>) switches between Month / Quarter / Year. It drives the
@@ -49,33 +50,12 @@ const fmt = (n: number) => n.toLocaleString();
 
 /* ───────────────────────── delta ───────────────────────── */
 
-type Delta =
-  | { kind: "up" | "down" | "flat"; pct: number }
-  | { kind: "new" }
-  | { kind: "none" };
-
-/**
- * Period-over-period delta. Only a percentage when there's a non-zero baseline:
- *   prev > 0  → Math.round((cur - prev) / prev * 100), bucketed up/down/flat
- *   prev == 0 && cur > 0 → "New" (can't express a % off a zero base)
- *   both 0    → nothing to compare ("—")
- */
-const computeDelta = (cur: number, prev: number): Delta => {
-  if (prev > 0) {
-    const pct = Math.round(((cur - prev) / prev) * 100);
-    if (pct > 0) return { kind: "up", pct };
-    if (pct < 0) return { kind: "down", pct };
-    return { kind: "flat", pct: 0 };
-  }
-  if (cur > 0) return { kind: "new" };
-  return { kind: "none" };
-};
-
 // Calm palette: up leans on the brand lime; down on the restrained spark-orange
 // (the same hue the sentiment card reserves for a negative move) — deliberately
-// NOT an alarm red, since a KPI dipping isn't a crisis. Flat / New / none sit
-// quietly in a muted neutral. Solid `text` color + matching rgba bg / border
-// tints, the same way <TenantKpiCharts> and <TenantSentimentCard> tint pills.
+// NOT an alarm red, since a KPI dipping isn't a crisis. Flat / New / none /
+// sparse sit quietly in a muted neutral. Solid `text` color + matching rgba bg
+// / border tints, the same way <TenantKpiCharts> and <TenantSentimentCard> tint
+// pills.
 type ChipStyle = { label: string; text: string; bg: string; border: string };
 
 const MUTED: Pick<ChipStyle, "text" | "bg" | "border"> = {
@@ -84,7 +64,7 @@ const MUTED: Pick<ChipStyle, "text" | "bg" | "border"> = {
   border: "rgba(255,255,255,0.14)",
 };
 
-const chipForDelta = (d: Delta): ChipStyle => {
+const chipForDelta = (d: PeriodDelta): ChipStyle => {
   switch (d.kind) {
     case "up":
       // lime #c5f546 → 197,245,70
@@ -109,6 +89,25 @@ const chipForDelta = (d: Delta): ChipStyle => {
       return { label: "New", ...MUTED };
     case "none":
       return { label: "—", ...MUTED };
+    case "sparse":
+      return { label: d.label, ...MUTED };
+    case "large":
+      // Cap at >500% — no fake precision on wild swings. Same hue family as
+      // a normal up/down so the direction is still scannable.
+      if (d.direction === "up") {
+        return {
+          label: `↑ >${d.cappedPct}%`,
+          text: "var(--spark-lime)",
+          bg: "rgba(197,245,70,0.10)",
+          border: "rgba(197,245,70,0.30)",
+        };
+      }
+      return {
+        label: `↓ >${d.cappedPct}%`,
+        text: "var(--spark-orange)",
+        bg: "rgba(239,90,42,0.10)",
+        border: "rgba(239,90,42,0.32)",
+      };
     default: {
       const _exhaustive: never = d;
       return _exhaustive;
@@ -118,7 +117,7 @@ const chipForDelta = (d: Delta): ChipStyle => {
 
 /* ───────────────────────── delta chip ───────────────────────── */
 
-const DeltaChip: React.FC<{ delta: Delta }> = ({ delta }) => {
+const DeltaChip: React.FC<{ delta: PeriodDelta }> = ({ delta }) => {
   const chip = chipForDelta(delta);
   return (
     <span
@@ -133,6 +132,19 @@ const DeltaChip: React.FC<{ delta: Delta }> = ({ delta }) => {
     >
       {chip.label}
     </span>
+  );
+};
+
+const DeltaNote: React.FC<{ delta: PeriodDelta }> = ({ delta }) => {
+  const note = periodDeltaNote(delta);
+  if (!note) return null;
+  return (
+    <p
+      className="text-[11px] mt-1.5 leading-snug"
+      style={{ color: "rgba(255,255,255,0.45)" }}
+    >
+      {note}
+    </p>
   );
 };
 
@@ -156,7 +168,7 @@ const ComparisonTile: React.FC<{
   previous: number;
   tone: Tone;
 }> = ({ label, current, previous, tone }) => {
-  const delta = computeDelta(current, previous);
+  const delta = computePeriodDelta(current, previous);
   return (
     <div
       className="spark-card rounded-2xl px-4 py-4"
@@ -192,6 +204,7 @@ const ComparisonTile: React.FC<{
       >
         was {fmt(previous)}
       </p>
+      <DeltaNote delta={delta} />
     </div>
   );
 };
@@ -205,7 +218,7 @@ const SecondaryRow: React.FC<{
   current: number;
   previous: number;
 }> = ({ label, current, previous }) => {
-  const delta = computeDelta(current, previous);
+  const delta = computePeriodDelta(current, previous);
   return (
     <div
       className="rounded-xl px-3.5 py-3"
@@ -246,6 +259,7 @@ const SecondaryRow: React.FC<{
           was {fmt(previous)}
         </span>
       </div>
+      <DeltaNote delta={delta} />
     </div>
   );
 };
