@@ -1020,9 +1020,8 @@ const RecapsListInner: React.FC<{
             stateCode,
             startDate,
             endDate,
-            // activationBucket is applied client-side until spark-api
-            // #1065 (filters.activationBucket) is deployed. Sending the
-            // field against the live schema rejects the whole list query.
+            activationBucket:
+              activationFilter === "all" ? null : activationFilter,
           }
         : null,
     [
@@ -1036,6 +1035,7 @@ const RecapsListInner: React.FC<{
       stateCode,
       startDate,
       endDate,
+      activationFilter,
     ],
   );
   const customListFilters = useMemo(
