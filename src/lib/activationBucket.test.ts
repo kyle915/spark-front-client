@@ -3,6 +3,7 @@ import {
   activationBucketForTypeName,
   countsTowardConversion,
   normalizeRecapActivationFilter,
+  recapActivationFilterLabel,
   recapMatchesActivationFilter,
 } from "./activationBucket";
 
@@ -25,17 +26,21 @@ describe("activationBucketForTypeName", () => {
     expect(activationBucketForTypeName("Demo Table")).toBe("other");
   });
 
-  it("keeps Product Seeding under View all (not Event)", () => {
-    expect(activationBucketForTypeName("Product Seeding")).toBe("other");
+  it("classifies Product Seeding as seeding (not Event)", () => {
+    expect(activationBucketForTypeName("Product Seeding")).toBe("seeding");
     expect(activationBucketForTypeName("Liquid Death-Product Seeding")).toBe(
-      "other",
+      "seeding",
     );
+    expect(activationBucketForTypeName("Seed drop")).toBe("other");
     expect(countsTowardConversion("Product Seeding")).toBe(false);
     expect(recapMatchesActivationFilter("Product Seeding", "event")).toBe(
       false,
     );
     expect(recapMatchesActivationFilter("Product Seeding", "retail")).toBe(
       false,
+    );
+    expect(recapMatchesActivationFilter("Product Seeding", "seeding")).toBe(
+      true,
     );
     expect(recapMatchesActivationFilter("Product Seeding", "all")).toBe(true);
   });
@@ -46,6 +51,7 @@ describe("countsTowardConversion", () => {
     expect(countsTowardConversion("Retail Sampling")).toBe(true);
     expect(countsTowardConversion("On-Premise Sampling")).toBe(true);
     expect(countsTowardConversion("Event Activation")).toBe(false);
+    expect(countsTowardConversion("Product Seeding")).toBe(false);
     expect(countsTowardConversion(null)).toBe(false);
   });
 });
@@ -71,10 +77,21 @@ describe("recapMatchesActivationFilter", () => {
 });
 
 describe("normalizeRecapActivationFilter", () => {
-  it("accepts retail/event and defaults everything else to all", () => {
+  it("accepts retail/event/seeding and defaults everything else to all", () => {
     expect(normalizeRecapActivationFilter("retail")).toBe("retail");
     expect(normalizeRecapActivationFilter("event")).toBe("event");
+    expect(normalizeRecapActivationFilter("seeding")).toBe("seeding");
+    expect(normalizeRecapActivationFilter("product_seeding")).toBe("all");
     expect(normalizeRecapActivationFilter("onprem")).toBe("all");
     expect(normalizeRecapActivationFilter(null)).toBe("all");
+  });
+});
+
+describe("recapActivationFilterLabel", () => {
+  it("labels chips for the toolbar and filter pills", () => {
+    expect(recapActivationFilterLabel("all")).toBe("View all");
+    expect(recapActivationFilterLabel("retail")).toBe("Retail");
+    expect(recapActivationFilterLabel("event")).toBe("Event");
+    expect(recapActivationFilterLabel("seeding")).toBe("Product Seeding");
   });
 });

@@ -50,6 +50,9 @@ describe("recap list return href", () => {
     expect(withRecapListReturn("/recap/view/x", null, "event")).toBe(
       "/recap/view/x?fromActivation=event",
     );
+    expect(withRecapListReturn("/recap/view/x", null, "seeding")).toBe(
+      "/recap/view/x?fromActivation=seeding",
+    );
   });
 
   it("rebuilds the list tab from fromStatus", () => {
@@ -66,6 +69,11 @@ describe("recap list return href", () => {
     expect(recapsListHrefFromReturn({ searchParams: params })).toBe(
       "/recaps/list?status=approved&activation=event",
     );
+    expect(
+      recapsListHrefFromReturn({
+        searchParams: new URLSearchParams("fromActivation=seeding"),
+      }),
+    ).toBe("/recaps/list?activation=seeding");
   });
 
   it("falls back when fromStatus is missing", () => {
