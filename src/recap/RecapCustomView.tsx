@@ -68,6 +68,7 @@ import { useAlertStore } from "@/store/alertStore";
 import { recapDisplayUrl, recapFileUrl } from "@/utils/recapFileUrl";
 import { useRecapPageCrumb } from "@/layout/pageCrumb";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
+import RecapStickyOpsBar from "@/recap/RecapStickyOpsBar";
 import useSparkRole from "@/hooks/useSparkRole";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
 import { ClientTenantRecapBrand } from "@/recap/TenantBrandedRecap";
@@ -1159,9 +1160,17 @@ const RecapCustomViewInner = () => {
     .filter(Boolean)
     .join(" · ");
 
+  const openShare = useCallback(() => {
+    if (!recap.shareToken) {
+      showAlert("Share link isn't ready yet.", "warning");
+      return;
+    }
+    setShareOpen(true);
+  }, [recap.shareToken, showAlert]);
+
   const inner = (
     <>
-      <div className="space-y-6 max-w-7xl">
+      <div className="space-y-6 max-w-7xl pb-24">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <Link
               to={backToListUrl}
@@ -1252,13 +1261,7 @@ const RecapCustomViewInner = () => {
                 </button>
                 )}
                 <button
-                  onClick={() => {
-                    if (!recap.shareToken) {
-                      showAlert("Share link isn't ready yet.", "warning");
-                      return;
-                    }
-                    setShareOpen(true);
-                  }}
+                  onClick={openShare}
                   className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                   style={ghostBtn}
                 >
@@ -2478,6 +2481,37 @@ const RecapCustomViewInner = () => {
           </div>
           </RecapDocument>
       </div>
+
+      {!isEditingValues && (
+        <RecapStickyOpsBar>
+          <button
+            type="button"
+            onClick={openShare}
+            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+            style={ghostBtn}
+          >
+            ↗ Share
+          </button>
+          {recap.approved ? (
+            <span className="chip chip-lime">
+              <StatusMorph value="Approved" />
+            </span>
+          ) : (
+            <ActionMorphButton
+              onClick={handleApprove}
+              disabled={isApproving}
+              phase={approvePhase}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{ ...limeBtn, opacity: isApproving ? 0.5 : 1 }}
+              title="Approve recap and email the requestor + mapped RMM"
+              pendingLabel="Approving…"
+              successLabel="Approved"
+            >
+              Approve recap
+            </ActionMorphButton>
+          )}
+        </RecapStickyOpsBar>
+      )}
 
       {currentPreview && (
         <ImagePreviewModal

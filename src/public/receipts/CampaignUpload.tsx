@@ -407,7 +407,7 @@ const CampaignUpload: React.FC = () => {
         }}
         className="space-y-4 mt-2"
       >
-        {/* Photo picker + preview */}
+        {/* Photo picker — library first (no capture), camera second. */}
         <div>
           <label className={LABEL_CLS}>Receipt photo</label>
           {preview ? (
@@ -419,21 +419,30 @@ const CampaignUpload: React.FC = () => {
               />
             </div>
           ) : (
-            <label className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 py-10 cursor-pointer">
-              <span className="text-3xl" aria-hidden>
-                📷
-              </span>
-              <span className="text-sm text-stone-600 font-medium">
-                Tap to take or choose a photo
-              </span>
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
-              />
-            </label>
+            <div className="space-y-2">
+              <label className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 py-10 cursor-pointer">
+                <span className="text-sm text-stone-600 font-medium">
+                  Choose from photo library
+                </span>
+                <span className="text-xs text-stone-400">JPG · PNG · HEIC</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
+                />
+              </label>
+              <label className="flex items-center justify-center rounded-2xl border border-stone-300 bg-white py-3 cursor-pointer text-sm font-medium text-stone-700">
+                Take photo
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
+                />
+              </label>
+            </div>
           )}
           {preview && (
             <button

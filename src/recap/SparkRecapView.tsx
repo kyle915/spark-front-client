@@ -38,6 +38,7 @@ import RateBaControl from "@/components/RateBaControl";
 import { recapDisplayUrl, recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
 import { useRecapPageCrumb } from "@/layout/pageCrumb";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
+import RecapStickyOpsBar from "@/recap/RecapStickyOpsBar";
 import { parseLocaleNumber } from "@/utils";
 import { useAlertStore } from "@/store/alertStore";
 import RecapUploader from "./RecapUploader";
@@ -404,7 +405,11 @@ const BaSearch: React.FC<{
   );
 };
 
-const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
+const SparkRecapInner: React.FC<{
+  uuid: string;
+  refreshKey: number;
+  onRefresh: () => void;
+}> = ({ uuid, refreshKey, onRefresh }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -449,9 +454,6 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const [pickedBa, setPickedBa] = useState<{ id: string; name: string } | null>(
     null,
   );
-  // Bumped after a file is attached so the query refetches and the new
-  // photo/receipt shows up in the grid without a full page reload.
-  const [refreshKey, setRefreshKey] = useState(0);
   // Per-BA optimistic rating average, keyed by ambassador global id, so
   // the Team card's "★ avg" updates the instant a rating is saved
   // (rateAmbassador returns the recomputed caller-visible average).
@@ -461,13 +463,14 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const data = useLazyLoadQuery<RecapQueryType>(
     RecapQuery,
     { uuid },
-    // store-and-network (not store-or-network) so bumping refreshKey
-    // after a mutation that doesn't return every field (updateRecap
-    // returns only id/name/eventId — not the numbers or ambassadors)
-    // actually re-fetches from the network. With store-or-network the
-    // bump served the stale store and edits/BA didn't show until a
-    // manual reload — the same "silly workflow" Nevena hit on photos.
-    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+    // refreshKey lives ABOVE the Suspense boundary so a network refetch
+    // that suspends doesn't remount this tree and reset the key to 0
+    // (which re-served the stale pre-save store). network-only after the
+    // first bump bypasses store data that updateRecap used to leave stale.
+    {
+      fetchPolicy: refreshKey === 0 ? "store-and-network" : "network-only",
+      fetchKey: refreshKey,
+    },
   );
 
   const recap = data?.recap;
@@ -764,7 +767,10 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         if (res.updateRecap?.success) {
           showAlert("Recap numbers updated.", "success");
           setEditingNumbers(false);
-          setRefreshKey((k) => k + 1);
+          // Mutation selection updates the store; bump fetchKey as a
+          // network-only safety net so nested lists (samples / BA) that
+          // were replaced server-side can't linger as stale linked IDs.
+          onRefresh();
         } else {
           showAlert(
             res.updateRecap?.message ?? "Couldn't save changes.",
@@ -880,8 +886,16 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     });
   };
 
+  const openShare = () => {
+    if (!recap.shareToken) {
+      showAlert("Share link isn't ready yet.", "warning");
+      return;
+    }
+    setShareOpen(true);
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className={`space-y-6 max-w-7xl${!isClient ? " pb-24" : ""}`}>
       <button
         onClick={() => navigate(backToListUrl)}
         className="mono text-[11px] transition"
@@ -1056,13 +1070,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 : `⬇ Download photos (${allFiles.length})`}
             </button>
             <button
-              onClick={() => {
-                if (!recap.shareToken) {
-                  showAlert("Share link isn't ready yet.", "warning");
-                  return;
-                }
-                setShareOpen(true);
-              }}
+              onClick={openShare}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "transparent",
@@ -2422,6 +2430,61 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       </div>
       </div>
       </RecapDocument>
+
+      {/* Ops-only sticky Approve / Share — stays reachable while scrolling
+          photo-first content. Not mounted for clients or /r/:token. */}
+      {!isClient && (
+        <RecapStickyOpsBar>
+          <button
+            type="button"
+            onClick={openShare}
+            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+            style={{
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            ↗ Share
+          </button>
+          {isAdmin &&
+            (recap.approved ? (
+              <button
+                type="button"
+                onClick={() => setApproved(false)}
+                disabled={isApproving}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-orange)",
+                  border: "1px solid rgba(239,90,42,0.4)",
+                  opacity: isApproving ? 0.5 : 1,
+                }}
+                title="This recap is approved — click to un-approve"
+              >
+                ✓ Approved · undo
+              </button>
+            ) : (
+              <ActionMorphButton
+                onClick={() => setApproved(true)}
+                disabled={isApproving}
+                phase={approvePhase}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "#0a0d09",
+                  boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                  opacity: isApproving ? 0.5 : 1,
+                }}
+                title="Approve this recap"
+                pendingLabel="Approving…"
+                successLabel="Approved"
+              >
+                Approve recap
+              </ActionMorphButton>
+            ))}
+        </RecapStickyOpsBar>
+      )}
     </div>
   );
 };
