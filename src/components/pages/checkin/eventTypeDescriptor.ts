@@ -41,3 +41,14 @@ export function eventTypesUseDescriptorPicker(
 ): boolean {
   return eventTypes.some((t) => eventTypeDescription(t.name) !== null);
 }
+
+/**
+ * Product Seeding asks for drop-off location (+ mileage) on the recap form,
+ * so the identify step should not show "Where are you working today".
+ * Retail Sampling / Event Activation keep the store/market gate.
+ */
+export function eventTypeSkipsIdentifyLocation(
+  name: string | null | undefined,
+): boolean {
+  return /product\s*seeding/i.test(name ?? "");
+}
