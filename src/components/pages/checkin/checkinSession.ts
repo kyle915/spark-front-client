@@ -76,6 +76,11 @@ export function canAttemptOpenPunchResume(opts: {
   if (opts.recapOnly) return false;
   if (opts.hasLiveSession) return false;
   if (!opts.firstName.trim() || !opts.phone.trim()) return false;
-  if (!opts.place.trim()) return false;
-  return opts.hasToken || opts.hasPendingClock || opts.cachedClockedIn;
+  const hasPunchEvidence =
+    opts.hasToken || opts.hasPendingClock || opts.cachedClockedIn;
+  if (!hasPunchEvidence) return false;
+  // Product Seeding skips pre-recap location; open_shift_event_for keys on
+  // ambassador + tenant + date, so place is optional when punch evidence exists.
+  // Address/market modes still send lastPlace when we have it.
+  return true;
 }

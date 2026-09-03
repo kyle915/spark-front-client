@@ -134,11 +134,23 @@ describe("canAttemptOpenPunchResume", () => {
         cachedClockedIn: false,
       }),
     ).toBe(false);
-    expect(canAttemptOpenPunchResume({ ...base, place: "" })).toBe(false);
+    expect(
+      canAttemptOpenPunchResume({
+        ...base,
+        place: "",
+        hasToken: false,
+        hasPendingClock: false,
+        cachedClockedIn: false,
+      }),
+    ).toBe(false);
     expect(canAttemptOpenPunchResume({ ...base, phone: "" })).toBe(false);
     expect(
       canAttemptOpenPunchResume({ ...base, hasLiveSession: true }),
     ).toBe(false);
     expect(canAttemptOpenPunchResume({ ...base, mode: "event" })).toBe(false);
+  });
+
+  it("Product Seeding can resume without a saved place when punch evidence exists", () => {
+    expect(canAttemptOpenPunchResume({ ...base, place: "" })).toBe(true);
   });
 });

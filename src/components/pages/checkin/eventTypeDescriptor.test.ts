@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   eventTypeDescription,
+  eventTypeSkipsIdentifyLocation,
   eventTypesUseDescriptorPicker,
 } from "./eventTypeDescriptor";
 
@@ -48,5 +49,16 @@ describe("eventTypesUseDescriptorPicker", () => {
         { name: "On-Premise Sampling" },
       ]),
     ).toBe(false);
+  });
+});
+
+describe("eventTypeSkipsIdentifyLocation", () => {
+  it("skips only Product Seeding", () => {
+    expect(eventTypeSkipsIdentifyLocation("Product Seeding")).toBe(true);
+    expect(eventTypeSkipsIdentifyLocation("Liquid Death-Product Seeding")).toBe(
+      true,
+    );
+    expect(eventTypeSkipsIdentifyLocation("Retail Sampling")).toBe(false);
+    expect(eventTypeSkipsIdentifyLocation("Event Activation")).toBe(false);
   });
 });

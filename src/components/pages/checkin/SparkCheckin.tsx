@@ -89,6 +89,7 @@ import {
 } from "./secondShift";
 import {
   eventTypeDescription,
+  eventTypeSkipsIdentifyLocation,
   eventTypesUseDescriptorPicker,
 } from "./eventTypeDescriptor";
 
@@ -661,6 +662,8 @@ type Identity = {
   email: string;
   /** Last market or store address submitted on identify for this code. */
   lastPlace?: string;
+  /** Last program id — needed when Product Seeding omitted a place. */
+  lastEventTypeId?: string;
 };
 const IDENTITY_KEY = (code: string) => `@spark.checkin.who/${code}`;
 
@@ -676,6 +679,7 @@ const readIdentity = (code: string): Identity => {
       phone: p.phone || "",
       email: p.email || "",
       lastPlace: (p.lastPlace || "").trim() || undefined,
+      lastEventTypeId: (p.lastEventTypeId || "").trim() || undefined,
     };
   } catch {
     return empty;
@@ -1023,7 +1027,14 @@ export default function SparkCheckin() {
               phone: who.phone,
               email: who.email,
               eventDate: todayISO(),
-              ...(isMarket ? { market: place } : { address: place }),
+              ...(who.lastEventTypeId
+                ? { eventTypeId: who.lastEventTypeId }
+                : {}),
+              ...(place
+                ? isMarket
+                  ? { market: place }
+                  : { address: place }
+                : {}),
             }),
           },
         );
@@ -1037,7 +1048,10 @@ export default function SparkCheckin() {
         } catch {
           /* private mode */
         }
-        writeIdentity(code, { ...who, lastPlace: place });
+        writeIdentity(code, {
+          ...who,
+          ...(place.trim() ? { lastPlace: place } : {}),
+        });
         setToken(json.sessionToken);
       } catch {
         /* leave them on identify — manual Start check-in still works */
@@ -1274,6 +1288,10 @@ function IdentifyStep({
   // and silently wrong the rest, and a BA scanning a form they've filled twenty
   // times won't re-read a field that already has an answer.
   const [eventTypeId, setEventTypeId] = useState("");
+  const selectedEventType = eventTypes.find((t) => t.id === eventTypeId);
+  const skipWorkLocation = eventTypeSkipsIdentifyLocation(
+    selectedEventType?.name,
+  );
 
   const saved = readIdentity(code);
   const [firstName, setFirstName] = useState(saved.firstName);
@@ -1395,19 +1413,23 @@ function IdentifyStep({
     const date = overrides?.eventDate ?? eventDate;
     const addr = overrides?.address ?? address;
     const mkt = overrides?.market ?? market;
+    // Unfiled-shift taps supply an address even when Product Seeding is selected.
+    const omitPlace = skipWorkLocation && !overrides?.address && !overrides?.market;
     if (needsEventDetails) {
       // Required, and asked BEFORE the store, because it decides which form the
       // BA gets. The backend falls back to the brand's default rather than
       // rejecting a request with no program, so this check is the only thing
       // standing between a distracted BA and the wrong recap.
       if (hasPrograms && !eventTypeId) return setErr("Pick the event you're working.");
-      if (isMarket) {
-        if (!mkt) return setErr("Pick your market.");
-      } else if (recapOnly) {
-        if (!storeName.trim()) return setErr("Enter the store name.");
-        if (!addr.trim()) return setErr("Enter the store address.");
-      } else if (!addr.trim()) {
-        return setErr("Enter the store address.");
+      if (!omitPlace) {
+        if (isMarket) {
+          if (!mkt) return setErr("Pick your market.");
+        } else if (recapOnly) {
+          if (!storeName.trim()) return setErr("Enter the store name.");
+          if (!addr.trim()) return setErr("Enter the store address.");
+        } else if (!addr.trim()) {
+          return setErr("Enter the store address.");
+        }
       }
       if (!date) return setErr("Pick the date you're working.");
     }
@@ -1425,7 +1447,11 @@ function IdentifyStep({
                 email,
                 eventDate: date,
                 ...(hasPrograms ? { eventTypeId } : {}),
-                ...(isMarket ? { market: mkt } : { storeName, address: addr }),
+                ...(omitPlace
+                  ? {}
+                  : isMarket
+                    ? { market: mkt }
+                    : { storeName, address: addr }),
               }
             : { firstName, lastName, phone, email },
         ),
@@ -1442,14 +1468,22 @@ function IdentifyStep({
         /* private mode — token still held in memory for this session */
       }
       // Remember them for the next event on this same link — including the
-      // market/store so a lost session can resume today's open punch.
-      const place = isMarket ? mkt : addr;
+      // market/store (or deferred seeding address from the API) so a lost
+      // session can resume today's open punch.
+      const place = omitPlace
+        ? String(json.event?.address || "").trim()
+        : isMarket
+          ? mkt
+          : addr;
       writeIdentity(code, {
         firstName,
         lastName,
         phone,
         email,
         ...(place.trim() ? { lastPlace: place.trim() } : {}),
+        ...(eventTypeId.trim()
+          ? { lastEventTypeId: eventTypeId.trim() }
+          : {}),
       });
       onDone(json.sessionToken);
     } catch {
@@ -1559,6 +1593,8 @@ function IdentifyStep({
 
       {needsEventDetails ? (
         <>
+          {!skipWorkLocation ? (
+            <>
           <h2 style={{ ...h2, marginTop: 22 }}>{recapOnly ? "Which store?" : "Where are you working?"}</h2>
 
           {/* ROAMING crews pick a market. Their whole day lands on ONE event
@@ -1653,6 +1689,13 @@ function IdentifyStep({
             onChange={(e) => setStoreName(e.target.value)}
           />
             </>
+          )}
+            </>
+          ) : (
+            <p style={{ fontSize: 13, opacity: 0.6, margin: "14px 0 0" }}>
+              Drop-off location and mileage are on the Product Seeding recap —
+              no store step here.
+            </p>
           )}
 
           {unfiled.length > 0 && !recapOnly ? (
