@@ -8,13 +8,13 @@ import { TenantBrandedRecap, recapBrandBtn } from "@/recap/TenantBrandedRecap";
 import { RecapDocument } from "@/recap/RecapDocument";
 import { RecapShareFieldSections } from "@/recap/RecapFieldRows";
 import PublicDeadLink from "@/public/PublicDeadLink";
+import { PhotoLightbox } from "@/shared/PhotoLightbox";
 import { thumbUrl } from "@/utils/thumb";
 import type { CssVariablesMap } from "@/utils/tenantThemeConfig";
 
 /**
  * Public, no-login recap — /r/:token.
- * Tenant-branded leave-behind (KPI strip, photos, $/sample, sign-off).
- * Admin chrome is not mounted here.
+ * Tenant-branded, photo-first leave-behind. Admin chrome is not mounted.
  */
 
 type ApiError = { error: string; message: string };
@@ -122,6 +122,7 @@ const PublicRecap: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [signoffBusy, setSignoffBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -232,19 +233,6 @@ const PublicRecap: React.FC = () => {
         status={recap ? (recap.approved ? "APPROVED" : "DRAFT") : null}
         actions={actions}
       >
-        {brandName && brandName !== "Spark" && (
-          <p
-            className="display truncate px-5 pt-2"
-            style={{
-              fontWeight: 700,
-              fontSize: 16,
-              letterSpacing: "-0.02em",
-              margin: 0,
-            }}
-          >
-            {brandName} recap
-          </p>
-        )}
         <main className="recap-doc-body">{children}</main>
       </RecapDocument>
     </TenantBrandedRecap>
@@ -276,141 +264,202 @@ const PublicRecap: React.FC = () => {
     .filter(Boolean)
     .join(" · ");
   const kpis = (recap.kpis ?? []).filter((k) => k.value != null);
+  const photos = recap.photos ?? [];
+  const hero = photos[0];
+  const restPhotos = photos.slice(1);
+  const lightboxPhotos = photos.map((p) => ({
+    name: p.name ?? p.category ?? "Photo",
+    url: p.url,
+    caption: p.category || undefined,
+  }));
 
-  return shell(
-    <div className="space-y-6">
-      <div className="spark-card p-6">
-        <div className="flex items-start justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="display text-3xl font-bold" style={{ letterSpacing: "-0.03em" }}>
+  return (
+    <>
+      {shell(
+        <div className="space-y-6">
+          {/* Brand + title — tenant first, not Spark ops chrome */}
+          <header className="px-1 pt-1">
+            {brandName && brandName !== "Spark" ? (
+              <p
+                className="display"
+                style={{
+                  fontWeight: 800,
+                  fontSize: "clamp(1.75rem, 5vw, 2.5rem)",
+                  letterSpacing: "-0.04em",
+                  lineHeight: 1.05,
+                  margin: 0,
+                  color: "var(--recap-brand, var(--recap-heading, #3f5c12))",
+                }}
+              >
+                {brandName}
+              </p>
+            ) : null}
+            <h1
+              className="display font-bold mt-2"
+              style={{
+                letterSpacing: "-0.03em",
+                fontSize: brandName && brandName !== "Spark" ? "1.35rem" : "1.875rem",
+                margin: 0,
+                color: "var(--recap-text, #14160f)",
+              }}
+            >
               {recap.name}
             </h1>
             <p className="mt-1 recap-doc-kicker">
               {place || recap.address || "—"}
               {" · "}
               {fmtDate(recap.date)}
+              {recap.ambassadorName ? ` · ${recap.ambassadorName}` : ""}
             </p>
-            {recap.ambassadorName && (
+          </header>
+
+          {/* Photos lead — hero + mosaic, then KPIs / fields */}
+          {photos.length > 0 ? (
+            <section aria-label="Recap photos">
+              {hero && (
+                <button
+                  type="button"
+                  onClick={() => setLightboxIndex(0)}
+                  className="block w-full overflow-hidden rounded-2xl text-left"
+                  style={{
+                    border: "1px solid var(--recap-border, #e2e4d8)",
+                    background: "var(--recap-surface, #fff)",
+                    padding: 0,
+                    cursor: "zoom-in",
+                  }}
+                >
+                  <img
+                    src={thumbUrl(hero.url, 800) || hero.url}
+                    alt={hero.name ?? "Recap photo"}
+                    className="w-full object-cover"
+                    style={{
+                      maxHeight: "min(70vh, 560px)",
+                      minHeight: 220,
+                    }}
+                  />
+                </button>
+              )}
+              {restPhotos.length > 0 && (
+                <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                  {restPhotos.map((p, i) => (
+                    <button
+                      key={p.url}
+                      type="button"
+                      onClick={() => setLightboxIndex(i + 1)}
+                      className="block overflow-hidden rounded-xl text-left"
+                      style={{
+                        border: "1px solid var(--recap-border, #e2e4d8)",
+                        padding: 0,
+                        cursor: "zoom-in",
+                        background: "transparent",
+                      }}
+                    >
+                      <img
+                        src={thumbUrl(p.url, 400) || p.url}
+                        alt={p.name ?? "Recap photo"}
+                        className="w-full h-36 md:h-40 object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
               <p
                 className="mono text-[10px] mt-2"
-                style={{ letterSpacing: "0.14em", color: "var(--recap-muted, #5c6154)" }}
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "var(--recap-muted, #5c6154)",
+                }}
               >
-                {recap.ambassadorName.toUpperCase()}
+                {photos.length} PHOTO{photos.length === 1 ? "" : "S"} · TAP TO ENLARGE
               </p>
-            )}
-            {typeof recap.viewCount === "number" && recap.viewCount > 0 && (
-              <p
-                className="mono text-[9px] mt-2"
-                style={{ letterSpacing: "0.12em", color: "var(--recap-muted, #5c6154)" }}
-              >
-                VIEWED {recap.viewCount.toLocaleString()} TIME
-                {recap.viewCount === 1 ? "" : "S"}
-                {recap.lastViewedAt
-                  ? ` · LAST ${new Date(recap.lastViewedAt).toLocaleDateString()}`
-                  : ""}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
+            </section>
+          ) : null}
 
-      {recap.photos.length > 0 && (
-        <div className="spark-card p-6">
-          <p className="mono text-[10px] mb-4" style={{ letterSpacing: "0.18em", color: "var(--recap-heading, #3f5c12)" }}>
-            PHOTOS · {recap.photos.length}
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {recap.photos.map((p) => (
-              <a
-                key={p.url}
-                href={p.url}
-                target="_blank"
-                rel="noreferrer"
-                className="block overflow-hidden rounded-xl"
-                style={{ border: "1px solid var(--spark-border)" }}
-              >
-                <img src={thumbUrl(p.url, 400) || p.url} alt={p.name ?? "Recap photo"} className="w-full h-40 object-cover" />
-                {p.category && (
-                  <p className="mono text-[9px] px-2 py-1.5" style={{ letterSpacing: "0.12em", color: "var(--recap-muted, #5c6154)" }}>
-                    {p.category.toUpperCase()}
+          {kpis.length > 0 && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {kpis.slice(0, 4).map((k, i) => (
+                <div
+                  key={k.label}
+                  className="kpi"
+                  style={
+                    i === 0
+                      ? {
+                          boxShadow:
+                            "0 0 28px color-mix(in srgb, var(--recap-brand, #c5f546) 25%, transparent)",
+                        }
+                      : undefined
+                  }
+                >
+                  <p
+                    className="kpi-value"
+                    style={{ color: "var(--recap-brand, var(--spark-lime))" }}
+                  >
+                    {typeof k.value === "number" && k.label.includes("$")
+                      ? `$${k.value.toFixed(2)}`
+                      : fmtNum(k.value)}
                   </p>
-                )}
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <RecapShareFieldSections
-        sections={Array.from(
-          (recap.fields ?? []).reduce((map, field) => {
-            const key = field.section || "Details";
-            const list = map.get(key) ?? [];
-            list.push(field);
-            map.set(key, list);
-            return map;
-          }, new Map<string, PublicField[]>()),
-        ).map(([name, fields]) => ({ name, fields }))}
-      />
-
-      {kpis.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {kpis.slice(0, 4).map((k, i) => (
-            <div
-              key={k.label}
-              className="kpi"
-              style={
-                i === 0
-                  ? {
-                      boxShadow:
-                        "0 0 28px color-mix(in srgb, var(--recap-brand, #c5f546) 25%, transparent)",
-                    }
-                  : undefined
-              }
-            >
-              <p className="kpi-value" style={{ color: "var(--recap-brand, var(--spark-lime))" }}>
-                {typeof k.value === "number" && k.label.includes("$")
-                  ? `$${k.value.toFixed(2)}`
-                  : fmtNum(k.value)}
-              </p>
-              <p className="kpi-label">{k.label}</p>
+                  <p className="kpi-label">{k.label}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+
+          <RecapShareFieldSections
+            sections={Array.from(
+              (recap.fields ?? []).reduce((map, field) => {
+                const key = field.section || "Details";
+                const list = map.get(key) ?? [];
+                list.push(field);
+                map.set(key, list);
+                return map;
+              }, new Map<string, PublicField[]>()),
+            ).map(([name, fields]) => ({ name, fields }))}
+          />
+
+          <RecapClientSignoff
+            existingStatus={recap.clientSignoff?.status}
+            existingComment={recap.clientSignoff?.comment}
+            existingAt={recap.clientSignoff?.at}
+            busy={signoffBusy}
+            onSubmit={submitSignoff}
+          />
+        </div>,
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={copyShare}
+            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{
+              background: "transparent",
+              border: "1px solid var(--recap-border, #e2e4d8)",
+              color: "var(--recap-text, #14160f)",
+            }}
+          >
+            {copied ? "Copied" : "Share"}
+          </button>
+          <a
+            href={pdfUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{ ...recapBrandBtn(), textDecoration: "none" }}
+            title="Download branded PDF matching this recap"
+          >
+            Download PDF
+          </a>
+        </div>,
       )}
 
-      <RecapClientSignoff
-        existingStatus={recap.clientSignoff?.status}
-        existingComment={recap.clientSignoff?.comment}
-        existingAt={recap.clientSignoff?.at}
-        busy={signoffBusy}
-        onSubmit={submitSignoff}
-      />
-    </div>,
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={copyShare}
-        className="px-4 py-2 rounded-xl text-sm font-semibold"
-        style={{
-          background: "transparent",
-          border: "1px solid var(--recap-border, #e2e4d8)",
-          color: "var(--recap-text, #14160f)",
-        }}
-      >
-        {copied ? "Copied" : "Share"}
-      </button>
-      <a
-        href={pdfUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="px-4 py-2 rounded-xl text-sm font-semibold"
-        style={{ ...recapBrandBtn(), textDecoration: "none" }}
-        title="Download branded PDF matching this recap"
-      >
-        Download PDF
-      </a>
-    </div>,
+      {lightboxIndex != null && lightboxPhotos.length > 0 && (
+        <PhotoLightbox
+          photos={lightboxPhotos}
+          index={lightboxIndex}
+          loop={lightboxPhotos.length > 1}
+          onClose={() => setLightboxIndex(null)}
+          onStep={setLightboxIndex}
+        />
+      )}
+    </>
   );
 };
 

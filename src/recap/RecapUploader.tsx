@@ -9,10 +9,11 @@ import { prepareImageForUpload } from "@/utils/compressImageForUpload";
 /**
  * Spark v2 — Recap photo / receipt uploader.
  *
- * Picks files, requests signed GCS upload URLs, PUTs each blob direct
- * to the bucket. The actual linking to a recap (creating a RecapFile
- * row in Postgres) requires a backend AddRecapFile mutation — UI calls
- * onUploaded(blobName) so the parent can wire that in when ready.
+ * Library picker first (multiple, no `capture`), camera second. Putting
+ * `capture="environment"` on the only file input opens the camera on iOS
+ * and blocks Camera Roll multi-select — same trap as walk-up check-in.
+ * Accept stays `image/*` so iOS keeps the native multi-select gallery
+ * (listing MIME types falls back to the Files app).
  */
 
 type Props = {
@@ -53,7 +54,8 @@ export const RecapUploader: React.FC<Props> = ({
   label: labelOverride,
 }) => {
   const showAlert = useAlertStore((s) => s.showAlert);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const libraryRef = useRef<HTMLInputElement | null>(null);
+  const cameraRef = useRef<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [rows, setRows] = useState<FileRow[]>([]);
   const [dragOver, setDragOver] = useState(false);
@@ -133,34 +135,52 @@ export const RecapUploader: React.FC<Props> = ({
   const takeFiles = (list: FileList | null) => {
     if (!list || list.length === 0) return;
     const picked = Array.from(list);
-    upload(picked);
+    void upload(picked);
   };
 
   const label =
     labelOverride ??
-    (category === "receipt" ? "Drop receipt" : "Drop photos");
+    (category === "receipt" ? "Upload from library" : "Upload from library");
+  const cameraLabel =
+    category === "receipt" ? "Take receipt photo" : "Take photo";
   const doneCount = rows.filter((r) => r.state === "done").length;
   const totalCount = rows.length;
 
   return (
     <div className="space-y-2">
+      {/* Library: multiple, no capture — iOS Camera Roll multi-select. */}
       <input
-        ref={inputRef}
+        ref={libraryRef}
         type="file"
-        multiple={category === "photo"}
+        multiple
         accept={ACCEPT[category]}
         style={{ display: "none" }}
         onChange={(e) => {
           if (e.target.files && e.target.files.length > 0) {
             const picked = Array.from(e.target.files);
             e.target.value = "";
-            upload(picked);
+            void upload(picked);
+          }
+        }}
+      />
+      {/* Camera: single shot with rear camera. Separate input so library stays gallery. */}
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            const picked = Array.from(e.target.files);
+            e.target.value = "";
+            void upload(picked);
           }
         }}
       />
       <button
         type="button"
-        onClick={() => inputRef.current?.click()}
+        onClick={() => libraryRef.current?.click()}
         disabled={busy}
         onDragOver={(e) => {
           e.preventDefault();
@@ -187,8 +207,24 @@ export const RecapUploader: React.FC<Props> = ({
           className="mono text-[10px] mt-1 block"
           style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
         >
-          {totalCount > 0 ? `${doneCount}/${totalCount}` : `0/${PHOTO_CAP}`}
+          {totalCount > 0
+            ? `${doneCount}/${totalCount}`
+            : `PHOTO LIBRARY · UP TO ${PHOTO_CAP}`}
         </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => cameraRef.current?.click()}
+        disabled={busy}
+        className="w-full rounded-xl px-4 py-3 text-sm font-semibold transition active:scale-[0.99]"
+        style={{
+          background: "transparent",
+          color: "var(--spark-text)",
+          border: "1px solid var(--spark-border)",
+          opacity: busy ? 0.7 : 1,
+        }}
+      >
+        {cameraLabel}
       </button>
       {rows.length > 0 && (
         <ul className="space-y-1">

@@ -38,6 +38,7 @@ import RateBaControl from "@/components/RateBaControl";
 import { recapDisplayUrl, recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
 import { useRecapPageCrumb } from "@/layout/pageCrumb";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
+import RecapStickyOpsBar from "@/recap/RecapStickyOpsBar";
 import { parseLocaleNumber } from "@/utils";
 import { useAlertStore } from "@/store/alertStore";
 import RecapUploader from "./RecapUploader";
@@ -880,8 +881,16 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
     });
   };
 
+  const openShare = () => {
+    if (!recap.shareToken) {
+      showAlert("Share link isn't ready yet.", "warning");
+      return;
+    }
+    setShareOpen(true);
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className={`space-y-6 max-w-7xl${!isClient ? " pb-24" : ""}`}>
       <button
         onClick={() => navigate(backToListUrl)}
         className="mono text-[11px] transition"
@@ -1056,13 +1065,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 : `⬇ Download photos (${allFiles.length})`}
             </button>
             <button
-              onClick={() => {
-                if (!recap.shareToken) {
-                  showAlert("Share link isn't ready yet.", "warning");
-                  return;
-                }
-                setShareOpen(true);
-              }}
+              onClick={openShare}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "transparent",
@@ -2422,6 +2425,61 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       </div>
       </div>
       </RecapDocument>
+
+      {/* Ops-only sticky Approve / Share — stays reachable while scrolling
+          photo-first content. Not mounted for clients or /r/:token. */}
+      {!isClient && (
+        <RecapStickyOpsBar>
+          <button
+            type="button"
+            onClick={openShare}
+            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+            style={{
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            ↗ Share
+          </button>
+          {isAdmin &&
+            (recap.approved ? (
+              <button
+                type="button"
+                onClick={() => setApproved(false)}
+                disabled={isApproving}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-orange)",
+                  border: "1px solid rgba(239,90,42,0.4)",
+                  opacity: isApproving ? 0.5 : 1,
+                }}
+                title="This recap is approved — click to un-approve"
+              >
+                ✓ Approved · undo
+              </button>
+            ) : (
+              <ActionMorphButton
+                onClick={() => setApproved(true)}
+                disabled={isApproving}
+                phase={approvePhase}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "var(--spark-lime)",
+                  color: "#0a0d09",
+                  boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                  opacity: isApproving ? 0.5 : 1,
+                }}
+                title="Approve this recap"
+                pendingLabel="Approving…"
+                successLabel="Approved"
+              >
+                Approve recap
+              </ActionMorphButton>
+            ))}
+        </RecapStickyOpsBar>
+      )}
     </div>
   );
 };
