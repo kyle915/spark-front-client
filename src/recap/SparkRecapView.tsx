@@ -404,7 +404,11 @@ const BaSearch: React.FC<{
   );
 };
 
-const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
+const SparkRecapInner: React.FC<{
+  uuid: string;
+  refreshKey: number;
+  onRefresh: () => void;
+}> = ({ uuid, refreshKey, onRefresh }) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const showAlert = useAlertStore((s) => s.showAlert);
@@ -449,9 +453,6 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const [pickedBa, setPickedBa] = useState<{ id: string; name: string } | null>(
     null,
   );
-  // Bumped after a file is attached so the query refetches and the new
-  // photo/receipt shows up in the grid without a full page reload.
-  const [refreshKey, setRefreshKey] = useState(0);
   // Per-BA optimistic rating average, keyed by ambassador global id, so
   // the Team card's "★ avg" updates the instant a rating is saved
   // (rateAmbassador returns the recomputed caller-visible average).
@@ -461,13 +462,12 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   const data = useLazyLoadQuery<RecapQueryType>(
     RecapQuery,
     { uuid },
-    // store-and-network (not store-or-network) so bumping refreshKey
-    // after a mutation that doesn't return every field (updateRecap
-    // returns only id/name/eventId — not the numbers or ambassadors)
-    // actually re-fetches from the network. With store-or-network the
-    // bump served the stale store and edits/BA didn't show until a
-    // manual reload — the same "silly workflow" Nevena hit on photos.
-    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+    // refreshKey lives ABOVE Suspense so a network refetch that suspends
+    // doesn't remount this tree and reset the key (re-serving stale store).
+    {
+      fetchPolicy: refreshKey === 0 ? "store-and-network" : "network-only",
+      fetchKey: refreshKey,
+    },
   );
 
   const recap = data?.recap;
@@ -764,7 +764,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         if (res.updateRecap?.success) {
           showAlert("Recap numbers updated.", "success");
           setEditingNumbers(false);
-          setRefreshKey((k) => k + 1);
+          onRefresh();
         } else {
           showAlert(
             res.updateRecap?.message ?? "Couldn't save changes.",
@@ -793,14 +793,14 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           if (approved) {
             setApprovePhase("success");
             void holdActionSuccess().then(() => {
-              setRefreshKey((k) => k + 1);
+              onRefresh();
               setApprovePhase("idle");
             });
             return;
           }
           // Refetch so the approval status updates immediately — the
           // mutation response alone doesn't refresh the rendered query.
-          setRefreshKey((k) => k + 1);
+          onRefresh();
         } else {
           setApprovePhase("idle");
           showAlert(
@@ -868,7 +868,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
           showAlert("File removed.", "success");
           // Refetch so the removed photo disappears immediately instead of
           // lingering until a manual page reload.
-          setRefreshKey((k) => k + 1);
+          onRefresh();
         } else {
           showAlert(
             res.removeRecapFile?.message ?? "Couldn't remove file.",
@@ -2009,7 +2009,7 @@ const SparkRecapInner: React.FC<{ uuid: string }> = ({ uuid }) => {
                   onCompleted: (res) => {
                     if (res.addRecapFile?.success) {
                       showAlert(`${uploadCategory} attached to recap.`, "success");
-                      setRefreshKey((k) => k + 1);
+                      onRefresh();
                     } else {
                       showAlert(
                         res.addRecapFile?.message ?? "Couldn't attach file.",
@@ -2459,10 +2459,17 @@ const CustomRecapFallback: React.FC<{ uuid: string }> = ({ uuid }) => {
 
 export default function SparkRecapView() {
   const { uuid } = useParams<{ uuid: string }>();
+  // Keep refreshKey above Suspense so a suspending refetch can't remount
+  // the inner tree and reset the key back to 0 (stale store).
+  const [refreshKey, setRefreshKey] = useState(0);
   return (
     <Layout>
       <Suspense fallback={<RecapDetailSkeleton />}>
-        <SparkRecapInner uuid={uuid ?? ""} />
+        <SparkRecapInner
+          uuid={uuid ?? ""}
+          refreshKey={refreshKey}
+          onRefresh={() => setRefreshKey((k) => k + 1)}
+        />
       </Suspense>
     </Layout>
   );

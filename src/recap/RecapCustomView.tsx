@@ -350,7 +350,13 @@ const ProductSamplesEditor = ({
   );
 };
 
-const RecapCustomViewInner = () => {
+const RecapCustomViewInner = ({
+  refreshKey,
+  onRefresh,
+}: {
+  refreshKey: number;
+  onRefresh: () => void;
+}) => {
   const { uuid } = useParams();
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
@@ -360,10 +366,6 @@ const RecapCustomViewInner = () => {
   // ×-button shows the in-flight state (the useMutation `isDeletingFile`
   // flag is global to the gallery).
   const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
-  // Bumped after a mutation that doesn't reliably re-render off its payload
-  // (approve) so the query refetches and the view reflects the new state —
-  // mirrors the legacy SparkRecapView refreshKey pattern.
-  const [refreshKey, setRefreshKey] = useState(0);
   // Section a new Evidences upload lands in. Send the category NAME so
   // it never collides with a real FileRecapCategory PK (LD "Table Set
   // Up" is PK 2). "" = Uncategorized.
@@ -711,6 +713,10 @@ const RecapCustomViewInner = () => {
         if (payload?.success) {
           showAlert("Recap values saved.", "success");
           exitEditMode();
+          // Mutation selection updates the store; network-only refetch is
+          // the safety net so every editable field (title, Metrics, custom
+          // fields, samples, BA) paints from the saved DB row.
+          onRefresh();
         } else {
           showAlert(payload?.message ?? "Save failed.", "error");
         }
@@ -735,6 +741,7 @@ const RecapCustomViewInner = () => {
     commitUpdateCustomRecap,
     showAlert,
     exitEditMode,
+    onRefresh,
   ]);
 
   // Generate (or regenerate) the recap PDF, then open the returned file in
@@ -806,7 +813,7 @@ const RecapCustomViewInner = () => {
             // auto-normalization of the mutation payload wasn't reliably
             // re-rendering this view, so bump the query's fetchKey to force
             // a fresh read (same fix the legacy SparkRecapView uses).
-            setRefreshKey((k) => k + 1);
+            onRefresh();
             setApprovePhase("idle");
           });
         } else {
@@ -876,7 +883,7 @@ const RecapCustomViewInner = () => {
             // Force a refetch so the removed file disappears from the
             // gallery immediately — without this the card lingers until a
             // manual reload (same refreshKey pattern the approve flow uses).
-            setRefreshKey((k) => k + 1);
+            onRefresh();
           } else {
             showAlert(payload?.message ?? "Couldn't remove file.", "error");
           }
@@ -903,7 +910,7 @@ const RecapCustomViewInner = () => {
           const payload = res.setCustomRecapFileCategory;
           if (payload?.success) {
             showAlert("File moved.", "success");
-            setRefreshKey((k) => k + 1);
+            onRefresh();
           } else {
             showAlert(payload?.message ?? "Couldn't move file.", "error");
           }
@@ -2462,7 +2469,7 @@ const RecapCustomViewInner = () => {
                   onCompleted: (res) => {
                     if (res.submitRecapClientSignoff?.success) {
                       showAlert("Sign-off saved.", "success");
-                      setRefreshKey((k) => k + 1);
+                      onRefresh();
                     } else {
                       showAlert(
                         res.submitRecapClientSignoff?.message ?? "Couldn't save sign-off.",
@@ -2677,7 +2684,7 @@ const RecapCustomViewInner = () => {
                 onCompleted: (res) => {
                   if (res.submitRecapClientSignoff?.success) {
                     showAlert("Sign-off saved.", "success");
-                    setRefreshKey((k) => k + 1);
+                    onRefresh();
                   } else {
                     showAlert(
                       res.submitRecapClientSignoff?.message ??
@@ -2727,10 +2734,16 @@ const RecapCustomViewInner = () => {
 };
 
 export default function RecapCustomView() {
+  // Keep refreshKey above Suspense so a suspending refetch can't remount
+  // the inner tree and reset the key back to 0 (stale store).
+  const [refreshKey, setRefreshKey] = useState(0);
   return (
     <Layout>
       <Suspense fallback={<RecapDetailSkeleton />}>
-        <RecapCustomViewInner />
+        <RecapCustomViewInner
+          refreshKey={refreshKey}
+          onRefresh={() => setRefreshKey((k) => k + 1)}
+        />
       </Suspense>
     </Layout>
   );
