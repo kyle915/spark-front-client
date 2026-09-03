@@ -41,7 +41,7 @@ import {
   type ActionPhase,
 } from "@/motion/opsMotion";
 import { SparkBentoTile, SparkStat } from "@/shared/SparkStat";
-import { recapListKpis } from "@/shared/sparkStat";
+import { recapListKpis, sumConversionBases } from "@/shared/sparkStat";
 import {
   appendUniqueByUuid,
   recapsListPageVariables,
@@ -812,6 +812,10 @@ type Meta = {
   loadMoreError: string | null;
   totalConsumers: number;
   totalProducts: number;
+  // Retail + On-Premise only — CONV uses these so Event activations
+  // don't dilute sold ÷ eng.
+  conversionConsumers: number;
+  conversionProducts: number;
 };
 
 type SortKey = "date-desc" | "date-asc" | "eng-desc" | "sold-desc";
@@ -1203,6 +1207,7 @@ const RecapsListInner: React.FC<{
   useEffect(() => {
     const totalConsumers = recaps.reduce((s, r) => s + (r.engagements ?? 0), 0);
     const totalProducts = recaps.reduce((s, r) => s + (r.productsSold ?? 0), 0);
+    const conversion = sumConversionBases(recaps);
     onMeta({
       retailers,
       states,
@@ -1217,6 +1222,8 @@ const RecapsListInner: React.FC<{
       loadMoreError,
       totalConsumers,
       totalProducts,
+      conversionConsumers: conversion.engagements,
+      conversionProducts: conversion.sold,
     });
   }, [
     retailers,
@@ -1540,6 +1547,8 @@ export default function SparkRecapsList() {
     loadMoreError: null,
     totalConsumers: 0,
     totalProducts: 0,
+    conversionConsumers: 0,
+    conversionProducts: 0,
   });
 
   const onMeta = useMemo(() => (next: Meta) => setMeta(next), []);
@@ -2658,6 +2667,8 @@ export default function SparkRecapsList() {
             total: meta.total,
             engagements: meta.totalConsumers,
             sold: meta.totalProducts,
+            conversionEngagements: meta.conversionConsumers,
+            conversionSold: meta.conversionProducts,
           }).map((k) => (
             <SparkBentoTile key={k.label} {...k} />
           ))}

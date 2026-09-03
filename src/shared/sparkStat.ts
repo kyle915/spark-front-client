@@ -1,3 +1,5 @@
+import { countsTowardConversion } from "@/lib/activationBucket";
+
 export type SparkStatTone = "default" | "lime" | "orange";
 
 export type SparkStatItem = {
@@ -7,9 +9,34 @@ export type SparkStatItem = {
   tone?: SparkStatTone;
 };
 
+export type RecapKpiRow = {
+  requestType: string | null | undefined;
+  engagements: number | null | undefined;
+  productsSold: number | null | undefined;
+};
+
+/**
+ * Sum engagements / sold for Retail + On-Premise rows only.
+ * Event (and unclassified) activations are excluded from CONV.
+ */
+export function sumConversionBases(rows: RecapKpiRow[]): {
+  engagements: number;
+  sold: number;
+} {
+  let engagements = 0;
+  let sold = 0;
+  for (const r of rows) {
+    if (!countsTowardConversion(r.requestType)) continue;
+    engagements += r.engagements ?? 0;
+    sold += r.productsSold ?? 0;
+  }
+  return { engagements, sold };
+}
+
 /**
  * Recaps list strip — numbers from the loaded/filtered set, never invented.
- * Conv is sold ÷ engagements when both are real and engagements > 0.
+ * IN VIEW / ENG / SOLD stay all-program; CONV is sold ÷ eng over Retail +
+ * On-Premise only (Event activations excluded from both sides).
  */
 export function recapListKpis(input: {
   filteredTotal: number;
@@ -17,10 +44,17 @@ export function recapListKpis(input: {
   total: number;
   engagements: number;
   sold: number;
+  /** Retail + on-prem engagements (CONV denominator). */
+  conversionEngagements: number;
+  /** Retail + on-prem sold (CONV numerator). */
+  conversionSold: number;
 }): SparkStatItem[] {
-  const hasConv = input.engagements > 0 && input.sold > 0;
+  const hasConv =
+    input.conversionEngagements > 0 && input.conversionSold > 0;
   const conv = hasConv
-    ? `${Math.round((input.sold / input.engagements) * 100)}%`
+    ? `${Math.round(
+        (input.conversionSold / input.conversionEngagements) * 100,
+      )}%`
     : "—";
   return [
     {
@@ -43,6 +77,7 @@ export function recapListKpis(input: {
     {
       label: "Conv",
       value: conv,
+      hint: "Retail + on-prem",
       tone: hasConv ? "lime" : "default",
     },
   ];
