@@ -1974,7 +1974,6 @@ const RecapCustomViewInner = ({
                                   }))
                                 }
                                 tenantId={tenantId || null}
-                                required={Boolean(field.required)}
                                 label={field.name ?? "Drop-off Locations"}
                               />
                             </Suspense>
