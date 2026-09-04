@@ -15,6 +15,8 @@ export function normalizeEventTypeName(name: string | null | undefined): string 
 const DESCRIPTORS: Record<string, string> = {
   "retail sampling":
     "All sampling demos done at gas stations, grocery stores or retail chains.",
+  "on-premise":
+    "Bar or venue sampling — back bar, drink features, and consumer cans.",
   "event activation":
     "All music festivals, street samplings, or similar events.",
   "product seeding":

@@ -15,6 +15,9 @@ describe("activationBucketForTypeName", () => {
     );
     expect(activationBucketForTypeName("On-Premise Sampling")).toBe("onprem");
     expect(activationBucketForTypeName("On-Premise")).toBe("onprem");
+    expect(
+      activationBucketForTypeName("Mark Anthony Brands-On-Premise"),
+    ).toBe("onprem");
     expect(activationBucketForTypeName("Event Activation")).toBe("event");
     expect(activationBucketForTypeName("Liquid Death-Event Activation")).toBe(
       "event",
