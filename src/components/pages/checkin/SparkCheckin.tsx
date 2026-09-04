@@ -6,6 +6,15 @@ import {
   templateHasConsumersSampledField,
 } from "@/recap/engagementsFromSamples";
 import {
+  DropOffLocationsField,
+} from "@/recap/DropOffLocationsField";
+import {
+  isDropOffLocationsField,
+  parseDropOffLocations,
+  productSamplesFromDropOffs,
+  validateDropOffLocationsValue,
+} from "@/recap/dropOffLocations";
+import {
   isProductsSampledMultiselect,
   matchProductForSampleOption,
   productSampleQtyHelper,
@@ -2996,6 +3005,10 @@ function RecapForm({
     () => templateFields.some((f) => isProductsSampledMultiselect(f)),
     [templateFields],
   );
+  const hasDropOffLocations = useMemo(
+    () => templateFields.some((f) => isDropOffLocationsField(f)),
+    [templateFields],
+  );
   // Torch (and most retail templates) already ask "total number of consumers
   // sampled". That IS Spark's engagements metric — don't make the BA type it
   // again in the native Total engagements box.
@@ -3078,6 +3091,13 @@ function RecapForm({
       for (const f of s.fields) {
         if (!f.required || isPhotoType(f.type)) continue;
         const v = valuesForSubmit[f.id];
+        if (isDropOffLocationsField(f)) {
+          const dropErr = validateDropOffLocationsValue(
+            Array.isArray(v) ? JSON.stringify(v) : String(v ?? ""),
+          );
+          if (dropErr) return setErr(dropErr);
+          continue;
+        }
         const empty = v == null || (Array.isArray(v) ? v.length === 0 : String(v).trim() === "");
         if (empty) return setErr(`Please fill in "${f.name}".`);
       }
@@ -3106,9 +3126,28 @@ function RecapForm({
     const fieldValues = Object.entries(valuesForSubmit)
       .map(([id, v]) => ({ customFieldId: id, value: Array.isArray(v) ? JSON.stringify(v) : String(v) }))
       .filter((fv) => fv.value !== "" && fv.value !== "[]");
-    // Prefer pill selections → catalog Product ids when the template has a
-    // Products Sampled multiselect (Liquid Death). Fall back to the plain
-    // per-SKU qty map used by productSamples-flag templates.
+    // Prefer Drop-off Locations JSON (Product Seeding), then Products Sampled
+    // pills, then the plain per-SKU qty grid.
+    const fromDropOffs = (() => {
+      const out: { productId: string; quantity: number }[] = [];
+      for (const f of templateFields) {
+        if (!isDropOffLocationsField(f)) continue;
+        const raw = valuesForSubmit[f.id];
+        const locs = parseDropOffLocations(
+          Array.isArray(raw) ? JSON.stringify(raw) : String(raw ?? ""),
+        );
+        out.push(...productSamplesFromDropOffs(locs));
+      }
+      // Merge duplicate productIds if multiple drop-off fields ever exist.
+      const totals = new Map<string, number>();
+      for (const row of out) {
+        totals.set(row.productId, (totals.get(row.productId) ?? 0) + row.quantity);
+      }
+      return [...totals.entries()].map(([productId, quantity]) => ({
+        productId,
+        quantity,
+      }));
+    })();
     const fromPills = (() => {
       if (!hasProductsSampledMultiselect) return [] as { productId: string; quantity: number }[];
       const selected: string[] = [];
@@ -3131,11 +3170,13 @@ function RecapForm({
       .map(([productId, q]) => ({ productId, quantity: Number(q) }))
       .filter((s) => Number.isFinite(s.quantity) && s.quantity > 0);
     const productSamples =
-      fromPills.length > 0
-        ? fromPills
-        : hasProductsSampledMultiselect
-          ? []
-          : fromGrid;
+      fromDropOffs.length > 0
+        ? fromDropOffs
+        : fromPills.length > 0
+          ? fromPills
+          : hasProductsSampledMultiselect
+            ? []
+            : fromGrid;
     const fromSamples = engagementsFromSamplesGiven(templateFields, values);
     const typed = engagements.trim() === "" ? null : Number(engagements);
     const totalEngagements = fromSamples ?? (Number.isFinite(typed) ? typed : null);
@@ -3295,43 +3336,18 @@ function RecapForm({
           </p>
         </div>
       ) : null}
-      {template.sections.map((section) => (
+      {template.sections.map((section) => {
+        // Mileage moves to the end of the recap (after photos). Skip empty
+        // sections that only held mileage fields.
+        const fields = section.fields.filter(
+          (f) => !isMileageCustomFieldName(f.name),
+        );
+        if (fields.length === 0) return null;
+        return (
         <div key={section.id} style={card}>
           <h2 style={h2}>{section.name}</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 4 }}>
-            {section.fields.map((f) =>
-              payableMiles != null &&
-              Number.isFinite(payableMiles) &&
-              isMileageCustomFieldName(f.name) ? (
-                <div key={f.id}>
-                  <label style={label}>
-                    {f.name}
-                    {f.required ? <span style={{ color: "#EF5A2A" }}> *</span> : null}
-                  </label>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    step="0.1"
-                    style={{
-                      ...input,
-                      background: "#fff",
-                      color: "#065f46",
-                      fontWeight: 600,
-                    }}
-                    value={
-                      values[f.id] != null && !Array.isArray(values[f.id])
-                        ? String(values[f.id])
-                        : String(payableMiles)
-                    }
-                    onChange={(e) => setVal(f.id, e.target.value)}
-                  />
-                  <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>
-                    Suggested {formatPayableMiles(payableMiles)}. Increase if
-                    detours / construction added miles.
-                  </p>
-                </div>
-              ) : (
+            {fields.map((f) => (
               <FieldInput
                 key={f.id}
                 field={f}
@@ -3348,17 +3364,19 @@ function RecapForm({
                 }
                 qtyContextName={template.name}
               />
-              ),
-            )}
+            ))}
           </div>
         </div>
-      ))}
+        );
+      })}
 
       {/* Full per-SKU qty grid only when there is no Products Sampled
-          multiselect — LD (and clones) use pills + qty on that field instead. */}
+          multiselect and no Drop-off Locations repeater — LD seeding
+          captures cases per stop on that field instead. */}
       {template.productSamples &&
       template.products.length > 0 &&
-      !hasProductsSampledMultiselect ? (
+      !hasProductsSampledMultiselect &&
+      !hasDropOffLocations ? (
         <div style={card}>
           <h2 style={h2}>Products sampled</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
@@ -3432,6 +3450,72 @@ function RecapForm({
           </div>
         </div>
       ) : null}
+
+      {/* Total mileage — end of the recap (after photos), still required. */}
+      {(() => {
+        const mileageFields = template.sections.flatMap((s) =>
+          s.fields.filter((f) => isMileageCustomFieldName(f.name)),
+        );
+        if (mileageFields.length === 0) return null;
+        return (
+          <div style={card}>
+            <h2 style={h2}>Mileage</h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 4 }}>
+              {mileageFields.map((f) =>
+                payableMiles != null && Number.isFinite(payableMiles) ? (
+                  <div key={f.id}>
+                    <label style={label}>
+                      {f.name}
+                      {f.required ? (
+                        <span style={{ color: "#EF5A2A" }}> *</span>
+                      ) : null}
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="0.1"
+                      style={{
+                        ...input,
+                        background: "#fff",
+                        color: "#065f46",
+                        fontWeight: 600,
+                      }}
+                      value={
+                        values[f.id] != null && !Array.isArray(values[f.id])
+                          ? String(values[f.id])
+                          : String(payableMiles)
+                      }
+                      onChange={(e) => setVal(f.id, e.target.value)}
+                    />
+                    <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6b7280" }}>
+                      Suggested {formatPayableMiles(payableMiles)}. Increase if
+                      detours / construction added miles.
+                    </p>
+                  </div>
+                ) : (
+                  <FieldInput
+                    key={f.id}
+                    field={f}
+                    value={values[f.id]}
+                    accent={accent}
+                    onChange={(v) => setVal(f.id, v)}
+                    onAddPhotos={uploadFiles}
+                    photos={loosePhotos}
+                    onRemovePhoto={removePhoto}
+                    products={template.products}
+                    sampleQtys={samples}
+                    onSampleQtyChange={(productId, qty) =>
+                      setSamples((s) => ({ ...s, [productId]: qty }))
+                    }
+                    qtyContextName={template.name}
+                  />
+                ),
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {uploadingCount > 0 ? (
         <p style={{ textAlign: "center", fontSize: 13, opacity: 0.7 }}>
@@ -3678,6 +3762,20 @@ function FieldInput({
   const libraryRef = useRef<HTMLInputElement | null>(null);
   const cameraRef = useRef<HTMLInputElement | null>(null);
   const req = field.required ? <span style={{ color: "#EF5A2A" }}> *</span> : null;
+
+  if (isDropOffLocationsField(field)) {
+    return (
+      <DropOffLocationsField
+        label={field.name}
+        value={typeof value === "string" ? value : Array.isArray(value) ? JSON.stringify(value) : ""}
+        onChange={(v) => onChange(v)}
+        products={products}
+        required={field.required}
+        theme="checkin"
+        accent={accent}
+      />
+    );
+  }
 
   if (isPhotoType(field.type)) {
     return (

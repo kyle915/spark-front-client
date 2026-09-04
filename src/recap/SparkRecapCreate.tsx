@@ -40,6 +40,15 @@ import {
   productSampleQtyUnit,
   sampleOptionSelected,
 } from "./productsSampledQty";
+import {
+  DropOffLocationsField,
+} from "./DropOffLocationsField";
+import {
+  isDropOffLocationsField,
+  parseDropOffLocations,
+  productSamplesFromDropOffs,
+  validateDropOffLocationsValue,
+} from "./dropOffLocations";
 
 type PendingRecapFile = { blob: string; categoryName: string };
 
@@ -459,24 +468,63 @@ export default function SparkRecapCreate() {
           type: f.customFieldType?.name ?? "",
         }),
     );
+    const hasDropOffs = (selectedTemplate.customField ?? []).some(
+      (f) => f && isDropOffLocationsField(f),
+    );
+    for (const f of selectedTemplate.customField ?? []) {
+      if (!f?.required || fieldKind(f) === "image") continue;
+      const raw = (fieldValues[String(f.id)] ?? "").trim();
+      if (isDropOffLocationsField(f)) {
+        const dropErr = validateDropOffLocationsValue(raw);
+        if (dropErr) {
+          showAlert(dropErr, "warning");
+          return;
+        }
+        continue;
+      }
+      if (!raw) {
+        showAlert(`Please fill in "${f.name}".`, "warning");
+        return;
+      }
+    }
+    const fromDropOffs = (() => {
+      if (!hasDropOffs) return [] as { productId: string; quantity: number }[];
+      const totals = new Map<string, number>();
+      for (const f of selectedTemplate.customField ?? []) {
+        if (!f || !isDropOffLocationsField(f)) continue;
+        const locs = parseDropOffLocations(fieldValues[String(f.id)] ?? "");
+        for (const row of productSamplesFromDropOffs(locs)) {
+          totals.set(
+            row.productId,
+            (totals.get(row.productId) ?? 0) + row.quantity,
+          );
+        }
+      }
+      return [...totals.entries()].map(([productId, quantity]) => ({
+        productId,
+        quantity,
+      }));
+    })();
     const productSamples =
-      selectedTemplate.productSamples || hasPills
-        ? Object.entries(sampleQtys)
-            .map(([productId, raw]) => ({
-              productId,
-              quantity: parseLocaleNumber(raw),
-            }))
-            .filter(
-              (s): s is { productId: string; quantity: number } =>
-                s.quantity != null &&
-                Number.isFinite(s.quantity) &&
-                s.quantity > 0,
-            )
-            .map((s) => ({
-              productId: s.productId,
-              quantity: Math.round(s.quantity),
-            }))
-        : [];
+      fromDropOffs.length > 0
+        ? fromDropOffs
+        : selectedTemplate.productSamples || hasPills
+          ? Object.entries(sampleQtys)
+              .map(([productId, raw]) => ({
+                productId,
+                quantity: parseLocaleNumber(raw),
+              }))
+              .filter(
+                (s): s is { productId: string; quantity: number } =>
+                  s.quantity != null &&
+                  Number.isFinite(s.quantity) &&
+                  s.quantity > 0,
+              )
+              .map((s) => ({
+                productId: s.productId,
+                quantity: Math.round(s.quantity),
+              }))
+          : [];
 
     const files = pendingFiles.map(({ blob, categoryName }) => ({
       file: blob,
@@ -1298,6 +1346,32 @@ const CustomTemplateFields: React.FC<{
                 );
               }
               if (kind === "longtext") {
+                if (isDropOffLocationsField(f)) {
+                  return (
+                    <div key={id} className="sm:col-span-2">
+                      <Suspense
+                        fallback={
+                          <Field label={label}>
+                            <p
+                              className="text-sm"
+                              style={{ color: "rgba(255,255,255,0.6)" }}
+                            >
+                              Loading products…
+                            </p>
+                          </Field>
+                        }
+                      >
+                        <DropOffLocationsOpsField
+                          label={f.name}
+                          required={Boolean(f.required)}
+                          value={values[id] ?? ""}
+                          onChange={(v) => onChange(id, v)}
+                          tenantId={tenantId}
+                        />
+                      </Suspense>
+                    </div>
+                  );
+                }
                 return (
                   <div key={id} className="sm:col-span-2">
                     <Field label={label}>
@@ -1434,6 +1508,44 @@ const CustomTemplateFields: React.FC<{
 
 // Products Sampled pills + per-selection can qty. Loads the tenant catalog
 // so each selected option maps to a Product id for productSamples submit.
+const DropOffLocationsOpsField: React.FC<{
+  label: string;
+  required?: boolean;
+  value: string;
+  onChange: (v: string) => void;
+  tenantId: string | null;
+}> = ({ label, required, value, onChange, tenantId }) => {
+  const data = useLazyLoadQuery<ProductsQueryType>(
+    ProductsQuery,
+    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+  const products = useMemo(
+    () =>
+      (data.products?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n))
+        .map((p) => ({
+          id: String(p.id),
+          name: p.name,
+          category: p.productType?.name ?? null,
+          imageUrl: p.image ?? null,
+        })),
+    [data],
+  );
+  return (
+    <DropOffLocationsField
+      label={label}
+      required={required}
+      value={value}
+      onChange={onChange}
+      products={products}
+      theme="ops"
+      accent="var(--spark-lime)"
+    />
+  );
+};
+
 const ProductsSampledPillsField: React.FC<{
   label: string;
   options: readonly string[];

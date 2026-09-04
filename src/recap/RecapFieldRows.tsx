@@ -4,6 +4,8 @@ import {
   formatRecapProductName,
   recapLabelsMatch,
 } from "./recapFieldLabel";
+import { DropOffLocationsReadout } from "./DropOffLocationsField";
+import { isDropOffLocationsField } from "./dropOffLocations";
 
 const rowBorder = "1px solid var(--recap-border, var(--spark-border, #e2e4d8))";
 const labelInk = "var(--recap-muted, #5c6154)";
@@ -80,14 +82,26 @@ export function RecapShareFieldSections({
         const withValue = section.fields.filter(
           (f) => f.imageUrl || Boolean((f.value ?? "").trim()),
         );
+        const dropOffs = withValue.filter((f) => isDropOffLocationsField(f));
         const rows = withValue.filter(
-          (f) => !f.imageUrl && (f.value ?? "").length <= 50,
+          (f) =>
+            !f.imageUrl &&
+            (f.value ?? "").length <= 50 &&
+            !isDropOffLocationsField(f),
         );
         const images = withValue.filter((f) => f.imageUrl);
         const notes = withValue.filter(
-          (f) => !f.imageUrl && (f.value ?? "").length > 50,
+          (f) =>
+            !f.imageUrl &&
+            (f.value ?? "").length > 50 &&
+            !isDropOffLocationsField(f),
         );
-        if (rows.length === 0 && images.length === 0 && notes.length === 0) {
+        if (
+          rows.length === 0 &&
+          images.length === 0 &&
+          notes.length === 0 &&
+          dropOffs.length === 0
+        ) {
           return null;
         }
         return (
@@ -98,6 +112,14 @@ export function RecapShareFieldSections({
             >
               {formatRecapFieldLabel(section.name)}
             </p>
+            {dropOffs.map((f) => (
+              <div key={f.name} className={rows.length > 0 ? "mb-4" : undefined}>
+                {!recapLabelsMatch(f.name, section.name) && (
+                  <RecapFieldBlockLabel label={f.name} />
+                )}
+                <DropOffLocationsReadout value={f.value} />
+              </div>
+            ))}
             {rows.length > 0 && (
               <RecapFieldStack>
                 {rows.map((f) => {
