@@ -26,6 +26,16 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { AmbassadorPicker } from "./AmbassadorPicker";
 import { RecapDetailSkeleton } from "@/layout/PageSkeletons";
 import { buildCustomFieldValuesPayload } from "./customRecapSave";
+import {
+  DropOffLocationsField,
+  DropOffLocationsReadout,
+} from "./DropOffLocationsField";
+import {
+  isDropOffLocationsField,
+  locationHasPin,
+  parseDropOffLocations,
+  productSamplesFromDropOffs,
+} from "./dropOffLocations";
 import { useAuthStore } from "@/store/authStore";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router";
@@ -119,10 +129,16 @@ function customFieldKind(
 // landing in a multiselect field).
 function customFieldHasDisplayValue(
   field: {
+    name?: string | null;
     value?: string | null;
     customFieldType?: { name?: string | null } | null;
   },
 ): boolean {
+  if (isDropOffLocationsField(field)) {
+    return parseDropOffLocations(field.value).some(
+      (loc) => Boolean((loc.placeName ?? "").trim()) || locationHasPin(loc),
+    );
+  }
   const kind = customFieldKind(field.customFieldType?.name);
   const value = field.value ?? "";
   if (kind === "image") return Boolean(value);
@@ -239,6 +255,51 @@ const KpiCardContainer = ({
 //     <div></div>
 //   </div>
 // );
+
+
+const DropOffLocationsEditBridge = ({
+  tenantId,
+  value,
+  onChange,
+  required,
+  label,
+}: {
+  tenantId: string | null;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+  label: string;
+}) => {
+  const data = useLazyLoadQuery<ProductsQueryType>(
+    ProductsQuery,
+    { first: 1000, filters: tenantId ? { tenantId } : null },
+    { fetchPolicy: "store-or-network" },
+  );
+  const products = useMemo(
+    () =>
+      (data.products?.edges ?? [])
+        .map((e) => e?.node)
+        .filter((n): n is NonNullable<typeof n> => Boolean(n))
+        .map((p) => ({
+          id: String(p.id),
+          name: p.name,
+          category: p.productType?.name ?? null,
+          imageUrl: p.image ?? null,
+        })),
+    [data],
+  );
+  return (
+    <DropOffLocationsField
+      label={label}
+      required={required}
+      value={value}
+      onChange={onChange}
+      products={products}
+      theme="ops"
+      accent="var(--spark-lime)"
+    />
+  );
+};
 
 // Edit-mode editor for "Products Sampled" units on the custom-recap view.
 // Loads the recap tenant's product catalog (same ProductsQuery the create
@@ -665,7 +726,27 @@ const RecapCustomViewInner = ({
     // productSamples is provided (delete-then-recreate). A current sample
     // whose product isn't on the editor's page still survives — its seeded
     // qty stays in editedSampleQtys and is re-sent here.
-    const productSamples = Object.entries(editedSampleQtys)
+    const fromDropOffs = (() => {
+      const totals = new Map<string, number>();
+      for (const field of allFields) {
+        if (!isDropOffLocationsField(field)) continue;
+        const fieldId = String(field.id);
+        const raw = editedValues[fieldId] ?? field.value ?? "";
+        for (const row of productSamplesFromDropOffs(
+          parseDropOffLocations(raw),
+        )) {
+          totals.set(
+            row.productId,
+            (totals.get(row.productId) ?? 0) + row.quantity,
+          );
+        }
+      }
+      return [...totals.entries()].map(([productId, quantity]) => ({
+        productId,
+        quantity,
+      }));
+    })();
+    const fromEditor = Object.entries(editedSampleQtys)
       .map(([productId, raw]) => {
         const n = parseLocaleNumber(raw ?? "");
         return n != null && Number.isFinite(n) && Math.round(n) > 0
@@ -675,6 +756,10 @@ const RecapCustomViewInner = ({
       .filter(
         (s): s is { productId: string; quantity: number } => s !== null,
       );
+    // Drop-off Locations own SKU+cases for Product Seeding; otherwise keep
+    // the Product Samples editor map.
+    const productSamples =
+      fromDropOffs.length > 0 ? fromDropOffs : fromEditor;
 
     // Never persist a blank title — fall back to the existing name.
     const nextName = editedName.trim() || recap.name || "Recap";
@@ -1804,7 +1889,8 @@ const RecapCustomViewInner = ({
                     if (
                       kind === "image" ||
                       kind === "select" ||
-                      kind === "multiselect"
+                      kind === "multiselect" ||
+                      isDropOffLocationsField(field)
                     ) {
                       return false;
                     }
@@ -1859,6 +1945,45 @@ const RecapCustomViewInner = ({
                     const kind = customFieldKind(
                       field.customFieldType?.name,
                     );
+
+                    // ── DROP-OFF LOCATIONS (Product Seeding repeater) ─
+                    if (isDropOffLocationsField(field)) {
+                      return (
+                        <div
+                          key={field.id}
+                          className="rounded-xl p-4 space-y-2 xl:col-span-2"
+                          style={inset}
+                        >
+                          {!recapLabelsMatch(field.name, section.name) && (
+                            <RecapFieldBlockLabel label={field.name} />
+                          )}
+                          {isEditingValues ? (
+                            <Suspense
+                              fallback={
+                                <p className="text-sm" style={faint}>
+                                  Loading products…
+                                </p>
+                              }
+                            >
+                              <DropOffLocationsEditBridge
+                                value={displayValue}
+                                onChange={(v) =>
+                                  setEditedValues((prev) => ({
+                                    ...prev,
+                                    [fieldId]: v,
+                                  }))
+                                }
+                                tenantId={tenantId || null}
+                                required={Boolean(field.required)}
+                                label={field.name ?? "Drop-off Locations"}
+                              />
+                            </Suspense>
+                          ) : (
+                            <DropOffLocationsReadout value={displayValue} />
+                          )}
+                        </div>
+                      );
+                    }
 
                     // ── IMAGE field ────────────────────────────────
                     // The field's value is a GCS blob path (or full URL);
