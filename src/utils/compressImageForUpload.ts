@@ -7,7 +7,7 @@ const DEFAULT_MIN_BYTES = 200 * 1024;
 
 /**
  * Walk-up / check-in field photos on store LTE. More aggressive than
- * admin recap so 20 iPhone shots finish before the BA clocks out.
+ * admin recap so ~50 iPhone shots finish before the BA clocks out.
  */
 export const FIELD_PHOTO_PREP = {
   maxEdge: 1600,

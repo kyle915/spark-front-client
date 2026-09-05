@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { useParams } from "react-router";
 import { bucketCountHint } from "./photoBuckets";
+import { PHOTO_CAP } from "./photoCap";
+import { isHeicUpload } from "./heicUpload";
 import {
   engagementsFromSamplesGiven,
   templateHasConsumersSampledField,
@@ -317,9 +319,30 @@ function telHref(phone: string): string {
 // up the rest. Serial uploads were the other half of "photos won't upload".
 const UPLOAD_CONCURRENCY = 3;
 
+/**
+ * Parallel heic2any WASM OOMs iPhone Safari when a BA picks a big Camera Roll
+ * batch. JPEG/PNG downscale can still run concurrent with PUTs; HEIC decode
+ * waits its turn.
+ */
+let heicPrepChain: Promise<void> = Promise.resolve();
+
 /** HEIC→JPEG + field downscale (see FIELD_PHOTO_PREP). */
-function compressImage(file: File): Promise<File> {
-  return prepareImageForUpload(file, FIELD_PHOTO_PREP);
+async function compressImage(file: File): Promise<File> {
+  if (!isHeicUpload(file)) {
+    return prepareImageForUpload(file, FIELD_PHOTO_PREP);
+  }
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const prev = heicPrepChain;
+  heicPrepChain = prev.then(() => gate);
+  await prev;
+  try {
+    return await prepareImageForUpload(file, FIELD_PHOTO_PREP);
+  } finally {
+    release();
+  }
 }
 
 /** Run `fn` over `items` with at most `limit` in flight. */
@@ -2938,6 +2961,8 @@ function RecapForm({
     ) };
   });
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const photosRef = useRef<Photo[]>([]);
+  photosRef.current = photos;
   const [samples, setSamples] = useState<Record<string, string>>(
     () => restored.current?.samples ?? {},
   );
@@ -3026,7 +3051,7 @@ function RecapForm({
   const setVal = (id: string, v: string | string[]) => setValues((p) => ({ ...p, [id]: v }));
 
   // Upload one photo, keyed by its stable id. Compresses first — a raw iPhone
-  // shot is 3-5MB and a BA files 20 of them from a store parking lot.
+  // shot is 3-5MB and a BA may file dozens from a parking lot on LTE.
   const uploadOne = async (id: string, original: File) => {
     try {
       const file = await compressImage(original);
@@ -3046,7 +3071,21 @@ function RecapForm({
 
   const uploadFiles = async (files: FileList | null, category: string | null = null) => {
     if (!files || !files.length) return;
-    const batch: Photo[] = Array.from(files).map((file) => ({
+    const room = Math.max(0, PHOTO_CAP - photosRef.current.length);
+    if (room === 0) {
+      setErr(`Photo limit reached (${PHOTO_CAP}). Remove some to add more.`);
+      return;
+    }
+    const picked = Array.from(files);
+    const accepted = picked.slice(0, room);
+    if (picked.length > accepted.length) {
+      setErr(
+        `Only ${room} more photo${room === 1 ? "" : "s"} fit (max ${PHOTO_CAP}). Added the first ${accepted.length}.`,
+      );
+    } else {
+      setErr(null);
+    }
+    const batch: Photo[] = accepted.map((file) => ({
       id: `${Date.now()}-${photoSeq.current++}`,
       file,
       blobName: null,
@@ -3054,7 +3093,10 @@ function RecapForm({
       state: "uploading" as const,
       category,
     }));
-    setPhotos((p) => [...p, ...batch]);
+    // Keep the ref ahead of re-render so a second library pick mid-upload
+    // still sees the true remaining room.
+    photosRef.current = [...photosRef.current, ...batch];
+    setPhotos(photosRef.current);
     await runWithConcurrency(batch, UPLOAD_CONCURRENCY, (ph) => uploadOne(ph.id, ph.file));
   };
 
@@ -3069,7 +3111,11 @@ function RecapForm({
   // Keyed by id, never by index. Each bucket renders its OWN filtered slice, so
   // position 0 of a bucket is some arbitrary position in `photos` — the same
   // index-vs-id confusion that once wrote every upload result into one slot.
-  const removePhoto = (id: string) => setPhotos((p) => p.filter((ph) => ph.id !== id));
+  const removePhoto = (id: string) => {
+    const next = photosRef.current.filter((ph) => ph.id !== id);
+    photosRef.current = next;
+    setPhotos(next);
+  };
 
   const submit = async () => {
     setErr(null);
@@ -3524,13 +3570,16 @@ function RecapForm({
       ) : null}
 
       {failedCount > 0 ? (
-        <div style={{ ...card, borderColor: "#EF5A2A", display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ flex: 1, fontSize: 13 }}>
-            {failedCount} photo{failedCount === 1 ? "" : "s"} didn't upload.
-          </span>
-          <button style={{ ...secondaryBtn, width: "auto", padding: "8px 14px", margin: 0 }} onClick={retryFailed}>
-            Retry
-          </button>
+        <div style={{ ...card, borderColor: "#EF5A2A", display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ flex: 1, fontSize: 13 }}>
+              {failedCount} photo{failedCount === 1 ? "" : "s"} didn't upload.
+              Tap Retry — or re-pick from your library (JPEG works best if HEIC keeps failing).
+            </span>
+            <button style={{ ...secondaryBtn, width: "auto", padding: "8px 14px", margin: 0 }} onClick={retryFailed}>
+              Retry
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -3980,8 +4029,6 @@ function PhotoFileInputs({
   );
 }
 
-const PHOTO_CAP = 20;
-
 function PhotoGrid({
   photos,
   onAdd,
@@ -4005,6 +4052,7 @@ function PhotoGrid({
     padding: "16px 12px",
   };
   const done = photos.filter((p) => p.state === "done").length;
+  const atCap = photos.length >= PHOTO_CAP;
 
   return (
     <div>
@@ -4057,34 +4105,40 @@ function PhotoGrid({
             </button>
           </div>
         ))}
-        <button
-          type="button"
-          onClick={onAdd}
-          style={{
-            ...tile,
-            border: `2px dashed ${accent}`,
-            fontSize: 15,
-            color: accent,
-          }}
-        >
-          Upload photos
-        </button>
-        <button
-          type="button"
-          onClick={onTake}
-          style={{
-            ...tile,
-            border: "2px dashed rgba(0,0,0,0.22)",
-            fontSize: 13,
-            color: "inherit",
-            opacity: 0.75,
-          }}
-        >
-          Take photo
-        </button>
+        {!atCap ? (
+          <>
+            <button
+              type="button"
+              onClick={onAdd}
+              style={{
+                ...tile,
+                border: `2px dashed ${accent}`,
+                fontSize: 15,
+                color: accent,
+              }}
+            >
+              Upload photos
+            </button>
+            <button
+              type="button"
+              onClick={onTake}
+              style={{
+                ...tile,
+                border: "2px dashed rgba(0,0,0,0.22)",
+                fontSize: 13,
+                color: "inherit",
+                opacity: 0.75,
+              }}
+            >
+              Take photo
+            </button>
+          </>
+        ) : null}
       </div>
       <p style={{ fontSize: 12, opacity: 0.55, margin: "6px 0 0" }}>
-        You can select many. iPhone photos are fine.
+        {atCap
+          ? `Limit ${PHOTO_CAP} photos. Remove one to add another.`
+          : "You can select many from your library. iPhone photos are fine."}
       </p>
     </div>
   );

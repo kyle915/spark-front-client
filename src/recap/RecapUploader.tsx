@@ -5,6 +5,7 @@ import { UploadUrlQuery } from "@/api/queries/UploadUrlQuery";
 import type { UploadUrlQuery as UploadUrlQueryType } from "@/api/queries/__generated__/UploadUrlQuery.graphql";
 import { useAlertStore } from "@/store/alertStore";
 import { prepareImageForUpload } from "@/utils/compressImageForUpload";
+import { PHOTO_CAP } from "@/components/pages/checkin/photoCap";
 
 /**
  * Spark v2 — Recap photo / receipt uploader.
@@ -34,8 +35,6 @@ type FileRow = {
   name: string;
   state: FileState;
 };
-
-const PHOTO_CAP = 20;
 
 // NOTE: keep photo accept as the broad `image/*`. iOS Safari falls back
 // to the Files-app picker (no multi-select) when accept lists specific
