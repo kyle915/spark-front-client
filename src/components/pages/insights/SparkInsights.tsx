@@ -5,7 +5,8 @@ import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
-import { useEventDashboardData } from "@/hooks/useEventDashboardData";
+import { EventDashboardTimelineQuery } from "@/api/queries/EventDashboardTimelineQuery";
+import type { EventDashboardTimelineQuery as EventDashboardTimelineQueryType } from "@api/queries/__generated__/EventDashboardTimelineQuery.graphql";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import BelowFold from "@/components/insights/BelowFold";
@@ -230,8 +231,18 @@ function InsightsTimeline({
   onClearState: () => void;
 }) {
   const navigate = useNavigate();
-  const { dashboard } = useEventDashboardData(tenantId, filters, 0);
-  const recent = dashboard.recentEvents ?? [];
+  const data = useLazyLoadQuery<EventDashboardTimelineQueryType>(
+    EventDashboardTimelineQuery,
+    {
+      filters: {
+        tenantId,
+        ...(filters ?? {}),
+        sections: ["recentEvents"],
+      },
+    },
+    { fetchPolicy: "store-or-network" },
+  );
+  const recent = data.eventDashboard?.recentEvents ?? [];
 
   const timelineRows = useMemo(() => {
     if (!selectedState) return recent;

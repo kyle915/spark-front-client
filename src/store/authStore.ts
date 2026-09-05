@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { login as loginService } from "@api/auth/login";
 import { fetchMe, type MeUser } from "@api/auth/me";
 import { themes } from "@/utils";
+import { resetHotRelayDataPrefetch } from "@/lib/prefetchHotRelayData";
 
 type TenantMeta = {
   logo?: string | null;
@@ -123,6 +124,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem("@tenantLogo");
     localStorage.removeItem("@tenantRequestUrlName");
     localStorage.removeItem("@tenantCheckinCode");
+
+    // Allow idle Relay warmup again after the next login.
+    resetHotRelayDataPrefetch();
 
     set({
       user: null,

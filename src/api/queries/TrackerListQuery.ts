@@ -54,16 +54,10 @@ export const TrackerListQuery = graphql`
             id
             name
           }
-          products {
-            id
-            name
-          }
-          openShifts {
-            uuid
-            releasedByName
-            claimedByName
-            status
-          }
+          productNames
+          openShiftsOpen
+          openShiftsTotal
+          openShiftsTooltip
           status {
             id
             name

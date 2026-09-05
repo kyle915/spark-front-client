@@ -11,8 +11,8 @@ import type { RecapsListQuery as RecapsListQueryType } from "@api/queries/__gene
 // Slim list ops for the unified /recaps card grid. Detail keeps
 // RecapQuery / CustomRecapsQueryDetailsQuery (full file/field arrays).
 import { CustomRecapsListQuery } from "@/api/queries/CustomRecapsListQuery";
-import { RecapListKindsProbeQuery } from "@/api/queries/RecapListKindsProbeQuery";
-import type { RecapListKindsProbeQuery as RecapListKindsProbeQueryType } from "@api/queries/__generated__/RecapListKindsProbeQuery.graphql";
+import { RecapListKindsQuery } from "@/api/queries/RecapListKindsQuery";
+import type { RecapListKindsQuery as RecapListKindsQueryType } from "@api/queries/__generated__/RecapListKindsQuery.graphql";
 import { ThirdPartyRecapBadge } from "@/recap/ThirdPartyRecapBadge";
 import { recapApprovalMeta } from "@/recap/recapApprovalMeta";
 import type { CustomRecapsListQuery as CustomRecapsListQueryType } from "@api/queries/__generated__/CustomRecapsListQuery.graphql";
@@ -1049,22 +1049,18 @@ const RecapsListInner: React.FC<{
   const page1Vars = recapsListPageVariables(null);
   const environment = useRelayEnvironment();
 
-  // Cheap totalCount probe so we skip the unused legacy OR custom page-1
-  // query (don't always pay 50+50 on tenants that only use one kind).
-  const probe = useLazyLoadQuery<RecapListKindsProbeQueryType>(
-    RecapListKindsProbeQuery,
-    {
-      q: searchQ,
-      legacyFilters: listFilters,
-      customFilters: customListFilters,
-    },
+  // Tenant-level EXISTS (warmed by idle prefetch) — skip unused kind
+  // without a filtered totalCount probe waterfall before page-1.
+  const kinds = useLazyLoadQuery<RecapListKindsQueryType>(
+    RecapListKindsQuery,
+    { tenantId: tenantId || null },
     {
       fetchPolicy: refreshKey === 0 ? "store-or-network" : "store-and-network",
       fetchKey: refreshKey,
     },
   );
-  const enableLegacy = (probe.recaps?.totalCount ?? 0) > 0;
-  const enableCustom = (probe.customRecaps?.totalCount ?? 0) > 0;
+  const enableLegacy = Boolean(kinds.recapListKinds?.hasLegacy);
+  const enableCustom = Boolean(kinds.recapListKinds?.hasCustom);
   const listFetchPolicy: RecapsListFetchPolicy =
     refreshKey === 0 ? "store-or-network" : "store-and-network";
 

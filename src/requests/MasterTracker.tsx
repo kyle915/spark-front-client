@@ -22,11 +22,10 @@ import { RmmClientsQuery } from "@/api/queries/RmmClientsQuery";
 import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__generated__/RmmClientsQuery.graphql";
 import { UsersQuery } from "@/api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
-import { useEventDashboardData } from "@/hooks/useEventDashboardData";
+import { useConsumersSampled } from "@/hooks/useConsumersSampled";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
-import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import {
   trackerDateRangeToServer,
   trackerSortToServer,
@@ -1069,27 +1068,12 @@ const MasterTrackerInner: React.FC<{
         venue: n.retailer?.name ?? n.name ?? "—",
         address: n.address ?? "",
         type: n.requestType?.name ?? "—",
-        skus: Array.from(
-          new Set(
-            (n.products ?? [])
-              .map((p) => (p?.name ?? "").trim())
-              .filter((s) => s.length > 0),
-          ),
-        ),
-        openShiftsOpen: (n.openShifts ?? []).filter(
-          (s) => s?.status === "open",
-        ).length,
-        openShiftsTotal: (n.openShifts ?? []).length,
-        openShiftsTooltip: (n.openShifts ?? [])
-          .map((s) => {
-            const who = s?.releasedByName || "A BA";
-            return s?.status === "claimed"
-              ? `${who} dropped${
-                  s?.claimedByName ? ` → claimed by ${s.claimedByName}` : " → claimed"
-                }`
-              : `${who} dropped — still open`;
-          })
-          .join(" · "),
+        skus: (n.productNames ?? [])
+          .map((s) => (s ?? "").trim())
+          .filter((s) => s.length > 0),
+        openShiftsOpen: n.openShiftsOpen ?? 0,
+        openShiftsTotal: n.openShiftsTotal ?? 0,
+        openShiftsTooltip: n.openShiftsTooltip ?? "",
         eventUuid: n.event?.uuid ? String(n.event.uuid) : null,
         eventId: n.event?.id ? String(n.event.id) : null,
         eventDate: (n.startTime ?? n.date) ? String(n.startTime ?? n.date) : null,
@@ -1327,18 +1311,8 @@ const RmmFilterInner: React.FC<{
  * immediately and this figure streams in behind a "…" placeholder.
  */
 const ConsumersStat: React.FC<{ tenantId: string }> = ({ tenantId }) => {
-  const dashFilters: DashboardFilters = useMemo(
-    () => ({
-      distributorIds: [],
-      rmmAsignedId: null,
-      quarter: null,
-      startDate: null,
-      endDate: null,
-    }),
-    [],
-  );
-  const { dashboard } = useEventDashboardData(tenantId, dashFilters, 0);
-  return <>{fmtNum(dashboard.metrics.consumersSampled)}</>;
+  const consumers = useConsumersSampled(tenantId, 0);
+  return <>{fmtNum(consumers)}</>;
 };
 
 export default function MasterTracker() {
