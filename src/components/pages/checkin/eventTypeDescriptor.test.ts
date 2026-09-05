@@ -6,8 +6,12 @@ import {
 } from "./eventTypeDescriptor";
 
 describe("eventTypeDescription", () => {
-  it("describes Retail Sampling and Event Activation", () => {
+  it("describes Retail, On-Premise, Event, and Product Seeding", () => {
     expect(eventTypeDescription("Retail Sampling")).toContain("gas stations");
+    expect(eventTypeDescription("On-Premise")).toContain("Bar or venue");
+    expect(eventTypeDescription("On-Premise Sampling")).toContain(
+      "Bar or venue",
+    );
     expect(eventTypeDescription("Event Activation")).toContain(
       "music festivals",
     );
@@ -28,7 +32,7 @@ describe("eventTypeDescription", () => {
 
   it("returns null for unrelated program names", () => {
     expect(eventTypeDescription("Event")).toBeNull();
-    expect(eventTypeDescription("On-Premise Sampling")).toBeNull();
+    expect(eventTypeDescription("Demo Table")).toBeNull();
   });
 });
 
@@ -40,13 +44,19 @@ describe("eventTypesUseDescriptorPicker", () => {
         { name: "Something Else" },
       ]),
     ).toBe(true);
+    expect(
+      eventTypesUseDescriptorPicker([
+        { name: "On-Premise" },
+        { name: "Something Else" },
+      ]),
+    ).toBe(true);
   });
 
   it("is false when no option has copy", () => {
     expect(
       eventTypesUseDescriptorPicker([
         { name: "Event" },
-        { name: "On-Premise Sampling" },
+        { name: "Demo Table" },
       ]),
     ).toBe(false);
   });
@@ -59,6 +69,7 @@ describe("eventTypeSkipsIdentifyLocation", () => {
       true,
     );
     expect(eventTypeSkipsIdentifyLocation("Retail Sampling")).toBe(false);
+    expect(eventTypeSkipsIdentifyLocation("On-Premise")).toBe(false);
     expect(eventTypeSkipsIdentifyLocation("Event Activation")).toBe(false);
   });
 });
