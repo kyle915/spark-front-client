@@ -4,6 +4,8 @@ import { fetchQuery } from "relay-runtime";
 import environment from "@/api/relay/environment";
 import { ChatThreadQuery } from "@/api/queries/ChatThreadQuery";
 import type { ChatThreadQuery as ChatThreadQueryType } from "@api/queries/__generated__/ChatThreadQuery.graphql";
+import { ChatThreadDeltaQuery } from "@/api/queries/ChatThreadDeltaQuery";
+import type { ChatThreadDeltaQuery as ChatThreadDeltaQueryType } from "@api/queries/__generated__/ChatThreadDeltaQuery.graphql";
 import { SendChatMessageMutation } from "@/api/mutations/SendChatMessageMutation";
 import type { SendChatMessageMutation as SendChatMessageMutationType } from "@api/mutations/__generated__/SendChatMessageMutation.graphql";
 import { MarkChatThreadReadMutation } from "@/api/mutations/MarkChatThreadReadMutation";
@@ -32,10 +34,18 @@ import {
  * caller only needs to know the uuid (e.g. from openChatThread). An
  * empty thread renders the "send the first one" prompt and works the
  * same as a populated one.
+ *
+ * Live refresh uses ChatThreadDeltaQuery + afterUuid so the 15s poll
+ * does not remount the thread via fetchKey.
  */
 
 const ACTIVE_THREAD_POLL_MS = 15 * 1000;
 const CHAT_PAGE = 200;
+
+type ThreadMessages = NonNullable<
+  ChatThreadQueryType["response"]["chatThread"]
+>["messages"];
+type ThreadMessage = NonNullable<ThreadMessages[number]>;
 
 function fmtTime(iso: string): string {
   try {
@@ -152,16 +162,24 @@ const ChatConversation: React.FC<{
     { fetchPolicy: "store-and-network", fetchKey: refreshKey },
   );
   const thread = data?.chatThread;
-  const [older, setOlder] = useState<
-    NonNullable<ChatThreadQueryType["response"]["chatThread"]>["messages"]
-  >([]);
+  const [older, setOlder] = useState<ThreadMessages>([]);
+  const [newer, setNewer] = useState<ThreadMessage[]>([]);
   const [olderBusy, setOlderBusy] = useState(false);
   const [olderHasMore, setOlderHasMore] = useState(true);
+  const newestUuidRef = useRef<string | null>(null);
 
   useEffect(() => {
     setOlder([]);
+    setNewer([]);
     setOlderHasMore(true);
+    newestUuidRef.current = null;
   }, [threadUuid]);
+
+  // Full reload (send / mark-read) already includes latest — drop deltas.
+  useEffect(() => {
+    setNewer([]);
+  }, [refreshKey]);
+
   const [commitSend, isSending] =
     useMutation<SendChatMessageMutationType>(SendChatMessageMutation);
   const [commitMarkRead] = useMutation<MarkChatThreadReadMutationType>(
@@ -188,12 +206,51 @@ const ChatConversation: React.FC<{
     markedRef.current = String(thread.uuid);
   }, [thread, commitMarkRead]);
 
-  // 15s polling refresh + Visibility API gate.
+  // Page is newest-first; newer deltas are ascending (afterUuid).
+  useEffect(() => {
+    const pageNewest = thread?.messages?.[0]?.uuid
+      ? String(thread.messages[0].uuid)
+      : null;
+    const deltaNewest = newer.length
+      ? String(newer[newer.length - 1]!.uuid)
+      : null;
+    newestUuidRef.current = deltaNewest ?? pageNewest;
+  }, [thread?.messages, newer]);
+
+  // 15s delta poll + Visibility API gate — no fetchKey remount.
   useEffect(() => {
     let id: ReturnType<typeof setInterval> | null = null;
+    let cancelled = false;
+
+    const poll = async () => {
+      const afterUuid = newestUuidRef.current;
+      if (!afterUuid || cancelled) return;
+      try {
+        const extra = await fetchQuery<ChatThreadDeltaQueryType>(
+          environment,
+          ChatThreadDeltaQuery,
+          { uuid: threadUuid, first: 50, afterUuid },
+        ).toPromise();
+        if (cancelled) return;
+        const incoming = (extra?.chatThread?.messages ?? []).filter(
+          (m): m is ThreadMessage => Boolean(m),
+        );
+        if (incoming.length === 0) return;
+        setNewer((prev) => {
+          const have = new Set(prev.map((m) => String(m.uuid)));
+          const add = incoming.filter((m) => !have.has(String(m.uuid)));
+          return add.length ? [...prev, ...add] : prev;
+        });
+      } catch {
+        // Transient poll failure — next tick retries.
+      }
+    };
+
     const start = () => {
       if (id) return;
-      id = setInterval(() => setRefreshKey((k) => k + 1), ACTIVE_THREAD_POLL_MS);
+      id = setInterval(() => {
+        void poll();
+      }, ACTIVE_THREAD_POLL_MS);
     };
     const stop = () => {
       if (id) {
@@ -205,15 +262,16 @@ const ChatConversation: React.FC<{
     if (!document.hidden) start();
     document.addEventListener("visibilitychange", onVis);
     return () => {
+      cancelled = true;
       stop();
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, []);
+  }, [threadUuid]);
 
   // Scroll to bottom on new messages.
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [thread?.messages?.length]);
+  }, [thread?.messages?.length, newer.length]);
 
   if (!thread) {
     return (
@@ -271,12 +329,18 @@ const ChatConversation: React.FC<{
     });
   };
 
-  // Messages from the API are newest-first; reverse so the UI
-  // renders oldest at top → newest at bottom (chat-natural order).
+  // Page + older pages are newest-first; reverse for chat order, then
+  // append ascending delta messages (newer than the page's newest).
   const page = thread.messages ?? [];
-  const seen = new Set(page.map((m) => m.uuid));
-  const olderUnique = older.filter((m) => m && !seen.has(m.uuid));
-  const messages = [...olderUnique, ...page].filter(Boolean).reverse();
+  const pageUuids = new Set(
+    page.map((m) => m?.uuid).filter((u): u is string => Boolean(u)),
+  );
+  const olderUnique = older.filter((m) => m && !pageUuids.has(m.uuid));
+  const newerUnique = newer.filter((m) => m && !pageUuids.has(m.uuid));
+  const messages = [
+    ...[...olderUnique, ...page].filter(Boolean).reverse(),
+    ...newerUnique,
+  ];
   const oldestUuid = messages[0]?.uuid;
   const canLoadOlder =
     olderHasMore && (page.length >= CHAT_PAGE || older.length >= CHAT_PAGE);

@@ -3,8 +3,8 @@ import type { ErrorInfo, ReactNode } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
-import { RequestsQuery } from "@/api/queries/RequestsQuery";
-import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
+import { ApprovalsListQuery } from "@/api/queries/ApprovalsListQuery";
+import type { ApprovalsListQuery as ApprovalsListQueryType } from "@api/queries/__generated__/ApprovalsListQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -251,9 +251,17 @@ const ApprovalRow: React.FC<{
 const ApprovalsInner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
-  const data = useLazyLoadQuery<RequestsQueryType>(
-    RequestsQuery,
-    { first: 300, filters: tenantId ? { tenantId } : null },
+  const data = useLazyLoadQuery<ApprovalsListQueryType>(
+    ApprovalsListQuery,
+    {
+      first: 300,
+      filters: tenantId
+        ? {
+            tenantId,
+            statusSlugs: ["pending", "approved", "declined"],
+          }
+        : { statusSlugs: ["pending", "approved", "declined"] },
+    },
     { fetchPolicy: "store-or-network" },
   );
 
@@ -1620,9 +1628,14 @@ const ApprovalsInner: React.FC = () => {
  */
 const ApprovalsCopyQueueButtonInner: React.FC = () => {
   const { tenantId } = useAuthStore();
-  const data = useLazyLoadQuery<RequestsQueryType>(
-    RequestsQuery,
-    { first: 300, filters: tenantId ? { tenantId } : null },
+  const data = useLazyLoadQuery<ApprovalsListQueryType>(
+    ApprovalsListQuery,
+    {
+      first: 100,
+      filters: tenantId
+        ? { tenantId, statusSlug: "pending" }
+        : { statusSlug: "pending" },
+    },
     { fetchPolicy: "store-or-network" },
   );
   const showAlert = useAlertStore((s) => s.showAlert);

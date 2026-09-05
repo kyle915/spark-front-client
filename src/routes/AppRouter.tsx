@@ -18,6 +18,8 @@ import VerifyAccount from "@/auth/VerifyAccount";
 import { AppShellSkeleton } from "@/layout/PageSkeletons";
 import { LayoutChrome } from "@/layout/Layout";
 import { LayoutShellContext } from "@/layout/LayoutShellContext";
+import environment from "@/api/relay/environment";
+import { prefetchHotRelayData } from "@/lib/prefetchHotRelayData";
 
 const rootPath = "/";
 
@@ -29,6 +31,15 @@ const rootPath = "/";
 // dashboard / recaps navigations.
 const RouteFallback = () => <AppShellSkeleton />;
 
+/** Idle-warm tracker / recaps / approvals Relay data once tenant is known. */
+const HotRelayPrefetch = () => {
+  const tenantId = useAuthStore((s) => s.tenantId);
+  useEffect(() => {
+    prefetchHotRelayData(environment, tenantId);
+  }, [tenantId]);
+  return null;
+};
+
 /**
  * Persistent chrome for every private route. LayoutShellContext tells
  * page-level `<Layout>` to passthrough so sidebar / topbar / chat
@@ -36,6 +47,7 @@ const RouteFallback = () => <AppShellSkeleton />;
  */
 const AuthenticatedShell = () => (
   <LayoutShellContext.Provider value={true}>
+    <HotRelayPrefetch />
     <LayoutChrome>
       <Suspense fallback={<RouteFallback />}>
         <Outlet />

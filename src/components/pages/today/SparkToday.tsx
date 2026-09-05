@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import {
@@ -137,14 +137,18 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   }, [data, today]);
 
   // GPS pings — re-fetches every 60 seconds so the map stays live.
+  // Must be useEffect (not useMemo) so the interval cleans up on unmount.
   const [pingTick, setPingTick] = useState(0);
-  useMemo(() => {
+  useEffect(() => {
     const id = window.setInterval(() => setPingTick((t) => t + 1), 60_000);
     return () => window.clearInterval(id);
   }, []);
   const pingData = useLazyLoadQuery<RecentLocationPingsQueryType>(
     RecentLocationPingsQuery,
-    { withinMinutes: 30 },
+    // 120 min: walk-up may only ping at clock-in + while the check-in
+    // tab stays open; 30 min dropped anyone who clocked early and put
+    // the phone away.
+    { withinMinutes: 120, tenantId: tenantId || null },
     { fetchPolicy: "network-only", fetchKey: pingTick },
   );
   const pings: Ping[] = useMemo(() => {
@@ -165,14 +169,20 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
 
   const mappable = shifts.filter((s) => s.coords !== null);
   const center = useMemo(() => {
-    if (mappable.length === 0) return { lat: 39.5, lng: -98.35 };
-    const lats = mappable.map((s) => s.coords!.lat).sort((a, b) => a - b);
-    const lngs = mappable.map((s) => s.coords!.lng).sort((a, b) => a - b);
+    // Prefer event coords; fall back to live BA pings so an empty
+    // "MAPPED" day still frames the map on people on the ground.
+    const pts =
+      mappable.length > 0
+        ? mappable.map((s) => s.coords!)
+        : pings.map((p) => ({ lat: p.lat, lng: p.lng }));
+    if (pts.length === 0) return { lat: 39.5, lng: -98.35 };
+    const lats = pts.map((p) => p.lat).sort((a, b) => a - b);
+    const lngs = pts.map((p) => p.lng).sort((a, b) => a - b);
     return {
       lat: lats[Math.floor(lats.length / 2)],
       lng: lngs[Math.floor(lngs.length / 2)],
     };
-  }, [mappable]);
+  }, [mappable, pings]);
 
   return (
     <div className="space-y-4">
@@ -210,7 +220,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           <APIProvider apiKey={apiKey} libraries={["marker"]}>
             <GMap
               defaultCenter={center}
-              defaultZoom={mappable.length === 1 ? 11 : 4}
+              defaultZoom={
+                mappable.length === 1 || pings.length === 1 ? 11 : 4
+              }
               mapId="spark-v2-today"
               styles={
                 [
