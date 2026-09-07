@@ -3,6 +3,6 @@ import { PHOTO_CAP } from "./photoCap";
 
 describe("PHOTO_CAP", () => {
   it("allows Feel Free-sized field day batches", () => {
-    expect(PHOTO_CAP).toBe(50);
+    expect(PHOTO_CAP).toBe(100);
   });
 });
