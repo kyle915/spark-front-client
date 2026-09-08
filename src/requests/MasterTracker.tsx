@@ -24,6 +24,7 @@ import { UsersQuery } from "@/api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
 import { useConsumersSampled } from "@/hooks/useConsumersSampled";
 import { useFirstTimeConsumers } from "@/hooks/useFirstTimeConsumers";
+import { useProductsPurchased } from "@/hooks/useProductsPurchased";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
@@ -45,7 +46,7 @@ import {
  *
  *   [STATUS] All·N | Pending·N | Queue·N | Approved·N | Scheduled·N | Done·N    [Search…]
  *
- *   [EVENTS] [CONSUMERS] [FIRST-TIME] [INDIVIDUAL : BULK] [$/SAMPLE]
+ *   [EVENTS] [CONSUMERS] [FIRST-TIME] [PRODUCTS PURCHASED] [$/SAMPLE]
  *
  *   | DATE | STATUS | MARKET | VENUE | TYPE | CONSUMERS | 1ST-TIME | $/SAMPLE | RECAP |
  *   ...
@@ -1326,6 +1327,18 @@ const FirstTimeStat: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   return <>{firstTime == null ? "—" : fmtNum(firstTime)}</>;
 };
 
+/**
+ * PRODUCTS PURCHASED strip — tenantKpis.productsSold (same soldUnits matcher
+ * as Insights / recap list: cans/packs primary, purchase/sold fallback).
+ * Torch: single cans + packs purchased fields. Honest "—" when empty.
+ */
+const ProductsPurchasedStat: React.FC<{ tenantId: string }> = ({
+  tenantId,
+}) => {
+  const purchased = useProductsPurchased(tenantId, 0);
+  return <>{purchased == null ? "—" : fmtNum(purchased)}</>;
+};
+
 export default function MasterTracker() {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
@@ -1953,10 +1966,18 @@ export default function MasterTracker() {
             </p>
           </div>
           <div className="spark-card p-4">
-            {/* Request has no individual/bulk/portal source field yet —
-                wireframe ratio stays "—" rather than inventing a split. */}
-            <p className="label-mini">INDIVIDUAL : BULK</p>
-            <p className="tab-num text-3xl font-bold mt-1">—</p>
+            <p className="label-mini">PRODUCTS PURCHASED</p>
+            <p className="tab-num text-3xl font-bold mt-1">
+              {tenantId ? (
+                <Suspense
+                  fallback={<span style={{ opacity: 0.4 }}>…</span>}
+                >
+                  <ProductsPurchasedStat tenantId={tenantId} />
+                </Suspense>
+              ) : (
+                "—"
+              )}
+            </p>
           </div>
           <div className="spark-card p-4">
             {/* $/sample needs an explicit ROI spend÷samples rollup; account
