@@ -23,6 +23,7 @@ import type { RmmClientsQuery as RmmClientsQueryType } from "@api/queries/__gene
 import { UsersQuery } from "@/api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
 import { useConsumersSampled } from "@/hooks/useConsumersSampled";
+import { useFirstTimeConsumers } from "@/hooks/useFirstTimeConsumers";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
@@ -1315,6 +1316,16 @@ const ConsumersStat: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   return <>{fmtNum(consumers)}</>;
 };
 
+/**
+ * FIRST-TIME strip — same isolation pattern as ConsumersStat. Pulled from
+ * tenantKpis so custom-recap "First Time …" fields (Torch, LD, etc.) count.
+ * Renders "—" when the tenant has no first-time signal yet (honest empty).
+ */
+const FirstTimeStat: React.FC<{ tenantId: string }> = ({ tenantId }) => {
+  const firstTime = useFirstTimeConsumers(tenantId, 0);
+  return <>{firstTime == null ? "—" : fmtNum(firstTime)}</>;
+};
+
 export default function MasterTracker() {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
@@ -1929,13 +1940,27 @@ export default function MasterTracker() {
           </div>
           <div className="spark-card p-4">
             <p className="label-mini">FIRST-TIME</p>
-            <p className="tab-num text-3xl font-bold mt-1">—</p>
+            <p className="tab-num text-3xl font-bold mt-1">
+              {tenantId ? (
+                <Suspense
+                  fallback={<span style={{ opacity: 0.4 }}>…</span>}
+                >
+                  <FirstTimeStat tenantId={tenantId} />
+                </Suspense>
+              ) : (
+                "—"
+              )}
+            </p>
           </div>
           <div className="spark-card p-4">
+            {/* Request has no individual/bulk/portal source field yet —
+                wireframe ratio stays "—" rather than inventing a split. */}
             <p className="label-mini">INDIVIDUAL : BULK</p>
             <p className="tab-num text-3xl font-bold mt-1">—</p>
           </div>
           <div className="spark-card p-4">
+            {/* $/sample needs an explicit ROI spend÷samples rollup; account
+                spend and BA pay are not sample cost — keep honest empty. */}
             <p className="label-mini">$/SAMPLE</p>
             <p
               className="tab-num text-3xl font-bold mt-1"

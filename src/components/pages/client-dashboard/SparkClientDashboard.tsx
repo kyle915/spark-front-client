@@ -28,6 +28,7 @@ import { useSidebarCounts } from "@/hooks/useSidebarCounts";
 import { ClientWeekAheadQuery } from "@/api/queries/ClientWeekAheadQuery";
 import type { ClientWeekAheadQuery as ClientWeekAheadQueryType } from "@api/queries/__generated__/ClientWeekAheadQuery.graphql";
 import AskAiButton from "@/components/ai/AskAiButton";
+import { requestDateKey } from "@/lib/requestDateKey";
 
 const AccountMapBody = lazy(() =>
   import("@/components/pages/map/SparkAccountMap").then((m) => ({
@@ -183,7 +184,8 @@ const ClientInner: React.FC = () => {
   const data = useLazyLoadQuery<ClientWeekAheadQueryType>(
     ClientWeekAheadQuery,
     {
-      first: 200,
+      // Busy tenants can schedule 200+ demos in a week (Torch sheet import).
+      first: 1000,
       tenantId: tenantId || "0",
       lookbackDays: 90,
       filters: tenantId
@@ -191,6 +193,7 @@ const ClientInner: React.FC = () => {
             tenantId,
             startDate: dateWindow.startDate,
             endDate: dateWindow.endDate,
+            dateSort: "asc",
           }
         : null,
     },
@@ -212,12 +215,11 @@ const ClientInner: React.FC = () => {
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
     for (const r of rows) {
-      if (!r.date) continue;
-      // r.date is YYYY-MM-DD — parsing as local works because the
-      // bucket keys are local dates too.
-      const [y, mo, d] = r.date.split("-").map(Number);
-      if (!y || !mo || !d) continue;
-      const k = dayKey(new Date(y, mo - 1, d));
+      // Request.date is a naive ISO datetime ("2026-09-10T14:00:00").
+      // slice(0,10) — never split("-").map(Number) on the full string
+      // (day becomes NaN and every row is dropped).
+      const k = requestDateKey(r.date);
+      if (!k) continue;
       const slot = byKey.get(k);
       if (slot) slot.count += 1;
     }
@@ -249,9 +251,9 @@ const ClientInner: React.FC = () => {
     const sevenAhead = new Date(today);
     sevenAhead.setDate(today.getDate() + 7);
     for (const r of rows) {
-      if (!r.date) continue;
-      const [y, mo, d] = r.date.split("-").map(Number);
-      if (!y || !mo || !d) continue;
+      const k = requestDateKey(r.date);
+      if (!k) continue;
+      const [y, mo, d] = k.split("-").map(Number);
       const ms = new Date(y, mo - 1, d).getTime();
       if (!Number.isFinite(ms)) continue;
       if (ms < today.getTime() || ms >= sevenAhead.getTime()) continue;

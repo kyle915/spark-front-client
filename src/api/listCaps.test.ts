@@ -41,6 +41,8 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(dash).not.toContain('from "@/api/queries/RequestsQuery"');
     expect(dash).toContain("ClientWeekAheadQuery");
     expect(dash).toContain("clientTodayCompletion");
+    expect(dash).toContain("requestDateKey");
+    expect(dash).toContain("first: 1000");
     const weekAhead = src("./queries/ClientWeekAheadQuery.ts");
     expect(weekAhead).toContain("ClientWeekAheadQuery");
     expect(weekAhead).toContain("clientTodayCompletion");
