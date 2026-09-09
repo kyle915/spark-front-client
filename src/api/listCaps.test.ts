@@ -60,4 +60,25 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(tracker).not.toContain('from "@/api/queries/RequestsQuery"');
     expect(src("./queries/TrackerListQuery.ts")).toContain("TrackerListQuery");
   });
+
+  it("Reports charts do not pull fat RequestsQuery / classic-only RecapsQuery", () => {
+    const reports = src("../components/pages/reports/SparkReports.tsx");
+    expect(reports).not.toContain('from "@/api/queries/RequestsQuery"');
+    expect(reports).not.toContain('from "@/api/queries/RecapsQuery"');
+    expect(reports).toContain("ReportsRequestsChartQuery");
+    expect(reports).toContain("ReportsEngagementsChartQuery");
+    expect(reports).toContain("customRecaps");
+    const requestsChart = src("./queries/ReportsRequestsChartQuery.ts");
+    expect(requestsChart).toContain("ReportsRequestsChartQuery");
+    // Assert the operation selection stays slim (not comment text).
+    expect(requestsChart).toMatch(
+      /query ReportsRequestsChartQuery[\s\S]*createdAt[\s\S]*requestType/,
+    );
+    expect(requestsChart).not.toMatch(/\bopenShifts\b/);
+    expect(requestsChart).not.toMatch(/\bproducts\b/);
+    const engagementsChart = src("./queries/ReportsEngagementsChartQuery.ts");
+    expect(engagementsChart).toContain("customRecaps");
+    expect(engagementsChart).toContain("consumersSampled");
+    expect(engagementsChart).toContain("consumerEngagements");
+  });
 });
