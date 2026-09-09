@@ -5692,6 +5692,7 @@ type Query {
   tenantActivationBreakdown(tenantId: ID!, startDate: String = null, endDate: String = null): TenantActivationBreakdown!
   tenantProgramHealth(tenantId: ID!, startDate: String = null, endDate: String = null): TenantProgramHealth!
   tenantConversionKpis(tenantId: ID!, startDate: String!, endDate: String!): TenantConversionKpis!
+  tenantSkuPulse(tenantId: ID!, startDate: String!, endDate: String!): TenantSkuPulse!
   tenantFieldCadence(tenantId: ID!): TenantFieldCadence!
   clientTodayCompletion(tenantId: ID!, lookbackDays: Int = null): ClientTodayCompletion!
   tenantKpiComparison(tenantId: ID!, period: String! = "month"): TenantKpiComparison
@@ -7610,6 +7611,26 @@ type TenantConversionKpis {
   previousPct: Float
   currentLabel: String
   previousLabel: String
+  startDate: String
+  endDate: String
+}
+
+type TenantSkuPulseItem {
+  product: String!
+  samples: Int!
+}
+
+"""
+Top catalog SKUs by samples handed out (approved recaps only).
+
+``mode`` is ``quantity`` when structured sample rows exist, else ``none``.
+Never invents per-SKU purchased — pair with TenantConversionKpis.sold for
+the Retail+On-Prem aggregate.
+"""
+type TenantSkuPulse {
+  mode: String!
+  items: [TenantSkuPulseItem!]!
+  totalSamples: Int!
   startDate: String
   endDate: String
 }
