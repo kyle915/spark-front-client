@@ -420,9 +420,9 @@ const ClientInner: React.FC = () => {
         <Tile
           label="Done · last 30d"
           value={counts.done30d}
-          sub="Completed events"
+          sub="Submitted recaps"
           tone="muted"
-          onClick={() => navigate("/requests/list")}
+          onClick={() => navigate("/recaps/list")}
         />
       </div>
 
