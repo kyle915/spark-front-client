@@ -66,6 +66,7 @@ export const TrackerListQuery = graphql`
           event {
             id
             uuid
+            date
             assignedAmbassadorsCount
             confirmedAmbassadorsCount
           }

@@ -11,7 +11,8 @@ import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import BelowFold from "@/components/insights/BelowFold";
 import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
-import ProgramHealthTile from "@/components/insights/ProgramHealthTile";
+import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
+import MarketConcentrationStrip from "@/components/insights/MarketConcentrationStrip";
 import AskAiButton from "@/components/ai/AskAiButton";
 import { TenantActivationBreakdownQuery } from "@/api/queries/TenantActivationBreakdownQuery";
 import type { TenantActivationBreakdownQuery as TenantActivationBreakdownQueryType } from "@api/queries/__generated__/TenantActivationBreakdownQuery.graphql";
@@ -19,8 +20,6 @@ import { ExecutiveSummaryQuery } from "@/api/queries/ExecutiveSummaryQuery";
 import type { ExecutiveSummaryQuery as ExecutiveSummaryQueryType } from "@api/queries/__generated__/ExecutiveSummaryQuery.graphql";
 import { TenantGoalsQuery } from "@/api/queries/TenantGoalsQuery";
 import type { TenantGoalsQuery as TenantGoalsQueryType } from "@api/queries/__generated__/TenantGoalsQuery.graphql";
-import { TenantProgramHealthQuery } from "@/api/queries/TenantProgramHealthQuery";
-import type { TenantProgramHealthQuery as TenantProgramHealthQueryType } from "@api/queries/__generated__/TenantProgramHealthQuery.graphql";
 import environment from "@/api/relay/environment";
 
 const TenantKpiCharts = lazy(() => import("@/components/ai/TenantKpiCharts"));
@@ -34,9 +33,6 @@ const TenantSentimentCard = lazy(
   () => import("@/components/ai/TenantSentimentCard"),
 );
 const TenantGeoHeatmap = lazy(() => import("@/components/ai/TenantGeoHeatmap"));
-const TenantBaLeaderboard = lazy(
-  () => import("@/components/ai/TenantBaLeaderboard"),
-);
 const MetroBreakdownCard = lazy(
   () => import("@/components/pages/dashboard-event/MetroBreakdownCard"),
 );
@@ -152,7 +148,7 @@ async function buildInsightsSummaryCopy(opts: {
   rangeLabel: string;
 }): Promise<string> {
   const { tenantId, startDate, endDate, rangeLabel } = opts;
-  const [pace, goals, health] = await Promise.all([
+  const [pace, goals] = await Promise.all([
     fetchQuery<ExecutiveSummaryQueryType>(
       environment,
       ExecutiveSummaryQuery,
@@ -165,32 +161,14 @@ async function buildInsightsSummaryCopy(opts: {
       { tenantId, year: null },
       { fetchPolicy: "store-or-network" },
     ).toPromise(),
-    fetchQuery<TenantProgramHealthQueryType>(
-      environment,
-      TenantProgramHealthQuery,
-      { tenantId, startDate, endDate },
-      { fetchPolicy: "store-or-network" },
-    ).toPromise(),
   ]);
 
   const summary = pace?.executiveSummary;
   const goalItems = goals?.tenantGoals?.items ?? [];
-  const ph = health?.tenantProgramHealth;
   const lines: string[] = [
     `*Insights summary — ${rangeLabel.toUpperCase()} (${startDate} → ${endDate})*`,
     "",
   ];
-
-  if (ph) {
-    lines.push(
-      `*Program health*`,
-      `• Scheduled: ${ph.scheduled}`,
-      `• Filed (photos/metrics): ${ph.filed}`,
-      `• Approved: ${ph.approved}`,
-      `• Missing: ${ph.missing}`,
-      "",
-    );
-  }
 
   if (summary) {
     lines.push(
@@ -475,8 +453,8 @@ function InsightsInner() {
             className="mt-3 text-base"
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            Page range scopes Timeline, Activation, geo, BA, and program
-            health. Program KPIs stay calendar-year.
+            Page range scopes Timeline, Activation, and geo. Program KPIs
+            stay calendar-year.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -540,11 +518,22 @@ function InsightsInner() {
       {tenantId && <PaceToGoalHero tenantId={tenantId} />}
 
       {tenantId && (
-        <ProgramHealthTile
+        <ExecutiveInsightsStrip
           tenantId={tenantId}
           startDate={startDate}
           endDate={endDate}
           rangeLabel={rangeLabel}
+          comparisonPeriod={comparisonPeriod}
+        />
+      )}
+
+      {tenantId && (
+        <MarketConcentrationStrip
+          tenantId={tenantId}
+          startDate={startDate}
+          endDate={endDate}
+          rangeLabel={rangeLabel}
+          onStateSelect={(code) => setSelectedState(code)}
         />
       )}
 
@@ -606,7 +595,7 @@ function InsightsInner() {
               className="spark-card p-6 text-center text-sm"
               style={{ color: "rgba(255,255,255,0.35)" }}
             >
-              Map & leaderboard load as you scroll…
+              Map loads as you scroll…
             </div>
           }
         >
@@ -618,14 +607,6 @@ function InsightsInner() {
                 endDate={endDate}
                 rangeLabel={rangeLabel}
                 onStateSelect={(code) => setSelectedState(code)}
-              />
-            </Suspense>
-            <Suspense fallback={null}>
-              <TenantBaLeaderboard
-                tenantId={tenantId}
-                startDate={startDate}
-                endDate={endDate}
-                rangeLabel={rangeLabel}
               />
             </Suspense>
             <Suspense fallback={null}>

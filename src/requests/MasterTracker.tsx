@@ -46,9 +46,9 @@ import {
  *
  *   [STATUS] All·N | Pending·N | Queue·N | Approved·N | Scheduled·N | Done·N    [Search…]
  *
- *   [EVENTS] [CONSUMERS] [FIRST-TIME] [PRODUCTS PURCHASED] [$/SAMPLE]
+ *   [SCHEDULED] [CONSUMERS] [FIRST-TIME] [PRODUCTS PURCHASED]
  *
- *   | DATE | STATUS | MARKET | VENUE | TYPE | CONSUMERS | 1ST-TIME | $/SAMPLE | RECAP |
+ *   | DATE | STATUS | MARKET | VENUE | TYPE | CONSUMERS | 1ST-TIME | RECAP |
  *   ...
  */
 
@@ -395,7 +395,6 @@ const TrackerTable: React.FC<{
               <th className="px-4 py-3">TYPE</th>
               <th className="px-4 py-3 text-right">CONSUMERS</th>
               <th className="px-4 py-3 text-right">1ST-TIME</th>
-              <th className="px-4 py-3 text-right">$/SAMPLE</th>
               <th className="px-4 py-3">RECAP</th>
               <th className="px-4 py-3">NOTES</th>
             </tr>
@@ -404,7 +403,7 @@ const TrackerTable: React.FC<{
             {rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={11}
+                  colSpan={10}
                   className="px-4 py-10 text-center text-sm"
                   style={{ color: "rgba(255,255,255,0.55)" }}
                 >
@@ -423,7 +422,7 @@ const TrackerTable: React.FC<{
               const headerEl = showGroupHeader ? (
                 <tr key={`hdr-${rowIdx}`}>
                   <td
-                    colSpan={11}
+                    colSpan={10}
                     className="px-4 py-3 mono"
                     style={{
                       letterSpacing: "0.16em",
@@ -664,7 +663,6 @@ const TrackerTable: React.FC<{
                   >
                     —
                   </td>
-                  <td className="px-4 py-3 text-right tab-num">—</td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {r.recapStatus === "submitted" ? (
                       <span
@@ -1049,19 +1047,24 @@ const MasterTrackerInner: React.FC<{
       const cityish = n.retailer?.location?.name ?? n.location?.name ?? "";
       const market = [cityish, stateCode].filter(Boolean).join(", ");
       const recapCount = n.recapsFiledCount ?? 0;
+      // Due-ness must follow the activation that actually ran (event.date),
+      // not Request.date — reschedules update the event in place and leave
+      // the request date stale (Arena Liquor: request Sep 5, event Sep 12).
+      const activationDate =
+        n.event?.date ?? n.startTime ?? n.date ?? null;
       const recapStatus: RecapStatus =
         (n.eventsCount ?? 0) === 0
           ? "none"
           : recapCount > 0
             ? "submitted"
-            : isRecapDue(n.date, 30)
+            : isRecapDue(activationDate, 30)
               ? "due"
               : "none";
       return {
         uuid: String(n.uuid),
         id: String(n.id),
-        date: n.date ?? "",
-        dateLabel: fmtDateLabel(n.date),
+        date: activationDate ?? "",
+        dateLabel: fmtDateLabel(activationDate),
         timeLabel: fmtTimeRange(n.startTime, n.endTime),
         statusSlug: (n.status?.slug ?? n.status?.name ?? "pending")
           .toString()
@@ -1078,7 +1081,7 @@ const MasterTrackerInner: React.FC<{
         openShiftsTooltip: n.openShiftsTooltip ?? "",
         eventUuid: n.event?.uuid ? String(n.event.uuid) : null,
         eventId: n.event?.id ? String(n.event.id) : null,
-        eventDate: (n.startTime ?? n.date) ? String(n.startTime ?? n.date) : null,
+        eventDate: activationDate ? String(activationDate) : null,
         eventAddress: n.address ? String(n.address) : null,
         recapEventUuid: n.recapEventUuid ? String(n.recapEventUuid) : null,
         recapStatus,
@@ -1924,17 +1927,27 @@ export default function MasterTracker() {
         </div>
 
         {/* Totals strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="spark-card p-4">
-            <p className="label-mini">EVENTS</p>
+            <p className="label-mini">SCHEDULED</p>
             <p
               className="tab-num text-3xl font-bold mt-1"
               style={{ color: "var(--spark-lime)" }}
+              title="Master Tracker requests (all statuses). Insights 'events' count only those with filed recaps."
             >
-              {/* Match the status chips (all-time, this tenant). m.totalEvents
-                  comes from the analytics dashboard which silently scopes to the
-                  current quarter, so it under-counted events dated outside it. */}
+              {/* Match the status chips (all-time, this tenant). Distinct from
+                  Insights Program KPIs events (= activations that produced a
+                  recap). */}
               {fmtNum(total)}
+            </p>
+            <p
+              className="mono text-[9px] mt-1"
+              style={{
+                letterSpacing: "0.12em",
+                color: "rgba(255,255,255,0.4)",
+              }}
+            >
+              TRACKER REQUESTS
             </p>
           </div>
           <div className="spark-card p-4">
@@ -1977,17 +1990,6 @@ export default function MasterTracker() {
               ) : (
                 "—"
               )}
-            </p>
-          </div>
-          <div className="spark-card p-4">
-            {/* $/sample needs an explicit ROI spend÷samples rollup; account
-                spend and BA pay are not sample cost — keep honest empty. */}
-            <p className="label-mini">$/SAMPLE</p>
-            <p
-              className="tab-num text-3xl font-bold mt-1"
-              style={{ color: "var(--spark-lime)" }}
-            >
-              —
             </p>
           </div>
         </div>

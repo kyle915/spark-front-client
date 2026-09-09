@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 /**
  * Mount children only after they scroll near the viewport (or immediately
  * when IntersectionObserver is unavailable). Used on Insights to defer
- * heavy geo / leaderboard Relay queries until below the fold.
+ * heavy geo Relay queries until below the fold.
  */
 export default function BelowFold({
   children,
