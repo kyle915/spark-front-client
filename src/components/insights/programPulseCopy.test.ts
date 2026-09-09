@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildProgramPulseCopy,
   buildProgramPulseOneLiner,
-} from "@/components/insights/ExecutiveInsightsStrip";
+} from "@/components/insights/programPulseCopy";
 
 describe("Program pulse copy helpers", () => {
   const mix = [
@@ -63,7 +63,9 @@ describe("Program pulse copy helpers", () => {
       totalSamples: 70,
       oneLiner: "In 30d: test.",
     });
-    expect(text).toContain("Products purchased (Retail + On-Prem aggregate, not per SKU): 46");
+    expect(text).toContain(
+      "Products purchased (Retail + On-Prem aggregate, not per SKU): 46",
+    );
     expect(text).toContain("5MG — Berry Blast 60");
   });
 });

@@ -10,10 +10,11 @@ import type { EventDashboardTimelineQuery as EventDashboardTimelineQueryType } f
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import BelowFold from "@/components/insights/BelowFold";
 import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
-import ExecutiveInsightsStrip, {
+import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
+import {
   buildProgramPulseCopy,
   buildProgramPulseOneLiner,
-} from "@/components/insights/ExecutiveInsightsStrip";
+} from "@/components/insights/programPulseCopy";
 import MarketConcentrationStrip from "@/components/insights/MarketConcentrationStrip";
 import AskAiButton from "@/components/ai/AskAiButton";
 import { TenantActivationBreakdownQuery } from "@/api/queries/TenantActivationBreakdownQuery";
