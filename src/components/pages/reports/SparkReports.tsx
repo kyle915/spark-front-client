@@ -4,10 +4,10 @@ import { useAuthStore } from "@/store/authStore";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import { Suspense, useMemo } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
-import { RequestsQuery } from "@/api/queries/RequestsQuery";
-import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
-import { RecapsQuery } from "@/api/queries/RecapsQuery";
-import type { RecapsQuery as RecapsQueryType } from "@api/queries/__generated__/RecapsQuery.graphql";
+import { ReportsRequestsChartQuery } from "@/api/queries/ReportsRequestsChartQuery";
+import type { ReportsRequestsChartQuery as ReportsRequestsChartQueryType } from "@api/queries/__generated__/ReportsRequestsChartQuery.graphql";
+import { ReportsEngagementsChartQuery } from "@/api/queries/ReportsEngagementsChartQuery";
+import type { ReportsEngagementsChartQuery as ReportsEngagementsChartQueryType } from "@api/queries/__generated__/ReportsEngagementsChartQuery.graphql";
 import { Bar, Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -39,6 +39,9 @@ const SPARK_PALETTE = [
   "#7a8074", // muted
 ];
 
+/** Cap matches Account Map / list ceiling — enough for 90d tenant charts. */
+const CHART_PAGE_SIZE = 2000;
+
 const isoWeekKey = (d: Date): string => {
   // Monday-start week label "MMM D" (week start). Cheap to compute,
   // easy to read on a 12-bar chart.
@@ -49,19 +52,92 @@ const isoWeekKey = (d: Date): string => {
   return start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-const EventsPerWeekChart: React.FC = () => {
+type EngagementRow = {
+  createdAt: string | null | undefined;
+  eventDate: string | null | undefined;
+  eventRetailer: string | null | undefined;
+  consumers: number;
+};
+
+const engagementFromClassic = (n: {
+  totalEngagements: number | null | undefined;
+  consumerEngagements: ReadonlyArray<{
+    totalConsumer: number | null | undefined;
+  } | null> | null;
+}): number => {
+  const fromCe = (n.consumerEngagements ?? []).reduce((sum, row) => {
+    const v = row?.totalConsumer;
+    return sum + (typeof v === "number" ? v : 0);
+  }, 0);
+  if (fromCe > 0) return fromCe;
+  return typeof n.totalEngagements === "number" ? n.totalEngagements : 0;
+};
+
+const engagementFromCustom = (n: {
+  consumersSampled: number | null | undefined;
+  totalEngagements: number | null | undefined;
+}): number => {
+  if (typeof n.consumersSampled === "number") return n.consumersSampled;
+  if (typeof n.totalEngagements === "number") return n.totalEngagements;
+  return 0;
+};
+
+const useReportsRequestRows = () => {
   const { tenantId } = useAuthStore();
-  const data = useLazyLoadQuery<RequestsQueryType>(
-    RequestsQuery,
-    { first: 2000, filters: tenantId ? { tenantId } : null },
+  const data = useLazyLoadQuery<ReportsRequestsChartQueryType>(
+    ReportsRequestsChartQuery,
+    { first: CHART_PAGE_SIZE, filters: tenantId ? { tenantId } : null },
     { fetchPolicy: "store-or-network" },
   );
-  const { labels, values } = useMemo(() => {
-    const rows =
+  return useMemo(
+    () =>
       data?.requests?.edges
         ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [],
+    [data],
+  );
+};
 
+const useReportsEngagementRows = (): EngagementRow[] => {
+  const { tenantId } = useAuthStore();
+  const filters = tenantId ? { tenantId } : null;
+  const data = useLazyLoadQuery<ReportsEngagementsChartQueryType>(
+    ReportsEngagementsChartQuery,
+    {
+      first: CHART_PAGE_SIZE,
+      filters,
+      customFilters: filters,
+    },
+    { fetchPolicy: "store-or-network" },
+  );
+  return useMemo(() => {
+    const classic =
+      data?.recaps?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
+        ?.map((n) => ({
+          createdAt: n.createdAt,
+          eventDate: n.eventDate,
+          eventRetailer: n.eventRetailer,
+          consumers: engagementFromClassic(n),
+        })) ?? [];
+    const custom =
+      data?.customRecaps?.edges
+        ?.map((e) => e?.node)
+        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
+        ?.map((n) => ({
+          createdAt: n.createdAt,
+          eventDate: n.eventDate,
+          eventRetailer: n.eventRetailer,
+          consumers: engagementFromCustom(n),
+        })) ?? [];
+    return [...classic, ...custom];
+  }, [data]);
+};
+
+const EventsPerWeekChart: React.FC = () => {
+  const rows = useReportsRequestRows();
+  const { labels, values } = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const cutoff = new Date(today);
@@ -93,7 +169,7 @@ const EventsPerWeekChart: React.FC = () => {
       labels: buckets.map((b) => b.key),
       values: buckets.map((b) => b.count),
     };
-  }, [data]);
+  }, [rows]);
 
   const chartData: ChartData<"bar"> = {
     labels,
@@ -135,17 +211,8 @@ const EventsPerWeekChart: React.FC = () => {
 };
 
 const ActivationMixChart: React.FC = () => {
-  const { tenantId } = useAuthStore();
-  const data = useLazyLoadQuery<RequestsQueryType>(
-    RequestsQuery,
-    { first: 2000, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
-  );
+  const rows = useReportsRequestRows();
   const { labels, values } = useMemo(() => {
-    const rows =
-      data?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
     const cutoff = Date.now() - 90 * 86_400_000;
     const counts = new Map<string, number>();
     for (const r of rows) {
@@ -159,7 +226,7 @@ const ActivationMixChart: React.FC = () => {
       labels: sorted.map(([k]) => k),
       values: sorted.map(([, v]) => v),
     };
-  }, [data]);
+  }, [rows]);
 
   const chartData: ChartData<"doughnut"> = {
     labels,
@@ -205,22 +272,12 @@ const ActivationMixChart: React.FC = () => {
 };
 
 // ---------------------------------------------------------------------------
-// Recap-driven charts (wire real `totalEngagements` from RecapsQuery).
+// Recap-driven charts (classic + custom; prefer consumersSampled on custom).
 // ---------------------------------------------------------------------------
 
 const ConsumersSampledChart: React.FC = () => {
-  const { tenantId } = useAuthStore();
-  const data = useLazyLoadQuery<RecapsQueryType>(
-    RecapsQuery,
-    { first: 2000, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
-  );
+  const rows = useReportsEngagementRows();
   const { labels, values } = useMemo(() => {
-    const rows =
-      data?.recaps?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const cutoff = new Date(today);
@@ -244,15 +301,13 @@ const ConsumersSampledChart: React.FC = () => {
       if (d < cutoff || d > today) continue;
       const idx = idxByKey.get(isoWeekKey(d));
       if (idx === undefined) continue;
-      const eng =
-        typeof r.totalEngagements === "number" ? r.totalEngagements : 0;
-      buckets[idx].count += eng;
+      buckets[idx].count += r.consumers;
     }
     return {
       labels: buckets.map((b) => b.key),
       values: buckets.map((b) => b.count),
     };
-  }, [data]);
+  }, [rows]);
 
   const total = values.reduce((s, v) => s + v, 0);
   if (total === 0) {
@@ -306,27 +361,17 @@ const ConsumersSampledChart: React.FC = () => {
 };
 
 const TopRetailersChart: React.FC = () => {
-  const { tenantId } = useAuthStore();
-  const data = useLazyLoadQuery<RecapsQueryType>(
-    RecapsQuery,
-    { first: 2000, filters: tenantId ? { tenantId } : null },
-    { fetchPolicy: "store-or-network" },
-  );
+  const rows = useReportsEngagementRows();
   const { labels, values } = useMemo(() => {
-    const rows =
-      data?.recaps?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
     const cutoff = Date.now() - 90 * 86_400_000;
     const totals = new Map<string, number>();
     for (const r of rows) {
       const raw = r.eventDate ?? r.createdAt;
       const t = raw ? new Date(raw).getTime() : NaN;
       if (!Number.isFinite(t) || t < cutoff) continue;
+      if (r.consumers <= 0) continue;
       const name = r.eventRetailer || "Unknown";
-      const eng =
-        typeof r.totalEngagements === "number" ? r.totalEngagements : 0;
-      totals.set(name, (totals.get(name) ?? 0) + eng);
+      totals.set(name, (totals.get(name) ?? 0) + r.consumers);
     }
     const sorted = [...totals.entries()]
       .sort((a, b) => b[1] - a[1])
@@ -335,7 +380,7 @@ const TopRetailersChart: React.FC = () => {
       labels: sorted.map(([k]) => k),
       values: sorted.map(([, v]) => v),
     };
-  }, [data]);
+  }, [rows]);
 
   if (values.length === 0 || values.every((v) => v === 0)) {
     return (
@@ -393,8 +438,9 @@ const TopRetailersChart: React.FC = () => {
  * Wireframe: spark-demo/index.html lines 2418-2484.
  *
  * KPI strip wired to dashboard metrics. Four charts wired to live data
- * (RequestsQuery + RecapsQuery). Scheduled-exports tiles remain visual-only
- * until the exports backend ships (tracked in REBUILD-PLAN.md).
+ * (slim ReportsRequestsChartQuery + ReportsEngagementsChartQuery).
+ * Scheduled-exports tiles remain visual-only until the exports backend
+ * ships (tracked in REBUILD-PLAN.md).
  */
 
 const fmtNum = (v: number | null | undefined) =>
