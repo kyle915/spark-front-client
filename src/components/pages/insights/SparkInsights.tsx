@@ -1,14 +1,13 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { fetchQuery } from "relay-runtime";
 import { useLazyLoadQuery } from "react-relay/hooks";
-import { useNavigate } from "react-router";
-import Layout from "@/layout/Layout";
+import { Navigate, useNavigate } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import useSparkRole from "@/hooks/useSparkRole";
 import { EventDashboardTimelineQuery } from "@/api/queries/EventDashboardTimelineQuery";
 import type { EventDashboardTimelineQuery as EventDashboardTimelineQueryType } from "@api/queries/__generated__/EventDashboardTimelineQuery.graphql";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
-import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import BelowFold from "@/components/insights/BelowFold";
 import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
 import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
@@ -190,7 +189,7 @@ async function buildInsightsSummaryCopy(opts: {
     lines.push("");
   }
 
-  lines.push("Open /insights or /reports for the full view.");
+  lines.push("Open Dashboard or /reports for the full view.");
   return lines.join("\n");
 }
 
@@ -373,13 +372,30 @@ function InsightsTimeline({
   );
 }
 
-function InsightsInner() {
+/** Program analytics body — embedded on Dashboard (admin + client). */
+export function InsightsBody({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   const { tenantId } = useAuthStore();
   const navigate = useNavigate();
   const showAlert = useAlertStore((s) => s.showAlert);
   const [range, setRange] = useState<RangeKey>("30d");
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [copying, setCopying] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#performance") return;
+    const t = window.setTimeout(() => {
+      document.getElementById("performance")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
+    return () => window.clearTimeout(t);
+  }, []);
 
   const { startDate, endDate, filters } = useMemo(() => {
     const today = new Date();
@@ -430,79 +446,114 @@ function InsightsInner() {
     }
   };
 
-  return (
-    <div className="space-y-6 lg:space-y-8 max-w-7xl">
-      <div className="flex items-end justify-between flex-wrap gap-4">
-        <div>
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            PROGRAM ANALYTICS
-          </p>
-          <h1
-            className="display text-2xl lg:text-3xl font-bold mt-2 leading-[1.1]"
-            style={{ letterSpacing: "-0.03em" }}
-          >
-            Insights
-          </h1>
-          <p
-            className="mt-3 text-base"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            Page range scopes Timeline, Activation, and geo. Program KPIs
-            stay calendar-year.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="pill-group">
-            {RANGES.map((r) => (
-              <button
-                key={r.key}
-                type="button"
-                onClick={() => {
-                  setRange(r.key);
-                  setSelectedState(null);
-                }}
-                className={`pill-btn ${r.key === range ? "on" : ""}`}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-          <AskAiButton tenantId={tenantId} />
+  const rangeControls = (
+    <div className="flex items-center gap-2 flex-wrap">
+      <div className="pill-group">
+        {RANGES.map((r) => (
           <button
+            key={r.key}
             type="button"
-            onClick={onCopySummary}
-            disabled={!tenantId || copying}
-            className="px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{
-              background: "transparent",
-              color: "var(--spark-text)",
-              border: "1px solid var(--spark-border)",
-              opacity: !tenantId || copying ? 0.5 : 1,
+            onClick={() => {
+              setRange(r.key);
+              setSelectedState(null);
             }}
-            title="Copy a Slack-friendly summary for this range"
+            className={`pill-btn ${r.key === range ? "on" : ""}`}
           >
-            {copying ? "Copying…" : "Copy summary"}
+            {r.label}
           </button>
-          <button
-            type="button"
-            onClick={() => navigate("/reports")}
-            className="px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{
-              background: "rgba(197,245,70,0.12)",
-              color: "var(--spark-lime)",
-              border: "1px solid rgba(197,245,70,0.35)",
-            }}
-          >
-            Open reports
-          </button>
-        </div>
+        ))}
       </div>
+      <AskAiButton tenantId={tenantId} />
+      <button
+        type="button"
+        onClick={onCopySummary}
+        disabled={!tenantId || copying}
+        className="px-4 py-2 rounded-xl text-sm font-semibold"
+        style={{
+          background: "transparent",
+          color: "var(--spark-text)",
+          border: "1px solid var(--spark-border)",
+          opacity: !tenantId || copying ? 0.5 : 1,
+        }}
+        title="Copy a Slack-friendly summary for this range"
+      >
+        {copying ? "Copying…" : "Copy summary"}
+      </button>
+      <button
+        type="button"
+        onClick={() => navigate("/reports")}
+        className="px-4 py-2 rounded-xl text-sm font-semibold"
+        style={{
+          background: "rgba(197,245,70,0.12)",
+          color: "var(--spark-lime)",
+          border: "1px solid rgba(197,245,70,0.35)",
+        }}
+      >
+        Open reports
+      </button>
+    </div>
+  );
+
+  return (
+    <div
+      id="performance"
+      className={
+        embedded
+          ? "space-y-6 lg:space-y-8"
+          : "space-y-6 lg:space-y-8 max-w-7xl"
+      }
+    >
+      {embedded ? (
+        <div className="flex items-end justify-between flex-wrap gap-4 pt-2">
+          <div>
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.18em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              PROGRAM PERFORMANCE
+            </p>
+            <p
+              className="mt-2 text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Range scopes Timeline, Activation, and geo. Program KPIs stay
+              calendar-year.
+            </p>
+          </div>
+          {rangeControls}
+        </div>
+      ) : (
+        <div className="flex items-end justify-between flex-wrap gap-4">
+          <div>
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.18em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              PROGRAM ANALYTICS
+            </p>
+            <h1
+              className="display text-2xl lg:text-3xl font-bold mt-2 leading-[1.1]"
+              style={{ letterSpacing: "-0.03em" }}
+            >
+              Dashboard
+            </h1>
+            <p
+              className="mt-3 text-base"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Page range scopes Timeline, Activation, and geo. Program KPIs
+              stay calendar-year.
+            </p>
+          </div>
+          {rangeControls}
+        </div>
+      )}
 
       <p
         className="mono text-[10px] -mt-2"
@@ -638,12 +689,17 @@ function InsightsInner() {
   );
 }
 
+/** Legacy `/insights` bookmarks → Dashboard (admin home / client home). */
 export default function SparkInsights() {
+  const { isClient } = useSparkRole();
   return (
-    <Layout>
-      <Suspense fallback={<DashboardSkeleton />}>
-        <InsightsInner />
-      </Suspense>
-    </Layout>
+    <Navigate
+      to={
+        isClient
+          ? { pathname: "/client-dashboard", hash: "performance" }
+          : { pathname: "/", hash: "performance" }
+      }
+      replace
+    />
   );
 }

@@ -9,13 +9,14 @@
  *   1. What's happening this week?
  *   2. How complete is the program (recap fill rate)?
  *   3. What do I need to look at right now?
- *   4. Where are my BAs on the ground?
+ *   4. Program performance (pace / KPIs / map) — same body as admin Dashboard
+ *   5. Where are my BAs on the ground? (map tab)
  *
  * Week-ahead uses slim ClientWeekAheadQuery (date + retailer over
  * today→+7d). Completion % uses clientTodayCompletion scalars
  * (filed / scheduled) — not a capped 90d request list. Sidebar badge
  * counts come from useSidebarCounts. Approvals / map tabs lazy-load
- * their bodies like AccountMapBody.
+ * their bodies like AccountMapBody. Legacy /insights redirects here.
  */
 
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
@@ -28,6 +29,7 @@ import { useSidebarCounts } from "@/hooks/useSidebarCounts";
 import { ClientWeekAheadQuery } from "@/api/queries/ClientWeekAheadQuery";
 import type { ClientWeekAheadQuery as ClientWeekAheadQueryType } from "@api/queries/__generated__/ClientWeekAheadQuery.graphql";
 import AskAiButton from "@/components/ai/AskAiButton";
+import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { requestDateKey } from "@/lib/requestDateKey";
 
 const AccountMapBody = lazy(() =>
@@ -426,39 +428,6 @@ const ClientInner: React.FC = () => {
         />
       </div>
 
-      <div
-        className="spark-card p-5 flex items-center justify-between flex-wrap gap-3"
-        style={{ borderRadius: 16 }}
-      >
-        <div>
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            DEEP ANALYTICS
-          </p>
-          <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.7)" }}>
-            KPIs, map, sentiment, and BA leaderboard live on Insights — kept off
-            Today so this page stays light.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => navigate("/insights")}
-          className="px-4 py-2.5 rounded-xl text-sm font-semibold"
-          style={{
-            background: "rgba(197,245,70,0.12)",
-            color: "var(--spark-lime)",
-            border: "1px solid rgba(197,245,70,0.35)",
-          }}
-        >
-          Full insights →
-        </button>
-      </div>
-
       {/* Week-ahead bars */}
       <div className="spark-card p-5">
         <p
@@ -624,6 +593,10 @@ const ClientInner: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <Suspense fallback={<DashboardSkeleton />}>
+        <InsightsBody embedded />
+      </Suspense>
 
       </>)}
     </div>

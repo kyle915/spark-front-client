@@ -6,6 +6,6 @@
  */
 export function useDashboardData(): never {
   throw new Error(
-    "useDashboardData is retired. Use Insights (/insights) or event dashboard hooks.",
+    "useDashboardData is retired. Use Dashboard (/) program performance section.",
   );
 }
