@@ -185,6 +185,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
 }) => {
   const role = useSparkRole();
   const navigate = useNavigate();
+  const location = useLocation();
   // Bumped after an invite so the Roster panel refetches and shows the
   // newly-invited BA immediately (otherwise the page looked like "nothing
   // happened" until a manual reload).
@@ -319,6 +320,26 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               ● {recaps.length} RECAP{recaps.length === 1 ? "" : "S"}
             </button>
           )}
+          {recaps.length === 0 &&
+            (event.request?.recapsFiledCount ?? 0) > 0 &&
+            event.request?.recapEventUuid &&
+            event.request.recapEventUuid !== event.uuid && (
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(`/event/view/${event.request!.recapEventUuid}`, {
+                    state: { from: location.pathname },
+                  })
+                }
+                className="chip chip-lime"
+                style={{ cursor: "pointer", border: "none" }}
+                title="Recap filed on a linked shift for this request"
+              >
+                ● {event.request.recapsFiledCount} RECAP
+                {(event.request.recapsFiledCount ?? 0) === 1 ? "" : "S"} ON
+                LINKED SHIFT
+              </button>
+            )}
           {role.isAdmin && (
             <>
               <button
@@ -635,7 +656,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               className="h-32 relative overflow-hidden grid place-items-center"
               style={{ background: "rgba(255,255,255,0.02)" }}
             >
-              <div className="text-center">
+              <div className="text-center px-4">
                 <p
                   className="mono text-[10px]"
                   style={{
@@ -649,8 +670,55 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                   className="text-xs mt-1"
                   style={{ color: "rgba(255,255,255,0.55)" }}
                 >
-                  No recap filed yet.
+                  No recap filed on this event yet.
                 </p>
+                {(() => {
+                  const filed = event.request?.recapsFiledCount ?? 0;
+                  const sibling = event.request?.recapEventUuid;
+                  if (filed > 0 && sibling && sibling !== event.uuid) {
+                    return (
+                      <button
+                        type="button"
+                        className="mt-3 mono text-[10px] px-3 py-1.5 rounded-lg"
+                        style={{
+                          letterSpacing: "0.12em",
+                          color: "var(--spark-lime)",
+                          border: "1px solid rgba(197,245,70,0.35)",
+                          background: "rgba(197,245,70,0.08)",
+                        }}
+                        onClick={() =>
+                          navigate(`/event/view/${sibling}`, {
+                            state: { from: location.pathname },
+                          })
+                        }
+                      >
+                        ● {filed} RECAP{filed === 1 ? "" : "S"} ON LINKED SHIFT →
+                      </button>
+                    );
+                  }
+                  if (requestUuid) {
+                    return (
+                      <button
+                        type="button"
+                        className="mt-3 mono text-[10px] px-3 py-1.5 rounded-lg"
+                        style={{
+                          letterSpacing: "0.12em",
+                          color: "rgba(255,255,255,0.7)",
+                          border: "1px solid var(--spark-border)",
+                          background: "transparent",
+                        }}
+                        onClick={() =>
+                          navigate(`/request/view/${requestUuid}`, {
+                            state: { from: location.pathname },
+                          })
+                        }
+                      >
+                        OPEN REQUEST FIELD REPORTS →
+                      </button>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           </div>

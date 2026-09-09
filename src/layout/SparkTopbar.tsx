@@ -27,8 +27,8 @@ const useBreadcrumb = () => {
   return useMemo(() => {
     if (pageCrumb) return `${pageCrumb.parent} / ${pageCrumb.title}`;
     if (pathname === "/") return "DASHBOARD";
-    if (pathname === "/insights") return "INSIGHTS";
-    if (pathname === "/client-dashboard") return "CLIENT";
+    if (pathname === "/insights") return "DASHBOARD";
+    if (pathname === "/client-dashboard") return "DASHBOARD";
     const parts = pathname.split("/").filter(Boolean);
     const last = parts[parts.length - 1] ?? "";
     if (looksLikeRouteId(last)) {

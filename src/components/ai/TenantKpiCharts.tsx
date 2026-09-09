@@ -297,7 +297,7 @@ const TenantKpiCharts: React.FC<{
             {scopeNote
               ? scopeNote.toUpperCase()
               : kpis.events > 0
-                ? `${fmt(kpis.events)} EVENTS · ${fmt(kpis.recaps)} RECAPS`
+                ? `${fmt(kpis.events)} WITH RECAPS · ${fmt(kpis.recaps)} RECAPS`
                 : selectedYear === null
                   ? "ALL TIME"
                   : `${selectedYear}`}

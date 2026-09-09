@@ -71,9 +71,8 @@ type CommandEntry = {
 };
 
 const ENTRIES: CommandEntry[] = [
-  { id: "dashboard", label: "Dashboard", hint: "Due recaps · clock · what needs you", to: "/", clientTo: "/client-dashboard", Icon: LayoutDashboard, keywords: "home overview work" },
+  { id: "dashboard", label: "Dashboard", hint: "Ops pulse · pace · program KPIs", to: "/", clientTo: "/client-dashboard", Icon: LayoutDashboard, keywords: "home overview work insights kpis analytics" },
   { id: "recaps-missing", label: "Missing recaps", hint: "Events with no recap filed", to: "/recaps/missing", Icon: AlertCircle, keywords: "missing due file recaps due", adminOnly: true },
-  { id: "insights", label: "Insights", hint: "Program KPIs · map · sentiment", to: "/insights", Icon: BarChart3, keywords: "kpis analytics map sentiment reports" },
   { id: "today", label: "Today", hint: "On the ground", to: "/today", Icon: Sun, keywords: "today map live field" },
   { id: "clock", label: "On the clock", hint: "Who's working now", to: "/live-board", Icon: Clock, keywords: "clock timesheet live board", adminOnly: true },
   { id: "tracker", label: "Master Tracker", hint: "All events, every status", to: "/requests/list", Icon: ListChecks, keywords: "events list table due" },

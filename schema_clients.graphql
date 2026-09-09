@@ -5691,6 +5691,8 @@ type Query {
   tenantKpis(tenantId: ID!, year: Int = null): TenantKpis!
   tenantActivationBreakdown(tenantId: ID!, startDate: String = null, endDate: String = null): TenantActivationBreakdown!
   tenantProgramHealth(tenantId: ID!, startDate: String = null, endDate: String = null): TenantProgramHealth!
+  tenantConversionKpis(tenantId: ID!, startDate: String!, endDate: String!): TenantConversionKpis!
+  tenantFieldCadence(tenantId: ID!): TenantFieldCadence!
   clientTodayCompletion(tenantId: ID!, lookbackDays: Int = null): ClientTodayCompletion!
   tenantKpiComparison(tenantId: ID!, period: String! = "month"): TenantKpiComparison
   tenantMarketPerformance(tenantId: ID!, year: Int = null, startDate: String = null, endDate: String = null): [MarketPerformance!]!
@@ -7597,6 +7599,28 @@ type TenantProgramHealth {
   missing: Int!
   startDate: String
   endDate: String
+}
+
+type TenantConversionKpis {
+  sold: Int!
+  engagements: Int!
+  pct: Float
+  previousSold: Int!
+  previousEngagements: Int!
+  previousPct: Float
+  currentLabel: String
+  previousLabel: String
+  startDate: String
+  endDate: String
+}
+
+type TenantFieldCadence {
+  scheduledNext7: Int!
+  approvedRecapsLast7: Int!
+  scheduleStart: String!
+  scheduleEnd: String!
+  approvedStart: String!
+  approvedEnd: String!
 }
 
 type TenantSentiment {

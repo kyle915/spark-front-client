@@ -148,6 +148,8 @@ export const EventUuidQuery = graphql`
           uuid
           name
         }
+        recapsFiledCount
+        recapEventUuid
         tenantId
         createdAt
         updatedAt

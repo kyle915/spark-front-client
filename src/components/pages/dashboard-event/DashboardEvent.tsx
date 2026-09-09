@@ -6,8 +6,9 @@ import useSidebarCounts from "@/hooks/useSidebarCounts";
 import AttentionEngine from "./AttentionEngine";
 import AskAiButton from "@/components/ai/AskAiButton";
 import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
-import { useNavigate } from "react-router";
+import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
+import { useNavigate } from "react-router";
 
 /**
  * Compact priority-glance card: shows pending approvals (with SLA
@@ -170,9 +171,9 @@ const TodaysSnapshot: React.FC = () => {
 };
 
 /**
- * Ops home — due recaps, clock, and what needs you.
- * Program KPIs / map / sentiment live on /insights so this page
- * is not titled Today while showing year analytics.
+ * Ops home — due recaps, clock, what needs you, then program
+ * performance (pace / KPIs / map) on the same page. Legacy
+ * /insights redirects here.
  */
 
 const monthLabel = () =>
@@ -198,7 +199,6 @@ const slugToName = (slug: string | null | undefined): string => {
 function DashboardInner() {
   const { tenantId, tenantMeta } = useAuthStore();
   const { isClient } = useSparkRole();
-  const navigate = useNavigate();
   const tenantDisplay = slugToName(tenantMeta?.requestUrlName);
 
   const linkedSheetUrl = tenantId
@@ -235,7 +235,7 @@ function DashboardInner() {
             className="mt-3 text-base"
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            Due recaps, who&apos;s on the clock, and what needs you.
+            Due recaps, who&apos;s on the clock, pace, and program KPIs.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -257,18 +257,18 @@ function DashboardInner() {
               📊 Sheet ↗
             </a>
           )}
-          <button
-            type="button"
-            onClick={() => navigate("/insights")}
+          <a
+            href="#performance"
             className="px-3 py-2 rounded-xl text-sm font-semibold"
             style={{
               background: "transparent",
               color: "var(--spark-text)",
               border: "1px solid var(--spark-border)",
+              textDecoration: "none",
             }}
           >
-            Insights →
-          </button>
+            Performance ↓
+          </a>
         </div>
       </div>
 
@@ -284,6 +284,10 @@ function DashboardInner() {
 
       <Suspense fallback={null}>
         <AttentionEngine />
+      </Suspense>
+
+      <Suspense fallback={<DashboardSkeleton />}>
+        <InsightsBody embedded />
       </Suspense>
     </div>
   );
