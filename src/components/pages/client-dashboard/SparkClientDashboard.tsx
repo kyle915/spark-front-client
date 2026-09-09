@@ -1,22 +1,15 @@
 /**
  * Per-tenant client dashboard — focused view for brand stakeholders.
  *
- * Lives at /client-dashboard (and /client). Where the admin
- * /dashboard surfaces everything (RMM workload, queues, SLA
- * breaches, internal notes), this view answers only the questions
- * a brand client asks:
- *
+ * Lives at /client-dashboard (and /client). Answers:
  *   1. What's happening this week?
- *   2. How complete is the program (recap fill rate)?
- *   3. What do I need to look at right now?
- *   4. Program performance (pace / KPIs / map) — same body as admin Dashboard
- *   5. Where are my BAs on the ground? (map tab)
+ *   2. Program performance (pace / KPIs / map) — same body as admin Dashboard
+ *   3. Approvals + account map tabs
  *
  * Week-ahead uses slim ClientWeekAheadQuery (date + retailer over
- * today→+7d). Completion % uses clientTodayCompletion scalars
- * (filed / scheduled) — not a capped 90d request list. Sidebar badge
- * counts come from useSidebarCounts. Approvals / map tabs lazy-load
- * their bodies like AccountMapBody. Legacy /insights redirects here.
+ * today→+7d). Sidebar badge counts come from useSidebarCounts.
+ * Approvals / map tabs lazy-load their bodies. Legacy /insights
+ * redirects here.
  */
 
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
@@ -88,65 +81,6 @@ const dayKey = (d: Date) => {
 
 const isoDay = (d: Date) => dayKey(d);
 
-// ────────────────────────────────────────────────────────────
-// Tile components
-// ────────────────────────────────────────────────────────────
-
-const Tile: React.FC<{
-  label: string;
-  value: string | number;
-  sub?: string;
-  tone?: "lime" | "sky" | "orange" | "muted";
-  onClick?: () => void;
-}> = ({ label, value, sub, tone = "lime", onClick }) => {
-  const colorMap = {
-    lime: "var(--spark-lime)",
-    sky: "var(--spark-sky)",
-    orange: "var(--spark-orange, #ef5a2a)",
-    muted: "rgba(255,255,255,0.55)",
-  } as const;
-  return (
-    <button
-      onClick={onClick}
-      disabled={!onClick}
-      className="spark-card text-left p-5 disabled:cursor-default"
-      style={{
-        cursor: onClick ? "pointer" : "default",
-        background: "var(--spark-card-bg, rgba(255,255,255,0.02))",
-        borderRadius: 16,
-        transition: "background 120ms",
-      }}
-    >
-      <p
-        className="mono text-[10px]"
-        style={{
-          letterSpacing: "0.18em",
-          color: "rgba(255,255,255,0.45)",
-        }}
-      >
-        {label.toUpperCase()}
-      </p>
-      <p
-        className="display text-3xl font-bold mt-2"
-        style={{
-          letterSpacing: "-0.03em",
-          color: colorMap[tone],
-        }}
-      >
-        {value}
-      </p>
-      {sub && (
-        <p
-          className="text-[12px] mt-1"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          {sub}
-        </p>
-      )}
-    </button>
-  );
-};
-
 const ClientInner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
@@ -172,10 +106,9 @@ const ClientInner: React.FC = () => {
     window.history.replaceState(null, "", url.toString());
   };
 
-  // Slim week-ahead only: today → +7d. Completion % is a separate
-  // server scalar (clientTodayCompletion), not row tallies.
+  // Slim week-ahead only: today → +7d.
   // Intentionally NOT RequestsQuery first:2000 — that pulls products,
-  // openShifts, nested location trees the Today page never renders.
+  // openShifts, nested location trees this page never renders.
   const dateWindow = useMemo(() => {
     const today = startOfDay(new Date());
     const end = new Date(today);
@@ -188,8 +121,6 @@ const ClientInner: React.FC = () => {
     {
       // Busy tenants can schedule 200+ demos in a week (Torch sheet import).
       first: 1000,
-      tenantId: tenantId || "0",
-      lookbackDays: 90,
       filters: tenantId
         ? {
             tenantId,
@@ -227,18 +158,6 @@ const ClientInner: React.FC = () => {
     }
     return buckets;
   }, [data]);
-
-  // Recap-completion % from uncapped server rollup (filed / scheduled).
-  // Empty clock-out shells are already excluded by the API filed definition.
-  const completionPct = useMemo(() => {
-    const scheduled = data?.clientTodayCompletion?.scheduled ?? 0;
-    const filed = data?.clientTodayCompletion?.filed ?? 0;
-    if (scheduled <= 0) return null;
-    return Math.round((filed / scheduled) * 100);
-  }, [data]);
-
-  const completionFiled = data?.clientTodayCompletion?.filed ?? 0;
-  const completionScheduled = data?.clientTodayCompletion?.scheduled ?? 0;
 
   // Top retailers in the next 7 days (count of scheduled requests
   // grouped by retailer.name). Empty when retailer FK isn't
@@ -295,7 +214,7 @@ const ClientInner: React.FC = () => {
             className="mt-2"
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            Due recaps and this week&apos;s program.
+            This week&apos;s schedule and program performance.
           </p>
         </div>
         {/* Ask AI about this client's own program — scoped to the client's
@@ -380,53 +299,6 @@ const ClientInner: React.FC = () => {
       )}
 
       {activeTab === "overview" && (<>
-
-      {/* Top tiles */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Tile
-          label="This week"
-          value={totalThisWeek}
-          sub={`${weekAhead.filter((b) => b.count > 0).length} active days`}
-          onClick={() => navigate("/requests/list")}
-        />
-        <Tile
-          label="Recap completion"
-          value={completionPct == null ? "—" : `${completionPct}%`}
-          sub={
-            completionScheduled > 0
-              ? `${completionFiled} of ${completionScheduled} filed · ${
-                  counts.recapsDue > 0
-                    ? `${counts.recapsDue} still open`
-                    : "caught up"
-                }`
-              : counts.recapsDue > 0
-                ? `${counts.recapsDue} still open · filed = photos/metrics`
-                : "No past events in window"
-          }
-          tone={completionPct != null && completionPct < 80 ? "orange" : "lime"}
-          onClick={() => navigate("/recaps/list")}
-        />
-        <Tile
-          label="Needs review"
-          value={counts.approvals}
-          sub={
-            counts.approvalsSlaBreach > 0
-              ? `${counts.approvalsSlaBreach} past SLA`
-              : counts.approvals === 0
-                ? "Nothing pending"
-                : "Awaiting your approval"
-          }
-          tone={counts.approvalsSlaBreach > 0 ? "orange" : "sky"}
-          onClick={() => navigate("/my-approvals")}
-        />
-        <Tile
-          label="Done · last 30d"
-          value={counts.done30d}
-          sub="Submitted recaps"
-          tone="muted"
-          onClick={() => navigate("/recaps/list")}
-        />
-      </div>
 
       {/* Week-ahead bars */}
       <div className="spark-card p-5">

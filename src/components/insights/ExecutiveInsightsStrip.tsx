@@ -223,12 +223,12 @@ const Inner: React.FC<{
           value={convPct}
           hint={
             conv?.pct != null
-              ? `${fmt(conv.sold)} sold ÷ ${fmt(conv.engagements)} eng${
+              ? `${fmt(conv.sold)} sold ÷ ${fmt(conv.engagements)} sampled${
                   conv.previousLabel ? ` · vs ${conv.previousLabel}` : ""
                 }${
                   convDelta ? ` · ${periodDeltaNote(convDelta) ?? ""}` : ""
                 }`.trim()
-              : "No Retail / On-Prem sold ÷ eng in this range"
+              : "No Retail / On-Prem sold ÷ sampled in this range"
           }
           chip={convDelta ? deltaChip(convDelta) : null}
           accent={convAccent}
