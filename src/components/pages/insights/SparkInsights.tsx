@@ -11,10 +11,18 @@ import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import BelowFold from "@/components/insights/BelowFold";
 import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
 import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
+import {
+  buildProgramPulseCopy,
+  buildProgramPulseOneLiner,
+} from "@/components/insights/programPulseCopy";
 import MarketConcentrationStrip from "@/components/insights/MarketConcentrationStrip";
 import AskAiButton from "@/components/ai/AskAiButton";
 import { TenantActivationBreakdownQuery } from "@/api/queries/TenantActivationBreakdownQuery";
 import type { TenantActivationBreakdownQuery as TenantActivationBreakdownQueryType } from "@api/queries/__generated__/TenantActivationBreakdownQuery.graphql";
+import { TenantConversionKpisQuery } from "@/api/queries/TenantConversionKpisQuery";
+import type { TenantConversionKpisQuery as TenantConversionKpisQueryType } from "@api/queries/__generated__/TenantConversionKpisQuery.graphql";
+import { TenantSkuPulseQuery } from "@/api/queries/TenantSkuPulseQuery";
+import type { TenantSkuPulseQuery as TenantSkuPulseQueryType } from "@api/queries/__generated__/TenantSkuPulseQuery.graphql";
 import { ExecutiveSummaryQuery } from "@/api/queries/ExecutiveSummaryQuery";
 import type { ExecutiveSummaryQuery as ExecutiveSummaryQueryType } from "@api/queries/__generated__/ExecutiveSummaryQuery.graphql";
 import { TenantGoalsQuery } from "@/api/queries/TenantGoalsQuery";
@@ -147,19 +155,47 @@ async function buildInsightsSummaryCopy(opts: {
   rangeLabel: string;
 }): Promise<string> {
   const { tenantId, startDate, endDate, rangeLabel } = opts;
-  const [pace, goals] = await Promise.all([
+  const [pace, goals, conv, mix, sku] = await Promise.all([
     fetchQuery<ExecutiveSummaryQueryType>(
       environment,
       ExecutiveSummaryQuery,
       { tenantId, windowDays: 7 },
       { fetchPolicy: "store-or-network" },
-    ).toPromise(),
+    )
+      .toPromise()
+      .catch(() => null),
     fetchQuery<TenantGoalsQueryType>(
       environment,
       TenantGoalsQuery,
       { tenantId, year: null },
       { fetchPolicy: "store-or-network" },
-    ).toPromise(),
+    )
+      .toPromise()
+      .catch(() => null),
+    fetchQuery<TenantConversionKpisQueryType>(
+      environment,
+      TenantConversionKpisQuery,
+      { tenantId, startDate, endDate },
+      { fetchPolicy: "store-or-network" },
+    )
+      .toPromise()
+      .catch(() => null),
+    fetchQuery<TenantActivationBreakdownQueryType>(
+      environment,
+      TenantActivationBreakdownQuery,
+      { tenantId, startDate, endDate },
+      { fetchPolicy: "store-or-network" },
+    )
+      .toPromise()
+      .catch(() => null),
+    fetchQuery<TenantSkuPulseQueryType>(
+      environment,
+      TenantSkuPulseQuery,
+      { tenantId, startDate, endDate },
+      { fetchPolicy: "store-or-network" },
+    )
+      .toPromise()
+      .catch(() => null),
   ]);
 
   const summary = pace?.executiveSummary;
@@ -168,6 +204,53 @@ async function buildInsightsSummaryCopy(opts: {
     `*Insights summary — ${rangeLabel.toUpperCase()} (${startDate} → ${endDate})*`,
     "",
   ];
+
+  const sold = conv?.tenantConversionKpis?.sold ?? 0;
+  const sampled = conv?.tenantConversionKpis?.engagements ?? 0;
+  const convPct =
+    conv?.tenantConversionKpis?.pct != null && sold > 0 && sampled > 0
+      ? conv.tenantConversionKpis.pct
+      : null;
+  const mixBuckets = (["retail", "onprem", "event"] as const).map((key) => {
+    const row = (mix?.tenantActivationBreakdown?.buckets ?? []).find(
+      (b) => b.key === key,
+    );
+    const label =
+      key === "retail"
+        ? "Retail demos"
+        : key === "onprem"
+          ? "On-prem samplings"
+          : "Events";
+    return { key, label, count: row?.count ?? 0 };
+  });
+  const topSkus = (sku?.tenantSkuPulse?.items ?? []).map((i) => ({
+    product: i.product,
+    samples: i.samples,
+  }));
+  const oneLiner = buildProgramPulseOneLiner({
+    rangeLabel,
+    convPct,
+    sold,
+    sampled,
+    mix: mixBuckets,
+    topSkus,
+    totalSamples: sku?.tenantSkuPulse?.totalSamples ?? 0,
+  });
+  lines.push(
+    buildProgramPulseCopy({
+      rangeLabel,
+      startDate,
+      endDate,
+      convPct,
+      sold,
+      sampled,
+      mix: mixBuckets,
+      topSkus,
+      totalSamples: sku?.tenantSkuPulse?.totalSamples ?? 0,
+      oneLiner,
+    }),
+    "",
+  );
 
   if (summary) {
     lines.push(
