@@ -1,5 +1,6 @@
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { TenantActivationBreakdownQuery } from "@/api/queries/TenantActivationBreakdownQuery";
 import type { TenantActivationBreakdownQuery as TenantActivationBreakdownQueryType } from "@api/queries/__generated__/TenantActivationBreakdownQuery.graphql";
 import { TenantConversionKpisQuery } from "@/api/queries/TenantConversionKpisQuery";
@@ -143,6 +144,7 @@ const Tile: React.FC<{
 );
 
 type MixBucket = { key: string; label: string; count: number };
+type SkuRow = { product: string; samples: number };
 
 /** Slack / Ask-AI one-liner from real page aggregates only — no invented rates. */
 export function buildProgramPulseOneLiner(opts: {
@@ -151,15 +153,11 @@ export function buildProgramPulseOneLiner(opts: {
   sold: number;
   sampled: number;
   mix: MixBucket[];
-  topSkus: { product: string; samples: number }[];
+  topSkus: SkuRow[];
   totalSamples: number;
 }): string {
   const parts: string[] = [];
-  if (
-    opts.convPct != null &&
-    opts.sold > 0 &&
-    opts.sampled > 0
-  ) {
+  if (opts.convPct != null && opts.sold > 0 && opts.sampled > 0) {
     parts.push(
       `${Math.round(opts.convPct)}% conversion (${fmt(opts.sold)} sold ÷ ${fmt(opts.sampled)} sampled, Retail + On-Prem)`,
     );
@@ -197,7 +195,7 @@ export function buildProgramPulseCopy(opts: {
   sold: number;
   sampled: number;
   mix: MixBucket[];
-  topSkus: { product: string; samples: number }[];
+  topSkus: SkuRow[];
   totalSamples: number;
   oneLiner: string;
 }): string {
@@ -244,6 +242,31 @@ export function buildProgramPulseCopy(opts: {
   return lines.join("\n");
 }
 
+/** Isolated so a missing/pre-deploy `tenantSkuPulse` field cannot blank the strip. */
+const SkuPulseLoader: React.FC<{
+  tenantId: string;
+  startDate: string;
+  endDate: string;
+  onData: (data: { topSkus: SkuRow[]; totalSamples: number }) => void;
+}> = ({ tenantId, startDate, endDate, onData }) => {
+  const skuData = useLazyLoadQuery<TenantSkuPulseQueryType>(
+    TenantSkuPulseQuery,
+    { tenantId, startDate, endDate },
+    { fetchPolicy: "store-or-network" },
+  );
+  const sku = skuData.tenantSkuPulse;
+  useEffect(() => {
+    onData({
+      topSkus: (sku?.items ?? []).map((i) => ({
+        product: i.product,
+        samples: i.samples,
+      })),
+      totalSamples: sku?.totalSamples ?? 0,
+    });
+  }, [sku?.items, sku?.totalSamples, onData]);
+  return null;
+};
+
 const Inner: React.FC<{
   tenantId: string;
   startDate: string;
@@ -253,6 +276,10 @@ const Inner: React.FC<{
 }> = ({ tenantId, startDate, endDate, rangeLabel, comparisonPeriod }) => {
   const { showAlert } = useAlertStore();
   const [copying, setCopying] = useState(false);
+  const [skuState, setSkuState] = useState<{
+    topSkus: SkuRow[];
+    totalSamples: number;
+  }>({ topSkus: [], totalSamples: 0 });
 
   const convData = useLazyLoadQuery<TenantConversionKpisQueryType>(
     TenantConversionKpisQuery,
@@ -274,16 +301,11 @@ const Inner: React.FC<{
     { tenantId, startDate, endDate },
     { fetchPolicy: "store-or-network" },
   );
-  const skuData = useLazyLoadQuery<TenantSkuPulseQueryType>(
-    TenantSkuPulseQuery,
-    { tenantId, startDate, endDate },
-    { fetchPolicy: "store-or-network" },
-  );
 
   const conv = convData.tenantConversionKpis;
   const cadence = cadenceData.tenantFieldCadence;
   const compare = compareData.tenantKpiComparison;
-  const sku = skuData.tenantSkuPulse;
+  const topSkus = skuState.topSkus;
 
   const mix = useMemo((): MixBucket[] => {
     const buckets = mixData.tenantActivationBreakdown?.buckets ?? [];
@@ -296,15 +318,6 @@ const Inner: React.FC<{
       };
     });
   }, [mixData]);
-
-  const topSkus = useMemo(
-    () =>
-      (sku?.items ?? []).map((i) => ({
-        product: i.product,
-        samples: i.samples,
-      })),
-    [sku?.items],
-  );
 
   const convDelta = useMemo(() => {
     if (conv?.pct == null || conv.previousPct == null) return null;
@@ -347,8 +360,7 @@ const Inner: React.FC<{
   const sampled = conv?.engagements ?? 0;
   const convPctValue =
     conv?.pct != null && sampled > 0 && sold > 0 ? conv.pct : null;
-  const convPct =
-    convPctValue != null ? `${Math.round(convPctValue)}%` : "—";
+  const convPct = convPctValue != null ? `${Math.round(convPctValue)}%` : "—";
   const convAccent =
     convPctValue != null && convPctValue > 0
       ? ("lime" as const)
@@ -363,9 +375,17 @@ const Inner: React.FC<{
         sampled,
         mix,
         topSkus,
-        totalSamples: sku?.totalSamples ?? 0,
+        totalSamples: skuState.totalSamples,
       }),
-    [rangeLabel, convPctValue, sold, sampled, mix, topSkus, sku?.totalSamples],
+    [
+      rangeLabel,
+      convPctValue,
+      sold,
+      sampled,
+      mix,
+      topSkus,
+      skuState.totalSamples,
+    ],
   );
 
   const onCopyPulse = async () => {
@@ -381,7 +401,7 @@ const Inner: React.FC<{
         sampled,
         mix,
         topSkus,
-        totalSamples: sku?.totalSamples ?? 0,
+        totalSamples: skuState.totalSamples,
         oneLiner,
       });
       await navigator.clipboard.writeText(text);
@@ -398,6 +418,17 @@ const Inner: React.FC<{
 
   return (
     <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
+      <ErrorBoundary fallback={null}>
+        <Suspense fallback={null}>
+          <SkuPulseLoader
+            tenantId={tenantId}
+            startDate={startDate}
+            endDate={endDate}
+            onData={setSkuState}
+          />
+        </Suspense>
+      </ErrorBoundary>
+
       <div className="flex items-end justify-between mb-4 flex-wrap gap-3">
         <div className="min-w-0">
           <p
@@ -417,7 +448,8 @@ const Inner: React.FC<{
               Program pulse
             </h2>
             {mix.map((b) => {
-              const color = ACTIVATION_BADGE_COLOR[b.key] ?? "rgba(255,255,255,0.45)";
+              const color =
+                ACTIVATION_BADGE_COLOR[b.key] ?? "rgba(255,255,255,0.45)";
               return (
                 <span
                   key={b.key}
@@ -482,9 +514,7 @@ const Inner: React.FC<{
         />
         <Tile
           eyebrow={
-            trial
-              ? trial.label.toUpperCase()
-              : comparisonPeriod.toUpperCase()
+            trial ? trial.label.toUpperCase() : comparisonPeriod.toUpperCase()
           }
           label="Trial quality"
           value={trial ? `${trial.pct}%` : "—"}
@@ -511,7 +541,10 @@ const Inner: React.FC<{
       </div>
 
       {topSkus.length > 0 && (
-        <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--spark-border)" }}>
+        <div
+          className="mt-4 pt-4"
+          style={{ borderTop: "1px solid var(--spark-border)" }}
+        >
           <div className="flex items-baseline justify-between flex-wrap gap-2 mb-2">
             <p
               className="mono text-[10px]"
@@ -561,7 +594,11 @@ const Inner: React.FC<{
                   </div>
                   <p
                     className="tab-num mono text-sm font-semibold tabular-nums"
-                    style={{ color: "var(--spark-lime)", minWidth: 48, textAlign: "right" }}
+                    style={{
+                      color: "var(--spark-lime)",
+                      minWidth: 48,
+                      textAlign: "right",
+                    }}
                   >
                     {fmt(row.samples)}
                   </p>

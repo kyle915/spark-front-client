@@ -160,31 +160,41 @@ async function buildInsightsSummaryCopy(opts: {
       ExecutiveSummaryQuery,
       { tenantId, windowDays: 7 },
       { fetchPolicy: "store-or-network" },
-    ).toPromise(),
+    )
+      .toPromise()
+      .catch(() => null),
     fetchQuery<TenantGoalsQueryType>(
       environment,
       TenantGoalsQuery,
       { tenantId, year: null },
       { fetchPolicy: "store-or-network" },
-    ).toPromise(),
+    )
+      .toPromise()
+      .catch(() => null),
     fetchQuery<TenantConversionKpisQueryType>(
       environment,
       TenantConversionKpisQuery,
       { tenantId, startDate, endDate },
       { fetchPolicy: "store-or-network" },
-    ).toPromise(),
+    )
+      .toPromise()
+      .catch(() => null),
     fetchQuery<TenantActivationBreakdownQueryType>(
       environment,
       TenantActivationBreakdownQuery,
       { tenantId, startDate, endDate },
       { fetchPolicy: "store-or-network" },
-    ).toPromise(),
+    )
+      .toPromise()
+      .catch(() => null),
     fetchQuery<TenantSkuPulseQueryType>(
       environment,
       TenantSkuPulseQuery,
       { tenantId, startDate, endDate },
       { fetchPolicy: "store-or-network" },
-    ).toPromise(),
+    )
+      .toPromise()
+      .catch(() => null),
   ]);
 
   const summary = pace?.executiveSummary;
