@@ -40,8 +40,8 @@ export const LEFTOVER_BANNER_BODY_RECAP =
 /** Escape hatch when leftover (same action as primary CTA). */
 export const LEFTOVER_ESCAPE_LINK = "Need today's check-in? Start today's shift";
 
-/** Same-day wrong-store / start-over (not leftover). */
-export const START_OVER_LINK = "Wrong store or date? Start over";
+/** Same-day wrong-store / new-shift start-over (not leftover). */
+export const START_OVER_LINK = "Clocking in for a new shift? Tap here";
 
 /**
  * Clocked-out escape when the BA needs a different place/day — avoid

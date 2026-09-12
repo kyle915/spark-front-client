@@ -7,6 +7,7 @@ import {
   LEFTOVER_BANNER_BODY,
   LEFTOVER_PRIMARY_CTA,
   LEFTOVER_SECONDARY_CTA,
+  START_OVER_LINK,
   walkupDayKind,
 } from "@/components/pages/checkin/leftoverCheckin";
 import { supportsStandingSecondShift } from "@/components/pages/checkin/secondShift";
@@ -49,6 +50,11 @@ describe("leftoverCheckin", () => {
     expect(LEFTOVER_BANNER_BODY.toLowerCase()).toContain("stay on the record");
     expect(LEFTOVER_PRIMARY_CTA.toLowerCase()).not.toContain("clear");
     expect(CHECK_IN_SOMEWHERE_ELSE.toLowerCase()).not.toContain("log another");
+  });
+
+  it("makes same-day start-over read as a new-shift reset", () => {
+    expect(START_OVER_LINK.toLowerCase()).toContain("new shift");
+    expect(START_OVER_LINK.toLowerCase()).not.toContain("wrong store");
   });
 
   it("never offers second-shift UI on a leftover prior-day session", () => {
