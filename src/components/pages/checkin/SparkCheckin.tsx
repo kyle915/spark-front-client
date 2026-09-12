@@ -784,6 +784,19 @@ const clearDraft = (code: string, token: string) => {
   }
 };
 
+/** True when this session already has typed answers waiting on-device. */
+const hasRecapDraft = (code: string, token: string): boolean => {
+  const d = readDraft(code, token);
+  if (!d) return false;
+  if ((d.engagements || "").trim()) return true;
+  if (Object.keys(d.samples || {}).some((k) => (d.samples[k] || "").trim())) {
+    return true;
+  }
+  return Object.values(d.values || {}).some((v) =>
+    Array.isArray(v) ? v.length > 0 : Boolean(String(v || "").trim()),
+  );
+};
+
 async function postCheckinClock(
   code: string,
   body: Record<string, unknown>,
@@ -1916,6 +1929,14 @@ function CheckedInFlow({
   const [queuedMileage, setQueuedMileage] = useState<PendingMileage | null>(() =>
     readPendingMileage(code),
   );
+  // Local draft (typed answers) — same phone, same session token. Lets the
+  // clocked-in CTA say Continue instead of File when they already started.
+  const [draftWaiting, setDraftWaiting] = useState(() =>
+    hasRecapDraft(code, token),
+  );
+  useEffect(() => {
+    setDraftWaiting(hasRecapDraft(code, token));
+  }, [code, token, showRecap]);
   // A queued clock-in is the shift they already started. Treat it as on the
   // clock so they can fill the recap offline instead of staring at Clock in.
   const effectiveClock: Clock["state"] =
@@ -2670,7 +2691,11 @@ function CheckedInFlow({
           {effectiveClock === "clocked_in" && !hasRecap ? (
             <>
               <button style={primaryBtn(accent)} onClick={() => openRecap(false)}>
-                {queuedRecap ? "Edit saved recap" : "File recap"}
+                {queuedRecap
+                  ? "Edit saved recap"
+                  : draftWaiting
+                    ? "Continue your recap"
+                    : "File recap"}
               </button>
               <button style={secondaryBtn} disabled={busy !== ""} onClick={() => clock("out")}>
                 {busy === "out" ? "Clocking out…" : "Clock out"}
@@ -2711,7 +2736,7 @@ function CheckedInFlow({
                 </button>
               ) : null}
               <button style={secondaryBtn} onClick={() => openRecap(false)}>
-                File recap
+                {draftWaiting ? "Continue your recap" : "File recap"}
               </button>
               {ctx.mode === "tenant" && !leftover ? (
                 <button
@@ -2744,23 +2769,27 @@ function CheckedInFlow({
         ) : null}
       </div>
 
-      {/* Wrong store or wrong day is easy to do on a shared link, and the
-          BA can't fix it themselves once the session is minted. A quiet way
-          back beats an admin having to merge two events later. Not offered
-          mid-shift on a per-event link, where there is no other event to
-          move to. */}
+      {/* Wrong store / new shift on a shared standing link — BAs need a clear
+          escape before they punch the wrong day. Not offered mid-shift on a
+          per-event link, where there is no other event to move to. */}
       {ctx.mode === "tenant" && (clockState === "clocked_in" || clockState === "not_started") ? (
         <button
           onClick={() => (leftover ? void clearClockIn() : onStartAnother())}
           style={{
             background: "none",
             border: "none",
-            padding: 4,
-            fontSize: 12,
-            opacity: 0.55,
+            padding: "8px 4px",
+            fontSize: leftover ? 13 : 15,
+            fontWeight: leftover ? 600 : 700,
+            lineHeight: 1.35,
+            color: leftover ? "inherit" : accent,
+            opacity: leftover ? 0.75 : 1,
             textDecoration: "underline",
+            textUnderlineOffset: 3,
             cursor: "pointer",
             alignSelf: "center",
+            textAlign: "center",
+            maxWidth: "100%",
           }}
         >
           {leftover ? LEFTOVER_ESCAPE_LINK : START_OVER_LINK}
@@ -2871,8 +2900,9 @@ function CheckedInFlow({
       ) : null}
       {effectiveClock === "clocked_in" && !hasRecap ? (
         <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>
-          You're on the clock. File your recap when you're done. If it won't go
-          through, clock out anyway — you can come back and file it after.
+          {draftWaiting
+            ? "Your answers are saved on this phone. Continue your recap whenever you're ready — reopen this check-in link if you leave."
+            : "You're on the clock. File your recap when you're done. If it won't go through, clock out anyway — you can come back and file it after."}
         </p>
       ) : null}
       {effectiveClock === "clocked_in" && hasRecap ? (
