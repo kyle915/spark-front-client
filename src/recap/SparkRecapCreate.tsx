@@ -1379,7 +1379,16 @@ const CustomTemplateFields: React.FC<{
                         value={values[id] ?? ""}
                         onChange={(e) => onChange(id, e.target.value)}
                         className={inputCls}
-                        rows={3}
+                        rows={Math.max(
+                          3,
+                          (
+                            (f as { placeholder?: string }).placeholder || ""
+                          ).split("\n").length + 1,
+                        )}
+                        placeholder={
+                          (f as { placeholder?: string }).placeholder ||
+                          undefined
+                        }
                       />
                     </Field>
                   </div>
@@ -1494,7 +1503,12 @@ const CustomTemplateFields: React.FC<{
                     onChange={(e) => onChange(id, e.target.value)}
                     className={inputCls}
                     inputMode={kind === "number" ? "numeric" : undefined}
-                    placeholder={kind === "number" ? "0" : undefined}
+                    placeholder={
+                      kind === "number"
+                        ? "0"
+                        : (f as { placeholder?: string }).placeholder ||
+                          undefined
+                    }
                   />
                 </Field>
               );

@@ -2153,6 +2153,7 @@ input CreateCustomFieldInput {
   required: Boolean = null
   order: Int = null
   options: [String!] = null
+  placeholder: String = null
 }
 
 input CreateCustomRecapFieldTypeInput {
@@ -2708,6 +2709,7 @@ type CustomField implements Node {
   name: String!
   required: Boolean!
   order: Int!
+  placeholder: String!
   customRecapTemplateId: ID!
   customFieldTypeId: ID!
   customFieldType: CustomRecapFieldType!
@@ -2990,6 +2992,7 @@ input CustomRecapTemplateFieldInput {
   required: Boolean = null
   order: Int = null
   options: [String!] = null
+  placeholder: String = null
 }
 
 input CustomRecapTemplateFiltersInput {
@@ -8044,6 +8047,7 @@ input UpdateCustomFieldInput {
   required: Boolean = null
   order: Int = null
   options: [String!] = null
+  placeholder: String = null
   id: ID!
 }
 
