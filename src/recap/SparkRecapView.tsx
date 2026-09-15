@@ -963,10 +963,8 @@ const SparkRecapInner: React.FC<{
             <button
               disabled={isPdfRunning}
               onClick={() => {
-                if (existingPdfUrl) {
-                  window.open(existingPdfUrl, "_blank", "noopener,noreferrer");
-                  return;
-                }
+                // Always generate-on-demand — backend reuses only when the
+                // GCS blob still exists (avoids NoSuchKey on stale rows).
                 commitPdf({
                   variables: { input: { id: recap.id } },
                   onCompleted: (res) => {
@@ -996,10 +994,10 @@ const SparkRecapInner: React.FC<{
                 opacity: isPdfRunning ? 0.5 : 1,
               }}
             >
-              {existingPdfUrl
-                ? "⬇ Download PDF"
-                : isPdfRunning
-                  ? "Generating…"
+              {isPdfRunning
+                ? "Generating…"
+                : existingPdfUrl
+                  ? "⬇ Download PDF"
                   : "⬇ PDF"}
             </button>
             <button
