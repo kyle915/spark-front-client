@@ -53,6 +53,7 @@ export const UpdateCustomRecapMutation = graphql`
           # Mirror GetCustomRecapQuery so select/multiselect options and
           # section labels survive an in-place save (not just the value).
           options
+          placeholder
           # Keep the field kind in the store after an in-place save so an
           # IMAGE field stays an image (renders its blob / upload control)
           # instead of reverting to a text input until the next reload.

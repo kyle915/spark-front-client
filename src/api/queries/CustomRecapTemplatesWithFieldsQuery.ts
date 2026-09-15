@@ -49,6 +49,7 @@ export const CustomRecapTemplatesWithFieldsQuery = graphql`
               name
             }
             options
+            placeholder
           }
         }
       }

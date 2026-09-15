@@ -70,6 +70,7 @@ export const CustomRecapTemplateBuilderQuery = graphql`
               name
             }
             options
+            placeholder
           }
         }
       }

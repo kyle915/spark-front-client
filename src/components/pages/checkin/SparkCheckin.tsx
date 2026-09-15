@@ -126,6 +126,8 @@ type TemplateField = {
   required: boolean;
   type: string; // number | text | long_text | select | multiselect | photo | ...
   options: string[];
+  /** BA-facing example copy (quality bar). Never submitted as the value. */
+  placeholder?: string;
 };
 type TemplateSection = { id: string; name: string; fields: TemplateField[] };
 type TemplateProduct = {
@@ -3917,6 +3919,7 @@ function FieldInput({
 
   const isLong = field.type.includes("long") || field.type.includes("area") || field.type.includes("paragraph");
   const isNumber = field.type.includes("number") || field.type.includes("int") || field.type.includes("decimal");
+  const example = (field.placeholder || "").trim();
   return (
     <div>
       <label style={label}>
@@ -3925,9 +3928,10 @@ function FieldInput({
       </label>
       {isLong ? (
         <textarea
-          style={{ ...input, minHeight: 84, resize: "vertical" }}
+          style={{ ...input, minHeight: example ? 120 : 84, resize: "vertical" }}
           value={(value as string) ?? ""}
           onChange={(e) => onChange(e.target.value)}
+          placeholder={example || undefined}
         />
       ) : (
         <input
@@ -3935,6 +3939,7 @@ function FieldInput({
           inputMode={isNumber ? "numeric" : "text"}
           value={(value as string) ?? ""}
           onChange={(e) => onChange(e.target.value)}
+          placeholder={example || (isNumber ? undefined : undefined)}
         />
       )}
     </div>

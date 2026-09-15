@@ -2206,8 +2206,20 @@ const RecapCustomViewInner = ({
                               }
                               rows={Math.min(
                                 10,
-                                Math.max(2, Math.ceil(displayValue.length / 60)),
+                                Math.max(
+                                  2,
+                                  Math.ceil(
+                                    Math.max(
+                                      displayValue.length,
+                                      ((field as { placeholder?: string | null }).placeholder || "").length,
+                                    ) / 60,
+                                  ),
+                                ),
                               )}
+                              placeholder={
+                                (field as { placeholder?: string | null }).placeholder ||
+                                undefined
+                              }
                               className="spark-input w-full text-sm md:text-base min-h-[6rem]"
                             />
                           ) : (
@@ -2219,6 +2231,10 @@ const RecapCustomViewInner = ({
                                   ...prev,
                                   [fieldId]: e.target.value,
                                 }))
+                              }
+                              placeholder={
+                                (field as { placeholder?: string | null }).placeholder ||
+                                undefined
                               }
                               className="spark-input w-full text-sm md:text-base"
                             />
