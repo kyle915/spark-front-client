@@ -850,12 +850,12 @@ const RecapCustomViewInner = ({
   const existingPdfUrl =
     existingPdf?.url || existingPdf?.displayUrl || "";
 
+  // Always generate-on-demand. Backend reuses a Spark PDF only when the
+  // GCS blob still exists and matches the approval badge; otherwise it
+  // rebuilds. Opening a cached displayUrl alone used to NoSuchKey when
+  // the object had been deleted after the DB row was written.
   const handleGeneratePdf = useCallback(() => {
     if (!recap?.id) return;
-    if (existingPdfUrl) {
-      window.open(existingPdfUrl, "_blank", "noopener,noreferrer");
-      return;
-    }
     commitGeneratePdf({
       variables: { input: { id: recap.id as string } },
       onCompleted: (res) => {
@@ -867,7 +867,10 @@ const RecapCustomViewInner = ({
             "";
           if (fileUrl) {
             window.open(fileUrl, "_blank", "noopener,noreferrer");
-            showAlert("PDF generated.", "success");
+            showAlert(
+              existingPdfUrl ? "PDF ready." : "PDF generated.",
+              "success",
+            );
           } else {
             showAlert("PDF generated, but no file URL was returned.", "warning");
           }
@@ -1326,14 +1329,14 @@ const RecapCustomViewInner = ({
                   style={{ ...ghostBtn, opacity: isGeneratingPdf ? 0.5 : 1 }}
                   title={
                     existingPdfUrl
-                      ? "Download the ready PDF"
+                      ? "Download the ready PDF (regenerates if missing)"
                       : "Generate and download this recap as a PDF"
                   }
                 >
-                  {existingPdfUrl
-                    ? "⬇ Download PDF"
-                    : isGeneratingPdf
-                      ? "Generating…"
+                  {isGeneratingPdf
+                    ? "Generating…"
+                    : existingPdfUrl
+                      ? "⬇ Download PDF"
                       : "⬇ PDF"}
                 </button>
                 {!isClient && (
@@ -2712,14 +2715,14 @@ const RecapCustomViewInner = ({
                 style={{ ...ghostBtn, opacity: isGeneratingPdf ? 0.5 : 1 }}
                 title={
                   existingPdfUrl
-                    ? "Download the ready PDF"
+                    ? "Download the ready PDF (regenerates if missing)"
                     : "Generate and download this recap as a PDF"
                 }
               >
-                {existingPdfUrl
-                  ? "Download PDF"
-                  : isGeneratingPdf
-                    ? "Generating…"
+                {isGeneratingPdf
+                  ? "Generating…"
+                  : existingPdfUrl
+                    ? "Download PDF"
                     : "PDF"}
               </button>
               <button
