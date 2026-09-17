@@ -22,6 +22,10 @@ import { UpdateRecapMutation } from "@/api/mutations/UpdateRecapMutation";
 import type { UpdateRecapMutation as UpdateRecapMutationType } from "@/api/mutations/__generated__/UpdateRecapMutation.graphql";
 import { ApproveRecapMutation } from "@/api/mutations/ApproveRecapMutation";
 import type { ApproveRecapMutation as ApproveRecapMutationType } from "@/api/mutations/__generated__/ApproveRecapMutation.graphql";
+import { ArchiveRecapMutation } from "@/api/mutations/ArchiveRecapMutation";
+import type { ArchiveRecapMutation as ArchiveRecapMutationType } from "@/api/mutations/__generated__/ArchiveRecapMutation.graphql";
+import { UnarchiveRecapMutation } from "@/api/mutations/UnarchiveRecapMutation";
+import type { UnarchiveRecapMutation as UnarchiveRecapMutationType } from "@/api/mutations/__generated__/UnarchiveRecapMutation.graphql";
 import { RemoveRecapFileMutation } from "@/api/mutations/RemoveRecapFileMutation";
 import type { RemoveRecapFileMutation as RemoveRecapFileMutationType } from "@/api/mutations/__generated__/RemoveRecapFileMutation.graphql";
 import { DeleteRecapMutation } from "@/api/mutations/DeleteRecapMutation";
@@ -424,6 +428,10 @@ const SparkRecapInner: React.FC<{
   const [commitApprove, isApproving] =
     useMutation<ApproveRecapMutationType>(ApproveRecapMutation);
   const [approvePhase, setApprovePhase] = useState<ActionPhase>("idle");
+  const [commitArchive, isArchiving] =
+    useMutation<ArchiveRecapMutationType>(ArchiveRecapMutation);
+  const [commitUnarchive, isUnarchiving] =
+    useMutation<UnarchiveRecapMutationType>(UnarchiveRecapMutation);
   const [commitSignoff, isSigningOff] =
     useMutation<RecapClientSignoffMutationType>(RecapClientSignoffMutation);
   const [commitRemoveFile] =
@@ -817,6 +825,49 @@ const SparkRecapInner: React.FC<{
     });
   };
 
+  const archiveRecap = () => {
+    if (isArchiving || isUnarchiving) return;
+    commitArchive({
+      variables: { input: { id: recap.id, reason: null } },
+      onCompleted: (res) => {
+        if (res.archiveRecap?.success) {
+          showAlert(
+            "Recap archived — kept as proof, hidden from client.",
+            "success",
+          );
+          onRefresh();
+        } else {
+          showAlert(
+            res.archiveRecap?.message ?? "Couldn't archive.",
+            "warning",
+          );
+        }
+      },
+      onError: (err) =>
+        showAlert(`Archive failed: ${err.message}`, "error"),
+    });
+  };
+
+  const unarchiveRecap = () => {
+    if (isArchiving || isUnarchiving) return;
+    commitUnarchive({
+      variables: { input: { id: recap.id } },
+      onCompleted: (res) => {
+        if (res.unarchiveRecap?.success) {
+          showAlert("Recap restored to Needs review.", "success");
+          onRefresh();
+        } else {
+          showAlert(
+            res.unarchiveRecap?.message ?? "Couldn't unarchive.",
+            "warning",
+          );
+        }
+      },
+      onError: (err) =>
+        showAlert(`Unarchive failed: ${err.message}`, "error"),
+    });
+  };
+
   // Delete the whole recap (admin-only on the backend; tenant-scoped).
   // Confirms first, then navigates back to the recaps list — which frees
   // the event for a fresh recap. The list refetches on mount so the row
@@ -1110,7 +1161,7 @@ const SparkRecapInner: React.FC<{
               ) : (
                 <ActionMorphButton
                   onClick={() => setApproved(true)}
-                  disabled={isApproving}
+                  disabled={isApproving || Boolean(recap.archivedAt)}
                   phase={approvePhase}
                   className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                   style={{
@@ -1119,12 +1170,51 @@ const SparkRecapInner: React.FC<{
                     boxShadow: "0 0 18px rgba(197,245,70,0.35)",
                     opacity: isApproving ? 0.5 : 1,
                   }}
-                  title="Approve this recap"
+                  title={
+                    recap.archivedAt
+                      ? "Unarchive before approving"
+                      : "Approve this recap"
+                  }
                   pendingLabel="Approving…"
                   successLabel="Approved"
                 >
                   Approve recap
                 </ActionMorphButton>
+              ))}
+
+            {isAdmin &&
+              (recap.archivedAt ? (
+                <button
+                  type="button"
+                  onClick={unarchiveRecap}
+                  disabled={isUnarchiving}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  style={{
+                    background: "transparent",
+                    color: "var(--spark-text)",
+                    border: "1px solid var(--spark-border)",
+                    opacity: isUnarchiving ? 0.5 : 1,
+                  }}
+                  title="Restore this recap to Needs review"
+                >
+                  {isUnarchiving ? "Restoring…" : "Unarchive"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={archiveRecap}
+                  disabled={isArchiving}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  style={{
+                    background: "transparent",
+                    color: "rgba(255,255,255,0.7)",
+                    border: "1px solid var(--spark-border)",
+                    opacity: isArchiving ? 0.5 : 1,
+                  }}
+                  title="Park this recap — keep proof, hide from client, leave Needs review"
+                >
+                  {isArchiving ? "Archiving…" : "Archive"}
+                </button>
               ))}
 
             {/* Admin-only delete. Removes the recap and frees the event
@@ -2460,7 +2550,7 @@ const SparkRecapInner: React.FC<{
             ) : (
               <ActionMorphButton
                 onClick={() => setApproved(true)}
-                disabled={isApproving}
+                disabled={isApproving || Boolean(recap.archivedAt)}
                 phase={approvePhase}
                 className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                 style={{
@@ -2469,12 +2559,50 @@ const SparkRecapInner: React.FC<{
                   boxShadow: "0 0 18px rgba(197,245,70,0.35)",
                   opacity: isApproving ? 0.5 : 1,
                 }}
-                title="Approve this recap"
+                title={
+                  recap.archivedAt
+                    ? "Unarchive before approving"
+                    : "Approve this recap"
+                }
                 pendingLabel="Approving…"
                 successLabel="Approved"
               >
                 Approve recap
               </ActionMorphButton>
+            ))}
+          {isAdmin &&
+            (recap.archivedAt ? (
+              <button
+                type="button"
+                onClick={unarchiveRecap}
+                disabled={isUnarchiving}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                  opacity: isUnarchiving ? 0.5 : 1,
+                }}
+                title="Restore this recap to Needs review"
+              >
+                {isUnarchiving ? "Restoring…" : "Unarchive"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={archiveRecap}
+                disabled={isArchiving}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "transparent",
+                  color: "rgba(255,255,255,0.7)",
+                  border: "1px solid var(--spark-border)",
+                  opacity: isArchiving ? 0.5 : 1,
+                }}
+                title="Park this recap — keep proof, hide from client"
+              >
+                {isArchiving ? "Archiving…" : "Archive"}
+              </button>
             ))}
         </RecapStickyOpsBar>
       )}

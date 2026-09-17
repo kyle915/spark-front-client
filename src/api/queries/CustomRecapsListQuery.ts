@@ -52,6 +52,7 @@ export const CustomRecapsListQuery = graphql`
           storeMappingStatus
           shareToken
           sharedAt
+          archivedAt
           eventDate
           eventAddress
           eventRetailer

@@ -17,6 +17,13 @@ export const RecapQuery = graphql`
       }
       shareToken
       sharedAt
+      archivedAt
+      archiveReason
+      archivedBy {
+        firstName
+        lastName
+        email
+      }
       clientSignoffStatus
       clientSignoffComment
       clientSignoffAt

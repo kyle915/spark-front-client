@@ -16,6 +16,7 @@ export type RecapListStatus =
   | "needs_review"
   | "approved"
   | "shared"
+  | "archived"
   | "all"
   | "draft";
 
@@ -23,6 +24,7 @@ const URL_STATUSES = new Set<string>([
   "needs_review",
   "approved",
   "shared",
+  "archived",
   "submitted",
   "all",
 ]);
@@ -32,9 +34,9 @@ export function defaultRecapStatus(
   statusFromUrl?: string | null,
 ): RecapListStatus {
   if (isClient) {
-    // Ignore ?status=shared / needs_review — those emptied the client
-    // view. "all" still means every approved recap (server already
-    // hides drafts from clients).
+    // Ignore ?status=shared / needs_review / archived — those emptied the
+    // client view. "all" still means every approved recap (server already
+    // hides drafts + archived from clients).
     if (statusFromUrl === "all") return "all";
     return "approved";
   }
@@ -57,18 +59,54 @@ export function sharedQueryFilter(
   return null;
 }
 
+/**
+ * Server `archived` filter. Null = no archive gate.
+ * Needs review / Approved / Shared exclude archived; Archived tab
+ * requests archived=true; All / Submitted leave the filter open.
+ */
+export function archivedQueryFilter(
+  isClient: boolean,
+  pipeline: RecapListStatus,
+): boolean | null {
+  if (isClient) return false;
+  if (pipeline === "archived") return true;
+  if (
+    pipeline === "needs_review" ||
+    pipeline === "draft" ||
+    pipeline === "approved" ||
+    pipeline === "shared"
+  ) {
+    return false;
+  }
+  return null;
+}
+
 export function recapMatchesPipeline(opts: {
   isClient: boolean;
   pipeline: RecapListStatus;
   approved: boolean;
   sharedAt: string | null;
+  archivedAt?: string | null;
   justApproved: boolean;
   /** Clock-out draft with no photos/metrics — hide from Needs review. */
   emptyShell?: boolean;
 }): boolean {
-  const { isClient, pipeline, approved, sharedAt, justApproved, emptyShell } =
-    opts;
-  if (isClient) return approved || justApproved;
+  const {
+    isClient,
+    pipeline,
+    approved,
+    sharedAt,
+    archivedAt,
+    justApproved,
+    emptyShell,
+  } = opts;
+  const archived = Boolean(archivedAt);
+  if (isClient) return (approved || justApproved) && !archived;
+  if (pipeline === "archived") return archived;
+  if (archived) {
+    // Parked rows only live on the Archived tab (and All / Submitted).
+    return pipeline === "all" || pipeline === "submitted";
+  }
   if (pipeline === "all" || pipeline === "submitted") return true;
   if (pipeline === "needs_review") {
     // Filed content only. Empty shells (no photos, no metrics) still live
@@ -113,6 +151,8 @@ export function recapListStatusWord(
       return "APPROVED";
     case "shared":
       return "SHARED";
+    case "archived":
+      return "ARCHIVED";
     case "submitted":
       return "SUBMITTED";
     default:

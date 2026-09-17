@@ -908,6 +908,12 @@ input ArchiveChatThreadInput {
   archived: Boolean! = true
 }
 
+input ArchiveCustomRecapInput {
+  clientMutationId: ID = null
+  id: ID!
+  reason: String = null
+}
+
 input ArchiveEventInput {
   clientMutationId: ID = null
   id: ID!
@@ -916,6 +922,12 @@ input ArchiveEventInput {
 input ArchiveGigTemplateInput {
   clientMutationId: ID = null
   templateId: ID!
+}
+
+input ArchiveRecapInput {
+  clientMutationId: ID = null
+  id: ID!
+  reason: String = null
 }
 
 input AssignAmbassadorToJobInput {
@@ -2700,7 +2712,7 @@ input CreateUserInput {
 }
 
 """
-CustomField(id, uuid, name, required, order, options, custom_recap_template, custom_field_type, recap_section, created_by, updated_by, created_at, updated_at)
+CustomField(id, uuid, name, required, order, options, placeholder, custom_recap_template, custom_field_type, recap_section, created_by, updated_by, created_at, updated_at)
 """
 type CustomField implements Node {
   """The Globally Unique ID of this object"""
@@ -2746,7 +2758,7 @@ type CustomFormType {
 }
 
 """
-CustomRecap(id, uuid, name, submitted_at, total_engagements, filling_for_ambassador, late, incomplete, approved, approved_by, approved_at, shared_at, client_signoff_status, client_signoff_comment, client_signoff_at, client_notified_at, used_corpo_card, data_quality_flags, timezone, event, ambassador, external_ba_name, is_third_party, typed_store_name, typed_store_address, store_mapping_status, store_suggestions, job, retailer, location, state, tenant, custom_recap_template, created_by, updated_by, created_at, updated_at)
+CustomRecap(id, uuid, name, submitted_at, total_engagements, filling_for_ambassador, late, incomplete, approved, approved_by, approved_at, shared_at, archived_at, archived_by, archive_reason, client_signoff_status, client_signoff_comment, client_signoff_at, client_notified_at, used_corpo_card, data_quality_flags, timezone, event, ambassador, external_ba_name, is_third_party, typed_store_name, typed_store_address, store_mapping_status, store_suggestions, job, retailer, location, state, tenant, custom_recap_template, created_by, updated_by, created_at, updated_at)
 """
 type CustomRecap implements Node {
   """The Globally Unique ID of this object"""
@@ -2761,6 +2773,8 @@ type CustomRecap implements Node {
   approved: Boolean!
   approvedAt: String
   sharedAt: String
+  archivedAt: String
+  archiveReason: String!
   clientSignoffStatus: String!
   clientSignoffComment: String!
   clientSignoffAt: String
@@ -2788,6 +2802,7 @@ type CustomRecap implements Node {
   customRecapTemplateId: ID!
   customRecapTemplate: CustomRecapTemplate!
   approvedBy: SparkUserType
+  archivedBy: SparkUserType
   createdAt: String!
   updatedAt: String!
   customRecapProductSample: [CustomRecapProductSample!]!
@@ -2910,6 +2925,7 @@ input CustomRecapFiltersInput {
   retailerName: String = null
   stateCode: String = null
   shared: Boolean = null
+  archived: Boolean = null
   activationBucket: String = null
   customRecapTemplateId: ID = null
   needsStoreMap: Boolean = null
@@ -4969,6 +4985,10 @@ type Mutation {
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
+  archiveRecap(input: ArchiveRecapInput!): RecapDetailResponse!
+  unarchiveRecap(input: UnarchiveRecapInput!): RecapDetailResponse!
+  archiveCustomRecap(input: ArchiveCustomRecapInput!): CustomRecapDetailResponse!
+  unarchiveCustomRecap(input: UnarchiveCustomRecapInput!): CustomRecapDetailResponse!
   mapCustomRecapStore(input: MapCustomRecapStoreInput!): CustomRecapDetailResponse!
   bulkApproveRecaps(input: BulkApproveRecapsInput!): BulkRecapsResponse!
   markRecapsShared(input: MarkRecapsSharedInput!): BulkRecapsResponse!
@@ -6046,7 +6066,7 @@ input RebookLastCrewInput {
 }
 
 """
-Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, total_cans_sold, total_packs_sold, filling_for_ambassador, late, incomplete, account_spend_amount, approved, approved_by, approved_at, shared_at, client_signoff_status, client_signoff_comment, client_signoff_at, client_notified_at, traffic_description, competitive_presence, timezone, event, ambassador, external_ba_name, job, retailer, location, state, created_by, updated_by, created_at, updated_at)
+Recap(id, uuid, name, submited_at, total_engagements, products_sold, total_earnings, total_cans_sold, total_packs_sold, filling_for_ambassador, late, incomplete, account_spend_amount, approved, approved_by, approved_at, shared_at, archived_at, archived_by, archive_reason, client_signoff_status, client_signoff_comment, client_signoff_at, client_notified_at, traffic_description, competitive_presence, timezone, event, ambassador, external_ba_name, job, retailer, location, state, created_by, updated_by, created_at, updated_at)
 """
 type Recap implements Node {
   """The Globally Unique ID of this object"""
@@ -6056,6 +6076,8 @@ type Recap implements Node {
   approved: Boolean!
   approvedAt: String
   sharedAt: String
+  archivedAt: String
+  archiveReason: String!
   clientSignoffStatus: String!
   clientSignoffComment: String!
   clientSignoffAt: String
@@ -6073,6 +6095,7 @@ type Recap implements Node {
   stateId: ID
   state: State
   approvedBy: SparkUserType
+  archivedBy: SparkUserType
   createdAt: String!
   updatedAt: String!
   totalEngagements: Int
@@ -6255,6 +6278,7 @@ input RecapFiltersInput {
   retailerName: String = null
   stateCode: String = null
   shared: Boolean = null
+  archived: Boolean = null
   activationBucket: String = null
 }
 
@@ -7496,6 +7520,19 @@ type TenantAiAnswer {
   chart: AiChart
 }
 
+type TenantConversionKpis {
+  sold: Int!
+  engagements: Int!
+  pct: Float
+  previousSold: Int!
+  previousEngagements: Int!
+  previousPct: Float
+  currentLabel: String
+  previousLabel: String
+  startDate: String
+  endDate: String
+}
+
 """
 TenantFavoriteAmbassador(id, uuid, tenant, ambassador, note, added_by, created_at)
 """
@@ -7509,6 +7546,15 @@ type TenantFavoriteAmbassador {
   firstName: String!
   lastName: String!
   email: String!
+}
+
+type TenantFieldCadence {
+  scheduledNext7: Int!
+  approvedRecapsLast7: Int!
+  scheduleStart: String!
+  scheduleEnd: String!
+  approvedStart: String!
+  approvedEnd: String!
 }
 
 input TenantFiltersInput {
@@ -7605,48 +7651,6 @@ type TenantProgramHealth {
   endDate: String
 }
 
-type TenantConversionKpis {
-  sold: Int!
-  engagements: Int!
-  pct: Float
-  previousSold: Int!
-  previousEngagements: Int!
-  previousPct: Float
-  currentLabel: String
-  previousLabel: String
-  startDate: String
-  endDate: String
-}
-
-type TenantSkuPulseItem {
-  product: String!
-  samples: Int!
-}
-
-"""
-Top catalog SKUs by samples handed out (approved recaps only).
-
-``mode`` is ``quantity`` when structured sample rows exist, else ``none``.
-Never invents per-SKU purchased — pair with TenantConversionKpis.sold for
-the Retail+On-Prem aggregate.
-"""
-type TenantSkuPulse {
-  mode: String!
-  items: [TenantSkuPulseItem!]!
-  totalSamples: Int!
-  startDate: String
-  endDate: String
-}
-
-type TenantFieldCadence {
-  scheduledNext7: Int!
-  approvedRecapsLast7: Int!
-  scheduleStart: String!
-  scheduleEnd: String!
-  approvedStart: String!
-  approvedEnd: String!
-}
-
 type TenantSentiment {
   overallSentiment: String!
   positivePct: Int!
@@ -7655,6 +7659,19 @@ type TenantSentiment {
   quotes: [SentimentQuote!]!
   sampleSize: Int!
   generatedAt: DateTime
+}
+
+type TenantSkuPulse {
+  mode: String!
+  items: [TenantSkuPulseItem!]!
+  totalSamples: Int!
+  startDate: String
+  endDate: String
+}
+
+type TenantSkuPulseItem {
+  product: String!
+  samples: Int!
 }
 
 type TenantThemeResponse {
@@ -7824,6 +7841,16 @@ input TypeOfGoodFiltersInput {
 }
 
 scalar UUID
+
+input UnarchiveCustomRecapInput {
+  clientMutationId: ID = null
+  id: ID!
+}
+
+input UnarchiveRecapInput {
+  clientMutationId: ID = null
+  id: ID!
+}
 
 input UnassignAmbassadorJobInput {
   clientMutationId: ID = null
@@ -8647,13 +8674,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
-  firstName: String
-  email: String!
   id: ID!
-  lastName: String
+  firstName: String
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
+  lastName: String
+  email: String!
   archived: Boolean!
   verified: Boolean!
 }

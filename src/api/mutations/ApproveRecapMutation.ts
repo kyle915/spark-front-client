@@ -20,6 +20,8 @@ export const ApproveRecapMutation = graphql`
                     lastName
                     email
                 }
+                archivedAt
+                archiveReason
             }
         }
     }

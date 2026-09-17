@@ -9,6 +9,10 @@ import { UpdateCustomRecapMutation } from "@/api/mutations/UpdateCustomRecapMuta
 import type { UpdateCustomRecapMutation as UpdateCustomRecapMutationType } from "@/api/mutations/__generated__/UpdateCustomRecapMutation.graphql";
 import { ApproveCustomRecapMutation } from "@/api/mutations/ApproveCustomRecapMutation";
 import type { ApproveCustomRecapMutation as ApproveCustomRecapMutationType } from "@/api/mutations/__generated__/ApproveCustomRecapMutation.graphql";
+import { ArchiveCustomRecapMutation } from "@/api/mutations/ArchiveCustomRecapMutation";
+import type { ArchiveCustomRecapMutation as ArchiveCustomRecapMutationType } from "@/api/mutations/__generated__/ArchiveCustomRecapMutation.graphql";
+import { UnarchiveCustomRecapMutation } from "@/api/mutations/UnarchiveCustomRecapMutation";
+import type { UnarchiveCustomRecapMutation as UnarchiveCustomRecapMutationType } from "@/api/mutations/__generated__/UnarchiveCustomRecapMutation.graphql";
 import { AddCustomRecapFileMutation } from "@/api/mutations/AddCustomRecapFileMutation";
 import type { AddCustomRecapFileMutation as AddCustomRecapFileMutationType } from "@/api/mutations/__generated__/AddCustomRecapFileMutation.graphql";
 import { DeleteCustomRecapMutation } from "@/api/mutations/DeleteCustomRecapMutation";
@@ -576,6 +580,10 @@ const RecapCustomViewInner = ({
   const [commitApprove, isApproving] =
     useMutation<ApproveCustomRecapMutationType>(ApproveCustomRecapMutation);
   const [approvePhase, setApprovePhase] = useState<ActionPhase>("idle");
+  const [commitArchive, isArchiving] =
+    useMutation<ArchiveCustomRecapMutationType>(ArchiveCustomRecapMutation);
+  const [commitUnarchive, isUnarchiving] =
+    useMutation<UnarchiveCustomRecapMutationType>(UnarchiveCustomRecapMutation);
   const [commitSignoff, isSigningOff] =
     useMutation<RecapClientSignoffMutationType>(RecapClientSignoffMutation);
   const [commitAddFile] = useMutation<AddCustomRecapFileMutationType>(
@@ -915,7 +923,64 @@ const RecapCustomViewInner = ({
         showAlert(`Approve failed: ${err.message}`, "error");
       },
     });
-  }, [recap?.id, commitApprove, showAlert, approvePhase]);
+  }, [recap?.id, commitApprove, showAlert, approvePhase, onRefresh]);
+
+  const handleArchive = useCallback(() => {
+    if (!recap?.id || isArchiving || isUnarchiving) return;
+    commitArchive({
+      variables: { input: { id: recap.id as string, reason: null } },
+      onCompleted: (res) => {
+        if (res.archiveCustomRecap?.success) {
+          showAlert(
+            "Recap archived — kept as proof, hidden from client.",
+            "success",
+          );
+          onRefresh();
+        } else {
+          showAlert(
+            res.archiveCustomRecap?.message ?? "Couldn't archive.",
+            "warning",
+          );
+        }
+      },
+      onError: (err) =>
+        showAlert(`Archive failed: ${err.message}`, "error"),
+    });
+  }, [
+    recap?.id,
+    commitArchive,
+    showAlert,
+    onRefresh,
+    isArchiving,
+    isUnarchiving,
+  ]);
+
+  const handleUnarchive = useCallback(() => {
+    if (!recap?.id || isArchiving || isUnarchiving) return;
+    commitUnarchive({
+      variables: { input: { id: recap.id as string } },
+      onCompleted: (res) => {
+        if (res.unarchiveCustomRecap?.success) {
+          showAlert("Recap restored to Needs review.", "success");
+          onRefresh();
+        } else {
+          showAlert(
+            res.unarchiveCustomRecap?.message ?? "Couldn't unarchive.",
+            "warning",
+          );
+        }
+      },
+      onError: (err) =>
+        showAlert(`Unarchive failed: ${err.message}`, "error"),
+    });
+  }, [
+    recap?.id,
+    commitUnarchive,
+    showAlert,
+    onRefresh,
+    isArchiving,
+    isUnarchiving,
+  ]);
 
   // Attach an uploaded blob to this custom recap. RecapUploader fires
   // this once per selected file; addCustomRecapFile returns the FULL
@@ -1307,11 +1372,15 @@ const RecapCustomViewInner = ({
                 ) : !isClient ? (
                   <ActionMorphButton
                     onClick={handleApprove}
-                    disabled={isApproving}
+                    disabled={isApproving || Boolean(recap.archivedAt)}
                     phase={approvePhase}
                     className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                     style={{ ...limeBtn, opacity: isApproving ? 0.5 : 1 }}
-                    title="Approve recap and email the requestor + mapped RMM"
+                    title={
+                      recap.archivedAt
+                        ? "Unarchive before approving"
+                        : "Approve recap and email the requestor + mapped RMM"
+                    }
                     pendingLabel="Approving…"
                     successLabel="Approved"
                   >
@@ -1322,6 +1391,41 @@ const RecapCustomViewInner = ({
                     <StatusMorph value="Needs review" />
                   </span>
                 )}
+                {!isClient &&
+                  (recap.archivedAt ? (
+                    <button
+                      type="button"
+                      onClick={handleUnarchive}
+                      disabled={isUnarchiving}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                      style={{
+                        ...ghostBtn,
+                        opacity: isUnarchiving ? 0.5 : 1,
+                      }}
+                      title="Restore this recap to Needs review"
+                    >
+                      {isUnarchiving ? "Restoring…" : "Unarchive"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleArchive}
+                      disabled={isArchiving}
+                      className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                      style={{
+                        ...ghostBtn,
+                        opacity: isArchiving ? 0.5 : 1,
+                      }}
+                      title="Park this recap — keep proof, hide from client"
+                    >
+                      {isArchiving ? "Archiving…" : "Archive"}
+                    </button>
+                  ))}
+                {recap.archivedAt ? (
+                  <span className="chip chip-orange">
+                    <StatusMorph value="Archived" />
+                  </span>
+                ) : null}
                 <button
                   onClick={handleGeneratePdf}
                   disabled={isGeneratingPdf}
@@ -2646,20 +2750,48 @@ const RecapCustomViewInner = ({
             <span className="chip chip-lime">
               <StatusMorph value="Approved" />
             </span>
-          ) : (
+          ) : !isClient ? (
             <ActionMorphButton
               onClick={handleApprove}
-              disabled={isApproving}
+              disabled={isApproving || Boolean(recap.archivedAt)}
               phase={approvePhase}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{ ...limeBtn, opacity: isApproving ? 0.5 : 1 }}
-              title="Approve recap and email the requestor + mapped RMM"
+              title={
+                recap.archivedAt
+                  ? "Unarchive before approving"
+                  : "Approve recap and email the requestor + mapped RMM"
+              }
               pendingLabel="Approving…"
               successLabel="Approved"
             >
               Approve recap
             </ActionMorphButton>
-          )}
+          ) : null}
+          {!isClient &&
+            (recap.archivedAt ? (
+              <button
+                type="button"
+                onClick={handleUnarchive}
+                disabled={isUnarchiving}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{ ...ghostBtn, opacity: isUnarchiving ? 0.5 : 1 }}
+                title="Restore this recap to Needs review"
+              >
+                {isUnarchiving ? "Restoring…" : "Unarchive"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleArchive}
+                disabled={isArchiving}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{ ...ghostBtn, opacity: isArchiving ? 0.5 : 1 }}
+                title="Park this recap — keep proof, hide from client"
+              >
+                {isArchiving ? "Archiving…" : "Archive"}
+              </button>
+            ))}
         </RecapStickyOpsBar>
       )}
 
