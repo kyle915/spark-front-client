@@ -12,6 +12,7 @@ import {
 } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
 import Layout from "@/layout/Layout";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -620,18 +621,20 @@ export default function PlansList() {
           ) : null}
         </div>
 
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading plans…
-            </div>
-          }
-        >
-          <PortfolioInner refreshKey={refreshKey} />
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense
+            fallback={
+              <div
+                className="spark-card p-8 text-center text-sm"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
+                Loading plans…
+              </div>
+            }
+          >
+            <PortfolioInner refreshKey={refreshKey} />
+          </Suspense>
+        </ErrorBoundary>
       </div>
     </Layout>
   );
