@@ -1,28 +1,36 @@
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useMutation } from "react-relay/hooks";
 import { ShareRecapByEmailMutation } from "@/api/mutations/ShareRecapByEmailMutation";
 import type { ShareRecapByEmailMutation as ShareRecapByEmailMutationType } from "@/api/mutations/__generated__/ShareRecapByEmailMutation.graphql";
 import { recapShareUrl } from "@/utils/recapShare";
 import { EMAIL_RE, parseRecipients } from "@/utils/emailRecipients";
 import { useAlertStore } from "@/store/alertStore";
+import { SparkSheet } from "@/shared/SparkSheet";
 
 /**
  * On-platform Share dialog for recap views — replaces the native OS
- * share sheet (navigator.share dumped users into Mail/AirDrop with no
- * Spark chrome). Two paths, same public /r/:token link:
- *   1. Copy link — clipboard, for pasting anywhere.
- *   2. Email it — recipient(s) + optional note, sent by the API
- *      (shareRecapByEmail) from Spark's sender with the client-host link.
+ * share sheet. Mobile uses a vaul bottom sheet; desktop stays centered.
  */
 
 type Props = {
-  /** Relay global id of the recap (legacy Recap or CustomRecap). */
   recapId: string;
   kind: "legacy" | "custom";
   shareToken: string;
   recapName?: string | null;
   onClose: () => void;
 };
+
+function useIsMobileSheet() {
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setMobile(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return mobile;
+}
 
 export default function ShareRecapModal({
   recapId,
@@ -33,6 +41,7 @@ export default function ShareRecapModal({
 }: Props) {
   const showAlert = useAlertStore((s) => s.showAlert);
   const shareUrl = recapShareUrl(shareToken);
+  const mobile = useIsMobileSheet();
 
   const [copied, setCopied] = useState(false);
   const [recipientsRaw, setRecipientsRaw] = useState("");
@@ -92,13 +101,176 @@ export default function ShareRecapModal({
     });
   };
 
+  const body: ReactNode = (
+    <div className="space-y-5">
+      <div>
+        <p
+          className="mono text-[10px] mb-2"
+          style={{
+            letterSpacing: "0.18em",
+            color: "var(--spark-lime)",
+          }}
+        >
+          PUBLIC LINK
+        </p>
+        <div className="flex items-center gap-2">
+          <input
+            readOnly
+            value={shareUrl}
+            onFocus={(e) => e.target.select()}
+            className="flex-1 min-w-0 rounded-xl text-xs mono"
+            style={{
+              padding: "0.6rem 0.75rem",
+              minHeight: 44,
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+              color: "rgba(255,255,255,0.75)",
+              outline: "none",
+            }}
+          />
+          <button
+            type="button"
+            onClick={copyLink}
+            className="px-3 rounded-xl text-sm font-semibold shrink-0 transition"
+            style={{
+              minHeight: 44,
+              background: copied ? "rgba(197,245,70,0.15)" : "transparent",
+              color: copied ? "var(--spark-lime)" : "var(--spark-text)",
+              border: `1px solid ${
+                copied ? "rgba(197,245,70,0.4)" : "var(--spark-border)"
+              }`,
+            }}
+          >
+            {copied ? "✓ Copied" : "Copy link"}
+          </button>
+        </div>
+        <p
+          className="text-[11px] mt-2"
+          style={{ color: "rgba(255,255,255,0.4)" }}
+        >
+          Anyone with the link can view the recap — no login needed.
+        </p>
+      </div>
+
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }} />
+
+      <div>
+        <p
+          className="mono text-[10px] mb-2"
+          style={{
+            letterSpacing: "0.18em",
+            color: "var(--spark-lime)",
+          }}
+        >
+          EMAIL IT
+        </p>
+        {sentTo === null ? (
+          <div className="space-y-2">
+            <input
+              value={recipientsRaw}
+              onChange={(e) => setRecipientsRaw(e.target.value)}
+              placeholder="name@brand.com, teammate@brand.com"
+              autoFocus={!mobile}
+              className="w-full rounded-xl text-sm"
+              style={{
+                padding: "0.6rem 0.85rem",
+                minHeight: 44,
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+                outline: "none",
+              }}
+            />
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Add a note (optional)"
+              rows={2}
+              className="w-full rounded-xl text-sm resize-none"
+              style={{
+                padding: "0.6rem 0.85rem",
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+                outline: "none",
+              }}
+            />
+          </div>
+        ) : (
+          <div
+            className="rounded-xl p-4 text-sm"
+            style={{
+              background: "rgba(197,245,70,0.08)",
+              border: "1px solid rgba(197,245,70,0.3)",
+              color: "var(--spark-lime)",
+            }}
+          >
+            ✓ Sent to {sentTo} recipient{sentTo === 1 ? "" : "s"} — the email
+            links to this recap on client.igniteproductions.co.
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-end gap-2 pt-1 pb-2">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isSending}
+          className="px-4 rounded-xl text-sm font-semibold disabled:opacity-50 transition"
+          style={{
+            minHeight: 44,
+            background: "transparent",
+            color: "var(--spark-text)",
+            border: "1px solid var(--spark-border)",
+          }}
+        >
+          {sentTo === null ? "Cancel" : "Done"}
+        </button>
+        {sentTo === null && (
+          <button
+            type="button"
+            onClick={sendEmail}
+            disabled={isSending || recipientsRaw.trim().length === 0}
+            className="px-4 rounded-xl text-sm font-semibold disabled:opacity-40 transition"
+            style={{
+              minHeight: 44,
+              background: "var(--spark-lime)",
+              color: "#0a0d09",
+              boxShadow:
+                recipientsRaw.trim().length > 0
+                  ? "0 0 16px rgba(197,245,70,0.35)"
+                  : "none",
+            }}
+          >
+            {isSending ? "Sending…" : "Send email"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  if (mobile) {
+    return (
+      <SparkSheet
+        open
+        onOpenChange={(next) => {
+          if (!next) onClose();
+        }}
+        eyebrow="SHARE RECAP"
+        title={recapName || "Activation recap"}
+      >
+        {body}
+      </SparkSheet>
+    );
+  }
+
   return (
     <div
       onClick={onClose}
       className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
       style={{
         background: "rgba(10,11,13,0.7)",
-        backdropFilter: "blur(8px)",
+        backdropFilter: "saturate(180%) blur(12px)",
       }}
     >
       <div
@@ -111,7 +283,7 @@ export default function ShareRecapModal({
       >
         <div
           className="p-5"
-          style={{ borderBottom: "1px solid var(--spark-border)" }}
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
         >
           <p
             className="mono text-[10px] mb-1"
@@ -126,154 +298,7 @@ export default function ShareRecapModal({
             {recapName || "Activation recap"}
           </h2>
         </div>
-
-        <div className="p-5 space-y-5">
-          {/* Public link + copy */}
-          <div>
-            <p
-              className="mono text-[10px] mb-2"
-              style={{
-                letterSpacing: "0.18em",
-                color: "var(--spark-lime)",
-              }}
-            >
-              PUBLIC LINK
-            </p>
-            <div className="flex items-center gap-2">
-              <input
-                readOnly
-                value={shareUrl}
-                onFocus={(e) => e.target.select()}
-                className="flex-1 min-w-0 rounded-xl text-xs mono"
-                style={{
-                  padding: "0.6rem 0.75rem",
-                  background: "var(--spark-bg)",
-                  border: "1px solid var(--spark-border)",
-                  color: "rgba(255,255,255,0.75)",
-                  outline: "none",
-                }}
-              />
-              <button
-                type="button"
-                onClick={copyLink}
-                className="px-3 py-2 rounded-xl text-sm font-semibold shrink-0 transition"
-                style={{
-                  background: copied
-                    ? "rgba(197,245,70,0.15)"
-                    : "transparent",
-                  color: copied ? "var(--spark-lime)" : "var(--spark-text)",
-                  border: `1px solid ${
-                    copied ? "rgba(197,245,70,0.4)" : "var(--spark-border)"
-                  }`,
-                }}
-              >
-                {copied ? "✓ Copied" : "Copy link"}
-              </button>
-            </div>
-            <p
-              className="text-[11px] mt-2"
-              style={{ color: "rgba(255,255,255,0.4)" }}
-            >
-              Anyone with the link can view the recap — no login needed.
-            </p>
-          </div>
-
-          <div style={{ borderTop: "1px solid var(--spark-border)" }} />
-
-          {/* Email it */}
-          <div>
-            <p
-              className="mono text-[10px] mb-2"
-              style={{
-                letterSpacing: "0.18em",
-                color: "var(--spark-lime)",
-              }}
-            >
-              EMAIL IT
-            </p>
-            {sentTo === null ? (
-              <div className="space-y-2">
-                <input
-                  value={recipientsRaw}
-                  onChange={(e) => setRecipientsRaw(e.target.value)}
-                  placeholder="name@brand.com, teammate@brand.com"
-                  autoFocus
-                  className="w-full rounded-xl text-sm"
-                  style={{
-                    padding: "0.6rem 0.85rem",
-                    background: "var(--spark-bg)",
-                    border: "1px solid var(--spark-border)",
-                    color: "var(--spark-text)",
-                    outline: "none",
-                  }}
-                />
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Add a note (optional)"
-                  rows={2}
-                  className="w-full rounded-xl text-sm resize-none"
-                  style={{
-                    padding: "0.6rem 0.85rem",
-                    background: "var(--spark-bg)",
-                    border: "1px solid var(--spark-border)",
-                    color: "var(--spark-text)",
-                    outline: "none",
-                  }}
-                />
-              </div>
-            ) : (
-              <div
-                className="rounded-xl p-4 text-sm"
-                style={{
-                  background: "rgba(197,245,70,0.08)",
-                  border: "1px solid rgba(197,245,70,0.3)",
-                  color: "var(--spark-lime)",
-                }}
-              >
-                ✓ Sent to {sentTo} recipient{sentTo === 1 ? "" : "s"} — the
-                email links to this recap on client.igniteproductions.co.
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div
-          className="p-4 flex items-center justify-end gap-2"
-          style={{ borderTop: "1px solid var(--spark-border)" }}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSending}
-            className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50 transition"
-            style={{
-              background: "transparent",
-              color: "var(--spark-text)",
-              border: "1px solid var(--spark-border)",
-            }}
-          >
-            {sentTo === null ? "Cancel" : "Done"}
-          </button>
-          {sentTo === null && (
-            <button
-              type="button"
-              onClick={sendEmail}
-              disabled={isSending || recipientsRaw.trim().length === 0}
-              className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40 transition"
-              style={{
-                background: "var(--spark-lime)",
-                color: "#0a0d09",
-                boxShadow:
-                  recipientsRaw.trim().length > 0
-                    ? "0 0 16px rgba(197,245,70,0.35)"
-                    : "none",
-              }}
-            >
-              {isSending ? "Sending…" : "Send email"}
-            </button>
-          )}
-        </div>
+        <div className="p-5">{body}</div>
       </div>
     </div>
   );

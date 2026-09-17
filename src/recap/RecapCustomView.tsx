@@ -106,6 +106,13 @@ import {
   isReceiptLikeCategory,
   FALLBACK_FILE_CATEGORY_PHOTOS,
 } from "@/recap/fileRecapCategoryOptions";
+import {
+  RecapDetailBackLink,
+  RecapDetailPanel,
+  RecapDetailTabs,
+  RecapKpiStrip,
+  type RecapDetailTab,
+} from "@/recap/RecapDetailShell";
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
 import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
 
@@ -1205,6 +1212,7 @@ const RecapCustomViewInner = ({
   // not an unopenable .heic.
   const [isZipping, setIsZipping] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [detailTab, setDetailTab] = useState<RecapDetailTab>("overview");
   const handleDownloadPhotos = useCallback(async () => {
     if (flatImages.length === 0) {
       showAlert("No photos to download.", "warning");
@@ -1332,19 +1340,12 @@ const RecapCustomViewInner = ({
     <>
       <div className="space-y-6 max-w-7xl pb-24">
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <Link
-              to={backToListUrl}
-              className="mono text-[11px] transition"
-              style={{
-                letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
+            <RecapDetailBackLink to={backToListUrl}>
               ← Recaps
               {recap.name ? ` / ${recap.name}` : ""}
               {place ? ` / ${place}` : ""}
               {` / ${formatDate(recap.event?.date ?? recap.eventDate ?? null)}`}
-            </Link>
+            </RecapDetailBackLink>
             {/* Edit-values toolbar. Toggles every custom-field value
                 in the sections below into an editable input, with
                 Save / Cancel pair here at the top. Re-renders the
@@ -1559,34 +1560,43 @@ const RecapCustomViewInner = ({
             </div>
           </div>
 
+          <RecapDetailTabs
+            value={detailTab}
+            onChange={setDetailTab}
+            photoCount={flatImages.length}
+          />
+
           {!isEditingValues && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="kpi kpi-glow">
-                <p className="kpi-value">
-                  {typeof recap.totalEngagements === "number"
-                    ? recap.totalEngagements.toLocaleString()
-                    : "—"}
-                </p>
-                <p className="kpi-label">Engagements</p>
-              </div>
-              {recap.customRecapProductSample &&
-                recap.customRecapProductSample.length > 0 && (
-                  <div className="kpi">
-                    <p className="kpi-value">
-                      {recap.customRecapProductSample
-                        .reduce((sum, s) => sum + (s.quantity ?? 0), 0)
-                        .toLocaleString()}
-                    </p>
-                    <p className="kpi-label">Units sampled</p>
-                  </div>
-                )}
-              <div className="kpi">
-                <p className="kpi-value">{flatImages.length}</p>
-                <p className="kpi-label">Photos</p>
-              </div>
-            </div>
+            <RecapKpiStrip
+              items={[
+                {
+                  label: "Engagements",
+                  value:
+                    typeof recap.totalEngagements === "number"
+                      ? recap.totalEngagements.toLocaleString()
+                      : "—",
+                  glow: true,
+                },
+                ...(recap.customRecapProductSample &&
+                recap.customRecapProductSample.length > 0
+                  ? [
+                      {
+                        label: "Units sampled",
+                        value: recap.customRecapProductSample
+                          .reduce((sum, s) => sum + (s.quantity ?? 0), 0)
+                          .toLocaleString(),
+                      },
+                    ]
+                  : []),
+                {
+                  label: "Photos",
+                  value: String(flatImages.length),
+                },
+              ]}
+            />
           )}
 
+          <RecapDetailPanel active={detailTab === "overview" || isEditingValues}>
           {/* ======================================================
           QUALITY CHECK — server-computed review aid for the approver.
           Custom recap → isCustom={true}. Self-degrades to nothing on
@@ -1610,7 +1620,9 @@ const RecapCustomViewInner = ({
               />
             </Suspense>
           ) : null}
+          </RecapDetailPanel>
 
+          <RecapDetailPanel active={detailTab === "details" || isEditingValues}>
           {/* ======================================================
           KPI GRID
           ====================================================== */}
@@ -2366,7 +2378,9 @@ const RecapCustomViewInner = ({
               );
             })}
           </div>
+          </RecapDetailPanel>
 
+          <RecapDetailPanel active={detailTab === "photos"}>
           {/* Photos gallery */}
           <div ref={evidenceRef} className="spark-card p-6 scroll-mt-24">
             {showPhotoPrompt && !isClient && (
@@ -2701,6 +2715,9 @@ const RecapCustomViewInner = ({
               </div>
             )}
           </div>
+          </RecapDetailPanel>
+
+          <RecapDetailPanel active={detailTab === "overview"}>
           {isClient && (
             <RecapClientSignoff
               existingStatus={recap.clientSignoffStatus}
@@ -2732,6 +2749,7 @@ const RecapCustomViewInner = ({
               }}
             />
           )}
+          </RecapDetailPanel>
           </div>
           </RecapDocument>
       </div>

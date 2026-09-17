@@ -112,9 +112,9 @@ describe("recapListKpis", () => {
 describe("todayGroundKpis", () => {
   it("oranges live BAs and limes mapped", () => {
     expect(todayGroundKpis({ events: 4, liveBas: 2, mapped: 3 })).toEqual([
-      { label: "Events", value: "4" },
-      { label: "Live BAs", value: "2", tone: "orange" },
-      { label: "Mapped", value: "3", tone: "lime" },
+      { label: "Events", value: "4", count: 4 },
+      { label: "Live BAs", value: "2", count: 2, tone: "orange" },
+      { label: "Mapped", value: "3", count: 3, tone: "lime" },
     ]);
   });
 });

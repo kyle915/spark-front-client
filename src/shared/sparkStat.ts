@@ -5,6 +5,8 @@ export type SparkStatTone = "default" | "lime" | "orange";
 export type SparkStatItem = {
   label: string;
   value: string;
+  /** When set, render with CountReel instead of the static string. */
+  count?: number;
   hint?: string;
   tone?: SparkStatTone;
 };
@@ -90,15 +92,17 @@ export function todayGroundKpis(input: {
   mapped: number;
 }): SparkStatItem[] {
   return [
-    { label: "Events", value: input.events.toLocaleString() },
+    { label: "Events", value: input.events.toLocaleString(), count: input.events },
     {
       label: "Live BAs",
       value: input.liveBas.toLocaleString(),
+      count: input.liveBas,
       tone: input.liveBas > 0 ? "orange" : "default",
     },
     {
       label: "Mapped",
       value: input.mapped.toLocaleString(),
+      count: input.mapped,
       tone: "lime",
     },
   ];

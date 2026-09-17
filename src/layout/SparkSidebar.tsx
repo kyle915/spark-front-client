@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import TenantPicker from "./TenantPicker";
-import { ChevronDown, ChevronRight, X } from "lucide-react";
+import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeft, X } from "lucide-react";
 import useSidebarCounts from "@/hooks/useSidebarCounts";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import useChatUnreadCount from "@/hooks/useChatUnreadCount";
@@ -343,10 +343,29 @@ const CollapsibleNavSection: React.FC<{
   defaultOpen: boolean;
   onStub: (label: string) => void;
   isClient?: boolean;
-}> = ({ section, pathname, defaultOpen, onStub, isClient }) => {
+  collapsed?: boolean;
+}> = ({ section, pathname, defaultOpen, onStub, isClient, collapsed }) => {
   const [open, setOpen] = useState(defaultOpen);
   const title =
     isClient && section.clientTitle ? section.clientTitle : section.title;
+
+  if (collapsed) {
+    return (
+      <div className="space-y-0.5 px-1">
+        {section.items.map((item) => (
+          <NavRow
+            key={item.label}
+            item={item}
+            pathname={pathname}
+            onStub={onStub}
+            isClient={isClient}
+            collapsed
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div>
       <button
@@ -379,7 +398,8 @@ const NavRow: React.FC<{
   pathname: string;
   onStub: (label: string) => void;
   isClient?: boolean;
-}> = ({ item, pathname, onStub, isClient }) => {
+  collapsed?: boolean;
+}> = ({ item, pathname, onStub, isClient, collapsed }) => {
   const effectiveTo =
     isClient && item.clientTo ? item.clientTo : item.to;
   const active = isActive(effectiveTo, pathname);
@@ -395,25 +415,34 @@ const NavRow: React.FC<{
       >
         <Icon size={16} />
       </span>
-      <span className="truncate">{label}</span>
-      {item.chip && (
-        <span
-          className={`${chipClass(item.chip.tone)} nav-badge ${item.chip.blink ? "spark-blink" : ""}`}
-        >
-          {item.chip.text}
-        </span>
-      )}
+      {!collapsed ? (
+        <>
+          <span className="truncate spark-sidebar-label">{label}</span>
+          {item.chip && (
+            <span
+              className={`${chipClass(item.chip.tone)} nav-badge ${item.chip.blink ? "spark-blink" : ""}`}
+            >
+              {item.chip.text}
+            </span>
+          )}
+        </>
+      ) : null}
     </>
   );
   if (item.stub || !effectiveTo) {
     return (
-      <button onClick={() => onStub(item.label)} className={cls}>
+      <button
+        onClick={() => onStub(item.label)}
+        className={cls}
+        title={label}
+        aria-label={label}
+      >
         {content}
       </button>
     );
   }
   return (
-    <Link to={effectiveTo} className={cls}>
+    <Link to={effectiveTo} className={cls} title={label} aria-label={label}>
       {content}
     </Link>
   );
@@ -439,7 +468,8 @@ const SidebarNav: React.FC<{
   pathname: string;
   isClient: boolean;
   onStub: (label: string) => void;
-}> = ({ sections, pathname, isClient, onStub }) => {
+  collapsed?: boolean;
+}> = ({ sections, pathname, isClient, onStub, collapsed }) => {
   const counts = useSidebarCounts();
   // Chat unread is on its own polled hook (60s) so it can refresh
   // without re-pulling the heavy RequestsQuery that useSidebarCounts
@@ -507,6 +537,7 @@ const SidebarNav: React.FC<{
             }
             onStub={onStub}
             isClient={isClient}
+            collapsed={collapsed}
           />
         );
       })}
@@ -518,6 +549,9 @@ export const SparkSidebar: React.FC = () => {
   const { user, tenantMeta } = useAuthStore();
   const { pathname } = useLocation();
   const { isClient } = useSparkRole();
+  const { open, setOpen, collapsed, toggleCollapsed } = useMobileNav();
+  // Mobile drawer always shows full labels; desktop can icon-rail collapse.
+  const iconRail = collapsed && !open;
   // Filter sections + items by role.
   const visibleSections: NavSection[] = SECTIONS.filter(
     (s) => !s.adminOnly || !isClient,
@@ -553,19 +587,19 @@ export const SparkSidebar: React.FC = () => {
             }
             onStub={onStub}
             isClient={isClient}
+            collapsed={iconRail}
           />
         );
       })}
     </nav>
   );
 
-  const { open, setOpen } = useMobileNav();
-
   return (
     <aside
       className={[
-        "w-64 shrink-0 flex flex-col h-screen min-h-0",
-        "fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out md:static md:translate-x-0 md:z-auto",
+        "spark-sidebar shrink-0 flex flex-col h-screen min-h-0",
+        iconRail ? "w-[4.5rem] is-collapsed" : "w-64",
+        "fixed inset-y-0 left-0 z-50 transition-[width,transform] duration-200 ease-out md:static md:translate-x-0 md:z-auto",
         open ? "translate-x-0" : "-translate-x-full md:translate-x-0",
       ].join(" ")}
       style={{
@@ -578,32 +612,60 @@ export const SparkSidebar: React.FC = () => {
       {/* Brand mark — real Spark logo PNG, inverted to white for the
           dark sidebar (the source logo is black on transparent). */}
       <div
-        className="px-5 py-5 flex items-center justify-between gap-2"
+        className="spark-sidebar-brand px-5 py-5 flex items-center justify-between gap-2"
         style={{ borderBottom: "1px solid var(--spark-border)" }}
       >
-        <img
-          src="/legal/spark-logo.png"
-          alt="Spark by Ignite"
-          style={{
-            height: 28,
-            width: "auto",
-            display: "block",
-            filter: "invert(1) hue-rotate(180deg)",
-          }}
-        />
-        <button
-          type="button"
-          className="md:hidden btn btn-ghost btn-sm btn-square"
-          aria-label="Close menu"
-          onClick={() => setOpen(false)}
-        >
-          <X className="w-4 h-4" />
-        </button>
+        {!iconRail ? (
+          <img
+            src="/legal/spark-logo.png"
+            alt="Spark by Ignite"
+            style={{
+              height: 28,
+              width: "auto",
+              display: "block",
+              filter: "invert(1) hue-rotate(180deg)",
+            }}
+          />
+        ) : (
+          <span
+            className="w-8 h-8 rounded-lg grid place-items-center text-xs font-bold"
+            style={{
+              background: "rgba(197,245,70,0.15)",
+              color: "var(--spark-lime)",
+            }}
+            aria-hidden
+          >
+            S
+          </span>
+        )}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="hidden md:inline-flex btn btn-ghost btn-sm btn-square"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={toggleCollapsed}
+          >
+            {collapsed ? (
+              <PanelLeft className="w-4 h-4" />
+            ) : (
+              <PanelLeftClose className="w-4 h-4" />
+            )}
+          </button>
+          <button
+            type="button"
+            className="md:hidden btn btn-ghost btn-sm btn-square"
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Tenant picker */}
       <div
-        className="px-3 py-3"
+        className="px-3 py-3 spark-sidebar-expand-only"
         style={{ borderBottom: "1px solid var(--spark-border)" }}
       >
         <div className="label-mini mb-1.5 px-1">Tenant</div>
@@ -652,6 +714,7 @@ export const SparkSidebar: React.FC = () => {
             pathname={pathname}
             isClient={isClient}
             onStub={onStub}
+            collapsed={iconRail}
           />
         </Suspense>
       </ErrorBoundary>
@@ -662,7 +725,7 @@ export const SparkSidebar: React.FC = () => {
         style={{ borderTop: "1px solid var(--spark-border)" }}
       >
         <span className="spark-avatar">{initial}</span>
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 spark-sidebar-expand-only">
           <p className="text-sm font-semibold truncate">
             {user?.firstName ?? user?.email ?? "User"}
           </p>

@@ -23,21 +23,37 @@ import { useMobileNav } from "./MobileNavContext";
 
 type Role = "admin" | "client";
 
-const useBreadcrumb = () => {
+type CrumbParts = { parent: string; current: string };
+
+const useBreadcrumb = (): CrumbParts => {
   const { pathname } = useLocation();
   const pageCrumb = usePageCrumb();
   return useMemo(() => {
-    if (pageCrumb) return `${pageCrumb.parent} / ${pageCrumb.title}`;
-    if (pathname === "/") return "DASHBOARD";
-    if (pathname === "/insights") return "DASHBOARD";
-    if (pathname === "/client-dashboard") return "DASHBOARD";
+    if (pageCrumb) {
+      return { parent: pageCrumb.parent, current: pageCrumb.title };
+    }
+    if (
+      pathname === "/" ||
+      pathname === "/insights" ||
+      pathname === "/client-dashboard"
+    ) {
+      return { parent: "Spark", current: "Dashboard" };
+    }
     const parts = pathname.split("/").filter(Boolean);
     const last = parts[parts.length - 1] ?? "";
     if (looksLikeRouteId(last)) {
       const parent = parts[parts.length - 2] ?? "page";
-      return parent.replace(/-/g, " ").toUpperCase();
+      return {
+        parent: parent.replace(/-/g, " "),
+        current: "Detail",
+      };
     }
-    return last.replace(/-/g, " ").toUpperCase();
+    const current = last.replace(/-/g, " ");
+    const parent =
+      parts.length > 1
+        ? parts[parts.length - 2].replace(/-/g, " ")
+        : "Spark";
+    return { parent, current };
   }, [pathname, pageCrumb]);
 };
 
@@ -92,7 +108,7 @@ export const SparkTopbar: React.FC = () => {
   const { pathname } = useLocation();
   const crumb = useBreadcrumb();
   const { role, isClient, setRole } = useSparkRole();
-  const { toggle: toggleNav } = useMobileNav();
+  const { toggle: toggleNav, toggleCollapsed } = useMobileNav();
   const initial = (user?.firstName ?? user?.email ?? "U")
     .charAt(0)
     .toUpperCase();
@@ -118,8 +134,8 @@ export const SparkTopbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-base-200/50 backdrop-blur-2xl border-b border-base-300 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.18)" }}>
-      {/* Left: mobile menu + breadcrumb + (optional) public share-link pill */}
+    <header className="sticky top-0 z-30 bg-base-200/55 backdrop-blur-[20px] border-b border-base-300 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.18)", WebkitBackdropFilter: "saturate(180%) blur(20px)", backdropFilter: "saturate(180%) blur(20px)" }}>
+      {/* Left: menu + quiet breadcrumb + (optional) public share-link pill */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           type="button"
@@ -129,12 +145,24 @@ export const SparkTopbar: React.FC = () => {
         >
           <Bars3Icon className="w-5 h-5" />
         </button>
-        <span className="mono text-[11px] tracking-[0.18em] text-base-content/40 hidden sm:inline">
-          spark.app /
-        </span>
-        <span className="mono text-[11px] tracking-[0.18em] text-primary truncate">
-          {crumb}
-        </span>
+        <button
+          type="button"
+          className="hidden md:inline-flex btn btn-ghost btn-sm btn-square shrink-0"
+          aria-label="Collapse sidebar"
+          title="Collapse sidebar"
+          onClick={toggleCollapsed}
+        >
+          <Bars3Icon className="w-5 h-5 opacity-70" />
+        </button>
+        <nav className="spark-crumb min-w-0" aria-label="Breadcrumb">
+          <span className="spark-crumb-root hidden sm:inline">
+            {crumb.parent}
+          </span>
+          <span className="spark-crumb-sep hidden sm:inline" aria-hidden>
+            /
+          </span>
+          <span className="spark-crumb-current">{crumb.current}</span>
+        </nav>
 
         <Suspense fallback={null}>
           <PublicFormPillSlot className="ml-2" />
