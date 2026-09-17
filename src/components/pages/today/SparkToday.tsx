@@ -196,14 +196,11 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           <SparkBentoTile key={k.label} {...k} />
         ))}
       </div>
-      <div
-        className="grid gap-5"
-        style={{ gridTemplateColumns: "1fr 380px" }}
-      >
+      <div className="grid gap-5 grid-cols-1 lg:grid-cols-[1fr_380px]">
       {/* Map */}
       <div
-        className="spark-card overflow-hidden relative"
-        style={{ borderRadius: 20, height: 640 }}
+        className="spark-card overflow-hidden relative order-1 min-h-[280px] h-[420px] lg:h-[640px]"
+        style={{ borderRadius: 20 }}
       >
         {!apiKey ? (
           <div
@@ -405,8 +402,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
 
       {/* Roster rail */}
       <div
-        className="spark-card overflow-hidden flex flex-col"
-        style={{ maxHeight: 640 }}
+        className="spark-card overflow-hidden flex flex-col order-2 min-h-[280px] max-h-[420px] lg:max-h-[640px]"
       >
         <div
           className="p-4 flex items-center justify-between"

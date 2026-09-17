@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { confirmActionClass } from "./sparkOverlay";
+import { confirmActionClass } from "./sparkConfirmTone";
 
 describe("confirmActionClass", () => {
   it("uses lime primary for default confirms", () => {

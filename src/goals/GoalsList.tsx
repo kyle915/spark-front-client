@@ -1,3 +1,4 @@
+import SparkOverlay from "@/shared/SparkOverlay";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { ArrowPathIcon, FlagIcon, PencilIcon } from "@heroicons/react/24/solid";
@@ -404,8 +405,8 @@ const GoalsList = () => {
       </div>
 
       {isEditModalOpen && editingGoal ? (
-        <dialog open className="modal">
-          <div className="modal-box max-w-3xl">
+        <SparkOverlay onClose={closeEditModal} size="lg" label="Edit Goal">
+          <div>
             <h3 className="font-bold text-lg mb-2">Edit Goal</h3>
             <p className="text-sm text-base-content/70 mb-4">
               Update goals for <strong>{editingGoal.userName}</strong>.
@@ -473,13 +474,7 @@ const GoalsList = () => {
               </div>
             </form>
           </div>
-
-          <form method="dialog" className="modal-backdrop">
-            <button type="button" onClick={closeEditModal}>
-              close
-            </button>
-          </form>
-        </dialog>
+        </SparkOverlay>
       ) : null}
     </Layout>
   );

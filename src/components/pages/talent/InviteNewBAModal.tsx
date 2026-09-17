@@ -4,6 +4,7 @@ import { CreateAmbassadorInvitationMutation } from "@/api/mutations/CreateAmbass
 import type { CreateAmbassadorInvitationMutation as CreateAmbassadorInvitationMutationType } from "@api/mutations/__generated__/CreateAmbassadorInvitationMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import SparkOverlay from "@/shared/SparkOverlay";
 
 /**
  * Email-invite a new Brand Ambassador to the current tenant.
@@ -76,19 +77,8 @@ export default function InviteNewBAModal({ onClose, onInvited }: Props) {
   };
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]"
-      style={{
-        background: "rgba(10,11,13,0.7)",
-        backdropFilter: "blur(8px)",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md spark-card overflow-hidden"
-        style={{ borderRadius: 20 }}
-      >
+    <SparkOverlay onClose={onClose} size="md" label="Invite a Brand Ambassador">
+      <div className="overflow-hidden">
         <div
           className="p-5"
           style={{ borderBottom: "1px solid var(--spark-border)" }}
@@ -188,6 +178,6 @@ export default function InviteNewBAModal({ onClose, onInvited }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </SparkOverlay>
   );
 }

@@ -24,6 +24,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { GenerateInsightsMutation } from "@/api/mutations/GenerateInsightsMutation";
 import type { GenerateInsightsMutationType } from "@/api/mutations/GenerateInsightsMutation";
+import { computePeriodDelta } from "@/lib/periodDelta";
 
 /* =========================
    Helpers
@@ -31,12 +32,6 @@ import type { GenerateInsightsMutationType } from "@/api/mutations/GenerateInsig
 
 const formatNumber = (value: number) => value.toLocaleString();
 const formatPercent = (value: number) => `${value.toFixed(1)}%`;
-const formatDelta = (current: number, previous?: number | null) => {
-  if (!previous || previous === 0) return "0%";
-  const diff = ((current - previous) / previous) * 100;
-  const sign = diff >= 0 ? "+" : "";
-  return `${sign}${diff.toFixed(1)}%`;
-};
 
 export default function DashboardRetail() {
   const { tenantId } = useAuthStore();
@@ -72,22 +67,34 @@ export default function DashboardRetail() {
       key: "totalConsumersSampled",
       title: "Total Consumers Sampled",
       value: formatNumber(metrics.totalConsumersSampled),
-      change: formatDelta(
+      current: metrics.totalConsumersSampled,
+      previous: comparison?.totalConsumersSampled ?? null,
+      delta: computePeriodDelta(
         metrics.totalConsumersSampled,
-        comparison?.totalConsumersSampled,
+        comparison?.totalConsumersSampled ?? 0,
       ),
     },
     {
       key: "totalPurchases",
       title: "Total Purchases",
       value: formatNumber(metrics.totalPurchases),
-      change: formatDelta(metrics.totalPurchases, comparison?.totalPurchases),
+      current: metrics.totalPurchases,
+      previous: comparison?.totalPurchases ?? null,
+      delta: computePeriodDelta(
+        metrics.totalPurchases,
+        comparison?.totalPurchases ?? 0,
+      ),
     },
     {
       key: "overallConversionRate",
       title: "Overall Conversion Rate",
       value: formatPercent(metrics.conversionRate),
-      change: formatDelta(metrics.conversionRate, comparison?.conversionRate),
+      current: metrics.conversionRate,
+      previous: comparison?.conversionRate ?? null,
+      delta: computePeriodDelta(
+        metrics.conversionRate,
+        comparison?.conversionRate ?? 0,
+      ),
     },
   ];
 
@@ -318,8 +325,9 @@ export default function DashboardRetail() {
               metricKey={metric.key}
               title={metric.title}
               value={metric.value}
-              change={metric.change}
-              variant={metric.change.startsWith("-") ? "error" : "success"}
+              delta={metric.delta}
+              current={metric.current}
+              previous={metric.previous}
               comparisonLabel={comparisonLabel}
             />
           ))}

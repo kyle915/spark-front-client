@@ -95,3 +95,37 @@ export function periodDeltaNote(delta: PeriodDelta): string | null {
   if (delta.kind === "sparse" || delta.kind === "large") return delta.note;
   return null;
 }
+
+/** Short chip / change label for MetricCard and legacy dashboards. */
+export function formatPeriodDeltaLabel(delta: PeriodDelta): string {
+  switch (delta.kind) {
+    case "up":
+      return `↑ ${delta.pct}%`;
+    case "down":
+      return `↓ ${Math.abs(delta.pct)}%`;
+    case "flat":
+      return "→ 0%";
+    case "new":
+      return "New";
+    case "none":
+      return "—";
+    case "sparse":
+      return delta.label;
+    case "large":
+      return delta.direction === "up"
+        ? `↑ >${delta.cappedPct}%`
+        : `↓ >${delta.cappedPct}%`;
+    default: {
+      const _exhaustive: never = delta;
+      return _exhaustive;
+    }
+  }
+}
+
+/** Whether the delta should use the orange (down / caution) tone. */
+export function periodDeltaIsNegative(delta: PeriodDelta): boolean {
+  return (
+    delta.kind === "down" ||
+    (delta.kind === "large" && delta.direction === "down")
+  );
+}

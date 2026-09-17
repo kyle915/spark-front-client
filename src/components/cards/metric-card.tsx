@@ -9,10 +9,6 @@ import {
   Boxes,
   Users,
   DollarSign,
-} from "lucide-react";
-import { cn } from "../../lib/utils";
-
-import {
   CalendarCheck,
   ClipboardList,
   UsersRound,
@@ -20,6 +16,13 @@ import {
   Eye,
   BadgeDollarSign,
 } from "lucide-react";
+import {
+  computePeriodDelta,
+  formatPeriodDeltaLabel,
+  periodDeltaIsNegative,
+  periodDeltaNote,
+  type PeriodDelta,
+} from "@/lib/periodDelta";
 
 const metricIcons: Record<string, React.ReactNode> = {
   totalEvents: <CalendarCheck />,
@@ -27,16 +30,16 @@ const metricIcons: Record<string, React.ReactNode> = {
   totalClients: <UsersRound />,
   totalDistributors: <Building2 />,
   totalConsumersSampled: <UsersRound />,
-  totalPurchases: <ShoppingCart className="text-green-500" />,
-  overallConversionRate: <Target className="text-purple-500" />,
-  totalDemos: <BarChart3 className="text-yellow-500" />,
-  newCustomersSampled: <UserPlus className="text-pink-500" />,
-  boxesSold: <Boxes className="text-red-500" />,
-  additionalDisplays: <Users className="text-gray-500" />,
-  revenueGenerated: <DollarSign className="text-green-500" />,
-  totalCansSold: <ShoppingCart className="text-green-500" />,
-  multiPacksSold: <Boxes className="text-red-500" />,
-  singleCansSold: <ShoppingCart className="text-green-500" />,
+  totalPurchases: <ShoppingCart />,
+  overallConversionRate: <Target />,
+  totalDemos: <BarChart3 />,
+  newCustomersSampled: <UserPlus />,
+  boxesSold: <Boxes />,
+  additionalDisplays: <Users />,
+  revenueGenerated: <DollarSign />,
+  totalCansSold: <ShoppingCart />,
+  multiPacksSold: <Boxes />,
+  singleCansSold: <ShoppingCart />,
   brandAwareness: <Eye />,
   purchaseIntent: <BadgeDollarSign />,
 };
@@ -45,7 +48,12 @@ export interface MetricCardProps {
   metricKey: string;
   title: string;
   value: string;
-  change: string;
+  /** Legacy string change (prefer current + previous). */
+  change?: string;
+  /** Prefer these — honest % via computePeriodDelta. */
+  current?: number;
+  previous?: number | null;
+  delta?: PeriodDelta;
   subtitle?: string;
   variant?: "success" | "error" | "neutral";
   icon?: React.ReactNode;
@@ -57,84 +65,123 @@ export function MetricCard({
   title,
   value,
   change,
+  current,
+  previous,
+  delta: deltaProp,
   subtitle,
   variant = "neutral",
   icon,
+  comparisonLabel = "vs previous period",
 }: MetricCardProps) {
-  const isNegative = change.startsWith("-");
+  const delta =
+    deltaProp ??
+    (typeof current === "number" && typeof previous === "number"
+      ? computePeriodDelta(current, previous)
+      : typeof current === "number" && (previous == null || previous === 0)
+        ? computePeriodDelta(current, previous ?? 0)
+        : null);
 
-  // DaisyUI-driven color scheme
-  const colorScheme =
-    variant === "success"
-      ? {
-          text: "text-green-600",
-          bg: "bg-green-600/10",
-        }
-      : variant === "error"
-        ? {
-            text: "text-error",
-            bg: "bg-error/10",
-          }
-        : {
-            text: "text-neutral-content",
-            bg: "bg-base-300/40",
-          };
+  const changeLabel = delta
+    ? formatPeriodDeltaLabel(delta)
+    : (change ?? "—");
+  const note = delta ? periodDeltaNote(delta) : null;
+  const isNegative = delta
+    ? periodDeltaIsNegative(delta)
+    : changeLabel.startsWith("-") || changeLabel.startsWith("↓");
+
+  const tone =
+    variant === "success" || (!isNegative && delta && delta.kind !== "none")
+      ? "lime"
+      : isNegative
+        ? "orange"
+        : "muted";
 
   const selectedIcon = metricKey
     ? (metricIcons[metricKey] ?? null)
     : (icon ?? null);
 
   return (
-    <div
-      className={cn(
-        // Card container
-        "rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300",
-        "bg-base-100 text-base-content border border-base-300",
-        "dark:border-base-700 dark:bg-base backdrop-blur-sm",
-      )}
-    >
-      {/* TITLE */}
-      <p className="text-sm font-semibold text-base-content/60 uppercase tracking-wider">
-        {title}
-      </p>
+    <div className="spark-card p-5 hov" style={{ borderRadius: 20 }}>
+      <p className="label-mini">{title}</p>
 
-      {/* VALUE + ICON */}
-      <div className="flex items-center justify-between mt-3">
-        <p className="text-4xl font-bold leading-tight">{value}</p>
-
-        <div
-          className={cn(
-            "p-3 rounded-xl flex items-center justify-center",
-            "transition-colors duration-300",
-            colorScheme.bg,
-          )}
+      <div className="flex items-center justify-between mt-3 gap-3">
+        <p
+          className="tab-num text-3xl font-bold leading-tight"
+          style={{ letterSpacing: "-0.03em" }}
         >
-          <div className={cn("w-6 h-6", colorScheme.text)}>{selectedIcon}</div>
-        </div>
+          {value}
+        </p>
+        {selectedIcon ? (
+          <div
+            className="p-2.5 rounded-xl flex items-center justify-center shrink-0"
+            style={{
+              background:
+                tone === "lime"
+                  ? "rgba(197,245,70,0.10)"
+                  : tone === "orange"
+                    ? "rgba(239,90,42,0.10)"
+                    : "rgba(255,255,255,0.04)",
+              color:
+                tone === "lime"
+                  ? "var(--spark-lime)"
+                  : tone === "orange"
+                    ? "var(--spark-orange)"
+                    : "rgba(255,255,255,0.55)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            <div className="w-5 h-5">{selectedIcon}</div>
+          </div>
+        ) : null}
       </div>
 
-      {/* FOOTER — Trends */}
-      <div className="flex items-center gap-2 mt-4">
+      <div className="flex items-center gap-2 mt-4 flex-wrap">
         {isNegative ? (
-          <TrendingDown className={cn("w-5 h-5", colorScheme.text)} />
+          <TrendingDown
+            className="w-4 h-4"
+            style={{ color: "var(--spark-orange)" }}
+          />
         ) : (
-          <TrendingUp className={cn("w-5 h-5", colorScheme.text)} />
+          <TrendingUp
+            className="w-4 h-4"
+            style={{
+              color:
+                delta?.kind === "none" || delta?.kind === "sparse"
+                  ? "rgba(255,255,255,0.45)"
+                  : "var(--spark-lime)",
+            }}
+          />
         )}
-
         <span
-          className={cn(
-            "text-sm font-semibold",
-            isNegative ? "text-error" : "text-green-600",
-          )}
+          className="text-sm font-semibold mono"
+          style={{
+            letterSpacing: "0.04em",
+            color: isNegative
+              ? "var(--spark-orange)"
+              : delta?.kind === "sparse" || delta?.kind === "none"
+                ? "rgba(255,255,255,0.55)"
+                : "var(--spark-lime)",
+          }}
         >
-          {change}
+          {changeLabel}
         </span>
-        <span className={cn("text-sm")}>vs Q4 2024</span>
-
-        {subtitle && (
-          <span className="text-sm text-base-content/60">{subtitle}</span>
-        )}
+        <span className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+          {comparisonLabel}
+        </span>
+        {subtitle ? (
+          <span className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+            {subtitle}
+          </span>
+        ) : null}
       </div>
+      {note ? (
+        <p
+          className="text-[11px] mt-2 leading-snug"
+          style={{ color: "rgba(255,255,255,0.45)" }}
+        >
+          {note}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import Layout from "@/layout/Layout";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkGhostButton from "@/shared/SparkGhostButton";
 import { useEventDashboardData } from "@/hooks/useEventDashboardData";
 import { useAuthStore } from "@/store/authStore";
 import type { DashboardFilters } from "@/components/filters/FiltersPanel";
@@ -77,8 +79,9 @@ const engagementFromCustom = (n: {
   consumersSampled: number | null | undefined;
   totalEngagements: number | null | undefined;
 }): number => {
+  // Prefer consumers sampled only — do not conflate with totalEngagements / reach.
   if (typeof n.consumersSampled === "number") return n.consumersSampled;
-  if (typeof n.totalEngagements === "number") return n.totalEngagements;
+  void n.totalEngagements;
   return 0;
 };
 
@@ -207,6 +210,16 @@ const EventsPerWeekChart: React.FC = () => {
       },
     },
   };
+  if (values.every((v) => v === 0)) {
+    return (
+      <div
+        className="grid place-items-center h-full text-xs"
+        style={{ color: "rgba(255,255,255,0.45)" }}
+      >
+        No requests created in this window.
+      </div>
+    );
+  }
   return <Bar data={chartData} options={options} />;
 };
 
@@ -357,6 +370,16 @@ const ConsumersSampledChart: React.FC = () => {
       },
     },
   };
+  if (values.every((v) => v === 0)) {
+    return (
+      <div
+        className="grid place-items-center h-full text-xs"
+        style={{ color: "rgba(255,255,255,0.45)" }}
+      >
+        No consumers sampled in this window.
+      </div>
+    );
+  }
   return <Bar data={chartData} options={options} />;
 };
 
@@ -430,6 +453,16 @@ const TopRetailersChart: React.FC = () => {
       },
     },
   };
+  if (values.length === 0 || values.every((v) => v === 0)) {
+    return (
+      <div
+        className="grid place-items-center h-full text-xs"
+        style={{ color: "rgba(255,255,255,0.45)" }}
+      >
+        No retailer sampling volume yet.
+      </div>
+    );
+  }
   return <Bar data={chartData} options={options} />;
 };
 
@@ -459,11 +492,12 @@ const ChartCard: React.FC<{
   title: string;
   subtitle: string;
   tall?: boolean;
+  empty?: boolean;
   children: React.ReactNode;
-}> = ({ title, subtitle, tall, children }) => (
+}> = ({ title, subtitle, tall, empty, children }) => (
   <div className="spark-card p-5">
     <h3
-      className="display font-bold mb-2"
+      className="spark-title font-semibold mb-2"
       style={{ letterSpacing: "-0.02em" }}
     >
       {title}
@@ -474,19 +508,34 @@ const ChartCard: React.FC<{
     >
       {subtitle}
     </p>
-    <div style={{ position: "relative", height: tall ? 280 : 260 }}>
-      <Suspense
-        fallback={
-          <div
-            className="grid place-items-center h-full text-xs"
-            style={{ color: "rgba(255,255,255,0.45)" }}
-          >
-            Loading…
-          </div>
-        }
-      >
-        {children}
-      </Suspense>
+    <div
+      className={
+        tall
+          ? "relative h-[200px] sm:h-[260px] md:h-[300px]"
+          : "relative h-[180px] sm:h-[240px] md:h-[260px]"
+      }
+    >
+      {empty ? (
+        <div
+          className="grid place-items-center h-full text-xs"
+          style={{ color: "rgba(255,255,255,0.45)" }}
+        >
+          No data for this range yet.
+        </div>
+      ) : (
+        <Suspense
+          fallback={
+            <div
+              className="grid place-items-center h-full text-xs"
+              style={{ color: "rgba(255,255,255,0.45)" }}
+            >
+              Loading…
+            </div>
+          }
+        >
+          {children}
+        </Suspense>
+      )}
     </div>
   </div>
 );
@@ -508,52 +557,20 @@ export default function SparkReports() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-7xl">
-        {/* Header */}
-        <div className="flex items-end justify-between flex-wrap gap-4">
-          <div>
-            <p
-              className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              REPORTS · LAST 90 DAYS
-            </p>
-            <h1
-              className="display text-4xl font-bold mt-2"
-              style={{ letterSpacing: "-0.04em" }}
-            >
-              The numbers.
-            </h1>
-            <p
-              className="mt-2"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Live from the analytics warehouse. Filter by brand, market,
-              activation type, or BA.
-            </p>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {/* Uses the same @media print stylesheet that powers the
-                request-view 'Print brief'. The page strips chrome,
-                inverts to dark-on-white for ink, and renders the
-                KPI strip + charts. Save-as-PDF works in any browser. */}
-            <button
+      <div className="space-y-6 max-w-7xl spark-fade-in">
+        <SparkPageHeader
+          eyebrow="REPORTS · LAST 90 DAYS"
+          title="The numbers."
+          support="Live from the analytics warehouse. Consumers counted are sampled — not reach or samples handed out."
+          action={
+            <SparkGhostButton
               onClick={() => window.print()}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
               title="Save the current view as PDF via the browser print dialog"
             >
-              🖨 Export PDF
-            </button>
-          </div>
-        </div>
+              Export PDF
+            </SparkGhostButton>
+          }
+        />
 
         {/* KPI strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -567,7 +584,7 @@ export default function SparkReports() {
             </p>
           </div>
           <div className="spark-card p-4">
-            <p className="label-mini">CONSUMERS</p>
+            <p className="label-mini">CONSUMERS SAMPLED</p>
             <p className="tab-num text-3xl font-bold mt-1">
               {fmtNum(m.consumersSampled)}
             </p>

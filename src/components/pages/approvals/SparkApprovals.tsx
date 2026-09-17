@@ -9,6 +9,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import SparkOverlay from "@/shared/SparkOverlay";
+import SparkPageHeader from "@/shared/SparkPageHeader";
 
 /**
  * Spark v2 — Approvals.
@@ -1770,48 +1771,27 @@ const LinkedSheetChip: React.FC = () => {
 export const ApprovalsBody: React.FC = () => {
   void useSparkRole;
   return (
-    <div className="space-y-6 max-w-5xl">
-        {/* Header */}
-        <div className="flex items-end justify-between flex-wrap gap-4">
-          <div>
-            <p
-              className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              PENDING APPROVALS
-            </p>
-            <h1
-              className="display text-4xl font-bold mt-2"
-              style={{ letterSpacing: "-0.04em" }}
-            >
-              Review &amp; approve.
-            </h1>
-            <p
-              className="mt-2"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
+    <div className="space-y-6 max-w-5xl spark-fade-in">
+        <SparkPageHeader
+          eyebrow="PENDING APPROVALS"
+          title="Review & approve."
+          support={
+            <>
               External requests route to a mapped client user. Logged-in
               submissions auto-approve. Approvals queue a job in{" "}
               <span style={{ color: "var(--spark-gold)" }}>
                 Queue for Ignite
               </span>
               .
-            </p>
-          </div>
-          <div className="flex gap-2 flex-wrap items-center">
-            {/* Per-tenant linked Google Sheet shortcut, mirroring the
-                tracker / dashboard / settings deep-links. Same
-                localStorage key. */}
-            <LinkedSheetChip />
-            {/* Quick Slack/email copy: dumps the current pending queue
-                as text so kyle can paste into a team channel. Uses
-                whatever's currently rendered (respects filters). */}
-            <ApprovalsCopyQueueButton />
-          </div>
-        </div>
+            </>
+          }
+          action={
+            <>
+              <LinkedSheetChip />
+              <ApprovalsCopyQueueButton />
+            </>
+          }
+        />
 
         {/* How it works */}
         <div
