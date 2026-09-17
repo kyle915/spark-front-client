@@ -153,6 +153,12 @@ describe("tenantLogoCandidates", () => {
     expect(candidates[0]).toContain("Claude_AI_symbol.svg");
   });
 
+  it("gives Kalshi the bundled official wordmark without an API image", () => {
+    expect(
+      tenantLogoCandidates({ name: "Kalshi", tenantSlug: "kalshi" })[0],
+    ).toBe("/brands/kalshi-logo.svg");
+  });
+
   it("still prefers a tenant image/logoUrl over the KKC Wikipedia mark", () => {
     const api =
       "https://storage.googleapis.com/sparkio-production/tenants/images/kkc.png";

@@ -69,6 +69,19 @@ describe("check-in brand logo matches spark-form", () => {
     expect(grubWalkup).toEqual(grubForm);
   });
 
+  it("Kalshi uses the bundled official wordmark on walk-up and spark-form", () => {
+    const walkup = tenantLogoCandidates({
+      name: "Kalshi",
+      tenantSlug: "kalshi",
+    });
+    const form = tenantLogoCandidates({
+      name: "Kalshi",
+      requestUrlName: "kalshi",
+    });
+    expect(walkup[0]).toBe("/brands/kalshi-logo.svg");
+    expect(walkup).toEqual(form);
+  });
+
   it("Anthropic uses the Claude symbol on walk-up and spark-form", () => {
     const walkup = tenantLogoCandidates({
       name: "Anthropic",

@@ -102,6 +102,10 @@ const OFFICIAL_FALLBACKS: Record<string, OfficialFallback> = {
     src: "https://upload.wikimedia.org/wikipedia/commons/8/87/Grubhub_2025_logo.svg",
   },
 
+  // Wikimedia Commons — Kalshi wordmark (sourced from kalshi.com).
+  // https://commons.wikimedia.org/wiki/File:Kalshi_logo.svg
+  kalshi: { src: "/brands/kalshi-logo.svg" },
+
   // Wikimedia Commons, sourced from dudeproducts.com.
   // https://commons.wikimedia.org/wiki/File:Dude_Wipes_logo.svg
   dudewipes: {

@@ -187,7 +187,14 @@ type SamplingStop = {
  * store parking lot on one bar has to be able to finish and clock out. Nothing
  * reads it but the counter in `PhotoBucketZone` — not `submit`, not the API.
  */
-type PhotoBucket = { id: string; name: string; helper: string; min: number };
+type PhotoBucket = {
+  id: string;
+  name: string;
+  helper: string;
+  min: number;
+  /** Optional MIME accept for the bucket's file inputs (e.g. image/*,video/*). */
+  accept?: string;
+};
 /** One program on the brand's standing link. `id` is their EventType id. */
 type EventTypeOption = { id: string; name: string };
 /**
@@ -328,8 +335,9 @@ const UPLOAD_CONCURRENCY = 3;
  */
 let heicPrepChain: Promise<void> = Promise.resolve();
 
-/** HEIC→JPEG + field downscale (see FIELD_PHOTO_PREP). */
+/** HEIC→JPEG + field downscale (see FIELD_PHOTO_PREP). Videos pass through. */
 async function compressImage(file: File): Promise<File> {
+  if (file.type.startsWith("video/")) return file;
   if (!isHeicUpload(file)) {
     return prepareImageForUpload(file, FIELD_PHOTO_PREP);
   }
@@ -4009,11 +4017,13 @@ function PhotoBucketZone({
         onTake={() => cameraRef.current?.click()}
         onRemove={onRemove}
         accent={accent}
+        allowVideo={Boolean(bucket.accept?.includes("video"))}
       />
       <PhotoFileInputs
         libraryRef={libraryRef}
         cameraRef={cameraRef}
         onFiles={(files) => onAdd(files, bucket.id)}
+        accept={bucket.accept || "image/*"}
       />
     </div>
   );
@@ -4027,16 +4037,20 @@ function PhotoBucketZone({
  * on Consumer Sampling Pictures. The library input has no capture attribute
  * and is `multiple`, so iOS offers Photo Library / Files and a BA can pick
  * the table, product, receipts, and crowd shots in one go. HEIC stays on
- * `accept="image/*"` (listing MIME types falls back to the Files app).
+ * `accept="image/*"` (listing MIME types falls back to the Files app). Buckets
+ * that opt into video pass `accept="image/*,video/*"` so library + camera
+ * can add both.
  */
 function PhotoFileInputs({
   libraryRef,
   cameraRef,
   onFiles,
+  accept = "image/*",
 }: {
   libraryRef: RefObject<HTMLInputElement | null>;
   cameraRef: RefObject<HTMLInputElement | null>;
   onFiles: (files: FileList | null) => void;
+  accept?: string;
 }) {
   const handle = (e: ChangeEvent<HTMLInputElement>) => {
     onFiles(e.target.files);
@@ -4047,7 +4061,7 @@ function PhotoFileInputs({
       <input
         ref={libraryRef}
         type="file"
-        accept="image/*"
+        accept={accept}
         multiple
         style={{ display: "none" }}
         onChange={handle}
@@ -4055,7 +4069,7 @@ function PhotoFileInputs({
       <input
         ref={cameraRef}
         type="file"
-        accept="image/*"
+        accept={accept}
         capture="environment"
         style={{ display: "none" }}
         onChange={handle}
@@ -4070,12 +4084,14 @@ function PhotoGrid({
   onTake,
   onRemove,
   accent,
+  allowVideo = false,
 }: {
   photos: Photo[];
   onAdd: () => void;
   onTake: () => void;
   onRemove: (id: string) => void;
   accent: string;
+  allowVideo?: boolean;
 }) {
   const tile: CSSProperties = {
     minWidth: 120,
@@ -4088,6 +4104,7 @@ function PhotoGrid({
   };
   const done = photos.filter((p) => p.state === "done").length;
   const atCap = photos.length >= PHOTO_CAP;
+  const mediaWord = allowVideo ? "photos/videos" : "photos";
 
   return (
     <div>
@@ -4103,20 +4120,39 @@ function PhotoGrid({
         {done}/{PHOTO_CAP}
       </p>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-        {photos.map((p) => (
+        {photos.map((p) => {
+          const isVideo = p.file.type.startsWith("video/");
+          return (
           <div key={p.id} style={{ position: "relative", width: 120, height: 120 }}>
-            <img
-              src={p.previewUrl}
-              alt=""
-              style={{
-                width: 120,
-                height: 120,
-                objectFit: "cover",
-                borderRadius: 10,
-                opacity: p.state === "done" ? 1 : 0.5,
-                border: p.state === "failed" ? "2px solid #EF5A2A" : "1px solid rgba(0,0,0,0.1)",
-              }}
-            />
+            {isVideo ? (
+              <video
+                src={p.previewUrl}
+                muted
+                playsInline
+                style={{
+                  width: 120,
+                  height: 120,
+                  objectFit: "cover",
+                  borderRadius: 10,
+                  opacity: p.state === "done" ? 1 : 0.5,
+                  border: p.state === "failed" ? "2px solid #EF5A2A" : "1px solid rgba(0,0,0,0.1)",
+                  background: "#111",
+                }}
+              />
+            ) : (
+              <img
+                src={p.previewUrl}
+                alt=""
+                style={{
+                  width: 120,
+                  height: 120,
+                  objectFit: "cover",
+                  borderRadius: 10,
+                  opacity: p.state === "done" ? 1 : 0.5,
+                  border: p.state === "failed" ? "2px solid #EF5A2A" : "1px solid rgba(0,0,0,0.1)",
+                }}
+              />
+            )}
             <span
               style={{
                 ...photoBadge,
@@ -4133,13 +4169,14 @@ function PhotoGrid({
                 color: "#fff",
               }}
             >
-              {p.state}
+              {p.state === "done" && isVideo ? "video" : p.state}
             </span>
             <button onClick={() => onRemove(p.id)} style={photoRemove} aria-label="Remove photo">
               ×
             </button>
           </div>
-        ))}
+          );
+        })}
         {!atCap ? (
           <>
             <button
@@ -4152,7 +4189,7 @@ function PhotoGrid({
                 color: accent,
               }}
             >
-              Upload photos
+              {allowVideo ? "Upload media" : "Upload photos"}
             </button>
             <button
               type="button"
@@ -4165,15 +4202,17 @@ function PhotoGrid({
                 opacity: 0.75,
               }}
             >
-              Take photo
+              {allowVideo ? "Take photo/video" : "Take photo"}
             </button>
           </>
         ) : null}
       </div>
       <p style={{ fontSize: 12, opacity: 0.55, margin: "6px 0 0" }}>
         {atCap
-          ? `Limit ${PHOTO_CAP} photos. Remove one to add another.`
-          : "You can select many from your library. iPhone photos are fine."}
+          ? `Limit ${PHOTO_CAP} ${mediaWord}. Remove one to add another.`
+          : allowVideo
+            ? "You can select many photos or videos from your library."
+            : "You can select many from your library. iPhone photos are fine."}
       </p>
     </div>
   );
