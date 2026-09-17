@@ -15,6 +15,9 @@ export const UpdateActivationPlanMutation = graphql`
         endDate
         markets
         requestCount
+        ownerId
+        ownerName
+        ownerEmail
         pipeline {
           planned
           approved
