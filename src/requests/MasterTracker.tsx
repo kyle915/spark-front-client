@@ -1994,7 +1994,7 @@ export default function MasterTracker() {
           )}
         </SparkFilterBar>
 
-        {planId ? ({planId ? (
+        {planId ? (
           <div
             className="spark-card px-4 py-3 flex flex-wrap items-center justify-between gap-2"
             style={{
