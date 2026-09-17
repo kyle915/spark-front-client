@@ -2715,6 +2715,8 @@ const RecapCustomViewInner = ({
               </div>
             )}
           </div>
+          </RecapDetailPanel>
+
           <RecapDetailPanel active={isRecapBodyTab(detailTab)}>
           {isClient && (
             <RecapClientSignoff

@@ -595,9 +595,10 @@ const RecapCard: React.FC<{
       ) : null}
       {showSla && !emptyShell && recap.date ? <SlaHours since={recap.date} /> : null}
 
-      <div className="relative z-10 flex items-center gap-2 mt-2 flex-wrap">
+      <div className="relative z-10 spark-row-actions mt-2">
         {recap.requestUuid && onOpenRequest && (
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               onOpenRequest(recap.requestUuid!);
@@ -2548,13 +2549,7 @@ export default function SparkRecapsList() {
           }
         />
         <div
-          className="sticky top-0 z-20 spark-card p-2.5 flex flex-col gap-1.5"
-          style={{
-            background: "rgba(10,13,9,0.92)",
-            backdropFilter: "saturate(180%) blur(16px)",
-            borderRadius: 12,
-            borderColor: "rgba(255,255,255,0.08)",
-          }}
+          className="sticky top-0 z-20 spark-card spark-sticky-filters flex flex-col"
         >
           <div className="flex flex-wrap gap-2 items-center">
             <div className="min-w-[120px] mr-1 shrink-0">

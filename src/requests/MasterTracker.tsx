@@ -110,14 +110,15 @@ const FilterSelect: React.FC<{
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
 }> = ({ label, value, onChange, options }) => (
-  <label className="flex items-center gap-2">
+  <label className="flex items-center gap-1.5">
     <span className="label-mini">{label}</span>
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-xl text-xs"
+      className="rounded-lg text-xs"
       style={{
-        padding: "0.45rem 0.9rem",
+        padding: "0.28rem 0.65rem",
+        minHeight: 30,
         background: "var(--spark-bg)",
         border: "1px solid var(--spark-border)",
         color: "var(--spark-text)",
@@ -763,7 +764,7 @@ const TrackerTable: React.FC<{
                       // action lands in the horizontal-scroll region and you
                       // have to scroll sideways to reach it.
                       <div
-                        className="flex flex-wrap items-center gap-x-3 gap-y-1.5"
+                        className="spark-row-actions"
                         style={{ maxWidth: 300 }}
                       >
                         <button
@@ -1371,9 +1372,10 @@ const RmmFilterInner: React.FC<{
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-xl text-xs"
+      className="rounded-lg text-xs"
       style={{
-        padding: "0.45rem 0.9rem",
+        padding: "0.28rem 0.65rem",
+        minHeight: 30,
         background: "var(--spark-bg)",
         border: "1px solid var(--spark-border)",
         color: "var(--spark-text)",
