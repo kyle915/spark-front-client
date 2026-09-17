@@ -9,6 +9,7 @@ import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import { useNavigate } from "react-router";
+import { dispatchOpenJump } from "@/motion/opsMotion";
 
 /**
  * Compact priority-glance card: shows pending approvals (with SLA
@@ -88,6 +89,15 @@ const TodaysSnapshot: React.FC = () => {
           : t === "muted"
             ? "rgba(255,255,255,0.55)"
             : "var(--spark-lime)";
+  const n = visible.length;
+  const gridCols =
+    n <= 1
+      ? "grid-cols-1"
+      : n === 2
+        ? "grid-cols-2"
+        : n === 3
+          ? "grid-cols-2 lg:grid-cols-3"
+          : "grid-cols-2 lg:grid-cols-4";
   return (
     <div
       className="spark-card p-4 lg:p-5"
@@ -103,17 +113,24 @@ const TodaysSnapshot: React.FC = () => {
         >
           TODAY'S SNAPSHOT
         </p>
-        <p
-          className="mono text-[10px]"
+        <button
+          type="button"
+          onClick={(e) => dispatchOpenJump(e.currentTarget)}
+          className="mono text-[10px] transition hover:opacity-100"
           style={{
             letterSpacing: "0.14em",
-            color: "rgba(255,255,255,0.4)",
+            color: "rgba(255,255,255,0.55)",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
           }}
+          title="Open Jump"
         >
           TAP TO JUMP
-        </p>
+        </button>
       </div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className={`grid ${gridCols} gap-3`}>
         {visible.map((t) => {
           const color = toneColor(t.tone);
           return (
@@ -259,10 +276,10 @@ function DashboardInner() {
           )}
           <a
             href="#performance"
-            className="px-3 py-2 rounded-xl text-sm font-semibold"
+            className="px-3 py-2 rounded-xl text-sm font-medium"
             style={{
               background: "transparent",
-              color: "var(--spark-text)",
+              color: "rgba(255,255,255,0.7)",
               border: "1px solid var(--spark-border)",
               textDecoration: "none",
             }}

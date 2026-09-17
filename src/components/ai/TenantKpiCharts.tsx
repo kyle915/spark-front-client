@@ -12,6 +12,7 @@ import {
   Filler,
   Tooltip,
   Legend,
+  type Plugin,
 } from "chart.js";
 import { Chart as ChartMixed } from "react-chartjs-2";
 import type { ChartData, ChartOptions } from "chart.js";
@@ -68,10 +69,45 @@ type MonthRow = {
 
 const fmt = (n: number) => n.toLocaleString();
 
+/** Months with any activity but under 15% of the peak look sparse — annotate. */
+const sparseMonthFlags = (data: readonly MonthRow[]): boolean[] => {
+  const peaks = data.map(
+    (d) => Math.max(d.recaps, d.engagements, d.samples) || 0,
+  );
+  const peak = Math.max(...peaks, 0);
+  if (peak <= 0) return data.map(() => false);
+  return data.map((_, i) => {
+    const m = peaks[i];
+    return m > 0 && m < peak * 0.15;
+  });
+};
+
+/** Lightweight canvas note for sparse early months — no datalabels dep. */
+const sparseMonthPlugin = (flags: boolean[]): Plugin<"bar" | "line"> => ({
+  id: "sparseMonthAnnotate",
+  afterDatasetsDraw(chart) {
+    const { ctx, chartArea, scales } = chart;
+    const xScale = scales.x;
+    if (!xScale || !chartArea) return;
+    ctx.save();
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.font = "9px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.textAlign = "center";
+    flags.forEach((sparse, i) => {
+      if (!sparse) return;
+      const x = xScale.getPixelForValue(i);
+      ctx.fillText("sparse", x, chartArea.bottom - 4);
+    });
+    ctx.restore();
+  },
+});
+
 /* ───────────────────────── trend chart ───────────────────────── */
 
 const TrendChart: React.FC<{ data: readonly MonthRow[] }> = ({ data }) => {
   const [isDark] = useThemeMode();
+  const sparseFlags = useMemo(() => sparseMonthFlags(data), [data]);
+  const sparseCount = sparseFlags.filter(Boolean).length;
 
   const { textColor, gridColor } = useMemo(
     () => ({
@@ -108,7 +144,7 @@ const TrendChart: React.FC<{ data: readonly MonthRow[] }> = ({ data }) => {
         pointBackgroundColor: "rgb(197,245,70)",
         borderWidth: 3,
         tension: 0.35,
-        yAxisID: "y1",
+        yAxisID: "y2",
       },
     ],
   };
@@ -129,6 +165,28 @@ const TrendChart: React.FC<{ data: readonly MonthRow[] }> = ({ data }) => {
         beginAtZero: true,
         ticks: { color: textColor },
         grid: { color: gridColor },
+        title: {
+          display: true,
+          text: "Engagements / Samples",
+          color: textColor,
+          font: { size: 11 },
+        },
+      },
+      y2: {
+        type: "linear",
+        position: "right",
+        beginAtZero: true,
+        ticks: {
+          color: textColor,
+          precision: 0,
+        },
+        grid: { drawOnChartArea: false },
+        title: {
+          display: true,
+          text: "Recaps",
+          color: textColor,
+          font: { size: 11 },
+        },
       },
       x: {
         ticks: { color: textColor },
@@ -138,13 +196,28 @@ const TrendChart: React.FC<{ data: readonly MonthRow[] }> = ({ data }) => {
   };
 
   return (
-    <div style={{ height: 280 }}>
-      <ChartMixed
-        key={isDark ? "dark" : "light"}
-        type="bar"
-        data={chartData}
-        options={options}
-      />
+    <div>
+      <div style={{ height: 280 }}>
+        <ChartMixed
+          key={isDark ? "dark" : "light"}
+          type="bar"
+          data={chartData}
+          options={options}
+          plugins={[sparseMonthPlugin(sparseFlags)]}
+        />
+      </div>
+      {sparseCount > 0 && (
+        <p
+          className="mono text-[10px] mt-2"
+          style={{
+            letterSpacing: "0.12em",
+            color: "rgba(255,255,255,0.4)",
+          }}
+        >
+          {sparseCount} early / light month{sparseCount === 1 ? "" : "s"} marked
+          sparse — low volume vs peak; % swings may mislead.
+        </p>
+      )}
     </div>
   );
 };
@@ -207,7 +280,11 @@ const useYearOptions = () =>
     const now = new Date().getFullYear();
     return [
       { value: String(now), label: "This year", year: now as YearChoice },
-      { value: String(now - 1), label: "Last year", year: (now - 1) as YearChoice },
+      {
+        value: String(now - 1),
+        label: "Last year",
+        year: (now - 1) as YearChoice,
+      },
       { value: YEAR_ALL, label: "All time", year: null as YearChoice },
     ];
   }, []);
@@ -261,9 +338,21 @@ const TenantKpiCharts: React.FC<{
       },
     ];
     const optional = [
-      { label: "First-time consumers", value: kpis.firstTimeConsumers, tone: "purple" as const },
-      { label: "Brand-aware", value: kpis.brandAwareConsumers, tone: "sky" as const },
-      { label: "Willing to purchase", value: kpis.willingToPurchase, tone: "gold" as const },
+      {
+        label: "First-time consumers",
+        value: kpis.firstTimeConsumers,
+        tone: "purple" as const,
+      },
+      {
+        label: "Brand-aware",
+        value: kpis.brandAwareConsumers,
+        tone: "sky" as const,
+      },
+      {
+        label: "Willing to purchase",
+        value: kpis.willingToPurchase,
+        tone: "gold" as const,
+      },
     ]
       .filter((t) => t.value > 0)
       .map((t) => ({
@@ -360,24 +449,34 @@ const TenantKpiCharts: React.FC<{
           </div>
 
           <div className="mt-6">
-            <p
-              className="mono text-[10px] mb-3"
-              style={{
-                letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              MONTHLY TREND · RECAPS / ENGAGEMENTS / SAMPLES
-            </p>
             {hasTrend ? (
-              <TrendChart data={trend} />
+              <>
+                <p
+                  className="mono text-[10px] mb-3"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "rgba(255,255,255,0.45)",
+                  }}
+                >
+                  MONTHLY TREND · RECAPS (RIGHT) / ENGAGEMENTS + SAMPLES (LEFT)
+                </p>
+                <TrendChart data={trend} />
+              </>
             ) : (
-              <p
-                className="text-sm py-8 text-center"
-                style={{ color: "rgba(255,255,255,0.55)" }}
-              >
-                No monthly trend data yet.
-              </p>
+              <div>
+                <p
+                  className="mono text-[10px] mb-3"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "rgba(255,255,255,0.45)",
+                  }}
+                >
+                  MONTHLY TREND · RECAPS / ENGAGEMENTS / SAMPLES
+                </p>
+                <div className="spark-chart-empty min-h-[180px]">
+                  No monthly trend data yet.
+                </div>
+              </div>
             )}
           </div>
         </>
