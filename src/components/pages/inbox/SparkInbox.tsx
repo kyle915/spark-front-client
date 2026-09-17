@@ -2,6 +2,8 @@ import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkGhostButton from "@/shared/SparkGhostButton";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
@@ -332,51 +334,20 @@ const Inner: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5 max-w-4xl">
-      <div className="flex items-end justify-between flex-wrap gap-4">
-        <div>
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            {items.length} ITEMS · ACTION REQUIRED
-          </p>
-          <h1
-            className="display text-4xl font-bold mt-2"
-            style={{ letterSpacing: "-0.04em" }}
-          >
-            What needs you.
-          </h1>
-          <p
-            className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            Workflow items pulled from your live request queue —
-            triaged by urgency. Dismissing an item hides it just for
-            you; the underlying request stays put.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <LinkedSheetChip />
-          {items.length > 0 && (
-            <button
-              onClick={dismissAll}
-              className="mono text-[10px] px-3 py-2 rounded-xl"
-              style={{
-                letterSpacing: "0.18em",
-                background: "rgba(255,255,255,0.04)",
-                color: "rgba(255,255,255,0.7)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              DISMISS ALL
-            </button>
-          )}
-        </div>
-      </div>
+    <div className="space-y-5 max-w-4xl spark-fade-in">
+      <SparkPageHeader
+        eyebrow={`${items.length} ITEMS · ACTION REQUIRED`}
+        title="What needs you."
+        support="Workflow items pulled from your live request queue — triaged by urgency. Dismissing an item hides it just for you; the underlying request stays put."
+        action={
+          <>
+            <LinkedSheetChip />
+            {items.length > 0 ? (
+              <SparkGhostButton onClick={dismissAll}>Dismiss all</SparkGhostButton>
+            ) : null}
+          </>
+        }
+      />
 
       {/* Mini stat strip */}
       {items.length > 0 && (

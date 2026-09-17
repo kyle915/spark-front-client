@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import SparkOverlay from "./SparkOverlay";
 import type { JumpOrigin } from "@/motion/opsMotion";
-import { confirmActionClass, type ConfirmTone } from "./sparkOverlay";
+import { confirmActionClass, type ConfirmTone } from "./sparkConfirmTone";
 
 export type { ConfirmTone };
 

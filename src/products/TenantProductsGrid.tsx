@@ -1,3 +1,4 @@
+import SparkOverlay from "@/shared/SparkOverlay";
 import { useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { motion } from "framer-motion";
@@ -298,8 +299,8 @@ const EditProductModal = ({
   };
 
   return (
-    <dialog open className="modal">
-      <div className="modal-box">
+    <SparkOverlay onClose={onClose} size="md" label="Edit product">
+      <div>
         <h3 className="font-bold text-lg">Edit product</h3>
         <form className="space-y-4 mt-4" onSubmit={handleSubmit(onSubmit)}>
           <div className="form-control">
@@ -381,12 +382,7 @@ const EditProductModal = ({
           </div>
         </form>
       </div>
-      <form method="dialog" className="modal-backdrop">
-        <button type="button" onClick={onClose}>
-          close
-        </button>
-      </form>
-    </dialog>
+    </SparkOverlay>
   );
 };
 

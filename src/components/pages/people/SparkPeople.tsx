@@ -2,6 +2,8 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkOverlay from "@/shared/SparkOverlay";
 import { UsersQuery } from "@/api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
 import { TenantsQuery } from "@/api/queries/TenantsQuery";
@@ -1026,19 +1028,14 @@ const Inner: React.FC<{
           Spells out exactly what removing them does (and doesn't do) so kyle
           knows what happens to historical recaps/requests/events. */}
       {removing && (
-        <div
-          onClick={() => !removeBusy && setRemoving(null)}
-          className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[10vh]"
-          style={{
-            background: "rgba(10,11,13,0.7)",
-            backdropFilter: "blur(8px)",
+        <SparkOverlay
+          onClose={() => {
+            if (!removeBusy) setRemoving(null);
           }}
+          size="md"
+          label={`Remove ${removing.name}`}
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg spark-card p-6"
-            style={{ borderRadius: 20 }}
-          >
+          <div>
             <p
               className="mono text-[10px] mb-1"
               style={{
@@ -1120,7 +1117,7 @@ const Inner: React.FC<{
               </button>
             </div>
           </div>
-        </div>
+        </SparkOverlay>
       )}
     </div>
   );
@@ -1309,19 +1306,8 @@ const InviteModal: React.FC<{
   };
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]"
-      style={{
-        background: "rgba(10,13,9,0.55)",
-        backdropFilter: "blur(8px)",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md spark-card p-6"
-        style={{ borderRadius: 20 }}
-      >
+    <SparkOverlay onClose={onClose} size="md" label={`Invite a ${role}`}>
+      <div>
         <p
           className="mono text-[10px] mb-1"
           style={{
@@ -1490,7 +1476,7 @@ const InviteModal: React.FC<{
           </div>
         )}
       </div>
-    </div>
+    </SparkOverlay>
   );
 };
 
@@ -1606,28 +1592,12 @@ export default function SparkPeople() {
     useState<"admin" | "client" | "ambassador" | null>(null);
   return (
     <Layout>
-      <div className="space-y-6 max-w-7xl">
-        <div>
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            PEOPLE · WORKSPACE
-          </p>
-          <h1
-            className="display text-4xl font-bold mt-2"
-            style={{ letterSpacing: "-0.04em" }}
-          >
-            Team.
-          </h1>
-          <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
-            Everyone in the workspace — admins, clients, ambassadors.
-            Invite new people directly.
-          </p>
-        </div>
+      <div className="space-y-6 max-w-7xl spark-fade-in">
+        <SparkPageHeader
+          eyebrow="PEOPLE · WORKSPACE"
+          title="Team."
+          support="Everyone in the workspace — admins, clients, ambassadors. Invite new people directly."
+        />
         <Suspense
           fallback={
             <div

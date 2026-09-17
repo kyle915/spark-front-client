@@ -1,3 +1,4 @@
+import SparkOverlay from "@/shared/SparkOverlay";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { useForm } from "react-hook-form";
@@ -584,8 +585,8 @@ const UsersList = () => {
       </div>
 
       {isModalOpen && editingUser ? (
-        <dialog open className="modal">
-          <div className="modal-box max-w-2xl">
+        <SparkOverlay onClose={closeModal} size="lg" label="Edit User">
+          <div>
             <h3 className="font-bold text-lg mb-2">Edit User</h3>
             <p className="text-sm text-base-content/70 mb-4">
               Update the user details. Tenant is only required for Client role.
@@ -700,17 +701,12 @@ const UsersList = () => {
               </div>
             </form>
           </div>
-          <form method="dialog" className="modal-backdrop">
-            <button type="button" onClick={closeModal}>
-              close
-            </button>
-          </form>
-        </dialog>
+        </SparkOverlay>
       ) : null}
 
       {isPasswordModalOpen && passwordUser ? (
-        <dialog open className="modal">
-          <div className="modal-box max-w-lg">
+        <SparkOverlay onClose={closePasswordModal} size="md" label="Change Password">
+          <div>
             <h3 className="font-bold text-lg mb-2">Change Password</h3>
             <p className="text-sm text-base-content/70 mb-4">
               Set a new password for {passwordUser.firstName}{" "}
@@ -759,12 +755,7 @@ const UsersList = () => {
               </div>
             </form>
           </div>
-          <form method="dialog" className="modal-backdrop">
-            <button type="button" onClick={closePasswordModal}>
-              close
-            </button>
-          </form>
-        </dialog>
+        </SparkOverlay>
       ) : null}
     </Layout>
   );

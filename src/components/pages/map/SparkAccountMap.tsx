@@ -21,6 +21,8 @@ import {
   type UploadedAccount,
 } from "@/lib/accounts";
 import AccountUploader from "./AccountUploader";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkFilterBar from "@/shared/SparkFilterBar";
 
 /**
  * Spark v2 — Account Map (Google Maps).
@@ -287,33 +289,12 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   }, [filtered]);
 
   return (
-    <div className="space-y-5 max-w-7xl">
-      <div className="flex items-end justify-between flex-wrap gap-4">
-        <div>
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            {isClient ? "YOUR ACCOUNTS · " : "ACCOUNT MAP · "}
-            {counts.all} VENUES
-          </p>
-          <h1
-            className="display text-4xl font-bold mt-2"
-            style={{ letterSpacing: "-0.04em" }}
-          >
-            Plan from the map.
-          </h1>
-          <p
-            className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            Click any pin to see the account and schedule a demo.
-          </p>
-        </div>
-      </div>
+    <div className="space-y-5 max-w-7xl spark-fade-in">
+      <SparkPageHeader
+        eyebrow={`${isClient ? "YOUR ACCOUNTS · " : "ACCOUNT MAP · "}${counts.all} VENUES`}
+        title="Plan from the map."
+        support="Click any pin to see the account and schedule a demo."
+      />
 
       {/* Uploader */}
       <AccountUploader onImported={setUploaded} />
@@ -359,8 +340,17 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
       </div>
 
       {/* Filter row */}
-      <div className="spark-card p-4 flex flex-wrap items-center gap-2">
-        <span className="label-mini mr-2">STATUS</span>
+      <SparkFilterBar
+        label="STATUS"
+        search={
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search accounts…"
+            className="spark-filter-search"
+          />
+        }
+      >
         {(
           [
             { key: "all" as const, label: "All", chip: "chip chip-muted", n: counts.all },
@@ -426,20 +416,6 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             </option>
           ))}
         </select>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search account or address…"
-          className="rounded-xl text-xs"
-          style={{
-            padding: "0.45rem 0.9rem",
-            background: "var(--spark-bg)",
-            border: "1px solid var(--spark-border)",
-            color: "var(--spark-text)",
-            maxWidth: 260,
-            outline: "none",
-          }}
-        />
         {(filter !== "all" ||
           stateFilter !== "all" ||
           retailerFilter !== "all" ||
@@ -463,16 +439,13 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             × CLEAR
           </button>
         )}
-      </div>
+      </SparkFilterBar>
 
       {/* Map + rail */}
-      <div
-        className="grid gap-5"
-        style={{ gridTemplateColumns: "1fr 360px" }}
-      >
+      <div className="grid gap-5 grid-cols-1 lg:grid-cols-[1fr_360px]">
         <div
-          className="spark-card overflow-hidden relative"
-          style={{ borderRadius: 20, height: 640 }}
+          className="spark-card overflow-hidden relative order-1 min-h-[280px] h-[420px] lg:h-[640px]"
+          style={{ borderRadius: 20 }}
         >
           {!apiKey ? (
             <div
@@ -763,8 +736,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
 
         {/* List */}
         <div
-          className="spark-card overflow-hidden flex flex-col"
-          style={{ maxHeight: 640 }}
+          className="spark-card overflow-hidden flex flex-col order-2 min-h-[280px] max-h-[420px] lg:max-h-[640px]"
         >
           <div
             className="p-4 flex items-center justify-between"

@@ -12,6 +12,7 @@ import { InviteAmbassadorToShiftMutation } from "@/api/mutations/InviteAmbassado
 import type { InviteAmbassadorToShiftMutation as InviteAmbassadorToShiftMutationType } from "@api/mutations/__generated__/InviteAmbassadorToShiftMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
+import SparkOverlay from "@/shared/SparkOverlay";
 
 /**
  * Admin modal that lists active BAs and lets the admin invite one
@@ -637,18 +638,10 @@ const Inner: React.FC<{
   };
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[8vh]"
-      style={{
-        background: "rgba(10,11,13,0.7)",
-        backdropFilter: "blur(8px)",
-      }}
-    >
+    <SparkOverlay onClose={onClose} size="lg" label="Add a Brand Ambassador">
       <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg spark-card overflow-hidden"
-        style={{ borderRadius: 20, maxHeight: "80vh", display: "flex", flexDirection: "column" }}
+        className="overflow-hidden"
+        style={{ maxHeight: "80vh", display: "flex", flexDirection: "column" }}
       >
         <div
           className="p-5"
@@ -943,7 +936,7 @@ const Inner: React.FC<{
           </div>
         </div>
       </div>
-    </div>
+    </SparkOverlay>
   );
 };
 
@@ -962,21 +955,9 @@ export default function InviteBAModal({
   return (
     <Suspense
       fallback={
-        <div
-          onClick={onClose}
-          className="fixed inset-0 z-[60] flex items-center justify-center"
-          style={{
-            background: "rgba(10,11,13,0.7)",
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          <div
-            className="spark-card p-6"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            Loading BAs…
-          </div>
-        </div>
+        <SparkOverlay onClose={onClose} size="md" label="Loading">
+          <p style={{ color: "rgba(255,255,255,0.55)" }}>Loading BAs…</p>
+        </SparkOverlay>
       }
     >
       <Inner

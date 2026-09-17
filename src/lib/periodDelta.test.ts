@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   ABSURD_PCT_THRESHOLD,
   computePeriodDelta,
+  formatPeriodDeltaLabel,
+  periodDeltaIsNegative,
   periodDeltaNote,
 } from "./periodDelta";
 
@@ -65,5 +67,24 @@ describe("periodDeltaNote", () => {
         note: "n/a — base period sparse / collection changed",
       }),
     ).toMatch(/sparse/);
+  });
+});
+
+describe("formatPeriodDeltaLabel", () => {
+  it("formats honest chips", () => {
+    expect(formatPeriodDeltaLabel({ kind: "up", pct: 12 })).toBe("↑ 12%");
+    expect(formatPeriodDeltaLabel({ kind: "down", pct: -8 })).toBe("↓ 8%");
+    expect(formatPeriodDeltaLabel({ kind: "new" })).toBe("New");
+    expect(
+      formatPeriodDeltaLabel({
+        kind: "large",
+        direction: "up",
+        cappedPct: 500,
+        rawPct: 900,
+        note: "x",
+      }),
+    ).toBe("↑ >500%");
+    expect(periodDeltaIsNegative({ kind: "down", pct: -3 })).toBe(true);
+    expect(periodDeltaIsNegative({ kind: "up", pct: 3 })).toBe(false);
   });
 });

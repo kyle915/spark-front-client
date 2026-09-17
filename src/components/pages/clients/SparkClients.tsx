@@ -16,6 +16,8 @@ import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { ClientsQuery } from "@/api/queries/ClientsQuery";
 import type { ClientsQuery as ClientsQueryType } from "@api/queries/__generated__/ClientsQuery.graphql";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
 
 type ClientNode = NonNullable<
   NonNullable<
@@ -51,44 +53,17 @@ const Inner: React.FC = () => {
   }, [clients, search]);
 
   return (
-    <div className="space-y-6 max-w-7xl">
-      <div className="flex items-end justify-between flex-wrap gap-3">
-        <div>
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            CLIENTS · {clients.length}
-          </p>
-          <h1
-            className="display text-4xl font-bold mt-2"
-            style={{ letterSpacing: "-0.04em" }}
-          >
-            Brands you serve.
-          </h1>
-          <p
-            className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            Every client organization in this workspace. Tap a row to
-            see the brand's program performance, insights & field team.
-          </p>
-        </div>
-        <button
-          onClick={() => navigate("/clients/new")}
-          className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-          style={{
-            background: "var(--spark-lime)",
-            color: "#0a0d09",
-            border: "none",
-          }}
-        >
-          + New client
-        </button>
-      </div>
+    <div className="space-y-6 max-w-7xl spark-fade-in">
+      <SparkPageHeader
+        eyebrow={`CLIENTS · ${clients.length}`}
+        title="Brands you serve."
+        support="Every client organization in this workspace. Tap a row to see the brand's program performance, insights & field team."
+        action={
+          <SparkPrimaryButton onClick={() => navigate("/clients/new")}>
+            + New client
+          </SparkPrimaryButton>
+        }
+      />
 
       <input
         value={search}
