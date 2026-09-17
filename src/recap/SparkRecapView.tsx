@@ -11,6 +11,7 @@ import {
   RecapDetailPanel,
   RecapDetailTabs,
   RecapKpiStrip,
+  isRecapBodyTab,
   type RecapDetailTab,
 } from "@/recap/RecapDetailShell";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
@@ -1262,7 +1263,7 @@ const SparkRecapInner: React.FC<{
         />
       ) : null}
 
-      <RecapDetailPanel active={detailTab === "overview"}>
+      <RecapDetailPanel active={isRecapBodyTab(detailTab)}>
       {/* Quality check — server-computed review aid for the approver. Legacy
           recap → isCustom={false}. Self-degrades to nothing on failure;
           wrapped in Suspense for the initial load. */}
@@ -1297,7 +1298,7 @@ const SparkRecapInner: React.FC<{
       )}
       </RecapDetailPanel>
 
-      <RecapDetailPanel active={detailTab === "details" || editingNumbers}>
+      <RecapDetailPanel active={isRecapBodyTab(detailTab) || editingNumbers}>
       {/* Products sampled — read view (everyone). Hidden while the admin is
           editing, since the editor panel below shows the same data. */}
       {!editingNumbers &&
@@ -1749,7 +1750,7 @@ const SparkRecapInner: React.FC<{
 
       </RecapDetailPanel>
 
-      <RecapDetailPanel active={detailTab === "overview"}>
+      <RecapDetailPanel active={isRecapBodyTab(detailTab)}>
       {/* Performance row — financial + qualitative signals */}
       {(recap.totalEarnings != null ||
         recap.accountSpendAmount != null ||
@@ -1837,7 +1838,7 @@ const SparkRecapInner: React.FC<{
 
       </RecapDetailPanel>
 
-      <RecapDetailPanel active={detailTab === "details"}>
+      <RecapDetailPanel active={isRecapBodyTab(detailTab)}>
       {/* Consumer voice — quotes, demographics, positive stories, reasons-to-decline */}
       {consumerFeedback && (
         consumerFeedback.feedback ||
@@ -2238,7 +2239,7 @@ const SparkRecapInner: React.FC<{
       </div>
       </RecapDetailPanel>
 
-      <RecapDetailPanel active={detailTab === "details"}>
+      <RecapDetailPanel active={isRecapBodyTab(detailTab)}>
       {/* Field intelligence — traffic + competitive presence */}
       {(recap.trafficDescription || recap.competitivePresence) && (
         <div className="grid lg:grid-cols-2 gap-5">

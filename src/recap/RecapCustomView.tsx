@@ -111,6 +111,7 @@ import {
   RecapDetailPanel,
   RecapDetailTabs,
   RecapKpiStrip,
+  isRecapBodyTab,
   type RecapDetailTab,
 } from "@/recap/RecapDetailShell";
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
@@ -1596,7 +1597,9 @@ const RecapCustomViewInner = ({
             />
           )}
 
-          <RecapDetailPanel active={detailTab === "overview" || isEditingValues}>
+          <RecapDetailPanel
+            active={isRecapBodyTab(detailTab) || isEditingValues}
+          >
           {/* ======================================================
           QUALITY CHECK — server-computed review aid for the approver.
           Custom recap → isCustom={true}. Self-degrades to nothing on
@@ -1620,11 +1623,8 @@ const RecapCustomViewInner = ({
               />
             </Suspense>
           ) : null}
-          </RecapDetailPanel>
-
-          <RecapDetailPanel active={detailTab === "details" || isEditingValues}>
           {/* ======================================================
-          KPI GRID
+          KPI GRID + FIELD BODY (full Overview read)
           ====================================================== */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <KpiCardContainer
@@ -2715,9 +2715,7 @@ const RecapCustomViewInner = ({
               </div>
             )}
           </div>
-          </RecapDetailPanel>
-
-          <RecapDetailPanel active={detailTab === "overview"}>
+          <RecapDetailPanel active={isRecapBodyTab(detailTab)}>
           {isClient && (
             <RecapClientSignoff
               existingStatus={recap.clientSignoffStatus}
