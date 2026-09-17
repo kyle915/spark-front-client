@@ -28,6 +28,7 @@ import { useProductsPurchased } from "@/hooks/useProductsPurchased";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
+import TrackerPlanFilter from "@/plans/TrackerPlanFilter";
 import {
   trackerDateRangeToServer,
   trackerSortToServer,
@@ -1417,6 +1418,13 @@ export default function MasterTracker() {
     next.delete("plan");
     setSearchParams(next, { replace: true });
   };
+  const setPlanFilter = (nextPlanId: string | null) => {
+    setPlanId(nextPlanId);
+    const next = new URLSearchParams(searchParams);
+    if (nextPlanId) next.set("plan", nextPlanId);
+    else next.delete("plan");
+    setSearchParams(next, { replace: true });
+  };
 
   // Saved views — everything a "view" captures, and how to re-apply one.
   // Unknown/missing keys fall back to each filter's default so an old
@@ -1919,6 +1927,11 @@ export default function MasterTracker() {
               ...markets.map((m) => ({ value: m, label: m })),
             ]}
           />
+          <TrackerPlanFilter
+            tenantId={tenantId}
+            planId={planId}
+            onChange={setPlanFilter}
+          />
           <FilterSelect
             label="SCHEDULING"
             value={schedulingFilter}
@@ -1953,7 +1966,7 @@ export default function MasterTracker() {
                 setMarketFilter("all");
                 setSchedulingFilter("all");
                 setSortMode("date-desc");
-                if (planId) clearPlanFilter();
+                if (planId) setPlanFilter(null);
               }}
               className="mono text-[10px] px-3 py-1.5 rounded-xl"
               style={{

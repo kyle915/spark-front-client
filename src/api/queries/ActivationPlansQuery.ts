@@ -11,6 +11,9 @@ export const ActivationPlansQuery = graphql`
       endDate
       markets
       requestCount
+      ownerId
+      ownerName
+      ownerEmail
       pipeline {
         planned
         approved
