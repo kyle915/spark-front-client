@@ -6,6 +6,7 @@
 import { Suspense } from "react";
 import { Link } from "react-router";
 import { useLazyLoadQuery } from "react-relay/hooks";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { ActivationPlansQuery } from "@/api/queries/ActivationPlansQuery";
 import type { ActivationPlansQuery as ActivationPlansQueryType } from "@api/queries/__generated__/ActivationPlansQuery.graphql";
 import ActivationPlanPipelineStrip from "@/plans/ActivationPlanPipelineStrip";
@@ -74,9 +75,13 @@ export default function PlansPipelineDashboardStrip({
   tenantId: string | null | undefined;
 }) {
   if (!tenantId) return null;
+  // Soft-fail: if API hasn't rolled ActivationPlan yet (or field is
+  // missing), hide the strip instead of blanking Insights / Dashboard.
   return (
-    <Suspense fallback={null}>
-      <Inner tenantId={tenantId} />
-    </Suspense>
+    <ErrorBoundary fallback={null}>
+      <Suspense fallback={null}>
+        <Inner tenantId={tenantId} />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
