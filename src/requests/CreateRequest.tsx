@@ -26,7 +26,7 @@ import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/
 
 import { useAlertStore } from "@store/alertStore";
 // import { useAuthStore } from "@store/authStore";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { dateFormat } from "@/public/form/utils/toDate";
@@ -39,6 +39,7 @@ interface CreateRequestFormProps {
   tenantSlug?: string | null;
   userId?: string;
   userUuid?: string;
+  activationPlanId?: string | null;
 }
 
 const CreateRequestForm = ({
@@ -46,6 +47,7 @@ const CreateRequestForm = ({
   tenantSlug,
   userId,
   userUuid,
+  activationPlanId = null,
 }: CreateRequestFormProps) => {
   // ========================
   // QUERIES
@@ -359,6 +361,7 @@ const CreateRequestForm = ({
           products: (formData.products || []).map((id) => ({
             productId: id,
           })),
+          ...(activationPlanId ? { activationPlanId } : {}),
         },
       },
       onCompleted: (response) => {
@@ -447,6 +450,8 @@ const CreateRequestForm = ({
 // ========================
 const CreateRequestContent = () => {
   const { tenantId, tenantSlug, user } = useAuthStore();
+  const [searchParams] = useSearchParams();
+  const activationPlanId = searchParams.get("plan") || null;
 
   if (!tenantId) {
     return (
@@ -464,6 +469,7 @@ const CreateRequestContent = () => {
           tenantSlug={tenantSlug}
           userId={user?.id}
           userUuid={user?.uuid}
+          activationPlanId={activationPlanId}
         />
       </Suspense>
     </>
