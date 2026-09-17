@@ -1,8 +1,7 @@
-/* Plans-only tokens — calm Apple-like rhythm without forking global theme. */
+/* Plans-specific leftovers. Shared chrome lives in index.css as spark-*. */
+
 .plans-shell {
   --plan-gap: 1.75rem;
-  --plan-radius: 20px;
-  --plan-pad: 1.5rem;
   --plan-muted: rgba(255, 255, 255, 0.5);
   --plan-faint: rgba(255, 255, 255, 0.38);
   max-width: 68rem;
@@ -19,8 +18,8 @@
     var(--spark-surface-2)
   );
   border: 1px solid var(--spark-border);
-  border-radius: var(--plan-radius);
-  padding: var(--plan-pad);
+  border-radius: 20px;
+  padding: 1.5rem;
   transition:
     border-color 0.2s ease,
     transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
@@ -34,13 +33,12 @@
 }
 
 .plans-title {
-  font-family: inherit;
   letter-spacing: -0.045em;
   line-height: 1.1;
 }
 
 .plans-support {
-  color: var(--plan-muted);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 0.95rem;
   line-height: 1.45;
   max-width: 36rem;
@@ -72,6 +70,7 @@
   font-size: 0.875rem;
   cursor: pointer;
   transition: opacity 0.15s ease, transform 0.15s ease;
+  text-decoration: none;
 }
 
 .plans-btn-primary:disabled {
@@ -91,9 +90,10 @@
   border-radius: 999px;
   border: 1px solid var(--spark-border);
   background: transparent;
-  color: var(--plan-muted);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 0.875rem;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .plans-btn-ghost:hover {
@@ -106,7 +106,7 @@
   border-radius: 999px;
   border: 1px solid var(--spark-border);
   background: transparent;
-  color: var(--plan-muted);
+  color: rgba(255, 255, 255, 0.5);
   font-size: 0.8rem;
   cursor: pointer;
 }
@@ -134,18 +134,7 @@
 }
 
 .plans-fade-in {
-  animation: plans-fade-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes plans-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  animation: spark-fade-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .plans-slide-down {
@@ -188,7 +177,7 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.75rem;
-  color: var(--plan-muted);
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .plans-status-mix-dot {
@@ -203,7 +192,7 @@
   align-items: center;
   gap: 0.35rem;
   font-size: 0.875rem;
-  color: var(--plan-muted);
+  color: rgba(255, 255, 255, 0.5);
   text-decoration: none;
 }
 

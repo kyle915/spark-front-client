@@ -29,6 +29,10 @@ import {
   planWindowKind,
   type PlanWindowKind,
 } from "@/plans/planHealth";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
+import SparkEmptyState from "@/shared/SparkEmptyState";
+import SparkFilterBar from "@/shared/SparkFilterBar";
 import "@/plans/plans.css";
 
 type PlanRow = NonNullable<
@@ -357,18 +361,15 @@ const PortfolioInner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
 
   if (plans.length === 0) {
     return (
-      <div className="plans-card text-center py-14 px-6">
-        <h2 className="plans-title text-2xl font-semibold">No plans yet</h2>
-        <p className="plans-support mt-3 mx-auto">
-          Create a named slate for a quarter or market, then add requests from
-          the plan or Master Tracker.
-        </p>
-      </div>
+      <SparkEmptyState
+        title="No plans yet"
+        body="Create a named slate for a quarter or market, then add requests from the plan or Master Tracker."
+      />
     );
   }
 
   return (
-    <div className="space-y-6 plans-fade-in">
+    <div className="space-y-6 spark-fade-in">
       <div className="plans-card">
         <p className="text-sm mb-4" style={{ color: "var(--plan-muted)" }}>
           {plans.length} plan{plans.length === 1 ? "" : "s"} · {rollup.planned}{" "}
@@ -377,14 +378,35 @@ const PortfolioInner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
         <ActivationPlanPipelineStrip pipeline={rollup} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search plans…"
-          className="plans-input"
-          style={{ maxWidth: 260, minWidth: 180 }}
-        />
+      <SparkFilterBar
+        search={
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search plans…"
+            className="spark-filter-search"
+            style={{ maxWidth: 260, minWidth: 180 }}
+          />
+        }
+        trailing={
+          <div className="flex gap-1">
+            <button
+              type="button"
+              className={`plans-chip ${viewMode === "cards" ? "plans-chip-on" : ""}`}
+              onClick={() => setViewMode("cards")}
+            >
+              Cards
+            </button>
+            <button
+              type="button"
+              className={`plans-chip ${viewMode === "list" ? "plans-chip-on" : ""}`}
+              onClick={() => setViewMode("list")}
+            >
+              List
+            </button>
+          </div>
+        }
+      >
         {(
           [
             ["all", "All"],
@@ -413,23 +435,7 @@ const PortfolioInner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
           <option value="planned">Sort by size</option>
           <option value="name">Sort by name</option>
         </select>
-        <div className="ml-auto flex gap-1">
-          <button
-            type="button"
-            className={`plans-chip ${viewMode === "cards" ? "plans-chip-on" : ""}`}
-            onClick={() => setViewMode("cards")}
-          >
-            Cards
-          </button>
-          <button
-            type="button"
-            className={`plans-chip ${viewMode === "list" ? "plans-chip-on" : ""}`}
-            onClick={() => setViewMode("list")}
-          >
-            List
-          </button>
-        </div>
-      </div>
+      </SparkFilterBar>
 
       {filtered.length === 0 ? (
         <p className="text-sm py-8 text-center" style={{ color: "var(--plan-faint)" }}>
@@ -558,26 +564,18 @@ export default function PlansList() {
 
   return (
     <Layout>
-      <div className="plans-shell plans-fade-in">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="plans-title text-4xl md:text-5xl font-bold">
-              Plans
-            </h1>
-            <p className="plans-support mt-3">
-              Proposed vs staffed vs done across every activation slate.
-            </p>
-          </div>
-          {isAdmin && !createOpen ? (
-            <button
-              type="button"
-              className="plans-btn-primary"
-              onClick={() => setCreateOpen(true)}
-            >
-              New plan
-            </button>
-          ) : null}
-        </div>
+      <div className="plans-shell spark-fade-in">
+        <SparkPageHeader
+          title="Plans"
+          support="Proposed vs staffed vs done across every activation slate."
+          action={
+            isAdmin && !createOpen ? (
+              <SparkPrimaryButton onClick={() => setCreateOpen(true)}>
+                New plan
+              </SparkPrimaryButton>
+            ) : null
+          }
+        />
 
         <AnimatePresence>
           {createOpen ? (

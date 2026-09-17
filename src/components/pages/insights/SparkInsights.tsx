@@ -12,6 +12,7 @@ import BelowFold from "@/components/insights/BelowFold";
 import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
 import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
 import PlansPipelineDashboardStrip from "@/plans/PlansPipelineDashboardStrip";
+import SparkPageHeader from "@/shared/SparkPageHeader";
 import {
   buildProgramPulseCopy,
   buildProgramPulseOneLiner,
@@ -610,33 +611,13 @@ export function InsightsBody({
           {rangeControls}
         </div>
       ) : (
-        <div className="flex items-end justify-between flex-wrap gap-4">
-          <div>
-            <p
-              className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              PROGRAM ANALYTICS
-            </p>
-            <h1
-              className="display text-2xl lg:text-3xl font-bold mt-2 leading-[1.1]"
-              style={{ letterSpacing: "-0.03em" }}
-            >
-              Dashboard
-            </h1>
-            <p
-              className="mt-3 text-base"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Page range scopes Timeline, Activation, and geo. Program KPIs
-              stay calendar-year.
-            </p>
-          </div>
-          {rangeControls}
-        </div>
+        <SparkPageHeader
+          eyebrow="PROGRAM ANALYTICS"
+          title="Dashboard"
+          titleClassName="text-2xl lg:text-3xl font-bold"
+          support="Page range scopes Timeline, Activation, and geo. Program KPIs stay calendar-year."
+          action={rangeControls}
+        />
       )}
 
       <p
