@@ -3,10 +3,11 @@ import { Link, useLocation } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import TenantPicker from "./TenantPicker";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, X } from "lucide-react";
 import useSidebarCounts from "@/hooks/useSidebarCounts";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import useChatUnreadCount from "@/hooks/useChatUnreadCount";
+import { useMobileNav } from "./MobileNavContext";
 import {
   Activity,
   LayoutDashboard,
@@ -558,19 +559,26 @@ export const SparkSidebar: React.FC = () => {
     </nav>
   );
 
+  const { open, setOpen } = useMobileNav();
+
   return (
     <aside
-      className="w-64 shrink-0 flex flex-col h-screen min-h-0"
+      className={[
+        "w-64 shrink-0 flex flex-col h-screen min-h-0",
+        "fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out md:static md:translate-x-0 md:z-auto",
+        open ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+      ].join(" ")}
       style={{
-        background: "rgba(10,13,9,0.85)",
+        background: "rgba(10,13,9,0.92)",
         borderRight: "1px solid var(--spark-border)",
         backdropFilter: "blur(12px)",
       }}
+      aria-label="Main navigation"
     >
       {/* Brand mark — real Spark logo PNG, inverted to white for the
           dark sidebar (the source logo is black on transparent). */}
       <div
-        className="px-5 py-5"
+        className="px-5 py-5 flex items-center justify-between gap-2"
         style={{ borderBottom: "1px solid var(--spark-border)" }}
       >
         <img
@@ -583,6 +591,14 @@ export const SparkSidebar: React.FC = () => {
             filter: "invert(1) hue-rotate(180deg)",
           }}
         />
+        <button
+          type="button"
+          className="md:hidden btn btn-ghost btn-sm btn-square"
+          aria-label="Close menu"
+          onClick={() => setOpen(false)}
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Tenant picker */}

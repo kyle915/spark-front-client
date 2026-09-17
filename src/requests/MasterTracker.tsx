@@ -30,6 +30,11 @@ import useSparkRole from "@/hooks/useSparkRole";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
 import TrackerPlanFilter from "@/plans/TrackerPlanFilter";
 import TrackerPlanAttachBar from "@/plans/TrackerPlanAttachBar";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
+import SparkGhostButton from "@/shared/SparkGhostButton";
+import SparkFilterBar from "@/shared/SparkFilterBar";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import {
   trackerDateRangeToServer,
   trackerSortToServer,
@@ -402,11 +407,11 @@ const TrackerTable: React.FC<{
               {selectionEnabled ? (
                 <th className="px-3 py-3 w-10" aria-label="Select" />
               ) : null}
-              <th className="px-4 py-3">DATE</th>
+              <th className="px-4 py-3 spark-table-sticky-date">DATE</th>
               <th className="px-4 py-3">STATUS</th>
               <th className="px-4 py-3">MARKET</th>
               <th className="px-4 py-3">VENUE</th>
-              <th className="px-4 py-3">ADDRESS</th>
+              <th className="px-4 py-3 spark-table-hide-sm">ADDRESS</th>
               <th className="px-4 py-3">TYPE</th>
               <th className="px-4 py-3 text-right">CONSUMERS</th>
               <th className="px-4 py-3 text-right">1ST-TIME</th>
@@ -417,12 +422,12 @@ const TrackerTable: React.FC<{
           <tbody>
             {rows.length === 0 && (
               <tr>
-                <td
-                  colSpan={colCount}
-                  className="px-4 py-10 text-center text-sm"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
-                >
-                  No events match these filters.
+                <td colSpan={colCount} className="p-0">
+                  <SparkEmptyState
+                    className="border-0 rounded-none"
+                    title="No events match"
+                    body="Try clearing status, when, or market filters."
+                  />
                 </td>
               </tr>
             )}
@@ -541,7 +546,7 @@ const TrackerTable: React.FC<{
                     </td>
                   ) : null}
                   <td
-                    className="px-4 py-3 align-top"
+                    className="px-4 py-3 align-top spark-table-sticky-date"
                     style={{ color: "rgba(255,255,255,0.85)" }}
                   >
                     <p className="text-sm">{r.dateLabel}</p>
@@ -680,7 +685,7 @@ const TrackerTable: React.FC<{
                     ) : null}
                   </td>
                   <td
-                    className="px-4 py-3 text-[13px] max-w-[280px]"
+                    className="px-4 py-3 text-[13px] max-w-[280px] spark-table-hide-sm"
                     style={{ color: "rgba(255,255,255,0.85)" }}
                   >
                     <span className="line-clamp-2">{r.address || "—"}</span>
@@ -1758,104 +1763,47 @@ export default function MasterTracker() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-7xl">
-        {/* Header */}
-        <div className="flex items-end justify-between flex-wrap gap-4">
-          <div>
-            <p
-              className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              {isClient ? "YOUR EVENTS" : "ALL EVENTS · ONE TABLE"}
-            </p>
-            <h1
-              className="display text-4xl font-bold mt-2"
-              style={{ letterSpacing: "-0.04em" }}
-            >
-              {isClient ? "My requests." : "Master tracker."}
-            </h1>
-            <p
-              className="mt-2"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              {isClient
-                ? "Every request you've submitted, with live status updates from your RMM."
-                : "Every event, every status, every recap link."}
-            </p>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {/* Linked Google Sheet — per-tenant deep-link. Set once
-                per brand and reuse across the team. When set, button
-                opens the Sheet in a new tab; otherwise opens the
-                config modal. */}
+      <div className="space-y-6 max-w-7xl spark-fade-in">
+        <SparkPageHeader
+          eyebrow={isClient ? "YOUR EVENTS" : "ALL EVENTS · ONE TABLE"}
+          title={isClient ? "My requests." : "Master tracker."}
+          support={
+            isClient
+              ? "Every request you've submitted, with live status updates from your RMM."
+              : "Every event, every status, every recap link."
+          }
+          action={
+            <>
             {linkedSheetUrl ? (
               <a
                 href={linkedSheetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition inline-flex items-center gap-2"
+                className="spark-btn-ghost"
                 style={{
-                  background: "rgba(95,184,239,0.10)",
                   color: "var(--spark-sky)",
-                  border: "1px solid rgba(95,184,239,0.35)",
-                  textDecoration: "none",
+                  borderColor: "rgba(95,184,239,0.35)",
                 }}
                 title="Open the brand's linked Google Sheet in a new tab"
               >
-                📊 Linked sheet ↗
+                Linked sheet ↗
               </a>
             ) : null}
-            <button
-              type="button"
+            <SparkGhostButton
               onClick={() => {
                 setSheetDraft(linkedSheetUrl);
                 setEditingSheet(true);
               }}
-              className="mono text-[10px] px-3 py-2 rounded-xl"
-              style={{
-                letterSpacing: "0.18em",
-                background: "transparent",
-                color: "rgba(255,255,255,0.55)",
-                border: "1px solid var(--spark-border)",
-              }}
               title="Link this brand to a Google Sheet for tracking"
             >
-              {linkedSheetUrl ? "EDIT SHEET LINK" : "+ LINK SHEET"}
-            </button>
-            <button
-              onClick={() => navigate("/requests/bulk-upload")}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              ⤴ Bulk upload
-            </button>
-            <button
+              {linkedSheetUrl ? "Edit sheet link" : "+ Link sheet"}
+            </SparkGhostButton>
+            <SparkGhostButton onClick={() => navigate("/requests/bulk-upload")}>
+              Bulk upload
+            </SparkGhostButton>
+            <SparkGhostButton
               onClick={copyForSheets}
               disabled={visibleRows.length === 0 || copyState === "copying"}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background:
-                  copyState === "copied"
-                    ? "rgba(95,184,239,0.18)"
-                    : "transparent",
-                color:
-                  copyState === "copied"
-                    ? "var(--spark-sky)"
-                    : "var(--spark-text)",
-                border: `1px solid ${
-                  copyState === "copied"
-                    ? "rgba(95,184,239,0.5)"
-                    : "var(--spark-border)"
-                }`,
-                opacity: visibleRows.length === 0 ? 0.5 : 1,
-              }}
               title={
                 visibleRows.length === 0
                   ? "Nothing to copy"
@@ -1863,30 +1811,23 @@ export default function MasterTracker() {
               }
             >
               {copyState === "copied"
-                ? `✓ Copied (${visibleRows.length})`
+                ? `Copied (${visibleRows.length})`
                 : copyState === "copying"
                   ? "Copying…"
-                  : `📋 Copy for Sheets ${visibleRows.length > 0 ? `(${visibleRows.length})` : ""}`}
-            </button>
-            <button
+                  : `Copy for Sheets${visibleRows.length > 0 ? ` (${visibleRows.length})` : ""}`}
+            </SparkGhostButton>
+            <SparkGhostButton
               onClick={exportCsv}
               disabled={visibleRows.length === 0}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-                opacity: visibleRows.length === 0 ? 0.5 : 1,
-              }}
               title={
                 visibleRows.length === 0
                   ? "Nothing to export"
                   : `Download ${visibleRows.length} rows as CSV`
               }
             >
-              ↗ Export CSV {visibleRows.length > 0 ? `(${visibleRows.length})` : ""}
-            </button>
-            <button
+              Export CSV{visibleRows.length > 0 ? ` (${visibleRows.length})` : ""}
+            </SparkGhostButton>
+            <SparkPrimaryButton
               onClick={() =>
                 navigate(
                   planId
@@ -1894,21 +1835,54 @@ export default function MasterTracker() {
                     : "/requests/create",
                 )
               }
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background: "var(--spark-lime)",
-                color: "#0a0d09",
-                boxShadow: "0 0 24px rgba(197,245,70,0.35)",
-              }}
             >
-              {isClient ? "+ Submit request" : "<Internal> Event Request"}
-            </button>
-          </div>
-        </div>
+              {isClient ? "+ Submit request" : "Create Request"}
+            </SparkPrimaryButton>
+            </>
+          }
+        />
 
-        {/* Status chips + group toggle + search */}
-        <div className="spark-card p-4 flex flex-wrap items-center gap-2">
-          <span className="label-mini mr-2">STATUS</span>
+        <SparkFilterBar
+          label="STATUS"
+          search={
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search venue, address, market, or REQ-…"
+              className="spark-filter-search"
+            />
+          }
+          trailing={
+            <>
+              <div className="pill-group">
+                <button
+                  onClick={() => setGroupBy("none")}
+                  className={`pill-btn ${groupBy === "none" ? "on" : ""}`}
+                >
+                  Flat
+                </button>
+                <button
+                  onClick={() => setGroupBy("date")}
+                  className={`pill-btn ${groupBy === "date" ? "on" : ""}`}
+                >
+                  By date
+                </button>
+              </div>
+              <TrackerSavedViews snapshot={viewSnapshot} onApply={applyView} />
+              <DuplicateEventsButton />
+              {tenantId && (
+                <Suspense fallback={null}>
+                  <RmmFilterInner
+                    tenantId={tenantId}
+                    value={rmmFilter}
+                    onChange={setRmmFilter}
+                    onRmms={setRmmList}
+                  />
+                </Suspense>
+              )}
+            </>
+          }
+        >
           {STATUS_FILTERS.map((f) => {
             const n =
               f.key === "all"
@@ -1936,55 +1910,9 @@ export default function MasterTracker() {
               </button>
             );
           })}
-          <span className="flex-1" />
-          {/* Group-by toggle */}
-          <div className="pill-group">
-            <button
-              onClick={() => setGroupBy("none")}
-              className={`pill-btn ${groupBy === "none" ? "on" : ""}`}
-            >
-              Flat
-            </button>
-            <button
-              onClick={() => setGroupBy("date")}
-              className={`pill-btn ${groupBy === "date" ? "on" : ""}`}
-            >
-              By date
-            </button>
-          </div>
-          <TrackerSavedViews snapshot={viewSnapshot} onApply={applyView} />
-          <DuplicateEventsButton />
-          {tenantId && (
-            <Suspense fallback={null}>
-              <RmmFilterInner
-                tenantId={tenantId}
-                value={rmmFilter}
-                onChange={setRmmFilter}
-                onRmms={setRmmList}
-              />
-            </Suspense>
-          )}
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search venue, address, market, or REQ-…"
-            className="rounded-xl text-xs"
-            style={{
-              padding: "0.45rem 0.9rem",
-              background: "var(--spark-bg)",
-              border: "1px solid var(--spark-border)",
-              color: "var(--spark-text)",
-              maxWidth: 240,
-              outline: "none",
-            }}
-          />
-        </div>
+        </SparkFilterBar>
 
-        {/* Date range + Sort + Market filter row. Lives below the
-            status chips so the chips read first (most-used filter)
-            and these refine. */}
-        <div className="spark-card p-4 flex flex-wrap items-center gap-2">
-          <span className="label-mini mr-2">REFINE</span>
+        <SparkFilterBar label="REFINE">
           <FilterSelect
             label="WHEN"
             value={dateRange}
@@ -2064,7 +1992,7 @@ export default function MasterTracker() {
               × RESET REFINE
             </button>
           )}
-        </div>
+        </SparkFilterBar>
 
         {planId ? (
           <div

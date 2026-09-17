@@ -7,6 +7,7 @@ import CommandPalette from "./CommandPalette";
 import UpdateBanner from "@/components/UpdateBanner";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useInLayoutShell } from "./LayoutShellContext";
+import { MobileNavProvider, useMobileNav } from "./MobileNavContext";
 
 /**
  * Spark v2 layout shell. SparkSidebar + SparkTopbar render the wireframe
@@ -26,16 +27,22 @@ interface LayoutProps {
   children?: ReactNode;
 }
 
-/** Actual sidebar + topbar chrome. Used by AuthenticatedShell and by Layout
- *  when not already inside a shell. */
-export const LayoutChrome: React.FC<LayoutProps> = ({ children }) => {
-  // Key the boundary by route so navigating to a working page clears a
-  // stuck error automatically (a remount resets its caught-error state).
+function LayoutChromeInner({ children }: LayoutProps) {
   const location = useLocation();
+  const { open, setOpen } = useMobileNav();
+
   return (
     <div className="flex min-h-[100dvh] bg-base-200 text-base-content spark-mesh">
       <UpdateBanner />
       <CommandPalette />
+      {open ? (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setOpen(false)}
+        />
+      ) : null}
       <SparkSidebar />
 
       <div className="flex flex-col flex-1 min-w-0">
@@ -55,7 +62,15 @@ export const LayoutChrome: React.FC<LayoutProps> = ({ children }) => {
       </div>
     </div>
   );
-};
+}
+
+/** Actual sidebar + topbar chrome. Used by AuthenticatedShell and by Layout
+ *  when not already inside a shell. */
+export const LayoutChrome: React.FC<LayoutProps> = ({ children }) => (
+  <MobileNavProvider>
+    <LayoutChromeInner>{children}</LayoutChromeInner>
+  </MobileNavProvider>
+);
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const inShell = useInLayoutShell();

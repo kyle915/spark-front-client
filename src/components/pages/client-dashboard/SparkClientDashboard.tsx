@@ -25,6 +25,7 @@ import AskAiButton from "@/components/ai/AskAiButton";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { requestDateKey } from "@/lib/requestDateKey";
 import PlansPipelineDashboardStrip from "@/plans/PlansPipelineDashboardStrip";
+import SparkPageHeader from "@/shared/SparkPageHeader";
 
 const AccountMapBody = lazy(() =>
   import("@/components/pages/map/SparkAccountMap").then((m) => ({
@@ -237,37 +238,13 @@ const ClientInner: React.FC = () => {
     horizonDays === 7 ? "next7" : horizonDays === 30 ? "next30" : "next90";
 
   return (
-    <div className="space-y-6 max-w-7xl">
-      {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            YOUR PROGRAM · MONTH AHEAD
-          </p>
-          <h1
-            className="display text-4xl font-bold mt-2"
-            style={{ letterSpacing: "-0.04em" }}
-          >
-            Today
-          </h1>
-          <p
-            className="mt-2"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            Upcoming schedule and program performance.
-          </p>
-        </div>
-        {/* Ask AI about this client's own program — scoped to the client's
-            own tenant (useAuthStore().tenantId), the same tenant id every
-            per-tenant surface resolves. */}
-        <AskAiButton tenantId={tenantId} />
-      </div>
+    <div className="space-y-6 max-w-7xl spark-fade-in">
+      <SparkPageHeader
+        eyebrow="YOUR PROGRAM · MONTH AHEAD"
+        title="Today"
+        support="Upcoming schedule and program performance."
+        action={<AskAiButton tenantId={tenantId} />}
+      />
 
       {/* Tab bar — Overview / Approvals / Account Map. The latter two
           tabs reuse the existing /approvals and /account-map pages by

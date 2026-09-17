@@ -18,6 +18,7 @@ import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { SparkBentoTile, SparkStat } from "@/shared/SparkStat";
 import { todayGroundKpis } from "@/shared/sparkStat";
+import SparkPageHeader from "@/shared/SparkPageHeader";
 
 /**
  * "Today's events" — list of events happening today with a Google Maps
@@ -512,28 +513,12 @@ export default function SparkToday() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-7xl">
-        <div>
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "var(--spark-lime)",
-            }}
-          >
-            LIVE · TODAY
-          </p>
-          <h1
-            className="display text-4xl font-bold mt-2"
-            style={{ letterSpacing: "-0.04em" }}
-          >
-            {isClient ? "Today's activations." : "Today, on the ground."}
-          </h1>
-          <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
-            Every event happening right now, plus the assigned BAs and
-            their GPS clock-in/out locations.
-          </p>
-        </div>
+      <div className="space-y-6 max-w-7xl spark-fade-in">
+        <SparkPageHeader
+          eyebrow="LIVE · TODAY"
+          title={isClient ? "Today's activations." : "Today, on the ground."}
+          support="Every event happening right now, plus the assigned BAs and their GPS clock-in/out locations."
+        />
 
         <Suspense fallback={<DashboardSkeleton />}>
           <Inner apiKey={apiKey} />

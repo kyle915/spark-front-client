@@ -2,6 +2,7 @@ import React, { Suspense, useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
   ArrowRightEndOnRectangleIcon,
+  Bars3Icon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import { useAuthStore } from "@/store/authStore";
@@ -11,6 +12,7 @@ import { looksLikeRouteId, usePageCrumb } from "./pageCrumb";
 import { dispatchOpenJump } from "@/motion/opsMotion";
 import { PublicFormPill } from "./PublicFormPill";
 import { usePublicFormLink } from "@/hooks/usePublicFormLink";
+import { useMobileNav } from "./MobileNavContext";
 
 /**
  * Spark v2 topbar — wireframe-faithful version of spark-demo/index.html
@@ -90,6 +92,7 @@ export const SparkTopbar: React.FC = () => {
   const { pathname } = useLocation();
   const crumb = useBreadcrumb();
   const { role, isClient, setRole } = useSparkRole();
+  const { toggle: toggleNav } = useMobileNav();
   const initial = (user?.firstName ?? user?.email ?? "U")
     .charAt(0)
     .toUpperCase();
@@ -115,10 +118,18 @@ export const SparkTopbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-base-200/50 backdrop-blur-2xl border-b border-base-300 px-6 py-3 flex items-center justify-between gap-3 flex-wrap" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.18)" }}>
-      {/* Left: breadcrumb + (optional) public share-link pill */}
-      <div className="flex items-center gap-3 min-w-0">
-        <span className="mono text-[11px] tracking-[0.18em] text-base-content/40">
+    <header className="sticky top-0 z-30 bg-base-200/50 backdrop-blur-2xl border-b border-base-300 px-4 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap" style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.18)" }}>
+      {/* Left: mobile menu + breadcrumb + (optional) public share-link pill */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <button
+          type="button"
+          className="md:hidden btn btn-ghost btn-sm btn-square shrink-0"
+          aria-label="Open menu"
+          onClick={toggleNav}
+        >
+          <Bars3Icon className="w-5 h-5" />
+        </button>
+        <span className="mono text-[11px] tracking-[0.18em] text-base-content/40 hidden sm:inline">
           spark.app /
         </span>
         <span className="mono text-[11px] tracking-[0.18em] text-primary truncate">

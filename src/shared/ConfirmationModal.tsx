@@ -1,78 +1,58 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import SparkConfirm from "./SparkConfirm";
 
 interface ConfirmationModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onConfirm: () => void;
-    title: string;
-    message: string;
-    confirmText?: string;
-    cancelText?: string;
-    confirmButtonClass?: string;
-    children?: ReactNode;
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  /** Kept for callers; danger tone when class includes error/warning. */
+  confirmButtonClass?: string;
+  children?: ReactNode;
 }
 
+/**
+ * Legacy confirm API — now backed by SparkOverlay / SparkConfirm.
+ */
 const ConfirmationModal = ({
-    isOpen,
-    onClose,
-    onConfirm,
-    title,
-    message,
-    confirmText = "Confirm",
-    cancelText = "Cancel",
-    confirmButtonClass = "btn-primary",
-    children,
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  confirmButtonClass = "btn-primary",
+  children,
 }: ConfirmationModalProps) => {
-    const modalRef = useRef<HTMLDialogElement>(null);
+  if (!isOpen) return null;
 
-    useEffect(() => {
-        const modal = modalRef.current;
-        if (!modal) return;
+  const tone =
+    confirmButtonClass.includes("error") ||
+    confirmButtonClass.includes("warning") ||
+    confirmButtonClass.includes("danger")
+      ? "danger"
+      : "default";
 
-        if (isOpen) {
-            modal.showModal();
-        } else {
-            modal.close();
-        }
-    }, [isOpen]);
-
-    const handleConfirm = () => {
-        onConfirm();
-        onClose();
-    };
-
-    const handleCancel = () => {
-        onClose();
-    };
-
-    return (
-        <dialog ref={modalRef} className="modal" onClose={onClose}>
-            <div className="modal-box">
-                <h3 className="font-bold text-lg">{title}</h3>
-                <p className="py-4">{message}</p>
-                {children}
-                <div className="modal-action">
-                    <button
-                        type="button"
-                        className="btn"
-                        onClick={handleCancel}
-                    >
-                        {cancelText}
-                    </button>
-                    <button
-                        type="button"
-                        className={`btn ${confirmButtonClass}`}
-                        onClick={handleConfirm}
-                    >
-                        {confirmText}
-                    </button>
-                </div>
-            </div>
-            <form method="dialog" className="modal-backdrop">
-                <button type="button" onClick={handleCancel}>close</button>
-            </form>
-        </dialog>
-    );
+  return (
+    <SparkConfirm
+      title={title}
+      body={
+        <>
+          <p>{message}</p>
+          {children}
+        </>
+      }
+      confirmLabel={confirmText}
+      cancelLabel={cancelText}
+      tone={tone}
+      onConfirm={onConfirm}
+      onCancel={onClose}
+    />
+  );
 };
 
 export default ConfirmationModal;

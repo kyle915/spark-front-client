@@ -27,6 +27,8 @@ import type { MarkRecapsSharedMutation as MarkRecapsSharedMutationType } from "@
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import ShareRecapsBulkModal from "@/recap/components/ShareRecapsBulkModal";
@@ -2527,7 +2529,24 @@ export default function SparkRecapsList() {
 
   return (
     <Layout>
-      <div className="space-y-4 max-w-7xl">
+      <div className="space-y-4 max-w-7xl spark-fade-in">
+        <SparkPageHeader
+          eyebrow={`RECAPS · ${windowLabel}`}
+          title="Recaps"
+          titleClassName="text-3xl md:text-4xl font-bold"
+          support="Filed activations — filter, review, share."
+          action={
+            !isClient ? (
+              <SparkPrimaryButton
+                onClick={() => {
+                  window.location.href = "/recap/create";
+                }}
+              >
+                + New recap
+              </SparkPrimaryButton>
+            ) : null
+          }
+        />
         <div
           className="sticky top-0 z-20 spark-card p-3 flex flex-col gap-2"
           style={{
@@ -2537,12 +2556,7 @@ export default function SparkRecapsList() {
         >
           <div className="flex flex-wrap gap-2 items-center">
             <div className="min-w-[120px] mr-1 shrink-0">
-              <p
-                className="mono text-[10px]"
-                style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
-              >
-                RECAPS · {windowLabel}
-              </p>
+              <p className="label-mini">TOTAL</p>
               <p
                 className="tab-num text-2xl font-bold leading-none mt-0.5"
                 style={{ color: "var(--spark-lime)" }}
@@ -2633,7 +2647,7 @@ export default function SparkRecapsList() {
                 onClick={() => {
                   window.location.href = "/recap/create";
                 }}
-                className="px-4 py-2 rounded-xl text-sm font-semibold shrink-0"
+                className="px-4 py-2 rounded-xl text-sm font-semibold shrink-0 hidden md:inline-flex"
                 style={limeBtn}
               >
                 + New recap

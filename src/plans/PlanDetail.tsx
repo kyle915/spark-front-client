@@ -37,6 +37,9 @@ import {
   planWindowKind,
 } from "@/plans/planHealth";
 import { requestDateKey } from "@/lib/requestDateKey";
+import SparkPageHeader from "@/shared/SparkPageHeader";
+import { SparkPrimaryLink } from "@/shared/SparkPrimaryButton";
+import { SparkGhostButton, SparkGhostLink } from "@/shared/SparkGhostButton";
 import "@/plans/plans.css";
 
 type PlanRequestNode = NonNullable<
@@ -718,30 +721,31 @@ const PlanDetailInner: React.FC<{ uuid: string }> = ({ uuid }) => {
   };
 
   return (
-    <div className="plans-shell plans-fade-in">
+    <div className="plans-shell spark-fade-in">
       <div>
         <Link to="/plans" className="plans-back">
           ← All plans
         </Link>
-        <div className="flex flex-wrap items-start justify-between gap-4 mt-3">
-          <div className="min-w-0">
-            <h1 className="plans-title text-4xl md:text-5xl font-bold">
-              {plan.name}
-            </h1>
-            <p className="plans-support mt-3">
+        <SparkPageHeader
+          className="mt-3"
+          title={plan.name}
+          support={
+            <>
               {WINDOW_LABEL[windowKind] ?? windowKind} ·{" "}
               {formatPlanWindow(plan.startDate, plan.endDate)}
               {plan.markets.length > 0 ? ` · ${plan.markets.join(", ")}` : ""}
               {ownerLabel ? ` · ${ownerLabel}` : ""}
-            </p>
-          </div>
-          <span
-            className="plans-health shrink-0"
-            style={{ color: health.color }}
-          >
-            {health.label}
-          </span>
-        </div>
+            </>
+          }
+          action={
+            <span
+              className="plans-health shrink-0"
+              style={{ color: health.color }}
+            >
+              {health.label}
+            </span>
+          }
+        />
         {plan.conceptBrief ? (
           <p className="mt-4 max-w-2xl" style={{ color: "var(--plan-muted)" }}>
             {plan.conceptBrief}
@@ -751,32 +755,22 @@ const PlanDetailInner: React.FC<{ uuid: string }> = ({ uuid }) => {
 
       <div className="flex flex-wrap gap-2 items-center">
         {isAdmin ? (
-          <Link to={createHref} className="plans-btn-primary">
-            Add request
-          </Link>
+          <SparkPrimaryLink to={createHref}>Add request</SparkPrimaryLink>
         ) : null}
-        <Link to={trackerHref} className="plans-btn-ghost">
-          Open in Tracker
-        </Link>
+        <SparkGhostLink to={trackerHref}>Open in Tracker</SparkGhostLink>
         {isAdmin ? (
           <>
-            <button
-              type="button"
-              className="plans-btn-ghost"
-              onClick={() => setShowAttach((v) => !v)}
-            >
+            <SparkGhostButton onClick={() => setShowAttach((v) => !v)}>
               {showAttach ? "Hide attach" : "Attach existing"}
-            </button>
-            <button
-              type="button"
-              className="plans-btn-ghost"
+            </SparkGhostButton>
+            <SparkGhostButton
               onClick={() => {
                 if (editing) setEditing(false);
                 else openEdit();
               }}
             >
               {editing ? "Close edit" : "Edit"}
-            </button>
+            </SparkGhostButton>
             <button
               type="button"
               className="plans-btn-ghost"

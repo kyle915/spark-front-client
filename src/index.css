@@ -336,13 +336,15 @@ h1, h2, h3, h4, h5, h6, .display {
   color: rgba(255, 255, 255, 0.55);
 }
 
-/* Mono micro-label used on metric cards: "RECAPS · 90D", etc. */
+/* Mono micro-label used on metric cards: "RECAPS · 90D", etc.
+   Quieter so ALL-CAPS mono stays secondary, not the page hero. */
 .label-mini {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.38);
+  font-weight: 500;
 }
 
 /* Subtle hover lift used on clickable cards */
@@ -549,8 +551,141 @@ body:has(.spark-login-page) {
 }
 .spark-card.hov:hover {
   transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.36);
+  border-color: rgba(197, 245, 70, 0.22);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
+}
+
+/* === Shared page chrome (promoted from Plans Apple UX) === */
+.spark-page {
+  --spark-page-gap: 1.75rem;
+  --spark-muted: rgba(255, 255, 255, 0.5);
+  --spark-faint: rgba(255, 255, 255, 0.38);
+  max-width: 68rem;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spark-page-gap);
+}
+.spark-page-wide {
+  max-width: 80rem;
+}
+.spark-title {
+  font-family: inherit;
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+}
+.spark-support {
+  color: var(--spark-muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  max-width: 36rem;
+}
+.spark-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: none;
+  background: var(--spark-lime);
+  color: #0a0a0a;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.spark-btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.spark-btn-primary:not(:disabled):hover {
+  transform: scale(1.02);
+}
+.spark-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.55rem 0.95rem;
+  border-radius: 999px;
+  border: 1px solid var(--spark-border);
+  background: transparent;
+  color: var(--spark-muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+.spark-btn-ghost:hover {
+  color: var(--spark-text);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.spark-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
+  padding: 1rem 1.15rem;
+  background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
+  border: 1px solid var(--spark-border);
+  border-radius: 20px;
+}
+.spark-filter-bar .spark-input,
+.spark-filter-bar input.spark-filter-search {
+  padding: 0.45rem 0.9rem;
+  border-radius: 14px;
+  border: 1px solid var(--spark-border);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--spark-text);
+  outline: none;
+  font-size: 0.8rem;
+  max-width: 240px;
+}
+.spark-filter-bar input.spark-filter-search:focus {
+  border-color: rgba(197, 245, 70, 0.45);
+  box-shadow: 0 0 0 3px rgba(197, 245, 70, 0.12);
+}
+.spark-empty {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
+  border: 1px solid var(--spark-border);
+  border-radius: 20px;
+}
+.spark-fade-in {
+  animation: spark-fade-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes spark-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spark-fade-in { animation: none; }
+}
+
+/* Tracker horizontal scroll: keep date identity visible */
+.spark-table-sticky-date {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--spark-surface);
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.18);
+}
+thead .spark-table-sticky-date {
+  background: var(--spark-surface-2);
+  z-index: 3;
+}
+@media (max-width: 767px) {
+  .spark-table-hide-sm {
+    display: none;
+  }
 }
 
 /* iOS Settings-style grouped inset — Recaps compact + Jump groups */
@@ -761,20 +896,21 @@ body:has(.spark-login-page) {
   color: var(--spark-text);
 }
 .nav-item.active {
-  background: rgba(197, 245, 70, 0.08);
+  background: rgba(197, 245, 70, 0.06);
   color: var(--spark-lime);
   font-weight: 600;
 }
 .nav-item.active::before {
   content: "";
   position: absolute;
-  left: -1px;
-  top: 25%;
-  bottom: 25%;
+  left: 0;
+  top: 28%;
+  bottom: 28%;
   width: 2px;
   background: var(--spark-lime);
   border-radius: 2px;
-  box-shadow: 0 0 8px var(--spark-lime);
+  opacity: 0.85;
+  box-shadow: none;
 }
 .nav-icon {
   width: 22px;
