@@ -847,6 +847,7 @@ const TrackerStatusCountsLoader: React.FC<{
   dateRange: TrackerDateRange;
   marketFilter: string;
   schedulingFilter: string;
+  planId: string | null;
   onCounts: (counts: Record<string, number>, total: number) => void;
   onMarkets: (markets: string[]) => void;
 }> = ({
@@ -856,6 +857,7 @@ const TrackerStatusCountsLoader: React.FC<{
   dateRange,
   marketFilter,
   schedulingFilter,
+  planId,
   onCounts,
   onMarkets,
 }) => {
@@ -876,6 +878,7 @@ const TrackerStatusCountsLoader: React.FC<{
       schedulingStatus:
         reqNeedle || schedulingFilter === "all" ? null : schedulingFilter,
       stateCode: reqNeedle || marketFilter === "all" ? null : marketFilter,
+      activationPlanId: reqNeedle || !planId ? null : planId,
     };
   }, [
     tenantId,
@@ -883,6 +886,7 @@ const TrackerStatusCountsLoader: React.FC<{
     dateRange,
     schedulingFilter,
     marketFilter,
+    planId,
     reqNeedle,
   ]);
 
@@ -894,9 +898,18 @@ const TrackerStatusCountsLoader: React.FC<{
         dateRange,
         schedulingFilter,
         marketFilter,
+        planId ?? "",
         search,
       ].join("|"),
-    [tenantId, rmmFilter, dateRange, schedulingFilter, marketFilter, search],
+    [
+      tenantId,
+      rmmFilter,
+      dateRange,
+      schedulingFilter,
+      marketFilter,
+      planId,
+      search,
+    ],
   );
 
   const data = useLazyLoadQuery<TrackerStatusCountsQueryType>(
@@ -935,6 +948,7 @@ const MasterTrackerInner: React.FC<{
   sortMode: "date-desc" | "date-asc" | "venue" | "status";
   marketFilter: string;
   schedulingFilter: string;
+  planId: string | null;
   mentionables: Mentionable[];
   listRefreshKey: number;
   onNotesOpened?: () => void;
@@ -952,6 +966,7 @@ const MasterTrackerInner: React.FC<{
   sortMode,
   marketFilter,
   schedulingFilter,
+  planId,
   mentionables,
   listRefreshKey,
   onNotesOpened,
@@ -983,6 +998,7 @@ const MasterTrackerInner: React.FC<{
       schedulingStatus:
         reqNeedle || schedulingFilter === "all" ? null : schedulingFilter,
       stateCode: reqNeedle || marketFilter === "all" ? null : marketFilter,
+      activationPlanId: reqNeedle || !planId ? null : planId,
     };
   }, [
     tenantId,
@@ -992,6 +1008,7 @@ const MasterTrackerInner: React.FC<{
     sortMode,
     schedulingFilter,
     marketFilter,
+    planId,
     reqNeedle,
   ]);
 
@@ -1005,6 +1022,7 @@ const MasterTrackerInner: React.FC<{
         sortMode,
         schedulingFilter,
         marketFilter,
+        planId ?? "",
         search,
         listRefreshKey,
       ].join("|"),
@@ -1016,6 +1034,7 @@ const MasterTrackerInner: React.FC<{
       sortMode,
       schedulingFilter,
       marketFilter,
+      planId,
       search,
       listRefreshKey,
     ],
@@ -1367,17 +1386,37 @@ export default function MasterTracker() {
   >("date-desc");
   // Market filter — options come from trackerStatusCounts.marketCodes.
   // `?market=CA` from Insights geo drill pre-selects a state.
-  const [searchParams] = useSearchParams();
+  // `?plan=<id>` from Activation Plan detail scopes rows to that plan.
+  const [searchParams, setSearchParams] = useSearchParams();
   const marketFromUrl = (searchParams.get("market") || "").toUpperCase();
+  const planFromUrl = searchParams.get("plan") || null;
   const [marketFilter, setMarketFilter] = useState<string>(
     marketFromUrl || "all",
   );
+  const [planId, setPlanId] = useState<string | null>(planFromUrl);
   useEffect(() => {
     if (marketFromUrl) setMarketFilter(marketFromUrl);
   }, [marketFromUrl]);
+  useEffect(() => {
+    setPlanId(planFromUrl);
+  }, [planFromUrl]);
+  const whenFromUrl = searchParams.get("when") || "";
+  useEffect(() => {
+    const allowed = ["all", "next7", "next30", "next90", "past7", "past30", "month"] as const;
+    if ((allowed as readonly string[]).includes(whenFromUrl)) {
+      setDateRange(whenFromUrl as TrackerDateRange);
+    }
+  }, [whenFromUrl]);
   const [markets, setMarkets] = useState<string[]>([]);
   // Scheduling-status filter — server-side via schedulingStatus.
   const [schedulingFilter, setSchedulingFilter] = useState<string>("all");
+
+  const clearPlanFilter = () => {
+    setPlanId(null);
+    const next = new URLSearchParams(searchParams);
+    next.delete("plan");
+    setSearchParams(next, { replace: true });
+  };
 
   // Saved views — everything a "view" captures, and how to re-apply one.
   // Unknown/missing keys fall back to each filter's default so an old
@@ -1410,7 +1449,7 @@ export default function MasterTracker() {
     setSearch(v.search ?? "");
     setRmmFilter(v.rmmFilter ?? "all");
     setDateRange(
-      (["all", "next7", "next30", "past7", "past30", "month"] as const).find(
+      (["all", "next7", "next30", "next90", "past7", "past30", "month"] as const).find(
         (d) => d === v.dateRange,
       ) ?? "all",
     );
@@ -1865,6 +1904,7 @@ export default function MasterTracker() {
               { value: "all", label: "All dates" },
               { value: "next7", label: "Next 7 days" },
               { value: "next30", label: "Next 30 days" },
+              { value: "next90", label: "Next 90 days" },
               { value: "month", label: "This month" },
               { value: "past7", label: "Past 7 days" },
               { value: "past30", label: "Past 30 days" },
@@ -1905,13 +1945,15 @@ export default function MasterTracker() {
           {(dateRange !== "all" ||
             marketFilter !== "all" ||
             schedulingFilter !== "all" ||
-            sortMode !== "date-desc") && (
+            sortMode !== "date-desc" ||
+            planId) && (
             <button
               onClick={() => {
                 setDateRange("all");
                 setMarketFilter("all");
                 setSchedulingFilter("all");
                 setSortMode("date-desc");
+                if (planId) clearPlanFilter();
               }}
               className="mono text-[10px] px-3 py-1.5 rounded-xl"
               style={{
@@ -1925,6 +1967,49 @@ export default function MasterTracker() {
             </button>
           )}
         </div>
+
+        {planId ? (
+          <div
+            className="spark-card px-4 py-3 flex flex-wrap items-center justify-between gap-2"
+            style={{
+              borderColor: "rgba(197,245,70,0.35)",
+              background: "rgba(197,245,70,0.06)",
+            }}
+          >
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.14em",
+                color: "var(--spark-lime)",
+              }}
+            >
+              PLAN FILTER · SHOWING REQUESTS ON THIS ACTIVATION PLAN
+            </p>
+            <div className="flex gap-2">
+              <Link
+                to="/plans"
+                className="mono text-[10px]"
+                style={{
+                  letterSpacing: "0.12em",
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                ALL PLANS
+              </Link>
+              <button
+                type="button"
+                onClick={clearPlanFilter}
+                className="mono text-[10px]"
+                style={{
+                  letterSpacing: "0.12em",
+                  color: "rgba(255,255,255,0.55)",
+                }}
+              >
+                × CLEAR
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {/* Totals strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -2015,6 +2100,7 @@ export default function MasterTracker() {
               dateRange={dateRange}
               marketFilter={marketFilter}
               schedulingFilter={schedulingFilter}
+              planId={planId}
               onCounts={handleCounts}
               onMarkets={setMarkets}
             />
@@ -2043,6 +2129,7 @@ export default function MasterTracker() {
             sortMode={sortMode}
             marketFilter={marketFilter}
             schedulingFilter={schedulingFilter}
+            planId={planId}
             mentionables={[
               ...rmmList,
               ...(adminList.length > 0 ? adminList : ADMIN_ROSTER_FALLBACK),

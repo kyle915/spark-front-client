@@ -100,6 +100,80 @@ type AccountMapPin {
   stateCode: String!
 }
 
+type ActivationPlanPipeline {
+  planned: Int!
+  approved: Int!
+  staffed: Int!
+  executed: Int!
+  verified: Int!
+}
+
+type ActivationPlanType {
+  id: ID!
+  uuid: String!
+  name: String!
+  conceptBrief: String!
+  startDate: String
+  endDate: String
+  markets: [String!]!
+  requestCount: Int!
+  pipeline: ActivationPlanPipeline!
+}
+
+type ActivationPlanDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  activationPlan: ActivationPlanType
+}
+
+type AttachRequestsToPlanResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  updatedCount: Int!
+  activationPlan: ActivationPlanType
+}
+
+input CreateActivationPlanInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  conceptBrief: String = null
+  startDate: String = null
+  endDate: String = null
+  markets: [String!] = null
+  ownerId: ID = null
+}
+
+input UpdateActivationPlanInput {
+  clientMutationId: ID = null
+  id: ID!
+  name: String = null
+  conceptBrief: String = null
+  startDate: String = null
+  endDate: String = null
+  markets: [String!] = null
+  ownerId: ID = null
+  clearOwner: Boolean = null
+}
+
+input DeleteActivationPlanInput {
+  clientMutationId: ID = null
+  id: ID!
+}
+
+input AttachRequestsToPlanInput {
+  clientMutationId: ID = null
+  activationPlanId: ID!
+  requestIds: [ID!]!
+}
+
+input DetachRequestsFromPlanInput {
+  clientMutationId: ID = null
+  requestIds: [ID!]!
+}
+
 input ActiveAmbassadorFiltersInput {
   email: String = null
   name: String = null
@@ -2541,6 +2615,7 @@ input CreateRequestInput {
   additionalTeamDetails: String = null
   casesToBeShipped: String = null
   storeNumber: String = null
+  activationPlanId: ID = null
   clientName: String = null
   clientEmail: String = null
   distributorName: String = null
@@ -4945,6 +5020,11 @@ type Mutation {
   requestBatchTemplateDownloadUrl(input: RequestBatchTemplateInput!): RequestBatchTemplateResponse!
   importRequestsBatch(input: ImportRequestsBatchInput!): RequestBatchImportResponse!
   createRequest(input: CreateRequestInput!): RequestDetailResponse!
+  createActivationPlan(input: CreateActivationPlanInput!): ActivationPlanDetailResponse!
+  updateActivationPlan(input: UpdateActivationPlanInput!): ActivationPlanDetailResponse!
+  deleteActivationPlan(input: DeleteActivationPlanInput!): ActivationPlanDetailResponse!
+  attachRequestsToPlan(input: AttachRequestsToPlanInput!): AttachRequestsToPlanResponse!
+  detachRequestsFromPlan(input: DetachRequestsFromPlanInput!): AttachRequestsToPlanResponse!
   bulkCloneRequest(input: BulkCloneRequestInput!): BulkCloneRequestResponse!
   updateRequest(input: UpdateRequestInput!): RequestDetailResponse!
   approveRequest(input: ApproveRequestInput!): ApproveRequestResponse!
@@ -5673,6 +5753,8 @@ type Query {
   requestStatus(id: ID = null, uuid: ID = null): RequestStatus
   requests(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestFiltersInput = null): RequestCountableConnection!
   trackerStatusCounts(filters: RequestFiltersInput = null, q: String = null): TrackerStatusCounts!
+  activationPlans(tenantId: ID = null, first: Int = null): [ActivationPlanType!]!
+  activationPlan(id: ID = null, uuid: String = null): ActivationPlanType
   sidebarRequestCounts(tenantId: ID = null): SidebarRequestCounts!
   recapListKinds(tenantId: ID = null): RecapListKinds!
   sidebarAlertCandidates(tenantId: ID = null): [SidebarAlertCandidate!]!
@@ -6548,6 +6630,7 @@ type Request implements Node {
   retailer: Retailer
   location: Location
   state: State
+  activationPlan: ActivationPlanType
   requestType: RequestType
   status: RequestStatus
   tenantId: ID!
@@ -6675,6 +6758,7 @@ input RequestFiltersInput {
   statusSlug: String = null
   statusSlugs: [String!] = null
   schedulingStatus: String = null
+  activationPlanId: ID = null
   stateCode: String = null
   createdWithinHours: Int = null
   edited: Boolean = null

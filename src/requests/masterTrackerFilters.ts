@@ -2,6 +2,7 @@ export type TrackerDateRange =
   | "all"
   | "next7"
   | "next30"
+  | "next90"
   | "past7"
   | "past30"
   | "month";
@@ -33,6 +34,11 @@ export function trackerDateRangeToServer(dateRange: TrackerDateRange): {
       end.setDate(end.getDate() + 30);
       return { startDate: todayIso, endDate: isoDate(end) };
     }
+    case "next90": {
+      const end = new Date(today);
+      end.setDate(end.getDate() + 90);
+      return { startDate: todayIso, endDate: isoDate(end) };
+    }
     case "past7": {
       const start = new Date(today);
       start.setDate(start.getDate() - 7);
@@ -48,8 +54,10 @@ export function trackerDateRangeToServer(dateRange: TrackerDateRange): {
       const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
       return { startDate: isoDate(start), endDate: isoDate(end) };
     }
-    default:
-      return {};
+    default: {
+      const _exhaustive: never = dateRange;
+      return _exhaustive;
+    }
   }
 }
 

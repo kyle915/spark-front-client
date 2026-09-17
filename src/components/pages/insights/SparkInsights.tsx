@@ -11,6 +11,7 @@ import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import BelowFold from "@/components/insights/BelowFold";
 import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
 import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
+import PlansPipelineDashboardStrip from "@/plans/PlansPipelineDashboardStrip";
 import {
   buildProgramPulseCopy,
   buildProgramPulseOneLiner,
@@ -660,6 +661,8 @@ export function InsightsBody({
           comparisonPeriod={comparisonPeriod}
         />
       )}
+
+      {tenantId && <PlansPipelineDashboardStrip tenantId={tenantId} />}
 
       {tenantId && (
         <MarketConcentrationStrip

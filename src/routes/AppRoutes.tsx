@@ -471,10 +471,12 @@ const CalendarConnection = lazyDefault(
   () => import("@/calendar/CalendarConnection"),
 );
 
-// Theme / Goals
+// Theme / Goals / Plans
 const ThemePage = lazyDefault(() => import("@/theme/ThemePage"));
 const CreateGoals = lazyDefault(() => import("@/goals/CreateGoals"));
 const GoalsList = lazyDefault(() => import("@/goals/GoalsList"));
+const PlansList = lazyDefault(() => import("@/plans/PlansList"));
+const PlanDetail = lazyDefault(() => import("@/plans/PlanDetail"));
 
 /* -----------------------------------------------------------
    PUBLIC ROUTES (NO AUTH REQUIRED)
@@ -1532,6 +1534,24 @@ const GoalsLinks = {
 };
 
 /* -----------------------------------------------------------
+  ACTIVATION PLANS
+----------------------------------------------------------- */
+const PlansLinks = {
+  routes: [
+    {
+      path: "/plans",
+      component: <PlansList />,
+      isPublic: false,
+    },
+    {
+      path: "/plans/:uuid",
+      component: <PlanDetail />,
+      isPublic: false,
+    },
+  ],
+};
+
+/* -----------------------------------------------------------
    EXPORT: SIDEBAR MENU
 ----------------------------------------------------------- */
 export const navigationMenuRoutes = [
@@ -1604,4 +1624,5 @@ export const appRoutes = [
   ...PublicRoutes.routes,
   ...SettingsLinks.routes,
   ...GoalsLinks.routes,
+  ...PlansLinks.routes,
 ];

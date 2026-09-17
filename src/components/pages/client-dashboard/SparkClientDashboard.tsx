@@ -2,12 +2,12 @@
  * Per-tenant client dashboard — focused view for brand stakeholders.
  *
  * Lives at /client-dashboard (and /client). Answers:
- *   1. What's happening this week?
+ *   1. What's happening ahead (7 / 30 / 90 days)?
  *   2. Program performance (pace / KPIs / map) — same body as admin Dashboard
  *   3. Approvals + account map tabs
  *
- * Week-ahead uses slim ClientWeekAheadQuery (date + retailer over
- * today→+7d). Sidebar badge counts come from useSidebarCounts.
+ * Month-ahead uses slim ClientWeekAheadQuery (date + retailer over
+ * the selected horizon). Sidebar badge counts come from useSidebarCounts.
  * Approvals / map tabs lazy-load their bodies. Legacy /insights
  * redirects here.
  */
@@ -24,6 +24,7 @@ import type { ClientWeekAheadQuery as ClientWeekAheadQueryType } from "@api/quer
 import AskAiButton from "@/components/ai/AskAiButton";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { requestDateKey } from "@/lib/requestDateKey";
+import PlansPipelineDashboardStrip from "@/plans/PlansPipelineDashboardStrip";
 
 const AccountMapBody = lazy(() =>
   import("@/components/pages/map/SparkAccountMap").then((m) => ({
@@ -38,6 +39,7 @@ const ApprovalsBody = lazy(() =>
 );
 
 type TabKey = "overview" | "approvals" | "map";
+type AheadHorizon = 7 | 30 | 90;
 
 // Read the active tab from the URL hash so deep-links (e.g.
 // /client-dashboard#approvals) land on the right tab and the back
@@ -106,20 +108,22 @@ const ClientInner: React.FC = () => {
     window.history.replaceState(null, "", url.toString());
   };
 
-  // Slim week-ahead only: today → +7d.
+  // Horizon: 7 / 30 / 90 days ahead. Defaults to month-ahead (30).
   // Intentionally NOT RequestsQuery first:2000 — that pulls products,
   // openShifts, nested location trees this page never renders.
+  const [horizonDays, setHorizonDays] = useState<AheadHorizon>(30);
+
   const dateWindow = useMemo(() => {
     const today = startOfDay(new Date());
     const end = new Date(today);
-    end.setDate(today.getDate() + 7);
+    end.setDate(today.getDate() + horizonDays);
     return { startDate: isoDay(today), endDate: isoDay(end) };
-  }, []);
+  }, [horizonDays]);
 
   const data = useLazyLoadQuery<ClientWeekAheadQueryType>(
     ClientWeekAheadQuery,
     {
-      // Busy tenants can schedule 200+ demos in a week (Torch sheet import).
+      // Busy tenants can schedule hundreds of demos in a quarter window.
       first: 1000,
       filters: tenantId
         ? {
@@ -130,38 +134,78 @@ const ClientInner: React.FC = () => {
           }
         : null,
     },
-    { fetchPolicy: "store-or-network" },
+    {
+      fetchPolicy: "store-or-network",
+      fetchKey: `${tenantId ?? ""}|${horizonDays}|${dateWindow.startDate}`,
+    },
   );
 
-  // 7-day forward bucket. Today + next 6 days.
-  const weekAhead: DayBucket[] = useMemo(() => {
-    const buckets: DayBucket[] = [];
+  // Bucket strategy: daily for 7d, weekly for 30d, monthly for 90d.
+  const aheadBuckets: DayBucket[] = useMemo(() => {
     const today = startOfDay(new Date());
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      buckets.push({ key: dayKey(d), label: fmtDayLabel(d), count: 0 });
+    const buckets: DayBucket[] = [];
+    if (horizonDays === 7) {
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+        buckets.push({ key: dayKey(d), label: fmtDayLabel(d), count: 0 });
+      }
+    } else if (horizonDays === 30) {
+      for (let w = 0; w < 5; w++) {
+        const start = new Date(today);
+        start.setDate(today.getDate() + w * 7);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        buckets.push({
+          key: `w${w}-${dayKey(start)}`,
+          label: `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+          count: 0,
+        });
+      }
+    } else {
+      for (let m = 0; m < 3; m++) {
+        const start = new Date(today.getFullYear(), today.getMonth() + m, 1);
+        buckets.push({
+          key: `m-${start.getFullYear()}-${start.getMonth()}`,
+          label: start.toLocaleDateString("en-US", { month: "short" }),
+          count: 0,
+        });
+      }
     }
-    const byKey = new Map(buckets.map((b) => [b.key, b]));
     const rows =
       data?.requests?.edges
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+    const endExclusive = new Date(today);
+    endExclusive.setDate(today.getDate() + horizonDays);
     for (const r of rows) {
-      // Request.date is a naive ISO datetime ("2026-09-10T14:00:00").
-      // slice(0,10) — never split("-").map(Number) on the full string
-      // (day becomes NaN and every row is dropped).
       const k = requestDateKey(r.date);
       if (!k) continue;
-      const slot = byKey.get(k);
-      if (slot) slot.count += 1;
+      const [y, mo, d] = k.split("-").map(Number);
+      const ms = new Date(y, mo - 1, d).getTime();
+      if (!Number.isFinite(ms)) continue;
+      if (ms < today.getTime() || ms >= endExclusive.getTime()) continue;
+      if (horizonDays === 7) {
+        const slot = buckets.find((b) => b.key === k);
+        if (slot) slot.count += 1;
+      } else if (horizonDays === 30) {
+        const dayOffset = Math.floor(
+          (ms - today.getTime()) / (24 * 60 * 60 * 1000),
+        );
+        const wi = Math.min(4, Math.max(0, Math.floor(dayOffset / 7)));
+        buckets[wi].count += 1;
+      } else {
+        const mi = Math.min(
+          2,
+          Math.max(0, (y - today.getFullYear()) * 12 + (mo - 1 - today.getMonth())),
+        );
+        buckets[mi].count += 1;
+      }
     }
     return buckets;
-  }, [data]);
+  }, [data, horizonDays]);
 
-  // Top retailers in the next 7 days (count of scheduled requests
-  // grouped by retailer.name). Empty when retailer FK isn't
-  // populated.
+  // Top retailers in the selected horizon.
   const topRetailers = useMemo(() => {
     const rows =
       data?.requests?.edges
@@ -169,15 +213,15 @@ const ClientInner: React.FC = () => {
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
     const map = new Map<string, number>();
     const today = startOfDay(new Date());
-    const sevenAhead = new Date(today);
-    sevenAhead.setDate(today.getDate() + 7);
+    const endExclusive = new Date(today);
+    endExclusive.setDate(today.getDate() + horizonDays);
     for (const r of rows) {
       const k = requestDateKey(r.date);
       if (!k) continue;
       const [y, mo, d] = k.split("-").map(Number);
       const ms = new Date(y, mo - 1, d).getTime();
       if (!Number.isFinite(ms)) continue;
-      if (ms < today.getTime() || ms >= sevenAhead.getTime()) continue;
+      if (ms < today.getTime() || ms >= endExclusive.getTime()) continue;
       const name = r.retailer?.name ?? "—";
       map.set(name, (map.get(name) ?? 0) + 1);
     }
@@ -185,10 +229,12 @@ const ClientInner: React.FC = () => {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([name, count]) => ({ name, count }));
-  }, [data]);
+  }, [data, horizonDays]);
 
-  const maxWeekCount = Math.max(1, ...weekAhead.map((b) => b.count));
-  const totalThisWeek = weekAhead.reduce((s, b) => s + b.count, 0);
+  const maxWeekCount = Math.max(1, ...aheadBuckets.map((b) => b.count));
+  const totalThisWeek = aheadBuckets.reduce((s, b) => s + b.count, 0);
+  const trackerWhen =
+    horizonDays === 7 ? "next7" : horizonDays === 30 ? "next30" : "next90";
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -202,7 +248,7 @@ const ClientInner: React.FC = () => {
               color: "rgba(255,255,255,0.45)",
             }}
           >
-            YOUR PROGRAM · LAST 7 DAYS FORWARD
+            YOUR PROGRAM · MONTH AHEAD
           </p>
           <h1
             className="display text-4xl font-bold mt-2"
@@ -214,7 +260,7 @@ const ClientInner: React.FC = () => {
             className="mt-2"
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            This week&apos;s schedule and program performance.
+            Upcoming schedule and program performance.
           </p>
         </div>
         {/* Ask AI about this client's own program — scoped to the client's
@@ -300,19 +346,70 @@ const ClientInner: React.FC = () => {
 
       {activeTab === "overview" && (<>
 
-      {/* Week-ahead bars */}
+      <PlansPipelineDashboardStrip tenantId={tenantId} />
+
+      {/* Month-ahead bars */}
       <div className="spark-card p-5">
-        <p
-          className="mono text-[10px] mb-3"
-          style={{
-            letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
-          }}
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            {horizonDays}-DAY FORWARD · {totalThisWeek} EVENTS
+          </p>
+          <div className="flex items-center gap-1">
+            {([7, 30, 90] as AheadHorizon[]).map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setHorizonDays(d)}
+                className="mono text-[9px] px-2 py-1 rounded-lg"
+                style={{
+                  letterSpacing: "0.12em",
+                  color:
+                    horizonDays === d
+                      ? "#0a0a0a"
+                      : "rgba(255,255,255,0.55)",
+                  background:
+                    horizonDays === d
+                      ? "var(--spark-lime)"
+                      : "transparent",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                {d}D
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() =>
+                navigate(`/requests/list?when=${trackerWhen}`)
+              }
+              className="mono text-[9px] px-2 py-1 rounded-lg ml-1"
+              style={{
+                letterSpacing: "0.12em",
+                color: "var(--spark-lime)",
+                border: "1px solid rgba(197,245,70,0.35)",
+                background: "transparent",
+              }}
+            >
+              TRACKER →
+            </button>
+          </div>
+        </div>
+        <div
+          className={`grid gap-2 items-end ${
+            horizonDays === 7
+              ? "grid-cols-7"
+              : horizonDays === 30
+                ? "grid-cols-5"
+                : "grid-cols-3"
+          }`}
         >
-          7-DAY FORWARD · {totalThisWeek} EVENTS
-        </p>
-        <div className="grid grid-cols-7 gap-2 items-end">
-          {weekAhead.map((b) => {
+          {aheadBuckets.map((b) => {
             const heightPct = (b.count / maxWeekCount) * 100;
             return (
               <div
@@ -373,14 +470,14 @@ const ClientInner: React.FC = () => {
               color: "rgba(255,255,255,0.45)",
             }}
           >
-            TOP RETAILERS · NEXT 7 DAYS
+            {`TOP RETAILERS · NEXT ${horizonDays} DAYS`}
           </p>
           {topRetailers.length === 0 ? (
             <p
               className="text-[13px]"
               style={{ color: "rgba(255,255,255,0.45)" }}
             >
-              Nothing scheduled in the next week.
+              Nothing scheduled in this window.
             </p>
           ) : (
             <ul className="space-y-2">
@@ -430,7 +527,9 @@ const ClientInner: React.FC = () => {
               📒 Recaps
             </button>
             <button
-              onClick={() => navigate("/requests/list")}
+              onClick={() =>
+                navigate(`/requests/list?when=${trackerWhen}`)
+              }
               className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
               style={{
                 background: "transparent",
@@ -439,6 +538,17 @@ const ClientInner: React.FC = () => {
               }}
             >
               Master tracker
+            </button>
+            <button
+              onClick={() => navigate("/plans")}
+              className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              Activation plans
             </button>
             <button
               onClick={() => navigate("/today")}
