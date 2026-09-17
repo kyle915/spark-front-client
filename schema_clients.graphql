@@ -118,6 +118,9 @@ type ActivationPlanType {
   markets: [String!]!
   requestCount: Int!
   pipeline: ActivationPlanPipeline!
+  ownerId: ID
+  ownerName: String
+  ownerEmail: String
 }
 
 type ActivationPlanDetailResponse {
@@ -6759,6 +6762,7 @@ input RequestFiltersInput {
   statusSlugs: [String!] = null
   schedulingStatus: String = null
   activationPlanId: ID = null
+  hasActivationPlan: Boolean = null
   stateCode: String = null
   createdWithinHours: Int = null
   edited: Boolean = null

@@ -145,7 +145,7 @@ const SECTIONS: NavSection[] = [
         clientLabel: "Master Tracker",
       },
       {
-        label: "Plans",
+        label: "All Plans",
         Icon: CalendarRange,
         to: "/plans",
         clientLabel: "Plans",
