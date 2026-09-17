@@ -55,7 +55,11 @@ export function RecapDetailTabs({
   photoCount?: number;
   className?: string;
 }) {
-  const tabs: RecapDetailTab[] = ["overview", "details", "photos"];
+  // Overview = full recap read (body + quality). Photos = gallery only.
+  // "details" remains in the type for callers that still set it in edit
+  // mode, but it is not shown as its own tab.
+  const tabs: RecapDetailTab[] = ["overview", "photos"];
+  const selected: RecapDetailTab = value === "photos" ? "photos" : "overview";
   return (
     <div
       className={cn("recap-detail-tabs", className)}
@@ -63,7 +67,7 @@ export function RecapDetailTabs({
       aria-label="Recap sections"
     >
       {tabs.map((tab) => {
-        const on = value === tab;
+        const on = selected === tab;
         const label =
           tab === "photos" && typeof photoCount === "number"
             ? `${TAB_LABELS[tab]} · ${photoCount}`
@@ -83,6 +87,11 @@ export function RecapDetailTabs({
       })}
     </div>
   );
+}
+
+/** True when the full recap body should render (everything except Photos). */
+export function isRecapBodyTab(tab: RecapDetailTab): boolean {
+  return tab !== "photos";
 }
 
 export type RecapKpiItem = {
