@@ -42,9 +42,10 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(dash).toContain("ClientWeekAheadQuery");
     expect(dash).toContain("requestDateKey");
     expect(dash).toContain("first: 1000");
+    expect(dash).toContain("horizonDays");
     const weekAhead = src("./queries/ClientWeekAheadQuery.ts");
     expect(weekAhead).toContain("ClientWeekAheadQuery");
-    // Slim week-ahead only — no capped 90d completion list or fat RequestsQuery.
+    // Slim ahead list — no fat RequestsQuery fields.
     expect(weekAhead).not.toContain("recapsFiledCount");
     expect(weekAhead).not.toContain("first: 2000");
   });
