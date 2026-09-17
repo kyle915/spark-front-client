@@ -48,6 +48,7 @@ export const RecapsListQuery = graphql`
           }
           shareToken
           sharedAt
+          archivedAt
           createdAt
           submittedAt
           totalEngagements

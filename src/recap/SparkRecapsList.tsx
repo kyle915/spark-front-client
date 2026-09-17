@@ -56,6 +56,7 @@ import {
   recapListStatusWord,
   recapMatchesBaName,
   recapMatchesPipeline,
+  archivedQueryFilter,
   sharedQueryFilter,
   withRecapListReturn,
 } from "./recapListFilters";
@@ -187,6 +188,7 @@ type Recap = {
   requestType: string | null;
   shareToken: string | null;
   sharedAt: string | null;
+  archivedAt: string | null;
 };
 
 // CONV = products sold ÷ consumers SAMPLED (a sampling program's conversion is
@@ -315,6 +317,7 @@ const mapLegacyRecap = (n: LegacyRecapNode): Recap => {
     requestType,
     shareToken: n.shareToken ?? null,
     sharedAt: n.sharedAt ?? null,
+    archivedAt: n.archivedAt ?? null,
     isThirdParty: false,
     storeMappingStatus: "",
   };
@@ -354,6 +357,7 @@ const mapCustomRecap = (n: CustomRecapNode): Recap => ({
   requestType: n.customRecapTemplate?.name ?? null,
   shareToken: n.shareToken ?? null,
   sharedAt: n.sharedAt ?? null,
+  archivedAt: n.archivedAt ?? null,
   isThirdParty: Boolean(n.isThirdParty),
   storeMappingStatus: n.storeMappingStatus ?? "",
 });
@@ -833,7 +837,14 @@ type Meta = {
 };
 
 type SortKey = "date-desc" | "date-asc" | "eng-desc" | "sold-desc";
-type StatusKey = "submitted" | "needs_review" | "approved" | "shared" | "all" | "draft";
+type StatusKey =
+  | "submitted"
+  | "needs_review"
+  | "approved"
+  | "shared"
+  | "archived"
+  | "all"
+  | "draft";
 
 type RecapsListFetchPolicy = "store-or-network" | "store-and-network";
 
@@ -978,11 +989,13 @@ const RecapsListInner: React.FC<{
   const pipeline = statusFilter === "draft" ? "needs_review" : statusFilter;
   const approvedFilter = isClient
     ? true
-    : pipeline === "approved" || pipeline === "shared"
-      ? true
-      : pipeline === "needs_review"
-        ? false
-        : null;
+    : pipeline === "archived"
+      ? null
+      : pipeline === "approved" || pipeline === "shared"
+        ? true
+        : pipeline === "needs_review"
+          ? false
+          : null;
   const retailerName = retailerFilter === "all" ? null : retailerFilter;
   const stateCode = stateFilter === "all" ? null : stateFilter;
   const searchQ = search.trim() || null;
@@ -1017,6 +1030,7 @@ const RecapsListInner: React.FC<{
             ambassadorName: baNameQuery || null,
             approved: approvedFilter,
             shared: sharedQueryFilter(isClient, pipeline),
+            archived: archivedQueryFilter(isClient, pipeline),
             retailerName,
             stateCode,
             startDate,
@@ -1497,6 +1511,7 @@ const RecapsListFetched: React.FC<{
         pipeline,
         approved: r.approved,
         sharedAt: r.sharedAt,
+        archivedAt: r.archivedAt,
         justApproved: justApprovedIds.has(r.id),
         emptyShell: recapIsEmptyShell(r),
       });
@@ -2470,7 +2485,9 @@ export default function SparkRecapsList() {
                 ? "Approved"
                 : statusFilter === "shared"
                   ? "Shared"
-                  : "Submitted",
+                  : statusFilter === "archived"
+                    ? "Archived"
+                    : "Submitted",
         }
       : null,
     activationFilter !== "all"
@@ -2551,6 +2568,7 @@ export default function SparkRecapsList() {
                     ["needs_review", "Needs review"],
                     ["approved", "Approved"],
                     ["shared", "Shared"],
+                    ["archived", "Archived"],
                     ["submitted", "Submitted"],
                   ] as const
                 ).map(([key, label]) => (

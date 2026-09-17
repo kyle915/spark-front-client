@@ -112,6 +112,13 @@ export const GetCustomRecapQuery = graphql`
       storeSuggestions
       shareToken
       sharedAt
+      archivedAt
+      archiveReason
+      archivedBy {
+        firstName
+        lastName
+        email
+      }
       clientSignoffStatus
       clientSignoffComment
       clientSignoffAt

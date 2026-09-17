@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  archivedQueryFilter,
   defaultRecapStatus,
   recapEmptyKind,
   recapIsEmptyShell,
@@ -103,20 +104,45 @@ describe("sharedQueryFilter", () => {
   });
 });
 
+describe("archivedQueryFilter", () => {
+  it("forces non-archived for clients", () => {
+    expect(archivedQueryFilter(true, "approved")).toBe(false);
+    expect(archivedQueryFilter(true, "all")).toBe(false);
+  });
+
+  it("gates archive on admin Needs review / Approved / Shared / Archived", () => {
+    expect(archivedQueryFilter(false, "needs_review")).toBe(false);
+    expect(archivedQueryFilter(false, "approved")).toBe(false);
+    expect(archivedQueryFilter(false, "shared")).toBe(false);
+    expect(archivedQueryFilter(false, "archived")).toBe(true);
+    expect(archivedQueryFilter(false, "submitted")).toBeNull();
+    expect(archivedQueryFilter(false, "all")).toBeNull();
+  });
+});
+
 describe("recapMatchesPipeline", () => {
   const approvedUnshared = {
     approved: true,
     sharedAt: null as string | null,
+    archivedAt: null as string | null,
     justApproved: false,
   };
   const approvedShared = {
     approved: true,
     sharedAt: "2026-08-16T00:00:00Z",
+    archivedAt: null as string | null,
     justApproved: false,
   };
   const draft = {
     approved: false,
     sharedAt: null as string | null,
+    archivedAt: null as string | null,
+    justApproved: false,
+  };
+  const archivedDraft = {
+    approved: false,
+    sharedAt: null as string | null,
+    archivedAt: "2026-09-16T00:00:00Z",
     justApproved: false,
   };
 
@@ -204,6 +230,46 @@ describe("recapMatchesPipeline", () => {
       }),
     ).toBe(true);
   });
+
+  it("parks archived out of Needs review / Approved and onto Archived", () => {
+    expect(
+      recapMatchesPipeline({
+        isClient: false,
+        pipeline: "needs_review",
+        ...archivedDraft,
+      }),
+    ).toBe(false);
+    expect(
+      recapMatchesPipeline({
+        isClient: false,
+        pipeline: "approved",
+        ...archivedDraft,
+        approved: true,
+      }),
+    ).toBe(false);
+    expect(
+      recapMatchesPipeline({
+        isClient: false,
+        pipeline: "archived",
+        ...archivedDraft,
+      }),
+    ).toBe(true);
+    expect(
+      recapMatchesPipeline({
+        isClient: false,
+        pipeline: "submitted",
+        ...archivedDraft,
+      }),
+    ).toBe(true);
+    expect(
+      recapMatchesPipeline({
+        isClient: true,
+        pipeline: "approved",
+        ...archivedDraft,
+        approved: true,
+      }),
+    ).toBe(false);
+  });
 });
 
 describe("recapIsEmptyShell", () => {
@@ -226,6 +292,7 @@ describe("recapListStatusWord", () => {
     expect(recapListStatusWord(false, "shared")).toBe("SHARED");
     expect(recapListStatusWord(false, "approved")).toBe("APPROVED");
     expect(recapListStatusWord(false, "needs_review")).toBe("NEEDS REVIEW");
+    expect(recapListStatusWord(false, "archived")).toBe("ARCHIVED");
   });
 });
 
