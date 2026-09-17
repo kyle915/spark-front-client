@@ -1,6 +1,5 @@
 /**
- * Leadership Activation Plans portfolio — scan every plan for the tenant:
- * rollup pipeline, health, filters, then drill into a plan or Tracker.
+ * Leadership Activation Plans portfolio — card-first, calm hierarchy.
  */
 
 import { Suspense, useMemo, useState } from "react";
@@ -11,6 +10,7 @@ import {
   useRelayEnvironment,
 } from "react-relay/hooks";
 import { fetchQuery } from "relay-runtime";
+import { motion, AnimatePresence } from "framer-motion";
 import Layout from "@/layout/Layout";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuthStore } from "@/store/authStore";
@@ -29,6 +29,7 @@ import {
   planWindowKind,
   type PlanWindowKind,
 } from "@/plans/planHealth";
+import "@/plans/plans.css";
 
 type PlanRow = NonNullable<
   ActivationPlansQueryType["response"]["activationPlans"]
@@ -36,6 +37,7 @@ type PlanRow = NonNullable<
 
 type WindowFilter = "all" | PlanWindowKind;
 type SortKey = "start" | "name" | "health" | "planned";
+type ViewMode = "cards" | "list";
 
 const WINDOW_LABEL: Record<PlanWindowKind, string> = {
   upcoming: "Upcoming",
@@ -52,19 +54,30 @@ const healthRank: Record<string, number> = {
   done: 4,
 };
 
-const CreatePlanForm: React.FC<{ onCreated: (uuid?: string | null) => void }> = ({
-  onCreated,
-}) => {
+const CreatePlanSheet: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  onCreated: (uuid?: string | null) => void;
+}> = ({ open, onClose, onCreated }) => {
   const { tenantId } = useAuthStore();
   const { showAlert } = useAlertStore();
   const [commit, inFlight] =
     useMutation<CreateActivationPlanMutationType>(CreateActivationPlanMutation);
+  const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState("");
   const [brief, setBrief] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [markets, setMarkets] = useState("");
-  const [open, setOpen] = useState(false);
+
+  const reset = () => {
+    setStep(1);
+    setName("");
+    setBrief("");
+    setStartDate("");
+    setEndDate("");
+    setMarkets("");
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,106 +104,172 @@ const CreatePlanForm: React.FC<{ onCreated: (uuid?: string | null) => void }> = 
         }
         showAlert("Plan created", "success");
         const uuid = r.activationPlan?.uuid;
-        setName("");
-        setBrief("");
-        setStartDate("");
-        setEndDate("");
-        setMarkets("");
-        setOpen(false);
+        reset();
+        onClose();
         onCreated(uuid);
       },
       onError: (err) => showAlert(err.message, "error"),
     });
   };
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        className="btn btn-sm"
-        style={{
-          background: "var(--spark-lime)",
-          color: "#0a0a0a",
-          border: "none",
-        }}
-        onClick={() => setOpen(true)}
-      >
-        + New plan
-      </button>
-    );
-  }
+  if (!open) return null;
 
   return (
-    <form onSubmit={submit} className="spark-card p-5 space-y-3 w-full max-w-xl">
+    <motion.form
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 4 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      onSubmit={submit}
+      className="plans-card space-y-4 max-w-lg w-full"
+    >
+      <div>
+        <h2 className="plans-title text-xl font-semibold">New plan</h2>
+        <p className="plans-support mt-1 text-sm">
+          {step === 1
+            ? "Name the slate leadership will review."
+            : "Optional window, markets, and brief."}
+        </p>
+      </div>
+
+      {step === 1 ? (
+        <input
+          className="plans-input"
+          placeholder="e.g. Q4 West Coast Retail"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          autoFocus
+        />
+      ) : (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm space-y-1.5 block">
+              <span style={{ color: "var(--plan-muted)" }}>Start</span>
+              <input
+                type="date"
+                className="plans-input"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </label>
+            <label className="text-sm space-y-1.5 block">
+              <span style={{ color: "var(--plan-muted)" }}>End</span>
+              <input
+                type="date"
+                className="plans-input"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </label>
+          </div>
+          <input
+            className="plans-input"
+            placeholder="Markets (CA, TX, NY)"
+            value={markets}
+            onChange={(e) => setMarkets(e.target.value)}
+          />
+          <textarea
+            className="plans-input min-h-[72px]"
+            placeholder="Concept brief"
+            value={brief}
+            onChange={(e) => setBrief(e.target.value)}
+          />
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2 pt-1">
+        {step === 1 ? (
+          <>
+            <button
+              type="button"
+              className="plans-btn-primary"
+              disabled={!name.trim()}
+              onClick={() => setStep(2)}
+            >
+              Continue
+            </button>
+            <button
+              type="button"
+              className="plans-btn-ghost"
+              onClick={() => {
+                reset();
+                onClose();
+              }}
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="submit"
+              className="plans-btn-primary"
+              disabled={inFlight || !name.trim()}
+            >
+              {inFlight ? "Creating…" : "Create plan"}
+            </button>
+            <button
+              type="button"
+              className="plans-btn-ghost"
+              onClick={() => setStep(1)}
+            >
+              Back
+            </button>
+          </>
+        )}
+      </div>
+    </motion.form>
+  );
+};
+
+const PlanCard: React.FC<{ plan: PlanRow }> = ({ plan }) => {
+  const health = planHealth(plan.pipeline);
+  const windowKind = planWindowKind(plan.startDate, plan.endDate);
+  const owner = plan.ownerName || plan.ownerEmail;
+
+  return (
+    <Link
+      to={`/plans/${plan.uuid}`}
+      className="plans-card plans-card-interactive block no-underline"
+      style={{ color: "inherit" }}
+    >
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="min-w-0">
+          <h2 className="plans-title text-xl font-semibold truncate">
+            {plan.name}
+          </h2>
+          <p className="mt-1.5 text-sm" style={{ color: "var(--plan-faint)" }}>
+            {WINDOW_LABEL[windowKind]} ·{" "}
+            {formatPlanWindow(plan.startDate, plan.endDate)}
+            {plan.markets.length > 0
+              ? ` · ${plan.markets.slice(0, 3).join(", ")}${
+                  plan.markets.length > 3 ? "…" : ""
+                }`
+              : ""}
+            {owner ? ` · ${owner}` : ""}
+          </p>
+        </div>
+        <span className="plans-health shrink-0" style={{ color: health.color }}>
+          {health.label}
+        </span>
+      </div>
+      {plan.conceptBrief ? (
+        <p
+          className="text-sm mb-4 line-clamp-2"
+          style={{ color: "var(--plan-muted)" }}
+        >
+          {plan.conceptBrief}
+        </p>
+      ) : null}
+      <ActivationPlanPipelineStrip pipeline={plan.pipeline} compact />
       <p
-        className="mono text-[10px]"
-        style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+        className="mt-4 text-sm font-medium"
+        style={{ color: "var(--spark-lime)" }}
       >
-        NEW ACTIVATION PLAN
+        Open plan
       </p>
-      <input
-        className="input input-bordered w-full bg-transparent"
-        placeholder="Plan name (e.g. Q4 West Coast Retail)"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-        autoFocus
-      />
-      <textarea
-        className="textarea textarea-bordered w-full bg-transparent"
-        placeholder="Concept brief — what leadership should know"
-        rows={2}
-        value={brief}
-        onChange={(e) => setBrief(e.target.value)}
-      />
-      <div className="grid grid-cols-2 gap-2">
-        <label className="text-xs space-y-1">
-          <span style={{ color: "rgba(255,255,255,0.55)" }}>Start</span>
-          <input
-            type="date"
-            className="input input-bordered w-full bg-transparent"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-        </label>
-        <label className="text-xs space-y-1">
-          <span style={{ color: "rgba(255,255,255,0.55)" }}>End</span>
-          <input
-            type="date"
-            className="input input-bordered w-full bg-transparent"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
-        </label>
-      </div>
-      <input
-        className="input input-bordered w-full bg-transparent"
-        placeholder="Markets (comma-separated, e.g. CA, TX, NY)"
-        value={markets}
-        onChange={(e) => setMarkets(e.target.value)}
-      />
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          className="btn btn-sm"
-          disabled={inFlight || !name.trim()}
-          style={{
-            background: "var(--spark-lime)",
-            color: "#0a0a0a",
-            border: "none",
-          }}
-        >
-          {inFlight ? "Saving…" : "Create plan"}
-        </button>
-        <button
-          type="button"
-          className="btn btn-sm btn-ghost"
-          onClick={() => setOpen(false)}
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
+    </Link>
   );
 };
 
@@ -209,6 +288,7 @@ const PortfolioInner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
   const [search, setSearch] = useState("");
   const [windowFilter, setWindowFilter] = useState<WindowFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("start");
+  const [viewMode, setViewMode] = useState<ViewMode>("cards");
 
   const rollup = useMemo(() => {
     return plans.reduce(
@@ -257,15 +337,18 @@ const PortfolioInner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
           const hb = healthRank[planHealth(b.pipeline).kind] ?? 99;
           return ha - hb;
         }
-        case "start":
-        default: {
+        case "start": {
           const as = a.startDate ?? "";
           const bs = b.startDate ?? "";
           if (as === bs) return a.name.localeCompare(b.name);
-          // Undated last; newest window first
           if (!as) return 1;
           if (!bs) return -1;
           return bs.localeCompare(as);
+        }
+        default: {
+          const _exhaustive: never = sortKey;
+          void _exhaustive;
+          return 0;
         }
       }
     });
@@ -274,299 +357,186 @@ const PortfolioInner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
 
   if (plans.length === 0) {
     return (
-      <div
-        className="spark-card p-10 text-center space-y-3"
-        style={{ color: "rgba(255,255,255,0.55)" }}
-      >
-        <p className="text-lg font-semibold" style={{ color: "var(--spark-text)" }}>
-          No activation plans yet
-        </p>
-        <p className="text-sm max-w-md mx-auto">
-          Create a named slate for a quarter or market, then attach requests from
-          the plan or Master Tracker. Leadership uses this page to see proposed
-          vs staffed vs done.
+      <div className="plans-card text-center py-14 px-6">
+        <h2 className="plans-title text-2xl font-semibold">No plans yet</h2>
+        <p className="plans-support mt-3 mx-auto">
+          Create a named slate for a quarter or market, then add requests from
+          the plan or Master Tracker.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
-      {/* Portfolio rollup */}
-      <div className="spark-card p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.16em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            ALL PLANS · {plans.length} SLATE{plans.length === 1 ? "" : "S"} ·{" "}
-            {rollup.planned} REQUEST{rollup.planned === 1 ? "" : "S"}
-          </p>
-        </div>
+    <div className="space-y-6 plans-fade-in">
+      <div className="plans-card">
+        <p className="text-sm mb-4" style={{ color: "var(--plan-muted)" }}>
+          {plans.length} plan{plans.length === 1 ? "" : "s"} · {rollup.planned}{" "}
+          request{rollup.planned === 1 ? "" : "s"} across the portfolio
+        </p>
         <ActivationPlanPipelineStrip pipeline={rollup} />
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search plans, markets, owner…"
-          className="rounded-xl text-xs"
-          style={{
-            padding: "0.45rem 0.9rem",
-            background: "var(--spark-bg)",
-            border: "1px solid var(--spark-border)",
-            color: "var(--spark-text)",
-            minWidth: 220,
-            outline: "none",
-          }}
+          placeholder="Search plans…"
+          className="plans-input"
+          style={{ maxWidth: 260, minWidth: 180 }}
         />
         {(
           [
-            ["all", "All windows"],
+            ["all", "All"],
             ["active", "Active"],
             ["upcoming", "Upcoming"],
             ["past", "Past"],
             ["undated", "No dates"],
           ] as const
-        ).map(([value, label]) => {
-          const on = windowFilter === value;
-          return (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setWindowFilter(value)}
-              className="mono text-[9px] px-2.5 py-1.5 rounded-lg"
-              style={{
-                letterSpacing: "0.12em",
-                color: on ? "#0a0a0a" : "rgba(255,255,255,0.55)",
-                background: on ? "var(--spark-lime)" : "transparent",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              {label.toUpperCase()}
-            </button>
-          );
-        })}
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setWindowFilter(value)}
+            className={`plans-chip ${windowFilter === value ? "plans-chip-on" : ""}`}
+          >
+            {label}
+          </button>
+        ))}
         <select
           value={sortKey}
           onChange={(e) => setSortKey(e.target.value as SortKey)}
-          className="mono text-[9px] px-2 py-1.5 rounded-lg bg-transparent"
-          style={{
-            letterSpacing: "0.12em",
-            color: "rgba(255,255,255,0.55)",
-            border: "1px solid var(--spark-border)",
-          }}
+          className="plans-chip bg-transparent"
         >
-          <option value="start">Sort · window</option>
-          <option value="health">Sort · health</option>
-          <option value="planned">Sort · size</option>
-          <option value="name">Sort · name</option>
+          <option value="start">Sort by window</option>
+          <option value="health">Sort by health</option>
+          <option value="planned">Sort by size</option>
+          <option value="name">Sort by name</option>
         </select>
+        <div className="ml-auto flex gap-1">
+          <button
+            type="button"
+            className={`plans-chip ${viewMode === "cards" ? "plans-chip-on" : ""}`}
+            onClick={() => setViewMode("cards")}
+          >
+            Cards
+          </button>
+          <button
+            type="button"
+            className={`plans-chip ${viewMode === "list" ? "plans-chip-on" : ""}`}
+            onClick={() => setViewMode("list")}
+          >
+            List
+          </button>
+        </div>
       </div>
 
-      {/* Leadership table */}
-      <div className="spark-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr
-                className="mono text-[9px]"
-                style={{
-                  letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.45)",
-                  borderBottom: "1px solid var(--spark-border)",
-                }}
-              >
-                <th className="px-4 py-3 font-normal">PLAN</th>
-                <th className="px-3 py-3 font-normal">WINDOW</th>
-                <th className="px-3 py-3 font-normal">HEALTH</th>
-                <th className="px-3 py-3 font-normal text-right">PLANNED</th>
-                <th className="px-3 py-3 font-normal text-right">STAFFED</th>
-                <th className="px-3 py-3 font-normal text-right">EXECUTED</th>
-                <th className="px-3 py-3 font-normal text-right">VERIFIED</th>
-                <th className="px-4 py-3 font-normal text-right">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-4 py-8 text-center text-sm"
-                    style={{ color: "rgba(255,255,255,0.45)" }}
-                  >
-                    No plans match these filters.
-                  </td>
+      {filtered.length === 0 ? (
+        <p className="text-sm py-8 text-center" style={{ color: "var(--plan-faint)" }}>
+          No plans match these filters.
+        </p>
+      ) : viewMode === "cards" ? (
+        <div className="grid md:grid-cols-2 gap-4">
+          {filtered.map((plan) => (
+            <PlanCard key={plan.id} plan={plan} />
+          ))}
+        </div>
+      ) : (
+        <div className="plans-card overflow-hidden !p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr
+                  className="text-xs"
+                  style={{
+                    color: "var(--plan-faint)",
+                    borderBottom: "1px solid var(--spark-border)",
+                  }}
+                >
+                  <th className="px-5 py-3 font-medium">Plan</th>
+                  <th className="px-3 py-3 font-medium">Window</th>
+                  <th className="px-3 py-3 font-medium">Health</th>
+                  <th className="px-3 py-3 font-medium text-right">Planned</th>
+                  <th className="px-3 py-3 font-medium text-right">Staffed</th>
+                  <th className="px-3 py-3 font-medium text-right">Verified</th>
+                  <th className="px-5 py-3 font-medium text-right" />
                 </tr>
-              ) : (
-                filtered.map((plan) => {
+              </thead>
+              <tbody>
+                {filtered.map((plan) => {
                   const health = planHealth(plan.pipeline);
-                  const windowKind = planWindowKind(
-                    plan.startDate,
-                    plan.endDate,
-                  );
-                  const staffPct = Math.round(
-                    planStaffedRate(plan.pipeline) * 100,
-                  );
-                  const verifiedPct = Math.round(
-                    planVerifiedRate(plan.pipeline) * 100,
-                  );
                   return (
                     <tr
                       key={plan.id}
                       style={{ borderBottom: "1px solid var(--spark-border)" }}
                     >
-                      <td className="px-4 py-3.5 align-top min-w-[180px]">
+                      <td className="px-5 py-3.5">
                         <Link
                           to={`/plans/${plan.uuid}`}
                           className="font-semibold text-sm hover:underline"
                         >
                           {plan.name}
                         </Link>
-                        <p
-                          className="mono text-[9px] mt-1"
-                          style={{
-                            letterSpacing: "0.1em",
-                            color: "rgba(255,255,255,0.4)",
-                          }}
-                        >
-                          {WINDOW_LABEL[windowKind].toUpperCase()}
-                          {plan.markets.length > 0
-                            ? ` · ${plan.markets.slice(0, 4).join(", ")}${
-                                plan.markets.length > 4 ? "…" : ""
-                              }`
-                            : ""}
-                          {plan.ownerName
-                            ? ` · ${plan.ownerName}`
-                            : plan.ownerEmail
-                              ? ` · ${plan.ownerEmail}`
-                              : ""}
-                        </p>
-                        {plan.conceptBrief ? (
-                          <p
-                            className="text-xs mt-1 line-clamp-1"
-                            style={{ color: "rgba(255,255,255,0.5)" }}
-                          >
-                            {plan.conceptBrief}
-                          </p>
-                        ) : null}
                       </td>
                       <td
-                        className="px-3 py-3.5 align-top text-xs whitespace-nowrap"
-                        style={{ color: "rgba(255,255,255,0.65)" }}
+                        className="px-3 py-3.5 text-sm whitespace-nowrap"
+                        style={{ color: "var(--plan-muted)" }}
                       >
                         {formatPlanWindow(plan.startDate, plan.endDate)}
                       </td>
-                      <td className="px-3 py-3.5 align-top">
+                      <td className="px-3 py-3.5">
                         <span
-                          className="mono text-[9px] px-2 py-1 rounded-full whitespace-nowrap"
-                          style={{
-                            letterSpacing: "0.1em",
-                            color: health.color,
-                            border: `1px solid ${health.color}`,
-                            background: "transparent",
-                          }}
+                          className="plans-health text-xs"
+                          style={{ color: health.color }}
                         >
-                          {health.label.toUpperCase()}
+                          {health.label}
                         </span>
                       </td>
-                      <td className="px-3 py-3.5 align-top text-right tab-num font-bold">
+                      <td className="px-3 py-3.5 text-right tab-num font-semibold">
                         {plan.pipeline.planned}
                       </td>
-                      <td className="px-3 py-3.5 align-top text-right">
-                        <span className="tab-num font-bold">
-                          {plan.pipeline.staffed}
-                        </span>
+                      <td className="px-3 py-3.5 text-right tab-num font-semibold">
+                        {plan.pipeline.staffed}
                         <span
-                          className="mono text-[9px] block"
-                          style={{ color: "rgba(255,255,255,0.4)" }}
+                          className="block text-xs font-normal"
+                          style={{ color: "var(--plan-faint)" }}
                         >
-                          {staffPct}%
+                          {Math.round(planStaffedRate(plan.pipeline) * 100)}%
                         </span>
                       </td>
-                      <td className="px-3 py-3.5 align-top text-right tab-num font-bold">
-                        {plan.pipeline.executed}
-                      </td>
-                      <td className="px-3 py-3.5 align-top text-right">
-                        <span className="tab-num font-bold">
-                          {plan.pipeline.verified}
-                        </span>
+                      <td className="px-3 py-3.5 text-right tab-num font-semibold">
+                        {plan.pipeline.verified}
                         <span
-                          className="mono text-[9px] block"
-                          style={{ color: "rgba(255,255,255,0.4)" }}
+                          className="block text-xs font-normal"
+                          style={{ color: "var(--plan-faint)" }}
                         >
-                          {verifiedPct}%
+                          {Math.round(planVerifiedRate(plan.pipeline) * 100)}%
                         </span>
                       </td>
-                      <td className="px-4 py-3.5 align-top text-right whitespace-nowrap">
-                        <Link
-                          to={`/plans/${plan.uuid}`}
-                          className="mono text-[9px] mr-3"
-                          style={{
-                            letterSpacing: "0.12em",
-                            color: "var(--spark-lime)",
-                          }}
-                        >
-                          OPEN
-                        </Link>
+                      <td className="px-5 py-3.5 text-right">
                         <Link
                           to={`/requests/list?plan=${encodeURIComponent(plan.id)}`}
-                          className="mono text-[9px]"
-                          style={{
-                            letterSpacing: "0.12em",
-                            color: "rgba(255,255,255,0.45)",
-                          }}
+                          className="text-sm"
+                          style={{ color: "var(--spark-lime)" }}
                         >
-                          TRACKER
+                          Tracker
                         </Link>
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-
-      {/* Compact cards for mobile-ish */}
-      <div className="lg:hidden space-y-3">
-        {filtered.map((plan) => {
-          const health = planHealth(plan.pipeline);
-          return (
-            <Link
-              key={`card-${plan.id}`}
-              to={`/plans/${plan.uuid}`}
-              className="spark-card block p-4"
-            >
-              <div className="flex justify-between gap-2 mb-2">
-                <span className="font-semibold">{plan.name}</span>
-                <span
-                  className="mono text-[9px]"
-                  style={{ color: health.color, letterSpacing: "0.1em" }}
-                >
-                  {health.label.toUpperCase()}
-                </span>
-              </div>
-              <ActivationPlanPipelineStrip
-                pipeline={plan.pipeline}
-                compact
-              />
-            </Link>
-          );
-        })}
-      </div>
+      )}
     </div>
   );
 };
 
 export default function PlansList() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [createOpen, setCreateOpen] = useState(false);
   const environment = useRelayEnvironment();
   const { tenantId } = useAuthStore();
   const { isAdmin } = useSparkRole();
@@ -588,45 +558,46 @@ export default function PlansList() {
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-6xl">
+      <div className="plans-shell plans-fade-in">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p
-              className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              LEADERSHIP · FIELD PLANNING
-            </p>
-            <h1
-              className="display text-4xl font-bold mt-2"
-              style={{ letterSpacing: "-0.04em" }}
-            >
-              All plans
+            <h1 className="plans-title text-4xl md:text-5xl font-bold">
+              Plans
             </h1>
-            <p className="mt-2" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <p className="plans-support mt-3">
               Proposed vs staffed vs done across every activation slate.
-              Ops still runs Tracker → Staffing → Today → Recap.
             </p>
           </div>
-          {isAdmin ? (
-            <CreatePlanForm
+          {isAdmin && !createOpen ? (
+            <button
+              type="button"
+              className="plans-btn-primary"
+              onClick={() => setCreateOpen(true)}
+            >
+              New plan
+            </button>
+          ) : null}
+        </div>
+
+        <AnimatePresence>
+          {createOpen ? (
+            <CreatePlanSheet
+              open={createOpen}
+              onClose={() => setCreateOpen(false)}
               onCreated={(uuid) => {
                 bump();
                 if (uuid) navigate(`/plans/${uuid}`);
               }}
             />
           ) : null}
-        </div>
+        </AnimatePresence>
 
         <ErrorBoundary>
           <Suspense
             fallback={
               <div
-                className="spark-card p-8 text-center text-sm"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                className="plans-card text-center text-sm py-10"
+                style={{ color: "var(--plan-muted)" }}
               >
                 Loading plans…
               </div>

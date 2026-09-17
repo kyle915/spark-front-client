@@ -69,14 +69,13 @@ export default function ActivationPlanPipelineStrip({
               {value}
             </p>
             <p
-              className="mono truncate"
+              className="truncate"
               style={{
-                fontSize: compact ? 8 : 9,
-                letterSpacing: "0.12em",
+                fontSize: compact ? 10 : 11,
                 color: "rgba(255,255,255,0.45)",
               }}
             >
-              {stage.label.toUpperCase()}
+              {stage.label}
             </p>
           </div>
         );

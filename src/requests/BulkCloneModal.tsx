@@ -218,7 +218,9 @@ export default function BulkCloneModal({
             >
               Each clone keeps the source's venue, activation type,
               distributor, BA count, notes, and RMM routing. You can
-              edit any clone after creation.
+              edit any clone after creation. Clones do not inherit the
+              source's Activation Plan — add them via Tracker
+              multi-select after creation.
             </div>
           </div>
         </div>

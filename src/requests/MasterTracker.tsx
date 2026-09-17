@@ -29,6 +29,7 @@ import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import useLinkedSheetUrl from "@/hooks/useLinkedSheetUrl";
 import TrackerPlanFilter from "@/plans/TrackerPlanFilter";
+import TrackerPlanAttachBar from "@/plans/TrackerPlanAttachBar";
 import {
   trackerDateRangeToServer,
   trackerSortToServer,
@@ -171,6 +172,9 @@ type Row = {
   // assigned" chip in the status column.
   assignedBa: number;
   confirmedBa: number;
+  // Activation Plan this request belongs to (null when unplanned).
+  planId: string | null;
+  planName: string | null;
 };
 
 const fmtDateLabel = (raw: string | null | undefined) => {
@@ -285,6 +289,9 @@ const TrackerTable: React.FC<{
   rows: Row[];
   mentionables: Mentionable[];
   groupBy: "none" | "date";
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  selectionEnabled?: boolean;
   onClone?: (row: Row) => void;
   onAssignBa?: (row: Row) => void;
   onPostBoard?: (row: Row) => void;
@@ -294,6 +301,9 @@ const TrackerTable: React.FC<{
   rows,
   mentionables,
   groupBy,
+  selectedIds,
+  onToggleSelect,
+  selectionEnabled,
   onClone,
   onAssignBa,
   onPostBoard,
@@ -305,6 +315,7 @@ const TrackerTable: React.FC<{
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
   const [approvingId, setApprovingId] = useState<string | null>(null);
+  const colCount = selectionEnabled ? 11 : 10;
 
   // Inline request approval from the Tracker (clients + admins). Backend
   // `approveRequest` enforces tenant membership + blocks BAs (same as the
@@ -388,6 +399,9 @@ const TrackerTable: React.FC<{
                 color: "rgba(255,255,255,0.45)",
               }}
             >
+              {selectionEnabled ? (
+                <th className="px-3 py-3 w-10" aria-label="Select" />
+              ) : null}
               <th className="px-4 py-3">DATE</th>
               <th className="px-4 py-3">STATUS</th>
               <th className="px-4 py-3">MARKET</th>
@@ -404,7 +418,7 @@ const TrackerTable: React.FC<{
             {rows.length === 0 && (
               <tr>
                 <td
-                  colSpan={10}
+                  colSpan={colCount}
                   className="px-4 py-10 text-center text-sm"
                   style={{ color: "rgba(255,255,255,0.55)" }}
                 >
@@ -423,7 +437,7 @@ const TrackerTable: React.FC<{
               const headerEl = showGroupHeader ? (
                 <tr key={`hdr-${rowIdx}`}>
                   <td
-                    colSpan={10}
+                    colSpan={colCount}
                     className="px-4 py-3 mono"
                     style={{
                       letterSpacing: "0.16em",
@@ -491,15 +505,41 @@ const TrackerTable: React.FC<{
                 {headerEl}
                 <tr
                   className="cursor-pointer transition"
-                  style={{ borderBottom: "1px solid var(--spark-border)" }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "rgba(255,255,255,0.02)")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "transparent")
-                  }
+                  style={{
+                    borderBottom: "1px solid var(--spark-border)",
+                    background: selectedIds?.has(r.id)
+                      ? "rgba(197,245,70,0.04)"
+                      : "transparent",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!selectedIds?.has(r.id))
+                      e.currentTarget.style.background = "rgba(255,255,255,0.02)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = selectedIds?.has(r.id)
+                      ? "rgba(197,245,70,0.04)"
+                      : "transparent";
+                  }}
                   onClick={onClick}
                 >
+                  {selectionEnabled && onToggleSelect ? (
+                    <td
+                      className="px-3 py-3 align-top"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedIds?.has(r.id) ?? false}
+                        onChange={() => onToggleSelect(r.id)}
+                        aria-label={`Select ${r.venue}`}
+                        className="checkbox checkbox-sm"
+                        style={{
+                          borderColor: "rgba(255,255,255,0.35)",
+                          accentColor: "var(--spark-lime)",
+                        }}
+                      />
+                    </td>
+                  ) : null}
                   <td
                     className="px-4 py-3 align-top"
                     style={{ color: "rgba(255,255,255,0.85)" }}
@@ -575,6 +615,18 @@ const TrackerTable: React.FC<{
                     >
                       REQ-{reqCodeOf(r.id)}
                     </span>
+                    {r.planName ? (
+                      <span
+                        className="block mono text-[9px] mt-1 truncate max-w-[160px]"
+                        style={{
+                          letterSpacing: "0.1em",
+                          color: "rgba(197,245,70,0.75)",
+                        }}
+                        title={`Plan: ${r.planName}`}
+                      >
+                        ▸ {r.planName}
+                      </span>
+                    ) : null}
                     {r.schedulingStatus === "needs_scheduling" ? (
                       <span
                         className="chip chip-gold chip-sm mt-1"
@@ -806,7 +858,7 @@ const TrackerTable: React.FC<{
                 </tr>
                 {isExpanded && !isClient && (
                   <tr style={{ borderBottom: "1px solid var(--spark-border)" }}>
-                    <td colSpan={11} style={{ padding: "0.5rem 1rem 1rem" }}>
+                    <td colSpan={colCount} style={{ padding: "0.5rem 1rem 1rem" }}>
                       <InternalNotesPanel
                         requestUuid={r.uuid}
                         requestLabel={`${r.venue} · ${r.market}`}
@@ -952,6 +1004,9 @@ const MasterTrackerInner: React.FC<{
   planId: string | null;
   mentionables: Mentionable[];
   listRefreshKey: number;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  selectionEnabled?: boolean;
   onNotesOpened?: () => void;
   onVisibleRowsChange?: (rows: Row[]) => void;
   onClone?: (row: Row) => void;
@@ -970,6 +1025,9 @@ const MasterTrackerInner: React.FC<{
   planId,
   mentionables,
   listRefreshKey,
+  selectedIds,
+  onToggleSelect,
+  selectionEnabled,
   onNotesOpened,
   onVisibleRowsChange,
   onClone,
@@ -1110,6 +1168,10 @@ const MasterTrackerInner: React.FC<{
         isNonActiveProductRequired: n.isNonActiveProductRequired ?? null,
         assignedBa: n.event?.assignedAmbassadorsCount ?? 0,
         confirmedBa: n.event?.confirmedAmbassadorsCount ?? 0,
+        planId: n.activationPlan?.id ? String(n.activationPlan.id) : null,
+        planName: n.activationPlan?.name
+          ? String(n.activationPlan.name)
+          : null,
       };
   }, []);
 
@@ -1247,6 +1309,9 @@ const MasterTrackerInner: React.FC<{
         rows={rows}
         mentionables={mentionables}
         groupBy={groupBy}
+        selectedIds={selectedIds}
+        onToggleSelect={onToggleSelect}
+        selectionEnabled={selectionEnabled}
         onClone={onClone}
         onAssignBa={onAssignBa}
         onPostBoard={onPostBoard}
@@ -1365,7 +1430,7 @@ const ProductsPurchasedStat: React.FC<{ tenantId: string }> = ({
 export default function MasterTracker() {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
-  const { isClient } = useSparkRole();
+  const { isClient, isAdmin } = useSparkRole();
   const [activeStatus, setActiveStatus] = useState<string>("active");
   // "By RMM" group is on the roadmap — needs rmmAsigned info per row,
   // which requires extending RequestsQuery.
@@ -1495,6 +1560,20 @@ export default function MasterTracker() {
   // Bump to force MasterTrackerInner to refetch after a successful
   // clone so the new requests show up immediately.
   const [refetchTick, setRefetchTick] = useState(0);
+  // Multi-select for Add to plan / Remove from plan.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [planId, activeStatus, search, rmmFilter, dateRange, marketFilter, schedulingFilter]);
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
   // CSV export of the currently-visible tracker rows. Quotes any field
   // containing commas/quotes/newlines. Filename includes the status
@@ -1808,7 +1887,13 @@ export default function MasterTracker() {
               ↗ Export CSV {visibleRows.length > 0 ? `(${visibleRows.length})` : ""}
             </button>
             <button
-              onClick={() => navigate("/requests/create")}
+              onClick={() =>
+                navigate(
+                  planId
+                    ? `/requests/create?plan=${encodeURIComponent(planId)}`
+                    : "/requests/create",
+                )
+              }
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: "var(--spark-lime)",
@@ -2121,6 +2206,18 @@ export default function MasterTracker() {
         )}
 
         {/* Table */}
+        {isAdmin && tenantId && selectedIds.size > 0 ? (
+          <TrackerPlanAttachBar
+            tenantId={tenantId}
+            planId={planId}
+            selectedIds={[...selectedIds]}
+            onClear={clearSelection}
+            onDone={() => {
+              clearSelection();
+              setRefetchTick((t) => t + 1);
+            }}
+          />
+        ) : null}
         <Suspense
           fallback={
             <div
@@ -2143,6 +2240,9 @@ export default function MasterTracker() {
             marketFilter={marketFilter}
             schedulingFilter={schedulingFilter}
             planId={planId}
+            selectedIds={selectedIds}
+            onToggleSelect={toggleSelect}
+            selectionEnabled={isAdmin}
             mentionables={[
               ...rmmList,
               ...(adminList.length > 0 ? adminList : ADMIN_ROSTER_FALLBACK),

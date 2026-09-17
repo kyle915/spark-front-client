@@ -308,6 +308,8 @@ const SparkRequestInner: React.FC = () => {
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+  // Activation Plan deep-link from Plan detail / Tracker (?plan=<id>).
+  const activationPlanId = searchParams.get("plan") || null;
 
   const email = user?.email ?? "";
   // Date is intentionally NOT pre-filled on duplicate — that's the
@@ -755,6 +757,9 @@ const SparkRequestInner: React.FC = () => {
               products: Array.from(selectedProducts).map((productId) => ({
                 productId,
               })),
+              ...(activationPlanId
+                ? { activationPlanId }
+                : {}),
             },
           },
           onCompleted: (res) => {
@@ -785,7 +790,11 @@ const SparkRequestInner: React.FC = () => {
           : "Request submitted · auto-routed to your RMM.",
         "success",
       );
-      navigate("/requests/list");
+      navigate(
+        activationPlanId
+          ? `/requests/list?plan=${encodeURIComponent(activationPlanId)}`
+          : "/requests/list",
+      );
     } else if (successes > 0) {
       // Partial success — leave the draft alone so kyle can fix the
       // bad rows without re-entering the good ones.
@@ -841,6 +850,17 @@ const SparkRequestInner: React.FC = () => {
           A few fields. We auto-route to your Ignite RMM for approval,
           staffing, and scheduling.
         </p>
+        {activationPlanId ? (
+          <p
+            className="mono text-[10px] mt-3"
+            style={{
+              letterSpacing: "0.14em",
+              color: "var(--spark-lime)",
+            }}
+          >
+            ▸ WILL ATTACH TO PLAN ON SUBMIT
+          </p>
+        ) : null}
       </div>
 
       {/* Restored-draft banner. Auto-dismisses when the user starts

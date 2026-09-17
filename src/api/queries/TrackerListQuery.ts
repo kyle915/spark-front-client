@@ -38,6 +38,10 @@ export const TrackerListQuery = graphql`
             id
             code
           }
+          activationPlan {
+            id
+            name
+          }
           retailer {
             id
             name
