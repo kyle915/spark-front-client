@@ -190,9 +190,11 @@ export const SparkTopbar: React.FC = () => {
         </button>
 
         <button
+          type="button"
           data-spark-jump
           onClick={(e) => openJump(e.currentTarget)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-base-300 text-xs text-base-content/55 hover:text-primary hover:border-primary transition active:scale-[0.98]"
+          className="spark-focus-ring flex items-center gap-2 px-3 py-1.5 rounded-full border border-base-300 text-xs text-base-content/55 hover:text-primary hover:border-primary transition active:scale-[0.98]"
+          aria-label="Jump to a page or recap"
         >
           <MagnifyingGlassIcon className="w-3.5 h-3.5" />
           <span>Jump</span>

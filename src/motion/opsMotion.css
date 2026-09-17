@@ -197,13 +197,20 @@
 .spark-overlay-panel {
   width: 100%;
   max-width: 28rem;
-  border-radius: 20px;
-  padding: 1.25rem 1.35rem 1.1rem;
+  border-radius: 18px;
+  padding: 1.15rem 1.25rem 1rem;
   background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
-  border: 1px solid var(--spark-border);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.28),
     0 24px 64px rgba(0, 0, 0, 0.4);
+}
+.spark-overlay-panel:focus {
+  outline: none;
+}
+.spark-overlay-panel:focus-visible {
+  outline: 2px solid rgba(197, 245, 70, 0.55);
+  outline-offset: 3px;
 }
 
 .spark-overlay-panel-sm {

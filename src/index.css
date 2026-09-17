@@ -627,37 +627,64 @@ body:has(.spark-login-page) {
   color: var(--spark-text);
   border-color: rgba(255, 255, 255, 0.2);
 }
+/* Soft X density — square-ui quieter shells + admin-kit filter chrome.
+   Patterns only; no kit vendoring. */
 .spark-filter-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem 0.45rem;
-  padding: 0.55rem 0.7rem;
-  background: rgba(255, 255, 255, 0.02);
+  gap: 0.28rem 0.35rem;
+  padding: 0.4rem 0.55rem;
+  background: rgba(255, 255, 255, 0.015);
   border: 1px solid var(--spark-hairline, var(--spark-border));
-  border-radius: 12px;
+  border-radius: 10px;
+}
+.spark-filter-bar .label-mini {
+  margin-right: 0.15rem;
+  opacity: 0.85;
 }
 .spark-filter-bar .spark-input,
-.spark-filter-bar input.spark-filter-search {
-  padding: 0.35rem 0.7rem;
-  border-radius: 10px;
+.spark-filter-bar input.spark-filter-search,
+.spark-filter-bar select {
+  padding: 0.28rem 0.6rem;
+  border-radius: 8px;
   border: 1px solid var(--spark-hairline, var(--spark-border));
   background: rgba(0, 0, 0, 0.22);
   color: var(--spark-text);
   outline: none;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   max-width: 220px;
-  min-height: 34px;
+  min-height: 30px;
 }
-.spark-filter-bar input.spark-filter-search:focus {
+.spark-filter-bar input.spark-filter-search:focus,
+.spark-filter-bar input.spark-filter-search:focus-visible,
+.spark-filter-bar select:focus-visible {
   border-color: rgba(197, 245, 70, 0.45);
-  box-shadow: 0 0 0 3px rgba(197, 245, 70, 0.12);
+  box-shadow: 0 0 0 2px rgba(197, 245, 70, 0.14);
 }
 .spark-filter-bar .chip,
 .spark-filter-bar .pill-btn {
-  padding: 0.28rem 0.55rem;
-  font-size: 0.72rem;
+  padding: 0.22rem 0.48rem;
+  font-size: 0.7rem;
   border-radius: 999px;
+  min-height: 28px;
+}
+.spark-filter-bar .chip:focus-visible,
+.spark-filter-bar .pill-btn:focus-visible,
+.spark-filter-bar button:focus-visible {
+  outline: 2px solid rgba(197, 245, 70, 0.7);
+  outline-offset: 2px;
+}
+
+/* Recaps / Tracker sticky refine shells — denser than spark-card padding */
+.spark-sticky-filters {
+  padding: 0.45rem 0.55rem !important;
+  gap: 0.4rem !important;
+  border-radius: 10px !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
+  background: rgba(10, 13, 9, 0.9) !important;
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
 }
 .spark-empty {
   text-align: center;
@@ -1306,6 +1333,10 @@ body { background: var(--spark-bg); }
   color: #0a0d09;
   background: var(--spark-lime);
 }
+.recap-detail-tab:focus-visible {
+  outline: 2px solid rgba(197, 245, 70, 0.75);
+  outline-offset: 2px;
+}
 .recap-kpi-strip {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1527,4 +1558,70 @@ body { background: var(--spark-bg); }
 }
 @media (prefers-reduced-motion: reduce) {
   .skeleton-block { animation: none; }
+}
+
+/* === Soft X a11y / composition polish (Untitled-inspired, Spark tokens) ===
+   Focus rings for keyboard users; quieter row-action chrome; sheet hit targets.
+   Do not adopt Untitled/Kibo/shadcn kits wholesale. */
+:root {
+  --spark-focus-ring: rgba(197, 245, 70, 0.75);
+  --spark-focus-offset: 2px;
+}
+
+.spark-focus-ring:focus-visible,
+[data-spark-jump]:focus-visible,
+.spark-overlay-action:focus-visible,
+.spark-overlay-panel button:focus-visible,
+.spark-sheet-close:focus-visible {
+  outline: 2px solid var(--spark-focus-ring);
+  outline-offset: var(--spark-focus-offset);
+}
+
+.spark-popover {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.28),
+    0 16px 40px rgba(0, 0, 0, 0.32);
+}
+
+/* List/Tracker row actions — secondary links stay quiet until row hover */
+.spark-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+}
+.spark-row-actions > button,
+.spark-row-actions > a {
+  min-height: 28px;
+  opacity: 0.72;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+.spark-row-actions > button:hover,
+.spark-row-actions > a:hover,
+.spark-row-actions > button:focus-visible,
+.spark-row-actions > a:focus-visible,
+tr:hover > td .spark-row-actions > button,
+tr:hover > td .spark-row-actions > a,
+.spark-card:hover .spark-row-actions > button,
+.spark-card:hover .spark-row-actions > a {
+  opacity: 1;
+}
+.spark-row-actions > button:focus-visible,
+.spark-row-actions > a:focus-visible {
+  outline: 2px solid var(--spark-focus-ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Vaul sheet — larger drag affordance + quieter header hairline */
+.spark-sheet-handle {
+  width: 2.75rem;
+  height: 0.3rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  margin: 0.7rem auto 0.35rem;
+}
+.spark-sheet-body {
+  padding: 0.85rem 1.15rem 1.25rem;
 }
