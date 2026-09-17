@@ -1375,6 +1375,63 @@ body { background: var(--spark-bg); }
   color: var(--spark-text);
 }
 
+/*
+ * RecapDocument is a light paper surface. Origin detail chrome (tabs, KPI
+ * strip) defaults to dark-ops white/rgba text — re-token under .recap-doc
+ * so inactive tabs, labels, and kickers stay readable without breaking
+ * dark admin usage outside the document.
+ */
+.recap-doc .recap-doc-kicker {
+  color: var(--recap-muted);
+  font-weight: 500;
+}
+.recap-doc .recap-detail-tabs {
+  background: rgba(20, 22, 15, 0.04);
+  border-color: var(--recap-border);
+}
+.recap-doc .recap-detail-tab {
+  color: var(--recap-muted);
+}
+.recap-doc .recap-detail-tab:hover {
+  color: var(--recap-text);
+  background: rgba(20, 22, 15, 0.06);
+}
+.recap-doc .recap-detail-tab.is-active {
+  color: #0a0d09;
+  background: var(--spark-lime);
+}
+.recap-doc .recap-kpi-strip {
+  border-color: var(--recap-border);
+  background: linear-gradient(
+    135deg,
+    rgba(20, 22, 15, 0.03),
+    rgba(20, 22, 15, 0.07)
+  );
+}
+.recap-doc .recap-kpi-cell:not(:last-child)::after {
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(20, 22, 15, 0.14),
+    transparent
+  );
+}
+.recap-doc .recap-kpi-label {
+  color: var(--recap-muted);
+}
+.recap-doc .recap-kpi-value {
+  color: var(--recap-text);
+}
+.recap-doc .recap-kpi-cell.is-glow .recap-kpi-value {
+  /* Darker brand green — lime glow washes out on light paper */
+  color: var(--recap-heading);
+}
+.recap-doc .recap-kpi-icon {
+  background: rgba(63, 92, 18, 0.1);
+  border-color: rgba(63, 92, 18, 0.28);
+  color: var(--recap-heading);
+}
+
 /* Tremor-style empty chart shell */
 .spark-chart-empty {
   width: 100%;
