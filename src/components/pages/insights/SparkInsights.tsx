@@ -19,7 +19,6 @@ import {
   buildProgramPulseOneLiner,
 } from "@/components/insights/programPulseCopy";
 import MarketConcentrationStrip from "@/components/insights/MarketConcentrationStrip";
-import AskAiButton from "@/components/ai/AskAiButton";
 import { TenantActivationBreakdownQuery } from "@/api/queries/TenantActivationBreakdownQuery";
 import type { TenantActivationBreakdownQuery as TenantActivationBreakdownQueryType } from "@api/queries/__generated__/TenantActivationBreakdownQuery.graphql";
 import { TenantConversionKpisQuery } from "@/api/queries/TenantConversionKpisQuery";
@@ -63,6 +62,8 @@ const BUCKET_COLORS: Record<string, string> = {
   other: "rgba(255,255,255,0.45)",
 };
 
+const MUTED_BUCKET = "rgba(255,255,255,0.35)";
+
 /** Map page range → comparison period the year/month API can express. */
 const comparisonPeriodForRange = (
   range: RangeKey,
@@ -97,13 +98,26 @@ const ActivationBreakdown: React.FC<{
   const display = (data.tenantActivationBreakdown?.buckets ?? []).filter(
     (b) => b.key !== "other" || b.count > 0,
   );
+  const total = display.reduce((sum, b) => sum + b.count, 0);
+  const zeroCount = display.filter((b) => b.count === 0).length;
+  /** Demote when mostly empty — don't compete with real KPI lime. */
+  const demoted = total === 0 || zeroCount >= Math.max(1, display.length - 1);
 
   return (
-    <div className="spark-card p-6 lg:p-8" style={{ borderRadius: 22 }}>
+    <div
+      className="spark-card p-6 lg:p-8"
+      style={{
+        borderRadius: 22,
+        opacity: demoted ? 0.62 : 1,
+      }}
+    >
       <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
         <h2
           className="display text-lg lg:text-xl font-bold"
-          style={{ letterSpacing: "-0.02em" }}
+          style={{
+            letterSpacing: "-0.02em",
+            color: demoted ? "rgba(255,255,255,0.65)" : undefined,
+          }}
         >
           By activation type
         </h2>
@@ -115,19 +129,26 @@ const ActivationBreakdown: React.FC<{
           }}
         >
           CONFIRMED + COMPLETED · {rangeLabel.toUpperCase()}
+          {demoted ? " · MOSTLY QUIET" : ""}
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {display.map((s) => {
-          const color = BUCKET_COLORS[s.key] ?? BUCKET_COLORS.other;
+          const active = s.count > 0;
+          const color = active
+            ? (BUCKET_COLORS[s.key] ?? BUCKET_COLORS.other)
+            : MUTED_BUCKET;
           return (
-            <div key={s.key}>
+            <div
+              key={s.key}
+              style={{ opacity: active ? 1 : 0.5 }}
+            >
               <div className="flex items-center gap-2 mb-1.5">
                 <span
                   className="spark-dot"
                   style={{
                     background: color,
-                    boxShadow: `0 0 8px ${color}`,
+                    boxShadow: active ? `0 0 8px ${color}` : "none",
                   }}
                 />
                 <p className="label-mini">{s.label.toUpperCase()}</p>
@@ -135,7 +156,7 @@ const ActivationBreakdown: React.FC<{
               <p
                 className="display tab-num font-bold"
                 style={{
-                  fontSize: "2.5rem",
+                  fontSize: demoted ? "2rem" : "2.5rem",
                   letterSpacing: "-0.04em",
                   lineHeight: 1,
                   color,
@@ -549,15 +570,14 @@ export function InsightsBody({
           </button>
         ))}
       </div>
-      <AskAiButton tenantId={tenantId} />
       <button
         type="button"
         onClick={onCopySummary}
         disabled={!tenantId || copying}
-        className="px-4 py-2 rounded-xl text-sm font-semibold"
+        className="px-3 py-2 rounded-xl text-sm font-medium"
         style={{
           background: "transparent",
-          color: "var(--spark-text)",
+          color: "rgba(255,255,255,0.7)",
           border: "1px solid var(--spark-border)",
           opacity: !tenantId || copying ? 0.5 : 1,
         }}
@@ -568,15 +588,41 @@ export function InsightsBody({
       <button
         type="button"
         onClick={() => navigate("/reports")}
-        className="px-4 py-2 rounded-xl text-sm font-semibold"
+        className="px-3 py-2 rounded-xl text-sm font-medium"
         style={{
-          background: "rgba(197,245,70,0.12)",
-          color: "var(--spark-lime)",
-          border: "1px solid rgba(197,245,70,0.35)",
+          background: "transparent",
+          color: "rgba(255,255,255,0.7)",
+          border: "1px solid var(--spark-border)",
         }}
       >
         Open reports
       </button>
+    </div>
+  );
+
+  const stickyRangeBar = (
+    <div className="spark-insights-range sticky z-20">
+      <div className="flex items-end justify-between flex-wrap gap-4">
+        <div>
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "rgba(255,255,255,0.45)",
+            }}
+          >
+            PROGRAM PERFORMANCE
+          </p>
+          <p
+            className="mt-1.5 text-sm"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            Range scopes Timeline, Activation, and geo. Program KPIs stay
+            calendar-year.
+          </p>
+        </div>
+        {rangeControls}
+      </div>
     </div>
   );
 
@@ -590,27 +636,7 @@ export function InsightsBody({
       }
     >
       {embedded ? (
-        <div className="flex items-end justify-between flex-wrap gap-4 pt-2">
-          <div>
-            <p
-              className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.18em",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              PROGRAM PERFORMANCE
-            </p>
-            <p
-              className="mt-2 text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Range scopes Timeline, Activation, and geo. Program KPIs stay
-              calendar-year.
-            </p>
-          </div>
-          {rangeControls}
-        </div>
+        stickyRangeBar
       ) : (
         <SparkPageHeader
           eyebrow="PROGRAM ANALYTICS"
@@ -632,16 +658,23 @@ export function InsightsBody({
         {selectedState ? ` · STATE ${selectedState}` : ""}
       </p>
 
-      {tenantId && <PaceToGoalHero tenantId={tenantId} />}
-
       {tenantId && (
-        <ExecutiveInsightsStrip
-          tenantId={tenantId}
-          startDate={startDate}
-          endDate={endDate}
-          rangeLabel={rangeLabel}
-          comparisonPeriod={comparisonPeriod}
-        />
+        <div className="spark-card overflow-hidden" style={{ borderRadius: 22 }}>
+          <div className="p-5 lg:p-6">
+            <PaceToGoalHero tenantId={tenantId} chromeless />
+          </div>
+          <div style={{ borderTop: "1px solid var(--spark-border)" }} />
+          <div className="p-5 lg:p-6">
+            <ExecutiveInsightsStrip
+              tenantId={tenantId}
+              startDate={startDate}
+              endDate={endDate}
+              rangeLabel={rangeLabel}
+              comparisonPeriod={comparisonPeriod}
+              chromeless
+            />
+          </div>
+        </div>
       )}
 
       {tenantId && <PlansPipelineDashboardStrip tenantId={tenantId} />}

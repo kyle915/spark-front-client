@@ -174,7 +174,15 @@ const Inner: React.FC<{
   endDate: string;
   rangeLabel: string;
   comparisonPeriod: "month" | "quarter" | "year";
-}> = ({ tenantId, startDate, endDate, rangeLabel, comparisonPeriod }) => {
+  chromeless?: boolean;
+}> = ({
+  tenantId,
+  startDate,
+  endDate,
+  rangeLabel,
+  comparisonPeriod,
+  chromeless = false,
+}) => {
   const { showAlert } = useAlertStore();
   const [copying, setCopying] = useState(false);
   const [skuState, setSkuState] = useState<{
@@ -318,7 +326,10 @@ const Inner: React.FC<{
   };
 
   return (
-    <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
+    <div
+      className={chromeless ? undefined : "spark-card p-5 lg:p-6"}
+      style={chromeless ? undefined : { borderRadius: 22 }}
+    >
       <ErrorBoundary fallback={null}>
         <Suspense fallback={null}>
           <SkuPulseLoader
@@ -349,8 +360,10 @@ const Inner: React.FC<{
               Program pulse
             </h2>
             {mix.map((b) => {
-              const color =
-                ACTIVATION_BADGE_COLOR[b.key] ?? "rgba(255,255,255,0.45)";
+              const active = b.count > 0;
+              const color = active
+                ? (ACTIVATION_BADGE_COLOR[b.key] ?? "rgba(255,255,255,0.45)")
+                : "rgba(255,255,255,0.35)";
               return (
                 <span
                   key={b.key}
@@ -358,7 +371,8 @@ const Inner: React.FC<{
                   style={{
                     color,
                     background: "rgba(255,255,255,0.04)",
-                    border: `1px solid ${color}55`,
+                    border: `1px solid ${active ? `${color}55` : "var(--spark-border)"}`,
+                    opacity: active ? 1 : 0.45,
                   }}
                   title={`${b.label} in ${rangeLabel}`}
                 >
@@ -379,7 +393,7 @@ const Inner: React.FC<{
           className="px-3 py-1.5 rounded-xl text-xs font-semibold"
           style={{
             background: "transparent",
-            color: "var(--spark-text)",
+            color: "rgba(255,255,255,0.7)",
             border: "1px solid var(--spark-border)",
             opacity: copying ? 0.5 : 1,
           }}
@@ -519,6 +533,8 @@ export default function ExecutiveInsightsStrip(props: {
   endDate: string;
   rangeLabel: string;
   comparisonPeriod: "month" | "quarter" | "year";
+  /** Skip outer spark-card when nested in a connected bento. */
+  chromeless?: boolean;
 }) {
   return (
     <Suspense fallback={null}>

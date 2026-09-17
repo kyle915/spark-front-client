@@ -50,7 +50,10 @@ const weeksRemainingInYear = (year: number): number => {
   return Math.max(1, Math.ceil(ms / (7 * 24 * 60 * 60 * 1000)));
 };
 
-const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
+const Inner: React.FC<{ tenantId: string; chromeless?: boolean }> = ({
+  tenantId,
+  chromeless = false,
+}) => {
   const navigate = useNavigate();
   const showAlert = useAlertStore((s) => s.showAlert);
   const [fetchKey, setFetchKey] = useState(0);
@@ -154,7 +157,10 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
       : "rgba(255,255,255,0.55)";
 
   return (
-    <div className="spark-card p-5 lg:p-6" style={{ borderRadius: 22 }}>
+    <div
+      className={chromeless ? undefined : "spark-card p-5 lg:p-6"}
+      style={chromeless ? undefined : { borderRadius: 22 }}
+    >
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
           <p
@@ -171,18 +177,20 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           </h2>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => navigate("/reports")}
-            className="mono text-[10px] px-3 py-1.5 rounded-lg"
-            style={{
-              letterSpacing: "0.12em",
-              color: "rgba(255,255,255,0.55)",
-              border: "1px solid var(--spark-border)",
-            }}
-          >
-            REPORTS →
-          </button>
+          {!chromeless && (
+            <button
+              type="button"
+              onClick={() => navigate("/reports")}
+              className="mono text-[10px] px-3 py-1.5 rounded-lg"
+              style={{
+                letterSpacing: "0.12em",
+                color: "rgba(255,255,255,0.55)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              REPORTS →
+            </button>
+          )}
           {primary && (
             <button
               type="button"
@@ -190,9 +198,9 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               className="mono text-[10px] px-3 py-1.5 rounded-lg"
               style={{
                 letterSpacing: "0.12em",
-                color: "var(--spark-lime)",
-                border: "1px solid rgba(197,245,70,0.30)",
-                background: "rgba(197,245,70,0.08)",
+                color: "rgba(255,255,255,0.7)",
+                border: "1px solid var(--spark-border)",
+                background: "transparent",
               }}
             >
               EDIT TARGET
@@ -232,7 +240,13 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               ? "No gap / no target"
               : `${weeksLeft} weeks left · to hit target`
           }
-          accent={weeklyNeed != null && weeklyNeed > 0 ? "var(--spark-orange)" : "var(--spark-lime)"}
+          accent={
+            weeklyNeed == null
+              ? undefined
+              : weeklyNeed > 0
+                ? "var(--spark-orange)"
+                : "var(--spark-lime)"
+          }
         />
         <Tile
           label="Last 7 days"
@@ -374,10 +388,17 @@ const Tile: React.FC<{
   </div>
 );
 
-export default function PaceToGoalHero({ tenantId }: { tenantId: string }) {
+export default function PaceToGoalHero({
+  tenantId,
+  chromeless = false,
+}: {
+  tenantId: string;
+  /** Skip outer spark-card when nested in a connected bento. */
+  chromeless?: boolean;
+}) {
   return (
     <Suspense fallback={null}>
-      <Inner tenantId={tenantId} />
+      <Inner tenantId={tenantId} chromeless={chromeless} />
     </Suspense>
   );
 }
