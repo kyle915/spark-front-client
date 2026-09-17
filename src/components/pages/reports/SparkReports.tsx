@@ -516,10 +516,7 @@ const ChartCard: React.FC<{
       }
     >
       {empty ? (
-        <div
-          className="grid place-items-center h-full text-xs"
-          style={{ color: "rgba(255,255,255,0.45)" }}
-        >
+        <div className="spark-chart-empty h-full text-xs">
           No data for this range yet.
         </div>
       ) : (

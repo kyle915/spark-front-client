@@ -45,7 +45,7 @@ import {
   recapReviewStatus,
   type ActionPhase,
 } from "@/motion/opsMotion";
-import { SparkBentoTile, SparkStat } from "@/shared/SparkStat";
+import { SparkBentoTile, SparkStat } from "@/shared/SparkStatBlocks";
 import { recapListKpis, sumConversionBases } from "@/shared/sparkStat";
 import {
   appendUniqueByUuid,
@@ -2548,10 +2548,12 @@ export default function SparkRecapsList() {
           }
         />
         <div
-          className="sticky top-0 z-20 spark-card p-3 flex flex-col gap-2"
+          className="sticky top-0 z-20 spark-card p-2.5 flex flex-col gap-1.5"
           style={{
             background: "rgba(10,13,9,0.92)",
-            backdropFilter: "blur(10px)",
+            backdropFilter: "saturate(180%) blur(16px)",
+            borderRadius: 12,
+            borderColor: "rgba(255,255,255,0.08)",
           }}
         >
           <div className="flex flex-wrap gap-2 items-center">

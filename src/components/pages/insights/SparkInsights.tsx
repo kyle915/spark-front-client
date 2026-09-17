@@ -13,6 +13,7 @@ import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
 import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
 import PlansPipelineDashboardStrip from "@/plans/PlansPipelineDashboardStrip";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import { CountReel } from "@/motion/CountReel";
 import {
   buildProgramPulseCopy,
   buildProgramPulseOneLiner,
@@ -140,7 +141,7 @@ const ActivationBreakdown: React.FC<{
                   color,
                 }}
               >
-                {s.count.toLocaleString()}
+                <CountReel value={s.count} />
               </p>
             </div>
           );

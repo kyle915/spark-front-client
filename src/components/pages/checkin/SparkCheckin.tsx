@@ -4333,7 +4333,8 @@ const photoRemove: React.CSSProperties = {
 function primaryBtn(accent: string): React.CSSProperties {
   return {
     flex: 1,
-    padding: "13px 16px",
+    padding: "12px 16px",
+    minHeight: 44,
     borderRadius: 12,
     border: "none",
     background: accent,
@@ -4345,7 +4346,8 @@ function primaryBtn(accent: string): React.CSSProperties {
 }
 const secondaryBtn: React.CSSProperties = {
   flex: 1,
-  padding: "13px 16px",
+  padding: "12px 16px",
+  minHeight: 44,
   borderRadius: 12,
   border: "1px solid rgba(0,0,0,0.18)",
   background: "transparent",

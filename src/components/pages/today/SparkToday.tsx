@@ -16,7 +16,7 @@ import { RecentLocationPingsQuery } from "@/api/queries/RecentLocationPingsQuery
 import type { RecentLocationPingsQuery as RecentLocationPingsQueryType } from "@api/queries/__generated__/RecentLocationPingsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
-import { SparkBentoTile, SparkStat } from "@/shared/SparkStat";
+import { SparkBentoTile, SparkStat } from "@/shared/SparkStatBlocks";
 import { todayGroundKpis } from "@/shared/sparkStat";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 

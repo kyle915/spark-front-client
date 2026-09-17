@@ -101,25 +101,20 @@ export function MetricCard({
     : (icon ?? null);
 
   return (
-    <div className="spark-card p-5 hov" style={{ borderRadius: 20 }}>
-      <p className="label-mini">{title}</p>
-
-      <div className="flex items-center justify-between mt-3 gap-3">
-        <p
-          className="tab-num text-3xl font-bold leading-tight"
-          style={{ letterSpacing: "-0.03em" }}
-        >
-          {value}
-        </p>
+    <div
+      className="spark-card hov relative px-4 py-4 lg:px-5"
+      style={{ borderRadius: 16 }}
+    >
+      <div className="flex items-start gap-3">
         {selectedIcon ? (
           <div
-            className="p-2.5 rounded-xl flex items-center justify-center shrink-0"
+            className="p-2 rounded-full flex items-center justify-center shrink-0 mt-0.5"
             style={{
               background:
                 tone === "lime"
-                  ? "rgba(197,245,70,0.10)"
+                  ? "rgba(197,245,70,0.12)"
                   : tone === "orange"
-                    ? "rgba(239,90,42,0.10)"
+                    ? "rgba(239,90,42,0.12)"
                     : "rgba(255,255,255,0.04)",
               color:
                 tone === "lime"
@@ -130,58 +125,72 @@ export function MetricCard({
               border: "1px solid var(--spark-border)",
             }}
           >
-            <div className="w-5 h-5">{selectedIcon}</div>
+            <div className="w-4 h-4">{selectedIcon}</div>
           </div>
         ) : null}
+        <div className="min-w-0 flex-1">
+          <p className="label-mini">{title}</p>
+          <p
+            className="tab-num text-2xl lg:text-3xl font-bold leading-tight mt-1.5"
+            style={{ letterSpacing: "-0.03em" }}
+          >
+            {value}
+          </p>
+          <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+            {isNegative ? (
+              <TrendingDown
+                className="w-3.5 h-3.5"
+                style={{ color: "var(--spark-orange)" }}
+              />
+            ) : (
+              <TrendingUp
+                className="w-3.5 h-3.5"
+                style={{
+                  color:
+                    delta?.kind === "none" || delta?.kind === "sparse"
+                      ? "rgba(255,255,255,0.45)"
+                      : "var(--spark-lime)",
+                }}
+              />
+            )}
+            <span
+              className="text-xs font-semibold mono"
+              style={{
+                letterSpacing: "0.04em",
+                color: isNegative
+                  ? "var(--spark-orange)"
+                  : delta?.kind === "sparse" || delta?.kind === "none"
+                    ? "rgba(255,255,255,0.55)"
+                    : "var(--spark-lime)",
+              }}
+            >
+              {changeLabel}
+            </span>
+            <span
+              className="text-xs"
+              style={{ color: "rgba(255,255,255,0.4)" }}
+            >
+              {comparisonLabel}
+            </span>
+            {subtitle ? (
+              <span
+                className="text-xs"
+                style={{ color: "rgba(255,255,255,0.4)" }}
+              >
+                {subtitle}
+              </span>
+            ) : null}
+          </div>
+          {note ? (
+            <p
+              className="text-[11px] mt-1.5 leading-snug"
+              style={{ color: "rgba(255,255,255,0.45)" }}
+            >
+              {note}
+            </p>
+          ) : null}
+        </div>
       </div>
-
-      <div className="flex items-center gap-2 mt-4 flex-wrap">
-        {isNegative ? (
-          <TrendingDown
-            className="w-4 h-4"
-            style={{ color: "var(--spark-orange)" }}
-          />
-        ) : (
-          <TrendingUp
-            className="w-4 h-4"
-            style={{
-              color:
-                delta?.kind === "none" || delta?.kind === "sparse"
-                  ? "rgba(255,255,255,0.45)"
-                  : "var(--spark-lime)",
-            }}
-          />
-        )}
-        <span
-          className="text-sm font-semibold mono"
-          style={{
-            letterSpacing: "0.04em",
-            color: isNegative
-              ? "var(--spark-orange)"
-              : delta?.kind === "sparse" || delta?.kind === "none"
-                ? "rgba(255,255,255,0.55)"
-                : "var(--spark-lime)",
-          }}
-        >
-          {changeLabel}
-        </span>
-        <span className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
-          {comparisonLabel}
-        </span>
-        {subtitle ? (
-          <span className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
-            {subtitle}
-          </span>
-        ) : null}
-      </div>
-      {note ? (
-        <p
-          className="text-[11px] mt-2 leading-snug"
-          style={{ color: "rgba(255,255,255,0.45)" }}
-        >
-          {note}
-        </p>
-      ) : null}
     </div>
   );
 }

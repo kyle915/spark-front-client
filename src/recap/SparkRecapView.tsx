@@ -6,6 +6,13 @@ import {
   recapReviewStatus,
   type ActionPhase,
 } from "@/motion/opsMotion";
+import {
+  RecapDetailBackLink,
+  RecapDetailPanel,
+  RecapDetailTabs,
+  RecapKpiStrip,
+  type RecapDetailTab,
+} from "@/recap/RecapDetailShell";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
@@ -104,25 +111,6 @@ const initials = (full: string) =>
     .join("")
     .slice(0, 2)
     .toUpperCase() || "?";
-
-const KpiTile: React.FC<{
-  icon: string;
-  label: string;
-  value: string;
-  delta?: string;
-  glow?: boolean;
-}> = ({ icon, label, value, delta, glow }) => (
-  <div className={`kpi kpi-hover ${glow ? "kpi-glow" : ""}`}>
-    <div className="flex items-start justify-between">
-      <span className="kpi-icon" aria-hidden>
-        {icon}
-      </span>
-      {delta && <span className="kpi-delta">{delta}</span>}
-    </div>
-    <p className="kpi-value">{value}</p>
-    <p className="kpi-label">{label}</p>
-  </div>
-);
 
 /* ─────────────────── inner ─────────────────── */
 
@@ -442,6 +430,7 @@ const SparkRecapInner: React.FC<{
   const [isZipping, setIsZipping] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [detailTab, setDetailTab] = useState<RecapDetailTab>("overview");
   // Admin-only inline number editor. `editingNumbers` toggles the panel;
   // `draft` holds the in-progress string values keyed by field.
   const [editingNumbers, setEditingNumbers] = useState(false);
@@ -942,21 +931,14 @@ const SparkRecapInner: React.FC<{
 
   return (
     <div className={`space-y-6 max-w-7xl${!isClient ? " pb-24" : ""}`}>
-      <button
-        onClick={() => navigate(backToListUrl)}
-        className="mono text-[11px] transition"
-        style={{
-          letterSpacing: "0.14em",
-          color: "rgba(255,255,255,0.45)",
-        }}
-      >
+      <RecapDetailBackLink onClick={() => navigate(backToListUrl)}>
         ← Recaps
         {recap.name ? ` / ${recap.name}` : ""}
         {event?.request?.retailer?.name || event?.address
           ? ` / ${event?.request?.retailer?.name ?? event?.address}`
           : ""}
         {` / ${fmtDate(fieldDate)}`}
-      </button>
+      </RecapDetailBackLink>
 
       <RecapDocument status={recap.approved ? "APPROVED" : "DRAFT"}>
       <div className="space-y-6">
@@ -1263,6 +1245,24 @@ const SparkRecapInner: React.FC<{
         </div>
       </div>
 
+      <RecapDetailTabs
+        value={detailTab}
+        onChange={setDetailTab}
+        photoCount={allFiles.length}
+      />
+
+      {kpiTiles.length > 0 ? (
+        <RecapKpiStrip
+          items={kpiTiles.map((t) => ({
+            label: t.label,
+            value: fmtNum(t.value),
+            glow: t.glow,
+            icon: t.icon,
+          }))}
+        />
+      ) : null}
+
+      <RecapDetailPanel active={detailTab === "overview"}>
       {/* Quality check — server-computed review aid for the approver. Legacy
           recap → isCustom={false}. Self-degrades to nothing on failure;
           wrapped in Suspense for the initial load. */}
@@ -1295,7 +1295,9 @@ const SparkRecapInner: React.FC<{
           }}
         />
       )}
+      </RecapDetailPanel>
 
+      <RecapDetailPanel active={detailTab === "details" || editingNumbers}>
       {/* Products sampled — read view (everyone). Hidden while the admin is
           editing, since the editor panel below shows the same data. */}
       {!editingNumbers &&
@@ -1745,29 +1747,9 @@ const SparkRecapInner: React.FC<{
         />
       )}
 
-      {/* KPI tiles — view mode. These are the legacy generic metrics
-          (samples / engagement funnel / products sold). On custom-template
-          tenants (e.g. Girl Beer) most of them are never collected, so a
-          blank "—" tile is just noise. The legacy Recap node exposes no
-          template-status signal (and we won't add a backend field just for
-          this), so we apply the general rule: drop any tile whose value is
-          null/blank, and hide the whole row if none remain. A fully-filled
-          recap (e.g. Liquid Death) keeps all five tiles unchanged. The
-          admin edit panel above still renders every field regardless. */}
-      {kpiTiles.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          {kpiTiles.map((t) => (
-            <KpiTile
-              key={t.label}
-              icon={t.icon}
-              label={t.label}
-              value={fmtNum(t.value)}
-              glow={t.glow}
-            />
-          ))}
-        </div>
-      )}
+      </RecapDetailPanel>
 
+      <RecapDetailPanel active={detailTab === "overview"}>
       {/* Performance row — financial + qualitative signals */}
       {(recap.totalEarnings != null ||
         recap.accountSpendAmount != null ||
@@ -1853,6 +1835,9 @@ const SparkRecapInner: React.FC<{
         </div>
       )}
 
+      </RecapDetailPanel>
+
+      <RecapDetailPanel active={detailTab === "details"}>
       {/* Consumer voice — quotes, demographics, positive stories, reasons-to-decline */}
       {consumerFeedback && (
         consumerFeedback.feedback ||
@@ -2041,6 +2026,9 @@ const SparkRecapInner: React.FC<{
         </div>
       ) : null}
 
+      </RecapDetailPanel>
+
+      <RecapDetailPanel active={detailTab === "photos"}>
       {/* Upload zone — admin/BA can add photos + receipts on the fly */}
       <div
         className="spark-card p-6"
@@ -2121,10 +2109,136 @@ const SparkRecapInner: React.FC<{
         >
           Pick a tenant photo section, then upload. Files go to GCS via
           signed URL and attach to this recap automatically — they appear
-          in the Files grid above as soon as the upload completes.
+          in the Files grid below as soon as the upload completes.
         </p>
       </div>
 
+      <div className="spark-card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="display font-bold">Files · {allFiles.length}</h3>
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.16em",
+              color: "var(--recap-muted, #5c6154)",
+            }}
+          >
+            CLICK ANY TILE →
+          </p>
+        </div>
+        {allFiles.length === 0 ? (
+          <div className="spark-chart-empty min-h-[140px]">
+            No files attached yet. Upload above to add photos or receipts.
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+            {allFiles.slice(0, 36).map((p, i) => {
+              const source = recapDisplayUrl(p?.displayUrl || p?.file);
+              const kind = recapFileKind(source);
+              const url = recapFileUrlFresh(source);
+              const labelByKind: Record<typeof kind, string> = {
+                image: "",
+                heic: "HEIC",
+                pdf: "PDF",
+                video: "VIDEO",
+                other: "FILE",
+              };
+              const fileId = p?.id ? String(p.id) : null;
+              const fileLabel = (p?.file ?? "").split("/").pop() || "this file";
+              return (
+                <a
+                  key={p?.uuid ?? i}
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block aspect-square rounded-lg overflow-hidden relative group"
+                  style={{
+                    background: "rgba(20, 22, 15, 0.04)",
+                    border: "1px solid var(--spark-border)",
+                  }}
+                >
+                  {isAdmin && fileId && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        removeFile(fileId, fileLabel);
+                      }}
+                      title="Remove this file from the recap"
+                      className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full grid place-items-center text-xs font-bold transition opacity-0 group-hover:opacity-100"
+                      style={{
+                        background: "rgba(10,13,9,0.85)",
+                        color: "var(--spark-orange)",
+                        border: "1px solid rgba(239,90,42,0.5)",
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                  {kind === "image" ? (
+                    <img
+                      src={thumbUrl(url, 400) || url}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const t = e.currentTarget as HTMLImageElement;
+                        if (url && t.src !== url) {
+                          t.src = url;
+                          return;
+                        }
+                        t.outerHTML = `<div style="font:9px/12px monospace;color:#ef5a2a;padding:6px;word-break:break-all;background:rgba(239,90,42,0.08)">IMG FAILED<br/>${url}</div>`;
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full grid place-items-center">
+                      <div className="text-center">
+                        <span
+                          className="mono"
+                          style={{
+                            fontSize: 10,
+                            letterSpacing: "0.16em",
+                            color: "var(--spark-lime)",
+                          }}
+                        >
+                          {labelByKind[kind]}
+                        </span>
+                        <p
+                          className="mono mt-1"
+                          style={{
+                            fontSize: 8,
+                            letterSpacing: "0.14em",
+                            color: "var(--recap-muted, #5c6154)",
+                          }}
+                        >
+                          OPEN →
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </a>
+              );
+            })}
+          </div>
+        )}
+        {allFiles.length > 36 ? (
+          <p
+            className="mt-3 mono text-[10px]"
+            style={{
+              letterSpacing: "0.16em",
+              color: "var(--recap-muted, #5c6154)",
+            }}
+          >
+            + {allFiles.length - 36} more files
+          </p>
+        ) : null}
+      </div>
+      </RecapDetailPanel>
+
+      <RecapDetailPanel active={detailTab === "details"}>
       {/* Field intelligence — traffic + competitive presence */}
       {(recap.trafficDescription || recap.competitivePresence) && (
         <div className="grid lg:grid-cols-2 gap-5">
@@ -2169,7 +2283,7 @@ const SparkRecapInner: React.FC<{
         </div>
       )}
 
-      {/* Two-col: SKU + Photos + Notes | Team + Compare */}
+      {/* Two-col: SKU + Notes | Team */}
       <div className="grid lg:grid-cols-[1fr_300px] gap-5">
         <div className="space-y-5">
           {/* SKU breakdown */}
@@ -2216,152 +2330,8 @@ const SparkRecapInner: React.FC<{
             </div>
           )}
 
-          {/* Files: images render inline, HEIC + PDF + video shown as
-              kind-labeled tiles that open in a new tab. Always rendered
-              so missing-data states are visible, not silent. */}
-          <div className="spark-card p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="display font-bold">
-                  Files · {allFiles.length}
-                </h3>
-                <p
-                  className="mono text-[10px]"
-                  style={{
-                    letterSpacing: "0.16em",
-                    color: "var(--recap-muted, #5c6154)",
-                  }}
-                >
-                  CLICK ANY TILE →
-                </p>
-              </div>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                {allFiles.slice(0, 36).map((p, i) => {
-                  // Prefer the backend `displayUrl` — for HEIC uploads it's
-                  // the server-converted .jpg sibling, so we render a plain
-                  // <img> with no in-browser HEIC decode / bucket-CORS
-                  // dependency. It's an absolute URL; recapFileUrlFresh
-                  // passes http(s) through untouched (just adds the cache-
-                  // buster). Falls back to `file` for older query results.
-                  // `kind` is computed from the chosen source so a converted
-                  // HEIC (now a .jpg) is treated as a normal image. A still-
-                  // unconverted .heic is a labeled tile — no in-browser WASM.
-                  const source = recapDisplayUrl(p?.displayUrl || p?.file);
-                  const kind = recapFileKind(source);
-                  const url = recapFileUrlFresh(source);
-                  const labelByKind: Record<typeof kind, string> = {
-                    image: "",
-                    heic: "HEIC",
-                    pdf: "PDF",
-                    video: "VIDEO",
-                    other: "FILE",
-                  };
-                  const fileId = p?.id ? String(p.id) : null;
-                  const fileLabel =
-                    (p?.file ?? "").split("/").pop() || "this file";
-                  return (
-                    <a
-                      key={p?.uuid ?? i}
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block aspect-square rounded-lg overflow-hidden relative group"
-                      style={{
-                        background: "rgba(20, 22, 15, 0.04)",
-                        border: "1px solid var(--spark-border)",
-                      }}
-                    >
-                      {/* Admin-only remove button. Stops the parent <a>
-                          from navigating; confirms before deleting. */}
-                      {isAdmin && fileId && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            removeFile(fileId, fileLabel);
-                          }}
-                          title="Remove this file from the recap"
-                          className="absolute top-1 right-1 z-10 w-6 h-6 rounded-full grid place-items-center text-xs font-bold transition opacity-0 group-hover:opacity-100"
-                          style={{
-                            background: "rgba(10,13,9,0.85)",
-                            color: "var(--spark-orange)",
-                            border: "1px solid rgba(239,90,42,0.5)",
-                          }}
-                        >
-                          ✕
-                        </button>
-                      )}
-                      {kind === "image" ? (
-                        <img
-                          src={thumbUrl(url, 400) || url}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const t = e.currentTarget as HTMLImageElement;
-                            if (url && t.src !== url) {
-                              t.src = url;
-                              return;
-                            }
-                            t.outerHTML = `<div style="font:9px/12px monospace;color:#ef5a2a;padding:6px;word-break:break-all;background:rgba(239,90,42,0.08)">IMG FAILED<br/>${url}</div>`;
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full h-full grid place-items-center">
-                          <div className="text-center">
-                            <span
-                              className="mono"
-                              style={{
-                                fontSize: 10,
-                                letterSpacing: "0.16em",
-                                color: "var(--spark-lime)",
-                              }}
-                            >
-                              {labelByKind[kind]}
-                            </span>
-                            <p
-                              className="mono mt-1"
-                              style={{
-                                fontSize: 8,
-                                letterSpacing: "0.14em",
-                                color: "var(--recap-muted, #5c6154)",
-                              }}
-                            >
-                              OPEN →
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </a>
-                  );
-                })}
-              </div>
-              {allFiles.length > 36 && (
-                <p
-                  className="mt-3 mono text-[10px]"
-                  style={{
-                    letterSpacing: "0.16em",
-                    color: "var(--recap-muted, #5c6154)",
-                  }}
-                >
-                  + {allFiles.length - 36} more files
-                </p>
-              )}
-              {allFiles.length === 0 && (
-                <p
-                  className="text-sm py-6 text-center"
-                  style={{ color: "var(--recap-muted, #5c6154)" }}
-                >
-                  No files attached yet. BAs upload photos + PDFs from the
-                  field; they show up here.
-                </p>
-              )}
-            </div>
-
           {/* BA notes */}
-          {notes && (
+          {notes ? (
             <div className="spark-card p-6">
               <h3 className="display font-bold mb-3">BA notes from the field</h3>
               <blockquote
@@ -2396,7 +2366,7 @@ const SparkRecapInner: React.FC<{
                 </p>
               ) : null}
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* Sidebar */}
@@ -2511,6 +2481,7 @@ const SparkRecapInner: React.FC<{
           </div>
         </aside>
       </div>
+      </RecapDetailPanel>
       </div>
       </RecapDocument>
 

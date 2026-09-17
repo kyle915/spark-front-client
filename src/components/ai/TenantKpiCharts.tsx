@@ -19,6 +19,7 @@ import { useThemeMode } from "@/hooks/useThemeMode";
 import { TenantKpisQuery } from "@/api/queries/TenantKpisQuery";
 import type { TenantKpisQuery as TenantKpisQueryType } from "@api/queries/__generated__/TenantKpisQuery.graphql";
 import { collapseSamplingKpis } from "@/lib/collapseSamplingKpis";
+import { CountReel } from "@/motion/CountReel";
 
 /**
  * Phase 1 KPI panel for the dashboards.
@@ -153,8 +154,9 @@ const TrendChart: React.FC<{ data: readonly MonthRow[] }> = ({ data }) => {
 const StatTile: React.FC<{
   label: string;
   value: string;
+  count?: number;
   tone: "lime" | "sky" | "gold" | "purple";
-}> = ({ label, value, tone }) => {
+}> = ({ label, value, count, tone }) => {
   const toneColor: Record<string, string> = {
     lime: "var(--spark-lime)",
     sky: "var(--spark-sky)",
@@ -185,7 +187,7 @@ const StatTile: React.FC<{
           color: "var(--spark-text)",
         }}
       >
-        {value}
+        {typeof count === "number" ? <CountReel value={count} /> : value}
       </p>
     </div>
   );
@@ -246,11 +248,17 @@ const TenantKpiCharts: React.FC<{
     }).map((t) => ({
       label: t.label,
       value: fmt(t.value),
+      count: t.value,
       tone: (t.key === "totalEngagements" ? "sky" : "lime") as "lime" | "sky",
     }));
     const core = [
       ...sampling,
-      { label: "Products sold", value: fmt(kpis.productsSold), tone: "gold" as const },
+      {
+        label: "Products sold",
+        value: fmt(kpis.productsSold),
+        count: kpis.productsSold,
+        tone: "gold" as const,
+      },
     ];
     const optional = [
       { label: "First-time consumers", value: kpis.firstTimeConsumers, tone: "purple" as const },
@@ -258,7 +266,12 @@ const TenantKpiCharts: React.FC<{
       { label: "Willing to purchase", value: kpis.willingToPurchase, tone: "gold" as const },
     ]
       .filter((t) => t.value > 0)
-      .map((t) => ({ label: t.label, value: fmt(t.value), tone: t.tone }));
+      .map((t) => ({
+        label: t.label,
+        value: fmt(t.value),
+        count: t.value,
+        tone: t.tone,
+      }));
     return [...core, ...optional];
   }, [kpis]);
 
@@ -340,6 +353,7 @@ const TenantKpiCharts: React.FC<{
                 key={t.label}
                 label={t.label}
                 value={t.value}
+                count={t.count}
                 tone={t.tone}
               />
             ))}
