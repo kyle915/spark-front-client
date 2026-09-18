@@ -79,8 +79,9 @@ import {
   X as XIcon,
 } from "lucide-react";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
+import { RecapVideoPlayer } from "@/shared/RecapVideoPlayer";
 import { useAlertStore } from "@/store/alertStore";
-import { recapDisplayUrl, recapFileUrl, recapGallerySlot } from "@/utils/recapFileUrl";
+import { recapDisplayUrl, recapFileUrl, recapGallerySlot, recapVideoPlayUrl } from "@/utils/recapFileUrl";
 import { useRecapPageCrumb } from "@/layout/pageCrumb";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import RecapStickyOpsBar from "@/recap/RecapStickyOpsBar";
@@ -464,6 +465,11 @@ const RecapCustomViewInner = ({
   const { isClient } = useSparkRole();
   const [searchParams] = useSearchParams();
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [playingVideo, setPlayingVideo] = useState<{
+    playSrc: string;
+    fileUrl: string;
+    name: string;
+  } | null>(null);
   // Id of the Evidences file currently being deleted, so only that card's
   // ×-button shows the in-flight state (the useMutation `isDeletingFile`
   // flag is global to the gallery).
@@ -1188,6 +1194,16 @@ const RecapCustomViewInner = ({
     [],
   );
 
+  const openVideo = useCallback((file: (typeof recapFiles)[number]) => {
+    const fileUrl = recapFileUrl(file.url || file.displayUrl || "");
+    if (!fileUrl) return;
+    setPlayingVideo({
+      playSrc: recapVideoPlayUrl(file.url || file.displayUrl || ""),
+      fileUrl,
+      name: file.name || "Video",
+    });
+  }, []);
+
   const isImageFile = useCallback(
     (file: (typeof recapFiles)[number]) => gallerySlot(file) === "image",
     [gallerySlot],
@@ -1371,6 +1387,15 @@ const RecapCustomViewInner = ({
     }
     setShareOpen(true);
   }, [recap.shareToken, showAlert]);
+
+  const videoModal = playingVideo ? (
+    <RecapVideoPlayer
+      src={playingVideo.playSrc}
+      fileUrl={playingVideo.fileUrl}
+      name={playingVideo.name}
+      onClose={() => setPlayingVideo(null)}
+    />
+  ) : null;
 
   const inner = (
     <>
@@ -2584,13 +2609,7 @@ const RecapCustomViewInner = ({
                                 style={inset}
                                 onClick={() => {
                                   if (isVideo) {
-                                    if (playable) {
-                                      window.open(
-                                        playable,
-                                        "_blank",
-                                        "noopener,noreferrer",
-                                      );
-                                    }
+                                    openVideo(file);
                                     return;
                                   }
                                   if (isImage) {
@@ -2885,6 +2904,7 @@ const RecapCustomViewInner = ({
           onIndex={setPreviewIndex}
         />
       )}
+      {videoModal}
 
       {shareOpen && recap.shareToken && (
         <ShareRecapModal
@@ -2990,11 +3010,7 @@ const RecapCustomViewInner = ({
                         <button
                           key={file.id}
                           type="button"
-                          onClick={() => {
-                            if (src) {
-                              window.open(src, "_blank", "noopener,noreferrer");
-                            }
-                          }}
+                          onClick={() => openVideo(file)}
                           className="relative block h-40 overflow-hidden rounded-xl text-left"
                           style={{ border: "1px solid var(--spark-border)" }}
                         >
@@ -3124,6 +3140,7 @@ const RecapCustomViewInner = ({
             onIndex={setPreviewIndex}
           />
         )}
+        {videoModal}
 
         {shareOpen && recap.shareToken && (
           <ShareRecapModal

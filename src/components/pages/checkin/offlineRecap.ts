@@ -17,6 +17,7 @@ import {
   formatSavedClockTime,
   type StorageLike,
 } from "./offlineClock";
+import { browserPlayableContentType } from "@/utils/recapFileUrl";
 
 export const RECAP_FETCH_TIMEOUT_MS = 20_000;
 export const PHOTO_PUT_ATTEMPTS = 3;
@@ -283,7 +284,10 @@ export async function putCheckinPhoto(args: {
 }): Promise<{ blobName: string }> {
   const fetchImpl = args.fetchImpl ?? fetch;
   const filename = args.file.name || "photo.jpg";
-  const contentType = args.file.type || "image/jpeg";
+  const contentType = browserPlayableContentType({
+    type: args.file.type,
+    name: args.file.name || filename,
+  });
   let lastError: unknown = new Error("upload failed");
 
   for (let attempt = 0; attempt < PHOTO_PUT_ATTEMPTS; attempt++) {

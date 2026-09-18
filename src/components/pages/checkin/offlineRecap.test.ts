@@ -362,6 +362,37 @@ describe("putCheckinPhoto", () => {
     ]);
   });
 
+  it("uploads iPhone .mov as video/mp4 so Chrome can play it", async () => {
+    let signedType = "";
+    let putType = "";
+    await putCheckinPhoto({
+      code: "KA-1",
+      token: "tok",
+      file: new File([new Uint8Array([1])], "activation.mov", {
+        type: "video/quicktime",
+      }),
+      apiOrigin: "https://api.example",
+      fetchImpl: async (input, init) => {
+        const url = String(input);
+        const headers = new Headers(init?.headers);
+        if (url.includes("/upload-url")) {
+          signedType = JSON.parse(String(init?.body)).contentType;
+          return new Response(
+            JSON.stringify({
+              uploadUrl: "https://signed.example/put",
+              blobName: "checkin/activation.mov",
+            }),
+            { status: 200 },
+          );
+        }
+        putType = headers.get("Content-Type") || "";
+        return new Response(null, { status: 200 });
+      },
+    });
+    expect(signedType).toBe("video/mp4");
+    expect(putType).toBe("video/mp4");
+  });
+
   it("retries the PUT after a gateway failure, with a new signed URL", async () => {
     let puts = 0;
     const blobName = await putCheckinPhoto({

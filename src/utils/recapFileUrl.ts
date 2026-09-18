@@ -79,12 +79,107 @@ export function recapGallerySlot(file: {
   return "file";
 }
 
+const VIDEO_MIME: Record<string, string> = {
+  mp4: "video/mp4",
+  m4v: "video/mp4",
+  // iPhone .mov is often H.264 in a QuickTime container. Chrome attempts
+  // playback when the response (and the <source type>) say video/mp4.
+  mov: "video/mp4",
+  webm: "video/webm",
+};
+
+const videoExtension = (path: string): string => {
+  const clean = path.split("?")[0]?.split("#")[0] ?? "";
+  return clean.split(".").pop()?.toLowerCase() ?? "";
+};
+
+/** MIME Chrome should attempt for a recap clip. .mov maps to video/mp4. */
+export const recapVideoMime = (path: string | null | undefined): string => {
+  if (!path) return "video/mp4";
+  return VIDEO_MIME[videoExtension(path)] || "video/mp4";
+};
+
+/**
+ * Content-Type to send on upload. QuickTime .mov is stored as video/mp4
+ * so the bucket object itself is a type Chrome will play. The signed PUT
+ * must use this same type.
+ */
+export const browserPlayableContentType = (file: {
+  type?: string;
+  name?: string;
+}): string => {
+  const type = (file.type || "").toLowerCase();
+  const name = (file.name || "").toLowerCase();
+  if (
+    type === "video/quicktime" ||
+    type === "video/x-m4v" ||
+    name.endsWith(".mov") ||
+    name.endsWith(".m4v")
+  ) {
+    return "video/mp4";
+  }
+  return file.type || "image/jpeg";
+};
+
 export const recapFileUrl = (path: string | null | undefined): string => {
   if (!path) return "";
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
   // Strip leading slash so prepend doesn't double up.
   const trimmed = path.startsWith("/") ? path.slice(1) : path;
   return `${getBase()}${trimmed}`;
+};
+
+/** Blob path inside the recap bucket, from a relative key or a public GCS URL. */
+export const recapMediaBlob = (path: string | null | undefined): string => {
+  const url = recapFileUrl(path);
+  if (!url) return "";
+  if (!/^https?:\/\//i.test(url)) {
+    return url.replace(/^\//, "").split("?")[0]?.split("#")[0] ?? "";
+  }
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname;
+    if (
+      host !== "storage.googleapis.com" &&
+      !host.endsWith(".storage.googleapis.com")
+    ) {
+      return "";
+    }
+    const parts = parsed.pathname.replace(/^\//, "").split("/");
+    if (parts.length < 2) return "";
+    return decodeURIComponent(parts.slice(1).join("/"));
+  } catch {
+    return "";
+  }
+};
+
+const graphqlOrigin = (): string => {
+  const graphql = (import.meta as { env?: Record<string, string> }).env
+    ?.VITE_GRAPHQL_ENDPOINT;
+  if (!graphql) return "";
+  try {
+    return new URL(graphql).origin;
+  } catch {
+    return "";
+  }
+};
+
+/**
+ * URL for an in-page <video> element. Hits the API play endpoint, which
+ * 302s to a signed GCS URL with Content-Disposition: inline and a MIME
+ * Chrome will attempt. Falls back to the public object URL when the API
+ * origin is unknown.
+ */
+export const recapVideoPlayUrl = (
+  path: string | null | undefined,
+  origin?: string,
+): string => {
+  const fileUrl = recapFileUrl(path);
+  if (!fileUrl) return "";
+  const base = (origin ?? graphqlOrigin()).replace(/\/$/, "");
+  const blob = recapMediaBlob(path);
+  if (!base || !blob) return fileUrl;
+  return `${base}/api/public/media/play?path=${encodeURIComponent(blob)}`;
 };
 
 /**
