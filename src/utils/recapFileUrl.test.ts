@@ -6,6 +6,9 @@ import {
   recapFileUrlFresh,
   pickHeroImage,
   recapGallerySlot,
+  recapVideoMime,
+  recapVideoPlayUrl,
+  browserPlayableContentType,
 } from "./recapFileUrl";
 
 /**
@@ -141,5 +144,40 @@ describe("pickHeroImage", () => {
   it("tolerates null entries", () => {
     const out = pickHeroImage([null, undefined, { file: null }]);
     expect(out).toBeNull();
+  });
+});
+
+describe("recap video playback urls", () => {
+  it("labels mov as mp4 so Chrome will attempt playback", () => {
+    expect(recapVideoMime("clip.mov")).toBe("video/mp4");
+    expect(recapVideoMime("clip.MP4")).toBe("video/mp4");
+    expect(recapVideoMime("clip.webm")).toBe("video/webm");
+  });
+
+  it("stores quicktime uploads as video/mp4", () => {
+    expect(
+      browserPlayableContentType({ type: "video/quicktime", name: "clip.mov" }),
+    ).toBe("video/mp4");
+    expect(
+      browserPlayableContentType({ type: "image/jpeg", name: "table.jpg" }),
+    ).toBe("image/jpeg");
+  });
+
+  it("points play at the inline media endpoint, not a download link", () => {
+    const out = recapVideoPlayUrl(
+      "https://storage.googleapis.com/sparkio-production/checkin/Activation%20Photos.mov",
+      "https://api.example",
+    );
+    expect(out.startsWith("https://api.example/api/public/media/play?path=")).toBe(
+      true,
+    );
+    expect(decodeURIComponent(out)).toContain("checkin/Activation Photos.mov");
+    expect(out.includes("download")).toBe(false);
+  });
+
+  it("falls back to the object URL when no API origin is known", () => {
+    const raw =
+      "https://storage.googleapis.com/sparkio-production/checkin/clip.mp4";
+    expect(recapVideoPlayUrl(raw, "")).toBe(raw);
   });
 });

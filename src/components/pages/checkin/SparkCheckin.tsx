@@ -27,6 +27,7 @@ import {
   FIELD_PHOTO_PREP,
   prepareImageForUpload,
 } from "@/utils/compressImageForUpload";
+import { browserPlayableContentType } from "@/utils/recapFileUrl";
 import {
   CLOCK_FETCH_TIMEOUT_MS,
   clearCachedContext,
@@ -3279,7 +3280,10 @@ function RecapForm({
             blobName: p.blobName,
             category: p.category,
             filename: p.file.name || "photo.jpg",
-            contentType: p.file.type || "image/jpeg",
+            contentType: browserPlayableContentType({
+              type: p.file.type,
+              name: p.file.name,
+            }),
           };
         });
       await enqueueRecap({

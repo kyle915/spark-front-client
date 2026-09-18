@@ -47,9 +47,10 @@ import { CreateProductMutation } from "@/api/mutations/CreateProductMutation";
 import type { CreateProductMutation as CreateProductMutationType } from "@/api/mutations/__generated__/CreateProductMutation.graphql";
 import useSparkRole from "@/hooks/useSparkRole";
 import RateBaControl from "@/components/RateBaControl";
-import { recapDisplayUrl, recapFileKind, recapFileUrl, recapFileUrlFresh } from "@/utils/recapFileUrl";
+import { recapDisplayUrl, recapFileKind, recapFileUrl, recapFileUrlFresh, recapVideoPlayUrl } from "@/utils/recapFileUrl";
 import { useRecapPageCrumb } from "@/layout/pageCrumb";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
+import { RecapVideoPlayer } from "@/shared/RecapVideoPlayer";
 import RecapStickyOpsBar from "@/recap/RecapStickyOpsBar";
 import { parseLocaleNumber } from "@/utils";
 import { useAlertStore } from "@/store/alertStore";
@@ -431,6 +432,11 @@ const SparkRecapInner: React.FC<{
   const [isZipping, setIsZipping] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [playingVideo, setPlayingVideo] = useState<{
+    playSrc: string;
+    fileUrl: string;
+    name: string;
+  } | null>(null);
   const [detailTab, setDetailTab] = useState<RecapDetailTab>("overview");
   // Admin-only inline number editor. `editingNumbers` toggles the panel;
   // `draft` holds the in-progress string values keyed by field.
@@ -2146,12 +2152,26 @@ const SparkRecapInner: React.FC<{
               };
               const fileId = p?.id ? String(p.id) : null;
               const fileLabel = (p?.file ?? "").split("/").pop() || "this file";
+              const rawFile = p?.file ? String(p.file) : "";
               return (
                 <a
                   key={p?.uuid ?? i}
-                  href={url}
-                  target="_blank"
-                  rel="noreferrer"
+                  href={kind === "video" ? undefined : url}
+                  target={kind === "video" ? undefined : "_blank"}
+                  rel={kind === "video" ? undefined : "noreferrer"}
+                  onClick={
+                    kind === "video"
+                      ? (event) => {
+                          event.preventDefault();
+                          if (!rawFile) return;
+                          setPlayingVideo({
+                            playSrc: recapVideoPlayUrl(rawFile),
+                            fileUrl: recapFileUrl(rawFile),
+                            name: fileLabel,
+                          });
+                        }
+                      : undefined
+                  }
                   className="block aspect-square rounded-lg overflow-hidden relative group"
                   style={{
                     background: "rgba(20, 22, 15, 0.04)",
@@ -2215,7 +2235,7 @@ const SparkRecapInner: React.FC<{
                             color: "var(--recap-muted, #5c6154)",
                           }}
                         >
-                          OPEN →
+                          {kind === "video" ? "PLAY" : "OPEN →"}
                         </p>
                       </div>
                     </div>
@@ -2578,6 +2598,14 @@ const SparkRecapInner: React.FC<{
             ))}
         </RecapStickyOpsBar>
       )}
+      {playingVideo ? (
+        <RecapVideoPlayer
+          src={playingVideo.playSrc}
+          fileUrl={playingVideo.fileUrl}
+          name={playingVideo.name}
+          onClose={() => setPlayingVideo(null)}
+        />
+      ) : null}
     </div>
   );
 };

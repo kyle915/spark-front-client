@@ -9,8 +9,9 @@ import { RecapDocument } from "@/recap/RecapDocument";
 import { RecapShareFieldSections } from "@/recap/RecapFieldRows";
 import PublicDeadLink from "@/public/PublicDeadLink";
 import { PhotoLightbox } from "@/shared/PhotoLightbox";
+import { RecapVideoPlayer } from "@/shared/RecapVideoPlayer";
 import { thumbUrl } from "@/utils/thumb";
-import { recapFileKind } from "@/utils/recapFileUrl";
+import { recapFileKind, recapVideoPlayUrl } from "@/utils/recapFileUrl";
 import type { CssVariablesMap } from "@/utils/tenantThemeConfig";
 
 /**
@@ -124,6 +125,10 @@ const PublicRecap: React.FC = () => {
   const [signoffBusy, setSignoffBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [playingVideo, setPlayingVideo] = useState<{
+    url: string;
+    name: string | null;
+  } | null>(null);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -391,22 +396,36 @@ const PublicRecap: React.FC = () => {
               </p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
                 {videos.map((p) => (
-                  <a
+                  <button
                     key={p.url}
-                    href={p.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex h-36 items-center justify-center rounded-xl"
+                    type="button"
+                    onClick={() => setPlayingVideo({ url: p.url, name: p.name })}
+                    className="relative block h-36 w-full overflow-hidden rounded-xl text-left"
                     style={{
                       border: "1px solid var(--recap-border, #e2e4d8)",
                       color: "var(--recap-brand, #3f5c12)",
                       fontWeight: 800,
                       letterSpacing: "0.12em",
                       fontSize: 12,
+                      background: "var(--recap-surface, #fff)",
+                      padding: 0,
+                      cursor: "pointer",
                     }}
                   >
-                    PLAY VIDEO
-                  </a>
+                    <video
+                      src={p.url}
+                      muted
+                      playsInline
+                      preload="metadata"
+                      className="pointer-events-none h-full w-full object-cover"
+                    />
+                    <span
+                      className="absolute inset-0 flex items-center justify-center"
+                      style={{ background: "rgba(10,13,9,0.28)" }}
+                    >
+                      PLAY
+                    </span>
+                  </button>
                 ))}
               </div>
             </section>
@@ -496,6 +515,14 @@ const PublicRecap: React.FC = () => {
           onStep={setLightboxIndex}
         />
       )}
+      {playingVideo ? (
+        <RecapVideoPlayer
+          src={recapVideoPlayUrl(playingVideo.url)}
+          fileUrl={playingVideo.url}
+          name={playingVideo.name || "Video"}
+          onClose={() => setPlayingVideo(null)}
+        />
+      ) : null}
     </>
   );
 };
