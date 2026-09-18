@@ -25,11 +25,12 @@ describe("isHeicUpload", () => {
   });
 });
 
-function heicBytes(): Uint8Array {
-  const bytes = new Uint8Array(16);
+function heicBytes(): ArrayBuffer {
+  const buffer = new ArrayBuffer(16);
+  const bytes = new Uint8Array(buffer);
   bytes.set([0x66, 0x74, 0x79, 0x70], 4);
   bytes.set([0x68, 0x65, 0x69, 0x63], 8);
-  return bytes;
+  return buffer;
 }
 
 describe("coerceHeicFile", () => {
