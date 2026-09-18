@@ -5,6 +5,7 @@ import {
   recapDisplayUrl,
   recapFileUrlFresh,
   pickHeroImage,
+  recapGallerySlot,
 } from "./recapFileUrl";
 
 /**
@@ -35,11 +36,40 @@ describe("recapFileKind", () => {
   it("identifies videos", () => {
     expect(recapFileKind("clip.mp4")).toBe("video");
     expect(recapFileKind("clip.MOV")).toBe("video");
+    expect(recapFileKind("clip.mov?cb=1")).toBe("video");
+    expect(recapFileKind("clip.m4v")).toBe("video");
   });
   it("falls back to other", () => {
     expect(recapFileKind("noext")).toBe("other");
     expect(recapFileKind(null)).toBe("other");
     expect(recapFileKind(undefined)).toBe("other");
+  });
+});
+
+describe("recapGallerySlot", () => {
+  const mov =
+    "https://storage.googleapis.com/sparkio-production/checkin/clip.mov";
+  const jpg =
+    "https://storage.googleapis.com/sparkio-production/checkin/shot.jpg";
+
+  it("does not treat Activation Photos videos as images", () => {
+    expect(
+      recapGallerySlot({
+        url: mov,
+        fileTypeName: "image",
+        categoryName: "Activation Photos",
+      }),
+    ).toBe("video");
+  });
+
+  it("still treats neighboring jpgs as images", () => {
+    expect(
+      recapGallerySlot({
+        url: jpg,
+        fileTypeName: "image",
+        categoryName: "Activation Photos",
+      }),
+    ).toBe("image");
   });
 });
 

@@ -20,9 +20,10 @@ const getBase = (): string => {
   return base.endsWith("/") ? base : `${base}/`;
 };
 
-const IMAGE_RE = /\.(jpe?g|png|webp|gif)(\?|$)/i;
-const HEIC_RE = /\.(heic|heif)(\?|$)/i;
-const PDF_RE = /\.pdf(\?|$)/i;
+const IMAGE_RE = /\.(jpe?g|png|webp|gif)(\?|#|$)/i;
+const HEIC_RE = /\.(heic|heif)(\?|#|$)/i;
+const PDF_RE = /\.pdf(\?|#|$)/i;
+const VIDEO_RE = /\.(mp4|mov|webm|m4v)(\?|#|$)/i;
 
 export type RecapFileKind = "image" | "heic" | "pdf" | "video" | "other";
 
@@ -31,9 +32,52 @@ export const recapFileKind = (path: string | null | undefined): RecapFileKind =>
   if (IMAGE_RE.test(path)) return "image";
   if (HEIC_RE.test(path)) return "heic";
   if (PDF_RE.test(path)) return "pdf";
-  if (/\.(mp4|mov|webm)$/i.test(path)) return "video";
+  if (VIDEO_RE.test(path)) return "video";
   return "other";
 };
+
+/**
+ * How a custom-recap evidence file should render in a gallery.
+ *
+ * Walk-up uploads stamp every file as FileType "image" (the first row),
+ * including Kalshi Activation Photos videos. Category names like
+ * "Activation Photos" also look image-like. The stored path wins: a
+ * .mov/.mp4 must not go in <img>, or the card shows the broken-image
+ * icon plus the alt text.
+ */
+export function recapGallerySlot(file: {
+  url?: string | null;
+  displayUrl?: string | null;
+  fileTypeName?: string | null;
+  categoryName?: string | null;
+}): "image" | "video" | "pdf" | "file" {
+  const paths = [file.url, file.displayUrl];
+  if (paths.some((path) => recapFileKind(path) === "video")) return "video";
+  if (paths.some((path) => recapFileKind(path) === "pdf")) return "pdf";
+  const typeName = (file.fileTypeName ?? "").toLowerCase();
+  if (typeName === "pdf") return "pdf";
+  const url = (file.displayUrl || file.url || "").toLowerCase();
+  if (
+    typeName === "image" ||
+    typeName === "img" ||
+    typeName === "photo" ||
+    recapFileKind(url) === "image" ||
+    recapFileKind(url) === "heic"
+  ) {
+    return "image";
+  }
+  const category = (file.categoryName ?? "").toLowerCase();
+  if (
+    Boolean(url) &&
+    (category.includes("photo") ||
+      category.includes("sampling") ||
+      category.includes("picture") ||
+      category.includes("table"))
+  ) {
+    return "image";
+  }
+  return "file";
+}
 
 export const recapFileUrl = (path: string | null | undefined): string => {
   if (!path) return "";
