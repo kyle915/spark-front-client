@@ -270,6 +270,45 @@ export async function enqueueRecap(
 
 export type RecapFlushResult = "none" | "flushed" | "retry" | "already";
 
+const UPLOAD_NAME_EXT = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "heic",
+  "heif",
+  "webp",
+  "gif",
+  "avif",
+  "mp4",
+  "mov",
+  "m4v",
+  "webm",
+  "3gp",
+]);
+
+function checkinUploadFilename(name: string, contentType: string): string {
+  const clean = name.split("?")[0]?.split("#")[0] ?? "";
+  const dot = clean.lastIndexOf(".");
+  const ext = dot >= 0 ? clean.slice(dot + 1).toLowerCase() : "";
+  if (UPLOAD_NAME_EXT.has(ext)) return clean || "photo.jpg";
+  const suffix =
+    contentType === "image/png"
+      ? "png"
+      : contentType === "image/heic"
+        ? "heic"
+        : contentType === "image/heif"
+          ? "heif"
+          : contentType === "image/webp"
+            ? "webp"
+            : contentType === "video/webm"
+              ? "webm"
+              : contentType.startsWith("video/")
+                ? "mp4"
+                : "jpg";
+  const base = (clean.replace(/\.[^.]+$/, "") || "photo").replace(/\.+$/, "") || "photo";
+  return `${base}.${suffix}`;
+}
+
 /**
  * Mint a signed URL and PUT the file. Fresh URL each attempt so an expired
  * signature is not a dead end. Network / gateway failures retry; 4xx other
@@ -283,11 +322,18 @@ export async function putCheckinPhoto(args: {
   fetchImpl?: typeof fetch;
 }): Promise<{ blobName: string }> {
   const fetchImpl = args.fetchImpl ?? fetch;
-  const filename = args.file.name || "photo.jpg";
   const contentType = browserPlayableContentType({
     type: args.file.type,
-    name: args.file.name || filename,
+    name: args.file.name || "photo.jpg",
   });
+  const filename = checkinUploadFilename(args.file.name || "photo.jpg", contentType);
+  // Stamp the blob type to the signed type. Chrome on Android will PUT the
+  // File's own type and ignore a mismatched Content-Type header, which 403s
+  // a v4 signature (the .mov → video/mp4 rewrite hit this).
+  const body =
+    args.file.type === contentType && args.file.name === filename
+      ? args.file
+      : new File([args.file], filename, { type: contentType });
   let lastError: unknown = new Error("upload failed");
 
   for (let attempt = 0; attempt < PHOTO_PUT_ATTEMPTS; attempt++) {
@@ -320,7 +366,7 @@ export async function putCheckinPhoto(args: {
       const put = await fetchImpl(meta.uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": contentType },
-        body: args.file,
+        body,
       });
       if (put.ok) return { blobName: meta.blobName };
       if (put.status === 401 || put.status === 403 || isOfflineClockFailure({ status: put.status })) {

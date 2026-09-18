@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, ty
 import { useParams } from "react-router";
 import { bucketCountHint } from "./photoBuckets";
 import { PHOTO_CAP } from "./photoCap";
-import { isHeicUpload } from "./heicUpload";
+import { isHeicUpload, coerceHeicFile } from "./heicUpload";
 import {
   engagementsFromSamplesGiven,
   templateHasConsumersSampledField,
@@ -338,9 +338,10 @@ let heicPrepChain: Promise<void> = Promise.resolve();
 
 /** HEIC→JPEG + field downscale (see FIELD_PHOTO_PREP). Videos pass through. */
 async function compressImage(file: File): Promise<File> {
-  if (file.type.startsWith("video/")) return file;
-  if (!isHeicUpload(file)) {
-    return prepareImageForUpload(file, FIELD_PHOTO_PREP);
+  if (file.type.startsWith("video/") && !isHeicUpload(file)) return file;
+  const coerced = await coerceHeicFile(file);
+  if (!isHeicUpload(coerced)) {
+    return prepareImageForUpload(coerced, FIELD_PHOTO_PREP);
   }
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {
@@ -350,7 +351,7 @@ async function compressImage(file: File): Promise<File> {
   heicPrepChain = prev.then(() => gate);
   await prev;
   try {
-    return await prepareImageForUpload(file, FIELD_PHOTO_PREP);
+    return await prepareImageForUpload(coerced, FIELD_PHOTO_PREP);
   } finally {
     release();
   }
@@ -3103,7 +3104,15 @@ function RecapForm({
         apiOrigin: apiOrigin(),
       });
       setPhotos((p) =>
-        p.map((ph) => (ph.id === id ? { ...ph, blobName, state: "done" } : ph)),
+        p.map((ph) => {
+          if (ph.id !== id) return ph;
+          let previewUrl = ph.previewUrl;
+          if (file !== original && file.type.startsWith("image/")) {
+            previewUrl = URL.createObjectURL(file);
+            URL.revokeObjectURL(ph.previewUrl);
+          }
+          return { ...ph, file, blobName, previewUrl, state: "done" };
+        }),
       );
     } catch {
       setPhotos((p) => p.map((ph) => (ph.id === id ? { ...ph, state: "failed" } : ph)));

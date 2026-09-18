@@ -163,6 +163,30 @@ describe("recap video playback urls", () => {
     ).toBe("image/jpeg");
   });
 
+  it("does not send Android octet-stream, which upload-url rejects", () => {
+    expect(
+      browserPlayableContentType({
+        type: "application/octet-stream",
+        name: "IMG_1234.jpg",
+      }),
+    ).toBe("image/jpeg");
+    expect(
+      browserPlayableContentType({
+        type: "application/octet-stream",
+        name: "table.HEIC",
+      }),
+    ).toBe("image/heic");
+    expect(
+      browserPlayableContentType({
+        type: "image/heic-sequence",
+        name: "burst.heic",
+      }),
+    ).toBe("image/heic");
+    expect(
+      browserPlayableContentType({ type: "", name: "shot.png" }),
+    ).toBe("image/png");
+  });
+
   it("points play at the inline media endpoint, not a download link", () => {
     const out = recapVideoPlayUrl(
       "https://storage.googleapis.com/sparkio-production/checkin/Activation%20Photos.mov",

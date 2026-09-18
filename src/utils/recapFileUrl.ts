@@ -100,25 +100,96 @@ export const recapVideoMime = (path: string | null | undefined): string => {
 };
 
 /**
- * Content-Type to send on upload. QuickTime .mov is stored as video/mp4
- * so the bucket object itself is a type Chrome will play. The signed PUT
- * must use this same type.
+ * Types the check-in upload-url endpoint already signs. Anything else
+ * comes back 400 ("Only photo and video uploads are allowed") and the
+ * walk-up tile goes FAILED. Keep this list in sync with
+ * `_ALLOWED_UPLOAD_TYPES` — do not send a type the live API will reject.
+ */
+const CHECKIN_UPLOAD_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/heic",
+  "image/heif",
+  "image/webp",
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "video/x-m4v",
+  "video/mpeg",
+]);
+
+const UPLOAD_TYPE_ALIAS: Record<string, string> = {
+  "image/jpg": "image/jpeg",
+  "image/pjpeg": "image/jpeg",
+  "image/x-png": "image/png",
+  "image/heic-sequence": "image/heic",
+  "image/heif-sequence": "image/heif",
+  "video/quicktime": "video/mp4",
+  "video/x-m4v": "video/mp4",
+  "video/3gpp": "video/mp4",
+  "video/3gpp2": "video/mp4",
+};
+
+const UPLOAD_EXT_TYPE: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  heic: "image/heic",
+  heif: "image/heif",
+  heics: "image/heic",
+  heifs: "image/heif",
+  mp4: "video/mp4",
+  m4v: "video/mp4",
+  mov: "video/mp4",
+  webm: "video/webm",
+  "3gp": "video/mp4",
+};
+
+function uploadExtension(name: string): string {
+  const clean = name.split("?")[0]?.split("#")[0] ?? "";
+  const dot = clean.lastIndexOf(".");
+  if (dot < 0 || dot === clean.length - 1) return "";
+  return clean.slice(dot + 1).toLowerCase();
+}
+
+/**
+ * Content-Type to send on upload. Must be exactly what the signed PUT
+ * will require.
+ *
+ * QuickTime `.mov` is stored as video/mp4 so Chrome can play H.264 clips.
+ * Android gallery picks often arrive as `application/octet-stream` (or
+ * `image/heic-sequence`) even when the bytes are a photo — sending that
+ * raw type makes upload-url 400 and the tile shows FAILED.
  */
 export const browserPlayableContentType = (file: {
   type?: string;
   name?: string;
 }): string => {
-  const type = (file.type || "").toLowerCase();
-  const name = (file.name || "").toLowerCase();
+  const raw = (file.type || "").split(";")[0]?.trim().toLowerCase() ?? "";
+  const extension = uploadExtension(file.name || "");
   if (
-    type === "video/quicktime" ||
-    type === "video/x-m4v" ||
-    name.endsWith(".mov") ||
-    name.endsWith(".m4v")
+    raw === "video/quicktime" ||
+    raw === "video/x-m4v" ||
+    extension === "mov" ||
+    extension === "m4v"
   ) {
     return "video/mp4";
   }
-  return file.type || "image/jpeg";
+  const aliased = UPLOAD_TYPE_ALIAS[raw] || raw;
+  if (
+    aliased &&
+    aliased !== "application/octet-stream" &&
+    aliased !== "binary/octet-stream" &&
+    CHECKIN_UPLOAD_TYPES.has(aliased)
+  ) {
+    return aliased === "image/jpg" ? "image/jpeg" : aliased;
+  }
+  const fromName = UPLOAD_EXT_TYPE[extension];
+  if (fromName && CHECKIN_UPLOAD_TYPES.has(fromName)) return fromName;
+  if (raw.startsWith("video/")) return "video/mp4";
+  return "image/jpeg";
 };
 
 export const recapFileUrl = (path: string | null | undefined): string => {
