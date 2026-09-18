@@ -75,11 +75,12 @@ import {
   FolderOpen,
   FileText,
   Trash2,
+  Video,
   X as XIcon,
 } from "lucide-react";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import { useAlertStore } from "@/store/alertStore";
-import { recapDisplayUrl, recapFileUrl } from "@/utils/recapFileUrl";
+import { recapDisplayUrl, recapFileUrl, recapGallerySlot } from "@/utils/recapFileUrl";
 import { useRecapPageCrumb } from "@/layout/pageCrumb";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import RecapStickyOpsBar from "@/recap/RecapStickyOpsBar";
@@ -423,6 +424,33 @@ const ProductSamplesEditor = ({
     </>
   );
 };
+
+function RecapVideoThumb({ src }: { src: string }) {
+  const [broken, setBroken] = useState(false);
+  if (!src || broken) {
+    return (
+      <div
+        className="flex h-full w-full flex-col items-center justify-center gap-1"
+        style={{ color: "var(--spark-lime)" }}
+      >
+        <Video className="h-8 w-8" />
+        <span className="text-[10px] font-black uppercase tracking-wider">
+          Video
+        </span>
+      </div>
+    );
+  }
+  return (
+    <video
+      src={src}
+      muted
+      playsInline
+      preload="metadata"
+      className="pointer-events-none h-full w-full object-cover"
+      onError={() => setBroken(true)}
+    />
+  );
+}
 
 const RecapCustomViewInner = ({
   refreshKey,
@@ -1122,45 +1150,47 @@ const RecapCustomViewInner = ({
     });
   }, [recap?.id, commitDelete, showAlert, navigate, backToListUrl]);
 
-  const isPdfFile = useCallback((file: (typeof recapFiles)[number]) => {
-    const typeName = file.fileType?.name?.toLowerCase() ?? "";
-    const url = file.url?.toLowerCase() ?? "";
-    const cleanUrl = url.split("?")[0]?.split("#")[0] ?? "";
-    return typeName === "pdf" || cleanUrl.endsWith(".pdf");
-  }, []);
+  const gallerySlot = useCallback(
+    (file: (typeof recapFiles)[number]) =>
+      recapGallerySlot({
+        url: file.url,
+        displayUrl: file.displayUrl,
+        fileTypeName: file.fileType?.name,
+        categoryName: file.fileRecapCategory?.name,
+      }),
+    [],
+  );
+
+  const isPdfFile = useCallback(
+    (file: (typeof recapFiles)[number]) => gallerySlot(file) === "pdf",
+    [gallerySlot],
+  );
+
+  const isVideoFile = useCallback(
+    (file: (typeof recapFiles)[number]) => gallerySlot(file) === "video",
+    [gallerySlot],
+  );
 
   // Prefer the backend `displayUrl` everywhere: for HEIC uploads it's the
   // server-converted .jpg sibling, so the gallery renders a plain <img>
   // with no in-browser HEIC decode / bucket-CORS dependency. Falls back to
-  // `url` for older query results.
+  // `url` for older query results. Videos keep the original path — the
+  // thumb endpoint 404s them, and <img> paints the alt text.
   const displaySrc = useCallback(
     (file: (typeof recapFiles)[number]) =>
       recapDisplayUrl(file.displayUrl || file.url || ""),
     [],
   );
 
+  const videoSrc = useCallback(
+    (file: (typeof recapFiles)[number]) =>
+      recapFileUrl(file.url || file.displayUrl || ""),
+    [],
+  );
+
   const isImageFile = useCallback(
-    (file: (typeof recapFiles)[number]) => {
-      const typeName = file.fileType?.name?.toLowerCase() ?? "";
-      const url = displaySrc(file).toLowerCase();
-      const category = (file.fileRecapCategory?.name ?? "").toLowerCase();
-      if (typeName === "pdf" || url.endsWith(".pdf")) return false;
-      if (
-        typeName === "image" ||
-        typeName === "img" ||
-        typeName === "photo"
-      )
-        return true;
-      if (/\.(jpg|jpeg|png|gif|heic|heif|webp)/i.test(url)) return true;
-      return (
-        Boolean(url) &&
-        (category.includes("photo") ||
-          category.includes("sampling") ||
-          category.includes("picture") ||
-          category.includes("table"))
-      );
-    },
-    [displaySrc],
+    (file: (typeof recapFiles)[number]) => gallerySlot(file) === "image",
+    [gallerySlot],
   );
 
   const categories = useMemo(() => {
@@ -1194,6 +1224,11 @@ const RecapCustomViewInner = ({
   const flatImages = useMemo(
     () => categoriesWithImages.flatMap((category) => category.imageFiles),
     [categoriesWithImages],
+  );
+
+  const flatVideos = useMemo(
+    () => categories.flatMap((category) => category.files.filter(isVideoFile)),
+    [categories, isVideoFile],
   );
 
   const firstEmptyImageFieldId = useMemo(() => {
@@ -2474,6 +2509,7 @@ const RecapCustomViewInner = ({
                 {categories.map((category) => {
                   const files = category.files;
                   const imageCount = files.filter(isImageFile).length;
+                  const videoCount = files.filter(isVideoFile).length;
                   const pdfCount = files.filter(isPdfFile).length;
 
                   return (
@@ -2499,6 +2535,9 @@ const RecapCustomViewInner = ({
                           </span>
                           <span className="text-[11px] font-medium" style={muted}>
                             {` · ${imageCount} image${imageCount !== 1 ? "s" : ""}`}
+                            {videoCount > 0
+                              ? ` · ${videoCount} video${videoCount !== 1 ? "s" : ""}`
+                              : ""}
                             {pdfCount > 0
                               ? ` · ${pdfCount} PDF${pdfCount !== 1 ? "s" : ""}`
                               : ""}
@@ -2534,7 +2573,9 @@ const RecapCustomViewInner = ({
                         >
                           {files.map((file) => {
                             const isImage = isImageFile(file);
+                            const isVideo = isVideoFile(file);
                             const isPdf = isPdfFile(file);
+                            const playable = isVideo ? videoSrc(file) : "";
 
                             return (
                               <div
@@ -2542,13 +2583,27 @@ const RecapCustomViewInner = ({
                                 className="group flex flex-col gap-1.5 rounded-xl p-2 cursor-pointer"
                                 style={inset}
                                 onClick={() => {
+                                  if (isVideo) {
+                                    if (playable) {
+                                      window.open(
+                                        playable,
+                                        "_blank",
+                                        "noopener,noreferrer",
+                                      );
+                                    }
+                                    return;
+                                  }
                                   if (isImage) {
                                     const idx = flatImages.findIndex(
                                       (img) => img.id === file.id,
                                     );
                                     if (idx >= 0) setPreviewIndex(idx);
                                   } else {
-                                    window.open(file.url || "#", "_blank");
+                                    window.open(
+                                      recapFileUrl(file.url || "") || "#",
+                                      "_blank",
+                                      "noopener,noreferrer",
+                                    );
                                   }
                                 }}
                               >
@@ -2591,7 +2646,9 @@ const RecapCustomViewInner = ({
                                     )}
                                   </button>
                                   )}
-                                  {isImage ? (
+                                  {isVideo ? (
+                                    <RecapVideoThumb src={playable} />
+                                  ) : isImage ? (
                                       <img
                                         src={
                                           thumbUrl(displaySrc(file), 400) ||
@@ -2639,7 +2696,7 @@ const RecapCustomViewInner = ({
                                         color: "#0a0d09",
                                       }}
                                     >
-                                      {isImage ? "View" : "Open"}
+                                      {isVideo ? "Play" : isImage ? "View" : "Open"}
                                     </span>
                                   </div>
                                 </div>
@@ -2919,34 +2976,58 @@ const RecapCustomViewInner = ({
               className="mono text-[10px] mb-4"
               style={{ letterSpacing: "0.18em", color: "var(--recap-muted, #5c6154)" }}
             >
-              PHOTOS · {flatImages.length}
+              PHOTOS · {flatImages.length + flatVideos.length}
             </p>
-            {flatImages.length > 0 ? (
+            {flatImages.length + flatVideos.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {flatImages.map((file, idx) => {
-                  const src = displaySrc(file);
-                  return (
-                    <button
-                      key={file.id}
-                      type="button"
-                      onClick={() => setPreviewIndex(idx)}
-                      className="block overflow-hidden rounded-xl text-left"
-                      style={{ border: "1px solid var(--spark-border)" }}
-                    >
-                      <img
-                        src={thumbUrl(src, 400) || src}
-                        alt={file.name || "Recap photo"}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-40 object-cover"
-                        onError={(event) => {
-                          const img = event.currentTarget;
-                          if (src && img.src !== src) img.src = src;
+                {categories
+                  .flatMap((category) => category.files)
+                  .filter((file) => isImageFile(file) || isVideoFile(file))
+                  .map((file) => {
+                    if (isVideoFile(file)) {
+                      const src = videoSrc(file);
+                      return (
+                        <button
+                          key={file.id}
+                          type="button"
+                          onClick={() => {
+                            if (src) {
+                              window.open(src, "_blank", "noopener,noreferrer");
+                            }
+                          }}
+                          className="relative block h-40 overflow-hidden rounded-xl text-left"
+                          style={{ border: "1px solid var(--spark-border)" }}
+                        >
+                          <RecapVideoThumb src={src} />
+                        </button>
+                      );
+                    }
+                    const src = displaySrc(file);
+                    const idx = flatImages.findIndex((img) => img.id === file.id);
+                    return (
+                      <button
+                        key={file.id}
+                        type="button"
+                        onClick={() => {
+                          if (idx >= 0) setPreviewIndex(idx);
                         }}
-                      />
-                    </button>
-                  );
-                })}
+                        className="block overflow-hidden rounded-xl text-left"
+                        style={{ border: "1px solid var(--spark-border)" }}
+                      >
+                        <img
+                          src={thumbUrl(src, 400) || src}
+                          alt={file.name || "Recap photo"}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-40 object-cover"
+                          onError={(event) => {
+                            const img = event.currentTarget;
+                            if (src && img.src !== src) img.src = src;
+                          }}
+                        />
+                      </button>
+                    );
+                  })}
               </div>
             ) : (
               <p className="text-sm" style={muted}>

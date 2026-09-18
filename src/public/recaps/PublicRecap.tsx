@@ -10,6 +10,7 @@ import { RecapShareFieldSections } from "@/recap/RecapFieldRows";
 import PublicDeadLink from "@/public/PublicDeadLink";
 import { PhotoLightbox } from "@/shared/PhotoLightbox";
 import { thumbUrl } from "@/utils/thumb";
+import { recapFileKind } from "@/utils/recapFileUrl";
 import type { CssVariablesMap } from "@/utils/tenantThemeConfig";
 
 /**
@@ -264,7 +265,9 @@ const PublicRecap: React.FC = () => {
     .filter(Boolean)
     .join(" · ");
   const kpis = (recap.kpis ?? []).filter((k) => k.value != null);
-  const photos = recap.photos ?? [];
+  const allPhotos = recap.photos ?? [];
+  const photos = allPhotos.filter((p) => recapFileKind(p.url) !== "video");
+  const videos = allPhotos.filter((p) => recapFileKind(p.url) === "video");
   const hero = photos[0];
   const restPhotos = photos.slice(1);
   const lightboxPhotos = photos.map((p) => ({
@@ -372,6 +375,40 @@ const PublicRecap: React.FC = () => {
               >
                 {photos.length} PHOTO{photos.length === 1 ? "" : "S"} · TAP TO ENLARGE
               </p>
+            </section>
+          ) : null}
+
+          {videos.length > 0 ? (
+            <section aria-label="Recap videos" className="space-y-2">
+              <p
+                className="mono text-[10px]"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "var(--recap-muted, #5c6154)",
+                }}
+              >
+                {videos.length} VIDEO{videos.length === 1 ? "" : "S"}
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                {videos.map((p) => (
+                  <a
+                    key={p.url}
+                    href={p.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex h-36 items-center justify-center rounded-xl"
+                    style={{
+                      border: "1px solid var(--recap-border, #e2e4d8)",
+                      color: "var(--recap-brand, #3f5c12)",
+                      fontWeight: 800,
+                      letterSpacing: "0.12em",
+                      fontSize: 12,
+                    }}
+                  >
+                    PLAY VIDEO
+                  </a>
+                ))}
+              </div>
             </section>
           ) : null}
 
