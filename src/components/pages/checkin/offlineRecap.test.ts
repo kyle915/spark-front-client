@@ -393,6 +393,47 @@ describe("putCheckinPhoto", () => {
     expect(putType).toBe("video/mp4");
   });
 
+  it("signs Android octet-stream JPEGs as image/jpeg so upload-url accepts them", async () => {
+    let signedType = "";
+    let filename = "";
+    let putType = "";
+    let bodyType = "";
+    await putCheckinPhoto({
+      code: "TH-1",
+      token: "tok",
+      file: new File([new Uint8Array([0xff, 0xd8])], "IMG_1.jpg", {
+        type: "application/octet-stream",
+      }),
+      apiOrigin: "https://api.example",
+      fetchImpl: async (input, init) => {
+        const url = String(input);
+        const headers = new Headers(init?.headers);
+        if (url.includes("/upload-url")) {
+          const parsed = JSON.parse(String(init?.body)) as {
+            contentType: string;
+            filename: string;
+          };
+          signedType = parsed.contentType;
+          filename = parsed.filename;
+          return new Response(
+            JSON.stringify({
+              uploadUrl: "https://signed.example/put",
+              blobName: "checkin/IMG_1.jpg",
+            }),
+            { status: 200 },
+          );
+        }
+        putType = headers.get("Content-Type") || "";
+        bodyType = init?.body instanceof Blob ? init.body.type : "";
+        return new Response(null, { status: 200 });
+      },
+    });
+    expect(signedType).toBe("image/jpeg");
+    expect(filename).toBe("IMG_1.jpg");
+    expect(putType).toBe("image/jpeg");
+    expect(bodyType).toBe("image/jpeg");
+  });
+
   it("retries the PUT after a gateway failure, with a new signed URL", async () => {
     let puts = 0;
     const blobName = await putCheckinPhoto({
