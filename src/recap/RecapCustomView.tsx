@@ -40,6 +40,12 @@ import {
   parseDropOffLocations,
   productSamplesFromDropOffs,
 } from "./dropOffLocations";
+import { SpendAmountInput } from "./SpendAmountInput";
+import {
+  isSpendAmountField,
+  spendAmountStored,
+  spendAmountSubmitError,
+} from "./spendAmount";
 import { useAuthStore } from "@/store/authStore";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router";
@@ -756,9 +762,30 @@ const RecapCustomViewInner = ({
     const allFields = customFieldsBySection.flatMap(
       (section) => section.fields,
     );
+    const spendValues = { ...editedValues };
+    for (const field of allFields) {
+      if (
+        !field ||
+        !isSpendAmountField({
+          name: field.name,
+          type: field.customFieldType?.name,
+        })
+      ) {
+        continue;
+      }
+      const fieldId = String(field.id);
+      const raw = spendValues[fieldId] ?? field.value ?? "";
+      const spendErr = spendAmountSubmitError(raw, field.value);
+      if (spendErr) {
+        showAlert(`${field.name}: ${spendErr}`, "warning");
+        return;
+      }
+      const stored = spendAmountStored(raw);
+      if (stored != null) spendValues[fieldId] = stored;
+    }
     const customFieldValues = buildCustomFieldValuesPayload(
       allFields,
-      editedValues,
+      spendValues,
     );
 
     // Ambassador to persist: prefer the picked / inline-created BA's id;
@@ -2091,6 +2118,23 @@ const RecapCustomViewInner = ({
                             return (
                               <RecapFieldRow key={field.id} label={field.name}>
                                 {isEditingValues ? (
+                                  isSpendAmountField({
+                                    name: field.name,
+                                    type: field.customFieldType?.name,
+                                  }) ? (
+                                    <SpendAmountInput
+                                      value={editedValues[fieldId] ?? ""}
+                                      onChange={(v) =>
+                                        setEditedValues((prev) => ({
+                                          ...prev,
+                                          [fieldId]: v,
+                                        }))
+                                      }
+                                      inputClassName="spark-input w-28 text-right text-sm"
+                                      ariaLabel={field.name ?? "Spend amount"}
+                                      hint={false}
+                                    />
+                                  ) : (
                                   <input
                                     type="text"
                                     value={editedValues[fieldId] ?? ""}
@@ -2102,6 +2146,7 @@ const RecapCustomViewInner = ({
                                     }
                                     className="spark-input w-28 text-right text-sm"
                                   />
+                                  )
                                 ) : (
                                   field.value || "—"
                                 )}

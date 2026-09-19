@@ -49,6 +49,12 @@ import {
   productSamplesFromDropOffs,
   validateDropOffLocationsValue,
 } from "./dropOffLocations";
+import { SpendAmountInput } from "./SpendAmountInput";
+import {
+  isSpendAmountField,
+  spendAmountError,
+  spendAmountStored,
+} from "./spendAmount";
 
 type PendingRecapFile = { blob: string; categoryName: string };
 
@@ -440,6 +446,21 @@ export default function SparkRecapCreate() {
       showAlert("Pick the recap template.", "warning");
       return;
     }
+    const nextFieldValues = { ...fieldValues };
+    for (const f of selectedTemplate.customField ?? []) {
+      if (!f || fieldKind(f) === "image") continue;
+      if (!isSpendAmountField({ name: f.name, type: f.customFieldType?.name })) {
+        continue;
+      }
+      const raw = nextFieldValues[String(f.id)] ?? "";
+      const spendErr = spendAmountError(raw);
+      if (spendErr) {
+        showAlert(`${f.name}: ${spendErr}`, "warning");
+        return;
+      }
+      const stored = spendAmountStored(raw);
+      if (stored != null) nextFieldValues[String(f.id)] = stored;
+    }
     // One CustomFieldValue per non-empty field. We deliberately don't
     // send blank fields — the detail view renders every template field
     // anyway (it iterates the template, not just stored values), so an
@@ -451,7 +472,7 @@ export default function SparkRecapCreate() {
       .filter((f) => fieldKind(f) !== "image")
       .map((f) => ({
         customFieldId: String(f.id),
-        value: (fieldValues[String(f.id)] ?? "").trim(),
+        value: (nextFieldValues[String(f.id)] ?? "").trim(),
       }))
       .filter((v) => v.value !== "");
 
@@ -598,6 +619,12 @@ export default function SparkRecapCreate() {
       showAlert("Pick the event this recap is for.", "warning");
       return;
     }
+    const spendErr = spendAmountError(accountSpend);
+    if (spendErr) {
+      showAlert(`Account Spend: ${spendErr}`, "warning");
+      return;
+    }
+    const storedSpend = spendAmountStored(accountSpend);
     const files = pendingFiles.map(({ blob, categoryName }) => ({
       file: blob,
       fileTypeId: "1",
@@ -626,7 +653,7 @@ export default function SparkRecapCreate() {
           totalCansSold: num(totalCansSold),
           totalPacksSold: num(totalPacksSold),
           productsSold: num(productsSold),
-          accountSpendAmount: num(accountSpend),
+          accountSpendAmount: storedSpend == null ? null : Number(storedSpend),
           trafficDescription: trafficDescription || null,
           competitivePresence: competitivePresence || null,
           consumerEngagements: {
@@ -1089,7 +1116,12 @@ export default function SparkRecapCreate() {
                 />
               </Field>
               <Field label="Account Spend ($)">
-                <input value={accountSpend} onChange={(e) => setAccountSpend(e.target.value)} className={inputCls} inputMode="decimal" placeholder="0.00" />
+                <SpendAmountInput
+                  value={accountSpend}
+                  onChange={setAccountSpend}
+                  inputClassName={inputCls}
+                  ariaLabel="Account Spend"
+                />
               </Field>
             </div>
             <p
@@ -1494,6 +1526,21 @@ const CustomTemplateFields: React.FC<{
                       </div>
                     </Field>
                   </div>
+                );
+              }
+              if (isSpendAmountField({
+                name: f.name,
+                type: f.customFieldType?.name,
+              })) {
+                return (
+                  <Field key={id} label={label}>
+                    <SpendAmountInput
+                      value={values[id] ?? ""}
+                      onChange={(v) => onChange(id, v)}
+                      inputClassName={inputCls}
+                      ariaLabel={f.name ?? "Spend amount"}
+                    />
+                  </Field>
                 );
               }
               return (
