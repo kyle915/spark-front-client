@@ -53,6 +53,11 @@ import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import { RecapVideoPlayer } from "@/shared/RecapVideoPlayer";
 import RecapStickyOpsBar from "@/recap/RecapStickyOpsBar";
 import { parseLocaleNumber } from "@/utils";
+import { SpendAmountInput } from "@/recap/SpendAmountInput";
+import {
+  spendAmountStored,
+  spendAmountSubmitError,
+} from "@/recap/spendAmount";
 import { useAlertStore } from "@/store/alertStore";
 import RecapUploader from "./RecapUploader";
 import { FileRecapCategoriesQuery } from "@/api/queries/FileRecapCategoriesQuery";
@@ -672,6 +677,15 @@ const SparkRecapInner: React.FC<{
 
   const saveNumbers = () => {
     if (isUpdating) return;
+    const spendErr = spendAmountSubmitError(
+      draft.accountSpendAmount,
+      recap.accountSpendAmount != null ? String(recap.accountSpendAmount) : "",
+    );
+    if (spendErr) {
+      showAlert(`Account spend: ${spendErr}`, "warning");
+      return;
+    }
+    const storedSpend = spendAmountStored(draft.accountSpendAmount);
     // Faithfully reconstruct the full file list so the reconcile keeps
     // every attached photo/receipt. Skip files with no blob (defensive).
     const files = allFiles
@@ -726,7 +740,11 @@ const SparkRecapInner: React.FC<{
               (r): r is { productId: string; quantity: number } =>
                 Boolean(r.productId) && r.quantity != null,
             ),
-          accountSpendAmount: numOrNull(draft.accountSpendAmount),
+          accountSpendAmount: storedSpend != null
+            ? Number(storedSpend)
+            : (draft.accountSpendAmount ?? "").trim()
+              ? numOrNull(draft.accountSpendAmount ?? "")
+              : null,
           // Preserve totalEarnings; the editor doesn't touch it.
           totalEarnings: recap.totalEarnings ?? null,
           // Recap-level scalars now editable. Empty string clears.
@@ -1371,6 +1389,20 @@ const SparkRecapInner: React.FC<{
                 >
                   {f.label.toUpperCase()}
                 </label>
+                {f.key === "accountSpendAmount" ? (
+                  <SpendAmountInput
+                    value={draft.accountSpendAmount ?? ""}
+                    onChange={(v) => handleNumberChange(f.key, v)}
+                    inputClassName="w-full rounded-lg px-3 py-2 text-[15px]"
+                    inputStyle={{
+                      background: "var(--spark-bg)",
+                      border: "1px solid var(--spark-border)",
+                      color: "var(--spark-text)",
+                    }}
+                    ariaLabel={f.label}
+                    hint={false}
+                  />
+                ) : (
                 <input
                   type="number"
                   inputMode="decimal"
@@ -1388,6 +1420,7 @@ const SparkRecapInner: React.FC<{
                     color: "var(--spark-text)",
                   }}
                 />
+                )}
               </div>
             ))}
           </div>

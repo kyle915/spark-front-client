@@ -23,6 +23,12 @@ import {
   productSampleQtyUnit,
   productSamplesFromSelections,
 } from "@/recap/productsSampledQty";
+import { SpendAmountInput } from "@/recap/SpendAmountInput";
+import {
+  isSpendAmountField,
+  spendAmountError,
+  spendAmountStored,
+} from "@/recap/spendAmount";
 import {
   FIELD_PHOTO_PREP,
   prepareImageForUpload,
@@ -3198,6 +3204,19 @@ function RecapForm({
         if (empty) return setErr(`Please fill in "${f.name}".`);
       }
     }
+    // Dollar spend fields: 2489 (no period) is rejected, not treated as
+    // two thousand. 24.89 / 24.8 / 2489.00 store as a numeric dollar string.
+    for (const s of template?.sections ?? []) {
+      for (const f of s.fields) {
+        if (isPhotoType(f.type) || !isSpendAmountField(f)) continue;
+        const v = valuesForSubmit[f.id];
+        const raw = Array.isArray(v) ? "" : String(v ?? "");
+        const spendErr = spendAmountError(raw);
+        if (spendErr) return setErr(`${f.name}: ${spendErr}`);
+        const stored = spendAmountStored(raw);
+        if (stored != null) valuesForSubmit[f.id] = stored;
+      }
+    }
     const donePhotos = photos.filter((p) => p.state === "done" && p.blobName);
     // Only block on uploads genuinely in flight, and say how many. Photos that
     // FAILED must never block: a BA standing in a parking lot on one bar has
@@ -3941,6 +3960,22 @@ function FieldInput({
   const isLong = field.type.includes("long") || field.type.includes("area") || field.type.includes("paragraph");
   const isNumber = field.type.includes("number") || field.type.includes("int") || field.type.includes("decimal");
   const example = (field.placeholder || "").trim();
+  if (!isLong && isSpendAmountField(field)) {
+    return (
+      <div>
+        <label style={label}>
+          {field.name}
+          {req}
+        </label>
+        <SpendAmountInput
+          value={typeof value === "string" ? value : ""}
+          onChange={(v) => onChange(v)}
+          inputStyle={input}
+          ariaLabel={field.name}
+        />
+      </div>
+    );
+  }
   return (
     <div>
       <label style={label}>
