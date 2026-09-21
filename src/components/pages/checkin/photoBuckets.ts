@@ -38,3 +38,13 @@ export function bucketCountHint(
   // never the positive treatment — there's no target to have reached.
   return done > 0 ? { text: String(done), met: false } : null;
 }
+
+/**
+ * Photo buckets that hold spend proof (receipts, expenses, Product Spend).
+ * The Corporate Card Used question sits immediately above the first match.
+ */
+export function isExpenseReceiptBucket(name: string | null | undefined): boolean {
+  const n = (name ?? "").trim().toLowerCase();
+  if (!n) return false;
+  return n.includes("receipt") || n.includes("expense") || n.includes("product spend");
+}

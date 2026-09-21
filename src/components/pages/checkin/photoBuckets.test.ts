@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { bucketCountHint } from "./photoBuckets";
+import { bucketCountHint, isExpenseReceiptBucket } from "./photoBuckets";
 
 /**
  * Liquid Death's "Consumer Sampling Pictures" bucket carries min 8 on both
@@ -61,5 +61,15 @@ describe("bucketCountHint — buckets with no target", () => {
     // No target means there is nothing to have reached, so `met` stays false
     // and the chip keeps the same muted styling as an unmet suggestion.
     expect(bucketCountHint(3, 0)).toEqual({ text: "3", met: false });
+  });
+});
+
+describe("isExpenseReceiptBucket", () => {
+  it("matches receipt, expense, and product spend buckets", () => {
+    expect(isExpenseReceiptBucket("Expenses/Receipts")).toBe(true);
+    expect(isExpenseReceiptBucket("Product Receipt")).toBe(true);
+    expect(isExpenseReceiptBucket("Product Spend")).toBe(true);
+    expect(isExpenseReceiptBucket("Consumer Sampling Pictures")).toBe(false);
+    expect(isExpenseReceiptBucket("Table Set Up")).toBe(false);
   });
 });
