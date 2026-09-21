@@ -44,6 +44,7 @@ export type PendingRecap = {
   forceNew?: boolean;
   shiftLabel?: string;
   secondShift?: boolean;
+  usedCorpoCard?: boolean | null;
 };
 
 export type PhotoBlobStore = {
@@ -230,6 +231,7 @@ export async function enqueueRecap(
     forceNew?: boolean;
     shiftLabel?: string;
     secondShift?: boolean;
+    usedCorpoCard?: boolean | null;
     submittedAt?: string;
     nowMs?: number;
     photoFiles?: Record<string, File>;
@@ -254,6 +256,7 @@ export async function enqueueRecap(
     forceNew: args.forceNew,
     shiftLabel: args.shiftLabel,
     secondShift: args.secondShift,
+    usedCorpoCard: args.usedCorpoCard,
   };
   writePendingRecap(pending, storage);
   if (args.photoFiles) {
@@ -424,6 +427,7 @@ export async function flushPendingRecap(
       files: uploaded.map((f) => ({ blobName: f.blobName, category: f.category })),
       productSamples: pending.productSamples,
       totalEngagements: pending.totalEngagements,
+      usedCorpoCard: pending.usedCorpoCard,
       forceNew: pending.forceNew,
       ...(pending.forceNew && pending.shiftLabel
         ? { shiftLabel: pending.shiftLabel, secondShift: pending.secondShift ?? true }

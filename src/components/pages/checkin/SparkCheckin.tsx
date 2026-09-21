@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { useParams } from "react-router";
-import { bucketCountHint } from "./photoBuckets";
+import { bucketCountHint, isExpenseReceiptBucket } from "./photoBuckets";
 import { PHOTO_CAP } from "./photoCap";
 import { isHeicUpload, coerceHeicFile } from "./heicUpload";
 import {
@@ -765,6 +765,7 @@ type RecapDraft = {
   values: Record<string, string | string[]>;
   samples: Record<string, string>;
   engagements: string;
+  usedCorpoCard?: boolean | null;
 };
 
 const DRAFT_KEY = (code: string, token: string) =>
@@ -807,6 +808,7 @@ const hasRecapDraft = (code: string, token: string): boolean => {
   const d = readDraft(code, token);
   if (!d) return false;
   if ((d.engagements || "").trim()) return true;
+  if (d.usedCorpoCard === true || d.usedCorpoCard === false) return true;
   if (Object.keys(d.samples || {}).some((k) => (d.samples[k] || "").trim())) {
     return true;
   }
@@ -3017,6 +3019,13 @@ function RecapForm({
   const [engagements, setEngagements] = useState(
     () => restored.current?.engagements ?? "",
   );
+  const [usedCorpoCard, setUsedCorpoCard] = useState<boolean | null>(
+    () =>
+      restored.current?.usedCorpoCard === true ||
+      restored.current?.usedCorpoCard === false
+        ? restored.current.usedCorpoCard
+        : null,
+  );
   const [savedAt, setSavedAt] = useState<number | null>(
     () => restored.current?.savedAt ?? null,
   );
@@ -3031,11 +3040,16 @@ function RecapForm({
   // keystroke, but short enough that "momentarily idle" is already saved.
   useEffect(() => {
     const t = window.setTimeout(() => {
-      const at = writeDraft(code, token, { values, samples, engagements });
+      const at = writeDraft(code, token, {
+        values,
+        samples,
+        engagements,
+        usedCorpoCard,
+      });
       if (at) setSavedAt(at);
     }, 500);
     return () => window.clearTimeout(t);
-  }, [code, token, values, samples, engagements]);
+  }, [code, token, values, samples, engagements, usedCorpoCard]);
 
   // Mileage step → RecapForm can race: lock miles into required field values
   // whenever the itinerary claim arrives (or updates).
@@ -3217,6 +3231,9 @@ function RecapForm({
         if (stored != null) valuesForSubmit[f.id] = stored;
       }
     }
+    if (usedCorpoCard == null) {
+      return setErr("Please say whether a corporate card was used.");
+    }
     const donePhotos = photos.filter((p) => p.state === "done" && p.blobName);
     // Only block on uploads genuinely in flight, and say how many. Photos that
     // FAILED must never block: a BA standing in a parking lot on one bar has
@@ -3321,6 +3338,7 @@ function RecapForm({
         files,
         productSamples,
         totalEngagements,
+        usedCorpoCard,
         forceNew,
         shiftLabel: forceNew ? shiftLabel : undefined,
         secondShift: Boolean(forceNew && shiftLabel),
@@ -3359,6 +3377,7 @@ function RecapForm({
         files: donePhotos.map((p) => ({ blobName: p.blobName, category: p.category })),
         productSamples,
         totalEngagements,
+        usedCorpoCard,
         forceNew,
         ...(forceNew && shiftLabel
           ? { shiftLabel, secondShift: true }
@@ -3547,6 +3566,16 @@ function RecapForm({
       </div>
       ) : null}
 
+      {buckets.length === 0 ? (
+        <div style={card}>
+          <CorpoCardYesNo
+            value={usedCorpoCard}
+            accent={accent}
+            onChange={setUsedCorpoCard}
+          />
+        </div>
+      ) : null}
+
       {buckets.length > 0 ? (
         <div style={card}>
           <h2 style={h2}>Photos</h2>
@@ -3555,15 +3584,33 @@ function RecapForm({
             the client report.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 14 }}>
-            {buckets.map((b) => (
-              <PhotoBucketZone
-                key={b.id}
-                bucket={b}
-                photos={photos.filter((p) => p.category === b.id)}
-                onAdd={uploadFiles}
-                onRemove={removePhoto}
+            {buckets.length > 0 &&
+            !buckets.some((b) => isExpenseReceiptBucket(b.name)) ? (
+              <CorpoCardYesNo
+                value={usedCorpoCard}
                 accent={accent}
+                onChange={setUsedCorpoCard}
               />
+            ) : null}
+            {buckets.map((b) => (
+              <React.Fragment key={b.id}>
+                {isExpenseReceiptBucket(b.name) &&
+                buckets.find((row) => isExpenseReceiptBucket(row.name))?.id ===
+                  b.id ? (
+                  <CorpoCardYesNo
+                    value={usedCorpoCard}
+                    accent={accent}
+                    onChange={setUsedCorpoCard}
+                  />
+                ) : null}
+                <PhotoBucketZone
+                  bucket={b}
+                  photos={photos.filter((p) => p.category === b.id)}
+                  onAdd={uploadFiles}
+                  onRemove={removePhoto}
+                  accent={accent}
+                />
+              </React.Fragment>
             ))}
           </div>
         </div>
@@ -4013,6 +4060,45 @@ function FieldInput({
  * upload. What the chip says, and why it must not look like a validation
  * error, is `bucketCountHint`.
  */
+function CorpoCardYesNo({
+  value,
+  accent,
+  onChange,
+}: {
+  value: boolean | null;
+  accent: string;
+  onChange: (next: boolean) => void;
+}) {
+  const choice = (yes: boolean) => {
+    const selected = value === yes;
+    return {
+      flex: 1,
+      minHeight: 44,
+      borderRadius: 10,
+      border: selected ? `2px solid ${accent}` : "1px solid #d6d3c8",
+      background: selected ? accent : "#fff",
+      color: selected ? "#111" : "#1c1917",
+      fontWeight: 600,
+      fontSize: 15,
+    } as const;
+  };
+  return (
+    <div>
+      <label style={label}>
+        Corporate Card Used <span style={{ color: "#EF5A2A" }}>*</span>
+      </label>
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <button type="button" style={choice(true)} onClick={() => onChange(true)}>
+          Yes
+        </button>
+        <button type="button" style={choice(false)} onClick={() => onChange(false)}>
+          No
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function PhotoBucketZone({
   bucket,
   photos,
