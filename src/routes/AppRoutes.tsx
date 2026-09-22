@@ -389,6 +389,7 @@ const SparkReceipts = lazyDefault(
 const SparkWalkups = lazyDefault(
   () => import("@/components/pages/walkups/SparkWalkups"),
 );
+const FieldMarketing = lazyDefault(() => import("@/field/FieldMarketing"));
 const SparkStaffingBoard = lazyDefault(
   () => import("@/components/pages/staffing/SparkStaffingBoard"),
 );
@@ -806,6 +807,11 @@ const RequestsLinks = {
           <SparkWalkups />
         </AdminOnly>
       ),
+      isPublic: false,
+    },
+    {
+      path: "/field-marketing",
+      component: <FieldMarketing />,
       isPublic: false,
     },
     {

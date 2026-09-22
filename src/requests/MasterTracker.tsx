@@ -231,6 +231,8 @@ import InviteBAModal from "./InviteBAModal";
 import PostToBoardModal from "./PostToBoardModal";
 import DeleteRequestModal from "./DeleteRequestModal";
 import CancelDemoDialog from "./CancelDemoDialog";
+import ProgramSwitch from "@/field/ProgramSwitch";
+import { isTorchTenant } from "@/field/torch";
 import { isRecapDue } from "../lib/recapDue";
 
 type Mentionable = { id: string; name: string; email: string };
@@ -1437,7 +1439,8 @@ const ProductsPurchasedStat: React.FC<{ tenantId: string }> = ({
 
 export default function MasterTracker() {
   const navigate = useNavigate();
-  const { tenantId } = useAuthStore();
+  const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
+  const torchProgram = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
   const { isClient, isAdmin } = useSparkRole();
   const [activeStatus, setActiveStatus] = useState<string>("active");
   // "By RMM" group is on the roadmap — needs rmmAsigned info per row,
@@ -1848,6 +1851,8 @@ export default function MasterTracker() {
             </>
           }
         />
+
+        {torchProgram ? <ProgramSwitch active="retail" /> : null}
 
         <SparkFilterBar
           label="STATUS"
