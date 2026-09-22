@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { useParams } from "react-router";
 import { bucketCountHint, isExpenseReceiptBucket } from "./photoBuckets";
 import { PHOTO_CAP } from "./photoCap";
@@ -3593,7 +3593,7 @@ function RecapForm({
               />
             ) : null}
             {buckets.map((b) => (
-              <React.Fragment key={b.id}>
+              <Fragment key={b.id}>
                 {isExpenseReceiptBucket(b.name) &&
                 buckets.find((row) => isExpenseReceiptBucket(row.name))?.id ===
                   b.id ? (
@@ -3610,7 +3610,7 @@ function RecapForm({
                   onRemove={removePhoto}
                   accent={accent}
                 />
-              </React.Fragment>
+              </Fragment>
             ))}
           </div>
         </div>
@@ -4363,7 +4363,7 @@ function Shell({
   framed = false,
   brand,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   framed?: boolean;
   brand?: Context["brand"] | null;
 }) {
@@ -4442,7 +4442,7 @@ function Shell({
   );
 }
 
-const wrap: React.CSSProperties = {
+const wrap: CSSProperties = {
   minHeight: "100dvh",
   background: "#faf7f1",
   color: "#1c1917",
@@ -4452,21 +4452,21 @@ const wrap: React.CSSProperties = {
   padding: "48px 20px 56px",
   fontFamily: "system-ui, -apple-system, sans-serif",
 };
-const card: React.CSSProperties = {
+const card: CSSProperties = {
   background: "#fff",
   border: "1px solid rgba(0,0,0,0.08)",
   borderRadius: 18,
   padding: 18,
 };
-const h2: React.CSSProperties = { fontSize: 16, fontWeight: 700, margin: 0 };
-const label: React.CSSProperties = {
+const h2: CSSProperties = { fontSize: 16, fontWeight: 700, margin: 0 };
+const label: CSSProperties = {
   display: "block",
   fontSize: 13,
   fontWeight: 600,
   marginBottom: 4,
   opacity: 0.8,
 };
-const input: React.CSSProperties = {
+const input: CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
   padding: "11px 12px",
@@ -4478,8 +4478,8 @@ const input: React.CSSProperties = {
   marginTop: 8,
   outline: "none",
 };
-const errText: React.CSSProperties = { color: "#EF5A2A", fontSize: 13, marginTop: 10, marginBottom: 0 };
-const photoBadge: React.CSSProperties = {
+const errText: CSSProperties = { color: "#EF5A2A", fontSize: 13, marginTop: 10, marginBottom: 0 };
+const photoBadge: CSSProperties = {
   position: "absolute",
   inset: 0,
   display: "flex",
@@ -4488,7 +4488,7 @@ const photoBadge: React.CSSProperties = {
   fontSize: 20,
   color: "#fff",
 };
-const photoRemove: React.CSSProperties = {
+const photoRemove: CSSProperties = {
   position: "absolute",
   top: -6,
   right: -6,
@@ -4503,7 +4503,7 @@ const photoRemove: React.CSSProperties = {
   cursor: "pointer",
   padding: 0,
 };
-function primaryBtn(accent: string): React.CSSProperties {
+function primaryBtn(accent: string): CSSProperties {
   return {
     flex: 1,
     padding: "12px 16px",
@@ -4517,7 +4517,7 @@ function primaryBtn(accent: string): React.CSSProperties {
     cursor: "pointer",
   };
 }
-const secondaryBtn: React.CSSProperties = {
+const secondaryBtn: CSSProperties = {
   flex: 1,
   padding: "12px 16px",
   minHeight: 44,
