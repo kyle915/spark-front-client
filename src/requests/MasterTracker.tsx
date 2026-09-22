@@ -230,6 +230,7 @@ import BulkCloneModal from "./BulkCloneModal";
 import InviteBAModal from "./InviteBAModal";
 import PostToBoardModal from "./PostToBoardModal";
 import DeleteRequestModal from "./DeleteRequestModal";
+import CancelDemoDialog from "./CancelDemoDialog";
 import { isRecapDue } from "../lib/recapDue";
 
 type Mentionable = { id: string; name: string; email: string };
@@ -1443,6 +1444,7 @@ export default function MasterTracker() {
   // which requires extending RequestsQuery.
   const [groupBy, setGroupBy] = useState<"none" | "date">("none");
   const [search, setSearch] = useState<string>("");
+  const [cancelDemoOpen, setCancelDemoOpen] = useState(false);
   const [rmmFilter, setRmmFilter] = useState<string>("all");
   const [rmmList, setRmmList] = useState<Mentionable[]>([]);
   const [adminList, setAdminList] = useState<Mentionable[]>([]);
@@ -1828,6 +1830,9 @@ export default function MasterTracker() {
               }
             >
               Export CSV{visibleRows.length > 0 ? ` (${visibleRows.length})` : ""}
+            </SparkGhostButton>
+            <SparkGhostButton onClick={() => setCancelDemoOpen(true)}>
+              Cancel demo
             </SparkGhostButton>
             <SparkPrimaryButton
               onClick={() =>
@@ -2406,6 +2411,7 @@ export default function MasterTracker() {
           </div>
         </div>
       )}
+      <CancelDemoDialog open={cancelDemoOpen} onClose={() => setCancelDemoOpen(false)} />
     </Layout>
   );
 }

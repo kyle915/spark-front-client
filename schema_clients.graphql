@@ -3154,11 +3154,25 @@ input DeclineRequestInput {
   declineReason: String = null
 }
 
+input CancelDemoInput {
+  clientMutationId: ID = null
+  requestId: ID = null
+  lookup: String = null
+  reason: String!
+}
+
 type DeclineRequestResponse {
   success: Boolean!
   message: String!
   clientMutationId: ID
   request: Request
+}
+
+type CancelDemoResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  requestCode: String
 }
 
 input DeleteAcademyModuleInput {
@@ -5033,6 +5047,7 @@ type Mutation {
   updateRequest(input: UpdateRequestInput!): RequestDetailResponse!
   approveRequest(input: ApproveRequestInput!): ApproveRequestResponse!
   declineRequest(input: DeclineRequestInput!): DeclineRequestResponse!
+  cancelDemo(input: CancelDemoInput!): CancelDemoResponse!
   deleteRequest(input: DeleteRequestInput!): DeleteRequestResponse!
   upsertRequestReviewed(input: UpsertRequestReviewedInput!): RequestDetailResponse!
   notifyNoteMention(input: NotifyNoteMentionInput!): NotifyNoteMentionResponse!
