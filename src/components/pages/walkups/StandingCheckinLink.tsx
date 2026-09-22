@@ -39,7 +39,7 @@ const StandingCheckinLink: React.FC = () => {
   const nodes = (data?.tenants?.edges ?? [])
     .map((e) => e?.node)
     .filter((n): n is NonNullable<typeof n> => Boolean(n));
-  const node =
+  const active =
     nodes.find(
       (n) =>
         String(n.id) === String(tenantId) ||
@@ -48,82 +48,153 @@ const StandingCheckinLink: React.FC = () => {
     nodes[0] ??
     null;
 
-  const code = (node?.checkinCode ?? "").trim();
-  if (!code) return null;
+  const coded = nodes.filter((n) => (n.checkinCode ?? "").trim());
+  if (coded.length === 0) return null;
 
-  // Always client.igniteproductions.co in prod — never the tab origin.
-  // Walk-ups opened on leftover spark. tabs used to text BAs a spark. URL.
-  const url = checkinUrl(code);
+  const activeCode = (active?.checkinCode ?? "").trim();
+  const activeUrl = activeCode ? checkinUrl(activeCode) : "";
 
-  const copy = async (): Promise<void> => {
+  const copy = async (url: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(url);
       showAlert("Check-in link copied.", "success");
     } catch {
-      // Clipboard is blocked without a secure context or user gesture in
-      // some browsers. The URL is on screen and selectable, so say that
-      // instead of failing silently.
       showAlert("Couldn't copy — select the link and copy it.", "error");
     }
   };
 
   return (
-    <div className="spark-card p-4 mb-5">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="min-w-0">
-          <p
-            className="mono text-[10px] mb-1"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+    <div className="mb-5 space-y-3">
+      {activeCode ? (
+        <div className="spark-card p-4">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
+              <p
+                className="mono text-[10px] mb-1"
+                style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+              >
+                SHARE WITH YOUR BAs
+              </p>
+              <p className="text-sm font-semibold mb-1">
+                {active?.name ? `${active.name} check-in link` : "Check-in link"}
+              </p>
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
+                One link, every event. BAs clock in, add their store and date, and
+                file the recap from their phone — no event code, no app install.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => {
+                  void copy(activeUrl);
+                }}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+              >
+                Copy link
+              </button>
+              <a
+                href={activeUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                Preview
+              </a>
+            </div>
+          </div>
+          <div
+            className="mt-3 pt-3"
+            style={{ borderTop: "1px solid var(--spark-border)" }}
           >
-            SHARE WITH YOUR BAs
-          </p>
-          <p className="text-sm font-semibold mb-1">
-            {node?.name ? `${node.name} check-in link` : "Check-in link"}
-          </p>
-          <p
-            className="text-xs"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            One link, every event. BAs clock in, add their store and date, and
-            file the recap from their phone — no event code, no app install.
-          </p>
+            <CheckinQr url={activeUrl} downloadName={`${activeCode}-checkin-qr.png`} />
+            <p
+              className="mono text-xs mt-3 break-all"
+              style={{ color: "rgba(255,255,255,0.7)" }}
+            >
+              {activeUrl}
+            </p>
+          </div>
         </div>
+      ) : null}
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={copy}
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-            style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
-          >
-            Copy link
-          </button>
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-            style={{
-              background: "transparent",
-              color: "var(--spark-text)",
-              border: "1px solid var(--spark-border)",
-            }}
-          >
-            Preview
-          </a>
-        </div>
-      </div>
-
-      <div
-        className="mt-3 pt-3"
-        style={{ borderTop: "1px solid var(--spark-border)" }}
-      >
-        <CheckinQr url={url} downloadName={`${code}-checkin-qr.png`} />
+      <div className="spark-card p-4">
         <p
-          className="mono text-xs mt-3 break-all"
-          style={{ color: "rgba(255,255,255,0.7)" }}
+          className="mono text-[10px] mb-3"
+          style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
         >
-          {url}
+          STANDING CODES
         </p>
+        <ul className="flex flex-col gap-2">
+          {coded.map((tenant) => {
+            const code = (tenant.checkinCode ?? "").trim();
+            const url = checkinUrl(code);
+            const isActive =
+              String(tenant.id) === String(active?.id) ||
+              String(tenant.uuid) === String(active?.uuid);
+            const programs = tenant.checkinEventTypeNames ?? [];
+            const buckets = tenant.checkinPhotoBuckets ?? [];
+            return (
+              <li
+                key={tenant.id}
+                className="rounded-xl p-3"
+                style={{
+                  border: isActive
+                    ? "1px solid rgba(197,245,70,0.55)"
+                    : "1px solid var(--spark-border)",
+                  background: isActive ? "rgba(197,245,70,0.06)" : "transparent",
+                }}
+              >
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">
+                      {tenant.name}
+                      {isActive ? (
+                        <span
+                          className="mono text-[10px] ml-2"
+                          style={{ color: "var(--spark-lime)", letterSpacing: "0.12em" }}
+                        >
+                          ACTIVE
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="mono text-xs mt-1" style={{ color: "rgba(255,255,255,0.7)" }}>
+                      {code}
+                    </p>
+                    <p className="text-xs mt-1 break-all" style={{ color: "rgba(255,255,255,0.5)" }}>
+                      {url}
+                    </p>
+                    <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.62)" }}>
+                      {programs.length ? programs.join(" · ") : "No programs listed"}
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>
+                      {buckets.length ? buckets.join(" · ") : "No photo buckets"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void copy(url);
+                    }}
+                    className="px-3 py-2 rounded-xl text-xs font-semibold shrink-0"
+                    style={{
+                      background: "transparent",
+                      color: "var(--spark-text)",
+                      border: "1px solid var(--spark-border)",
+                    }}
+                  >
+                    Copy
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </div>
   );

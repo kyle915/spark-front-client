@@ -455,21 +455,21 @@ const GoalsList = () => {
                 />
               </div>
 
-              <div className="modal-action">
+              <div className="spark-overlay-actions">
+                <button
+                  type="submit"
+                  className="spark-overlay-action spark-overlay-action-primary"
+                  disabled={isSaving || isMutationInFlight}
+                >
+                  {isSaving ? "Saving…" : "Save changes"}
+                </button>
                 <button
                   type="button"
-                  className="btn"
+                  className="spark-overlay-action spark-overlay-action-cancel"
                   onClick={closeEditModal}
                   disabled={isSaving}
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className={`btn btn-primary ${isSaving ? "loading" : ""}`}
-                  disabled={isSaving || isMutationInFlight}
-                >
-                  {isSaving ? "Saving..." : "Save changes"}
                 </button>
               </div>
             </form>

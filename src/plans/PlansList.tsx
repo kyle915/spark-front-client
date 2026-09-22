@@ -31,6 +31,7 @@ import {
 } from "@/plans/planHealth";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
+import SparkGhostButton from "@/shared/SparkGhostButton";
 import SparkEmptyState from "@/shared/SparkEmptyState";
 import SparkFilterBar from "@/shared/SparkFilterBar";
 import "@/plans/plans.css";
@@ -125,11 +126,11 @@ const CreatePlanSheet: React.FC<{
       exit={{ opacity: 0, y: 4 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       onSubmit={submit}
-      className="plans-card space-y-4 max-w-lg w-full"
+      className="spark-card space-y-4 max-w-lg w-full"
     >
       <div>
-        <h2 className="plans-title text-xl font-semibold">New plan</h2>
-        <p className="plans-support mt-1 text-sm">
+        <h2 className="spark-title text-xl font-semibold">New plan</h2>
+        <p className="spark-support mt-1 text-sm">
           {step === 1
             ? "Name the slate leadership will review."
             : "Optional window, markets, and brief."}
@@ -185,41 +186,32 @@ const CreatePlanSheet: React.FC<{
       <div className="flex flex-wrap gap-2 pt-1">
         {step === 1 ? (
           <>
-            <button
-              type="button"
-              className="plans-btn-primary"
+            <SparkPrimaryButton
               disabled={!name.trim()}
               onClick={() => setStep(2)}
             >
               Continue
-            </button>
-            <button
-              type="button"
-              className="plans-btn-ghost"
+            </SparkPrimaryButton>
+            <SparkGhostButton
               onClick={() => {
                 reset();
                 onClose();
               }}
             >
               Cancel
-            </button>
+            </SparkGhostButton>
           </>
         ) : (
           <>
-            <button
+            <SparkPrimaryButton
               type="submit"
-              className="plans-btn-primary"
               disabled={inFlight || !name.trim()}
             >
               {inFlight ? "Creating…" : "Create plan"}
-            </button>
-            <button
-              type="button"
-              className="plans-btn-ghost"
-              onClick={() => setStep(1)}
-            >
+            </SparkPrimaryButton>
+            <SparkGhostButton onClick={() => setStep(1)}>
               Back
-            </button>
+            </SparkGhostButton>
           </>
         )}
       </div>
@@ -235,12 +227,12 @@ const PlanCard: React.FC<{ plan: PlanRow }> = ({ plan }) => {
   return (
     <Link
       to={`/plans/${plan.uuid}`}
-      className="plans-card plans-card-interactive block no-underline"
+      className="spark-card plans-card-interactive block no-underline"
       style={{ color: "inherit" }}
     >
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="min-w-0">
-          <h2 className="plans-title text-xl font-semibold truncate">
+          <h2 className="spark-title text-xl font-semibold truncate">
             {plan.name}
           </h2>
           <p className="mt-1.5 text-sm" style={{ color: "var(--plan-faint)" }}>
@@ -370,7 +362,7 @@ const PortfolioInner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
 
   return (
     <div className="space-y-6 spark-fade-in">
-      <div className="plans-card">
+      <div className="spark-card">
         <p className="text-sm mb-4" style={{ color: "var(--plan-muted)" }}>
           {plans.length} plan{plans.length === 1 ? "" : "s"} · {rollup.planned}{" "}
           request{rollup.planned === 1 ? "" : "s"} across the portfolio
@@ -448,7 +440,7 @@ const PortfolioInner: React.FC<{ refreshKey: number }> = ({ refreshKey }) => {
           ))}
         </div>
       ) : (
-        <div className="plans-card overflow-hidden !p-0">
+        <div className="spark-card overflow-hidden !p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
@@ -594,7 +586,7 @@ export default function PlansList() {
           <Suspense
             fallback={
               <div
-                className="plans-card text-center text-sm py-10"
+                className="spark-card text-center text-sm py-10"
                 style={{ color: "var(--plan-muted)" }}
               >
                 Loading plans…

@@ -151,6 +151,25 @@ const SECTIONS: NavSection[] = [
         to: "/plans",
         clientLabel: "Plans",
       },
+      {
+        label: "Approvals",
+        Icon: CheckCircle2,
+        to: "/approvals",
+        clientTo: "/my-approvals",
+        clientLabel: "Approvals",
+      },
+      {
+        label: "Walk-ups",
+        Icon: QrCode,
+        to: "/walkups",
+        adminOnly: true,
+      },
+      {
+        label: "People",
+        Icon: UsersRound,
+        to: "/people",
+        adminOnly: true,
+      },
     ],
   },
   {
@@ -177,12 +196,6 @@ const SECTIONS: NavSection[] = [
       },
       { label: "Chat", Icon: MessageCircle, to: "/chat", adminOnly: true },
       {
-        label: "Walk-ups",
-        Icon: QrCode,
-        to: "/walkups",
-        adminOnly: true,
-      },
-      {
         label: "Bulk Upload",
         Icon: Upload,
         to: "/requests/bulk-upload",
@@ -195,13 +208,6 @@ const SECTIONS: NavSection[] = [
         to: "/account-map",
         clientLabel: "Account Map",
       },
-      {
-        label: "Approvals",
-        Icon: CheckCircle2,
-        to: "/approvals",
-        clientTo: "/my-approvals",
-        clientLabel: "Approvals",
-      },
     ],
   },
   {
@@ -210,7 +216,6 @@ const SECTIONS: NavSection[] = [
     items: [
       { label: "Search Talent", Icon: Users, to: "/talent" },
       { label: "Favorites", Icon: Star, to: "/favorites" },
-      { label: "People", Icon: UsersRound, to: "/people" },
       { label: "Spark Academy", Icon: GraduationCap, to: "/academy" },
       { label: "Manage Library", Icon: GraduationCap, to: "/academy/manage" },
     ],
@@ -530,10 +535,14 @@ const SidebarNav: React.FC<{
             section={section}
             pathname={pathname}
             defaultOpen={
-              isClient ||
-              section.title === "Today" ||
-              section.title === "Recaps" ||
-              activeInSection
+              section.title === "Catalogs" ||
+              section.title === "Build" ||
+              section.title === "System"
+                ? activeInSection
+                : isClient ||
+                  section.title === "Today" ||
+                  section.title === "Recaps" ||
+                  activeInSection
             }
             onStub={onStub}
             isClient={isClient}
@@ -580,10 +589,14 @@ export const SparkSidebar: React.FC = () => {
             section={section}
             pathname={pathname}
             defaultOpen={
-              isClient ||
-              section.title === "Today" ||
-              section.title === "Recaps" ||
-              activeInSection
+              section.title === "Catalogs" ||
+              section.title === "Build" ||
+              section.title === "System"
+                ? activeInSection
+                : isClient ||
+                  section.title === "Today" ||
+                  section.title === "Recaps" ||
+                  activeInSection
             }
             onStub={onStub}
             isClient={isClient}
@@ -612,32 +625,24 @@ export const SparkSidebar: React.FC = () => {
       {/* Brand mark — real Spark logo PNG, inverted to white for the
           dark sidebar (the source logo is black on transparent). */}
       <div
-        className="spark-sidebar-brand px-5 py-5 flex items-center justify-between gap-2"
+        className={[
+          "spark-sidebar-brand flex gap-2",
+          iconRail
+            ? "flex-col items-center px-2 py-3"
+            : "px-5 py-5 items-center justify-between",
+        ].join(" ")}
         style={{ borderBottom: "1px solid var(--spark-border)" }}
       >
-        {!iconRail ? (
-          <img
-            src="/legal/spark-logo.png"
-            alt="Spark by Ignite"
-            style={{
-              height: 28,
-              width: "auto",
-              display: "block",
-              filter: "invert(1) hue-rotate(180deg)",
-            }}
-          />
-        ) : (
-          <span
-            className="w-8 h-8 rounded-lg grid place-items-center text-xs font-bold"
-            style={{
-              background: "rgba(197,245,70,0.15)",
-              color: "var(--spark-lime)",
-            }}
-            aria-hidden
-          >
-            S
-          </span>
-        )}
+        <img
+          src="/legal/spark-logo.png"
+          alt="Spark by Ignite"
+          style={{
+            height: iconRail ? "auto" : 28,
+            width: iconRail ? "2.4rem" : "auto",
+            display: "block",
+            filter: "invert(1) hue-rotate(180deg)",
+          }}
+        />
         <div className="flex items-center gap-1">
           <button
             type="button"

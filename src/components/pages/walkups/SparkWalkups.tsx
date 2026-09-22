@@ -13,6 +13,7 @@ import type { WalkupMutationsRejectMutation as RejectType } from "@api/mutations
 import type { WalkupMutationsBulkConfirmMutation as BulkConfirmType } from "@api/mutations/__generated__/WalkupMutationsBulkConfirmMutation.graphql";
 import type { WalkupMutationsBulkRejectMutation as BulkRejectType } from "@api/mutations/__generated__/WalkupMutationsBulkRejectMutation.graphql";
 import { useAlertStore } from "@/store/alertStore";
+import SparkConfirm from "@/shared/SparkConfirm";
 import StandingCheckinLink from "./StandingCheckinLink";
 
 /**
@@ -23,6 +24,7 @@ import StandingCheckinLink from "./StandingCheckinLink";
  */
 type Filter = "pending" | "all";
 type Row = WalkupShiftsQueryType["response"]["walkupShifts"][number];
+type RejectPrompt = { kind: "bulk" } | { kind: "one"; row: Row };
 
 const fmt = (iso: string | null | undefined): string => {
   if (!iso) return "—";
@@ -62,6 +64,7 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
     BulkRejectWalkupShiftsMutation,
   );
   const busy = confirming || rejecting || bulkConfirming || bulkRejecting;
+  const [rejectPrompt, setRejectPrompt] = useState<RejectPrompt | null>(null);
 
   // Bulk triage: select pending walk-ups and confirm/reject them in one go.
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -82,21 +85,14 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
 
   const runBulk = (kind: "confirm" | "reject") => {
     if (selectedList.length === 0) return;
-    if (
-      kind === "reject" &&
-      !window.confirm(
-        `Reject ${selectedList.length} walk-up${selectedList.length === 1 ? "" : "s"}? This removes their clock-ins.`,
-      )
-    )
+    if (kind === "reject") {
+      setRejectPrompt({ kind: "bulk" });
       return;
-    const commit = kind === "confirm" ? commitBulkConfirm : commitBulkReject;
-    commit({
+    }
+    commitBulkConfirm({
       variables: { input: { ambassadorEventUuids: selectedList } },
-      onCompleted: (resp: BulkConfirmType["response"] | BulkRejectType["response"]) => {
-        const r =
-          "bulkConfirmWalkupShifts" in resp
-            ? resp.bulkConfirmWalkupShifts
-            : resp.bulkRejectWalkupShifts;
+      onCompleted: (resp) => {
+        const r = resp.bulkConfirmWalkupShifts;
         showAlert(r?.message || "Done.", r?.success ? "success" : "error");
         setSelected(new Set());
         if (r?.success) bump();
@@ -122,14 +118,28 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
   };
 
   const onReject = (r: Row) => {
-    if (
-      !window.confirm(
-        `Reject ${r.ambassadorName}'s walk-up for ${r.eventName}? This removes the clock-in.`,
-      )
-    )
+    setRejectPrompt({ kind: "one", row: r });
+  };
+
+  const confirmReject = () => {
+    if (!rejectPrompt || busy) return;
+    if (rejectPrompt.kind === "bulk") {
+      commitBulkReject({
+        variables: { input: { ambassadorEventUuids: selectedList } },
+        onCompleted: (resp) => {
+          const r = resp.bulkRejectWalkupShifts;
+          showAlert(r?.message || "Done.", r?.success ? "success" : "error");
+          setSelected(new Set());
+          setRejectPrompt(null);
+          if (r?.success) bump();
+        },
+        onError: (e) => showAlert(e.message, "error"),
+      });
       return;
+    }
+    const row = rejectPrompt.row;
     commitReject({
-      variables: { input: { ambassadorEventUuid: r.ambassadorEventUuid } },
+      variables: { input: { ambassadorEventUuid: row.ambassadorEventUuid } },
       onCompleted: (resp) => {
         const ok = resp.rejectWalkupShift?.success;
         showAlert(
@@ -137,6 +147,7 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
             (ok ? "Rejected." : "Couldn't reject."),
           ok ? "success" : "error",
         );
+        setRejectPrompt(null);
         if (ok) bump();
       },
       onError: (e) => showAlert(e.message, "error"),
@@ -333,6 +344,28 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
           </div>
         </div>
       ))}
+      {rejectPrompt ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Reject"
+          title={
+            rejectPrompt.kind === "bulk"
+              ? `Reject ${selectedList.length} walk-up${selectedList.length === 1 ? "" : "s"}`
+              : `Reject ${rejectPrompt.row.ambassadorName}`
+          }
+          body={
+            rejectPrompt.kind === "bulk"
+              ? "This removes their clock-ins."
+              : `This removes the clock-in for ${rejectPrompt.row.eventName}.`
+          }
+          confirmLabel="Reject"
+          busy={busy}
+          onConfirm={confirmReject}
+          onCancel={() => {
+            if (!busy) setRejectPrompt(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 };

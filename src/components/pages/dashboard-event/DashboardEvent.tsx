@@ -9,7 +9,6 @@ import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import { useNavigate } from "react-router";
-import { dispatchOpenJump } from "@/motion/opsMotion";
 
 /**
  * Compact priority-glance card: shows pending approvals (with SLA
@@ -79,16 +78,6 @@ const TodaysSnapshot: React.FC = () => {
   ];
   const visible = tiles.filter((t) => !t.hide);
   if (visible.length === 0) return null;
-  const toneColor = (t: string) =>
-    t === "orange"
-      ? "var(--spark-orange)"
-      : t === "sky"
-        ? "var(--spark-sky)"
-        : t === "gold"
-          ? "var(--spark-gold)"
-          : t === "muted"
-            ? "rgba(255,255,255,0.55)"
-            : "var(--spark-lime)";
   const n = visible.length;
   const gridCols =
     n <= 1
@@ -99,68 +88,26 @@ const TodaysSnapshot: React.FC = () => {
           ? "grid-cols-2 lg:grid-cols-3"
           : "grid-cols-2 lg:grid-cols-4";
   return (
-    <div
-      className="spark-card p-4 lg:p-5"
-      style={{ borderRadius: 18 }}
-    >
-      <div className="flex items-center justify-between mb-3">
-        <p
-          className="mono text-[10px]"
-          style={{
-            letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.45)",
-          }}
-        >
-          TODAY'S SNAPSHOT
-        </p>
-        <button
-          type="button"
-          onClick={(e) => dispatchOpenJump(e.currentTarget)}
-          className="mono text-[10px] transition hover:opacity-100"
-          style={{
-            letterSpacing: "0.14em",
-            color: "rgba(255,255,255,0.55)",
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            padding: 0,
-          }}
-          title="Open Jump"
-        >
-          TAP TO JUMP
-        </button>
-      </div>
+    <div className="spark-card p-4 lg:p-5" style={{ borderRadius: 18 }}>
       <div className={`grid ${gridCols} gap-3`}>
         {visible.map((t) => {
-          const color = toneColor(t.tone);
+          const color =
+            t.label === "Recaps due" && t.value > 0
+              ? "var(--spark-orange)"
+              : "var(--spark-text)";
           return (
             <button
               key={t.label}
               type="button"
               onClick={() => navigate(t.to)}
-              className="text-left rounded-xl p-3 transition"
-              style={{
-                background:
-                  t.tone === "muted" ? "transparent" : `${color}10`,
-                border: `1px solid ${t.tone === "muted" ? "rgba(255,255,255,0.18)" : `${color}40`}`,
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background =
-                  t.tone === "muted" ? "rgba(255,255,255,0.04)" : `${color}1a`)
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background =
-                  t.tone === "muted" ? "transparent" : `${color}10`)
-              }
+              className="text-left p-1 transition"
+              style={{ background: "transparent", border: "none" }}
             >
               <p
-                className="mono text-[10px] mb-1"
-                style={{
-                  letterSpacing: "0.16em",
-                  color: "rgba(255,255,255,0.55)",
-                }}
+                className="text-sm mb-1"
+                style={{ color: "rgba(255,255,255,0.55)" }}
               >
-                {t.label.toUpperCase()}
+                {t.label}
               </p>
               <p
                 className="tab-num text-2xl lg:text-3xl font-bold leading-none"
@@ -168,17 +115,6 @@ const TodaysSnapshot: React.FC = () => {
               >
                 {t.value.toLocaleString()}
               </p>
-              {t.sub && (
-                <p
-                  className="mono text-[10px] mt-1.5"
-                  style={{
-                    letterSpacing: "0.14em",
-                    color: "var(--spark-orange)",
-                  }}
-                >
-                  ⚠ {t.sub.toUpperCase()}
-                </p>
-              )}
             </button>
           );
         })}
@@ -192,11 +128,6 @@ const TodaysSnapshot: React.FC = () => {
  * performance (pace / KPIs / map) on the same page. Legacy
  * /insights redirects here.
  */
-
-const monthLabel = () =>
-  new Date()
-    .toLocaleString("en-US", { month: "long", year: "numeric" })
-    .toUpperCase();
 
 const slugToName = (slug: string | null | undefined): string => {
   if (!slug) return "—";
@@ -232,31 +163,21 @@ function DashboardInner() {
     <div className="space-y-6 lg:space-y-8 max-w-7xl">
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            {isClient ? "YOUR PROGRAM · " : ""}
-            {tenantDisplay.toUpperCase()} · {monthLabel()}
-          </p>
           <h1
-            className="display text-2xl lg:text-3xl font-bold mt-2 leading-[1.1]"
+            className="display text-2xl lg:text-3xl font-bold leading-[1.1]"
             style={{ letterSpacing: "-0.03em" }}
           >
             Dashboard
           </h1>
-          <p
-            className="mt-3 text-base"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            Due recaps, who&apos;s on the clock, pace, and program KPIs.
-          </p>
+          <div className="mt-2">
+            <AskAiButton
+              tenantId={tenantId}
+              tenantName={tenantDisplay}
+              variant="text"
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <AskAiButton tenantId={tenantId} tenantName={tenantDisplay} />
           {linkedSheetUrl && (
             <a
               href={linkedSheetUrl}

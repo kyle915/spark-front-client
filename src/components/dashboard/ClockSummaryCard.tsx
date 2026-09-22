@@ -87,16 +87,21 @@ const ClockFrame: React.FC<{
             : `Hours this pay week · ${weekLabel}`}
         </p>
       </div>
-      <div style={{ display: "flex", gap: 6 }}>
+      <div style={{ display: "flex", gap: 14 }}>
         {(["today", "week"] as const).map((t) => (
           <button
             key={t}
+            type="button"
             onClick={() => setTab(t)}
-            className="px-3 py-1.5 rounded-full text-xs font-semibold"
+            className="text-sm"
             style={{
-              background: tab === t ? "var(--spark-lime)" : "transparent",
-              color: tab === t ? "#0a0d09" : "var(--spark-text)",
-              border: tab === t ? "none" : "1px solid var(--spark-border)",
+              background: "transparent",
+              color: tab === t ? "var(--spark-text)" : "rgba(255,255,255,0.45)",
+              border: "none",
+              fontWeight: tab === t ? 600 : 500,
+              padding: 0,
+              textDecoration: tab === t ? "underline" : "none",
+              textUnderlineOffset: 4,
             }}
           >
             {t === "today" ? "Today" : "Pay week"}
@@ -149,11 +154,10 @@ const TodayView: React.FC<{
 
   return (
     <ClockFrame tab="today" setTab={setTab} weekLabel={weekLabel}>
-      <div style={{ display: "flex", gap: 26, margin: "14px 0 4px", flexWrap: "wrap" }}>
-        <Stat value={String(onClock.length)} unit="on the clock" live={onClock.length > 0} />
-        <Stat value={fmtHours(totalToday)} unit="logged today" />
-        {notIn.length ? <Stat value={String(notIn.length)} unit="not clocked in" warn /> : null}
-      </div>
+      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.88)", margin: "14px 0 0" }}>
+        {onClock.length} on the clock · {fmtHours(totalToday)} logged · {notIn.length}{" "}
+        not clocked in
+      </p>
       <Rows>
         {[...onClock, ...done, ...notIn].slice(0, 8).map((r) => (
           <Row
@@ -204,11 +208,11 @@ const WeekView: React.FC<{
 
   return (
     <ClockFrame tab="week" setTab={setTab} weekLabel={weekLabel}>
-      <div style={{ display: "flex", gap: 26, margin: "14px 0 4px", flexWrap: "wrap" }}>
-        <Stat value={fmtHours(sheet?.totalHours)} unit="total hours" />
-        <Stat value={String(rows.length)} unit={rows.length === 1 ? "BA" : "BAs"} />
-        {needsReview ? <Stat value={String(needsReview)} unit="need review" warn /> : null}
-      </div>
+      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.88)", margin: "14px 0 0" }}>
+        {fmtHours(sheet?.totalHours)} total · {rows.length}{" "}
+        {rows.length === 1 ? "BA" : "BAs"}
+        {needsReview ? ` · ${needsReview} need review` : ""}
+      </p>
       <Rows>
         {sorted.slice(0, 8).map((r) => (
           <Row
@@ -230,41 +234,6 @@ const WeekView: React.FC<{
 };
 
 // ── Bits ────────────────────────────────────────────────────────────────────
-const Stat: React.FC<{ value: string; unit: string; live?: boolean; warn?: boolean }> = ({
-  value,
-  unit,
-  live,
-  warn,
-}) => (
-  <div>
-    <div
-      style={{
-        fontSize: 26,
-        fontWeight: 800,
-        lineHeight: 1.1,
-        color: warn ? "#f0b429" : live ? "var(--spark-lime)" : "var(--spark-text)",
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-      }}
-    >
-      {value}
-      {live ? (
-        <span
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 999,
-            background: "var(--spark-lime)",
-            display: "inline-block",
-          }}
-        />
-      ) : null}
-    </div>
-    <div style={{ fontSize: 12, color: muted, marginTop: 2 }}>{unit}</div>
-  </div>
-);
-
 const Rows: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div style={{ marginTop: 14, display: "flex", flexDirection: "column" }}>{children}</div>
 );

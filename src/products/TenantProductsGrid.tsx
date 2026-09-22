@@ -8,14 +8,15 @@ import { useForm } from "react-hook-form";
 import { ProductsQuery } from "@api/queries/ProductsQuery";
 import { DeleteProductMutation } from "@api/mutations/DeleteProductMutation";
 import { UpdateProductMutation } from "@api/mutations/UpdateProductMutation";
+import { RenameCatalogLabelMutation } from "@api/mutations/RenameCatalogLabelMutation";
 import { ProductTypesQuery } from "@api/queries/ProductTypesQuery";
 import type { ProductTypesQuery as ProductTypesQueryType } from "@api/queries/__generated__/ProductTypesQuery.graphql";
 import type { DeleteProductMutation as DeleteProductMutationType } from "@api/mutations/__generated__/DeleteProductMutation.graphql";
 import type { UpdateProductMutation as UpdateProductMutationType } from "@api/mutations/__generated__/UpdateProductMutation.graphql";
+import type { RenameCatalogLabelMutation as RenameCatalogLabelMutationType } from "@api/mutations/__generated__/RenameCatalogLabelMutation.graphql";
 import { useAlertStore } from "@store/alertStore";
 import ConfirmationModal from "../shared/ConfirmationModal";
 import ImageUpload from "../shared/ImageUpload";
-import LoadingButton from "../shared/LoadingButton";
 import environment from "@api/relay/environment";
 import { Edit, ImageOff, Trash2Icon } from "lucide-react";
 
@@ -183,12 +184,16 @@ const EditProductModal = ({
   const [commitUpdate, isUpdating] = useMutation<UpdateProductMutationType>(
     UpdateProductMutation
   );
+  const [commitRename, isRenaming] = useMutation<RenameCatalogLabelMutationType>(
+    RenameCatalogLabelMutation
+  );
   const [loading, setLoading] = useState(false);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm<EditProductFormValues>({
     defaultValues: {
@@ -213,7 +218,37 @@ const EditProductModal = ({
     [productTypesData]
   );
 
-  const isBusy = loading || isUpdating;
+  const isBusy = loading || isUpdating || isRenaming;
+
+  const onRename = () => {
+    const nextName = getValues("name").trim();
+    if (nextName.length < 2) {
+      showAlert("Name must be at least 2 characters.", "error");
+      return;
+    }
+    if (nextName === product.name.trim()) {
+      showAlert("Change the name, then rename so filed recaps update.", "info");
+      return;
+    }
+    commitRename({
+      variables: { input: { productId: product.id, name: nextName } },
+      onCompleted: (response) => {
+        const payload = response.renameCatalogLabel;
+        if (payload?.success) {
+          showAlert(
+            payload.message ||
+              `Renamed. ${payload.recapsUpdated} recaps updated.`,
+            "success",
+          );
+          onUpdated();
+          onClose();
+        } else {
+          showAlert(payload?.message ?? "Couldn't rename this product.", "error");
+        }
+      },
+      onError: (error) => showAlert(error.message, "error"),
+    });
+  };
 
   const onSubmit = (values: EditProductFormValues) => {
     setLoading(true);
@@ -374,11 +409,29 @@ const EditProductModal = ({
             onError={(err) => showAlert(err, "error")}
           />
 
-          <div className="modal-action">
-            <button type="button" className="btn" onClick={onClose}>
+          <div className="spark-overlay-actions">
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={onRename}
+              className="spark-overlay-action spark-overlay-action-primary"
+            >
+              {isRenaming ? "Renaming…" : "Rename and update recaps"}
+            </button>
+            <button
+              type="submit"
+              disabled={isBusy}
+              className="spark-overlay-action spark-overlay-action-cancel"
+            >
+              {isBusy && !isRenaming ? "Saving…" : "Save"}
+            </button>
+            <button
+              type="button"
+              className="spark-overlay-action spark-overlay-action-cancel"
+              onClick={onClose}
+            >
               Cancel
             </button>
-            <LoadingButton type="submit" loading={isBusy} text="Save" />
           </div>
         </form>
       </div>

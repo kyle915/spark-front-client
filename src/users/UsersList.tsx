@@ -680,23 +680,21 @@ const UsersList = () => {
                 </label>
               </div>
 
-              <div className="modal-action">
+              <div className="spark-overlay-actions">
+                <button
+                  type="submit"
+                  className="spark-overlay-action spark-overlay-action-primary"
+                  disabled={isSaving || isUploading}
+                >
+                  {isSaving || isUploading ? "Saving…" : "Save changes"}
+                </button>
                 <button
                   type="button"
-                  className="btn"
+                  className="spark-overlay-action spark-overlay-action-cancel"
                   onClick={closeModal}
                   disabled={isSaving || isUploading}
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className={`btn btn-primary ${
-                    isSaving || isUploading ? "loading" : ""
-                  }`}
-                  disabled={isSaving || isUploading}
-                >
-                  {isSaving || isUploading ? "Saving..." : "Save changes"}
                 </button>
               </div>
             </form>
@@ -734,23 +732,21 @@ const UsersList = () => {
                 }}
               />
 
-              <div className="modal-action">
+              <div className="spark-overlay-actions">
+                <button
+                  type="submit"
+                  className="spark-overlay-action spark-overlay-action-primary"
+                  disabled={isChangingPassword}
+                >
+                  {isChangingPassword ? "Updating…" : "Update Password"}
+                </button>
                 <button
                   type="button"
-                  className="btn"
+                  className="spark-overlay-action spark-overlay-action-cancel"
                   onClick={closePasswordModal}
                   disabled={isChangingPassword}
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className={`btn btn-primary ${
-                    isChangingPassword ? "loading" : ""
-                  }`}
-                  disabled={isChangingPassword}
-                >
-                  {isChangingPassword ? "Updating..." : "Update Password"}
                 </button>
               </div>
             </form>

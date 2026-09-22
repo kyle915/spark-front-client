@@ -229,7 +229,8 @@ const AskAiButton: React.FC<{
   tenantId: string | null | undefined;
   tenantName?: string;
   className?: string;
-}> = ({ tenantId, tenantName, className }) => {
+  variant?: "lime" | "text";
+}> = ({ tenantId, tenantName, className, variant = "lime" }) => {
   const [open, setOpen] = useState(false);
   const [origin, setOrigin] = useState<JumpOrigin | null>(null);
 
@@ -245,13 +246,26 @@ const AskAiButton: React.FC<{
           setOrigin(jumpOriginFromElement(e.currentTarget));
           setOpen(true);
         }}
-        className={`px-4 py-2 rounded-xl text-sm font-semibold transition inline-flex items-center gap-2 ${
-          className ?? ""
-        }`}
-        style={limeBtn}
+        className={
+          variant === "text"
+            ? `text-sm font-medium ${className ?? ""}`
+            : `px-4 py-2 rounded-xl text-sm font-semibold transition inline-flex items-center gap-2 ${
+                className ?? ""
+              }`
+        }
+        style={
+          variant === "text"
+            ? {
+                background: "transparent",
+                color: "rgba(255,255,255,0.62)",
+                border: "none",
+                padding: 0,
+              }
+            : limeBtn
+        }
         title="Ask AI a question about this client's program"
       >
-        ✨ Ask AI
+        {variant === "text" ? "Ask AI" : "✨ Ask AI"}
       </button>
       {open && (
         <AskAiModal

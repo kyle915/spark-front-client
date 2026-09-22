@@ -12,6 +12,8 @@ import { CreateProductTypeMutation } from "@api/mutations/CreateProductTypeMutat
 import type { CreateProductTypeMutation as CreateProductTypeMutationType } from "@api/mutations/__generated__/CreateProductTypeMutation.graphql";
 import { UpdateProductTypeMutation } from "@api/mutations/UpdateProductTypeMutation";
 import type { UpdateProductTypeMutation as UpdateProductTypeMutationType } from "@api/mutations/__generated__/UpdateProductTypeMutation.graphql";
+import { RenameCatalogLabelMutation } from "@api/mutations/RenameCatalogLabelMutation";
+import type { RenameCatalogLabelMutation as RenameCatalogLabelMutationType } from "@api/mutations/__generated__/RenameCatalogLabelMutation.graphql";
 import { useAlertStore } from "@store/alertStore";
 import { useAuthStore } from "@/store/authStore";
 import { PlusCircle, TagIcon } from "lucide-react";
@@ -30,6 +32,7 @@ type ProductTypeFormValues = {
 type ProductTypeFormProps = {
   defaultValues: ProductTypeFormValues;
   onSubmit: (values: ProductTypeFormValues) => void;
+  onRename?: (values: ProductTypeFormValues) => void;
   submitLabel: string;
   isSubmitting?: boolean;
   mode?: "create" | "edit";
@@ -38,6 +41,7 @@ type ProductTypeFormProps = {
 const ProductTypeForm = ({
   defaultValues,
   onSubmit,
+  onRename,
   submitLabel,
   isSubmitting,
   mode = "create",
@@ -111,7 +115,17 @@ const ProductTypeForm = ({
           </section>
 
           {/* FOOTER ACTIONS */}
-          <div className="pt-2 flex items-center justify-end">
+          <div className="pt-2 flex items-center justify-end gap-2">
+            {onRename ? (
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={handleSubmit(onRename)}
+                className="btn btn-ghost"
+              >
+                Rename and update recaps
+              </button>
+            ) : null}
             <LoadingButton
               type="submit"
               loading={isSubmitting}
@@ -325,6 +339,39 @@ export const EditProductType = () => {
   const [commitUpdate, isUpdating] = useMutation<UpdateProductTypeMutationType>(
     UpdateProductTypeMutation,
   );
+  const [commitRename, isRenaming] = useMutation<RenameCatalogLabelMutationType>(
+    RenameCatalogLabelMutation,
+  );
+
+  const handleRename = (values: ProductTypeFormValues) => {
+    if (!productType?.id) return;
+    if (values.name.trim() === productType.name.trim()) {
+      showAlert("Change the name, then rename so filed recaps update.", "info");
+      return;
+    }
+    commitRename({
+      variables: {
+        input: {
+          productTypeId: productType.id,
+          name: values.name.trim(),
+        },
+      },
+      onCompleted: (response) => {
+        const payload = response.renameCatalogLabel;
+        if (payload?.success) {
+          showAlert(
+            payload.message ||
+              `Renamed. ${payload.recapsUpdated} recaps updated.`,
+            "success",
+          );
+          navigate("/catalogs/product-types/list");
+        } else {
+          showAlert(payload?.message ?? "Couldn't rename this product type.", "error");
+        }
+      },
+      onError: (error) => showAlert(error.message, "error"),
+    });
+  };
 
   const handleSubmit = (values: ProductTypeFormValues) => {
     if (!productType?.id) return;
@@ -370,8 +417,9 @@ export const EditProductType = () => {
           tenantId: productType.tenantId,
         }}
         onSubmit={handleSubmit}
+        onRename={handleRename}
         submitLabel="Update"
-        isSubmitting={isUpdating}
+        isSubmitting={isUpdating || isRenaming}
         mode="edit"
       />
     </Layout>

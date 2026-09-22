@@ -5013,6 +5013,7 @@ type Mutation {
   updateProductType(input: UpdateProductTypeInput!): ProductTypeDetailResponse!
   createProduct(input: CreateProductInput!): ProductDetailResponse!
   updateProduct(input: UpdateProductInput!): ProductDetailResponse!
+  renameCatalogLabel(input: RenameCatalogLabelInput!): RenameCatalogLabelResponse!
   deleteProduct(input: DeleteProductInput!): ProductDetailResponse!
   createRequestType(input: CreateRequestTypeInput!): RequestTypeDetailResponse!
   updateRequestType(input: UpdateRequestTypeInput!): RequestTypeDetailResponse!
@@ -5619,6 +5620,20 @@ type ProductDetailResponse {
   message: String!
   clientMutationId: ID
   product: Product
+}
+
+type RenameCatalogLabelResponse {
+  success: Boolean!
+  message: String!
+  recapsUpdated: Int!
+  clientMutationId: ID
+}
+
+input RenameCatalogLabelInput {
+  clientMutationId: ID = null
+  name: String!
+  productId: ID = null
+  productTypeId: ID = null
 }
 
 input ProductFiltersInput {
@@ -7809,6 +7824,8 @@ type TenantType implements Node {
   """
   clientWeeklyDigestEnabled: Boolean!
   checkinCode: String
+  checkinPhotoBuckets: [String!]!
+  checkinEventTypeNames: [String!]!
   recapRecipientEmails: String!
   defaultExternalRmm: SparkUserType
   image: String
