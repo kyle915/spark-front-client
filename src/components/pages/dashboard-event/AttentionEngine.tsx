@@ -14,10 +14,7 @@ import { useAuthStore } from "@/store/authStore";
 
 type AttentionItem = {
   id: string;
-  tone: "orange" | "gold" | "sky";
-  badge: string;
-  headline: string;
-  body: string;
+  fact: string;
   cta: string;
   to: string;
 };
@@ -68,10 +65,7 @@ export const AttentionEngine: React.FC = () => {
     if (stalePending.length > 0) {
       out.push({
         id: "stale-pending",
-        tone: "orange",
-        badge: `${stalePending.length} REQUESTS · 24H+ OLD`,
-        headline: "Approval bottleneck",
-        body: `${stalePending.length} request${stalePending.length === 1 ? "" : "s"} waiting more than 24 hours`,
+        fact: `${stalePending.length} waiting more than 24 hours`,
         cta: "Review now",
         to: "/approvals",
       });
@@ -85,10 +79,7 @@ export const AttentionEngine: React.FC = () => {
     if (upcomingUnscheduled.length > 0) {
       out.push({
         id: "upcoming-unscheduled",
-        tone: "gold",
-        badge: `${upcomingUnscheduled.length} UPCOMING · NOT YET SCHEDULED`,
-        headline: "Staffing risk this week",
-        body: `${upcomingUnscheduled.length} upcoming request${upcomingUnscheduled.length === 1 ? "" : "s"} not yet scheduled`,
+        fact: `${upcomingUnscheduled.length} upcoming, not scheduled`,
         cta: "Open tracker",
         to: "/requests/list",
       });
@@ -100,71 +91,31 @@ export const AttentionEngine: React.FC = () => {
   if (items.length === 0) return null;
 
   return (
-    <div>
-      <h2
-        className="display text-xl font-bold mb-3"
-        style={{ letterSpacing: "-0.02em" }}
-      >
-        What needs you
-      </h2>
-      <div
-        className="grid lg:grid-cols-2 gap-4"
-        style={items.length === 1 ? { gridTemplateColumns: "1fr" } : undefined}
-      >
-        {items.map((it) => {
-          const color =
-            it.tone === "orange"
-              ? "var(--spark-orange)"
-              : it.tone === "gold"
-                ? "var(--spark-gold)"
-                : "var(--spark-sky)";
-          return (
-            <div
-              key={it.id}
-              className="spark-card p-5"
-              style={{ borderColor: `${color}55` }}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span
-                  className="spark-dot"
-                  style={{
-                    background: color,
-                    boxShadow: `0 0 6px ${color}`,
-                  }}
-                />
-                <span
-                  className="mono text-[10px]"
-                  style={{ letterSpacing: "0.18em", color }}
-                >
-                  {it.badge}
-                </span>
-              </div>
-              <h4 className="font-bold text-sm leading-snug mb-1.5">
-                {it.headline}
-              </h4>
-              <p
-                className="text-xs leading-relaxed"
-                style={{ color: "rgba(255,255,255,0.65)" }}
-              >
-                {it.body}
-              </p>
-              <button
-                onClick={() => navigate(it.to)}
-                className="mt-4 w-full text-xs py-2 rounded-xl transition active:scale-[0.98]"
-                style={{
-                  background: "transparent",
-                  color,
-                  border: `1px solid ${color}55`,
-                  fontFamily: "Space Grotesk, sans-serif",
-                  fontWeight: 600,
-                }}
-              >
-                {it.cta} →
-              </button>
-            </div>
-          );
-        })}
-      </div>
+    <div className="flex flex-col">
+      {items.map((it) => (
+        <div
+          key={it.id}
+          className="flex items-center justify-between gap-3 py-3"
+          style={{ borderTop: "1px solid var(--spark-border)" }}
+        >
+          <p className="text-sm" style={{ color: "rgba(255,255,255,0.88)" }}>
+            {it.fact}
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(it.to)}
+            className="text-sm font-medium shrink-0"
+            style={{
+              background: "transparent",
+              color: "rgba(255,255,255,0.72)",
+              border: "none",
+              padding: 0,
+            }}
+          >
+            {it.cta}
+          </button>
+        </div>
+      ))}
     </div>
   );
 };

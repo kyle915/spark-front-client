@@ -29,6 +29,7 @@ import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
+import SparkGhostButton from "@/shared/SparkGhostButton";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import ShareRecapsBulkModal from "@/recap/components/ShareRecapsBulkModal";
@@ -680,6 +681,12 @@ const recapHref = (
     r.kind === "custom" ? `/recap/view-custom/${r.uuid}` : `/recap/view/${r.uuid}`,
     listStatus,
     listActivation,
+  );
+
+const reviewRecapPath = (kind: "legacy" | "custom", uuid: string) =>
+  withRecapListReturn(
+    kind === "custom" ? `/recap/view-custom/${uuid}` : `/recap/view/${uuid}`,
+    "needs_review",
   );
 
 const RecapCompactRow: React.FC<{
@@ -1938,6 +1945,10 @@ export default function SparkRecapsList() {
   }, [baFromNav]);
   const [opsOpen, setOpsOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
+  const [reviewNextBusy, setReviewNextBusy] = useState(false);
+  const environment = useRelayEnvironment();
+  const showAlert = useAlertStore((s) => s.showAlert);
   const [sortKey, setSortKey] = useState<SortKey>("date-desc");
   const [meta, setMeta] = useState<Meta>({
     retailers: [],
@@ -1958,6 +1969,75 @@ export default function SparkRecapsList() {
   const onMeta = useMemo(() => (next: Meta) => setMeta(next), []);
 
   const [visibleRecaps, setVisibleRecaps] = useState<Recap[]>([]);
+
+  const openNextReview = useCallback(async () => {
+    if (isClient || !tenantId || reviewNextBusy) return;
+    const onNeedsReview =
+      statusFilter === "needs_review" || statusFilter === "draft";
+    const first = visibleRecaps[0];
+    if (onNeedsReview && first) {
+      navigate(recapHref(first, "needs_review", activationFilter));
+      return;
+    }
+    setReviewNextBusy(true);
+    try {
+      const filters = {
+        tenantId: String(tenantId),
+        approved: false,
+        archived: false,
+      };
+      const [legacy, custom] = await Promise.all([
+        fetchQuery<RecapsListQueryType>(environment, RecapsListQuery, {
+          last: 1,
+          filters,
+        }).toPromise(),
+        fetchQuery<CustomRecapsListQueryType>(
+          environment,
+          CustomRecapsListQuery,
+          { last: 1, filters },
+        ).toPromise(),
+      ]);
+      const picks: { kind: "legacy" | "custom"; uuid: string; at: string }[] =
+        [];
+      const legacyNode = legacy?.recaps?.edges?.[0]?.node;
+      if (legacyNode?.uuid) {
+        picks.push({
+          kind: "legacy",
+          uuid: String(legacyNode.uuid),
+          at: legacyNode.createdAt || legacyNode.eventDate || "",
+        });
+      }
+      const customNode = custom?.customRecaps?.edges?.[0]?.node;
+      if (customNode?.uuid) {
+        picks.push({
+          kind: "custom",
+          uuid: String(customNode.uuid),
+          at: customNode.createdAt || customNode.eventDate || "",
+        });
+      }
+      picks.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+      const next = picks[0];
+      if (!next) {
+        showAlert("Nothing waiting for review.", "info");
+        return;
+      }
+      navigate(reviewRecapPath(next.kind, next.uuid));
+    } catch {
+      showAlert("Couldn't open the next recap.", "error");
+    } finally {
+      setReviewNextBusy(false);
+    }
+  }, [
+    activationFilter,
+    environment,
+    isClient,
+    navigate,
+    reviewNextBusy,
+    showAlert,
+    statusFilter,
+    tenantId,
+    visibleRecaps,
+  ]);
 
   useEffect(() => {
     try {
@@ -2035,7 +2115,6 @@ export default function SparkRecapsList() {
   // changes — kyle can switch retailer, tick a few more, etc. The
   // sticky action bar at the bottom of the page shows the count and
   // fires the Campaign Report mutation.
-  const showAlert = useAlertStore((s) => s.showAlert);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const toggleSelected = (id: string) =>
     setSelectedIds((prev) => {
@@ -2502,6 +2581,7 @@ export default function SparkRecapsList() {
     search.trim() ? { key: "search", label: search.trim() } : null,
     retailerFilter !== "all" ? { key: "client", label: retailerFilter } : null,
     stateFilter !== "all" ? { key: "state", label: stateFilter } : null,
+    rmmFilter !== "all" ? { key: "rmm", label: "RMM" } : null,
     baName.trim() ? { key: "ba", label: baName.trim() } : null,
     !isClient && needsStoreMap
       ? { key: "store-map", label: "Map store" }
@@ -2538,13 +2618,23 @@ export default function SparkRecapsList() {
           support="Filed activations — filter, review, share."
           action={
             !isClient ? (
-              <SparkPrimaryButton
-                onClick={() => {
-                  window.location.href = "/recap/create";
-                }}
-              >
-                + New recap
-              </SparkPrimaryButton>
+              <div className="flex flex-wrap gap-2">
+                <SparkGhostButton
+                  disabled={reviewNextBusy}
+                  onClick={() => {
+                    void openNextReview();
+                  }}
+                >
+                  {reviewNextBusy ? "Opening…" : "Next to review"}
+                </SparkGhostButton>
+                <SparkPrimaryButton
+                  onClick={() => {
+                    window.location.href = "/recap/create";
+                  }}
+                >
+                  + New recap
+                </SparkPrimaryButton>
+              </div>
             ) : null
           }
         />
@@ -3167,6 +3257,30 @@ export default function SparkRecapsList() {
         </div>
 
         <div className="spark-card p-3 flex flex-wrap gap-2 items-center">
+          <button
+            type="button"
+            className="md:hidden rounded-xl text-xs px-3 py-2 font-semibold"
+            style={
+              moreFiltersOpen ||
+              retailerFilter !== "all" ||
+              stateFilter !== "all" ||
+              rmmFilter !== "all" ||
+              Boolean(baName.trim()) ||
+              dateFrom !== DAYS_30_ISO ||
+              dateTo !== TODAY_ISO
+                ? limeBtn
+                : ghostBtn
+            }
+            aria-expanded={moreFiltersOpen}
+            onClick={() => setMoreFiltersOpen((v) => !v)}
+          >
+            More
+          </button>
+          <div
+            className={`${
+              moreFiltersOpen ? "flex" : "hidden"
+            } md:flex flex-wrap gap-2 items-center w-full md:w-auto`}
+          >
           <select
             value={retailerFilter}
             onChange={(e) => setRetailerFilter(e.target.value)}
@@ -3279,6 +3393,7 @@ export default function SparkRecapsList() {
               Clear dates
             </button>
           )}
+          </div>
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value as SortKey)}

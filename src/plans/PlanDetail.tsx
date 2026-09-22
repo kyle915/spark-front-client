@@ -38,7 +38,7 @@ import {
 } from "@/plans/planHealth";
 import { requestDateKey } from "@/lib/requestDateKey";
 import SparkPageHeader from "@/shared/SparkPageHeader";
-import { SparkPrimaryLink } from "@/shared/SparkPrimaryButton";
+import SparkPrimaryButton, { SparkPrimaryLink } from "@/shared/SparkPrimaryButton";
 import { SparkGhostButton, SparkGhostLink } from "@/shared/SparkGhostButton";
 import "@/plans/plans.css";
 
@@ -280,13 +280,13 @@ const PlanRequestsRoster: React.FC<{
   if (rows.length === 0) {
     return (
       <div className="text-center py-8 px-4">
-        <p className="plans-support mx-auto">
+        <p className="spark-support mx-auto">
           No requests on this plan yet.
         </p>
         {canEdit ? (
-          <Link to={createHref} className="plans-btn-primary mt-4 inline-flex">
+          <SparkPrimaryLink to={createHref} className="mt-4 inline-flex">
             Add request
-          </Link>
+          </SparkPrimaryLink>
         ) : null}
       </div>
     );
@@ -296,21 +296,15 @@ const PlanRequestsRoster: React.FC<{
     <div className="space-y-3">
       {canEdit && selected.size > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            className="plans-btn-ghost"
+          <SparkGhostButton
             disabled={detaching}
             onClick={() => detachIds([...selected])}
           >
             Detach {selected.size} selected
-          </button>
-          <button
-            type="button"
-            className="plans-btn-ghost"
-            onClick={() => setSelected(new Set())}
-          >
+          </SparkGhostButton>
+          <SparkGhostButton onClick={() => setSelected(new Set())}>
             Clear
-          </button>
+          </SparkGhostButton>
         </div>
       ) : null}
       <div className="overflow-x-auto -mx-1">
@@ -514,13 +508,11 @@ const AttachUnplannedPanel: React.FC<{
           style={{ flex: 1, minWidth: 180 }}
         />
         {candidates.length > 0 ? (
-          <button type="button" className="plans-btn-ghost" onClick={toggleAll}>
+          <SparkGhostButton onClick={toggleAll}>
             {allSelected ? "Clear all" : "Select all"}
-          </button>
+          </SparkGhostButton>
         ) : null}
-        <button
-          type="button"
-          className="plans-btn-primary"
+        <SparkPrimaryButton
           disabled={inFlight || selected.size === 0}
           onClick={attach}
         >
@@ -529,16 +521,16 @@ const AttachUnplannedPanel: React.FC<{
             : selected.size
               ? `Attach ${selected.size}`
               : "Attach"}
-        </button>
+        </SparkPrimaryButton>
       </div>
       {candidates.length === 0 ? (
         <div className="text-center py-6 px-3">
-          <p className="plans-support mx-auto">
+          <p className="spark-support mx-auto">
             Nothing unplanned — create a request for this plan.
           </p>
-          <Link to={createHref} className="plans-btn-primary mt-4 inline-flex">
+          <SparkPrimaryLink to={createHref} className="mt-4 inline-flex">
             Add request
-          </Link>
+          </SparkPrimaryLink>
         </div>
       ) : (
         <ul className="space-y-1.5 max-h-64 overflow-y-auto">
@@ -633,7 +625,7 @@ const PlanDetailInner: React.FC<{ uuid: string }> = ({ uuid }) => {
 
   if (!plan) {
     return (
-      <div className="plans-card text-center py-10">
+      <div className="spark-card text-center py-10">
         Plan not found.{" "}
         <Link to="/plans" className="underline">
           Back to plans
@@ -771,20 +763,18 @@ const PlanDetailInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             >
               {editing ? "Close edit" : "Edit"}
             </SparkGhostButton>
-            <button
-              type="button"
-              className="plans-btn-ghost"
+            <SparkGhostButton
               disabled={deleting}
               onClick={remove}
               style={{ color: "var(--spark-orange)" }}
             >
               Delete
-            </button>
+            </SparkGhostButton>
           </>
         ) : null}
       </div>
 
-      <div className="plans-card">
+      <div className="spark-card">
         <p className="text-sm mb-4" style={{ color: "var(--plan-muted)" }}>
           {plan.requestCount} request{plan.requestCount === 1 ? "" : "s"} on this
           plan
@@ -802,11 +792,11 @@ const PlanDetailInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             onSubmit={save}
-            className="plans-card space-y-4 max-w-lg"
+            className="spark-card space-y-4 max-w-lg"
           >
             <div>
-              <h2 className="plans-title text-xl font-semibold">Edit plan</h2>
-              <p className="plans-support mt-1 text-sm">
+              <h2 className="spark-title text-xl font-semibold">Edit plan</h2>
+              <p className="spark-support mt-1 text-sm">
                 {editStep === 1
                   ? "Name and brief."
                   : "Window, markets, and owner."}
@@ -879,38 +869,27 @@ const PlanDetailInner: React.FC<{ uuid: string }> = ({ uuid }) => {
             <div className="flex flex-wrap gap-2 pt-1">
               {editStep === 1 ? (
                 <>
-                  <button
-                    type="button"
-                    className="plans-btn-primary"
+                  <SparkPrimaryButton
                     disabled={!name.trim()}
                     onClick={() => setEditStep(2)}
                   >
                     Continue
-                  </button>
-                  <button
-                    type="button"
-                    className="plans-btn-ghost"
-                    onClick={() => setEditing(false)}
-                  >
+                  </SparkPrimaryButton>
+                  <SparkGhostButton onClick={() => setEditing(false)}>
                     Cancel
-                  </button>
+                  </SparkGhostButton>
                 </>
               ) : (
                 <>
-                  <button
+                  <SparkPrimaryButton
                     type="submit"
-                    className="plans-btn-primary"
                     disabled={updating || !name.trim()}
                   >
                     {updating ? "Saving…" : "Save"}
-                  </button>
-                  <button
-                    type="button"
-                    className="plans-btn-ghost"
-                    onClick={() => setEditStep(1)}
-                  >
+                  </SparkPrimaryButton>
+                  <SparkGhostButton onClick={() => setEditStep(1)}>
                     Back
-                  </button>
+                  </SparkGhostButton>
                 </>
               )}
             </div>
@@ -919,8 +898,8 @@ const PlanDetailInner: React.FC<{ uuid: string }> = ({ uuid }) => {
       </AnimatePresence>
 
       {showAttach && isAdmin && tenantId ? (
-        <div className="plans-card space-y-3">
-          <h2 className="plans-title text-lg font-semibold">
+        <div className="spark-card space-y-3">
+          <h2 className="spark-title text-lg font-semibold">
             Attach existing requests
           </h2>
           <p className="text-sm" style={{ color: "var(--plan-muted)" }}>
@@ -944,9 +923,9 @@ const PlanDetailInner: React.FC<{ uuid: string }> = ({ uuid }) => {
         </div>
       ) : null}
 
-      <div className="plans-card">
+      <div className="spark-card">
         <div className="flex items-center justify-between gap-2 mb-4">
-          <h2 className="plans-title text-lg font-semibold">Requests</h2>
+          <h2 className="spark-title text-lg font-semibold">Requests</h2>
           <Link
             to={trackerHref}
             className="text-sm"
@@ -993,7 +972,7 @@ export default function PlanDetail() {
               className="plans-shell"
             >
               <div
-                className="plans-card text-center text-sm py-10"
+                className="spark-card text-center text-sm py-10"
                 style={{ color: "var(--plan-muted)" }}
               >
                 Loading plan…

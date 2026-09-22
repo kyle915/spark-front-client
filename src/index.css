@@ -971,10 +971,10 @@ thead .spark-table-sticky-date {
 .nav-section {
   font-family: "JetBrains Mono", monospace;
   font-size: 0.6rem;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.35);
-  padding: 1rem 0.9rem 0.4rem;
+  padding: 0.7rem 0.9rem 0.1rem;
 }
 
 /* === Dot + pulse === */

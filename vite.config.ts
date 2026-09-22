@@ -4,9 +4,42 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 import packageJson from "./package.json";
 
+// macOS resolves TenantLogo.tsx and tenantLogo.ts as the same stem and
+// Vite then prefers .ts, so the component import never reaches the tsx.
+// Linux builds keep them apart. Pin both ids before the default resolver.
+function caseSensitiveTenantLogo() {
+  const layout = path.resolve("src/layout");
+  return {
+    name: "case-sensitive-tenant-logo",
+    enforce: "pre" as const,
+    resolveId(source: string) {
+      const bare = source.split("?")[0];
+      if (
+        bare === "./tenantLogo" ||
+        bare === "@/layout/tenantLogo" ||
+        bare.endsWith("/tenantLogo")
+      ) {
+        return path.join(layout, "tenantLogo.ts");
+      }
+      if (
+        bare === "./TenantLogo" ||
+        bare === "@/layout/TenantLogo" ||
+        bare.endsWith("/TenantLogo")
+      ) {
+        return path.join(layout, "TenantLogo.tsx");
+      }
+      return null;
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react({ babel: { plugins: ["relay"] } }), tailwindcss()],
+  plugins: [
+    caseSensitiveTenantLogo(),
+    react({ babel: { plugins: ["relay"] } }),
+    tailwindcss(),
+  ],
   define: {
     __APP_VERSION__: JSON.stringify(packageJson.version),
   },

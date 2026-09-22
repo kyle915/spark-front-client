@@ -231,6 +231,37 @@ const ProductPicker: React.FC<{
   );
 };
 
+const ConfirmationStatusChip: React.FC<{
+  status: "Sent" | "Queued" | "Error";
+}> = ({ status }) => {
+  const tone =
+    status === "Sent"
+      ? {
+          background: "rgba(197,245,70,0.14)",
+          border: "1px solid rgba(197,245,70,0.4)",
+          color: "var(--spark-lime)",
+        }
+      : status === "Error"
+        ? {
+            background: "rgba(239,90,42,0.12)",
+            border: "1px solid rgba(239,90,42,0.4)",
+            color: "var(--spark-orange)",
+          }
+        : {
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid var(--spark-border)",
+            color: "rgba(255,255,255,0.7)",
+          };
+  return (
+    <span
+      className="px-2 py-0.5 rounded-md text-[11px] font-semibold"
+      style={tone}
+    >
+      {status}
+    </span>
+  );
+};
+
 const StageBadge: React.FC<{ stage: string; sentAt: string | null }> = ({
   stage,
   sentAt,
@@ -246,6 +277,19 @@ const StageBadge: React.FC<{ stage: string; sentAt: string | null }> = ({
     {STAGE_LABEL[stage] ?? stage} {sentAt ? "✓" : "·"}
   </span>
 );
+
+const confirmationChip = (
+  sends: ReadonlyArray<{
+    stage: string;
+    sentAt?: string | null;
+    lastError?: string | null;
+  }>,
+): "Sent" | "Queued" | "Error" => {
+  if (sends.some((send) => (send.lastError || "").trim())) return "Error";
+  const booked = sends.find((send) => send.stage === "booked");
+  if (booked?.sentAt) return "Sent";
+  return "Queued";
+};
 
 const HistoryRow: React.FC<{
   row: Confirmation;
@@ -289,6 +333,7 @@ const HistoryRow: React.FC<{
           ) : null}
         </div>
         <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          <ConfirmationStatusChip status={confirmationChip(row.sends)} />
           {["booked", "t24", "t3"].map((stage) => (
             <StageBadge
               key={stage}
