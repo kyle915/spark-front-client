@@ -23,6 +23,7 @@ import StandingCheckinLink from "./StandingCheckinLink";
  * Workspace review queues (Receipts / Approvals).
  */
 type Filter = "pending" | "all";
+type WalkupsTab = "codes" | "queue";
 type Row = WalkupShiftsQueryType["response"]["walkupShifts"][number];
 type RejectPrompt = { kind: "bulk" } | { kind: "one"; row: Row };
 
@@ -371,6 +372,7 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
 };
 
 export default function SparkWalkups() {
+  const [tab, setTab] = useState<WalkupsTab>("codes");
   const [filter, setFilter] = useState<Filter>("pending");
   const [refreshKey, setRefreshKey] = useState(0);
   const bump = () => setRefreshKey((k) => k + 1);
@@ -384,47 +386,82 @@ export default function SparkWalkups() {
         WORKSPACE
       </p>
       <h1 className="display text-2xl font-bold mb-1">Walk-ups</h1>
-      <p className="text-sm mb-5" style={{ color: "rgba(255,255,255,0.55)" }}>
-        Self-serve clock-ins from a check-in link or event code. Confirm to
-        count their hours (and activate a new BA), or reject.
+      <p className="text-sm mb-4" style={{ color: "rgba(255,255,255,0.55)" }}>
+        {tab === "codes"
+          ? "Standing check-in links for each brand. Share the live code."
+          : "Self-serve clock-ins from a check-in link or event code. Confirm to count their hours (and activate a new BA), or reject."}
       </p>
 
-      {/* Own Suspense with no fallback: the standing link is a nicety, so it
-          streams in silently rather than holding up the review queue. */}
-      <Suspense fallback={null}>
-        <StandingCheckinLink />
-      </Suspense>
-
-      <div className="flex items-center gap-1 mb-5">
-        {(["pending", "all"] as const).map((f) => (
+      <div className="flex items-center gap-5 mb-5" style={{ borderBottom: "1px solid var(--spark-border)" }}>
+        {(
+          [
+            ["codes", "Standing codes"],
+            ["queue", "Walk-ups"],
+          ] as const
+        ).map(([id, label]) => (
           <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className="px-4 py-2 rounded-full text-sm font-semibold"
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className="text-sm pb-2"
             style={{
-              background: filter === f ? "var(--spark-lime)" : "transparent",
-              color: filter === f ? "#0a0d09" : "var(--spark-text)",
-              border:
-                filter === f ? "none" : "1px solid var(--spark-border)",
+              background: "transparent",
+              border: "none",
+              borderBottom:
+                tab === id
+                  ? "2px solid var(--spark-lime)"
+                  : "2px solid transparent",
+              color: tab === id ? "var(--spark-text)" : "rgba(255,255,255,0.45)",
+              fontWeight: tab === id ? 600 : 500,
+              marginBottom: -1,
+              paddingLeft: 0,
+              paddingRight: 0,
             }}
           >
-            {f === "pending" ? "Needs review" : "All"}
+            {label}
           </button>
         ))}
       </div>
 
-      <Suspense
-        fallback={
-          <p
-            className="p-8 text-center text-sm"
-            style={{ color: "rgba(255,255,255,0.45)" }}
+      {tab === "codes" ? (
+        <Suspense fallback={null}>
+          <StandingCheckinLink />
+        </Suspense>
+      ) : (
+        <>
+          <div className="flex items-center gap-1 mb-5">
+            {(["pending", "all"] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                className="px-4 py-2 rounded-full text-sm font-semibold"
+                style={{
+                  background: filter === f ? "var(--spark-lime)" : "transparent",
+                  color: filter === f ? "#0a0d09" : "var(--spark-text)",
+                  border:
+                    filter === f ? "none" : "1px solid var(--spark-border)",
+                }}
+              >
+                {f === "pending" ? "Needs review" : "All"}
+              </button>
+            ))}
+          </div>
+
+          <Suspense
+            fallback={
+              <p
+                className="p-8 text-center text-sm"
+                style={{ color: "rgba(255,255,255,0.45)" }}
+              >
+                Loading walk-ups…
+              </p>
+            }
           >
-            Loading walk-ups…
-          </p>
-        }
-      >
-        <Inner filter={filter} refreshKey={refreshKey} bump={bump} />
-      </Suspense>
+            <Inner filter={filter} refreshKey={refreshKey} bump={bump} />
+          </Suspense>
+        </>
+      )}
     </div>
   );
 }

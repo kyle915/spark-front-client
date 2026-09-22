@@ -15,9 +15,7 @@ import CheckinQr from "./CheckinQr";
  * recap. Spark creates or joins the event from those answers, so there is no
  * event code to distribute and nothing for ops to set up per activation.
  *
- * Whatever comes in through it lands in the queue directly below, which is
- * why this belongs here rather than on a settings page: the link and the
- * review of what it produced are one workflow.
+ * The review queue for what comes in through these links is the Walk-ups tab.
  *
  * Renders NOTHING when the tenant has no code. Codes are minted by the
  * backend setup command, so most tenants see no banner at all and the page
