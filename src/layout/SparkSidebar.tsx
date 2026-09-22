@@ -1,6 +1,7 @@
 import React, { Suspense, useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useAuthStore } from "@/store/authStore";
+import { isTorchTenant } from "@/field/torch";
 import useSparkRole from "@/hooks/useSparkRole";
 import TenantPicker from "./TenantPicker";
 import { ChevronDown, ChevronRight, PanelLeftClose, PanelLeft, X } from "lucide-react";
@@ -555,19 +556,31 @@ const SidebarNav: React.FC<{
 };
 
 export const SparkSidebar: React.FC = () => {
-  const { user, tenantMeta } = useAuthStore();
+  const { user, tenantMeta, tenantSlug } = useAuthStore();
   const { pathname } = useLocation();
   const { isClient } = useSparkRole();
   const { open, setOpen, collapsed, toggleCollapsed } = useMobileNav();
   // Mobile drawer always shows full labels; desktop can icon-rail collapse.
   const iconRail = collapsed && !open;
   // Filter sections + items by role.
+  const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
   const visibleSections: NavSection[] = SECTIONS.filter(
     (s) => !s.adminOnly || !isClient,
-  ).map((s) => ({
-    ...s,
-    items: s.items.filter((it) => !it.adminOnly || !isClient),
-  }));
+  ).map((s) => {
+    const items = s.items.filter((it) => !it.adminOnly || !isClient);
+    if (s.title !== "Recaps" || !torch) return { ...s, items };
+    const trackerAt = items.findIndex((it) => it.to === "/requests/list");
+    const fieldItem: NavItem = {
+      label: "Field marketing",
+      Icon: Megaphone,
+      to: "/field-marketing",
+      clientLabel: "Field marketing",
+    };
+    if (trackerAt < 0) return { ...s, items: [...items, fieldItem] };
+    const next = items.slice();
+    next.splice(trackerAt + 1, 0, fieldItem);
+    return { ...s, items: next };
+  });
   const initial = (user?.firstName ?? user?.email ?? "U")
     .charAt(0)
     .toUpperCase();

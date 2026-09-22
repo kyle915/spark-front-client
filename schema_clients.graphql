@@ -3161,6 +3161,92 @@ input CancelDemoInput {
   reason: String!
 }
 
+type FieldMarketingManager {
+  market: String!
+  marketLabel: String!
+  name: String!
+  email: String!
+  phone: String!
+}
+
+type FieldMarketingKpi {
+  key: String!
+  label: String!
+  detail: String!
+  target: Int!
+  planned: Int!
+  logged: Int
+  unit: String!
+}
+
+type FieldMarketingEvent {
+  id: String!
+  market: String!
+  marketLabel: String!
+  managerName: String!
+  activity: String!
+  activityLabel: String!
+  name: String!
+  startsOn: String!
+  days: Int!
+  address: String!
+  notes: String!
+  plannedFullCans: Int!
+  plannedPourSamples: Int!
+  plannedEmails: Int!
+  loggedFullCans: Int
+  loggedPourSamples: Int
+  loggedEmails: Int
+  loggedDays: Int
+  status: String!
+  requestCode: String
+}
+
+type FieldMarketingBoard {
+  available: Boolean!
+  month: String!
+  monthLabel: String!
+  managers: [FieldMarketingManager!]!
+  kpis: [FieldMarketingKpi!]!
+  events: [FieldMarketingEvent!]!
+}
+
+input PlanFieldMarketingInput {
+  clientMutationId: ID = null
+  market: String!
+  activity: String!
+  name: String!
+  startsOn: String!
+  days: Int! = 1
+  address: String! = ""
+  notes: String! = ""
+  plannedFullCans: Int! = 0
+  plannedPourSamples: Int! = 0
+  plannedEmails: Int! = 0
+  submit: Boolean! = false
+}
+
+input SubmitFieldMarketingInput {
+  clientMutationId: ID = null
+  eventId: String!
+}
+
+input LogFieldMarketingInput {
+  clientMutationId: ID = null
+  eventId: String!
+  loggedFullCans: Int = null
+  loggedPourSamples: Int = null
+  loggedEmails: Int = null
+  loggedDays: Int = null
+}
+
+type FieldMarketingEventResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  event: FieldMarketingEvent
+}
+
 type DeclineRequestResponse {
   success: Boolean!
   message: String!
@@ -5048,6 +5134,9 @@ type Mutation {
   approveRequest(input: ApproveRequestInput!): ApproveRequestResponse!
   declineRequest(input: DeclineRequestInput!): DeclineRequestResponse!
   cancelDemo(input: CancelDemoInput!): CancelDemoResponse!
+  planFieldMarketing(input: PlanFieldMarketingInput!): FieldMarketingEventResponse!
+  submitFieldMarketing(input: SubmitFieldMarketingInput!): FieldMarketingEventResponse!
+  logFieldMarketing(input: LogFieldMarketingInput!): FieldMarketingEventResponse!
   deleteRequest(input: DeleteRequestInput!): DeleteRequestResponse!
   upsertRequestReviewed(input: UpsertRequestReviewedInput!): RequestDetailResponse!
   notifyNoteMention(input: NotifyNoteMentionInput!): NotifyNoteMentionResponse!
@@ -5739,6 +5828,7 @@ type QuarterOption {
 }
 
 type Query {
+  fieldMarketing(month: String = null): FieldMarketingBoard!
   eventPnl(tenantId: ID!, startDate: String!, endDate: String!): [EventPnlRow!]!
   duplicateEventClusters(tenantId: ID!): [DuplicateEventCluster!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
