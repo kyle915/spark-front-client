@@ -336,6 +336,8 @@ const ClientInner: React.FC = () => {
         <PlansPipelineDashboardStrip tenantId={tenantId} />
       )}
 
+      {program === "field" ? null : (
+      <>
       {/* Month-ahead bars */}
       <div className="spark-card p-5">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -563,6 +565,8 @@ const ClientInner: React.FC = () => {
           </div>
         </div>
       </div>
+      </>
+      )}
 
       <Suspense fallback={<DashboardSkeleton />}>
         <InsightsBody embedded />
