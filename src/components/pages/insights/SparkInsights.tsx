@@ -616,9 +616,27 @@ export function InsightsBody({
     </div>
   );
 
+  const showingLine =
+    fieldProgram ? null : (
+      <p
+        className="mono text-[10px] min-w-0 whitespace-normal"
+        style={{
+          letterSpacing: "0.16em",
+          color: "rgba(255,255,255,0.45)",
+        }}
+      >
+        SHOWING {rangeLabel.toUpperCase()} · {startDate} → {endDate}
+        {selectedState ? ` · STATE ${selectedState}` : ""}
+      </p>
+    );
+
   const stickyRangeBar = (
-    <div className="spark-insights-range sticky z-20">
-      {/* Stack copy above pills so Torch program + range controls never clip the support line. */}
+    <div className="spark-insights-range sticky z-20 overflow-visible">
+      {/*
+        Keep eyebrow, support, pills, and SHOWING inside the sticky chrome.
+        A sibling under the bar with negative margin used to tuck under the
+        opaque sticky background (z-20) and look clipped.
+      */}
       <div className="flex flex-col gap-3">
         <div className="min-w-0 w-full">
           <p
@@ -640,6 +658,7 @@ export function InsightsBody({
           </p>
         </div>
         <div className="w-full min-w-0">{rangeControls}</div>
+        {showingLine}
       </div>
     </div>
   );
@@ -668,20 +687,8 @@ export function InsightsBody({
             }
           />
           <div className="w-full min-w-0">{rangeControls}</div>
+          {showingLine}
         </div>
-      )}
-
-      {fieldProgram ? null : (
-      <p
-        className="mono text-[10px] -mt-2"
-        style={{
-          letterSpacing: "0.16em",
-          color: "rgba(255,255,255,0.45)",
-        }}
-      >
-        SHOWING {rangeLabel.toUpperCase()} · {startDate} → {endDate}
-        {selectedState ? ` · STATE ${selectedState}` : ""}
-      </p>
       )}
 
       {fieldProgram ? <FieldMarketingScorecard /> : null}
