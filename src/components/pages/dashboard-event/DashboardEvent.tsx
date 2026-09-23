@@ -218,19 +218,23 @@ function DashboardInner() {
         </div>
       </div>
 
-      <Suspense fallback={null}>
-        <TodaysSnapshot />
-      </Suspense>
+      {program === "field" ? null : (
+        <>
+          <Suspense fallback={null}>
+            <TodaysSnapshot />
+          </Suspense>
 
-      {!isClient && (
-        <Suspense fallback={null}>
-          <ClockSummaryCard />
-        </Suspense>
+          {!isClient && (
+            <Suspense fallback={null}>
+              <ClockSummaryCard />
+            </Suspense>
+          )}
+
+          <Suspense fallback={null}>
+            <AttentionEngine />
+          </Suspense>
+        </>
       )}
-
-      <Suspense fallback={null}>
-        <AttentionEngine />
-      </Suspense>
 
       <Suspense fallback={<DashboardSkeleton />}>
         <InsightsBody embedded />

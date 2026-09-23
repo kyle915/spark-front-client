@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import { useAuthStore } from "@/store/authStore";
 import ProgramSwitch from "./ProgramSwitch";
 
 /**
@@ -60,8 +61,8 @@ type Board = {
 };
 
 const BOARD = `
-  query FieldMarketingBoard($month: String) {
-    fieldMarketing(month: $month) {
+  query FieldMarketingBoard($month: String, $tenantId: ID) {
+    fieldMarketing(month: $month, tenantId: $tenantId) {
       available
       month
       monthLabel
@@ -170,6 +171,7 @@ const emptyForm = {
 };
 
 export default function FieldMarketing() {
+  const { tenantId } = useAuthStore();
   const [month, setMonth] = useState(currentMonth);
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState("");
@@ -191,6 +193,7 @@ export default function FieldMarketing() {
     try {
       const data = await postGql<{ fieldMarketing: Board }>(BOARD, {
         month: nextMonth,
+        tenantId: tenantId || null,
       });
       setBoard(data.fieldMarketing);
       setMonth(data.fieldMarketing.month || nextMonth);
@@ -199,13 +202,13 @@ export default function FieldMarketing() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [tenantId]);
 
   useEffect(() => {
     void load(month);
     // Initial load only. Month changes go through the buttons.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [tenantId]);
 
   const activity = form.activity;
   const showCans = activity === "full_can" || activity === "sponsorship";
@@ -246,6 +249,7 @@ export default function FieldMarketing() {
           plannedPourSamples: showPours ? num(form.plannedPourSamples) : 0,
           plannedEmails: num(form.plannedEmails),
           submit,
+          tenantId: tenantId || null,
         },
       });
       setForm({ ...emptyForm, market: form.market, activity: form.activity });
@@ -262,7 +266,7 @@ export default function FieldMarketing() {
     setError("");
     setNotice("");
     try {
-      await postGql(SUBMIT, { input: { eventId } });
+      await postGql(SUBMIT, { input: { eventId, tenantId: tenantId || null } });
       setNotice("Submitted to Ignite.");
       await load(month);
     } catch (err) {
@@ -294,6 +298,7 @@ export default function FieldMarketing() {
               : null,
           loggedEmails: optional(logDraft.emails),
           loggedDays: row.activity === "sponsorship" ? optional(logDraft.days) : null,
+          tenantId: tenantId || null,
         },
       });
       setLoggingId(null);

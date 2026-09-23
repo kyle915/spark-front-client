@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
+import { useAuthStore } from "@/store/authStore";
 
 /**
  * Monthly Field Marketing scorecard for the dashboard.
@@ -25,9 +26,58 @@ type Board = {
   kpis: Kpi[];
 };
 
+/** Stable empty skeleton so the five buckets never disappear while loading. */
+const EMPTY_KPIS: Kpi[] = [
+  {
+    key: "full_cans",
+    label: "Full can samples",
+    detail: "Product drops, donations, guerilla events. Drives trial and awareness.",
+    target: 1152,
+    planned: 0,
+    logged: null,
+    unit: "cans",
+  },
+  {
+    key: "pour_samples",
+    label: "4oz pour samples",
+    detail: "Local sponsorships, events, festivals. 3,456 pours is 1,152 full cans.",
+    target: 3456,
+    planned: 0,
+    logged: null,
+    unit: "pours",
+  },
+  {
+    key: "sponsorship_days",
+    label: "Local event sponsorships",
+    detail: "Minimum days. Builds meaningful local presence.",
+    target: 8,
+    planned: 0,
+    logged: null,
+    unit: "days",
+  },
+  {
+    key: "retail_support",
+    label: "Retail activations / support",
+    detail: "On-premise support, retail check-in, sales and DP meetings.",
+    target: 4,
+    planned: 0,
+    logged: null,
+    unit: "activations",
+  },
+  {
+    key: "emails",
+    label: "Consumer data captured",
+    detail: "Email addresses. Builds an addressable audience.",
+    target: 500,
+    planned: 0,
+    logged: null,
+    unit: "emails",
+  },
+];
+
 const BOARD = `
-  query FieldMarketingBoard($month: String) {
-    fieldMarketing(month: $month) {
+  query FieldMarketingBoard($month: String, $tenantId: ID) {
+    fieldMarketing(month: $month, tenantId: $tenantId) {
       available
       month
       monthLabel
@@ -73,31 +123,79 @@ function fmtNum(value: number | null): string {
   return value.toLocaleString();
 }
 
+function ProgressBar({
+  logged,
+  target,
+}: {
+  logged: number | null;
+  target: number;
+}) {
+  const pct =
+    target > 0 && logged != null
+      ? Math.min(100, Math.round((logged / target) * 100))
+      : 0;
+  return (
+    <div className="mt-3" aria-hidden>
+      <div
+        className="h-1.5 w-full rounded-full overflow-hidden"
+        style={{ background: "rgba(255,255,255,0.08)" }}
+      >
+        <div
+          className="h-full rounded-full transition-[width] duration-500"
+          style={{
+            width: `${pct}%`,
+            background:
+              logged == null
+                ? "transparent"
+                : "var(--spark-lime, #c5f546)",
+            minWidth: logged != null && logged > 0 ? 4 : 0,
+          }}
+        />
+      </div>
+      <p className="mt-1.5 mono text-[9px]" style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.4)" }}>
+        LOGGED {pct}% OF TARGET
+      </p>
+    </div>
+  );
+}
+
 export default function FieldMarketingScorecard() {
+  const { tenantId } = useAuthStore();
   const [month, setMonth] = useState(currentMonth);
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async (nextMonth: string) => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await postGql<{ fieldMarketing: Board }>(BOARD, {
-        month: nextMonth,
-      });
-      setBoard(data.fieldMarketing);
-      setMonth(data.fieldMarketing.month || nextMonth);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load the scorecard.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (nextMonth: string) => {
+      setLoading(true);
+      setError("");
+      try {
+        const data = await postGql<{ fieldMarketing: Board }>(BOARD, {
+          month: nextMonth,
+          tenantId: tenantId || null,
+        });
+        setBoard(data.fieldMarketing);
+        setMonth(data.fieldMarketing.month || nextMonth);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Could not load the scorecard.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [tenantId],
+  );
 
   useEffect(() => {
     void load(currentMonth());
   }, [load]);
+
+  const kpis = useMemo(() => {
+    const rows = board?.kpis?.length ? board.kpis : EMPTY_KPIS;
+    return rows;
+  }, [board]);
 
   return (
     <section className="space-y-4">
@@ -139,16 +237,17 @@ export default function FieldMarketingScorecard() {
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        {(board?.kpis ?? []).map((kpi) => (
+        {kpis.map((kpi) => (
           <article key={kpi.key} className="spark-card p-4">
             <p className="label-mini mb-2">{kpi.label}</p>
             <p className="tab-num text-2xl lg:text-3xl font-bold leading-none">
-              {loading ? "…" : fmtNum(kpi.logged)}
+              {loading && !board ? "…" : fmtNum(kpi.logged)}
               <span className="text-sm font-normal opacity-60">
                 {" "}
                 / {kpi.target.toLocaleString()}
               </span>
             </p>
+            <ProgressBar logged={kpi.logged} target={kpi.target} />
             <p className="mt-3 text-xs opacity-70">
               Planned {kpi.planned.toLocaleString()} {kpi.unit}
             </p>
