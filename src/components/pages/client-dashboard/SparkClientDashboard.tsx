@@ -26,6 +26,9 @@ import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { requestDateKey } from "@/lib/requestDateKey";
 import PlansPipelineDashboardStrip from "@/plans/PlansPipelineDashboardStrip";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import DashboardProgramSwitch from "@/field/DashboardProgramSwitch";
+import { isTorchTenant } from "@/field/torch";
+import { useDashboardProgram } from "@/field/useDashboardProgram";
 
 const AccountMapBody = lazy(() =>
   import("@/components/pages/map/SparkAccountMap").then((m) => ({
@@ -86,7 +89,9 @@ const isoDay = (d: Date) => dayKey(d);
 
 const ClientInner: React.FC = () => {
   const navigate = useNavigate();
-  const { tenantId } = useAuthStore();
+  const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
+  const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
+  const { program, choose } = useDashboardProgram(torch);
   const counts = useSidebarCounts();
 
   // Active tab — Overview / Approvals / Account Map. Persists in the
@@ -323,7 +328,13 @@ const ClientInner: React.FC = () => {
 
       {activeTab === "overview" && (<>
 
-      <PlansPipelineDashboardStrip tenantId={tenantId} />
+      {torch ? (
+        <DashboardProgramSwitch program={program} onChange={choose} />
+      ) : null}
+
+      {program === "field" ? null : (
+        <PlansPipelineDashboardStrip tenantId={tenantId} />
+      )}
 
       {/* Month-ahead bars */}
       <div className="spark-card p-5">

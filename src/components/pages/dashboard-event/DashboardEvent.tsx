@@ -7,6 +7,9 @@ import AttentionEngine from "./AttentionEngine";
 import AskAiButton from "@/components/ai/AskAiButton";
 import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
+import DashboardProgramSwitch from "@/field/DashboardProgramSwitch";
+import { isTorchTenant } from "@/field/torch";
+import { useDashboardProgram } from "@/field/useDashboardProgram";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import { useNavigate } from "react-router";
 
@@ -145,7 +148,9 @@ const slugToName = (slug: string | null | undefined): string => {
 };
 
 function DashboardInner() {
-  const { tenantId, tenantMeta } = useAuthStore();
+  const { tenantId, tenantMeta, tenantSlug } = useAuthStore();
+  const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
+  const { program, choose } = useDashboardProgram(torch);
   const { isClient } = useSparkRole();
   const tenantDisplay = slugToName(tenantMeta?.requestUrlName);
 
@@ -178,6 +183,9 @@ function DashboardInner() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {torch ? (
+            <DashboardProgramSwitch program={program} onChange={choose} />
+          ) : null}
           {linkedSheetUrl && (
             <a
               href={linkedSheetUrl}

@@ -1,4 +1,8 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import DashboardProgramSwitch from "@/field/DashboardProgramSwitch";
+import FieldMarketingScorecard from "@/field/FieldMarketingScorecard";
+import { isTorchTenant } from "@/field/torch";
+import { useDashboardProgram } from "@/field/useDashboardProgram";
 import { fetchQuery } from "relay-runtime";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { Navigate, useNavigate } from "react-router";
@@ -485,12 +489,15 @@ export function InsightsBody({
 }: {
   embedded?: boolean;
 }) {
-  const { tenantId } = useAuthStore();
+  const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
+  const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
   const navigate = useNavigate();
   const showAlert = useAlertStore((s) => s.showAlert);
   const [range, setRange] = useState<RangeKey>("30d");
   const [selectedState, setSelectedState] = useState<string | null>(null);
   const [copying, setCopying] = useState(false);
+  const { program, choose: chooseProgram } = useDashboardProgram(torch);
+  const fieldProgram = program === "field";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -553,8 +560,15 @@ export function InsightsBody({
     }
   };
 
+  const programSwitch = torch ? (
+    <DashboardProgramSwitch program={program} onChange={chooseProgram} />
+  ) : null;
+
   const rangeControls = (
     <div className="flex items-center gap-2 flex-wrap">
+      {programSwitch}
+      {fieldProgram ? null : (
+      <>
       <div className="pill-group">
         {RANGES.map((r) => (
           <button
@@ -597,6 +611,8 @@ export function InsightsBody({
       >
         Open reports
       </button>
+      </>
+      )}
     </div>
   );
 
@@ -611,14 +627,15 @@ export function InsightsBody({
               color: "rgba(255,255,255,0.45)",
             }}
           >
-            PROGRAM PERFORMANCE
+            {fieldProgram ? "FIELD MARKETING" : "PROGRAM PERFORMANCE"}
           </p>
           <p
             className="mt-1.5 text-sm"
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
-            Range scopes Timeline, Activation, and geo. Program KPIs stay
-            calendar-year.
+            {fieldProgram
+              ? "Monthly scorecard from logged field events. Retail sampling stays on the other tab."
+              : "Range scopes Timeline, Activation, and geo. Program KPIs stay calendar-year."}
           </p>
         </div>
         {rangeControls}
@@ -639,14 +656,19 @@ export function InsightsBody({
         stickyRangeBar
       ) : (
         <SparkPageHeader
-          eyebrow="PROGRAM ANALYTICS"
+          eyebrow={fieldProgram ? "FIELD MARKETING" : "PROGRAM ANALYTICS"}
           title="Dashboard"
           titleClassName="text-2xl lg:text-3xl font-bold"
-          support="Page range scopes Timeline, Activation, and geo. Program KPIs stay calendar-year."
+          support={
+            fieldProgram
+              ? "Monthly scorecard from logged field events. Retail sampling stays on the other tab."
+              : "Page range scopes Timeline, Activation, and geo. Program KPIs stay calendar-year."
+          }
           action={rangeControls}
         />
       )}
 
+      {fieldProgram ? null : (
       <p
         className="mono text-[10px] -mt-2"
         style={{
@@ -657,7 +679,12 @@ export function InsightsBody({
         SHOWING {rangeLabel.toUpperCase()} · {startDate} → {endDate}
         {selectedState ? ` · STATE ${selectedState}` : ""}
       </p>
+      )}
 
+      {fieldProgram ? <FieldMarketingScorecard /> : null}
+
+      {!fieldProgram ? (
+      <>
       {tenantId && (
         <div className="spark-card overflow-hidden" style={{ borderRadius: 22 }}>
           <div className="p-5 lg:p-6">
@@ -786,6 +813,8 @@ export function InsightsBody({
           onClearState={() => setSelectedState(null)}
         />
       </Suspense>
+      </>
+      ) : null}
     </div>
   );
 }
