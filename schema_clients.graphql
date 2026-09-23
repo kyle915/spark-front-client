@@ -3191,6 +3191,16 @@ type FieldMarketingEvent {
   days: Int!
   address: String!
   notes: String!
+  samplingFormat: String!
+  samplingLabel: String!
+  supportType: String!
+  supportLabel: String!
+  supportOther: String!
+  skuNames: [String!]!
+  needsFieldSupport: Boolean!
+  ambassadorCount: Int!
+  supportTimes: String!
+  supportScope: String!
   plannedFullCans: Int!
   plannedPourSamples: Int!
   plannedEmails: Int!
@@ -3198,6 +3208,7 @@ type FieldMarketingEvent {
   loggedPourSamples: Int
   loggedEmails: Int
   loggedDays: Int
+  loggedCases: Int
   status: String!
   requestCode: String
 }
@@ -3209,6 +3220,7 @@ type FieldMarketingBoard {
   managers: [FieldMarketingManager!]!
   kpis: [FieldMarketingKpi!]!
   events: [FieldMarketingEvent!]!
+  skus: [String!]!
 }
 
 input PlanFieldMarketingInput {
@@ -3223,6 +3235,14 @@ input PlanFieldMarketingInput {
   plannedFullCans: Int! = 0
   plannedPourSamples: Int! = 0
   plannedEmails: Int! = 0
+  samplingFormat: String! = ""
+  supportType: String! = ""
+  supportOther: String! = ""
+  skuNames: [String!] = null
+  needsFieldSupport: Boolean! = false
+  ambassadorCount: Int! = 0
+  supportTimes: String! = ""
+  supportScope: String! = ""
   submit: Boolean! = false
   tenantId: ID = null
 }
@@ -3240,6 +3260,7 @@ input LogFieldMarketingInput {
   loggedPourSamples: Int = null
   loggedEmails: Int = null
   loggedDays: Int = null
+  loggedCases: Int = null
   tenantId: ID = null
 }
 
@@ -5831,7 +5852,7 @@ type QuarterOption {
 }
 
 type Query {
-  fieldMarketing(month: String = null, tenantId: ID = null, market: String = null): FieldMarketingBoard!
+  fieldMarketing(month: String = null, tenantId: ID = null, market: String = null, quarter: String = null, activity: String = null): FieldMarketingBoard!
   eventPnl(tenantId: ID!, startDate: String!, endDate: String!): [EventPnlRow!]!
   duplicateEventClusters(tenantId: ID!): [DuplicateEventCluster!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!

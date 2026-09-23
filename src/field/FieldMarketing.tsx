@@ -2,62 +2,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import { useAuthStore } from "@/store/authStore";
+import FieldMarketingCalendar from "./FieldMarketingCalendar";
 import ProgramSwitch from "./ProgramSwitch";
+import {
+  downloadCsv,
+  fieldMarketingCsv,
+  matchesTactic,
+} from "./fieldMarketingExport";
+import type { Board, FmEvent, Manager } from "./fieldMarketingTypes";
 
 /**
  * Torch Plans = field marketing planner (merged with Activation Plans nav).
  * Dense month table, filter by market/RMM, projected KPI rollups, push to Ignite.
  */
-
-type Manager = {
-  market: string;
-  marketLabel: string;
-  name: string;
-  email: string;
-  phone: string;
-};
-
-type Kpi = {
-  key: string;
-  label: string;
-  detail: string;
-  target: number;
-  planned: number;
-  logged: number | null;
-  unit: string;
-};
-
-type FmEvent = {
-  id: string;
-  market: string;
-  marketLabel: string;
-  managerName: string;
-  activity: string;
-  activityLabel: string;
-  name: string;
-  startsOn: string;
-  days: number;
-  address: string;
-  notes: string;
-  plannedFullCans: number;
-  plannedPourSamples: number;
-  plannedEmails: number;
-  loggedFullCans: number | null;
-  loggedPourSamples: number | null;
-  loggedEmails: number | null;
-  loggedDays: number | null;
-  status: string;
-  requestCode: string | null;
-};
-
-type Board = {
-  available: boolean;
-  month: string;
-  monthLabel: string;
-  managers: Manager[];
-  kpis: Kpi[];
-  events: FmEvent[];
-};
 
 type SubmitPayload = {
   submitFieldMarketing: {
@@ -72,19 +29,25 @@ type SubmitPayload = {
   };
 };
 
+const EVENT_FIELDS = `
+  id market marketLabel managerName activity activityLabel name startsOn days
+  address notes samplingFormat samplingLabel supportType supportLabel supportOther
+  skuNames needsFieldSupport ambassadorCount supportTimes supportScope
+  plannedFullCans plannedPourSamples plannedEmails
+  loggedFullCans loggedPourSamples loggedEmails loggedDays loggedCases
+  status requestCode
+`;
+
 const BOARD = `
-  query FieldMarketingBoard($month: String, $tenantId: ID, $market: String) {
-    fieldMarketing(month: $month, tenantId: $tenantId, market: $market) {
+  query FieldMarketingBoard($month: String, $tenantId: ID, $market: String, $quarter: String, $activity: String) {
+    fieldMarketing(month: $month, tenantId: $tenantId, market: $market, quarter: $quarter, activity: $activity) {
       available
       month
       monthLabel
       managers { market marketLabel name email phone }
       kpis { key label detail target planned logged unit }
-      events {
-        id market marketLabel managerName activity activityLabel name startsOn days
-        address notes plannedFullCans plannedPourSamples plannedEmails
-        loggedFullCans loggedPourSamples loggedEmails loggedDays status requestCode
-      }
+      skus
+      events { ${EVENT_FIELDS} }
     }
   }
 `;
@@ -119,11 +82,19 @@ const LOG = `
 `;
 
 const ACTIVITIES = [
-  { id: "full_can", label: "Full can samples" },
-  { id: "pour", label: "4oz pour samples" },
-  { id: "sponsorship", label: "Local event sponsorship" },
-  { id: "retail_support", label: "Retail activation / support" },
+  { id: "event_activation", label: "Event activation / sponsorship" },
+  { id: "guerilla", label: "Guerilla event" },
+  { id: "product_seeding", label: "Product seeding" },
+  { id: "sales_support", label: "Sales support" },
 ];
+
+const SUPPORT_TYPES = [
+  { id: "distributor_meeting", label: "Distributor meeting" },
+  { id: "retail_visit", label: "Retail visit" },
+  { id: "other", label: "Other" },
+];
+
+const TACTICS = [{ id: "", label: "All tactics" }, ...ACTIVITIES];
 
 const FALLBACK_MANAGERS: Manager[] = [
   {
@@ -194,8 +165,34 @@ function hasLogged(row: FmEvent): boolean {
     row.loggedFullCans != null ||
     row.loggedPourSamples != null ||
     row.loggedEmails != null ||
-    row.loggedDays != null
+    row.loggedDays != null ||
+    row.loggedCases != null
   );
+}
+
+function showsCans(activity: string, sampling: string): boolean {
+  if (activity === "full_can") return true;
+  if (activity === "sponsorship" || activity === "event_activation") {
+    return sampling !== "pour";
+  }
+  return activity === "guerilla" && sampling === "full_can";
+}
+
+function showsPours(activity: string, sampling: string): boolean {
+  if (activity === "pour") return true;
+  if (activity === "sponsorship" || activity === "event_activation") {
+    return sampling !== "full_can";
+  }
+  return activity === "guerilla" && sampling === "pour";
+}
+
+function showsDays(activity: string): boolean {
+  return activity === "sponsorship" || activity === "event_activation";
+}
+
+function currentMonthKey(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function rowStatus(row: FmEvent): string {
@@ -208,15 +205,21 @@ function rowStatus(row: FmEvent): string {
 
 const emptyForm = {
   market: "miami",
-  activity: "full_can",
+  activity: "event_activation",
   name: "",
   startsOn: "",
   days: "1",
   address: "",
   notes: "",
-  plannedFullCans: "",
-  plannedPourSamples: "",
   plannedEmails: "",
+  samplingFormat: "",
+  supportType: "distributor_meeting",
+  supportOther: "",
+  skuNames: [] as string[],
+  needsFieldSupport: false,
+  ambassadorCount: "",
+  supportTimes: "",
+  supportScope: "",
 };
 
 export default function FieldMarketing() {
@@ -234,11 +237,16 @@ export default function FieldMarketing() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loggingId, setLoggingId] = useState<string | null>(null);
   const [showPlanForm, setShowPlanForm] = useState(false);
+  const [tactic, setTactic] = useState("");
+  const [view, setView] = useState<"list" | "calendar">("list");
+  const [exportQuarter, setExportQuarter] = useState("");
+  const [exporting, setExporting] = useState(false);
   const [logDraft, setLogDraft] = useState({
     cans: "",
     pours: "",
     emails: "",
     days: "",
+    cases: "",
   });
 
   const load = useCallback(
@@ -272,12 +280,20 @@ export default function FieldMarketing() {
   }, [tenantId, marketFilter]);
 
   const activity = form.activity;
-  const showCans = activity === "full_can" || activity === "sponsorship";
-  const showPours = activity === "pour" || activity === "sponsorship";
-  const showDays = activity === "sponsorship";
+  const staffed = activity === "event_activation" || activity === "guerilla";
+  const showDays = showsDays(activity);
+  const showSampling = activity === "event_activation" || activity === "guerilla";
+  const showSkus =
+    activity === "event_activation" ||
+    activity === "guerilla" ||
+    activity === "product_seeding";
+  const skuOptions = board?.skus ?? [];
 
   const managers = board?.managers?.length ? board.managers : FALLBACK_MANAGERS;
-  const events = useMemo(() => board?.events ?? [], [board?.events]);
+  const events = useMemo(() => {
+    const rows = board?.events ?? [];
+    return rows.filter((row) => matchesTactic(row.activity, tactic));
+  }, [board?.events, tactic]);
   const kpis = board?.kpis ?? [];
 
   const draftRows = useMemo(
@@ -348,9 +364,23 @@ export default function FieldMarketing() {
           days: showDays ? num(form.days || "1") : 1,
           address: form.address.trim(),
           notes: form.notes.trim(),
-          plannedFullCans: showCans ? num(form.plannedFullCans) : 0,
-          plannedPourSamples: showPours ? num(form.plannedPourSamples) : 0,
+          plannedFullCans: 0,
+          plannedPourSamples: 0,
           plannedEmails: num(form.plannedEmails),
+          samplingFormat: showSampling ? form.samplingFormat : "",
+          supportType: activity === "sales_support" ? form.supportType : "",
+          supportOther:
+            activity === "sales_support" && form.supportType === "other"
+              ? form.supportOther.trim()
+              : "",
+          skuNames: showSkus ? form.skuNames : [],
+          needsFieldSupport: staffed && form.needsFieldSupport,
+          ambassadorCount:
+            staffed && form.needsFieldSupport ? num(form.ambassadorCount || "0") : 0,
+          supportTimes:
+            staffed && form.needsFieldSupport ? form.supportTimes.trim() : "",
+          supportScope:
+            staffed && form.needsFieldSupport ? form.supportScope.trim() : "",
           submit,
           tenantId: tenantId || null,
         },
@@ -426,16 +456,16 @@ export default function FieldMarketing() {
       await postGql(LOG, {
         input: {
           eventId: row.id,
-          loggedFullCans:
-            row.activity === "full_can" || row.activity === "sponsorship"
-              ? optional(logDraft.cans)
-              : null,
-          loggedPourSamples:
-            row.activity === "pour" || row.activity === "sponsorship"
-              ? optional(logDraft.pours)
-              : null,
+          loggedFullCans: showsCans(row.activity, row.samplingFormat)
+            ? optional(logDraft.cans)
+            : null,
+          loggedPourSamples: showsPours(row.activity, row.samplingFormat)
+            ? optional(logDraft.pours)
+            : null,
           loggedEmails: optional(logDraft.emails),
-          loggedDays: row.activity === "sponsorship" ? optional(logDraft.days) : null,
+          loggedDays: showsDays(row.activity) ? optional(logDraft.days) : null,
+          loggedCases:
+            row.activity === "product_seeding" ? optional(logDraft.cases) : null,
           tenantId: tenantId || null,
         },
       });
@@ -453,6 +483,30 @@ export default function FieldMarketing() {
       return;
     }
     setSelected(new Set(draftRows.map((row) => row.id)));
+  }
+
+  async function exportPlan() {
+    setExporting(true);
+    setError("");
+    try {
+      const quarter = exportQuarter.trim();
+      const data = await postGql<{ fieldMarketing: Board }>(BOARD, {
+        month: quarter ? null : month || null,
+        quarter: quarter || null,
+        tenantId: tenantId || null,
+        market: marketFilter || null,
+        activity: tactic || null,
+      });
+      const rows = (data.fieldMarketing.events ?? []).filter((row) =>
+        matchesTactic(row.activity, tactic),
+      );
+      const stamp = quarter || month || "all";
+      downloadCsv(`torch-field-marketing-${stamp}.csv`, fieldMarketingCsv(rows));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not export.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   function toggleRow(id: string) {
@@ -528,6 +582,62 @@ export default function FieldMarketing() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="spark-support">{loading ? "Loading…" : summaryLine}</p>
+            <div className="flex rounded-full border border-white/10 p-0.5" role="tablist" aria-label="Plan view">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={view === "list"}
+                className={`pill-btn ${view === "list" ? "on" : ""}`}
+                onClick={() => setView("list")}
+              >
+                List
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={view === "calendar"}
+                className={`pill-btn ${view === "calendar" ? "on" : ""}`}
+                onClick={() => {
+                  setView("calendar");
+                  if (!month) {
+                    const next = currentMonthKey();
+                    setMonth(next);
+                    void load(next, marketFilter);
+                  }
+                }}
+              >
+                Calendar
+              </button>
+            </div>
+            <label className="text-sm flex items-center gap-2">
+              <span className="opacity-60">Export</span>
+              <select
+                className="select select-bordered select-sm"
+                value={exportQuarter}
+                onChange={(e) => setExportQuarter(e.target.value)}
+                aria-label="Export range"
+              >
+                <option value="">
+                  {month ? "Selected month" : "All dates"}
+                </option>
+                {[0, 1].flatMap((offset) => {
+                  const year = new Date().getFullYear() + offset;
+                  return [1, 2, 3, 4].map((q) => (
+                    <option key={`${year}-Q${q}`} value={`${year}-Q${q}`}>
+                      {year} Q{q}
+                    </option>
+                  ));
+                })}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="spark-btn-ghost"
+              disabled={exporting}
+              onClick={() => void exportPlan()}
+            >
+              {exporting ? "Exporting…" : "Export CSV"}
+            </button>
             <button
               type="button"
               className="spark-btn-ghost"
@@ -571,6 +681,20 @@ export default function FieldMarketing() {
               title={`${manager.name} · ${manager.email}`}
             >
               {manager.marketLabel}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2 items-center" role="tablist" aria-label="Tactic">
+          {TACTICS.map((row) => (
+            <button
+              key={row.id || "all"}
+              type="button"
+              role="tab"
+              aria-selected={tactic === row.id}
+              className={`pill-btn ${tactic === row.id ? "on" : ""}`}
+              onClick={() => setTactic(row.id)}
+            >
+              {row.label}
             </button>
           ))}
         </div>
@@ -684,6 +808,50 @@ export default function FieldMarketing() {
                   />
                 </label>
               ) : null}
+              {showSampling ? (
+                <label className="text-sm space-y-1">
+                  <span className="opacity-70">
+                    Sampling format{activity === "guerilla" ? "" : " (optional)"}
+                  </span>
+                  <select
+                    className="input input-bordered w-full input-sm"
+                    value={form.samplingFormat}
+                    onChange={(e) =>
+                      setForm({ ...form, samplingFormat: e.target.value })
+                    }
+                  >
+                    <option value="">{activity === "guerilla" ? "Pick one" : "Not set"}</option>
+                    <option value="full_can">Full can</option>
+                    <option value="pour">4oz pour</option>
+                  </select>
+                </label>
+              ) : null}
+              {activity === "sales_support" ? (
+                <label className="text-sm space-y-1">
+                  <span className="opacity-70">Sales support</span>
+                  <select
+                    className="input input-bordered w-full input-sm"
+                    value={form.supportType}
+                    onChange={(e) => setForm({ ...form, supportType: e.target.value })}
+                  >
+                    {SUPPORT_TYPES.map((row) => (
+                      <option key={row.id} value={row.id}>
+                        {row.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              {activity === "sales_support" && form.supportType === "other" ? (
+                <label className="text-sm space-y-1">
+                  <span className="opacity-70">What kind</span>
+                  <input
+                    className="input input-bordered w-full input-sm"
+                    value={form.supportOther}
+                    onChange={(e) => setForm({ ...form, supportOther: e.target.value })}
+                  />
+                </label>
+              ) : null}
               <label className="text-sm space-y-1 md:col-span-2">
                 <span className="opacity-70">Address</span>
                 <input
@@ -693,34 +861,91 @@ export default function FieldMarketing() {
                   placeholder="Required before Ignite can execute"
                 />
               </label>
-              {showCans ? (
+              {showSkus ? (
+                <fieldset className="text-sm space-y-1 md:col-span-2">
+                  <legend className="opacity-70">SKUs</legend>
+                  {skuOptions.length === 0 ? (
+                    <p className="text-xs opacity-60">
+                      Black Cherry 10mg, Strawberry Lemonade 10mg, Watermelon Limeade 10mg,
+                      and Nonactive are not in the Torch catalog yet.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {skuOptions.map((name) => {
+                        const on = form.skuNames.includes(name);
+                        return (
+                          <label key={name} className="inline-flex items-center gap-1.5 text-xs">
+                            <input
+                              type="checkbox"
+                              className="checkbox checkbox-xs"
+                              checked={on}
+                              onChange={() =>
+                                setForm({
+                                  ...form,
+                                  skuNames: on
+                                    ? form.skuNames.filter((sku) => sku !== name)
+                                    : [...form.skuNames, name],
+                                })
+                              }
+                            />
+                            {name}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </fieldset>
+              ) : null}
+              {staffed ? (
                 <label className="text-sm space-y-1">
-                  <span className="opacity-70">Planned full cans</span>
-                  <input
-                    inputMode="numeric"
+                  <span className="opacity-70">Need field support?</span>
+                  <select
                     className="input input-bordered w-full input-sm"
-                    value={form.plannedFullCans}
+                    value={form.needsFieldSupport ? "yes" : "no"}
                     onChange={(e) =>
-                      setForm({ ...form, plannedFullCans: e.target.value })
+                      setForm({ ...form, needsFieldSupport: e.target.value === "yes" })
                     }
-                  />
+                  >
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                  </select>
                 </label>
               ) : null}
-              {showPours ? (
-                <label className="text-sm space-y-1">
-                  <span className="opacity-70">Planned 4oz pours</span>
-                  <input
-                    inputMode="numeric"
-                    className="input input-bordered w-full input-sm"
-                    value={form.plannedPourSamples}
-                    onChange={(e) =>
-                      setForm({ ...form, plannedPourSamples: e.target.value })
-                    }
-                  />
-                </label>
+              {staffed && form.needsFieldSupport ? (
+                <>
+                  <label className="text-sm space-y-1">
+                    <span className="opacity-70">Brand ambassadors</span>
+                    <input
+                      inputMode="numeric"
+                      className="input input-bordered w-full input-sm"
+                      value={form.ambassadorCount}
+                      onChange={(e) =>
+                        setForm({ ...form, ambassadorCount: e.target.value })
+                      }
+                    />
+                  </label>
+                  <label className="text-sm space-y-1">
+                    <span className="opacity-70">Times</span>
+                    <input
+                      className="input input-bordered w-full input-sm"
+                      value={form.supportTimes}
+                      onChange={(e) => setForm({ ...form, supportTimes: e.target.value })}
+                      placeholder="4–8pm"
+                    />
+                  </label>
+                  <label className="text-sm space-y-1 md:col-span-2">
+                    <span className="opacity-70">Scope</span>
+                    <input
+                      className="input input-bordered w-full input-sm"
+                      value={form.supportScope}
+                      onChange={(e) => setForm({ ...form, supportScope: e.target.value })}
+                      placeholder="What you need on site"
+                    />
+                  </label>
+                </>
               ) : null}
               <label className="text-sm space-y-1">
-                <span className="opacity-70">Planned emails</span>
+                <span className="opacity-70">Emails to capture</span>
                 <input
                   inputMode="numeric"
                   className="input input-bordered w-full input-sm"
@@ -759,6 +984,16 @@ export default function FieldMarketing() {
           </section>
         ) : null}
 
+        {view === "calendar" ? (
+          <FieldMarketingCalendar
+            month={month || currentMonthKey()}
+            events={events}
+            onMonth={(next) => {
+              setMonth(next);
+              void load(next, marketFilter);
+            }}
+          />
+        ) : (
         <section className="rounded-xl border border-white/10 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="table table-sm w-full">
@@ -784,6 +1019,7 @@ export default function FieldMarketing() {
                   <th className="px-2 py-2 text-right">Days</th>
                   <th className="px-2 py-2 text-right">Cans</th>
                   <th className="px-2 py-2 text-right">Pours</th>
+                  <th className="px-2 py-2 text-right">Cases</th>
                   <th className="px-2 py-2 text-right">Emails</th>
                   <th className="px-2 py-2">Status</th>
                   <th className="px-2 py-2 text-right">Actions</th>
@@ -792,7 +1028,7 @@ export default function FieldMarketing() {
               <tbody>
                 {events.length === 0 && !loading ? (
                   <tr>
-                    <td colSpan={12} className="px-3 py-8 text-center opacity-55 text-sm">
+                    <td colSpan={13} className="px-3 py-8 text-center opacity-55 text-sm">
                       No plan rows
                       {month ? " for this month" : ""}
                       {marketFilter ? " and market" : ""}. Add to plan to start.
@@ -826,8 +1062,25 @@ export default function FieldMarketing() {
                       <td className="px-2 py-2 whitespace-nowrap text-sm opacity-70">
                         {row.managerName}
                       </td>
-                      <td className="px-2 py-2 text-sm opacity-80 max-w-[140px] truncate">
-                        {row.activityLabel}
+                      <td className="px-2 py-2 text-sm opacity-80 max-w-[160px]">
+                        <span className="block truncate">{row.activityLabel}</span>
+                        {row.supportLabel ? (
+                          <span className="block text-[11px] opacity-50 truncate">
+                            {row.supportOther
+                              ? `${row.supportLabel}: ${row.supportOther}`
+                              : row.supportLabel}
+                          </span>
+                        ) : null}
+                        {row.samplingLabel ? (
+                          <span className="block text-[11px] opacity-50 truncate">
+                            {row.samplingLabel}
+                          </span>
+                        ) : null}
+                        {row.skuNames?.length ? (
+                          <span className="block text-[11px] opacity-50 truncate">
+                            {row.skuNames.join(", ")}
+                          </span>
+                        ) : null}
                       </td>
                       <td className="px-2 py-2 text-sm font-medium max-w-[220px]">
                         <span className="truncate block" title={row.name}>
@@ -847,16 +1100,19 @@ export default function FieldMarketing() {
                         )}
                       </td>
                       <td className="px-2 py-2 text-right tabular-nums text-sm">
-                        {row.activity === "sponsorship" ? row.days : "—"}
+                        {showsDays(row.activity) ? row.days : "—"}
                       </td>
                       <td className="px-2 py-2 text-right tabular-nums text-sm">
-                        {row.plannedFullCans || "—"}
+                        {fmtNum(row.loggedFullCans ?? (row.plannedFullCans || null))}
                       </td>
                       <td className="px-2 py-2 text-right tabular-nums text-sm">
-                        {row.plannedPourSamples || "—"}
+                        {fmtNum(row.loggedPourSamples ?? (row.plannedPourSamples || null))}
                       </td>
                       <td className="px-2 py-2 text-right tabular-nums text-sm">
-                        {row.plannedEmails || "—"}
+                        {fmtNum(row.loggedCases)}
+                      </td>
+                      <td className="px-2 py-2 text-right tabular-nums text-sm">
+                        {fmtNum(row.loggedEmails ?? (row.plannedEmails || null))}
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap text-xs">
                         <span
@@ -895,6 +1151,7 @@ export default function FieldMarketing() {
                                 pours: "",
                                 emails: "",
                                 days: "",
+                                cases: "",
                               });
                             }}
                           >
@@ -918,7 +1175,7 @@ export default function FieldMarketing() {
                     <p className="text-xs opacity-60 w-full">
                       Log results · {row.name}
                     </p>
-                    {row.activity === "full_can" || row.activity === "sponsorship" ? (
+                    {showsCans(row.activity, row.samplingFormat) ? (
                       <input
                         className="input input-bordered input-sm"
                         inputMode="numeric"
@@ -929,7 +1186,7 @@ export default function FieldMarketing() {
                         }
                       />
                     ) : null}
-                    {row.activity === "pour" || row.activity === "sponsorship" ? (
+                    {showsPours(row.activity, row.samplingFormat) ? (
                       <input
                         className="input input-bordered input-sm"
                         inputMode="numeric"
@@ -940,7 +1197,18 @@ export default function FieldMarketing() {
                         }
                       />
                     ) : null}
-                    {row.activity === "sponsorship" ? (
+                    {row.activity === "product_seeding" ? (
+                      <input
+                        className="input input-bordered input-sm"
+                        inputMode="numeric"
+                        placeholder="Cases seeded"
+                        value={logDraft.cases}
+                        onChange={(e) =>
+                          setLogDraft({ ...logDraft, cases: e.target.value })
+                        }
+                      />
+                    ) : null}
+                    {showsDays(row.activity) ? (
                       <input
                         className="input input-bordered input-sm"
                         inputMode="numeric"
@@ -965,7 +1233,7 @@ export default function FieldMarketing() {
                       className="spark-btn-primary"
                       onClick={() => void logEvent(row)}
                     >
-                      {row.activity === "retail_support"
+                      {row.activity === "retail_support" || row.activity === "sales_support"
                         ? "Save / mark done"
                         : "Save logged"}
                     </button>
@@ -982,6 +1250,7 @@ export default function FieldMarketing() {
             </div>
           ) : null}
         </section>
+        )}
 
         {!marketFilter && managers.length ? (
           <details className="text-sm opacity-70">
