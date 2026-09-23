@@ -3224,11 +3224,13 @@ input PlanFieldMarketingInput {
   plannedPourSamples: Int! = 0
   plannedEmails: Int! = 0
   submit: Boolean! = false
+  tenantId: ID = null
 }
 
 input SubmitFieldMarketingInput {
   clientMutationId: ID = null
   eventId: String!
+  tenantId: ID = null
 }
 
 input LogFieldMarketingInput {
@@ -3238,6 +3240,7 @@ input LogFieldMarketingInput {
   loggedPourSamples: Int = null
   loggedEmails: Int = null
   loggedDays: Int = null
+  tenantId: ID = null
 }
 
 type FieldMarketingEventResponse {
@@ -5828,7 +5831,7 @@ type QuarterOption {
 }
 
 type Query {
-  fieldMarketing(month: String = null): FieldMarketingBoard!
+  fieldMarketing(month: String = null, tenantId: ID = null): FieldMarketingBoard!
   eventPnl(tenantId: ID!, startDate: String!, endDate: String!): [EventPnlRow!]!
   duplicateEventClusters(tenantId: ID!): [DuplicateEventCluster!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
