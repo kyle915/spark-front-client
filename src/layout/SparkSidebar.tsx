@@ -567,18 +567,21 @@ export const SparkSidebar: React.FC = () => {
   const visibleSections: NavSection[] = SECTIONS.filter(
     (s) => !s.adminOnly || !isClient,
   ).map((s) => {
-    const items = s.items.filter((it) => !it.adminOnly || !isClient);
-    if (s.title !== "Recaps" || !torch) return { ...s, items };
+    let items = s.items.filter((it) => !it.adminOnly || !isClient);
+    if (s.title !== "Recaps") return { ...s, items };
+    if (!torch) return { ...s, items };
+    // Torch: one Plans nav (field marketing). Hide Activation Plans.
+    items = items.filter((it) => it.to !== "/plans");
     const trackerAt = items.findIndex((it) => it.to === "/requests/list");
-    const fieldItem: NavItem = {
-      label: "Field marketing",
-      Icon: Megaphone,
+    const plansItem: NavItem = {
+      label: "Plans",
+      Icon: CalendarRange,
       to: "/field-marketing",
-      clientLabel: "Field marketing",
+      clientLabel: "Plans",
     };
-    if (trackerAt < 0) return { ...s, items: [...items, fieldItem] };
+    if (trackerAt < 0) return { ...s, items: [...items, plansItem] };
     const next = items.slice();
-    next.splice(trackerAt + 1, 0, fieldItem);
+    next.splice(trackerAt + 1, 0, plansItem);
     return { ...s, items: next };
   });
   const initial = (user?.firstName ?? user?.email ?? "U")

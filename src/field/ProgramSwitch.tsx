@@ -22,7 +22,7 @@ export default function ProgramSwitch({
         role="tab"
         aria-selected={active === "field"}
       >
-        Field marketing
+        Plans
       </Link>
     </div>
   );

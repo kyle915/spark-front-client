@@ -704,7 +704,9 @@ export function InsightsBody({
         </div>
       )}
 
-      {tenantId && <PlansPipelineDashboardStrip tenantId={tenantId} />}
+      {tenantId && !torch ? (
+        <PlansPipelineDashboardStrip tenantId={tenantId} />
+      ) : null}
 
       {tenantId && (
         <MarketConcentrationStrip

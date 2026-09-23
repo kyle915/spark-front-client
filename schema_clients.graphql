@@ -5831,7 +5831,7 @@ type QuarterOption {
 }
 
 type Query {
-  fieldMarketing(month: String = null, tenantId: ID = null): FieldMarketingBoard!
+  fieldMarketing(month: String = null, tenantId: ID = null, market: String = null): FieldMarketingBoard!
   eventPnl(tenantId: ID!, startDate: String!, endDate: String!): [EventPnlRow!]!
   duplicateEventClusters(tenantId: ID!): [DuplicateEventCluster!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!

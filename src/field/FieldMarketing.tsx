@@ -5,9 +5,8 @@ import { useAuthStore } from "@/store/authStore";
 import ProgramSwitch from "./ProgramSwitch";
 
 /**
- * Torch field marketing planner. Separate from retail sampling.
- * Marketers plan the month, submit events onto the tracker for Ignite,
- * and log results against the monthly KPI scorecard.
+ * Torch Plans = field marketing planner (merged with Activation Plans nav).
+ * Dense month table, filter by market/RMM, projected KPI rollups, push to Ignite.
  */
 
 type Manager = {
@@ -60,9 +59,17 @@ type Board = {
   events: FmEvent[];
 };
 
+type SubmitPayload = {
+  submitFieldMarketing: {
+    success: boolean;
+    message: string;
+    event: { requestCode: string | null; status: string } | null;
+  };
+};
+
 const BOARD = `
-  query FieldMarketingBoard($month: String, $tenantId: ID) {
-    fieldMarketing(month: $month, tenantId: $tenantId) {
+  query FieldMarketingBoard($month: String, $tenantId: ID, $market: String) {
+    fieldMarketing(month: $month, tenantId: $tenantId, market: $market) {
       available
       month
       monthLabel
@@ -82,6 +89,7 @@ const PLAN = `
     planFieldMarketing(input: $input) {
       success
       message
+      event { id requestCode status }
     }
   }
 `;
@@ -91,6 +99,7 @@ const SUBMIT = `
     submitFieldMarketing(input: $input) {
       success
       message
+      event { id requestCode status }
     }
   }
 `;
@@ -109,6 +118,37 @@ const ACTIVITIES = [
   { id: "pour", label: "4oz pour samples" },
   { id: "sponsorship", label: "Local event sponsorship" },
   { id: "retail_support", label: "Retail activation / support" },
+];
+
+const FALLBACK_MANAGERS: Manager[] = [
+  {
+    market: "miami",
+    marketLabel: "Miami",
+    name: "Alec Aparicio",
+    email: "alec@torchdrinks.com",
+    phone: "786-348-9538",
+  },
+  {
+    market: "orlando",
+    marketLabel: "Orlando",
+    name: "Octavius Jefferson",
+    email: "octavius@torchdrinks.com",
+    phone: "772-646-2137",
+  },
+  {
+    market: "houston",
+    marketLabel: "Houston",
+    name: "Victoria Quintana",
+    email: "victoria@torchdrinks.com",
+    phone: "979-575-1622",
+  },
+  {
+    market: "austin-dallas",
+    marketLabel: "Austin / Dallas",
+    name: "Brittany Senglin",
+    email: "brittany@torchdrinks.com",
+    phone: "972-978-7253",
+  },
 ];
 
 async function postGql<T>(
@@ -152,9 +192,26 @@ function fmtDay(iso: string): string {
   });
 }
 
-function fmtNum(value: number | null): string {
+function fmtNum(value: number | null | undefined): string {
   if (value == null) return "—";
   return value.toLocaleString();
+}
+
+function hasLogged(row: FmEvent): boolean {
+  return (
+    row.loggedFullCans != null ||
+    row.loggedPourSamples != null ||
+    row.loggedEmails != null ||
+    row.loggedDays != null
+  );
+}
+
+function rowStatus(row: FmEvent): string {
+  if (row.status === "submitted") {
+    return row.requestCode ? `Ignite · ${row.requestCode}` : "Submitted to Ignite";
+  }
+  if (hasLogged(row)) return "Logged results";
+  return "Draft";
 }
 
 const emptyForm = {
@@ -173,13 +230,17 @@ const emptyForm = {
 export default function FieldMarketing() {
   const { tenantId } = useAuthStore();
   const [month, setMonth] = useState(currentMonth);
+  const [marketFilter, setMarketFilter] = useState("");
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loggingId, setLoggingId] = useState<string | null>(null);
+  const [showPlanForm, setShowPlanForm] = useState(false);
   const [logDraft, setLogDraft] = useState({
     cans: "",
     pours: "",
@@ -187,42 +248,63 @@ export default function FieldMarketing() {
     days: "",
   });
 
-  const load = useCallback(async (nextMonth: string) => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await postGql<{ fieldMarketing: Board }>(BOARD, {
-        month: nextMonth,
-        tenantId: tenantId || null,
-      });
-      setBoard(data.fieldMarketing);
-      setMonth(data.fieldMarketing.month || nextMonth);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load the plan.");
-    } finally {
-      setLoading(false);
-    }
-  }, [tenantId]);
+  const load = useCallback(
+    async (nextMonth: string, nextMarket: string) => {
+      setLoading(true);
+      setError("");
+      try {
+        const data = await postGql<{ fieldMarketing: Board }>(BOARD, {
+          month: nextMonth,
+          tenantId: tenantId || null,
+          market: nextMarket || null,
+        });
+        setBoard(data.fieldMarketing);
+        setMonth(data.fieldMarketing.month || nextMonth);
+        setSelected(new Set());
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not load the plan.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [tenantId],
+  );
 
   useEffect(() => {
-    void load(month);
-    // Initial load only. Month changes go through the buttons.
+    void load(month, marketFilter);
+    // Reload when tenant or market filter changes; month nav calls load directly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId]);
+  }, [tenantId, marketFilter]);
 
   const activity = form.activity;
   const showCans = activity === "full_can" || activity === "sponsorship";
   const showPours = activity === "pour" || activity === "sponsorship";
   const showDays = activity === "sponsorship";
 
-  const managers = board?.managers ?? [];
+  const managers = board?.managers?.length ? board.managers : FALLBACK_MANAGERS;
+  const events = useMemo(() => board?.events ?? [], [board?.events]);
+  const kpis = board?.kpis ?? [];
 
-  const plannedLine = useMemo(() => {
-    const count = board?.events.length ?? 0;
-    if (!count) return "Nothing planned this month.";
-    const submitted = board?.events.filter((row) => row.status === "submitted").length ?? 0;
-    return `${count} planned · ${submitted} with Ignite`;
-  }, [board]);
+  const draftRows = useMemo(
+    () => events.filter((row) => row.status !== "submitted"),
+    [events],
+  );
+
+  const selectedDraftIds = useMemo(
+    () => draftRows.filter((row) => selected.has(row.id)).map((row) => row.id),
+    [draftRows, selected],
+  );
+
+  const summaryLine = useMemo(() => {
+    if (!events.length) return "Nothing in the plan for this filter.";
+    const submitted = events.filter((row) => row.status === "submitted").length;
+    const drafts = events.length - submitted;
+    return `${events.length} in plan · ${drafts} draft · ${submitted} with Ignite`;
+  }, [events]);
+
+  const activeManager = marketFilter
+    ? managers.find((m) => m.market === marketFilter)
+    : null;
 
   async function save(submit: boolean) {
     setSaving(true);
@@ -236,7 +318,13 @@ export default function FieldMarketing() {
         if (!Number.isFinite(value)) throw new Error("Use whole numbers.");
         return Math.round(value);
       };
-      await postGql(PLAN, {
+      const data = await postGql<{
+        planFieldMarketing: {
+          success: boolean;
+          message: string;
+          event: { requestCode: string | null } | null;
+        };
+      }>(PLAN, {
         input: {
           market: form.market,
           activity: form.activity,
@@ -252,9 +340,21 @@ export default function FieldMarketing() {
           tenantId: tenantId || null,
         },
       });
-      setForm({ ...emptyForm, market: form.market, activity: form.activity });
-      setNotice(submit ? "Submitted to Ignite." : "Saved to the plan.");
-      await load(month);
+      const code = data.planFieldMarketing.event?.requestCode;
+      setForm({
+        ...emptyForm,
+        market: marketFilter || form.market,
+        activity: form.activity,
+      });
+      setShowPlanForm(false);
+      setNotice(
+        submit
+          ? code
+            ? `Submitted to Ignite · ${code}`
+            : "Submitted to Ignite."
+          : "Saved to the plan.",
+      );
+      await load(month, marketFilter);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save.");
     } finally {
@@ -262,15 +362,31 @@ export default function FieldMarketing() {
     }
   }
 
-  async function submitExisting(eventId: string) {
+  async function pushToIgnite(ids: string[]) {
+    if (!ids.length) return;
+    setSubmitting(true);
     setError("");
     setNotice("");
+    const codes: string[] = [];
     try {
-      await postGql(SUBMIT, { input: { eventId, tenantId: tenantId || null } });
-      setNotice("Submitted to Ignite.");
-      await load(month);
+      for (const eventId of ids) {
+        const data = await postGql<SubmitPayload>(SUBMIT, {
+          input: { eventId, tenantId: tenantId || null },
+        });
+        const code = data.submitFieldMarketing.event?.requestCode;
+        if (code) codes.push(code);
+      }
+      setNotice(
+        codes.length
+          ? `Pushed to Ignite · ${codes.join(", ")}`
+          : `Pushed ${ids.length} to Ignite.`,
+      );
+      await load(month, marketFilter);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not submit.");
+      await load(month, marketFilter);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -302,26 +418,43 @@ export default function FieldMarketing() {
         },
       });
       setLoggingId(null);
-      setNotice("Logged. The scorecard uses this number.");
-      await load(month);
+      setNotice("Logged. Scorecard logged totals update from this.");
+      await load(month, marketFilter);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not log.");
     }
   }
 
+  function toggleAllDrafts() {
+    if (selectedDraftIds.length === draftRows.length && draftRows.length > 0) {
+      setSelected(new Set());
+      return;
+    }
+    setSelected(new Set(draftRows.map((row) => row.id)));
+  }
+
+  function toggleRow(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   return (
     <Layout>
-      <div className="space-y-6 max-w-6xl spark-fade-in">
+      <div className="space-y-5 max-w-[1400px] spark-fade-in">
         <SparkPageHeader
-          eyebrow="TORCH THC · FIELD MARKETING"
-          title="Field marketing."
-          support="Plan the month, submit events for Ignite to execute, and log the scorecard. Retail sampling stays on My requests."
+          eyebrow="TORCH THC · PLANS"
+          title="Plans."
+          support="Field marketing plan for the month — filter by market/RMM, see projected results, and push rows to Ignite to execute. Retail sampling stays on Master Tracker."
         />
         <ProgramSwitch active="field" />
 
         {board && !board.available ? (
           <p className="spark-support">
-            Field marketing is the Torch THC program. Switch to that brand to plan it.
+            Plans (field marketing) is the Torch THC program. Switch to that brand.
           </p>
         ) : null}
 
@@ -344,7 +477,7 @@ export default function FieldMarketing() {
               onClick={() => {
                 const next = shiftMonth(month, -1);
                 setMonth(next);
-                void load(next);
+                void load(next, marketFilter);
               }}
             >
               Prev
@@ -356,312 +489,476 @@ export default function FieldMarketing() {
               onClick={() => {
                 const next = shiftMonth(month, 1);
                 setMonth(next);
-                void load(next);
+                void load(next, marketFilter);
               }}
             >
               Next
             </button>
           </div>
-          <p className="spark-support">{loading ? "Loading…" : plannedLine}</p>
-        </div>
-
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {(board?.kpis ?? []).map((kpi) => (
-            <article
-              key={kpi.key}
-              className="rounded-2xl border border-white/10 p-4"
-              style={{ background: "#0A0B0D" }}
-            >
-              <p className="label-mini mb-2">{kpi.label}</p>
-              <p className="text-2xl font-bold tabular-nums">
-                {fmtNum(kpi.logged)}
-                <span className="text-sm font-normal opacity-60">
-                  {" "}
-                  / {kpi.target.toLocaleString()}
-                </span>
-              </p>
-              <p className="mt-2 text-xs opacity-70">
-                Planned {kpi.planned.toLocaleString()} {kpi.unit}
-              </p>
-              <p className="mt-2 text-xs leading-snug opacity-60">{kpi.detail}</p>
-            </article>
-          ))}
-        </section>
-        <p className="text-xs opacity-60">
-          The big number is logged. A dash means nobody has reported that result yet.
-          Planned is what is on the calendar. Targets are the monthly scorecard.
-        </p>
-
-        {managers.length ? (
-          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {managers.map((manager) => (
-              <article key={manager.market} className="rounded-2xl border border-white/10 p-4">
-                <p className="label-mini mb-1">{manager.marketLabel}</p>
-                <p className="font-semibold">{manager.name}</p>
-                <p className="text-sm opacity-70">{manager.phone}</p>
-                <a className="text-sm" href={`mailto:${manager.email}`}>
-                  {manager.email}
-                </a>
-              </article>
-            ))}
-          </section>
-        ) : null}
-
-        <section className="rounded-2xl border border-white/10 p-4 space-y-3">
-          <p className="label-mini">Plan an event</p>
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="text-sm space-y-1">
-              <span className="opacity-70">Market</span>
-              <select
-                className="input input-bordered w-full"
-                value={form.market}
-                onChange={(e) => setForm({ ...form, market: e.target.value })}
-              >
-                {(managers.length
-                  ? managers
-                  : [
-                      { market: "miami", marketLabel: "Miami" },
-                      { market: "orlando", marketLabel: "Orlando" },
-                      { market: "houston", marketLabel: "Houston" },
-                      { market: "austin-dallas", marketLabel: "Austin / Dallas" },
-                    ]
-                ).map((manager) => (
-                  <option key={manager.market} value={manager.market}>
-                    {manager.marketLabel}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm space-y-1">
-              <span className="opacity-70">Activity</span>
-              <select
-                className="input input-bordered w-full"
-                value={form.activity}
-                onChange={(e) => setForm({ ...form, activity: e.target.value })}
-              >
-                {ACTIVITIES.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm space-y-1">
-              <span className="opacity-70">Event</span>
-              <input
-                className="input input-bordered w-full"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Wynwood product drop"
-              />
-            </label>
-            <label className="text-sm space-y-1">
-              <span className="opacity-70">Date</span>
-              <input
-                type="date"
-                className="input input-bordered w-full"
-                value={form.startsOn}
-                onChange={(e) => setForm({ ...form, startsOn: e.target.value })}
-              />
-            </label>
-            {showDays ? (
-              <label className="text-sm space-y-1">
-                <span className="opacity-70">Days</span>
-                <input
-                  inputMode="numeric"
-                  className="input input-bordered w-full"
-                  value={form.days}
-                  onChange={(e) => setForm({ ...form, days: e.target.value })}
-                />
-              </label>
-            ) : null}
-            <label className="text-sm space-y-1 md:col-span-2">
-              <span className="opacity-70">Address</span>
-              <input
-                className="input input-bordered w-full"
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-                placeholder="Required before Ignite can execute it"
-              />
-            </label>
-            {showCans ? (
-              <label className="text-sm space-y-1">
-                <span className="opacity-70">Planned full cans</span>
-                <input
-                  inputMode="numeric"
-                  className="input input-bordered w-full"
-                  value={form.plannedFullCans}
-                  onChange={(e) => setForm({ ...form, plannedFullCans: e.target.value })}
-                />
-              </label>
-            ) : null}
-            {showPours ? (
-              <label className="text-sm space-y-1">
-                <span className="opacity-70">Planned 4oz pours</span>
-                <input
-                  inputMode="numeric"
-                  className="input input-bordered w-full"
-                  value={form.plannedPourSamples}
-                  onChange={(e) =>
-                    setForm({ ...form, plannedPourSamples: e.target.value })
-                  }
-                />
-              </label>
-            ) : null}
-            <label className="text-sm space-y-1">
-              <span className="opacity-70">Planned emails</span>
-              <input
-                inputMode="numeric"
-                className="input input-bordered w-full"
-                value={form.plannedEmails}
-                onChange={(e) => setForm({ ...form, plannedEmails: e.target.value })}
-              />
-            </label>
-            <label className="text-sm space-y-1 md:col-span-2">
-              <span className="opacity-70">Notes</span>
-              <textarea
-                className="textarea textarea-bordered w-full"
-                rows={2}
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              />
-            </label>
-          </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="spark-support">{loading ? "Loading…" : summaryLine}</p>
             <button
               type="button"
               className="spark-btn-ghost"
-              disabled={saving}
-              onClick={() => void save(false)}
+              onClick={() => setShowPlanForm((v) => !v)}
             >
-              Save plan
+              {showPlanForm ? "Close form" : "Add to plan"}
             </button>
             <button
               type="button"
               className="spark-btn-primary"
-              disabled={saving}
-              onClick={() => void save(true)}
+              disabled={submitting || selectedDraftIds.length === 0}
+              onClick={() => void pushToIgnite(selectedDraftIds)}
             >
-              Submit to Ignite
+              {submitting
+                ? "Pushing…"
+                : selectedDraftIds.length
+                  ? `Push ${selectedDraftIds.length} to Ignite`
+                  : "Push to Ignite"}
             </button>
           </div>
-        </section>
+        </div>
 
-        <section className="space-y-2">
-          {(board?.events ?? []).map((row) => (
-            <article key={row.id} className="rounded-2xl border border-white/10 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="label-mini">
-                    {fmtDay(row.startsOn)} · {row.marketLabel} · {row.activityLabel}
-                  </p>
-                  <p className="font-semibold">{row.name}</p>
-                  <p className="text-sm opacity-70">
-                    {row.managerName}
-                    {row.address ? ` · ${row.address}` : ""}
-                  </p>
-                  <p className="text-sm opacity-70">
-                    Plan{" "}
-                    {[
-                      row.plannedFullCans ? `${row.plannedFullCans} cans` : "",
-                      row.plannedPourSamples ? `${row.plannedPourSamples} pours` : "",
-                      row.activity === "sponsorship" ? `${row.days} days` : "",
-                      row.plannedEmails ? `${row.plannedEmails} emails` : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") || "no sample target"}
-                    {row.loggedFullCans != null ||
-                    row.loggedPourSamples != null ||
-                    row.loggedEmails != null ||
-                    row.loggedDays != null
-                      ? ` · Logged ${[
-                          row.loggedFullCans != null ? `${row.loggedFullCans} cans` : "",
-                          row.loggedPourSamples != null
-                            ? `${row.loggedPourSamples} pours`
-                            : "",
-                          row.loggedDays != null ? `${row.loggedDays} days` : "",
-                          row.loggedEmails != null ? `${row.loggedEmails} emails` : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}`
-                      : ""}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="pill-btn on">
-                    {row.status === "submitted"
-                      ? row.requestCode || "With Ignite"
-                      : "Planned"}
-                  </span>
-                  {row.status !== "submitted" ? (
-                    <button
-                      type="button"
-                      className="spark-btn-primary"
-                      onClick={() => void submitExisting(row.id)}
-                    >
-                      Submit to Ignite
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="spark-btn-ghost"
-                    onClick={() => {
-                      setLoggingId(loggingId === row.id ? null : row.id);
-                      setLogDraft({ cans: "", pours: "", emails: "", days: "" });
-                    }}
-                  >
-                    Log results
-                  </button>
-                </div>
-              </div>
-              {loggingId === row.id ? (
-                <div className="mt-3 grid gap-2 md:grid-cols-4">
-                  {row.activity === "full_can" || row.activity === "sponsorship" ? (
-                    <input
-                      className="input input-bordered"
-                      inputMode="numeric"
-                      placeholder="Cans logged"
-                      value={logDraft.cans}
-                      onChange={(e) => setLogDraft({ ...logDraft, cans: e.target.value })}
-                    />
-                  ) : null}
-                  {row.activity === "pour" || row.activity === "sponsorship" ? (
-                    <input
-                      className="input input-bordered"
-                      inputMode="numeric"
-                      placeholder="Pours logged"
-                      value={logDraft.pours}
-                      onChange={(e) => setLogDraft({ ...logDraft, pours: e.target.value })}
-                    />
-                  ) : null}
-                  {row.activity === "sponsorship" ? (
-                    <input
-                      className="input input-bordered"
-                      inputMode="numeric"
-                      placeholder="Days logged"
-                      value={logDraft.days}
-                      onChange={(e) => setLogDraft({ ...logDraft, days: e.target.value })}
-                    />
-                  ) : null}
-                  <input
-                    className="input input-bordered"
-                    inputMode="numeric"
-                    placeholder="Emails logged"
-                    value={logDraft.emails}
-                    onChange={(e) => setLogDraft({ ...logDraft, emails: e.target.value })}
-                  />
-                  <button
-                    type="button"
-                    className="spark-btn-primary"
-                    onClick={() => void logEvent(row)}
-                  >
-                    {row.activity === "retail_support" ? "Save / mark done" : "Save logged"}
-                  </button>
-                </div>
-              ) : null}
+        <div className="flex flex-wrap gap-2 items-center" role="tablist" aria-label="Market">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!marketFilter}
+            className={`pill-btn ${!marketFilter ? "on" : ""}`}
+            onClick={() => setMarketFilter("")}
+          >
+            All markets
+          </button>
+          {managers.map((manager) => (
+            <button
+              key={manager.market}
+              type="button"
+              role="tab"
+              aria-selected={marketFilter === manager.market}
+              className={`pill-btn ${marketFilter === manager.market ? "on" : ""}`}
+              onClick={() => setMarketFilter(manager.market)}
+              title={`${manager.name} · ${manager.email}`}
+            >
+              {manager.marketLabel}
+            </button>
+          ))}
+        </div>
+        {activeManager ? (
+          <p className="text-sm opacity-70">
+            RMM · {activeManager.name} · {activeManager.phone} ·{" "}
+            <a href={`mailto:${activeManager.email}`}>{activeManager.email}</a>
+          </p>
+        ) : (
+          <p className="text-xs opacity-55">
+            Filter by market to scope the plan and projected totals to that RMM.
+          </p>
+        )}
+
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {kpis.map((kpi) => (
+            <article
+              key={kpi.key}
+              className="rounded-xl border border-white/10 p-3.5"
+              style={{ background: "#0A0B0D" }}
+            >
+              <p className="label-mini mb-2">{kpi.label}</p>
+              <p className="text-2xl font-bold tabular-nums" style={{ color: "#c5f546" }}>
+                {fmtNum(kpi.planned)}
+                <span className="text-sm font-normal opacity-55 text-white">
+                  {" "}
+                  / {kpi.target.toLocaleString()}
+                </span>
+              </p>
+              <p className="mt-1.5 text-xs opacity-70">
+                Projected (planned) {kpi.unit}
+              </p>
+              <p className="mt-1 text-xs opacity-55">
+                Logged {fmtNum(kpi.logged)} {kpi.unit}
+              </p>
+              <p className="mt-2 text-[11px] leading-snug opacity-50">{kpi.detail}</p>
             </article>
           ))}
         </section>
+        <p className="text-xs opacity-55">
+          Lime number is projected from the plan for this month
+          {marketFilter ? " and market" : ""}. Targets are monthly. Logged stays a
+          dash until someone reports a result. 4oz pours are not added into full cans.
+        </p>
+
+        {showPlanForm ? (
+          <section className="rounded-xl border border-white/10 p-4 space-y-3">
+            <p className="label-mini">Add to plan</p>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <label className="text-sm space-y-1">
+                <span className="opacity-70">Market / RMM</span>
+                <select
+                  className="input input-bordered w-full input-sm"
+                  value={form.market}
+                  onChange={(e) => setForm({ ...form, market: e.target.value })}
+                >
+                  {managers.map((manager) => (
+                    <option key={manager.market} value={manager.market}>
+                      {manager.marketLabel} · {manager.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm space-y-1">
+                <span className="opacity-70">Activity</span>
+                <select
+                  className="input input-bordered w-full input-sm"
+                  value={form.activity}
+                  onChange={(e) => setForm({ ...form, activity: e.target.value })}
+                >
+                  {ACTIVITIES.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-sm space-y-1">
+                <span className="opacity-70">Name</span>
+                <input
+                  className="input input-bordered w-full input-sm"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="Wynwood product drop"
+                />
+              </label>
+              <label className="text-sm space-y-1">
+                <span className="opacity-70">Date</span>
+                <input
+                  type="date"
+                  className="input input-bordered w-full input-sm"
+                  value={form.startsOn}
+                  onChange={(e) => setForm({ ...form, startsOn: e.target.value })}
+                />
+              </label>
+              {showDays ? (
+                <label className="text-sm space-y-1">
+                  <span className="opacity-70">Days</span>
+                  <input
+                    inputMode="numeric"
+                    className="input input-bordered w-full input-sm"
+                    value={form.days}
+                    onChange={(e) => setForm({ ...form, days: e.target.value })}
+                  />
+                </label>
+              ) : null}
+              <label className="text-sm space-y-1 md:col-span-2">
+                <span className="opacity-70">Address</span>
+                <input
+                  className="input input-bordered w-full input-sm"
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  placeholder="Required before Ignite can execute"
+                />
+              </label>
+              {showCans ? (
+                <label className="text-sm space-y-1">
+                  <span className="opacity-70">Planned full cans</span>
+                  <input
+                    inputMode="numeric"
+                    className="input input-bordered w-full input-sm"
+                    value={form.plannedFullCans}
+                    onChange={(e) =>
+                      setForm({ ...form, plannedFullCans: e.target.value })
+                    }
+                  />
+                </label>
+              ) : null}
+              {showPours ? (
+                <label className="text-sm space-y-1">
+                  <span className="opacity-70">Planned 4oz pours</span>
+                  <input
+                    inputMode="numeric"
+                    className="input input-bordered w-full input-sm"
+                    value={form.plannedPourSamples}
+                    onChange={(e) =>
+                      setForm({ ...form, plannedPourSamples: e.target.value })
+                    }
+                  />
+                </label>
+              ) : null}
+              <label className="text-sm space-y-1">
+                <span className="opacity-70">Planned emails</span>
+                <input
+                  inputMode="numeric"
+                  className="input input-bordered w-full input-sm"
+                  value={form.plannedEmails}
+                  onChange={(e) => setForm({ ...form, plannedEmails: e.target.value })}
+                />
+              </label>
+              <label className="text-sm space-y-1 md:col-span-2 xl:col-span-4">
+                <span className="opacity-70">Notes</span>
+                <textarea
+                  className="textarea textarea-bordered w-full textarea-sm"
+                  rows={2}
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                />
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="spark-btn-ghost"
+                disabled={saving}
+                onClick={() => void save(false)}
+              >
+                Save draft
+              </button>
+              <button
+                type="button"
+                className="spark-btn-primary"
+                disabled={saving}
+                onClick={() => void save(true)}
+              >
+                Save + push to Ignite
+              </button>
+            </div>
+          </section>
+        ) : null}
+
+        <section className="rounded-xl border border-white/10 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="table table-sm w-full">
+              <thead>
+                <tr className="border-b border-white/10 text-left text-[11px] uppercase tracking-wider opacity-60">
+                  <th className="px-3 py-2 w-10">
+                    <input
+                      type="checkbox"
+                      className="checkbox checkbox-xs"
+                      checked={
+                        draftRows.length > 0 &&
+                        selectedDraftIds.length === draftRows.length
+                      }
+                      onChange={toggleAllDrafts}
+                      aria-label="Select all drafts"
+                    />
+                  </th>
+                  <th className="px-2 py-2">Date</th>
+                  <th className="px-2 py-2">Market</th>
+                  <th className="px-2 py-2">RMM</th>
+                  <th className="px-2 py-2">Activity</th>
+                  <th className="px-2 py-2">Name</th>
+                  <th className="px-2 py-2 text-right">Days</th>
+                  <th className="px-2 py-2 text-right">Cans</th>
+                  <th className="px-2 py-2 text-right">Pours</th>
+                  <th className="px-2 py-2 text-right">Emails</th>
+                  <th className="px-2 py-2">Status</th>
+                  <th className="px-2 py-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.length === 0 && !loading ? (
+                  <tr>
+                    <td colSpan={12} className="px-3 py-8 text-center opacity-55 text-sm">
+                      No plan rows for this month
+                      {marketFilter ? " and market" : ""}. Add to plan to start.
+                    </td>
+                  </tr>
+                ) : null}
+                {events.map((row) => {
+                  const isDraft = row.status !== "submitted";
+                  return (
+                    <tr
+                      key={row.id}
+                      className="border-b border-white/5 hover:bg-white/[0.03]"
+                    >
+                      <td className="px-3 py-2">
+                        {isDraft ? (
+                          <input
+                            type="checkbox"
+                            className="checkbox checkbox-xs"
+                            checked={selected.has(row.id)}
+                            onChange={() => toggleRow(row.id)}
+                            aria-label={`Select ${row.name}`}
+                          />
+                        ) : null}
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap tabular-nums text-sm">
+                        {fmtDay(row.startsOn)}
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap text-sm">
+                        {row.marketLabel}
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap text-sm opacity-70">
+                        {row.managerName}
+                      </td>
+                      <td className="px-2 py-2 text-sm opacity-80 max-w-[140px] truncate">
+                        {row.activityLabel}
+                      </td>
+                      <td className="px-2 py-2 text-sm font-medium max-w-[220px]">
+                        <span className="truncate block" title={row.name}>
+                          {row.name}
+                        </span>
+                        {row.address ? (
+                          <span
+                            className="block text-[11px] opacity-45 truncate"
+                            title={row.address}
+                          >
+                            {row.address}
+                          </span>
+                        ) : (
+                          <span className="block text-[11px]" style={{ color: "#ef5a2a" }}>
+                            Needs address
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-right tabular-nums text-sm">
+                        {row.activity === "sponsorship" ? row.days : "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right tabular-nums text-sm">
+                        {row.plannedFullCans || "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right tabular-nums text-sm">
+                        {row.plannedPourSamples || "—"}
+                      </td>
+                      <td className="px-2 py-2 text-right tabular-nums text-sm">
+                        {row.plannedEmails || "—"}
+                      </td>
+                      <td className="px-2 py-2 whitespace-nowrap text-xs">
+                        <span
+                          className="inline-block px-2 py-0.5 rounded border border-white/10"
+                          style={{
+                            color:
+                              row.status === "submitted"
+                                ? "#c5f546"
+                                : hasLogged(row)
+                                  ? "rgba(255,255,255,0.7)"
+                                  : "rgba(255,255,255,0.55)",
+                          }}
+                        >
+                          {rowStatus(row)}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-right whitespace-nowrap">
+                        <div className="inline-flex gap-1 justify-end">
+                          {isDraft ? (
+                            <button
+                              type="button"
+                              className="spark-btn-ghost !px-2 !py-1 text-xs"
+                              disabled={submitting}
+                              onClick={() => void pushToIgnite([row.id])}
+                            >
+                              Push
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            className="spark-btn-ghost !px-2 !py-1 text-xs"
+                            onClick={() => {
+                              setLoggingId(loggingId === row.id ? null : row.id);
+                              setLogDraft({
+                                cans: "",
+                                pours: "",
+                                emails: "",
+                                days: "",
+                              });
+                            }}
+                          >
+                            Log
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {loggingId ? (
+            <div className="border-t border-white/10 p-3 flex flex-wrap gap-2 items-end bg-black/30">
+              {(() => {
+                const row = events.find((r) => r.id === loggingId);
+                if (!row) return null;
+                return (
+                  <>
+                    <p className="text-xs opacity-60 w-full">
+                      Log results · {row.name}
+                    </p>
+                    {row.activity === "full_can" || row.activity === "sponsorship" ? (
+                      <input
+                        className="input input-bordered input-sm"
+                        inputMode="numeric"
+                        placeholder="Cans logged"
+                        value={logDraft.cans}
+                        onChange={(e) =>
+                          setLogDraft({ ...logDraft, cans: e.target.value })
+                        }
+                      />
+                    ) : null}
+                    {row.activity === "pour" || row.activity === "sponsorship" ? (
+                      <input
+                        className="input input-bordered input-sm"
+                        inputMode="numeric"
+                        placeholder="Pours logged"
+                        value={logDraft.pours}
+                        onChange={(e) =>
+                          setLogDraft({ ...logDraft, pours: e.target.value })
+                        }
+                      />
+                    ) : null}
+                    {row.activity === "sponsorship" ? (
+                      <input
+                        className="input input-bordered input-sm"
+                        inputMode="numeric"
+                        placeholder="Days logged"
+                        value={logDraft.days}
+                        onChange={(e) =>
+                          setLogDraft({ ...logDraft, days: e.target.value })
+                        }
+                      />
+                    ) : null}
+                    <input
+                      className="input input-bordered input-sm"
+                      inputMode="numeric"
+                      placeholder="Emails logged"
+                      value={logDraft.emails}
+                      onChange={(e) =>
+                        setLogDraft({ ...logDraft, emails: e.target.value })
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="spark-btn-primary"
+                      onClick={() => void logEvent(row)}
+                    >
+                      {row.activity === "retail_support"
+                        ? "Save / mark done"
+                        : "Save logged"}
+                    </button>
+                    <button
+                      type="button"
+                      className="spark-btn-ghost"
+                      onClick={() => setLoggingId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          ) : null}
+        </section>
+
+        {!marketFilter && managers.length ? (
+          <details className="text-sm opacity-70">
+            <summary className="cursor-pointer label-mini mb-2">RMM directory</summary>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4 mt-2">
+              {managers.map((manager) => (
+                <div key={manager.market} className="rounded-lg border border-white/10 p-3">
+                  <p className="font-medium">{manager.marketLabel}</p>
+                  <p>{manager.name}</p>
+                  <p className="opacity-60">{manager.phone}</p>
+                  <a href={`mailto:${manager.email}`}>{manager.email}</a>
+                </div>
+              ))}
+            </div>
+          </details>
+        ) : null}
       </div>
     </Layout>
   );

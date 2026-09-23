@@ -3,7 +3,7 @@
  */
 
 import { Suspense, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, Navigate, useNavigate } from "react-router";
 import {
   useLazyLoadQuery,
   useMutation,
@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Layout from "@/layout/Layout";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuthStore } from "@/store/authStore";
+import { isTorchTenant } from "@/field/torch";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { ActivationPlansQuery } from "@/api/queries/ActivationPlansQuery";
@@ -536,9 +537,13 @@ export default function PlansList() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
   const environment = useRelayEnvironment();
-  const { tenantId } = useAuthStore();
+  const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const { isAdmin } = useSparkRole();
   const navigate = useNavigate();
+  const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
+  if (torch) {
+    return <Navigate to="/field-marketing" replace />;
+  }
 
   const bump = () => {
     if (tenantId) {
