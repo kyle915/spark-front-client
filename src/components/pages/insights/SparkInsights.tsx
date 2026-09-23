@@ -618,8 +618,9 @@ export function InsightsBody({
 
   const stickyRangeBar = (
     <div className="spark-insights-range sticky z-20">
-      <div className="flex items-end justify-between flex-wrap gap-4">
-        <div>
+      {/* Stack copy above pills so Torch program + range controls never clip the support line. */}
+      <div className="flex flex-col gap-3">
+        <div className="min-w-0 w-full">
           <p
             className="mono text-[10px]"
             style={{
@@ -630,7 +631,7 @@ export function InsightsBody({
             {fieldProgram ? "FIELD MARKETING" : "PROGRAM PERFORMANCE"}
           </p>
           <p
-            className="mt-1.5 text-sm"
+            className="mt-1.5 text-sm min-w-0 whitespace-normal"
             style={{ color: "rgba(255,255,255,0.55)" }}
           >
             {fieldProgram
@@ -638,7 +639,7 @@ export function InsightsBody({
               : "Range scopes Timeline, Activation, and geo. Program KPIs stay calendar-year."}
           </p>
         </div>
-        {rangeControls}
+        <div className="w-full min-w-0">{rangeControls}</div>
       </div>
     </div>
   );
@@ -655,17 +656,19 @@ export function InsightsBody({
       {embedded ? (
         stickyRangeBar
       ) : (
-        <SparkPageHeader
-          eyebrow={fieldProgram ? "FIELD MARKETING" : "PROGRAM ANALYTICS"}
-          title="Dashboard"
-          titleClassName="text-2xl lg:text-3xl font-bold"
-          support={
-            fieldProgram
-              ? "Monthly scorecard from logged field events. Retail sampling stays on the other tab."
-              : "Page range scopes Timeline, Activation, and geo. Program KPIs stay calendar-year."
-          }
-          action={rangeControls}
-        />
+        <div className="flex flex-col gap-3">
+          <SparkPageHeader
+            eyebrow={fieldProgram ? "FIELD MARKETING" : "PROGRAM ANALYTICS"}
+            title="Dashboard"
+            titleClassName="text-2xl lg:text-3xl font-bold"
+            support={
+              fieldProgram
+                ? "Monthly scorecard from logged field events. Retail sampling stays on the other tab."
+                : "Page range scopes Timeline, Activation, and geo. Program KPIs stay calendar-year."
+            }
+          />
+          <div className="w-full min-w-0">{rangeControls}</div>
+        </div>
       )}
 
       {fieldProgram ? null : (
