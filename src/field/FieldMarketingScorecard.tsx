@@ -226,7 +226,7 @@ export default function FieldMarketingScorecard() {
           </button>
         </div>
         <Link to="/field-marketing" className="spark-btn-ghost">
-          Open the plan
+          Open Plans
         </Link>
       </div>
 
@@ -240,25 +240,31 @@ export default function FieldMarketingScorecard() {
         {kpis.map((kpi) => (
           <article key={kpi.key} className="spark-card p-4">
             <p className="label-mini mb-2">{kpi.label}</p>
-            <p className="tab-num text-2xl lg:text-3xl font-bold leading-none">
-              {loading && !board ? "…" : fmtNum(kpi.logged)}
-              <span className="text-sm font-normal opacity-60">
+            <p
+              className="tab-num text-2xl lg:text-3xl font-bold leading-none"
+              style={{ color: "var(--spark-lime, #c5f546)" }}
+            >
+              {loading && !board ? "…" : fmtNum(kpi.planned)}
+              <span className="text-sm font-normal opacity-60 text-white">
                 {" "}
                 / {kpi.target.toLocaleString()}
               </span>
             </p>
-            <ProgressBar logged={kpi.logged} target={kpi.target} />
-            <p className="mt-3 text-xs opacity-70">
-              Planned {kpi.planned.toLocaleString()} {kpi.unit}
+            <p className="mt-2 text-xs opacity-70">
+              Projected (planned) {kpi.unit}
             </p>
+            <p className="mt-1 text-xs opacity-55">
+              Logged {fmtNum(kpi.logged)} {kpi.unit}
+            </p>
+            <ProgressBar logged={kpi.logged} target={kpi.target} />
             <p className="mt-2 text-xs leading-snug opacity-60">{kpi.detail}</p>
           </article>
         ))}
       </div>
       <p className="text-xs opacity-60">
-        The big number is logged against the monthly target. A dash means nobody
-        has reported that result yet. Planned is what is on the calendar. 4oz
-        pours stay on their own score and are not added into full can samples.
+        Lime number is projected (planned) against the monthly target. Logged
+        stays a dash until someone reports a result. 4oz pours stay on their
+        own score and are not added into full can samples.
       </p>
     </section>
   );

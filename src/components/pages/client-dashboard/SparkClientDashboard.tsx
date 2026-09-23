@@ -530,7 +530,9 @@ const ClientInner: React.FC = () => {
               Master tracker
             </button>
             <button
-              onClick={() => navigate("/plans")}
+              onClick={() =>
+                navigate(torch ? "/field-marketing" : "/plans")
+              }
               className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
               style={{
                 background: "transparent",
@@ -538,7 +540,7 @@ const ClientInner: React.FC = () => {
                 border: "1px solid var(--spark-border)",
               }}
             >
-              Activation plans
+              {torch ? "Plans" : "Activation plans"}
             </button>
             <button
               onClick={() => navigate("/today")}

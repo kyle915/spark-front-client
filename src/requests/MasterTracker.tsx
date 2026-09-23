@@ -2025,14 +2025,14 @@ export default function MasterTracker() {
             </p>
             <div className="flex gap-2">
               <Link
-                to="/plans"
+                to={torchProgram ? "/field-marketing" : "/plans"}
                 className="mono text-[10px]"
                 style={{
                   letterSpacing: "0.12em",
                   color: "rgba(255,255,255,0.55)",
                 }}
               >
-                ALL PLANS
+                {torchProgram ? "PLANS" : "ALL PLANS"}
               </Link>
               <button
                 type="button"
