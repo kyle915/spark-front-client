@@ -63,7 +63,12 @@ type SubmitPayload = {
   submitFieldMarketing: {
     success: boolean;
     message: string;
-    event: { requestCode: string | null; status: string } | null;
+    event: {
+      requestCode: string | null;
+      status: string;
+      market?: string | null;
+      startsOn?: string | null;
+    } | null;
   };
 };
 
@@ -89,7 +94,7 @@ const PLAN = `
     planFieldMarketing(input: $input) {
       success
       message
-      event { id requestCode status }
+      event { id requestCode status market startsOn }
     }
   }
 `;
@@ -99,7 +104,7 @@ const SUBMIT = `
     submitFieldMarketing(input: $input) {
       success
       message
-      event { id requestCode status }
+      event { id requestCode status market startsOn }
     }
   }
 `;
@@ -170,19 +175,6 @@ async function postGql<T>(
   return json.data as T;
 }
 
-function shiftMonth(month: string, delta: number): string {
-  const [yearS, monS] = month.split("-");
-  const cursor = new Date(Number(yearS), Number(monS) - 1 + delta, 1);
-  const y = cursor.getFullYear();
-  const m = String(cursor.getMonth() + 1).padStart(2, "0");
-  return `${y}-${m}`;
-}
-
-function currentMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
 function fmtDay(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   if (!y || !m || !d) return iso;
@@ -229,7 +221,8 @@ const emptyForm = {
 
 export default function FieldMarketing() {
   const { tenantId } = useAuthStore();
-  const [month, setMonth] = useState(currentMonth);
+  // Default: all plans (no date filter). Optional month narrows the table + KPIs.
+  const [month, setMonth] = useState("");
   const [marketFilter, setMarketFilter] = useState("");
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState("");
@@ -254,12 +247,14 @@ export default function FieldMarketing() {
       setError("");
       try {
         const data = await postGql<{ fieldMarketing: Board }>(BOARD, {
-          month: nextMonth,
+          month: nextMonth || null,
           tenantId: tenantId || null,
           market: nextMarket || null,
         });
         setBoard(data.fieldMarketing);
-        setMonth(data.fieldMarketing.month || nextMonth);
+        // Keep local filter state — server returns "all" when unscoped.
+        const serverMonth = data.fieldMarketing.month || "";
+        setMonth(serverMonth === "all" ? "" : serverMonth || nextMonth);
         setSelected(new Set());
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not load the plan.");
@@ -272,7 +267,7 @@ export default function FieldMarketing() {
 
   useEffect(() => {
     void load(month, marketFilter);
-    // Reload when tenant or market filter changes; month nav calls load directly.
+    // month changes go through the Month select onChange (calls load).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId, marketFilter]);
 
@@ -306,6 +301,22 @@ export default function FieldMarketing() {
     ? managers.find((m) => m.market === marketFilter)
     : null;
 
+
+  async function reloadAfterMutate(opts?: {
+    rowMarket?: string | null;
+    rowStartsOn?: string | null;
+  }) {
+    // Always show the new row: clear optional month filter so all-plans lists it.
+    const nextMonth = "";
+    let nextMarket = marketFilter;
+    if (opts?.rowMarket && marketFilter && opts.rowMarket !== marketFilter) {
+      nextMarket = opts.rowMarket;
+    }
+    setMonth(nextMonth);
+    setMarketFilter(nextMarket);
+    await load(nextMonth, nextMarket);
+  }
+
   async function save(submit: boolean) {
     setSaving(true);
     setError("");
@@ -322,7 +333,11 @@ export default function FieldMarketing() {
         planFieldMarketing: {
           success: boolean;
           message: string;
-          event: { requestCode: string | null } | null;
+          event: {
+            requestCode: string | null;
+            market?: string | null;
+            startsOn?: string | null;
+          } | null;
         };
       }>(PLAN, {
         input: {
@@ -340,7 +355,8 @@ export default function FieldMarketing() {
           tenantId: tenantId || null,
         },
       });
-      const code = data.planFieldMarketing.event?.requestCode;
+      const ev = data.planFieldMarketing.event;
+      const code = ev?.requestCode;
       setForm({
         ...emptyForm,
         market: marketFilter || form.market,
@@ -354,7 +370,10 @@ export default function FieldMarketing() {
             : "Submitted to Ignite."
           : "Saved to the plan.",
       );
-      await load(month, marketFilter);
+      await reloadAfterMutate({
+        rowMarket: form.market,
+        rowStartsOn: form.startsOn,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save.");
     } finally {
@@ -368,23 +387,26 @@ export default function FieldMarketing() {
     setError("");
     setNotice("");
     const codes: string[] = [];
+    let lastMarket: string | null = null;
     try {
       for (const eventId of ids) {
         const data = await postGql<SubmitPayload>(SUBMIT, {
           input: { eventId, tenantId: tenantId || null },
         });
-        const code = data.submitFieldMarketing.event?.requestCode;
+        const ev = data.submitFieldMarketing.event;
+        const code = ev?.requestCode;
         if (code) codes.push(code);
+        if (ev?.market) lastMarket = ev.market;
       }
       setNotice(
         codes.length
           ? `Pushed to Ignite · ${codes.join(", ")}`
           : `Pushed ${ids.length} to Ignite.`,
       );
-      await load(month, marketFilter);
+      await reloadAfterMutate({ rowMarket: lastMarket });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not submit.");
-      await load(month, marketFilter);
+      await reloadAfterMutate();
     } finally {
       setSubmitting(false);
     }
@@ -448,7 +470,7 @@ export default function FieldMarketing() {
         <SparkPageHeader
           eyebrow="TORCH THC · PLANS"
           title="Plans."
-          support="Field marketing plan for the month — filter by market/RMM, see projected results, and push rows to Ignite to execute. Retail sampling stays on Master Tracker."
+          support="All field marketing plans for Torch — filter by market/RMM or month, see projected results, and push rows to Ignite to execute. Retail sampling stays on Master Tracker."
         />
         <ProgramSwitch active="field" />
 
@@ -470,30 +492,39 @@ export default function FieldMarketing() {
         ) : null}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="spark-btn-ghost"
-              onClick={() => {
-                const next = shiftMonth(month, -1);
-                setMonth(next);
-                void load(next, marketFilter);
-              }}
-            >
-              Prev
-            </button>
-            <p className="spark-title text-lg">{board?.monthLabel || month}</p>
-            <button
-              type="button"
-              className="spark-btn-ghost"
-              onClick={() => {
-                const next = shiftMonth(month, 1);
-                setMonth(next);
-                void load(next, marketFilter);
-              }}
-            >
-              Next
-            </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="spark-title text-lg">
+              {month ? board?.monthLabel || month : "All plans"}
+            </p>
+            <label className="text-sm flex items-center gap-2">
+              <span className="opacity-60">Month</span>
+              <select
+                className="select select-bordered select-sm"
+                value={month}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setMonth(next);
+                  void load(next, marketFilter);
+                }}
+              >
+                <option value="">All months</option>
+                {Array.from({ length: 18 }, (_, i) => {
+                  const cursor = new Date();
+                  cursor.setDate(1);
+                  cursor.setMonth(cursor.getMonth() - 6 + i);
+                  const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+                  const label = cursor.toLocaleDateString(undefined, {
+                    month: "short",
+                    year: "numeric",
+                  });
+                  return (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="spark-support">{loading ? "Loading…" : summaryLine}</p>
@@ -564,13 +595,16 @@ export default function FieldMarketing() {
               <p className="label-mini mb-2">{kpi.label}</p>
               <p className="text-2xl font-bold tabular-nums" style={{ color: "#c5f546" }}>
                 {fmtNum(kpi.planned)}
-                <span className="text-sm font-normal opacity-55 text-white">
-                  {" "}
-                  / {kpi.target.toLocaleString()}
-                </span>
+                {month ? (
+                  <span className="text-sm font-normal opacity-55 text-white">
+                    {" "}
+                    / {kpi.target.toLocaleString()}
+                  </span>
+                ) : null}
               </p>
               <p className="mt-1.5 text-xs opacity-70">
                 Projected (planned) {kpi.unit}
+                {!month ? " · all dates" : ""}
               </p>
               <p className="mt-1 text-xs opacity-55">
                 Logged {fmtNum(kpi.logged)} {kpi.unit}
@@ -580,9 +614,13 @@ export default function FieldMarketing() {
           ))}
         </section>
         <p className="text-xs opacity-55">
-          Lime number is projected from the plan for this month
-          {marketFilter ? " and market" : ""}. Targets are monthly. Logged stays a
-          dash until someone reports a result. 4oz pours are not added into full cans.
+          Lime number is projected (planned) for the current filter
+          {marketFilter ? " and market" : ""}.
+          {month
+            ? " Targets are the monthly scorecard for the selected month."
+            : " All months shows planned sums only — monthly targets (1,152 cans / 3,456 pours / …) are not scored against a multi-month rollup."}{" "}
+          Logged stays a dash until someone reports a result. 4oz pours are not
+          added into full cans.
         </p>
 
         {showPlanForm ? (
@@ -755,7 +793,8 @@ export default function FieldMarketing() {
                 {events.length === 0 && !loading ? (
                   <tr>
                     <td colSpan={12} className="px-3 py-8 text-center opacity-55 text-sm">
-                      No plan rows for this month
+                      No plan rows
+                      {month ? " for this month" : ""}
                       {marketFilter ? " and market" : ""}. Add to plan to start.
                     </td>
                   </tr>
