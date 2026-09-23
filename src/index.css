@@ -1487,11 +1487,13 @@ body { background: var(--spark-bg); }
   padding: 1.25rem;
 }
 
-/* Sticky Program Performance range — sits under SparkTopbar once */
+/* Sticky Program Performance range — sits under SparkTopbar once.
+   overflow must stay visible so wrapped support / SHOWING lines are never clipped. */
 .spark-insights-range {
   top: 3.75rem;
   margin: 0 -0.25rem;
-  padding: 0.75rem 0.25rem 0.85rem;
+  padding: 0.75rem 0.25rem 1rem;
+  overflow: visible;
   background: color-mix(in srgb, var(--spark-bg, #0a0b0d) 88%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
