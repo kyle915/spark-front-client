@@ -95,13 +95,23 @@ export function isOfflineClockFailure(input: {
 }): boolean {
   if (input.timedOut) return true;
   if (input.error != null) {
+    // Only real connectivity failures — not validation / rate-limit Errors.
+    // Treating every Error as offline made photo uploads retry MIME/429
+    // rejects three times with no useful message for the BA.
+    if (input.error instanceof TypeError) return true;
     const name = input.error instanceof Error ? input.error.name : "";
-    if (name === "AbortError") return true;
-    return true;
+    return name === "AbortError" || name === "TimeoutError" || name === "NetworkError";
   }
   const status = input.status;
   if (status == null) return false;
-  return status === 0 || status === 408 || status === 502 || status === 503 || status === 504;
+  return (
+    status === 0 ||
+    status === 408 ||
+    status === 429 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
+  );
 }
 
 export function readPendingClock(

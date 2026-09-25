@@ -101,6 +101,13 @@ describe("isOfflineClockFailure", () => {
     expect(isOfflineClockFailure({ status: 401 })).toBe(false);
     expect(isOfflineClockFailure({ status: 403 })).toBe(false);
     expect(isOfflineClockFailure({ status: 200 })).toBe(false);
+    expect(isOfflineClockFailure({ error: new Error("Only photo uploads") })).toBe(
+      false,
+    );
+  });
+
+  it("retries rate limits and gateway statuses", () => {
+    expect(isOfflineClockFailure({ status: 429 })).toBe(true);
   });
 });
 
