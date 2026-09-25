@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   archivedQueryFilter,
+  consumeRecapsListNeedsRefresh,
   defaultRecapStatus,
+  markRecapsListNeedsRefresh,
   recapEmptyKind,
   recapIsEmptyShell,
   recapListStatusWord,
   recapMatchesBaName,
   recapMatchesPipeline,
   recapsListHrefFromReturn,
+  recapsListNavState,
   sharedQueryFilter,
   withRecapListReturn,
 } from "./recapListFilters";
@@ -87,6 +90,26 @@ describe("recap list return href", () => {
     expect(
       recapsListHrefFromReturn({ searchParams: new URLSearchParams() }),
     ).toBe("/recaps/list");
+  });
+});
+
+describe("recaps list refresh flag", () => {
+  it("marks and consumes a one-shot list refresh", () => {
+    sessionStorage.removeItem("spark.recaps.forceListRefresh");
+    expect(consumeRecapsListNeedsRefresh()).toBe(false);
+    markRecapsListNeedsRefresh();
+    expect(consumeRecapsListNeedsRefresh()).toBe(true);
+    expect(consumeRecapsListNeedsRefresh()).toBe(false);
+  });
+
+  it("builds navigate state for a forced list refetch", () => {
+    expect(recapsListNavState(true)).toEqual({ refreshRecaps: true });
+    expect(recapsListNavState(true, "Alex")).toEqual({
+      baName: "Alex",
+      refreshRecaps: true,
+    });
+    expect(recapsListNavState(false, "Alex")).toEqual({ baName: "Alex" });
+    expect(recapsListNavState(false)).toEqual({});
   });
 });
 

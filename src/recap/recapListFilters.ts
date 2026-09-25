@@ -221,6 +221,50 @@ export function recapsListHrefFromReturn(opts: {
   return q ? `/recaps/list?${q}` : "/recaps/list";
 }
 
+/**
+ * Approve/archive mutate a single Recap node but leave the list
+ * connection cache (Needs review = approved:false) untouched. Without a
+ * forced network refetch, Back / remount serves store-or-network and the
+ * row stays in Needs review until a hard refresh.
+ */
+const RECAPS_LIST_REFRESH_FLAG = "spark.recaps.forceListRefresh";
+
+export type RecapsListNavState = {
+  baName?: string;
+  /** Bump SparkRecapsList refreshKey so connections refetch from network. */
+  refreshRecaps?: boolean;
+};
+
+export function markRecapsListNeedsRefresh(): void {
+  try {
+    sessionStorage.setItem(RECAPS_LIST_REFRESH_FLAG, "1");
+  } catch {
+    // private mode / quota — navigate state is the backup
+  }
+}
+
+export function consumeRecapsListNeedsRefresh(): boolean {
+  try {
+    if (sessionStorage.getItem(RECAPS_LIST_REFRESH_FLAG) === "1") {
+      sessionStorage.removeItem(RECAPS_LIST_REFRESH_FLAG);
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+  return false;
+}
+
+export function recapsListNavState(
+  refresh: boolean,
+  baName?: string,
+): RecapsListNavState {
+  return {
+    ...(baName ? { baName } : {}),
+    ...(refresh ? { refreshRecaps: true } : {}),
+  };
+}
+
 export type { RecapActivationFilter };
 
 export function recapMatchesBaName(
