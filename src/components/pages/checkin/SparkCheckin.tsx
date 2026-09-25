@@ -322,6 +322,8 @@ type Photo = {
   // validates it against that brand's own buckets and falls back to its
   // "photos" category for anything it doesn't recognise.
   category: string | null;
+  /** Last upload error — shown on the Retry banner so BAs know why. */
+  failReason?: string | null;
 };
 
 const FALLBACK_ACCENT = "#C4D82E";
@@ -342,6 +344,9 @@ const UPLOAD_CONCURRENCY = 3;
  */
 let heicPrepChain: Promise<void> = Promise.resolve();
 
+/** HEIC decode can hang on iPhone Safari — don't leave the tile on "uploading". */
+const HEIC_PREP_TIMEOUT_MS = 20_000;
+
 /** HEIC→JPEG + field downscale (see FIELD_PHOTO_PREP). Videos pass through. */
 async function compressImage(file: File): Promise<File> {
   if (file.type.startsWith("video/") && !isHeicUpload(file)) return file;
@@ -357,7 +362,14 @@ async function compressImage(file: File): Promise<File> {
   heicPrepChain = prev.then(() => gate);
   await prev;
   try {
-    return await prepareImageForUpload(coerced, FIELD_PHOTO_PREP);
+    const prepared = prepareImageForUpload(coerced, FIELD_PHOTO_PREP);
+    const timed = new Promise<File>((_resolve, reject) => {
+      window.setTimeout(
+        () => reject(new Error("Photo took too long to convert — try JPEG, or tap Retry.")),
+        HEIC_PREP_TIMEOUT_MS,
+      );
+    });
+    return await Promise.race([prepared, timed]);
   } finally {
     release();
   }
@@ -3131,11 +3143,17 @@ function RecapForm({
             previewUrl = URL.createObjectURL(file);
             URL.revokeObjectURL(ph.previewUrl);
           }
-          return { ...ph, file, blobName, previewUrl, state: "done" };
+          return { ...ph, file, blobName, previewUrl, state: "done", failReason: null };
         }),
       );
-    } catch {
-      setPhotos((p) => p.map((ph) => (ph.id === id ? { ...ph, state: "failed" } : ph)));
+    } catch (error) {
+      const failReason =
+        error instanceof Error && error.message.trim()
+          ? error.message.trim()
+          : "Upload failed — tap Retry.";
+      setPhotos((p) =>
+        p.map((ph) => (ph.id === id ? { ...ph, state: "failed", failReason } : ph)),
+      );
     }
   };
 
@@ -3693,7 +3711,20 @@ function RecapForm({
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ flex: 1, fontSize: 13 }}>
               {failedCount} photo{failedCount === 1 ? "" : "s"} didn't upload.
-              Tap Retry — or re-pick from your library (JPEG works best if HEIC keeps failing).
+              {(() => {
+                const reasons = [
+                  ...new Set(
+                    photos
+                      .filter((p) => p.state === "failed" && p.failReason)
+                      .map((p) => p.failReason as string),
+                  ),
+                ];
+                if (reasons.length === 1) return ` ${reasons[0]}`;
+                if (reasons.some((r) => /too many|wait a minute/i.test(r))) {
+                  return " Too many uploads at once — wait a minute, then tap Retry.";
+                }
+                return " Tap Retry — or re-pick from your library (JPEG works best if HEIC keeps failing).";
+              })()}
             </span>
             <button style={{ ...secondaryBtn, width: "auto", padding: "8px 14px", margin: 0 }} onClick={retryFailed}>
               Retry

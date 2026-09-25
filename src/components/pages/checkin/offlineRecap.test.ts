@@ -460,4 +460,27 @@ describe("putCheckinPhoto", () => {
     expect(blobName).toEqual({ blobName: "gcs/photo.jpg" });
     expect(puts).toBe(2);
   });
+
+  it("surfaces MIME rejects immediately without burning offline retries", async () => {
+    let mints = 0;
+    await expect(
+      putCheckinPhoto({
+        code: "FF-1",
+        token: "tok",
+        file: sampleFile(),
+        apiOrigin: "https://api.example",
+        fetchImpl: async (input) => {
+          if (String(input).includes("/upload-url")) {
+            mints += 1;
+            return new Response(
+              JSON.stringify({ message: "Only photo and video uploads are allowed here." }),
+              { status: 400 },
+            );
+          }
+          return new Response(null, { status: 200 });
+        },
+      }),
+    ).rejects.toThrow(/Only photo and video/);
+    expect(mints).toBe(1);
+  });
 });

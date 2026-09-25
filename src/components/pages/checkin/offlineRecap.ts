@@ -360,11 +360,20 @@ export async function putCheckinPhoto(args: {
         meta = {};
       }
       if (!urlRes.ok || !meta.uploadUrl || !meta.blobName) {
+        const detail =
+          meta.message ||
+          (urlRes.status === 429
+            ? "Too many photo uploads — wait a minute, then tap Retry."
+            : "Couldn't prepare that photo for upload.");
         if (isOfflineClockFailure({ status: urlRes.status })) {
-          lastError = new Error(meta.message || "no url");
+          lastError = new Error(detail);
+          // Rate limits need breathing room; thrashing 3 remints makes it worse.
+          if (urlRes.status === 429 && attempt + 1 < PHOTO_PUT_ATTEMPTS) {
+            await new Promise((r) => setTimeout(r, 2500 * (attempt + 1)));
+          }
           continue;
         }
-        throw new Error(meta.message || "no url");
+        throw new Error(detail);
       }
       const put = await fetchImpl(meta.uploadUrl, {
         method: "PUT",
