@@ -302,6 +302,7 @@ const SparkRequestInner: React.FC = () => {
   const qpNotes = searchParams.get("notes") ?? "";
   const qpBaCount = parseInt(searchParams.get("baCount") ?? "1", 10);
   const qpRequestTypeId = searchParams.get("requestTypeId") ?? "";
+  const qpRequestTypeName = (searchParams.get("requestTypeName") ?? "").trim();
   const qpDistributorId = searchParams.get("distributorId") ?? "";
   const qpTimezoneId = searchParams.get("timezoneId") ?? "";
   const qpProducts = (searchParams.get("productIds") ?? "")
@@ -310,11 +311,13 @@ const SparkRequestInner: React.FC = () => {
     .filter(Boolean);
   // Activation Plan deep-link from Plan detail / Tracker (?plan=<id>).
   const activationPlanId = searchParams.get("plan") || null;
+  // Field marketing / duplicate deep-link date (YYYY-MM-DD).
+  const qpDate = (searchParams.get("date") || searchParams.get("startsOn") || "")
+    .trim()
+    .slice(0, 10);
 
   const email = user?.email ?? "";
-  // Date is intentionally NOT pre-filled on duplicate — that's the
-  // whole point of cloning (new date for same venue/setup).
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(qpDate);
   const [startTime, setStartTime] = useState(qpStart);
   const [endTime, setEndTime] = useState(qpEnd);
   const [venue, setVenue] = useState(searchParams.get("venue") ?? "");
@@ -563,8 +566,16 @@ const SparkRequestInner: React.FC = () => {
 
   // Pick sensible defaults once the catalog loads.
   useEffect(() => {
-    if (!requestTypeId && requestTypes[0]) {
-      setRequestTypeId(String(requestTypes[0].id));
+    if (!requestTypeId && requestTypes.length) {
+      const byName = qpRequestTypeName
+        ? requestTypes.find(
+            (rt) =>
+              (rt?.name || "").trim().toLowerCase() ===
+              qpRequestTypeName.toLowerCase(),
+          )
+        : null;
+      const pick = byName ?? requestTypes[0];
+      if (pick) setRequestTypeId(String(pick.id));
     }
     // NOTE: we intentionally do NOT auto-pick a timezone here anymore.
     // The old "Chicago-or-first" guess silently stamped requests with the
@@ -582,7 +593,16 @@ const SparkRequestInner: React.FC = () => {
       const target = meAsRmm ?? rmms[0];
       if (target) setRmmId(String(target.id));
     }
-  }, [requestTypes, timezones, rmms, requestTypeId, timezoneId, rmmId, user?.id]);
+  }, [
+    requestTypes,
+    timezones,
+    rmms,
+    requestTypeId,
+    timezoneId,
+    rmmId,
+    user?.id,
+    qpRequestTypeName,
+  ]);
 
   const geocode = async (
     raw: string,
