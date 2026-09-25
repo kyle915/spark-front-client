@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   archivedQueryFilter,
   consumeRecapsListNeedsRefresh,
@@ -95,11 +95,21 @@ describe("recap list return href", () => {
 
 describe("recaps list refresh flag", () => {
   it("marks and consumes a one-shot list refresh", () => {
-    sessionStorage.removeItem("spark.recaps.forceListRefresh");
+    const store = new Map<string, string>();
+    vi.stubGlobal("sessionStorage", {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+    });
     expect(consumeRecapsListNeedsRefresh()).toBe(false);
     markRecapsListNeedsRefresh();
     expect(consumeRecapsListNeedsRefresh()).toBe(true);
     expect(consumeRecapsListNeedsRefresh()).toBe(false);
+    vi.unstubAllGlobals();
   });
 
   it("builds navigate state for a forced list refetch", () => {
