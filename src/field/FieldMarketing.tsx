@@ -197,10 +197,50 @@ function currentMonthKey(): string {
 
 function rowStatus(row: FmEvent): string {
   if (row.status === "submitted") {
-    return row.requestCode ? `Ignite · ${row.requestCode}` : "Submitted to Ignite";
+    return row.requestCode ? `Ignite · ${row.requestCode}` : "On plan";
   }
   if (hasLogged(row)) return "Logged results";
   return "Draft";
+}
+
+/** Matches API `_should_create_request` — staffed activation / guerilla book Ignite. */
+function booksWithIgnite(row: FmEvent): boolean {
+  if (row.activity === "event_activation" || row.activity === "sponsorship") {
+    return true;
+  }
+  if (
+    row.activity === "guerilla" ||
+    row.activity === "full_can" ||
+    row.activity === "pour"
+  ) {
+    return Boolean(row.needsFieldSupport);
+  }
+  return false;
+}
+
+function requestFormHref(row: FmEvent): string {
+  const params = new URLSearchParams();
+  params.set("venue", row.name || "");
+  if (row.address) params.set("address", row.address);
+  if (row.startsOn) params.set("date", row.startsOn.slice(0, 10));
+  params.set("requestTypeName", "Event Activation");
+  params.set("schedulingStatus", "needs_scheduling");
+  if (row.ambassadorCount) params.set("baCount", String(row.ambassadorCount));
+  if (row.supportTimes) params.set("loadInTime", row.supportTimes);
+  if (row.managerName) params.set("onsitePoc", row.managerName);
+  const teamParts: string[] = [];
+  if (row.supportScope) teamParts.push(row.supportScope);
+  if (row.samplingLabel) teamParts.push(`Sampling: ${row.samplingLabel}`);
+  if (row.days > 1) teamParts.push(`${row.days} days`);
+  if (row.skuNames?.length) teamParts.push(`SKUs: ${row.skuNames.join(", ")}`);
+  if (teamParts.length) params.set("additionalTeamDetails", teamParts.join(" · "));
+  const noteBits = [
+    row.marketLabel ? `Market: ${row.marketLabel}` : "",
+    row.activityLabel ? `Tactic: ${row.activityLabel}` : "",
+    row.notes || "",
+  ].filter(Boolean);
+  if (noteBits.length) params.set("notes", noteBits.join("\n"));
+  return `/requests/create?${params.toString()}`;
 }
 
 const emptyForm = {
@@ -652,10 +692,10 @@ export default function FieldMarketing() {
               onClick={() => void pushToIgnite(selectedDraftIds)}
             >
               {submitting
-                ? "Pushing…"
+                ? "Booking…"
                 : selectedDraftIds.length
-                  ? `Push ${selectedDraftIds.length} to Ignite`
-                  : "Push to Ignite"}
+                  ? `Book ${selectedDraftIds.length} with Ignite`
+                  : "Book with Ignite"}
             </button>
           </div>
         </div>
@@ -978,7 +1018,7 @@ export default function FieldMarketing() {
                 disabled={saving}
                 onClick={() => void save(true)}
               >
-                Save + push to Ignite
+                Save + book with Ignite
               </button>
             </div>
           </section>
@@ -1137,9 +1177,23 @@ export default function FieldMarketing() {
                               className="spark-btn-ghost !px-2 !py-1 text-xs"
                               disabled={submitting}
                               onClick={() => void pushToIgnite([row.id])}
+                              title={
+                                booksWithIgnite(row)
+                                  ? "Book as Event Activation on the tracker"
+                                  : "Confirm on the plan (no Ignite request for this tactic)"
+                              }
                             >
-                              Push
+                              {booksWithIgnite(row) ? "Book Ignite" : "Confirm"}
                             </button>
+                          ) : null}
+                          {booksWithIgnite(row) ? (
+                            <a
+                              className="spark-btn-ghost !px-2 !py-1 text-xs inline-flex items-center"
+                              href={requestFormHref(row)}
+                              title="Open the full Event Activation request form, prefilled from this plan row"
+                            >
+                              Full form
+                            </a>
                           ) : null}
                           <button
                             type="button"
