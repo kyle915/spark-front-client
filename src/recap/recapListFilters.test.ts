@@ -1,13 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   archivedQueryFilter,
+  consumeRecapsListNeedsRefresh,
   defaultRecapStatus,
+  markRecapsListNeedsRefresh,
   recapEmptyKind,
   recapIsEmptyShell,
   recapListStatusWord,
   recapMatchesBaName,
   recapMatchesPipeline,
   recapsListHrefFromReturn,
+  recapsListNavState,
   sharedQueryFilter,
   withRecapListReturn,
 } from "./recapListFilters";
@@ -87,6 +90,36 @@ describe("recap list return href", () => {
     expect(
       recapsListHrefFromReturn({ searchParams: new URLSearchParams() }),
     ).toBe("/recaps/list");
+  });
+});
+
+describe("recaps list refresh flag", () => {
+  it("marks and consumes a one-shot list refresh", () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("sessionStorage", {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        store.set(key, value);
+      },
+      removeItem: (key: string) => {
+        store.delete(key);
+      },
+    });
+    expect(consumeRecapsListNeedsRefresh()).toBe(false);
+    markRecapsListNeedsRefresh();
+    expect(consumeRecapsListNeedsRefresh()).toBe(true);
+    expect(consumeRecapsListNeedsRefresh()).toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it("builds navigate state for a forced list refetch", () => {
+    expect(recapsListNavState(true)).toEqual({ refreshRecaps: true });
+    expect(recapsListNavState(true, "Alex")).toEqual({
+      baName: "Alex",
+      refreshRecaps: true,
+    });
+    expect(recapsListNavState(false, "Alex")).toEqual({ baName: "Alex" });
+    expect(recapsListNavState(false)).toEqual({});
   });
 });
 

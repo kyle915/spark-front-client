@@ -40,7 +40,11 @@ import { DeleteRecapMutation } from "@/api/mutations/DeleteRecapMutation";
 import type { DeleteRecapMutation as DeleteRecapMutationType } from "@/api/mutations/__generated__/DeleteRecapMutation.graphql";
 import { AmbassadorSearchQuery } from "@/api/queries/AmbassadorSearchQuery";
 import type { AmbassadorSearchQuery as AmbassadorSearchQueryType } from "@/api/queries/__generated__/AmbassadorSearchQuery.graphql";
-import { recapsListHrefFromReturn } from "./recapListFilters";
+import {
+  markRecapsListNeedsRefresh,
+  recapsListHrefFromReturn,
+  recapsListNavState,
+} from "./recapListFilters";
 import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import type { ProductsQuery as ProductsQueryType } from "@/api/queries/__generated__/ProductsQuery.graphql";
 import { CreateProductMutation } from "@/api/mutations/CreateProductMutation";
@@ -800,8 +804,9 @@ const SparkRecapInner: React.FC<{
   };
 
   // Approve / decline the recap itself (distinct from request approval).
-  // Uses the existing approveRecap mutation; the response returns
-  // `approved` so the status chip updates in-place.
+  // After success, return to the list with a forced network refetch —
+  // Relay updates the Recap node but not the Needs review connection, so
+  // store-or-network would keep the row in the queue until a hard refresh.
   const setApproved = (approved: boolean) => {
     if (isApproving || approvePhase !== "idle") return;
     if (approved) setApprovePhase("pending");
@@ -813,17 +818,22 @@ const SparkRecapInner: React.FC<{
             approved ? "Recap approved." : "Recap marked not approved.",
             "success",
           );
+          const goList = () => {
+            markRecapsListNeedsRefresh();
+            navigate(
+              recapsListHrefFromReturn({
+                searchParams,
+                fallbackStatus: approved ? "approved" : "needs_review",
+              }),
+              { state: recapsListNavState(true) },
+            );
+          };
           if (approved) {
             setApprovePhase("success");
-            void holdActionSuccess().then(() => {
-              onRefresh();
-              setApprovePhase("idle");
-            });
+            void holdActionSuccess().then(goList);
             return;
           }
-          // Refetch so the approval status updates immediately — the
-          // mutation response alone doesn't refresh the rendered query.
-          onRefresh();
+          goList();
         } else {
           setApprovePhase("idle");
           showAlert(

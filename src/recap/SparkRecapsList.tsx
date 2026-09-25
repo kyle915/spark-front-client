@@ -53,6 +53,7 @@ import {
   recapsListPageVariables,
 } from "./recapsListPagination";
 import {
+  consumeRecapsListNeedsRefresh,
   defaultRecapStatus,
   recapEmptyKind,
   recapIsEmptyShell,
@@ -62,6 +63,7 @@ import {
   archivedQueryFilter,
   sharedQueryFilter,
   withRecapListReturn,
+  type RecapsListNavState,
 } from "./recapListFilters";
 import {
   normalizeRecapActivationFilter,
@@ -856,7 +858,10 @@ type StatusKey =
   | "all"
   | "draft";
 
-type RecapsListFetchPolicy = "store-or-network" | "store-and-network";
+type RecapsListFetchPolicy =
+  | "store-or-network"
+  | "store-and-network"
+  | "network-only";
 
 const EMPTY_LEGACY_PAGE: RecapsListQueryType["response"] = {
   recaps: {
@@ -1079,14 +1084,14 @@ const RecapsListInner: React.FC<{
     RecapListKindsQuery,
     { tenantId: tenantId || null },
     {
-      fetchPolicy: refreshKey === 0 ? "store-or-network" : "store-and-network",
+      fetchPolicy: refreshKey === 0 ? "store-or-network" : "network-only",
       fetchKey: refreshKey,
     },
   );
   const enableLegacy = Boolean(kinds.recapListKinds?.hasLegacy);
   const enableCustom = Boolean(kinds.recapListKinds?.hasCustom);
   const listFetchPolicy: RecapsListFetchPolicy =
-    refreshKey === 0 ? "store-or-network" : "store-and-network";
+    refreshKey === 0 ? "store-or-network" : "network-only";
 
   const legacyVars = {
     first: page1Vars.first,
@@ -2155,7 +2160,13 @@ export default function SparkRecapsList() {
   const [justApprovedIds, setJustApprovedIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [refreshKey, setRefreshKey] = useState(0);
+  // Detail approve/archive sets refreshRecaps / session flag so we skip
+  // store-or-network and drop the row from Needs review without F5.
+  const [refreshKey, setRefreshKey] = useState(() => {
+    const nav = location.state as RecapsListNavState | null;
+    if (nav?.refreshRecaps || consumeRecapsListNeedsRefresh()) return 1;
+    return 0;
+  });
   const [commitMarkShared, isMarkingShared] =
     useMutation<MarkRecapsSharedMutationType>(MarkRecapsSharedMutation);
 

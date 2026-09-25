@@ -58,7 +58,11 @@ import {
   useState,
   Suspense,
 } from "react";
-import { recapsListHrefFromReturn } from "./recapListFilters";
+import {
+  markRecapsListNeedsRefresh,
+  recapsListHrefFromReturn,
+  recapsListNavState,
+} from "./recapListFilters";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { StatusMorph } from "@/motion/StatusMorph";
 import {
@@ -960,7 +964,8 @@ const RecapCustomViewInner = ({
   }, [recap?.id, existingPdfUrl, commitGeneratePdf, showAlert]);
 
   // Approve the custom recap → backend emails the requestor + mapped RMM
-  // (with the PDF). Returns `approved` so the view flips in-place.
+  // (with the PDF). Then return to the list with a forced network refetch
+  // so Needs review drops the row (connection cache stays stale otherwise).
   const handleApprove = useCallback(() => {
     if (!recap?.id || approvePhase !== "idle") return;
     setApprovePhase("pending");
@@ -975,12 +980,14 @@ const RecapCustomViewInner = ({
           );
           setApprovePhase("success");
           void holdActionSuccess().then(() => {
-            // Refetch so the status flips to Approved in-place. Relay's
-            // auto-normalization of the mutation payload wasn't reliably
-            // re-rendering this view, so bump the query's fetchKey to force
-            // a fresh read (same fix the legacy SparkRecapView uses).
-            onRefresh();
-            setApprovePhase("idle");
+            markRecapsListNeedsRefresh();
+            navigate(
+              recapsListHrefFromReturn({
+                searchParams,
+                fallbackStatus: "approved",
+              }),
+              { state: recapsListNavState(true) },
+            );
           });
         } else {
           setApprovePhase("idle");
@@ -992,7 +999,14 @@ const RecapCustomViewInner = ({
         showAlert(`Approve failed: ${err.message}`, "error");
       },
     });
-  }, [recap?.id, commitApprove, showAlert, approvePhase, onRefresh]);
+  }, [
+    recap?.id,
+    commitApprove,
+    showAlert,
+    approvePhase,
+    navigate,
+    searchParams,
+  ]);
 
   const handleArchive = useCallback(() => {
     if (!recap?.id || isArchiving || isUnarchiving) return;
