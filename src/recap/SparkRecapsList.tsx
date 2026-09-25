@@ -858,7 +858,10 @@ type StatusKey =
   | "all"
   | "draft";
 
-type RecapsListFetchPolicy = "store-or-network" | "store-and-network";
+type RecapsListFetchPolicy =
+  | "store-or-network"
+  | "store-and-network"
+  | "network-only";
 
 const EMPTY_LEGACY_PAGE: RecapsListQueryType["response"] = {
   recaps: {
