@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { fetchQuery, useLazyLoadQuery } from "react-relay/hooks";
+import type { IEnvironment } from "relay-runtime";
 import { SidebarCountsQuery } from "@/api/queries/SidebarCountsQuery";
 import type { SidebarCountsQuery as SidebarCountsQueryType } from "@api/queries/__generated__/SidebarCountsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -33,11 +34,29 @@ function loadReadKeys(): Set<string> {
   }
 }
 
+const sidebarCountsVariables = (tenantId: string | null | undefined) => ({
+  tenantId: tenantId || null,
+});
+
+/** Re-pull the badge counts into the store after a mutation changes them. */
+export function refreshSidebarCounts(
+  environment: IEnvironment,
+  tenantId: string | null | undefined,
+): Promise<unknown> {
+  return fetchQuery<SidebarCountsQueryType>(
+    environment,
+    SidebarCountsQuery,
+    sidebarCountsVariables(tenantId),
+  )
+    .toPromise()
+    .catch(() => undefined);
+}
+
 export function useSidebarCounts(): SidebarCounts {
   const { tenantId } = useAuthStore();
   const data = useLazyLoadQuery<SidebarCountsQueryType>(
     SidebarCountsQuery,
-    { tenantId: tenantId || null },
+    sidebarCountsVariables(tenantId),
     { fetchPolicy: "store-or-network" },
   );
 
