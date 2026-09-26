@@ -1,13 +1,18 @@
 import { Component, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { ErrorInfo, ReactNode } from "react";
-import { useLazyLoadQuery } from "react-relay/hooks";
+import { fetchQuery, useLazyLoadQuery, useRelayEnvironment } from "react-relay/hooks";
+import type { IEnvironment } from "relay-runtime";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
 import { ApprovalsListQuery } from "@/api/queries/ApprovalsListQuery";
-import type { ApprovalsListQuery as ApprovalsListQueryType } from "@api/queries/__generated__/ApprovalsListQuery.graphql";
+import type {
+  ApprovalsListQuery as ApprovalsListQueryType,
+  ApprovalsListQuery$variables,
+} from "@api/queries/__generated__/ApprovalsListQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import SparkOverlay from "@/shared/SparkOverlay";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 
@@ -247,22 +252,49 @@ const ApprovalRow: React.FC<{
   );
 };
 
+/* ─────────────────── data ─────────────────── */
+
+const queueVariables = (tenantId: string | null | undefined): ApprovalsListQuery$variables => ({
+  first: 300,
+  filters: tenantId
+    ? { tenantId, statusSlugs: ["pending", "approved", "declined"] }
+    : { statusSlugs: ["pending", "approved", "declined"] },
+});
+
+const copyQueueVariables = (tenantId: string | null | undefined): ApprovalsListQuery$variables => ({
+  first: 100,
+  filters: tenantId
+    ? { tenantId, statusSlug: "pending" }
+    : { statusSlug: "pending" },
+});
+
+/**
+ * Approve/decline go through a raw fetch, so the Relay store never learns the
+ * status changed. Re-pull every query that renders pending state so header
+ * stats, recently-decided, the copy button and the sidebar badge stay honest
+ * (and a remount doesn't resurrect decided rows from the cache).
+ */
+function refreshAfterDecision(
+  environment: IEnvironment,
+  tenantId: string | null | undefined,
+): void {
+  for (const variables of [queueVariables(tenantId), copyQueueVariables(tenantId)]) {
+    fetchQuery<ApprovalsListQueryType>(environment, ApprovalsListQuery, variables)
+      .toPromise()
+      .catch(() => undefined);
+  }
+  void refreshSidebarCounts(environment, tenantId);
+}
+
 /* ─────────────────── inner ─────────────────── */
 
 const ApprovalsInner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
+  const environment = useRelayEnvironment();
   const data = useLazyLoadQuery<ApprovalsListQueryType>(
     ApprovalsListQuery,
-    {
-      first: 300,
-      filters: tenantId
-        ? {
-            tenantId,
-            statusSlugs: ["pending", "approved", "declined"],
-          }
-        : { statusSlugs: ["pending", "approved", "declined"] },
-    },
+    queueVariables(tenantId),
     { fetchPolicy: "store-or-network" },
   );
 
@@ -479,6 +511,7 @@ const ApprovalsInner: React.FC = () => {
         failures.push(`${r.reqId}: ${(e as Error).message}`);
       }
     }
+    if (okCount > 0) refreshAfterDecision(environment, tenantId);
     setBulkBusy(false);
     setBulkConfirm(false);
     clearSelection();
@@ -539,6 +572,7 @@ const ApprovalsInner: React.FC = () => {
         failures.push(`${r.reqId}: ${(e as Error).message}`);
       }
     }
+    if (okCount > 0) refreshAfterDecision(environment, tenantId);
     setBulkBusy(false);
     setBulkDeclineOpen(false);
     setBulkDeclineReason("");
@@ -576,6 +610,7 @@ const ApprovalsInner: React.FC = () => {
         next.add(r.id);
         return next;
       });
+      refreshAfterDecision(environment, tenantId);
       setApproving(null);
     } catch (e) {
       showAlert(`Couldn't approve: ${(e as Error).message}`, "error");
@@ -605,6 +640,7 @@ const ApprovalsInner: React.FC = () => {
         next.add(declining.id);
         return next;
       });
+      refreshAfterDecision(environment, tenantId);
       setDeclining(null);
       setDeclineReason("");
     } catch (e) {
@@ -1631,12 +1667,7 @@ const ApprovalsCopyQueueButtonInner: React.FC = () => {
   const { tenantId } = useAuthStore();
   const data = useLazyLoadQuery<ApprovalsListQueryType>(
     ApprovalsListQuery,
-    {
-      first: 100,
-      filters: tenantId
-        ? { tenantId, statusSlug: "pending" }
-        : { statusSlug: "pending" },
-    },
+    copyQueueVariables(tenantId),
     { fetchPolicy: "store-or-network" },
   );
   const showAlert = useAlertStore((s) => s.showAlert);
