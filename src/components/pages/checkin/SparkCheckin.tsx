@@ -54,6 +54,7 @@ import {
   flushPendingRecap,
   offlineRecapBanner,
   putCheckinPhoto,
+  NO_SIGNAL_PHOTO_MESSAGE,
   readPendingRecap,
   type PendingRecap,
 } from "./offlineRecap";
@@ -324,6 +325,8 @@ type Photo = {
   category: string | null;
   /** Last upload error — shown on the Retry banner so BAs know why. */
   failReason?: string | null;
+  /** Failed on connectivity (timeout / dropped), not a server reject. */
+  failedOffline?: boolean;
 };
 
 const FALLBACK_ACCENT = "#C4D82E";
@@ -3091,6 +3094,11 @@ function RecapForm({
 
   const uploadingCount = photos.filter((p) => p.state === "uploading").length;
   const failedCount = photos.filter((p) => p.state === "failed").length;
+  // Store Wi-Fi / one bar keeps navigator.onLine true while every request
+  // stalls, so all-photos-timed-out counts as offline and queues the recap.
+  const allFailedOffline =
+    failedCount > 0 &&
+    photos.every((p) => p.state === "failed" && p.failedOffline);
 
   const hasPhotoField = useMemo(
     () => (template?.sections ?? []).some((s) => s.fields.some((f) => isPhotoType(f.type))),
@@ -3143,16 +3151,28 @@ function RecapForm({
             previewUrl = URL.createObjectURL(file);
             URL.revokeObjectURL(ph.previewUrl);
           }
-          return { ...ph, file, blobName, previewUrl, state: "done", failReason: null };
+          return {
+            ...ph,
+            file,
+            blobName,
+            previewUrl,
+            state: "done",
+            failReason: null,
+            failedOffline: false,
+          };
         }),
       );
     } catch (error) {
-      const failReason =
-        error instanceof Error && error.message.trim()
+      const failedOffline = isOfflineClockFailure({ error });
+      const failReason = failedOffline
+        ? NO_SIGNAL_PHOTO_MESSAGE
+        : error instanceof Error && error.message.trim()
           ? error.message.trim()
           : "Upload failed — tap Retry.";
       setPhotos((p) =>
-        p.map((ph) => (ph.id === id ? { ...ph, state: "failed", failReason } : ph)),
+        p.map((ph) =>
+          ph.id === id ? { ...ph, state: "failed", failReason, failedOffline } : ph,
+        ),
       );
     }
   };
@@ -3262,7 +3282,8 @@ function RecapForm({
         `Still uploading ${uploadingCount} photo${uploadingCount === 1 ? "" : "s"} — one moment.`,
       );
     }
-    const offlineNow = typeof navigator !== "undefined" && navigator.onLine === false;
+    const offlineNow =
+      (typeof navigator !== "undefined" && navigator.onLine === false) || allFailedOffline;
     if (donePhotos.length === 0) {
       if (!(failedCount > 0 && offlineNow)) {
         return setErr(
@@ -3762,9 +3783,11 @@ function RecapForm({
           pendingLabel="Submitting…"
           successLabel="Submitted"
         >
-          {failedCount > 0
-            ? `Submit without ${failedCount} photo${failedCount === 1 ? "" : "s"}`
-            : "Submit recap"}
+          {allFailedOffline
+            ? "Save & send when back online"
+            : failedCount > 0
+              ? `Submit without ${failedCount} photo${failedCount === 1 ? "" : "s"}`
+              : "Submit recap"}
         </ActionMorphButton>
       </div>
     </div>

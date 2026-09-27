@@ -21,6 +21,48 @@ import { browserPlayableContentType } from "@/utils/recapFileUrl";
 
 export const RECAP_FETCH_TIMEOUT_MS = 20_000;
 export const PHOTO_PUT_ATTEMPTS = 3;
+export const PHOTO_URL_TIMEOUT_MS = 20_000;
+const PHOTO_PUT_MIN_TIMEOUT_MS = 45_000;
+// Slowest link we'll wait out: one bar of LTE inside a big-box store.
+const PHOTO_PUT_MIN_BYTES_PER_SEC = 32_000;
+
+export const NO_SIGNAL_PHOTO_MESSAGE =
+  "No signal — photos are still on this screen. Tap Retry once you have bars.";
+
+// A stalled request on weak-but-present signal never errors on its own; the
+// tile sat on "UPLOADING" forever and Submit stayed blocked. Named
+// TimeoutError so isOfflineClockFailure treats it as connectivity.
+export class PhotoUploadTimeoutError extends Error {
+  constructor() {
+    super(NO_SIGNAL_PHOTO_MESSAGE);
+    this.name = "TimeoutError";
+  }
+}
+
+export function photoPutTimeoutMs(bytes: number): number {
+  return Math.max(
+    PHOTO_PUT_MIN_TIMEOUT_MS,
+    Math.ceil((bytes / PHOTO_PUT_MIN_BYTES_PER_SEC) * 1000),
+  );
+}
+
+async function fetchWithDeadline(
+  fetchImpl: typeof fetch,
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetchImpl(url, { ...init, signal: ctrl.signal });
+  } catch (error) {
+    if (ctrl.signal.aborted) throw new PhotoUploadTimeoutError();
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export type PendingRecapFile = {
   id: string;
@@ -323,6 +365,7 @@ export async function putCheckinPhoto(args: {
   file: File;
   apiOrigin: string;
   fetchImpl?: typeof fetch;
+  timeoutMs?: { url?: number; put?: number };
 }): Promise<{ blobName: string }> {
   const fetchImpl = args.fetchImpl ?? fetch;
   const contentType = browserPlayableContentType({
@@ -337,11 +380,14 @@ export async function putCheckinPhoto(args: {
     args.file.type === contentType && args.file.name === filename
       ? args.file
       : new File([args.file], filename, { type: contentType });
+  const urlTimeoutMs = args.timeoutMs?.url ?? PHOTO_URL_TIMEOUT_MS;
+  const putTimeoutMs = args.timeoutMs?.put ?? photoPutTimeoutMs(body.size);
   let lastError: unknown = new Error("upload failed");
 
   for (let attempt = 0; attempt < PHOTO_PUT_ATTEMPTS; attempt++) {
     try {
-      const urlRes = await fetchImpl(
+      const urlRes = await fetchWithDeadline(
+        fetchImpl,
         `${args.apiOrigin}/api/public/checkin/${encodeURIComponent(args.code)}/upload-url`,
         {
           method: "POST",
@@ -352,6 +398,7 @@ export async function putCheckinPhoto(args: {
             contentType,
           }),
         },
+        urlTimeoutMs,
       );
       let meta: { uploadUrl?: string; blobName?: string; message?: string } = {};
       try {
@@ -375,11 +422,16 @@ export async function putCheckinPhoto(args: {
         }
         throw new Error(detail);
       }
-      const put = await fetchImpl(meta.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": contentType },
-        body,
-      });
+      const put = await fetchWithDeadline(
+        fetchImpl,
+        meta.uploadUrl,
+        {
+          method: "PUT",
+          headers: { "Content-Type": contentType },
+          body,
+        },
+        putTimeoutMs,
+      );
       if (put.ok) return { blobName: meta.blobName };
       if (put.status === 401 || put.status === 403 || isOfflineClockFailure({ status: put.status })) {
         lastError = new Error("upload failed");
@@ -388,6 +440,8 @@ export async function putCheckinPhoto(args: {
       throw new Error("upload failed");
     } catch (error) {
       lastError = error;
+      // Re-trying a stalled link just triples the wait before Retry shows.
+      if (error instanceof PhotoUploadTimeoutError) throw error;
       if (!isOfflineClockFailure({ error })) throw error;
     }
   }
