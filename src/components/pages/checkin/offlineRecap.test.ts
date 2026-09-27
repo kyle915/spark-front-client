@@ -6,12 +6,14 @@ import {
   memoryPhotoStore,
   offlineRecapBanner,
   pendingRecapKey,
+  photoPutTimeoutMs,
+  PhotoUploadTimeoutError,
   putCheckinPhoto,
   readPendingRecap,
   writePendingRecap,
   type PendingRecap,
 } from "./offlineRecap";
-import { formatSavedClockTime, type StorageLike } from "./offlineClock";
+import { formatSavedClockTime, isOfflineClockFailure, type StorageLike } from "./offlineClock";
 
 class MemoryStorage implements StorageLike {
   private store = new Map<string, string>();
@@ -482,5 +484,54 @@ describe("putCheckinPhoto", () => {
       }),
     ).rejects.toThrow(/Only photo and video/);
     expect(mints).toBe(1);
+  });
+
+  const hangUntilAborted = (init?: RequestInit) =>
+    new Promise<Response>((_, reject) => {
+      init?.signal?.addEventListener("abort", () =>
+        reject(new DOMException("aborted", "AbortError")),
+      );
+    });
+
+  it("fails a stalled PUT fast with a no-signal error instead of hanging", async () => {
+    let puts = 0;
+    const err = await putCheckinPhoto({
+      code: "TH-1",
+      token: "tok",
+      file: sampleFile(),
+      apiOrigin: "https://api.example",
+      timeoutMs: { url: 50, put: 20 },
+      fetchImpl: async (input, init) => {
+        if (String(input).includes("/upload-url")) {
+          return new Response(
+            JSON.stringify({ uploadUrl: "https://signed.example/put", blobName: "b.jpg" }),
+            { status: 200 },
+          );
+        }
+        puts += 1;
+        return hangUntilAborted(init);
+      },
+    }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(PhotoUploadTimeoutError);
+    expect(isOfflineClockFailure({ error: err })).toBe(true);
+    expect(puts).toBe(1);
+  });
+
+  it("times out a stalled upload-url mint", async () => {
+    await expect(
+      putCheckinPhoto({
+        code: "TH-1",
+        token: "tok",
+        file: sampleFile(),
+        apiOrigin: "https://api.example",
+        timeoutMs: { url: 20 },
+        fetchImpl: async (_input, init) => hangUntilAborted(init),
+      }),
+    ).rejects.toBeInstanceOf(PhotoUploadTimeoutError);
+  });
+
+  it("scales the PUT deadline with file size", () => {
+    expect(photoPutTimeoutMs(500_000)).toBe(45_000);
+    expect(photoPutTimeoutMs(32_000_000)).toBe(1_000_000);
   });
 });
