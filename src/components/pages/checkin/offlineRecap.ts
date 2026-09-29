@@ -87,6 +87,8 @@ export type PendingRecap = {
   shiftLabel?: string;
   secondShift?: boolean;
   usedCorpoCard?: boolean | null;
+  storeName?: string;
+  storeNumber?: string;
 };
 
 export type PhotoBlobStore = {
@@ -274,6 +276,8 @@ export async function enqueueRecap(
     shiftLabel?: string;
     secondShift?: boolean;
     usedCorpoCard?: boolean | null;
+    storeName?: string;
+    storeNumber?: string;
     submittedAt?: string;
     nowMs?: number;
     photoFiles?: Record<string, File>;
@@ -299,6 +303,8 @@ export async function enqueueRecap(
     shiftLabel: args.shiftLabel,
     secondShift: args.secondShift,
     usedCorpoCard: args.usedCorpoCard,
+    storeName: args.storeName,
+    storeNumber: args.storeNumber,
   };
   writePendingRecap(pending, storage);
   if (args.photoFiles) {
@@ -491,6 +497,9 @@ export async function flushPendingRecap(
       productSamples: pending.productSamples,
       totalEngagements: pending.totalEngagements,
       usedCorpoCard: pending.usedCorpoCard,
+      ...(pending.storeName
+        ? { storeName: pending.storeName, storeNumber: pending.storeNumber ?? "" }
+        : {}),
       forceNew: pending.forceNew,
       ...(pending.forceNew && pending.shiftLabel
         ? { shiftLabel: pending.shiftLabel, secondShift: pending.secondShift ?? true }

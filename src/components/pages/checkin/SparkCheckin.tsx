@@ -259,6 +259,9 @@ type Context = {
   // Labelled photo dropzones, in render order. Absent/empty for every brand
   // that hasn't opted in, which is the signal to keep the single generic grid.
   photoBuckets?: PhotoBucket[];
+  // Present only for brands whose recap title must be "Store Name #1234"
+  // (Torch); the values prefill the recap form's Store boxes.
+  storeIdentity?: StoreIdentity | null;
   session?: {
     ambassadorName: string;
     clock: Clock;
@@ -781,7 +784,11 @@ type RecapDraft = {
   samples: Record<string, string>;
   engagements: string;
   usedCorpoCard?: boolean | null;
+  store?: StoreIdentityDraft;
 };
+
+type StoreIdentity = { name: string; number: string };
+type StoreIdentityDraft = StoreIdentity & { noNumber: boolean };
 
 const DRAFT_KEY = (code: string, token: string) =>
   `@spark.checkin.draft/${code}/${token.slice(-24)}`;
@@ -2443,6 +2450,7 @@ function CheckedInFlow({
         token={token}
         template={ctx.template ?? null}
         photoBuckets={ctx.photoBuckets}
+        storeIdentity={ctx.storeIdentity ?? null}
         accent={accent}
         brandName={ctx.brand.name || ""}
         eventDate={ctx.event?.date}
@@ -2955,6 +2963,7 @@ function RecapForm({
   token,
   template,
   photoBuckets,
+  storeIdentity = null,
   accent,
   brandName,
   eventDate,
@@ -2969,6 +2978,7 @@ function RecapForm({
   token: string;
   template: Template | null;
   photoBuckets?: PhotoBucket[];
+  storeIdentity?: StoreIdentity | null;
   accent: string;
   brandName: string;
   eventDate?: string | null;
@@ -3041,6 +3051,14 @@ function RecapForm({
         ? restored.current.usedCorpoCard
         : null,
   );
+  const [store, setStore] = useState<StoreIdentityDraft>(
+    () =>
+      restored.current?.store ?? {
+        name: storeIdentity?.name ?? "",
+        number: storeIdentity?.number ?? "",
+        noNumber: false,
+      },
+  );
   const [savedAt, setSavedAt] = useState<number | null>(
     () => restored.current?.savedAt ?? null,
   );
@@ -3060,11 +3078,12 @@ function RecapForm({
         samples,
         engagements,
         usedCorpoCard,
+        ...(storeIdentity ? { store } : {}),
       });
       if (at) setSavedAt(at);
     }, 500);
     return () => window.clearTimeout(t);
-  }, [code, token, values, samples, engagements, usedCorpoCard]);
+  }, [code, token, values, samples, engagements, usedCorpoCard, storeIdentity, store]);
 
   // Mileage step → RecapForm can race: lock miles into required field values
   // whenever the itinerary claim arrives (or updates).
@@ -3227,6 +3246,15 @@ function RecapForm({
 
   const submit = async () => {
     setErr(null);
+    const storeName = store.name.trim();
+    const storeNumber = store.noNumber ? "" : store.number.trim().replace(/^#\s*/, "");
+    if (storeIdentity) {
+      if (!storeName) return setErr("Enter the store name.");
+      if (!storeNumber && !store.noNumber) {
+        return setErr("Enter the store number, or tick \"No store number\".");
+      }
+    }
+    const storeFields = storeIdentity ? { storeName, storeNumber } : {};
     // Ensure itinerary miles are in values before required-field checks
     // (covers any race where the mileage step → recap handoff lagged).
     const valuesForSubmit = { ...values };
@@ -3378,6 +3406,7 @@ function RecapForm({
         productSamples,
         totalEngagements,
         usedCorpoCard,
+        ...storeFields,
         forceNew,
         shiftLabel: forceNew ? shiftLabel : undefined,
         secondShift: Boolean(forceNew && shiftLabel),
@@ -3417,6 +3446,7 @@ function RecapForm({
         productSamples,
         totalEngagements,
         usedCorpoCard,
+        ...storeFields,
         forceNew,
         ...(forceNew && shiftLabel
           ? { shiftLabel, secondShift: true }
@@ -3510,6 +3540,40 @@ function RecapForm({
               ? "No reimbursable mileage for this shift. You can still bump the Mileage field below if needed."
               : "Pre-filled from Google Maps driving directions through your stops (when available). If construction or detours added distance, bump the Mileage field below before you submit."}
           </p>
+        </div>
+      ) : null}
+      {storeIdentity ? (
+        <div style={card}>
+          <h2 style={h2}>Store</h2>
+          <label style={label}>
+            Store name <span style={{ color: "#EF5A2A" }}>*</span>
+          </label>
+          <input
+            style={input}
+            placeholder="e.g. Total Wine & More"
+            autoComplete="off"
+            value={store.name}
+            onChange={(e) => setStore((s) => ({ ...s, name: e.target.value }))}
+          />
+          <label style={{ ...label, marginTop: 10 }}>
+            Store # <span style={{ color: "#EF5A2A" }}>*</span>
+          </label>
+          <input
+            style={{ ...input, opacity: store.noNumber ? 0.45 : 1 }}
+            placeholder="e.g. 1234"
+            autoComplete="off"
+            disabled={store.noNumber}
+            value={store.noNumber ? "" : store.number}
+            onChange={(e) => setStore((s) => ({ ...s, number: e.target.value }))}
+          />
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={store.noNumber}
+              onChange={(e) => setStore((s) => ({ ...s, noNumber: e.target.checked }))}
+            />
+            No store number (independent store)
+          </label>
         </div>
       ) : null}
       {template.sections.map((section) => {

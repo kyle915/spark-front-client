@@ -189,6 +189,51 @@ describe("pending recap queue", () => {
     expect(second).toBe("none");
   });
 
+  it("sends the typed store name + number when the queued recap flushes", async () => {
+    const storage = new MemoryStorage();
+    const photos = memoryPhotoStore();
+    await enqueueRecap(
+      {
+        code: "TH-2HRV3D",
+        token: "tok",
+        fieldValues: [],
+        files: [
+          {
+            id: "p1",
+            blobName: "blob-1",
+            category: null,
+            filename: "a.jpg",
+            contentType: "image/jpeg",
+          },
+        ],
+        productSamples: [],
+        totalEngagements: null,
+        storeName: "Total Wine & More",
+        storeNumber: "1234",
+        nowMs: THREE_PM_MS,
+      },
+      storage,
+      photos,
+    );
+    const calls: Record<string, unknown>[] = [];
+    await flushPendingRecap(
+      {
+        code: "TH-2HRV3D",
+        postRecap: async (body) => {
+          calls.push(body);
+          return { ok: true, status: 200 };
+        },
+        putPhoto: async () => ({ blobName: "x" }),
+      },
+      storage,
+      photos,
+    );
+    expect(calls[0]).toMatchObject({
+      storeName: "Total Wine & More",
+      storeNumber: "1234",
+    });
+  });
+
   it("treats already-filed as success so a double flush cannot double-submit", async () => {
     const storage = new MemoryStorage();
     const photos = memoryPhotoStore();
