@@ -13,16 +13,19 @@ type UseTenantSelectionResult = {
 export const useTenantSelection = (): UseTenantSelectionResult => {
     const tenantsData = useLazyLoadQuery<TenantsQueryType>(
         TenantsQuery,
-        {},
+        // The tenants connection defaults to 10 rows; 500 is its cap.
+        { first: 500 },
         { fetchPolicy: "store-and-network" }
     );
 
     const tenantOptions = useMemo(
         () =>
-            tenantsData.tenants.edges.map((edge) => ({
-                value: edge.node.id,
-                label: edge.node.name,
-            })),
+            tenantsData.tenants.edges
+                .map((edge) => ({
+                    value: edge.node.id,
+                    label: edge.node.name,
+                }))
+                .sort((a, b) => a.label.localeCompare(b.label)),
         [tenantsData]
     );
 

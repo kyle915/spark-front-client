@@ -325,6 +325,8 @@ const CatalogsProvider = ({
     [],
   );
   const emptyFilters = useMemo(() => ({}), []);
+  // The tenants connection defaults to 10 rows; 500 is its cap.
+  const tenantsVariablesMemo = useMemo(() => ({ first: 500 }), []);
 
   const [refreshTriggers, setRefreshTriggers] = useState<
     Record<string, number>
@@ -483,6 +485,7 @@ const CatalogsProvider = ({
     TenantsQuery,
     "tenants",
     parseTenants,
+    tenantsVariablesMemo,
   );
 
   useCatalogEffect<RequestsQueryType, CatalogItem>(
