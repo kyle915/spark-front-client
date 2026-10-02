@@ -42,4 +42,29 @@ describe("clientRecapKpis", () => {
     }).map((k) => k.label);
     expect(labels).toEqual(["Engagements", "Sold", "Photos"]);
   });
+
+  it("divides by consumers sampled, not engagements (reach)", () => {
+    expect(
+      clientRecapKpis({
+        engagements: 300,
+        consumersSampled: 80,
+        soldUnits: 20,
+        unitsSampled: 0,
+        photoCount: 4,
+        activationType: "Torch THC-Retail Sampling",
+      }).find((k) => k.label === "Conv"),
+    ).toEqual({ label: "Conv", value: "25%" });
+  });
+
+  it("never shows conv on an Event activation recap", () => {
+    const labels = clientRecapKpis({
+      engagements: 500,
+      consumersSampled: 200,
+      soldUnits: 10,
+      unitsSampled: 0,
+      photoCount: 1,
+      activationType: "Event Activation",
+    }).map((k) => k.label);
+    expect(labels).toEqual(["Engagements", "Sold", "Photos"]);
+  });
 });

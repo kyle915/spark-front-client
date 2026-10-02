@@ -95,6 +95,7 @@ export const GetCustomRecapQuery = graphql`
       createdAt
       totalEngagements
       soldUnits
+      consumersSampled
       fillingForAmbassador
       late
       incomplete

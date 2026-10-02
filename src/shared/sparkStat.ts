@@ -14,12 +14,15 @@ export type SparkStatItem = {
 export type RecapKpiRow = {
   requestType: string | null | undefined;
   engagements: number | null | undefined;
+  consumersSampled?: number | null | undefined;
   productsSold: number | null | undefined;
 };
 
 /**
- * Sum engagements / sold for Retail + On-Premise rows only.
+ * Sum the CONV base / sold for Retail + On-Premise rows only.
  * Event (and unclassified) activations are excluded from CONV.
+ * The base is consumers sampled — people reached / engagements only when a
+ * recap logs no sampled count (same rule as the per-card CONV).
  */
 export function sumConversionBases(rows: RecapKpiRow[]): {
   engagements: number;
@@ -29,7 +32,7 @@ export function sumConversionBases(rows: RecapKpiRow[]): {
   let sold = 0;
   for (const r of rows) {
     if (!countsTowardConversion(r.requestType)) continue;
-    engagements += r.engagements ?? 0;
+    engagements += r.consumersSampled ?? r.engagements ?? 0;
     sold += r.productsSold ?? 0;
   }
   return { engagements, sold };
