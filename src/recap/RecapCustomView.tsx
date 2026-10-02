@@ -1380,11 +1380,20 @@ const RecapCustomViewInner = ({
     () =>
       clientRecapKpis({
         engagements: recap?.totalEngagements,
+        consumersSampled: recap?.consumersSampled,
         soldUnits: recap?.soldUnits,
         unitsSampled,
         photoCount: flatImages.length,
+        activationType: recap?.customRecapTemplate?.name ?? null,
       }),
-    [recap?.totalEngagements, recap?.soldUnits, unitsSampled, flatImages.length],
+    [
+      recap?.totalEngagements,
+      recap?.consumersSampled,
+      recap?.soldUnits,
+      unitsSampled,
+      flatImages.length,
+      recap?.customRecapTemplate?.name,
+    ],
   );
 
   const crumbTitle = useMemo(() => {

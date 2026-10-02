@@ -29,6 +29,20 @@ describe("sumConversionBases", () => {
     ).toEqual({ engagements: 150, sold: 30 });
   });
 
+  it("uses consumers sampled as the base when a row has one", () => {
+    expect(
+      sumConversionBases([
+        {
+          requestType: "Torch THC-Retail Sampling",
+          engagements: 300,
+          consumersSampled: 80,
+          productsSold: 20,
+        },
+        { requestType: "Retail Sampling", engagements: 50, productsSold: 5 },
+      ]),
+    ).toEqual({ engagements: 130, sold: 25 });
+  });
+
   it("ignores unclassified / null request types", () => {
     expect(
       sumConversionBases([
