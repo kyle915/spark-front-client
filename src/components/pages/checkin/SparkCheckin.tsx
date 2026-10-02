@@ -108,6 +108,7 @@ import {
 } from "./secondShift";
 import {
   eventTypeDescription,
+  eventTypeIsActivation,
   eventTypeSkipsIdentifyLocation,
   eventTypesUseDescriptorPicker,
 } from "./eventTypeDescriptor";
@@ -1379,6 +1380,7 @@ function IdentifyStep({
   const skipWorkLocation = eventTypeSkipsIdentifyLocation(
     selectedEventType?.name,
   );
+  const atVenue = !recapOnly && eventTypeIsActivation(selectedEventType?.name);
 
   const saved = readIdentity(code);
   const [firstName, setFirstName] = useState(saved.firstName);
@@ -1515,7 +1517,7 @@ function IdentifyStep({
           if (!storeName.trim()) return setErr("Enter the store name.");
           if (!addr.trim()) return setErr("Enter the store address.");
         } else if (!addr.trim()) {
-          return setErr("Enter the store address.");
+          return setErr(atVenue ? "Enter the event or venue address." : "Enter the store address.");
         }
       }
       if (!date) return setErr("Pick the date you're working.");
@@ -1682,7 +1684,9 @@ function IdentifyStep({
         <>
           {!skipWorkLocation ? (
             <>
-          <h2 style={{ ...h2, marginTop: 22 }}>{recapOnly ? "Which store?" : "Where are you working?"}</h2>
+          <h2 style={{ ...h2, marginTop: 22 }}>
+            {recapOnly ? "Which store?" : atVenue ? "Where's the event?" : "Where are you working?"}
+          </h2>
 
           {/* ROAMING crews pick a market. Their whole day lands on ONE event
               per market, and the individual spots get logged as stops while
@@ -1729,12 +1733,13 @@ function IdentifyStep({
           ) : (
             <>
           <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
-            Pick your store from the list if it's there — that keeps you on the
-            same event as anyone else working with you today.
+            {atVenue
+              ? "Use the venue's address — anyone else working this event today lands on the same one."
+              : "Pick your store from the list if it's there — that keeps you on the same event as anyone else working with you today."}
           </p>
           <input
             style={input}
-            placeholder="Store address"
+            placeholder={atVenue ? "Event / venue address" : "Store address"}
             list="spark-checkin-stores"
             autoComplete="off"
             value={address}
@@ -1771,7 +1776,7 @@ function IdentifyStep({
           </datalist>
           <input
             style={input}
-            placeholder="Store name (optional)"
+            placeholder={atVenue ? "Event or venue name (optional)" : "Store name (optional)"}
             value={storeName}
             onChange={(e) => setStoreName(e.target.value)}
           />
