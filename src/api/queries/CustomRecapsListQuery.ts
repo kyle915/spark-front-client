@@ -70,6 +70,7 @@ export const CustomRecapsListQuery = graphql`
           }
           soldUnits
           consumersSampled
+          isDryDemo
           heroImageUrl
           customRecapFilesCount
           accountSpend

@@ -160,6 +160,8 @@ type Recap = {
   // Null on legacy recaps that don't track a separate sampled count.
   consumersSampled: number | null;
   productsSold: number | null;
+  // Dry demo (no product tasted): stays in ENG / SOLD but never in CONV.
+  isDryDemo: boolean;
   // Granular sale + spend numbers. Kept separate from productsSold so
   // exports can break out "Cans Sold" vs "Packs Sold" — clients
   // reconciling invoices need that split, not the combined number.
@@ -205,9 +207,11 @@ const conversionStr = (
     productsSold: number | null;
     consumersSampled: number | null;
     engagements: number | null;
+    isDryDemo: boolean;
   },
   empty: string,
 ): string => {
+  if (r.isDryDemo) return empty;
   const base = r.consumersSampled ?? r.engagements;
   if (!base || base <= 0 || !r.productsSold) return empty;
   return `${Math.round((r.productsSold / base) * 100)}%`;
@@ -309,6 +313,7 @@ const mapLegacyRecap = (n: LegacyRecapNode): Recap => {
     engagements: n.totalEngagements ?? null,
     consumersSampled: null,
     productsSold: n.productsSold ?? null,
+    isDryDemo: false,
     cansSold: n.totalCansSold ?? null,
     packsSold: n.totalPacksSold ?? null,
     accountSpendAmount: n.accountSpendAmount ?? null,
@@ -347,6 +352,7 @@ const mapCustomRecap = (n: CustomRecapNode): Recap => ({
   engagements: n.totalEngagements ?? n.consumersSampled ?? null,
   consumersSampled: n.consumersSampled ?? null,
   productsSold: n.soldUnits ?? null,
+  isDryDemo: Boolean(n.isDryDemo),
   cansSold: null,
   packsSold: null,
   accountSpendAmount: n.accountSpend ?? null,
@@ -665,7 +671,7 @@ const RecapCard: React.FC<{
         <SparkStat
           tone="lime"
           value={conversionStr(recap, "—")}
-          label="Conv"
+          label={recap.isDryDemo ? "Dry demo" : "Conv"}
         />
       </div>
       ) : null}
@@ -2399,7 +2405,7 @@ export default function SparkRecapsList() {
     ];
     const lines = [header.join(",")];
     for (const r of visibleRecaps) {
-      const conv = conversionStr(r, "");
+      const conv = r.isDryDemo ? "dry demo" : conversionStr(r, "");
       lines.push(
         [
           `R-${r.uuid.slice(-4).toUpperCase()}`,
@@ -2471,7 +2477,7 @@ export default function SparkRecapsList() {
       (raw ?? "").toString().replace(/\t/g, " ").replace(/\r?\n/g, " ");
     const rows = [headers.join("\t")];
     for (const r of visibleRecaps) {
-      const conv = conversionStr(r, "");
+      const conv = r.isDryDemo ? "dry demo" : conversionStr(r, "");
       rows.push(
         [
           `R-${r.uuid.slice(-4).toUpperCase()}`,

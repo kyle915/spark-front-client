@@ -190,6 +190,7 @@ export const RequestUuidQuery = graphql`
           approved
           totalEngagements
           soldUnits
+          isDryDemo
           createdAt
           heroImageUrl
           customRecapFilesCount

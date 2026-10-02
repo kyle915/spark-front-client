@@ -7,7 +7,8 @@ export type ClientRecapKpi = { label: string; value: string };
  * ENG / SOLD / CONV when we have them; otherwise sampled + photo count.
  * CONV is sold ÷ consumers sampled (engagements only when no sampled count
  * is logged) and only for Retail / On-Premise — never for Event activations.
- * Never invents a conversion from missing sold or a zero base.
+ * Never invents a conversion from missing sold or a zero base. Dry demos
+ * (no product tasted) show a "Dry demo" label and People engaged instead.
  */
 export function clientRecapKpis(input: {
   engagements: number | null | undefined;
@@ -16,8 +17,24 @@ export function clientRecapKpis(input: {
   unitsSampled: number | null | undefined;
   photoCount: number;
   activationType?: string | null | undefined;
+  isDryDemo?: boolean | null | undefined;
+  peopleEngaged?: number | null | undefined;
 }): ClientRecapKpi[] {
   const out: ClientRecapKpi[] = [];
+  if (input.isDryDemo) {
+    out.push({ label: "Dry demo", value: "No tasting" });
+    if (typeof input.peopleEngaged === "number") {
+      out.push({
+        label: "People engaged",
+        value: input.peopleEngaged.toLocaleString(),
+      });
+    }
+    if (typeof input.soldUnits === "number") {
+      out.push({ label: "Sold", value: input.soldUnits.toLocaleString() });
+    }
+    out.push({ label: "Photos", value: String(input.photoCount) });
+    return out.slice(0, 4);
+  }
   if (typeof input.engagements === "number") {
     out.push({
       label: "Engagements",

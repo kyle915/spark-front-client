@@ -53,6 +53,7 @@ describe("Recaps list GraphQL stays slim", () => {
     expect(body).toContain("query CustomRecapsListQuery");
     expect(body).toContain("soldUnits");
     expect(body).toContain("consumersSampled");
+    expect(body).toContain("isDryDemo");
     expect(body).toContain("heroImageUrl");
     expect(body).toContain("customRecapFilesCount");
     expect(body).toContain("eventDate");
