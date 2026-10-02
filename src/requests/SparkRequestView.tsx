@@ -33,6 +33,8 @@ type RecapCard = {
   approved: boolean;
   totalEngagements: number | null;
   productsSold: number | null;
+  // Dry demo (no product tasted): counted in CONSUMERS / SOLD, not CONV.
+  isDryDemo: boolean;
   baName: string | null;
   hero: string | null;
   fileCount: number;
@@ -58,6 +60,7 @@ const normalizeLegacyRecap = (recap: NonNullable<LegacyRecap>): RecapCard => ({
   approved: Boolean(recap.approved),
   totalEngagements: recap.totalEngagements ?? null,
   productsSold: recap.productsSold ?? null,
+  isDryDemo: false,
   baName: baNameFrom(recap.ambassador?.user),
   hero: pickHeroImage(recap.recapFiles ?? []),
   fileCount: (recap.recapFiles ?? []).filter(
@@ -74,6 +77,7 @@ const normalizeCustomRecap = (recap: NonNullable<CustomRecap>): RecapCard => ({
   totalEngagements: recap.totalEngagements ?? null,
   // CustomRecap exposes a single soldUnits count rather than productsSold.
   productsSold: recap.soldUnits ?? null,
+  isDryDemo: Boolean(recap.isDryDemo),
   baName: baNameFrom(recap.ambassador?.user),
   // CustomRecap precomputes a browser-renderable hero URL server-side; the
   // file list isn't fetched here, just its count.
@@ -1267,6 +1271,15 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
     (s, r) => s + (r.recap.productsSold ?? 0),
     0,
   );
+  const convRows = rows.filter((r) => !r.recap.isDryDemo);
+  const convBase = convRows.reduce(
+    (s, r) => s + (r.recap.totalEngagements ?? 0),
+    0,
+  );
+  const convSold = convRows.reduce(
+    (s, r) => s + (r.recap.productsSold ?? 0),
+    0,
+  );
   const fmt = (d: string | null) => {
     if (!d) return "";
     try {
@@ -1324,8 +1337,8 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
                 className="tab-num font-bold text-base"
                 style={{ color: "var(--spark-lime)" }}
               >
-                {totalEngagements > 0
-                  ? `${Math.round((totalSold / totalEngagements) * 100)}%`
+                {convBase > 0
+                  ? `${Math.round((convSold / convBase) * 100)}%`
                   : "—"}
               </p>
               <p className="label-mini">CONV</p>

@@ -2889,6 +2889,8 @@ type CustomRecap implements Node {
   customField: [CustomField!]!
   soldUnits: Int
   consumersSampled: Int
+  isDryDemo: Boolean!
+  peopleEngaged: Int
   accountSpend: Float
   baDisplayName: String
   heroImageUrl: String

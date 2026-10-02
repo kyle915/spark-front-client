@@ -43,6 +43,27 @@ describe("sumConversionBases", () => {
     ).toEqual({ engagements: 130, sold: 25 });
   });
 
+  it("skips dry demos on both sides of CONV", () => {
+    expect(
+      sumConversionBases([
+        {
+          requestType: "Torch THC-Retail Sampling",
+          engagements: 30,
+          consumersSampled: 30,
+          productsSold: 25,
+          isDryDemo: true,
+        },
+        {
+          requestType: "Torch THC-Retail Sampling",
+          engagements: 50,
+          consumersSampled: 50,
+          productsSold: 10,
+          isDryDemo: false,
+        },
+      ]),
+    ).toEqual({ engagements: 50, sold: 10 });
+  });
+
   it("ignores unclassified / null request types", () => {
     expect(
       sumConversionBases([

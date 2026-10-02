@@ -67,4 +67,24 @@ describe("clientRecapKpis", () => {
     }).map((k) => k.label);
     expect(labels).toEqual(["Engagements", "Sold", "Photos"]);
   });
+
+  it("labels a dry demo and shows people engaged instead of conv", () => {
+    expect(
+      clientRecapKpis({
+        engagements: 30,
+        consumersSampled: 30,
+        soldUnits: 25,
+        unitsSampled: 0,
+        photoCount: 5,
+        activationType: "Torch THC-Retail Sampling",
+        isDryDemo: true,
+        peopleEngaged: 30,
+      }),
+    ).toEqual([
+      { label: "Dry demo", value: "No tasting" },
+      { label: "People engaged", value: "30" },
+      { label: "Sold", value: "25" },
+      { label: "Photos", value: "5" },
+    ]);
+  });
 });

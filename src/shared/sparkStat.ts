@@ -16,13 +16,16 @@ export type RecapKpiRow = {
   engagements: number | null | undefined;
   consumersSampled?: number | null | undefined;
   productsSold: number | null | undefined;
+  /** Dry demo (no product tasted) — left out of CONV on both sides. */
+  isDryDemo?: boolean | null | undefined;
 };
 
 /**
  * Sum the CONV base / sold for Retail + On-Premise rows only.
  * Event (and unclassified) activations are excluded from CONV.
  * The base is consumers sampled — people reached / engagements only when a
- * recap logs no sampled count (same rule as the per-card CONV).
+ * recap logs no sampled count (same rule as the per-card CONV). Dry demos
+ * are skipped entirely.
  */
 export function sumConversionBases(rows: RecapKpiRow[]): {
   engagements: number;
@@ -31,7 +34,7 @@ export function sumConversionBases(rows: RecapKpiRow[]): {
   let engagements = 0;
   let sold = 0;
   for (const r of rows) {
-    if (!countsTowardConversion(r.requestType)) continue;
+    if (!countsTowardConversion(r.requestType) || r.isDryDemo) continue;
     engagements += r.consumersSampled ?? r.engagements ?? 0;
     sold += r.productsSold ?? 0;
   }
