@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  conversionSplitNote,
   padIndex,
   recapListKpis,
   sumConversionBases,
@@ -26,7 +27,7 @@ describe("sumConversionBases", () => {
           productsSold: 5,
         },
       ]),
-    ).toEqual({ engagements: 150, sold: 30 });
+    ).toEqual({ engagements: 150, sold: 30, dryDemos: 0 });
   });
 
   it("uses consumers sampled as the base when a row has one", () => {
@@ -40,18 +41,35 @@ describe("sumConversionBases", () => {
         },
         { requestType: "Retail Sampling", engagements: 50, productsSold: 5 },
       ]),
-    ).toEqual({ engagements: 130, sold: 25 });
+    ).toEqual({ engagements: 130, sold: 25, dryDemos: 0 });
   });
 
-  it("skips dry demos on both sides of CONV", () => {
+  it("counts dry demos against people engaged, never unpaired sold", () => {
     expect(
       sumConversionBases([
         {
           requestType: "Torch THC-Retail Sampling",
           engagements: 30,
-          consumersSampled: 30,
-          productsSold: 25,
+          consumersSampled: 0,
+          productsSold: 6,
           isDryDemo: true,
+          peopleEngaged: 30,
+        },
+        {
+          requestType: "Torch THC-Retail Sampling",
+          engagements: 25,
+          consumersSampled: 25,
+          productsSold: 5,
+          isDryDemo: true,
+          peopleEngaged: null,
+        },
+        {
+          requestType: "Torch THC-Retail Sampling",
+          engagements: 0,
+          consumersSampled: 0,
+          productsSold: 17,
+          isDryDemo: true,
+          peopleEngaged: null,
         },
         {
           requestType: "Torch THC-Retail Sampling",
@@ -60,8 +78,15 @@ describe("sumConversionBases", () => {
           productsSold: 10,
           isDryDemo: false,
         },
+        {
+          requestType: "Event Activation",
+          engagements: 0,
+          productsSold: 9,
+          isDryDemo: true,
+          peopleEngaged: 40,
+        },
       ]),
-    ).toEqual({ engagements: 50, sold: 10 });
+    ).toEqual({ engagements: 105, sold: 21, dryDemos: 2 });
   });
 
   it("ignores unclassified / null request types", () => {
@@ -74,11 +99,26 @@ describe("sumConversionBases", () => {
           productsSold: 4,
         },
       ]),
-    ).toEqual({ engagements: 0, sold: 0 });
+    ).toEqual({ engagements: 0, sold: 0, dryDemos: 0 });
   });
 });
 
 describe("recapListKpis", () => {
+  it("notes dry demos inside CONV", () => {
+    expect(
+      recapListKpis({
+        filteredTotal: 3,
+        loaded: 3,
+        total: 3,
+        engagements: 80,
+        sold: 16,
+        conversionEngagements: 80,
+        conversionSold: 16,
+        conversionDryDemos: 1,
+      }).find((k) => k.label === "Conv")?.hint,
+    ).toBe("Retail + on-prem · incl. 1 dry demo vs people engaged");
+  });
+
   it("builds in-view / eng / sold / conv from loaded numbers", () => {
     expect(
       recapListKpis({
@@ -158,5 +198,26 @@ describe("padIndex", () => {
   it("zero-pads Jump row numbers", () => {
     expect(padIndex(1)).toBe("01");
     expect(padIndex(12)).toBe("12");
+  });
+});
+
+describe("conversionSplitNote", () => {
+  it("is empty with no dry demos", () => {
+    expect(conversionSplitNote({ sold: 10, engagements: 50 })).toBe("");
+  });
+
+  it("splits live sampled vs dry demos and flags unpaired", () => {
+    expect(
+      conversionSplitNote({
+        sold: 16,
+        engagements: 80,
+        drySold: 6,
+        dryEngagements: 30,
+        dryRecaps: 1,
+        unpairedDryRecaps: 2,
+      }),
+    ).toBe(
+      " · live sampled 20% (10/50) · dry demos 20% vs people engaged (6/30) · 2 dry demos with no people engaged left out",
+    );
   });
 });

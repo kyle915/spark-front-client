@@ -17,6 +17,7 @@ import {
   periodDeltaNote,
   type PeriodDelta,
 } from "@/lib/periodDelta";
+import { conversionSplitNote } from "@/shared/sparkStat";
 import { useAlertStore } from "@/store/alertStore";
 import {
   ACTIVATION_BADGE_LABEL,
@@ -417,11 +418,13 @@ const Inner: React.FC<{
           value={convPct}
           hint={
             convPctValue != null
-              ? `${fmt(sold)} sold ÷ ${fmt(sampled)} sampled${
+              ? `${fmt(sold)} sold ÷ ${fmt(sampled)} ${
+                  conv.dryRecaps ? "sampled + engaged" : "sampled"
+                }${
                   conv.previousLabel ? ` · vs ${conv.previousLabel}` : ""
                 }${
                   convDelta ? ` · ${periodDeltaNote(convDelta) ?? ""}` : ""
-                }`.trim()
+                }${conversionSplitNote(conv)}`.trim()
               : "No Retail / On-Prem sold ÷ sampled in this range"
           }
           chip={convDelta ? deltaChip(convDelta) : null}

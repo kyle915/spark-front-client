@@ -16,29 +16,43 @@ export type RecapKpiRow = {
   engagements: number | null | undefined;
   consumersSampled?: number | null | undefined;
   productsSold: number | null | undefined;
-  /** Dry demo (no product tasted) — left out of CONV on both sides. */
+  /** Dry demo (no product tasted): CONV base is People engaged. */
   isDryDemo?: boolean | null | undefined;
+  peopleEngaged?: number | null | undefined;
 };
 
 /**
+ * One recap's CONV denominator. Live sampling: consumers sampled, else
+ * engagements. Dry demo: People engaged (shoppers pitched), else the
+ * consumers-sampled value. 0 means its purchases can't be paired.
+ */
+export function conversionBase(r: RecapKpiRow): number {
+  if (r.isDryDemo) return r.peopleEngaged || r.consumersSampled || 0;
+  return r.consumersSampled ?? r.engagements ?? 0;
+}
+
+/**
  * Sum the CONV base / sold for Retail + On-Premise rows only.
- * Event (and unclassified) activations are excluded from CONV.
- * The base is consumers sampled — people reached / engagements only when a
- * recap logs no sampled count (same rule as the per-card CONV). Dry demos
- * are skipped entirely.
+ * Event (and unclassified) activations are excluded from CONV. Dry demos
+ * count against People engaged; a row with no base adds no sold either.
  */
 export function sumConversionBases(rows: RecapKpiRow[]): {
   engagements: number;
   sold: number;
+  dryDemos: number;
 } {
   let engagements = 0;
   let sold = 0;
+  let dryDemos = 0;
   for (const r of rows) {
-    if (!countsTowardConversion(r.requestType) || r.isDryDemo) continue;
-    engagements += r.consumersSampled ?? r.engagements ?? 0;
+    if (!countsTowardConversion(r.requestType)) continue;
+    const base = conversionBase(r);
+    if (base <= 0) continue;
+    engagements += base;
     sold += r.productsSold ?? 0;
+    if (r.isDryDemo) dryDemos += 1;
   }
-  return { engagements, sold };
+  return { engagements, sold, dryDemos };
 }
 
 /**
@@ -56,6 +70,8 @@ export function recapListKpis(input: {
   conversionEngagements: number;
   /** Retail + on-prem sold (CONV numerator). */
   conversionSold: number;
+  /** Dry demos inside the CONV totals (paired with People engaged). */
+  conversionDryDemos?: number;
 }): SparkStatItem[] {
   const hasConv =
     input.conversionEngagements > 0 && input.conversionSold > 0;
@@ -85,7 +101,11 @@ export function recapListKpis(input: {
     {
       label: "Conv",
       value: conv,
-      hint: "Retail + on-prem",
+      hint: input.conversionDryDemos
+        ? `Retail + on-prem · incl. ${input.conversionDryDemos} dry demo${
+            input.conversionDryDemos === 1 ? "" : "s"
+          } vs people engaged`
+        : "Retail + on-prem",
       tone: hasConv ? "lime" : "default",
     },
   ];
@@ -116,4 +136,42 @@ export function todayGroundKpis(input: {
 
 export function padIndex(n: number): string {
   return String(n).padStart(2, "0");
+}
+
+/**
+ * Insights CONV tile suffix: live-sampled vs dry-demo split, so a program
+ * with dry demos shows what each side contributes. Empty when there are no
+ * dry demos in range.
+ */
+export function conversionSplitNote(conv: {
+  sold: number;
+  engagements: number;
+  drySold?: number | null;
+  dryEngagements?: number | null;
+  dryRecaps?: number | null;
+  unpairedDryRecaps?: number | null;
+}): string {
+  const dryRecaps = conv.dryRecaps ?? 0;
+  const unpaired = conv.unpairedDryRecaps ?? 0;
+  if (dryRecaps <= 0 && unpaired <= 0) return "";
+  const pct = (s: number, b: number) =>
+    b > 0 ? `${Math.round((s / b) * 1000) / 10}%` : "—";
+  const drySold = conv.drySold ?? 0;
+  const dryBase = conv.dryEngagements ?? 0;
+  const liveSold = conv.sold - drySold;
+  const liveBase = conv.engagements - dryBase;
+  const parts = [
+    ` · live sampled ${pct(liveSold, liveBase)} (${liveSold.toLocaleString()}/${liveBase.toLocaleString()})`,
+  ];
+  if (dryRecaps > 0) {
+    parts.push(
+      ` · dry demos ${pct(drySold, dryBase)} vs people engaged (${drySold.toLocaleString()}/${dryBase.toLocaleString()})`,
+    );
+  }
+  if (unpaired > 0) {
+    parts.push(
+      ` · ${unpaired} dry demo${unpaired === 1 ? "" : "s"} with no people engaged left out`,
+    );
+  }
+  return parts.join("");
 }

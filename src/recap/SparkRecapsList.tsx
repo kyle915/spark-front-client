@@ -47,7 +47,11 @@ import {
   type ActionPhase,
 } from "@/motion/opsMotion";
 import { SparkBentoTile, SparkStat } from "@/shared/SparkStatBlocks";
-import { recapListKpis, sumConversionBases } from "@/shared/sparkStat";
+import {
+  conversionBase,
+  recapListKpis,
+  sumConversionBases,
+} from "@/shared/sparkStat";
 import {
   appendUniqueByUuid,
   recapsListPageVariables,
@@ -160,8 +164,9 @@ type Recap = {
   // Null on legacy recaps that don't track a separate sampled count.
   consumersSampled: number | null;
   productsSold: number | null;
-  // Dry demo (no product tasted): stays in ENG / SOLD but never in CONV.
+  // Dry demo (no product tasted): CONV pairs its sold with People engaged.
   isDryDemo: boolean;
+  peopleEngaged: number | null;
   // Granular sale + spend numbers. Kept separate from productsSold so
   // exports can break out "Cans Sold" vs "Packs Sold" — clients
   // reconciling invoices need that split, not the combined number.
@@ -200,7 +205,8 @@ type Recap = {
 
 // CONV = products sold ÷ consumers SAMPLED (a sampling program's conversion is
 // sold-per-person-sampled, NOT sold-per-engagement). Falls back to engagements
-// for legacy recaps with no separate sampled count. `empty` is what to show
+// for legacy recaps with no separate sampled count; dry demos divide by People
+// engaged (see conversionBase). `empty` is what to show
 // when there's no base/sold (— for the card, "" for CSV/TSV cells).
 const conversionStr = (
   r: {
@@ -208,11 +214,11 @@ const conversionStr = (
     consumersSampled: number | null;
     engagements: number | null;
     isDryDemo: boolean;
+    peopleEngaged: number | null;
   },
   empty: string,
 ): string => {
-  if (r.isDryDemo) return empty;
-  const base = r.consumersSampled ?? r.engagements;
+  const base = conversionBase({ ...r, requestType: null });
   if (!base || base <= 0 || !r.productsSold) return empty;
   return `${Math.round((r.productsSold / base) * 100)}%`;
 };
@@ -314,6 +320,7 @@ const mapLegacyRecap = (n: LegacyRecapNode): Recap => {
     consumersSampled: null,
     productsSold: n.productsSold ?? null,
     isDryDemo: false,
+    peopleEngaged: null,
     cansSold: n.totalCansSold ?? null,
     packsSold: n.totalPacksSold ?? null,
     accountSpendAmount: n.accountSpendAmount ?? null,
@@ -353,6 +360,7 @@ const mapCustomRecap = (n: CustomRecapNode): Recap => ({
   consumersSampled: n.consumersSampled ?? null,
   productsSold: n.soldUnits ?? null,
   isDryDemo: Boolean(n.isDryDemo),
+  peopleEngaged: n.peopleEngaged ?? null,
   cansSold: null,
   packsSold: null,
   accountSpendAmount: n.accountSpend ?? null,
@@ -671,7 +679,7 @@ const RecapCard: React.FC<{
         <SparkStat
           tone="lime"
           value={conversionStr(recap, "—")}
-          label={recap.isDryDemo ? "Dry demo" : "Conv"}
+          label={recap.isDryDemo ? "Conv · dry demo" : "Conv"}
         />
       </div>
       ) : null}
@@ -852,6 +860,7 @@ type Meta = {
   // don't dilute sold ÷ eng.
   conversionConsumers: number;
   conversionProducts: number;
+  conversionDryDemos: number;
 };
 
 type SortKey = "date-desc" | "date-asc" | "eng-desc" | "sold-desc";
@@ -1626,6 +1635,7 @@ const RecapsListFetched: React.FC<{
       totalProducts,
       conversionConsumers: conversion.engagements,
       conversionProducts: conversion.sold,
+      conversionDryDemos: conversion.dryDemos,
     });
   }, [
     retailers,
@@ -1975,6 +1985,7 @@ export default function SparkRecapsList() {
     totalProducts: 0,
     conversionConsumers: 0,
     conversionProducts: 0,
+    conversionDryDemos: 0,
   });
 
   const onMeta = useMemo(() => (next: Meta) => setMeta(next), []);
@@ -2405,7 +2416,7 @@ export default function SparkRecapsList() {
     ];
     const lines = [header.join(",")];
     for (const r of visibleRecaps) {
-      const conv = r.isDryDemo ? "dry demo" : conversionStr(r, "");
+      const conv = conversionStr(r, "");
       lines.push(
         [
           `R-${r.uuid.slice(-4).toUpperCase()}`,
@@ -2477,7 +2488,7 @@ export default function SparkRecapsList() {
       (raw ?? "").toString().replace(/\t/g, " ").replace(/\r?\n/g, " ");
     const rows = [headers.join("\t")];
     for (const r of visibleRecaps) {
-      const conv = r.isDryDemo ? "dry demo" : conversionStr(r, "");
+      const conv = conversionStr(r, "");
       rows.push(
         [
           `R-${r.uuid.slice(-4).toUpperCase()}`,
@@ -3268,6 +3279,7 @@ export default function SparkRecapsList() {
             sold: meta.totalProducts,
             conversionEngagements: meta.conversionConsumers,
             conversionSold: meta.conversionProducts,
+            conversionDryDemos: meta.conversionDryDemos,
           }).map((k) => (
             <SparkBentoTile key={k.label} {...k} />
           ))}

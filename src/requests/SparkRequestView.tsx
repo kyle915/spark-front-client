@@ -33,8 +33,9 @@ type RecapCard = {
   approved: boolean;
   totalEngagements: number | null;
   productsSold: number | null;
-  // Dry demo (no product tasted): counted in CONSUMERS / SOLD, not CONV.
+  // Dry demo (no product tasted): CONV divides its sold by People engaged.
   isDryDemo: boolean;
+  peopleEngaged: number | null;
   baName: string | null;
   hero: string | null;
   fileCount: number;
@@ -61,6 +62,7 @@ const normalizeLegacyRecap = (recap: NonNullable<LegacyRecap>): RecapCard => ({
   totalEngagements: recap.totalEngagements ?? null,
   productsSold: recap.productsSold ?? null,
   isDryDemo: false,
+  peopleEngaged: null,
   baName: baNameFrom(recap.ambassador?.user),
   hero: pickHeroImage(recap.recapFiles ?? []),
   fileCount: (recap.recapFiles ?? []).filter(
@@ -78,6 +80,7 @@ const normalizeCustomRecap = (recap: NonNullable<CustomRecap>): RecapCard => ({
   // CustomRecap exposes a single soldUnits count rather than productsSold.
   productsSold: recap.soldUnits ?? null,
   isDryDemo: Boolean(recap.isDryDemo),
+  peopleEngaged: recap.peopleEngaged ?? null,
   baName: baNameFrom(recap.ambassador?.user),
   // CustomRecap precomputes a browser-renderable hero URL server-side; the
   // file list isn't fetched here, just its count.
@@ -1271,15 +1274,16 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
     (s, r) => s + (r.recap.productsSold ?? 0),
     0,
   );
-  const convRows = rows.filter((r) => !r.recap.isDryDemo);
-  const convBase = convRows.reduce(
-    (s, r) => s + (r.recap.totalEngagements ?? 0),
-    0,
-  );
-  const convSold = convRows.reduce(
-    (s, r) => s + (r.recap.productsSold ?? 0),
-    0,
-  );
+  let convBase = 0;
+  let convSold = 0;
+  for (const { recap } of rows) {
+    const base = recap.isDryDemo
+      ? recap.peopleEngaged || recap.totalEngagements || 0
+      : recap.totalEngagements ?? 0;
+    if (base <= 0) continue;
+    convBase += base;
+    convSold += recap.productsSold ?? 0;
+  }
   const fmt = (d: string | null) => {
     if (!d) return "";
     try {
