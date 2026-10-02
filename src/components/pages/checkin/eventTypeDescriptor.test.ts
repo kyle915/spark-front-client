@@ -1,9 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
   eventTypeDescription,
+  eventTypeIsActivation,
   eventTypeSkipsIdentifyLocation,
   eventTypesUseDescriptorPicker,
 } from "./eventTypeDescriptor";
+
+describe("eventTypeIsActivation", () => {
+  it("is true only for Event Activation programs", () => {
+    expect(eventTypeIsActivation("Event Activation")).toBe(true);
+    expect(eventTypeIsActivation("Torch THC-Event Activation")).toBe(true);
+    expect(eventTypeIsActivation("Retail Sampling")).toBe(false);
+    expect(eventTypeIsActivation("On-Premise")).toBe(false);
+    expect(eventTypeIsActivation(undefined)).toBe(false);
+  });
+});
 
 describe("eventTypeDescription", () => {
   it("describes Retail, On-Premise, Event, and Product Seeding", () => {

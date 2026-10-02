@@ -49,6 +49,11 @@ export function eventTypesUseDescriptorPicker(
  * so the identify step should not show "Where are you working today".
  * Retail Sampling / Event Activation keep the store/market gate.
  */
+/** Event Activation happens at a festival or venue, not a store. */
+export function eventTypeIsActivation(name: string | null | undefined): boolean {
+  return /\bactivation\b/i.test(name ?? "");
+}
+
 export function eventTypeSkipsIdentifyLocation(
   name: string | null | undefined,
 ): boolean {
