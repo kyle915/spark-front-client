@@ -68,12 +68,12 @@ describe("clientRecapKpis", () => {
     expect(labels).toEqual(["Engagements", "Sold", "Photos"]);
   });
 
-  it("labels a dry demo and shows people engaged instead of conv", () => {
+  it("dry demo: conversion vs people engaged, labelled", () => {
     expect(
       clientRecapKpis({
         engagements: 30,
-        consumersSampled: 30,
-        soldUnits: 25,
+        consumersSampled: 0,
+        soldUnits: 6,
         unitsSampled: 0,
         photoCount: 5,
         activationType: "Torch THC-Retail Sampling",
@@ -81,10 +81,24 @@ describe("clientRecapKpis", () => {
         peopleEngaged: 30,
       }),
     ).toEqual([
-      { label: "Dry demo", value: "No tasting" },
-      { label: "People engaged", value: "30" },
-      { label: "Sold", value: "25" },
+      { label: "Dry demo · people engaged", value: "30" },
+      { label: "Sold", value: "6" },
+      { label: "Conv · vs. people engaged (dry demo)", value: "20%" },
       { label: "Photos", value: "5" },
     ]);
+  });
+
+  it("dry demo with no people engaged or sampled shows no conv", () => {
+    const labels = clientRecapKpis({
+      engagements: 0,
+      consumersSampled: 0,
+      soldUnits: 17,
+      unitsSampled: 0,
+      photoCount: 2,
+      activationType: "Torch THC-Retail Sampling",
+      isDryDemo: true,
+      peopleEngaged: null,
+    }).map((k) => k.label);
+    expect(labels).toEqual(["Dry demo", "Sold", "Photos"]);
   });
 });

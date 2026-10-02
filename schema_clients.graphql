@@ -7765,6 +7765,10 @@ type TenantConversionKpis {
   previousLabel: String
   startDate: String
   endDate: String
+  drySold: Int!
+  dryEngagements: Int!
+  dryRecaps: Int!
+  unpairedDryRecaps: Int!
 }
 
 """

@@ -71,6 +71,7 @@ export const CustomRecapsListQuery = graphql`
           soldUnits
           consumersSampled
           isDryDemo
+          peopleEngaged
           heroImageUrl
           customRecapFilesCount
           accountSpend

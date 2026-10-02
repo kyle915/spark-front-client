@@ -8,7 +8,8 @@ export type ClientRecapKpi = { label: string; value: string };
  * CONV is sold ÷ consumers sampled (engagements only when no sampled count
  * is logged) and only for Retail / On-Premise — never for Event activations.
  * Never invents a conversion from missing sold or a zero base. Dry demos
- * (no product tasted) show a "Dry demo" label and People engaged instead.
+ * (no product tasted) are labelled and divide by People engaged (else the
+ * consumers-sampled value) instead.
  */
 export function clientRecapKpis(input: {
   engagements: number | null | undefined;
@@ -22,15 +23,27 @@ export function clientRecapKpis(input: {
 }): ClientRecapKpi[] {
   const out: ClientRecapKpi[] = [];
   if (input.isDryDemo) {
-    out.push({ label: "Dry demo", value: "No tasting" });
-    if (typeof input.peopleEngaged === "number") {
+    const pitched = input.peopleEngaged || input.consumersSampled || 0;
+    if (pitched > 0) {
       out.push({
-        label: "People engaged",
-        value: input.peopleEngaged.toLocaleString(),
+        label: "Dry demo · people engaged",
+        value: pitched.toLocaleString(),
       });
+    } else {
+      out.push({ label: "Dry demo", value: "No tasting" });
     }
     if (typeof input.soldUnits === "number") {
       out.push({ label: "Sold", value: input.soldUnits.toLocaleString() });
+    }
+    const convEligible =
+      input.activationType === undefined ||
+      countsTowardConversion(input.activationType);
+    if (convEligible && typeof input.soldUnits === "number" && pitched > 0) {
+      const pct = Math.round((input.soldUnits / pitched) * 1000) / 10;
+      out.push({
+        label: "Conv · vs. people engaged (dry demo)",
+        value: `${pct}%`,
+      });
     }
     out.push({ label: "Photos", value: String(input.photoCount) });
     return out.slice(0, 4);
