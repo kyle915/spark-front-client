@@ -71,6 +71,7 @@ import {
   CHECK_IN_SOMEWHERE_ELSE,
   CLEAR_LEFTOVER_ERROR,
   isLeftoverCheckinSession,
+  isPastDayWalkupSession,
   LEFTOVER_BANNER_BODY,
   LEFTOVER_BANNER_BODY_RECAP,
   LEFTOVER_BANNER_TITLE,
@@ -79,6 +80,7 @@ import {
   LEFTOVER_PRIMARY_CTA,
   LEFTOVER_PRIMARY_CTA_RECAP,
   LEFTOVER_SECONDARY_CTA,
+  PAST_DAY_NO_CLOCK,
   START_OVER_LINK,
 } from "./leftoverCheckin";
 import {
@@ -2024,6 +2026,7 @@ function CheckedInFlow({
     ctx.mode === "tenant" &&
     !keepLeftover &&
     isLeftoverCheckinSession(ctx.event?.date, today);
+  const pastDay = isPastDayWalkupSession(ctx.event?.date, ctx.event?.startTime);
   // Second shift is Feel Free + same calendar day only. Gate on the event
   // date (not keepLeftover) so "Stay on that day" never shows "second shift
   // today" on a prior-day session.
@@ -2616,7 +2619,7 @@ function CheckedInFlow({
               </div>
             ) : (
               <>
-                {!ctx.recapOnly ? (
+                {!ctx.recapOnly && !pastDay ? (
                   <button
                     onClick={() => clock("in")}
                     disabled={busy !== ""}
@@ -2628,8 +2631,8 @@ function CheckedInFlow({
                 <button
                   onClick={() => openRecap(true)}
                   style={{
-                    ...(ctx.recapOnly ? primaryBtn(accent) : secondaryBtn),
-                    marginTop: ctx.recapOnly ? 18 : 10,
+                    ...(ctx.recapOnly || pastDay ? primaryBtn(accent) : secondaryBtn),
+                    marginTop: ctx.recapOnly || pastDay ? 18 : 10,
                     width: "100%",
                   }}
                 >
@@ -2784,7 +2787,16 @@ function CheckedInFlow({
             Nobody can get stranded on the clock: the auto-clock-out cron
             closes anything left open. */}
         <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-          {effectiveClock === "not_started" && !leftover ? (
+          {effectiveClock === "not_started" && !leftover && pastDay ? (
+            <button style={primaryBtn(accent)} onClick={() => openRecap(false)}>
+              {queuedRecap
+                ? "Edit saved recap"
+                : draftWaiting
+                  ? "Continue your recap"
+                  : "File recap"}
+            </button>
+          ) : null}
+          {effectiveClock === "not_started" && !leftover && !pastDay ? (
             <ActionMorphButton
               style={primaryBtn(accent)}
               disabled={busy !== ""}
@@ -2845,7 +2857,7 @@ function CheckedInFlow({
               start today's. Hence the escape hatch below. */}
           {effectiveClock === "clocked_out" && !hasRecap ? (
             <>
-              {ctx.mode === "tenant" && !ctx.recapOnly && !leftover ? (
+              {ctx.mode === "tenant" && !ctx.recapOnly && !leftover && !pastDay ? (
                 <button style={primaryBtn(accent)} disabled={busy !== ""} onClick={() => clock("in")}>
                   {busy === "in" ? "Clocking in…" : "Clock in"}
                 </button>
@@ -3011,7 +3023,9 @@ function CheckedInFlow({
       ) : null}
 
       {effectiveClock === "not_started" ? (
-        <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>Clock in when you arrive to start your shift.</p>
+        <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>
+          {pastDay ? PAST_DAY_NO_CLOCK : "Clock in when you arrive to start your shift."}
+        </p>
       ) : null}
       {effectiveClock === "clocked_in" && !hasRecap ? (
         <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>

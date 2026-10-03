@@ -79,6 +79,41 @@ export function isLeftoverCheckinSession(
   return walkupDayKind(eventDate, today) === "leftover_prior_day";
 }
 
+export const PAST_DAY_NO_CLOCK =
+  "That day is over, so there's no clock to start. File its recap — your lead adds the hours.";
+
+/** Matches API OPEN_SHIFT_RESUME_HOURS: a start this recent can still clock in. */
+const OVERNIGHT_GRACE_MS = 18 * 60 * 60 * 1000;
+
+function latestUsToday(now: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Pacific/Honolulu",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
+/**
+ * True when Clock in would land on a day that already ended — the API refuses
+ * it (409 past_day), so the page offers File recap instead. Weni (Torch, Oct
+ * 2026) clocked in Saturday onto Thursday's event just to reach the recap.
+ * "Today" is Hawaii's date, like the API, so no US market loses an evening.
+ */
+export function isPastDayWalkupSession(
+  eventDate: string | null | undefined,
+  startTime: string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  const cal = eventCalendarDate(eventDate);
+  if (!cal || cal >= latestUsToday(now)) return false;
+  const start = startTime ? Date.parse(startTime) : NaN;
+  if (!Number.isNaN(start) && Math.abs(now.getTime() - start) <= OVERNIGHT_GRACE_MS) {
+    return false;
+  }
+  return true;
+}
+
 /** True when a restored session token exists but the event date is not today. */
 export function isStaleWalkupSession(
   hasSessionToken: boolean,
