@@ -2865,6 +2865,7 @@ type CustomRecap implements Node {
   ambassador: Ambassador
   externalBaName: String
   isThirdParty: Boolean!
+  excludeFromAggregates: Boolean!
   typedStoreName: String!
   typedStoreAddress: String!
   storeMappingStatus: String!

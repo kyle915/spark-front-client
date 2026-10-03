@@ -51,6 +51,7 @@ import {
   conversionBase,
   recapListKpis,
   sumConversionBases,
+  aggregateRows,
 } from "@/shared/sparkStat";
 import {
   appendUniqueByUuid,
@@ -184,6 +185,7 @@ type Recap = {
   // Filed via the tenant's recap-only / 3rd-party agency check-in link.
   // Distinct from isExternalBa (a write-in name). Drives the list badge.
   isThirdParty: boolean;
+  excludeFromAggregates: boolean;
   storeMappingStatus: string;
   // Relay global id of the recap's PRIMARY ambassador (Recap.ambassador /
   // CustomRecap.ambassador), or null for external/unlinked BAs.
@@ -336,6 +338,7 @@ const mapLegacyRecap = (n: LegacyRecapNode): Recap => {
     sharedAt: n.sharedAt ?? null,
     archivedAt: n.archivedAt ?? null,
     isThirdParty: false,
+    excludeFromAggregates: false,
     storeMappingStatus: "",
   };
 };
@@ -378,6 +381,7 @@ const mapCustomRecap = (n: CustomRecapNode): Recap => ({
   sharedAt: n.sharedAt ?? null,
   archivedAt: n.archivedAt ?? null,
   isThirdParty: Boolean(n.isThirdParty),
+  excludeFromAggregates: Boolean(n.excludeFromAggregates),
   storeMappingStatus: n.storeMappingStatus ?? "",
 });
 
@@ -545,7 +549,7 @@ const RecapCard: React.FC<{
       </span>
       {recap.isThirdParty ? (
         <span className="absolute bottom-2 left-2">
-          <ThirdPartyRecapBadge />
+          <ThirdPartyRecapBadge notInTotals={recap.excludeFromAggregates} />
         </span>
       ) : null}
     </div>
@@ -556,7 +560,7 @@ const RecapCard: React.FC<{
       </p>
       {recap.isThirdParty ? (
         <div className="mt-2 flex items-center gap-2 flex-wrap">
-          <ThirdPartyRecapBadge />
+          <ThirdPartyRecapBadge notInTotals={recap.excludeFromAggregates} />
           {recap.storeMappingStatus === "unmatched" ? (
             <span className="chip chip-orange">Map store</span>
           ) : recap.storeMappingStatus === "mapped" ? (
@@ -776,7 +780,7 @@ const RecapCompactRow: React.FC<{
         <p className="text-sm font-semibold truncate">{recap.baName || "Unattributed"}</p>
         {recap.isThirdParty ? (
           <div className="mt-1 flex items-center gap-1 flex-wrap">
-            <ThirdPartyRecapBadge compact />
+            <ThirdPartyRecapBadge compact notInTotals={recap.excludeFromAggregates} />
             {recap.storeMappingStatus === "unmatched" ? (
               <span className="chip chip-orange chip-sm">Map store</span>
             ) : null}
@@ -861,6 +865,7 @@ type Meta = {
   conversionConsumers: number;
   conversionProducts: number;
   conversionDryDemos: number;
+  notInTotals: number;
 };
 
 type SortKey = "date-desc" | "date-asc" | "eng-desc" | "sold-desc";
@@ -1616,8 +1621,9 @@ const RecapsListFetched: React.FC<{
   }, [hasMore, loadingMore, loadMoreError, loadMore, recaps.length]);
 
   useEffect(() => {
-    const totalConsumers = recaps.reduce((s, r) => s + (r.engagements ?? 0), 0);
-    const totalProducts = recaps.reduce((s, r) => s + (r.productsSold ?? 0), 0);
+    const counted = aggregateRows(recaps);
+    const totalConsumers = counted.reduce((s, r) => s + (r.engagements ?? 0), 0);
+    const totalProducts = counted.reduce((s, r) => s + (r.productsSold ?? 0), 0);
     const conversion = sumConversionBases(recaps);
     onMeta({
       retailers,
@@ -1636,6 +1642,7 @@ const RecapsListFetched: React.FC<{
       conversionConsumers: conversion.engagements,
       conversionProducts: conversion.sold,
       conversionDryDemos: conversion.dryDemos,
+      notInTotals: recaps.length - counted.length,
     });
   }, [
     retailers,
@@ -1986,6 +1993,7 @@ export default function SparkRecapsList() {
     conversionConsumers: 0,
     conversionProducts: 0,
     conversionDryDemos: 0,
+    notInTotals: 0,
   });
 
   const onMeta = useMemo(() => (next: Meta) => setMeta(next), []);
@@ -3280,6 +3288,7 @@ export default function SparkRecapsList() {
             conversionEngagements: meta.conversionConsumers,
             conversionSold: meta.conversionProducts,
             conversionDryDemos: meta.conversionDryDemos,
+            notInTotals: meta.notInTotals,
           }).map((k) => (
             <SparkBentoTile key={k.label} {...k} />
           ))}

@@ -1653,7 +1653,7 @@ const RecapCustomViewInner = ({
                   {recap.incomplete && (
                     <span className="chip chip-orange">INCOMPLETE</span>
                   )}
-                  {recap.isThirdParty ? <ThirdPartyRecapBadge /> : null}
+                  {recap.isThirdParty ? <ThirdPartyRecapBadge notInTotals={recap.excludeFromAggregates} /> : null}
                 </div>
                 {isEditingValues ? (
                   <input
@@ -3052,7 +3052,7 @@ const RecapCustomViewInner = ({
           <div className="spark-card p-6">
             {recap.isThirdParty ? (
               <div className="flex items-center gap-2 flex-wrap mb-2">
-                <ThirdPartyRecapBadge />
+                <ThirdPartyRecapBadge notInTotals={recap.excludeFromAggregates} />
               </div>
             ) : null}
             <h1

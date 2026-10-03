@@ -36,6 +36,8 @@ type RecapCard = {
   // Dry demo (no product tasted): CONV divides its sold by People engaged.
   isDryDemo: boolean;
   peopleEngaged: number | null;
+  // 3rd-party / agency recap: listed, but kept out of every total.
+  excludeFromAggregates: boolean;
   baName: string | null;
   hero: string | null;
   fileCount: number;
@@ -63,6 +65,7 @@ const normalizeLegacyRecap = (recap: NonNullable<LegacyRecap>): RecapCard => ({
   productsSold: recap.productsSold ?? null,
   isDryDemo: false,
   peopleEngaged: null,
+  excludeFromAggregates: false,
   baName: baNameFrom(recap.ambassador?.user),
   hero: pickHeroImage(recap.recapFiles ?? []),
   fileCount: (recap.recapFiles ?? []).filter(
@@ -81,6 +84,7 @@ const normalizeCustomRecap = (recap: NonNullable<CustomRecap>): RecapCard => ({
   productsSold: recap.soldUnits ?? null,
   isDryDemo: Boolean(recap.isDryDemo),
   peopleEngaged: recap.peopleEngaged ?? null,
+  excludeFromAggregates: Boolean(recap.excludeFromAggregates),
   baName: baNameFrom(recap.ambassador?.user),
   // CustomRecap precomputes a browser-renderable hero URL server-side; the
   // file list isn't fetched here, just its count.
@@ -1266,17 +1270,18 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
 
   // Headline: total recaps + total engagements aggregated across
   // every event on this request.
-  const totalEngagements = rows.reduce(
+  const counted = rows.filter((r) => !r.recap.excludeFromAggregates);
+  const totalEngagements = counted.reduce(
     (s, r) => s + (r.recap.totalEngagements ?? 0),
     0,
   );
-  const totalSold = rows.reduce(
+  const totalSold = counted.reduce(
     (s, r) => s + (r.recap.productsSold ?? 0),
     0,
   );
   let convBase = 0;
   let convSold = 0;
-  for (const { recap } of rows) {
+  for (const { recap } of counted) {
     const base = recap.isDryDemo
       ? recap.peopleEngaged || recap.totalEngagements || 0
       : recap.totalEngagements ?? 0;
