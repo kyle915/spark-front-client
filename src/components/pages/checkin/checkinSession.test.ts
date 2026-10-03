@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   canAttemptOpenPunchResume,
+  hasLookupPhone,
+  lookupShiftsByPhone,
+  resumeOpenShift,
   shouldDropSessionToken,
   shouldKeepCachedSession,
 } from "@/components/pages/checkin/checkinSession";
@@ -94,63 +97,119 @@ describe("canAttemptOpenPunchResume", () => {
     mode: "tenant" as const,
     recapOnly: false,
     hasLiveSession: false,
-    firstName: "Joy",
-    phone: "5550100",
-    place: "100 Main St",
-    hasToken: true,
-    hasPendingClock: false,
-    cachedClockedIn: false,
+    phone: "(305) 555-0142",
   };
 
-  it("resumes on address-mode standing links (LD / Torch / Brew Dr)", () => {
+  it("checks the server with only a saved phone — no local punch evidence needed", () => {
+    // Annjolie (Torch): reopened TH-2HRV3D with no token, no cache, no
+    // pending clock. The server still knows she's on the clock.
     expect(canAttemptOpenPunchResume(base)).toBe(true);
-    expect(
-      canAttemptOpenPunchResume({
-        ...base,
-        place: "Total Wine & More, Austin",
-        hasToken: false,
-        cachedClockedIn: true,
-      }),
-    ).toBe(true);
   });
 
-  it("resumes on market-mode standing links (Feel Free)", () => {
-    expect(
-      canAttemptOpenPunchResume({
-        ...base,
-        place: "Tampa / St. Pete, FL",
-        hasToken: false,
-        hasPendingClock: true,
-      }),
-    ).toBe(true);
-  });
-
-  it("does not resume without evidence or identity", () => {
-    expect(
-      canAttemptOpenPunchResume({
-        ...base,
-        hasToken: false,
-        hasPendingClock: false,
-        cachedClockedIn: false,
-      }),
-    ).toBe(false);
-    expect(
-      canAttemptOpenPunchResume({
-        ...base,
-        place: "",
-        hasToken: false,
-        hasPendingClock: false,
-        cachedClockedIn: false,
-      }),
-    ).toBe(false);
+  it("skips when there is nothing to look up or nothing to fix", () => {
     expect(canAttemptOpenPunchResume({ ...base, phone: "" })).toBe(false);
-    expect(
-      canAttemptOpenPunchResume({ ...base, hasLiveSession: true }),
-    ).toBe(false);
+    expect(canAttemptOpenPunchResume({ ...base, phone: "555-0142" })).toBe(false);
+    expect(canAttemptOpenPunchResume({ ...base, hasLiveSession: true })).toBe(false);
     expect(canAttemptOpenPunchResume({ ...base, mode: "event" })).toBe(false);
+    expect(canAttemptOpenPunchResume({ ...base, recapOnly: true })).toBe(false);
   });
 
-  it("Product Seeding can resume without a saved place when punch evidence exists", () => {
-    expect(canAttemptOpenPunchResume({ ...base, place: "" })).toBe(true);
+  it("stays quiet right after Start over / new shift", () => {
+    expect(canAttemptOpenPunchResume({ ...base, suppressed: true })).toBe(false);
+  });
+});
+
+describe("hasLookupPhone", () => {
+  it("needs a full number", () => {
+    expect(hasLookupPhone("305-555-0142")).toBe(true);
+    expect(hasLookupPhone("+1 (305) 555-0142")).toBe(true);
+    expect(hasLookupPhone("305555")).toBe(false);
+    expect(hasLookupPhone(null)).toBe(false);
+  });
+});
+
+type Call = { url: string; body: Record<string, unknown> };
+
+const fakeFetch = (status: number, payload: unknown, calls: Call[]) =>
+  (async (url: string, init?: RequestInit) => {
+    calls.push({ url, body: JSON.parse(String(init?.body || "{}")) });
+    return new Response(JSON.stringify(payload), { status });
+  }) as (input: string, init?: RequestInit) => Promise<Response>;
+
+const OPEN = {
+  eventDate: "2026-10-03",
+  name: "10/3/2026 - 11000 S Red Road, Pinecrest, FL 33156 (HER Bazar market place)",
+  address: "11000 S Red Road, Pinecrest, FL 33156",
+  clockInAt: "2026-10-03T13:31:00Z",
+};
+
+describe("lookupShiftsByPhone", () => {
+  it("returns the open shift for today's date", async () => {
+    const calls: Call[] = [];
+    const out = await lookupShiftsByPhone({
+      origin: "https://api.test",
+      code: "TH-2HRV3D",
+      phone: "3055550142",
+      eventDate: "2026-10-03",
+      fetchImpl: fakeFetch(200, { shifts: [], openShift: OPEN }, calls),
+    });
+    expect(out.openShift).toEqual(OPEN);
+    expect(calls[0].url).toBe("https://api.test/api/public/checkin/TH-2HRV3D/unfiled-recaps");
+    expect(calls[0].body).toMatchObject({ phone: "3055550142", eventDate: "2026-10-03" });
+  });
+
+  it("treats older APIs (no openShift) and network failures as nothing open", async () => {
+    const calls: Call[] = [];
+    expect(
+      (
+        await lookupShiftsByPhone({
+          origin: "",
+          code: "TH-2HRV3D",
+          phone: "3055550142",
+          eventDate: "2026-10-03",
+          fetchImpl: fakeFetch(200, { shifts: [] }, calls),
+        })
+      ).openShift,
+    ).toBeNull();
+    expect(
+      await lookupShiftsByPhone({
+        origin: "",
+        code: "TH-2HRV3D",
+        phone: "3055550142",
+        eventDate: "2026-10-03",
+        fetchImpl: async () => {
+          throw new TypeError("offline");
+        },
+      }),
+    ).toEqual({ shifts: [], openShift: null });
+  });
+});
+
+describe("resumeOpenShift", () => {
+  it("asks for resumeOnly so it can never start a second shift", async () => {
+    const calls: Call[] = [];
+    const out = await resumeOpenShift({
+      origin: "",
+      code: "TH-2HRV3D",
+      phone: "3055550142",
+      eventDate: "2026-10-03",
+      fetchImpl: fakeFetch(200, { sessionToken: "tok", session: {} }, calls),
+    });
+    expect(out?.sessionToken).toBe("tok");
+    expect(calls[0].url).toBe("/api/public/checkin/TH-2HRV3D/identify");
+    expect(calls[0].body).toMatchObject({ resumeOnly: true, phone: "3055550142" });
+    expect(calls[0].body).not.toHaveProperty("address");
+    expect(calls[0].body).not.toHaveProperty("eventTypeId");
+  });
+
+  it("returns null when the API has no open shift", async () => {
+    const out = await resumeOpenShift({
+      origin: "",
+      code: "TH-2HRV3D",
+      phone: "3055550142",
+      eventDate: "2026-10-03",
+      fetchImpl: fakeFetch(404, { error: "no_open_shift" }, []),
+    });
+    expect(out).toBeNull();
   });
 });
