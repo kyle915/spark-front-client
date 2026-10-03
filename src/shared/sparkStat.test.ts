@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  aggregateRows,
   conversionSplitNote,
   padIndex,
   recapListKpis,
@@ -181,6 +182,43 @@ describe("recapListKpis", () => {
       hint: "Retail + on-prem",
       tone: "default",
     });
+  });
+});
+
+describe("3rd-party recaps stay out of totals", () => {
+  const rows = [
+    { requestType: "Retail Sampling", engagements: 100, consumersSampled: 100, productsSold: 20 },
+    {
+      requestType: "Retail Sampling",
+      engagements: 50,
+      consumersSampled: 50,
+      productsSold: 25,
+      excludeFromAggregates: true,
+    },
+  ];
+
+  it("aggregateRows drops flagged rows", () => {
+    expect(aggregateRows(rows)).toHaveLength(1);
+  });
+
+  it("sumConversionBases skips flagged rows on both sides", () => {
+    expect(sumConversionBases(rows)).toEqual({ engagements: 100, sold: 20, dryDemos: 0 });
+  });
+
+  it("recapListKpis notes the 3rd-party rows left out", () => {
+    const kpis = recapListKpis({
+      filteredTotal: 2,
+      loaded: 2,
+      total: 2,
+      engagements: 100,
+      sold: 20,
+      conversionEngagements: 100,
+      conversionSold: 20,
+      notInTotals: 1,
+    });
+    expect(kpis.find((k) => k.label === "Eng")?.hint).toBe("excl. 1 3rd-party");
+    expect(kpis.find((k) => k.label === "Sold")?.hint).toBe("excl. 1 3rd-party");
+    expect(kpis.find((k) => k.label === "Conv")?.hint).toBe("Retail + on-prem · excl. 1 3rd-party");
   });
 });
 

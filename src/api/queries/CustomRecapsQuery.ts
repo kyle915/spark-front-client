@@ -41,6 +41,7 @@ export const GetCustomRecapsQuery = graphql`
             email
           }
           isThirdParty
+          excludeFromAggregates
           typedStoreName
           storeMappingStatus
           shareToken
@@ -109,6 +110,7 @@ export const GetCustomRecapQuery = graphql`
         email
       }
       isThirdParty
+      excludeFromAggregates
       typedStoreName
       typedStoreAddress
       storeMappingStatus

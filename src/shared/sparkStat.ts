@@ -19,7 +19,16 @@ export type RecapKpiRow = {
   /** Dry demo (no product tasted): CONV base is People engaged. */
   isDryDemo?: boolean | null | undefined;
   peopleEngaged?: number | null | undefined;
+  /** 3rd-party / agency recap kept out of every total. */
+  excludeFromAggregates?: boolean | null | undefined;
 };
+
+/** Rows that roll into totals — 3rd-party recaps stay listed, never summed. */
+export function aggregateRows<T extends { excludeFromAggregates?: boolean | null }>(
+  rows: T[],
+): T[] {
+  return rows.filter((r) => !r.excludeFromAggregates);
+}
 
 /**
  * One recap's CONV denominator. Live sampling: consumers sampled, else
@@ -45,6 +54,7 @@ export function sumConversionBases(rows: RecapKpiRow[]): {
   let sold = 0;
   let dryDemos = 0;
   for (const r of rows) {
+    if (r.excludeFromAggregates) continue;
     if (!countsTowardConversion(r.requestType)) continue;
     const base = conversionBase(r);
     if (base <= 0) continue;
@@ -72,7 +82,12 @@ export function recapListKpis(input: {
   conversionSold: number;
   /** Dry demos inside the CONV totals (paired with People engaged). */
   conversionDryDemos?: number;
+  /** 3rd-party recaps in view, left out of Eng / Sold / Conv. */
+  notInTotals?: number;
 }): SparkStatItem[] {
+  const notInTotalsHint = input.notInTotals
+    ? `excl. ${input.notInTotals} 3rd-party`
+    : undefined;
   const hasConv =
     input.conversionEngagements > 0 && input.conversionSold > 0;
   const conv = hasConv
@@ -92,20 +107,24 @@ export function recapListKpis(input: {
     {
       label: "Eng",
       value: input.engagements.toLocaleString(),
+      hint: notInTotalsHint,
       tone: "lime",
     },
     {
       label: "Sold",
       value: input.sold.toLocaleString(),
+      hint: notInTotalsHint,
     },
     {
       label: "Conv",
       value: conv,
-      hint: input.conversionDryDemos
-        ? `Retail + on-prem · incl. ${input.conversionDryDemos} dry demo${
-            input.conversionDryDemos === 1 ? "" : "s"
-          } vs people engaged`
-        : "Retail + on-prem",
+      hint:
+        (input.conversionDryDemos
+          ? `Retail + on-prem · incl. ${input.conversionDryDemos} dry demo${
+              input.conversionDryDemos === 1 ? "" : "s"
+            } vs people engaged`
+          : "Retail + on-prem") +
+        (notInTotalsHint ? ` · ${notInTotalsHint}` : ""),
       tone: hasConv ? "lime" : "default",
     },
   ];

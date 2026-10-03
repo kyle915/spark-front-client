@@ -49,6 +49,7 @@ export const CustomRecapsListQuery = graphql`
             email
           }
           isThirdParty
+          excludeFromAggregates
           storeMappingStatus
           shareToken
           sharedAt

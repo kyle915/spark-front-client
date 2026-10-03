@@ -192,6 +192,7 @@ export const RequestUuidQuery = graphql`
           soldUnits
           isDryDemo
           peopleEngaged
+          excludeFromAggregates
           createdAt
           heroImageUrl
           customRecapFilesCount
