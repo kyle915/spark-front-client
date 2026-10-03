@@ -40,6 +40,7 @@ import {
   parseDropOffLocations,
   productSamplesFromDropOffs,
 } from "./dropOffLocations";
+import { sampleQtyLabels } from "./productsSampledQty";
 import { SpendAmountInput } from "./SpendAmountInput";
 import {
   isSpendAmountField,
@@ -1368,6 +1369,10 @@ const RecapCustomViewInner = ({
     flatImages && previewIndex !== null ? flatImages[previewIndex] : null;
   const currentPreviewSrc = currentPreview ? displaySrc(currentPreview) : "";
 
+  const qtyLabels = useMemo(
+    () => sampleQtyLabels(recap?.customRecapTemplate?.layout),
+    [recap?.customRecapTemplate?.layout],
+  );
   const unitsSampled = useMemo(
     () =>
       (recap?.customRecapProductSample ?? []).reduce(
@@ -1387,6 +1392,7 @@ const RecapCustomViewInner = ({
         activationType: recap?.customRecapTemplate?.name ?? null,
         isDryDemo: recap?.isDryDemo,
         peopleEngaged: recap?.peopleEngaged,
+        unitsSampledLabel: qtyLabels.total || undefined,
       }),
     [
       recap?.totalEngagements,
@@ -1397,6 +1403,7 @@ const RecapCustomViewInner = ({
       unitsSampled,
       flatImages.length,
       recap?.customRecapTemplate?.name,
+      qtyLabels.total,
     ],
   );
 
@@ -1696,7 +1703,7 @@ const RecapCustomViewInner = ({
                 recap.customRecapProductSample.length > 0
                   ? [
                       {
-                        label: "Units sampled",
+                        label: qtyLabels.total || "Units sampled",
                         value: recap.customRecapProductSample
                           .reduce((sum, s) => sum + (s.quantity ?? 0), 0)
                           .toLocaleString(),
@@ -2091,7 +2098,7 @@ const RecapCustomViewInner = ({
                         </div>
                         <div className="flex justify-between items-center text-sm pt-2">
                           <span style={muted}>
-                            Quantity Distributed
+                            {qtyLabels.perSku || "Quantity Distributed"}
                           </span>
                           <span className="mono" style={lime}>
                             {sample.quantity}

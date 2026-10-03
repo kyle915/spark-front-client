@@ -3,6 +3,7 @@ import {
   catalogSampleOptions,
   isProductsSampledMultiselect,
   matchProductForSampleOption,
+  sampleQtyLabels,
   optionSkuName,
   productSamplesFromSelections,
   sampleOptionSelected,
@@ -127,5 +128,23 @@ describe("sampleOptionSelected", () => {
     expect(
       sampleOptionSelected("Sparkling Water — Mt. Death", ["Mt. Death"]),
     ).toBe(true);
+  });
+});
+
+describe("sampleQtyLabels", () => {
+  it("reads the template layout copy (object or JSON string)", () => {
+    const layout = { sampleQtyLabel: "Cans sampled", sampleQtyTotalLabel: "Total cans sampled" };
+    expect(sampleQtyLabels(layout)).toEqual({
+      perSku: "Cans sampled",
+      total: "Total cans sampled",
+    });
+    expect(sampleQtyLabels(JSON.stringify(layout)).perSku).toBe("Cans sampled");
+    expect(sampleQtyLabels({ sampleQtyLabel: "Cans sampled" }).total).toBe("Total cans sampled");
+  });
+
+  it("is empty for templates without it", () => {
+    expect(sampleQtyLabels({})).toEqual({ perSku: "", total: "" });
+    expect(sampleQtyLabels(null)).toEqual({ perSku: "", total: "" });
+    expect(sampleQtyLabels("not json")).toEqual({ perSku: "", total: "" });
   });
 });

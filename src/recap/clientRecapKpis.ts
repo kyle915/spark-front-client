@@ -20,6 +20,8 @@ export function clientRecapKpis(input: {
   activationType?: string | null | undefined;
   isDryDemo?: boolean | null | undefined;
   peopleEngaged?: number | null | undefined;
+  /** Template copy for the per-SKU total, e.g. "Total cans sampled". */
+  unitsSampledLabel?: string;
 }): ClientRecapKpi[] {
   const out: ClientRecapKpi[] = [];
   if (input.isDryDemo) {
@@ -74,7 +76,7 @@ export function clientRecapKpis(input: {
     out.push({ label: "Conv", value: `${pct}%` });
   } else if (typeof input.unitsSampled === "number" && input.unitsSampled > 0) {
     out.push({
-      label: "Sampled",
+      label: input.unitsSampledLabel || "Sampled",
       value: input.unitsSampled.toLocaleString(),
     });
   }

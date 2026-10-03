@@ -18,6 +18,31 @@ export type SampleProductRef = {
   category?: string | null;
 };
 
+/**
+ * Per-SKU count copy a template opts into via `layout.sampleQtyLabel` /
+ * `layout.sampleQtyTotalLabel` (Torch Event Activation: "Cans sampled").
+ * Empty strings when the template has none — callers keep their generic copy.
+ */
+export function sampleQtyLabels(layout: unknown): { perSku: string; total: string } {
+  let obj: unknown = layout;
+  if (typeof obj === "string") {
+    try {
+      obj = JSON.parse(obj);
+    } catch {
+      obj = null;
+    }
+  }
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+    return { perSku: "", total: "" };
+  }
+  const rec = obj as Record<string, unknown>;
+  const perSku = typeof rec.sampleQtyLabel === "string" ? rec.sampleQtyLabel.trim() : "";
+  let total =
+    typeof rec.sampleQtyTotalLabel === "string" ? rec.sampleQtyTotalLabel.trim() : "";
+  if (perSku && !total) total = `Total ${perSku.charAt(0).toLowerCase()}${perSku.slice(1)}`;
+  return { perSku, total };
+}
+
 /** True when a custom field is the LD-style Products Sampled multiselect. */
 export function isProductsSampledMultiselect(field: {
   name?: string | null;

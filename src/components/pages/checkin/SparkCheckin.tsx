@@ -152,6 +152,9 @@ type Template = {
   productSamples: boolean;
   sections: TemplateSection[];
   products: TemplateProduct[];
+  /** Per-SKU count copy from the template (e.g. "Cans sampled"); empty = generic. */
+  sampleQtyLabel?: string;
+  sampleQtyTotalLabel?: string;
 };
 type Clock = {
   state: "not_started" | "clocked_in" | "clocked_out";
@@ -3608,6 +3611,8 @@ function RecapForm({
                   setSamples((s) => ({ ...s, [productId]: qty }))
                 }
                 qtyContextName={template.name}
+                qtyLabel={template.sampleQtyLabel}
+                qtyTotalLabel={template.sampleQtyTotalLabel}
               />
             ))}
           </div>
@@ -3782,6 +3787,8 @@ function RecapForm({
                       setSamples((s) => ({ ...s, [productId]: qty }))
                     }
                     qtyContextName={template.name}
+                    qtyLabel={template.sampleQtyLabel}
+                    qtyTotalLabel={template.sampleQtyTotalLabel}
                   />
                 ),
               )}
@@ -3875,6 +3882,8 @@ function MultiselectFieldInput({
   req,
   labelStyle,
   qtyContextName,
+  qtyLabel,
+  qtyTotalLabel,
 }: {
   field: TemplateField;
   value: string | string[] | undefined;
@@ -3886,6 +3895,8 @@ function MultiselectFieldInput({
   req: ReactNode;
   labelStyle: CSSProperties;
   qtyContextName?: string | null;
+  qtyLabel?: string | null;
+  qtyTotalLabel?: string | null;
 }) {
   const [skuFilter, setSkuFilter] = useState("");
   const arr = Array.isArray(value) ? value : [];
@@ -3923,6 +3934,10 @@ function MultiselectFieldInput({
           Boolean(row),
         )
     : [];
+  const qtyTotal = selectedWithProduct.reduce((sum, { product }) => {
+    const n = parseInt(sampleQtys[product.id] ?? "", 10);
+    return Number.isFinite(n) && n > 0 ? sum + n : sum;
+  }, 0);
 
   return (
     <div>
@@ -3984,6 +3999,19 @@ function MultiselectFieldInput({
             marginTop: 12,
           }}
         >
+          {qtyLabel ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                fontSize: 12,
+                fontWeight: 600,
+                opacity: 0.65,
+              }}
+            >
+              <span style={{ width: 88, textAlign: "center" }}>{qtyLabel}</span>
+            </div>
+          ) : null}
           {selectedWithProduct.map(({ option, product }) => (
             <div
               key={product.id}
@@ -4012,12 +4040,29 @@ function MultiselectFieldInput({
                 style={{ ...input, width: 88, margin: 0 }}
                 inputMode="numeric"
                 placeholder={qtyUnit}
-                aria-label={`${qtyUnit === "cases" ? "Cases" : "Cans"} — ${product.name}`}
+                aria-label={`${qtyLabel || (qtyUnit === "cases" ? "Cases" : "Cans")} — ${product.name}`}
                 value={sampleQtys[product.id] ?? ""}
                 onChange={(e) => onSampleQtyChange?.(product.id, e.target.value)}
               />
             </div>
           ))}
+          {qtyTotalLabel ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                borderTop: "1px solid rgba(0,0,0,0.1)",
+                paddingTop: 8,
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              <span>{qtyTotalLabel}</span>
+              <span style={{ width: 88, textAlign: "center" }}>
+                {qtyTotal.toLocaleString()}
+              </span>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -4037,6 +4082,8 @@ function FieldInput({
   sampleQtys = {},
   onSampleQtyChange,
   qtyContextName,
+  qtyLabel,
+  qtyTotalLabel,
 }: {
   field: TemplateField;
   value: string | string[] | undefined;
@@ -4049,6 +4096,8 @@ function FieldInput({
   sampleQtys?: Record<string, string>;
   onSampleQtyChange?: (productId: string, qty: string) => void;
   qtyContextName?: string | null;
+  qtyLabel?: string | null;
+  qtyTotalLabel?: string | null;
 }) {
   const libraryRef = useRef<HTMLInputElement | null>(null);
   const cameraRef = useRef<HTMLInputElement | null>(null);
@@ -4123,6 +4172,8 @@ function FieldInput({
         req={req}
         labelStyle={label}
         qtyContextName={qtyContextName}
+        qtyLabel={qtyLabel}
+        qtyTotalLabel={qtyTotalLabel}
       />
     );
   }

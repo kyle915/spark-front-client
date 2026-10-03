@@ -166,6 +166,9 @@ export const GetCustomRecapQuery = graphql`
       customRecapTemplate {
         id
         name
+        # sampleQtyLabel / sampleQtyTotalLabel ("Cans sampled") for the
+        # Product Samples card and KPI strip.
+        layout
         # Tenant scope for FileRecapCategoriesQuery — Evidences upload /
         # "Move to…" must list THIS brand's buckets (e.g. Torch THC
         # "Product Spend"), not a hard-coded Sampling photos / Receipts pair.

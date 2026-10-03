@@ -101,4 +101,20 @@ describe("clientRecapKpis", () => {
     }).map((k) => k.label);
     expect(labels).toEqual(["Dry demo", "Sold", "Photos"]);
   });
+
+  it("uses the template's per-SKU total label for sampled units", () => {
+    const base = {
+      engagements: null,
+      consumersSampled: 312,
+      soldUnits: null,
+      unitsSampled: 389,
+      photoCount: 6,
+      activationType: "Torch THC-Event Activation",
+    };
+    expect(clientRecapKpis({ ...base, unitsSampledLabel: "Total cans sampled" })[0]).toEqual({
+      label: "Total cans sampled",
+      value: "389",
+    });
+    expect(clientRecapKpis(base)[0].label).toBe("Sampled");
+  });
 });
