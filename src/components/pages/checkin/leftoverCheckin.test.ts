@@ -3,10 +3,12 @@ import {
   CHECK_IN_SOMEWHERE_ELSE,
   eventCalendarDate,
   isLeftoverCheckinSession,
+  isPastDayWalkupSession,
   isStaleWalkupSession,
   LEFTOVER_BANNER_BODY,
   LEFTOVER_PRIMARY_CTA,
   LEFTOVER_SECONDARY_CTA,
+  PAST_DAY_NO_CLOCK,
   START_OVER_LINK,
   walkupDayKind,
 } from "@/components/pages/checkin/leftoverCheckin";
@@ -86,5 +88,43 @@ describe("leftoverCheckin", () => {
       today: "2026-08-23",
     });
     expect(day === "leftover_prior_day" && second).toBe(false);
+  });
+});
+
+describe("isPastDayWalkupSession", () => {
+  // Weni's Saturday punch: 10:58 CT = 15:58Z on Oct 3.
+  const saturday = new Date("2026-10-03T15:58:00Z");
+
+  it("Thursday's walk-up on Saturday has no clock", () => {
+    expect(isPastDayWalkupSession("2026-10-01T12:00:00Z", null, saturday)).toBe(true);
+  });
+
+  it("today keeps the clock", () => {
+    expect(isPastDayWalkupSession("2026-10-03T12:00:00Z", null, saturday)).toBe(false);
+  });
+
+  it("Saturday 9pm ET (01:00Z Sunday) is still Saturday", () => {
+    const lateEast = new Date("2026-10-04T01:00:00Z");
+    expect(isPastDayWalkupSession("2026-10-03T12:00:00Z", null, lateEast)).toBe(false);
+  });
+
+  it("a shift that started last night can still clock in", () => {
+    expect(
+      isPastDayWalkupSession("2026-10-02T12:00:00Z", "2026-10-03T03:00:00Z", saturday),
+    ).toBe(false);
+  });
+
+  it("yesterday's afternoon start is past by the next morning", () => {
+    expect(
+      isPastDayWalkupSession("2026-10-01T12:00:00Z", "2026-10-01T19:00:00Z", saturday),
+    ).toBe(true);
+  });
+
+  it("no event date is not past", () => {
+    expect(isPastDayWalkupSession(null, null, saturday)).toBe(false);
+  });
+
+  it("tells the BA to file the recap instead", () => {
+    expect(PAST_DAY_NO_CLOCK).toMatch(/File its recap/);
   });
 });
