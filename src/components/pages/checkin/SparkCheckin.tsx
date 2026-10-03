@@ -83,8 +83,12 @@ import {
 } from "./leftoverCheckin";
 import {
   canAttemptOpenPunchResume,
+  hasLookupPhone,
+  lookupShiftsByPhone,
+  resumeOpenShift,
   shouldDropSessionToken,
   shouldKeepCachedSession,
+  type OpenShift,
 } from "./checkinSession";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { holdActionSuccess, type ActionPhase } from "@/motion/opsMotion";
@@ -986,7 +990,8 @@ export default function SparkCheckin() {
       return null;
     }
   });
-  // One silent resume per page life — reset when the BA taps Start over.
+  // One silent resume per page life; Start over suppresses it so the BA who
+  // just asked for a fresh form isn't bounced straight back.
   const resumeAttempted = useRef(false);
 
   // ── Load / refresh context (with the session token if we have one) ─────────
@@ -1072,81 +1077,59 @@ export default function SparkCheckin() {
     void refresh();
   }, [refresh]);
 
-  // Lost local session but still on this phone for the same shift: re-identify
-  // with saved name/phone + last market/store so open_shift_event_for restores
-  // the server punch on ANY standing code (FF / LD / TH / BD / …). Skips when
-  // Start over cleared the cache intentionally.
+  // No live session but this phone remembers who they are: ask the server
+  // whether that number is on the clock today and, if so, put them straight
+  // back on the shift (any standing code — FF / LD / TH / BD / …). The API's
+  // resumeOnly never starts a new check-in, so a miss just leaves identify.
   useEffect(() => {
     if (!ctx) return;
     if (resumeAttempted.current) return;
 
     const who = readIdentity(code);
-    const cached = readCachedContext<Context>(code);
-    const pending = readPendingClock(code);
-    const place =
-      (who.lastPlace || "").trim() ||
-      (cached?.event?.address || "").trim();
     if (
       !canAttemptOpenPunchResume({
         mode: ctx.mode,
         recapOnly: ctx.recapOnly,
         hasLiveSession: Boolean(token && ctx.session),
-        firstName: who.firstName,
         phone: who.phone,
-        place,
-        hasToken: Boolean(token),
-        hasPendingClock: Boolean(pending),
-        cachedClockedIn: cached?.session?.clock?.state === "clocked_in",
       })
     ) {
       return;
     }
 
     resumeAttempted.current = true;
-    const isMarket = (ctx.locationMode || "address") === "market";
     let cancelled = false;
     void (async () => {
+      const today = todayISO();
+      const { openShift } = await lookupShiftsByPhone({
+        origin: apiOrigin(),
+        code,
+        phone: who.phone,
+        firstName: who.firstName,
+        lastName: who.lastName,
+        eventDate: today,
+      });
+      if (cancelled || !openShift) return;
+      const json = await resumeOpenShift({
+        origin: apiOrigin(),
+        code,
+        phone: who.phone,
+        firstName: who.firstName,
+        lastName: who.lastName,
+        email: who.email,
+        eventDate: openShift.eventDate || today,
+      });
+      if (cancelled || !json) return;
       try {
-        const res = await fetch(
-          `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/identify`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              firstName: who.firstName,
-              lastName: who.lastName,
-              phone: who.phone,
-              email: who.email,
-              eventDate: todayISO(),
-              ...(who.lastEventTypeId
-                ? { eventTypeId: who.lastEventTypeId }
-                : {}),
-              ...(place
-                ? isMarket
-                  ? { market: place }
-                  : { address: place }
-                : {}),
-            }),
-          },
-        );
-        const json = (await res.json()) as {
-          sessionToken?: string;
-          session?: Context["session"];
-        };
-        if (cancelled || !res.ok || !json.sessionToken) return;
-        try {
-          window.localStorage.setItem(storeKey, json.sessionToken);
-        } catch {
-          /* private mode */
-        }
-        writeIdentity(code, {
-          ...who,
-          ...(place.trim() ? { lastPlace: place } : {}),
-        });
-        setToken(json.sessionToken);
+        window.localStorage.setItem(storeKey, json.sessionToken);
       } catch {
-        /* leave them on identify — manual Start check-in still works */
+        /* private mode */
       }
+      writeIdentity(code, {
+        ...who,
+        ...(openShift.address.trim() ? { lastPlace: openShift.address.trim() } : {}),
+      });
+      setToken(json.sessionToken);
     })();
     return () => {
       cancelled = true;
@@ -1191,7 +1174,7 @@ export default function SparkCheckin() {
   // step for a fresh event; their NAME is kept (see IDENTITY_KEY) so a repeat
   // BA only answers "which store, what day".
   const startAnother = useCallback(() => {
-    resumeAttempted.current = false;
+    resumeAttempted.current = true;
     try {
       window.localStorage.removeItem(storeKey);
       clearPendingClock(code);
@@ -1399,6 +1382,7 @@ function IdentifyStep({
   const [err, setErr] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [unfiled, setUnfiled] = useState<UnfiledShift[]>([]);
+  const [openShift, setOpenShift] = useState<OpenShift | null>(null);
 
   // Picking a known store fills BOTH fields, so the address matches an existing
   // event's exactly and this BA joins it rather than forking a near-duplicate.
@@ -1469,34 +1453,64 @@ function IdentifyStep({
     );
   };
 
+  // Keyed on the phone only: retyping a name must not re-ask the server.
   useEffect(() => {
-    if (recapOnly || !needsEventDetails || !phone.trim()) {
+    if (recapOnly || !needsEventDetails || !hasLookupPhone(phone)) {
       setUnfiled([]);
+      setOpenShift(null);
       return;
     }
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      void fetch(
-        `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/unfiled-recaps`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ firstName, lastName, phone }),
-        },
-      )
-        .then((r) => r.json())
-        .then((json: { shifts?: UnfiledShift[] }) => {
-          if (!cancelled && Array.isArray(json.shifts)) setUnfiled(json.shifts);
-        })
-        .catch(() => {
-          if (!cancelled) setUnfiled([]);
-        });
+      void lookupShiftsByPhone<UnfiledShift>({
+        origin: apiOrigin(),
+        code,
+        phone,
+        eventDate: todayISO(),
+      }).then(({ shifts, openShift: open }) => {
+        if (cancelled) return;
+        setUnfiled(shifts);
+        setOpenShift(open);
+      });
     }, 400);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [code, needsEventDetails, firstName, lastName, phone, recapOnly]);
+  }, [code, needsEventDetails, phone, recapOnly]);
+
+  const continueShift = async () => {
+    if (!openShift) return;
+    setErr(null);
+    setBusy(true);
+    const json = await resumeOpenShift({
+      origin: apiOrigin(),
+      code,
+      phone,
+      firstName,
+      lastName,
+      email,
+      eventDate: openShift.eventDate || todayISO(),
+    });
+    if (!json) {
+      setErr("Couldn't reach your shift. Check your bars and tap again.");
+      setBusy(false);
+      return;
+    }
+    try {
+      window.localStorage.setItem(storeKey, json.sessionToken);
+    } catch {
+      /* private mode — token still held in memory for this session */
+    }
+    writeIdentity(code, {
+      firstName,
+      lastName,
+      phone,
+      email,
+      ...(openShift.address.trim() ? { lastPlace: openShift.address.trim() } : {}),
+    });
+    onDone(json.sessionToken);
+  };
 
   const submit = async (overrides?: { eventDate?: string; address?: string; market?: string }) => {
     setErr(null);
@@ -1512,7 +1526,8 @@ function IdentifyStep({
       // BA gets. The backend falls back to the brand's default rather than
       // rejecting a request with no program, so this check is the only thing
       // standing between a distracted BA and the wrong recap.
-      if (hasPrograms && !eventTypeId) return setErr("Pick the event you're working.");
+      // A tapped "Still need a recap" shift already has its event and program.
+      if (hasPrograms && !eventTypeId && !overrides) return setErr("Pick the event you're working.");
       if (!omitPlace) {
         if (isMarket) {
           if (!mkt) return setErr("Pick your market.");
@@ -1590,7 +1605,7 @@ function IdentifyStep({
       <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
         {recapOnly
           ? "Your name on this recap. Phone is optional."
-          : "Tell us who you are so your lead can confirm your hours."}
+          : "Tell us who you are so your lead can confirm your hours. Already clocked in? Use the same phone number to pick up your shift."}
       </p>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         <input style={{ ...input, flex: "1 1 140px" }} placeholder="First name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -1599,7 +1614,54 @@ function IdentifyStep({
       <input style={input} placeholder={recapOnly ? "Mobile phone (optional)" : "Mobile phone"} inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
       <input style={input} placeholder="Email (optional)" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />
 
-      {needsEventDetails && hasPrograms ? (
+      {openShift ? (
+        <div
+          role="status"
+          style={{
+            marginTop: 14,
+            padding: "14px 16px",
+            borderRadius: 14,
+            border: `2px solid ${accent}`,
+            background: "rgba(255,255,255,0.95)",
+          }}
+        >
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              margin: "0 0 4px",
+              color: "#57534e",
+            }}
+          >
+            You're on the clock
+          </p>
+          <p style={{ fontSize: 17, fontWeight: 800, margin: "0 0 2px", color: "#1c1917" }}>
+            {openShift.clockInAt
+              ? `Clocked in at ${fmtTime(openShift.clockInAt)}`
+              : "Clocked in today"}
+          </p>
+          {openShift.address || openShift.name ? (
+            <p style={{ fontSize: 13, margin: "0 0 12px", color: "#57534e" }}>
+              {openShift.address || openShift.name}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            style={{ ...primaryBtn(accent), width: "100%" }}
+            disabled={busy}
+            onClick={() => void continueShift()}
+          >
+            {busy ? "Opening your shift…" : "Continue my shift"}
+          </button>
+          <p style={{ fontSize: 12, margin: "8px 0 0", color: "#78716c" }}>
+            Your hours are saved. No need to clock in again.
+          </p>
+        </div>
+      ) : null}
+
+      {!openShift && needsEventDetails && hasPrograms ? (
         <>
           {/* Asked before the store, because this is the answer that picks the
               BA's recap form and their photo buckets — a retail demo and an
@@ -1683,7 +1745,7 @@ function IdentifyStep({
         </>
       ) : null}
 
-      {needsEventDetails ? (
+      {!openShift && needsEventDetails ? (
         <>
           {!skipWorkLocation ? (
             <>
@@ -1853,9 +1915,11 @@ function IdentifyStep({
       ) : null}
 
       {err ? <p style={errText}>{err}</p> : null}
-      <button style={{ ...primaryBtn(accent), marginTop: 6 }} disabled={busy} onClick={() => void submit()}>
-        {busy ? "Starting…" : recapOnly ? "Continue to recap" : "Start check-in"}
-      </button>
+      {openShift ? null : (
+        <button style={{ ...primaryBtn(accent), marginTop: 6 }} disabled={busy} onClick={() => void submit()}>
+          {busy ? "Starting…" : recapOnly ? "Continue to recap" : "Start check-in"}
+        </button>
+      )}
     </div>
   );
 }
