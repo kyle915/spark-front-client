@@ -42,8 +42,8 @@
           ]
         },
         {
-          "//": "BA training assets: the LD field guide is a self-extracting single-file bundle (~4MB) and the video/PDFs are multi-MB. The blanket `**` no-store rule above would re-download all of it on every open, which on store LTE is the difference between instant and unusable. Matched LAST so it wins for these paths only. A week is long enough that a BA re-reading between shifts pays nothing, and short enough that a content fix reaches the field without renaming files — if something urgent changes, ship it under a new filename and update the TrainingResource URL.",
-          "source": "/training/**",
+          "//": "BA training assets: the LD field guide is a self-extracting single-file bundle (~4MB) and the video/PDFs are multi-MB. The blanket `**` no-store rule above would re-download all of it on every open, which on store LTE is the difference between instant and unusable. Matched LAST so it wins for these paths only. A week is long enough that a BA re-reading between shifts pays nothing, and short enough that a content fix reaches the field without renaming files — if something urgent changes, ship it under a new filename and update the TrainingResource URL. Scoped to file extensions so the /training/:code SPA shell stays no-store; under no-store the CDN also ignores Range, and iOS Safari will not play <video> without 206 responses.",
+          "source": "/training/**/*.@(mp4|mov|m4v|webm|pdf|html|jpg|jpeg|png|webp)",
           "headers": [
             { "key": "Cache-Control", "value": "public, max-age=604800" }
           ]
@@ -127,6 +127,13 @@
               "key": "Cache-Control",
               "value": "public, max-age=31536000, immutable"
             }
+          ]
+        },
+        {
+          "//": "Client serves BA training pages. Under the blanket no-store rule the CDN ignores Range and answers 200 with the whole file; iOS Safari will not play <video> without 206 partial responses. Scoped to file extensions so the /training/:code SPA shell stays no-store.",
+          "source": "/training/**/*.@(mp4|mov|m4v|webm|pdf|html|jpg|jpeg|png|webp)",
+          "headers": [
+            { "key": "Cache-Control", "value": "public, max-age=604800" }
           ]
         },
         {
