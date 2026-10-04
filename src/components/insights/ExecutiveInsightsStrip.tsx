@@ -414,7 +414,11 @@ const Inner: React.FC<{
               ? `${fmt(sold)} sold ÷ ${fmt(sampled)} ${
                   conv.dryRecaps ? "sampled + engaged" : "sampled"
                 }${
-                  conv.previousLabel
+                  conv.previousLabel &&
+                  !(
+                    convDelta?.kind === "sparse" &&
+                    convDelta.note.startsWith(conv.previousLabel)
+                  )
                     ? ` · vs ${conv.previousLabel}${
                         convDelta?.kind === "pts"
                           ? ` (${conv.previousPct?.toFixed(1)}%)`
