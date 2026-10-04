@@ -7840,6 +7840,13 @@ type TenantKpiMonth {
   recaps: Int!
   engagements: Int!
   samples: Int!
+  consumersSampled: Int!
+  unitsSold: Int!
+}
+
+type TenantKpiTrendSeries {
+  key: String!
+  label: String!
 }
 
 type TenantKpiTotals {
@@ -7869,6 +7876,8 @@ type TenantKpis {
   brandAwareConsumers: Int!
   willingToPurchase: Int!
   monthlyTrend: [TenantKpiMonth!]!
+  trendSeries: [TenantKpiTrendSeries!]!
+  trendNote: String
 }
 
 type TenantMetroBreakdown {

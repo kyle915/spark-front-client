@@ -12,8 +12,10 @@ import { graphql } from "react-relay";
  * fetchQuery) so it can paint on mount.
  *
  * `monthlyTrend` is an ordered list of up to 12 months (oldest → newest); each
- * entry carries that month's recaps, engagements and samples for the trend
- * chart. When the tenant has no activity yet the totals are all zero and
+ * entry carries that month's recaps plus every bar metric. `trendSeries` says
+ * which bars this tenant charts (Engagements + Samples, or Consumers sampled +
+ * Units sold for retail-sales programs like Torch) and `trendNote` explains
+ * the basis. When the tenant has no activity yet the totals are all zero and
  * `monthlyTrend` may be empty — the panel renders an empty state in that case.
  *
  * The optional `year` narrows the rollup to a single calendar year (Jan→current
@@ -40,7 +42,14 @@ export const TenantKpisQuery = graphql`
         recaps
         engagements
         samples
+        consumersSampled
+        unitsSold
       }
+      trendSeries {
+        key
+        label
+      }
+      trendNote
     }
   }
 `;
