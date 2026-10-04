@@ -13,9 +13,9 @@ import { TenantSkuPulseQuery } from "@/api/queries/TenantSkuPulseQuery";
 import type { TenantSkuPulseQuery as TenantSkuPulseQueryType } from "@api/queries/__generated__/TenantSkuPulseQuery.graphql";
 import { collapseSamplingKpis } from "@/lib/collapseSamplingKpis";
 import {
-  computePeriodDelta,
-  periodDeltaNote,
-  type PeriodDelta,
+  computeRateDelta,
+  formatRateDeltaLabel,
+  type RateDelta,
 } from "@/lib/periodDelta";
 import { conversionSplitNote } from "@/shared/sparkStat";
 import { useAlertStore } from "@/store/alertStore";
@@ -41,31 +41,15 @@ const ACTIVATION_BADGE_COLOR: Record<string, string> = {
   event: "var(--spark-sky)",
 };
 
-const deltaChip = (d: PeriodDelta): { label: string; color: string } | null => {
-  switch (d.kind) {
-    case "up":
-      return { label: `↑ ${d.pct}%`, color: "var(--spark-lime)" };
-    case "down":
-      return { label: `↓ ${Math.abs(d.pct)}%`, color: "var(--spark-orange)" };
-    case "flat":
-      return { label: "→ 0%", color: "rgba(255,255,255,0.55)" };
-    case "new":
-      return { label: "New", color: "var(--spark-lime)" };
-    case "sparse":
-      return { label: d.label, color: "rgba(255,255,255,0.55)" };
-    case "large":
-      return {
-        label: `${d.direction === "up" ? "↑" : "↓"} >${d.cappedPct}%`,
-        color:
-          d.direction === "up" ? "var(--spark-lime)" : "var(--spark-orange)",
-      };
-    case "none":
-      return null;
-    default: {
-      const _exhaustive: never = d;
-      return _exhaustive;
-    }
-  }
+const rateChip = (d: RateDelta): { label: string; color: string } | null => {
+  if (d.kind === "none") return null;
+  const color =
+    d.kind === "pts" && d.pts > 0
+      ? "var(--spark-lime)"
+      : d.kind === "pts" && d.pts < 0
+        ? "var(--spark-orange)"
+        : "rgba(255,255,255,0.55)";
+  return { label: formatRateDeltaLabel(d), color };
 };
 
 const Tile: React.FC<{
@@ -229,38 +213,47 @@ const Inner: React.FC<{
     });
   }, [mixData]);
 
-  const convDelta = useMemo(() => {
-    if (conv?.pct == null || conv.previousPct == null) return null;
-    return computePeriodDelta(conv.pct, conv.previousPct);
-  }, [conv?.pct, conv?.previousPct]);
+  const convDelta = useMemo(
+    () =>
+      conv?.pct == null
+        ? null
+        : computeRateDelta(conv.pct, conv.previousPct, conv.sparseNote),
+    [conv?.pct, conv?.previousPct, conv?.sparseNote],
+  );
 
   const trial = useMemo(() => {
     if (!compare) return null;
-    const curTiles = collapseSamplingKpis({
-      consumersReached: compare.current.consumersReached,
-      samplesDistributed: compare.current.samplesDistributed,
-      totalEngagements: compare.current.totalEngagements,
-    });
-    const prevTiles = collapseSamplingKpis({
-      consumersReached: compare.previous.consumersReached,
-      samplesDistributed: compare.previous.samplesDistributed,
-      totalEngagements: compare.previous.totalEngagements,
-    });
-    const consumers = curTiles[0]?.value ?? 0;
-    const firstTime = compare.current.firstTimeConsumers;
-    const prevConsumers = prevTiles[0]?.value ?? 0;
-    const prevFirst = compare.previous.firstTimeConsumers;
-    if (consumers <= 0 || firstTime <= 0) return null;
-    const pct = Math.round((firstTime / consumers) * 1000) / 10;
+    const audience = (
+      side: typeof compare.current,
+    ): { consumers: number; firstTime: number } =>
+      side.program
+        ? {
+            consumers: side.program.consumersSampled,
+            firstTime: side.program.firstTimeConsumers,
+          }
+        : {
+            consumers:
+              collapseSamplingKpis({
+                consumersReached: side.consumersReached,
+                samplesDistributed: side.samplesDistributed,
+                totalEngagements: side.totalEngagements,
+              })[0]?.value ?? 0,
+            firstTime: side.firstTimeConsumers,
+          };
+    const cur = audience(compare.current);
+    const prev = audience(compare.previous);
+    if (cur.consumers <= 0 || cur.firstTime <= 0) return null;
+    const pct = Math.round((cur.firstTime / cur.consumers) * 1000) / 10;
     const prevPct =
-      prevConsumers > 0 && prevFirst > 0
-        ? Math.round((prevFirst / prevConsumers) * 1000) / 10
+      prev.consumers > 0 && prev.firstTime > 0
+        ? Math.round((prev.firstTime / prev.consumers) * 1000) / 10
         : null;
     return {
       pct,
-      firstTime,
-      consumers,
-      delta: prevPct == null ? null : computePeriodDelta(pct, prevPct),
+      prevPct,
+      firstTime: cur.firstTime,
+      consumers: cur.consumers,
+      delta: computeRateDelta(pct, prevPct, compare.sparseNote),
       label: compare.currentLabel,
       previousLabel: compare.previousLabel,
     };
@@ -421,13 +414,19 @@ const Inner: React.FC<{
               ? `${fmt(sold)} sold ÷ ${fmt(sampled)} ${
                   conv.dryRecaps ? "sampled + engaged" : "sampled"
                 }${
-                  conv.previousLabel ? ` · vs ${conv.previousLabel}` : ""
+                  conv.previousLabel
+                    ? ` · vs ${conv.previousLabel}${
+                        convDelta?.kind === "pts"
+                          ? ` (${conv.previousPct?.toFixed(1)}%)`
+                          : ""
+                      }`
+                    : ""
                 }${
-                  convDelta ? ` · ${periodDeltaNote(convDelta) ?? ""}` : ""
+                  convDelta?.kind === "sparse" ? ` · ${convDelta.note}` : ""
                 }${conversionSplitNote(conv)}`.trim()
               : "No Retail / On-Prem sold ÷ sampled in this range"
           }
-          chip={convDelta ? deltaChip(convDelta) : null}
+          chip={convDelta ? rateChip(convDelta) : null}
           accent={convAccent}
         />
         <Tile
@@ -438,10 +437,16 @@ const Inner: React.FC<{
           value={trial ? `${trial.pct}%` : "—"}
           hint={
             trial
-              ? `${fmt(trial.firstTime)} first-time ÷ ${fmt(trial.consumers)} consumers`
+              ? `${fmt(trial.firstTime)} first-time ÷ ${fmt(trial.consumers)} consumers${
+                  trial.delta.kind === "pts"
+                    ? ` · vs ${trial.previousLabel} (${trial.prevPct?.toFixed(1)}%)`
+                    : trial.delta.kind === "sparse"
+                      ? ` · ${trial.delta.note}`
+                      : ""
+                }`
               : "Hidden until first-time and consumers both exist"
           }
-          chip={trial?.delta ? deltaChip(trial.delta) : null}
+          chip={trial ? rateChip(trial.delta) : null}
           accent={trial ? "lime" : "neutral"}
         />
         <Tile

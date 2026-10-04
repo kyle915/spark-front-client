@@ -8,6 +8,8 @@ import {
 } from "@/lib/collapseSamplingKpis";
 import {
   computePeriodDelta,
+  computeRateDelta,
+  formatRateDeltaLabel,
   periodDeltaNote,
   type PeriodDelta,
 } from "@/lib/periodDelta";
@@ -219,29 +221,26 @@ const ComparisonTile: React.FC<{
 const ConversionTile: React.FC<{
   current: number | null | undefined;
   previous: number | null | undefined;
-  hidePct?: boolean;
-}> = ({ current, previous, hidePct }) => {
-  const pts =
-    current != null && previous != null
-      ? Math.round((current - previous) * 10) / 10
-      : null;
+  sparseNote?: string | null;
+}> = ({ current, previous, sparseNote }) => {
+  const delta = computeRateDelta(current, previous, sparseNote);
+  const label = formatRateDeltaLabel(delta);
   let chip: ChipStyle;
-  if (hidePct || pts == null) chip = { label: "n/a", ...MUTED };
-  else if (pts > 0)
+  if (delta.kind !== "pts" || delta.pts === 0) chip = { label, ...MUTED };
+  else if (delta.pts > 0)
     chip = {
-      label: `+${pts.toFixed(1)} pts`,
+      label,
       text: "var(--spark-lime)",
       bg: "rgba(197,245,70,0.10)",
       border: "rgba(197,245,70,0.30)",
     };
-  else if (pts < 0)
+  else
     chip = {
-      label: `${pts.toFixed(1)} pts`,
+      label,
       text: "var(--spark-orange)",
       bg: "rgba(239,90,42,0.10)",
       border: "rgba(239,90,42,0.32)",
     };
-  else chip = { label: "+0.0 pts", ...MUTED };
   return (
     <div
       className="spark-card rounded-2xl px-4 py-4"
@@ -523,7 +522,7 @@ const TenantKpiComparison: React.FC<{
           <ConversionTile
             current={salesProgram.c.conversionPct}
             previous={salesProgram.p.conversionPct}
-            hidePct={hidePct}
+            sparseNote={comparison.sparseNote}
           />
         )}
       </div>

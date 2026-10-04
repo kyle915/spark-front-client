@@ -7770,6 +7770,9 @@ type TenantConversionKpis {
   dryEngagements: Int!
   dryRecaps: Int!
   unpairedDryRecaps: Int!
+  recaps: Int!
+  previousRecaps: Int!
+  sparseNote: String
 }
 
 """
