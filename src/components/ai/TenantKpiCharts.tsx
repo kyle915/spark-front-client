@@ -30,8 +30,8 @@ import { CountReel } from "@/motion/CountReel";
  *   1. headline KPI stat tiles — consumers reached, samples distributed,
  *      products sold, total engagements, first-time / brand-aware / willing-to-
  *      purchase consumers, and
- *   2. a 12-month trend chart (recaps / engagements / samples) from
- *      `monthlyTrend`.
+ *   2. a 12-month trend chart from `monthlyTrend`: recaps on the right axis,
+ *      and the bars the server names in `trendSeries` on the left.
  *
  * Mounted on both dashboards (admin DashboardEvent and the client
  * SparkClientDashboard) scoped to the active tenant via `useAuthStore()
@@ -65,14 +65,31 @@ type MonthRow = {
   recaps: number;
   engagements: number;
   samples: number;
+  consumersSampled: number;
+  unitsSold: number;
 };
+
+type TrendSeries = { key: string; label: string };
+
+const DEFAULT_SERIES: readonly TrendSeries[] = [
+  { key: "engagements", label: "Engagements" },
+  { key: "samples", label: "Samples" },
+];
+
+const SERIES_COLORS = ["rgba(95,184,239,0.85)", "rgba(239,90,42,0.85)"];
+
+const seriesValue = (row: MonthRow, key: string): number =>
+  Number((row as Record<string, unknown>)[key]) || 0;
 
 const fmt = (n: number) => n.toLocaleString();
 
 /** Months with any activity but under 15% of the peak look sparse — annotate. */
-const sparseMonthFlags = (data: readonly MonthRow[]): boolean[] => {
+const sparseMonthFlags = (
+  data: readonly MonthRow[],
+  series: readonly TrendSeries[],
+): boolean[] => {
   const peaks = data.map(
-    (d) => Math.max(d.recaps, d.engagements, d.samples) || 0,
+    (d) => Math.max(d.recaps, ...series.map((s) => seriesValue(d, s.key))) || 0,
   );
   const peak = Math.max(...peaks, 0);
   if (peak <= 0) return data.map(() => false);
@@ -104,9 +121,16 @@ const sparseMonthPlugin = (flags: boolean[]): Plugin<"bar" | "line"> => ({
 
 /* ───────────────────────── trend chart ───────────────────────── */
 
-const TrendChart: React.FC<{ data: readonly MonthRow[] }> = ({ data }) => {
+const TrendChart: React.FC<{
+  data: readonly MonthRow[];
+  series: readonly TrendSeries[];
+  note?: string | null;
+}> = ({ data, series, note }) => {
   const [isDark] = useThemeMode();
-  const sparseFlags = useMemo(() => sparseMonthFlags(data), [data]);
+  const sparseFlags = useMemo(
+    () => sparseMonthFlags(data, series),
+    [data, series],
+  );
   const sparseCount = sparseFlags.filter(Boolean).length;
 
   const { textColor, gridColor } = useMemo(
@@ -120,22 +144,14 @@ const TrendChart: React.FC<{ data: readonly MonthRow[] }> = ({ data }) => {
   const chartData: ChartData<"bar" | "line"> = {
     labels: data.map((d) => d.month),
     datasets: [
-      {
-        type: "bar",
-        label: "Engagements",
-        data: data.map((d) => d.engagements),
-        backgroundColor: "rgba(95,184,239,0.85)",
+      ...series.map((s, i) => ({
+        type: "bar" as const,
+        label: s.label,
+        data: data.map((d) => seriesValue(d, s.key)),
+        backgroundColor: SERIES_COLORS[i % SERIES_COLORS.length],
         borderRadius: 6,
         yAxisID: "y1",
-      },
-      {
-        type: "bar",
-        label: "Samples",
-        data: data.map((d) => d.samples),
-        backgroundColor: "rgba(239,90,42,0.85)",
-        borderRadius: 6,
-        yAxisID: "y1",
-      },
+      })),
       {
         type: "line",
         label: "Recaps",
@@ -167,7 +183,7 @@ const TrendChart: React.FC<{ data: readonly MonthRow[] }> = ({ data }) => {
         grid: { color: gridColor },
         title: {
           display: true,
-          text: "Engagements / Samples",
+          text: series.map((s) => s.label).join(" / "),
           color: textColor,
           font: { size: 11 },
         },
@@ -216,6 +232,17 @@ const TrendChart: React.FC<{ data: readonly MonthRow[] }> = ({ data }) => {
         >
           {sparseCount} early / light month{sparseCount === 1 ? "" : "s"} marked
           sparse — low volume vs peak; % swings may mislead.
+        </p>
+      )}
+      {note && (
+        <p
+          className="mono text-[10px] mt-2"
+          style={{
+            letterSpacing: "0.12em",
+            color: "rgba(255,255,255,0.4)",
+          }}
+        >
+          {note}
         </p>
       )}
     </div>
@@ -367,6 +394,10 @@ const TenantKpiCharts: React.FC<{
   if (!kpis) return null;
 
   const trend = kpis.monthlyTrend ?? [];
+  const series: readonly TrendSeries[] = kpis.trendSeries?.length
+    ? kpis.trendSeries
+    : DEFAULT_SERIES;
+  const seriesTitle = series.map((s) => s.label.toUpperCase());
 
   // All-zero / empty: a brand-new tenant with nothing logged yet. Show a quiet
   // empty state rather than a grid of zeros and a blank chart.
@@ -379,7 +410,7 @@ const TenantKpiCharts: React.FC<{
     kpis.totalEngagements > 0;
 
   const hasTrend = trend.some(
-    (m) => m.recaps > 0 || m.engagements > 0 || m.samples > 0,
+    (m) => m.recaps > 0 || series.some((s) => seriesValue(m, s.key) > 0),
   );
 
   return (
@@ -458,9 +489,14 @@ const TenantKpiCharts: React.FC<{
                     color: "rgba(255,255,255,0.45)",
                   }}
                 >
-                  MONTHLY TREND · RECAPS (RIGHT) / ENGAGEMENTS + SAMPLES (LEFT)
+                  MONTHLY TREND · RECAPS (RIGHT) / {seriesTitle.join(" + ")}{" "}
+                  (LEFT)
                 </p>
-                <TrendChart data={trend} />
+                <TrendChart
+                  data={trend}
+                  series={series}
+                  note={kpis.trendNote}
+                />
               </>
             ) : (
               <div>
@@ -471,7 +507,7 @@ const TenantKpiCharts: React.FC<{
                     color: "rgba(255,255,255,0.45)",
                   }}
                 >
-                  MONTHLY TREND · RECAPS / ENGAGEMENTS / SAMPLES
+                  MONTHLY TREND · RECAPS / {seriesTitle.join(" / ")}
                 </p>
                 <div className="spark-chart-empty min-h-[180px]">
                   No monthly trend data yet.
