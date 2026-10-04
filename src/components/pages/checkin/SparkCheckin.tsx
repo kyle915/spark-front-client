@@ -1684,7 +1684,7 @@ function IdentifyStep({
             >
               {eventTypes.map((t) => {
                 const selected = eventTypeId === t.id;
-                const description = eventTypeDescription(t.name);
+                const description = eventTypeDescription(t.name, { roaming: isMarket });
                 return (
                   <button
                     key={t.id}

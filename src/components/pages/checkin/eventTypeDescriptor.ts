@@ -23,15 +23,27 @@ const DESCRIPTORS: Record<string, string> = {
     "Dropping off cases at a venue or retailer — not a sampling shift.",
 };
 
+// Market-mode (roaming) brands street-sample under Retail Sampling, so the
+// default "street samplings" line would steer their everyday shift into
+// Event Activation.
+const ROAMING_DESCRIPTORS: Record<string, string> = {
+  "retail sampling":
+    "Your regular market shift — sampling spots around town, logged as you go.",
+  "event activation":
+    "One festival, concert, or community event at a single venue.",
+};
+
 /** Return helper text for a known program name, else null. */
 export function eventTypeDescription(
   name: string | null | undefined,
+  opts: { roaming?: boolean } = {},
 ): string | null {
   const key = normalizeEventTypeName(name);
   if (!key) return null;
-  if (DESCRIPTORS[key]) return DESCRIPTORS[key];
+  const table = opts.roaming ? { ...DESCRIPTORS, ...ROAMING_DESCRIPTORS } : DESCRIPTORS;
+  if (table[key]) return table[key];
   // "Liquid Death-Retail Sampling" and similar prefixed labels.
-  for (const [label, text] of Object.entries(DESCRIPTORS)) {
+  for (const [label, text] of Object.entries(table)) {
     if (key.includes(label)) return text;
   }
   return null;
