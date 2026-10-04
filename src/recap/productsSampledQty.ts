@@ -66,21 +66,35 @@ export function isProductSeedingContext(
   return /product\s*seeding/i.test(name ?? "");
 }
 
+/** A template per-SKU label that isn't counted in cans (e.g. "Samples distributed"). */
+function nonCanQtyLabel(qtyLabel?: string | null): string {
+  const label = (qtyLabel ?? "").trim();
+  return label && !/\bcans?\b/i.test(label) ? label : "";
+}
+
 /** Qty unit label for Products Sampled / Cases-by-SKU pills. */
 export function productSampleQtyUnit(
   contextName?: string | null,
-): "cases" | "cans" {
-  return isProductSeedingContext(contextName) ? "cases" : "cans";
+  qtyLabel?: string | null,
+): "cases" | "cans" | "qty" {
+  if (isProductSeedingContext(contextName)) return "cases";
+  return nonCanQtyLabel(qtyLabel) ? "qty" : "cans";
 }
 
 /**
- * Helper line under the SKU pills. Seeding asks for cases; sampling for cans.
+ * Helper line under the SKU pills. Seeding asks for cases; sampling for cans
+ * unless the template names its own count.
  */
 export function productSampleQtyHelper(
   contextName?: string | null,
+  qtyLabel?: string | null,
 ): string {
-  return isProductSeedingContext(contextName)
-    ? "Tap each SKU you dropped off, then enter how many cases."
+  if (isProductSeedingContext(contextName)) {
+    return "Tap each SKU you dropped off, then enter how many cases.";
+  }
+  const label = nonCanQtyLabel(qtyLabel);
+  return label
+    ? `Tap each SKU you handed out, then enter ${label.toLowerCase()} for each.`
     : "Tap each SKU you handed out, then enter how many cans.";
 }
 

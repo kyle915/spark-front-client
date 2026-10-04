@@ -5,9 +5,27 @@ import {
   matchProductForSampleOption,
   sampleQtyLabels,
   optionSkuName,
+  productSampleQtyHelper,
+  productSampleQtyUnit,
   productSamplesFromSelections,
   sampleOptionSelected,
 } from "./productsSampledQty";
+
+describe("productSampleQtyHelper", () => {
+  it("follows a template label that isn't counted in cans", () => {
+    expect(productSampleQtyHelper("Products Sampled", "Samples distributed")).toBe(
+      "Tap each SKU you handed out, then enter samples distributed for each.",
+    );
+    expect(productSampleQtyUnit("Products Sampled", "Samples distributed")).toBe("qty");
+  });
+
+  it("keeps cans and cases copy", () => {
+    expect(productSampleQtyHelper("Products Sampled", "Cans sampled")).toContain("how many cans");
+    expect(productSampleQtyHelper("Products Sampled")).toContain("how many cans");
+    expect(productSampleQtyUnit("Products Sampled", "Cans sampled")).toBe("cans");
+    expect(productSampleQtyHelper("Product Seeding", "Samples distributed")).toContain("cases");
+  });
+});
 
 const products = [
   { id: "1", name: "Mt. Death", category: "Sparkling Water" },
