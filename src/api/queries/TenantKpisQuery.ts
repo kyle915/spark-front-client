@@ -50,6 +50,20 @@ export const TenantKpisQuery = graphql`
         label
       }
       trendNote
+      program {
+        recaps
+        demos
+        consumersSampled
+        unitsSold
+        cansSold
+        packsSold
+        conversionPct
+        dryDemos
+        dryPeopleEngaged
+        firstTimeConsumers
+        brandAwareConsumers
+        willingToPurchase
+      }
     }
   }
 `;

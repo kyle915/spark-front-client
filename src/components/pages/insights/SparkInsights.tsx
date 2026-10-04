@@ -751,14 +751,18 @@ export function InsightsBody({
           <TenantKpiComparison
             tenantId={tenantId}
             period={comparisonPeriod}
-            scopeNote={`Aligned to ${rangeLabel} (nearest complete period)`}
+            scopeNote={`Complete calendar ${comparisonPeriod}s · closest to ${rangeLabel}`}
           />
         </Suspense>
       )}
 
       {tenantId && (
         <Suspense fallback={null}>
-          <TenantInsightsPanel tenantId={tenantId} />
+          <TenantInsightsPanel
+            tenantId={tenantId}
+            startDate={startDate}
+            endDate={endDate}
+          />
         </Suspense>
       )}
 

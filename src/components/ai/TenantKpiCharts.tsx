@@ -255,8 +255,9 @@ const StatTile: React.FC<{
   label: string;
   value: string;
   count?: number;
+  sub?: string;
   tone: "lime" | "sky" | "gold" | "purple";
-}> = ({ label, value, count, tone }) => {
+}> = ({ label, value, count, sub, tone }) => {
   const toneColor: Record<string, string> = {
     lime: "var(--spark-lime)",
     sky: "var(--spark-sky)",
@@ -289,6 +290,14 @@ const StatTile: React.FC<{
       >
         {typeof count === "number" ? <CountReel value={count} /> : value}
       </p>
+      {sub && (
+        <p
+          className="text-[11px] mt-1 leading-snug"
+          style={{ color: "rgba(255,255,255,0.5)" }}
+        >
+          {sub}
+        </p>
+      )}
     </div>
   );
 };
@@ -338,8 +347,65 @@ const TenantKpiCharts: React.FC<{
 
   const kpis = data?.tenantKpis;
 
-  const tiles = useMemo(() => {
+  const tiles = useMemo((): {
+    label: string;
+    value: string;
+    count?: number;
+    sub?: string;
+    tone: "lime" | "sky" | "gold" | "purple";
+  }[] => {
     if (!kpis) return [];
+    const program = kpis.program;
+    if (program) {
+      // Retail-sales programs (Torch): the Conversion tile's recap set — no
+      // engagements, units sold = cans + packs at 1 each.
+      const audience = [
+        {
+          label: "First-time consumers",
+          value: program.firstTimeConsumers,
+          tone: "purple" as const,
+        },
+        {
+          label: "Brand-aware",
+          value: program.brandAwareConsumers,
+          tone: "sky" as const,
+        },
+        {
+          label: "Willing to purchase",
+          value: program.willingToPurchase,
+          tone: "gold" as const,
+        },
+      ]
+        .filter((t) => t.value > 0)
+        .map((t) => ({ ...t, value: fmt(t.value), count: t.value }));
+      return [
+        {
+          label: "Consumers sampled",
+          value: fmt(program.consumersSampled),
+          count: program.consumersSampled,
+          sub:
+            program.dryDemos > 0
+              ? `${fmt(program.demos)} demos · incl. ${fmt(program.dryDemos)} dry (People engaged)`
+              : `${fmt(program.demos)} demos`,
+          tone: "lime" as const,
+        },
+        {
+          label: "Units sold",
+          value: fmt(program.unitsSold),
+          count: program.unitsSold,
+          sub: `${fmt(program.cansSold)} cans · ${fmt(program.packsSold)} packs`,
+          tone: "gold" as const,
+        },
+        {
+          label: "Conversion",
+          value:
+            program.conversionPct == null ? "—" : `${program.conversionPct}%`,
+          sub: "Units sold ÷ consumers sampled",
+          tone: "sky" as const,
+        },
+        ...audience,
+      ];
+    }
     // Core metrics every tenant tracks — always shown, even at 0 (a real 0 is
     // meaningful here). The consumer-signal metrics below are template-
     // dependent: a bread tenant (Stone House Bread) never collects brand
@@ -474,6 +540,7 @@ const TenantKpiCharts: React.FC<{
                 label={t.label}
                 value={t.value}
                 count={t.count}
+                sub={t.sub}
                 tone={t.tone}
               />
             ))}

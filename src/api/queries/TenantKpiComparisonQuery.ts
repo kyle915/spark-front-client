@@ -26,6 +26,7 @@ export const TenantKpiComparisonQuery = graphql`
       period
       currentLabel
       previousLabel
+      sparseNote
       current {
         events
         recaps
@@ -38,6 +39,20 @@ export const TenantKpiComparisonQuery = graphql`
         firstTimeConsumers
         brandAwareConsumers
         willingToPurchase
+        program {
+          recaps
+          demos
+          consumersSampled
+          unitsSold
+          cansSold
+          packsSold
+          conversionPct
+          dryDemos
+          dryPeopleEngaged
+          firstTimeConsumers
+          brandAwareConsumers
+          willingToPurchase
+        }
       }
       previous {
         events
@@ -51,6 +66,20 @@ export const TenantKpiComparisonQuery = graphql`
         firstTimeConsumers
         brandAwareConsumers
         willingToPurchase
+        program {
+          recaps
+          demos
+          consumersSampled
+          unitsSold
+          cansSold
+          packsSold
+          conversionPct
+          dryDemos
+          dryPeopleEngaged
+          firstTimeConsumers
+          brandAwareConsumers
+          willingToPurchase
+        }
       }
     }
   }

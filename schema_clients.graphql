@@ -5956,7 +5956,7 @@ type Query {
   tenantFieldSamplingReport(tenantId: ID!, startDate: String!, endDate: String!, eventTypeId: ID = null, market: String = null): FieldSamplingReport!
   tenantBaLeaderboard(tenantId: ID!, year: Int = null, startDate: String = null, endDate: String = null): [BaLeaderboardEntry!]!
   tenantGoals(tenantId: ID!, year: Int = null): TenantGoals!
-  tenantInsights(tenantId: ID!): TenantInsights!
+  tenantInsights(tenantId: ID!, startDate: String = null, endDate: String = null): TenantInsights!
   tenantSentiment(tenantId: ID!, year: Int = null): TenantSentiment
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   fileTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): FileTypeCountableConnection!
@@ -7825,6 +7825,7 @@ type TenantInsightItem {
 type TenantInsights {
   generatedAt: String
   items: [TenantInsightItem!]!
+  scopeLabel: String
 }
 
 type TenantKpiComparison {
@@ -7833,6 +7834,7 @@ type TenantKpiComparison {
   previousLabel: String!
   current: TenantKpiTotals!
   previous: TenantKpiTotals!
+  sparseNote: String
 }
 
 type TenantKpiMonth {
@@ -7861,6 +7863,7 @@ type TenantKpiTotals {
   firstTimeConsumers: Int!
   brandAwareConsumers: Int!
   willingToPurchase: Int!
+  program: TenantProgramMetrics
 }
 
 type TenantKpis {
@@ -7878,6 +7881,23 @@ type TenantKpis {
   monthlyTrend: [TenantKpiMonth!]!
   trendSeries: [TenantKpiTrendSeries!]!
   trendNote: String
+  program: TenantProgramMetrics
+}
+
+type TenantProgramMetrics {
+  recaps: Int!
+  demos: Int!
+  consumersSampled: Int!
+  unitsSold: Int!
+  cansSold: Int!
+  packsSold: Int!
+  conversionPct: Float
+  dryDemos: Int!
+  dryPeopleEngaged: Int!
+  unpairedDryDemos: Int!
+  firstTimeConsumers: Int!
+  brandAwareConsumers: Int!
+  willingToPurchase: Int!
 }
 
 type TenantMetroBreakdown {

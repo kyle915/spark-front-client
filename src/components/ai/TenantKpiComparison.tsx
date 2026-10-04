@@ -48,6 +48,9 @@ import {
 
 const fmt = (n: number) => n.toLocaleString();
 
+/** Every chip when the base period is too thin; the panel says why once. */
+const HIDDEN_DELTA: PeriodDelta = { kind: "sparse", label: "n/a", note: "" };
+
 /* ───────────────────────── delta ───────────────────────── */
 
 // Calm palette: up leans on the brand lime; down on the restrained spark-orange
@@ -167,8 +170,9 @@ const ComparisonTile: React.FC<{
   current: number;
   previous: number;
   tone: Tone;
-}> = ({ label, current, previous, tone }) => {
-  const delta = computePeriodDelta(current, previous);
+  hidePct?: boolean;
+}> = ({ label, current, previous, tone, hidePct }) => {
+  const delta = hidePct ? HIDDEN_DELTA : computePeriodDelta(current, previous);
   return (
     <div
       className="spark-card rounded-2xl px-4 py-4"
@@ -209,6 +213,85 @@ const ComparisonTile: React.FC<{
   );
 };
 
+/* ───────────────────────── conversion tile ───────────────────────── */
+
+// Conversion is a rate, so its change is in percentage points, not %.
+const ConversionTile: React.FC<{
+  current: number | null | undefined;
+  previous: number | null | undefined;
+  hidePct?: boolean;
+}> = ({ current, previous, hidePct }) => {
+  const pts =
+    current != null && previous != null
+      ? Math.round((current - previous) * 10) / 10
+      : null;
+  let chip: ChipStyle;
+  if (hidePct || pts == null) chip = { label: "n/a", ...MUTED };
+  else if (pts > 0)
+    chip = {
+      label: `+${pts.toFixed(1)} pts`,
+      text: "var(--spark-lime)",
+      bg: "rgba(197,245,70,0.10)",
+      border: "rgba(197,245,70,0.30)",
+    };
+  else if (pts < 0)
+    chip = {
+      label: `${pts.toFixed(1)} pts`,
+      text: "var(--spark-orange)",
+      bg: "rgba(239,90,42,0.10)",
+      border: "rgba(239,90,42,0.32)",
+    };
+  else chip = { label: "+0.0 pts", ...MUTED };
+  return (
+    <div
+      className="spark-card rounded-2xl px-4 py-4"
+      style={{ borderTop: `2px solid ${TONE_COLOR.sky}` }}
+    >
+      <p
+        className="mono text-[9px]"
+        style={{
+          letterSpacing: "0.18em",
+          color: "rgba(255,255,255,0.55)",
+          textTransform: "uppercase",
+        }}
+      >
+        Conversion
+      </p>
+      <div className="flex items-baseline justify-between gap-2 mt-1.5 flex-wrap">
+        <p
+          className="display tab-num font-bold"
+          style={{
+            fontSize: "clamp(1.4rem, 3vw, 1.9rem)",
+            letterSpacing: "-0.03em",
+            lineHeight: 1.05,
+            color: "var(--spark-text)",
+          }}
+        >
+          {current == null ? "—" : `${current.toFixed(1)}%`}
+        </p>
+        <span
+          className="mono text-[11px] px-2 py-0.5 rounded-full inline-flex items-center shrink-0"
+          style={{
+            color: chip.text,
+            background: chip.bg,
+            border: `1px solid ${chip.border}`,
+            letterSpacing: "0.04em",
+            fontWeight: 600,
+          }}
+        >
+          {chip.label}
+        </span>
+      </div>
+      <p
+        className="tab-num text-[12px] mt-1"
+        style={{ color: "rgba(255,255,255,0.45)" }}
+      >
+        was {previous == null ? "—" : `${previous.toFixed(1)}%`}
+      </p>
+    </div>
+  );
+};
+
 /* ───────────────────────── secondary row ───────────────────────── */
 
 // Compact secondary KPI — the same numbers, smaller chrome: label, current
@@ -217,8 +300,9 @@ const SecondaryRow: React.FC<{
   label: string;
   current: number;
   previous: number;
-}> = ({ label, current, previous }) => {
-  const delta = computePeriodDelta(current, previous);
+  hidePct?: boolean;
+}> = ({ label, current, previous, hidePct }) => {
+  const delta = hidePct ? HIDDEN_DELTA : computePeriodDelta(current, previous);
   return (
     <div
       className="rounded-xl px-3.5 py-3"
@@ -297,9 +381,31 @@ const TenantKpiComparison: React.FC<{
 
   // Headline KPIs — prominent comparison tiles, in the same order/accents the
   // KPI panel uses for these four.
+  const salesProgram =
+    comparison?.current.program && comparison?.previous.program
+      ? { c: comparison.current.program, p: comparison.previous.program }
+      : null;
+  const hidePct = !!comparison?.sparseNote;
+
   const headline = useMemo(() => {
     if (!comparison) return [];
     const { current: c, previous: p } = comparison;
+    if (salesProgram) {
+      return [
+        {
+          label: "Consumers sampled",
+          current: salesProgram.c.consumersSampled,
+          previous: salesProgram.p.consumersSampled,
+          tone: "lime" as Tone,
+        },
+        {
+          label: "Units sold",
+          current: salesProgram.c.unitsSold,
+          previous: salesProgram.p.unitsSold,
+          tone: "gold" as Tone,
+        },
+      ];
+    }
     const sampling = collapseSamplingKpis({
       consumersReached: c.consumersReached,
       samplesDistributed: c.samplesDistributed,
@@ -318,12 +424,22 @@ const TenantKpiComparison: React.FC<{
       ...sampling,
       { label: "Products sold", current: c.productsSold, previous: p.productsSold, tone: "gold" as const },
     ];
-  }, [comparison]);
+  }, [comparison, salesProgram]);
 
   // Secondary KPIs — compact grid below.
   const secondary = useMemo(() => {
     if (!comparison) return [];
     const { current: c, previous: p } = comparison;
+    if (salesProgram) {
+      const { c: sc, p: sp } = salesProgram;
+      return [
+        { label: "Demos", current: sc.demos, previous: sp.demos },
+        { label: "Recaps", current: sc.recaps, previous: sp.recaps },
+        { label: "First-time", current: sc.firstTimeConsumers, previous: sp.firstTimeConsumers },
+        { label: "Brand-aware", current: sc.brandAwareConsumers, previous: sp.brandAwareConsumers },
+        { label: "Willing to purchase", current: sc.willingToPurchase, previous: sp.willingToPurchase },
+      ];
+    }
     return [
       { label: "Events", current: c.events, previous: p.events },
       { label: "Recaps", current: c.recaps, previous: p.recaps },
@@ -331,7 +447,7 @@ const TenantKpiComparison: React.FC<{
       { label: "Brand-aware", current: c.brandAwareConsumers, previous: p.brandAwareConsumers },
       { label: "Willing to purchase", current: c.willingToPurchase, previous: p.willingToPurchase },
     ];
-  }, [comparison]);
+  }, [comparison, salesProgram]);
 
   // No data for this period → render NOTHING (no empty frame).
   if (!comparison) return null;
@@ -353,6 +469,17 @@ const TenantKpiComparison: React.FC<{
             {comparison.currentLabel} vs {comparison.previousLabel}
             {scopeNote ? ` · ${scopeNote}` : ""}
           </p>
+          {comparison.sparseNote && (
+            <p
+              className="mono text-[10px] mt-1.5"
+              style={{
+                letterSpacing: "0.12em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              {comparison.sparseNote}
+            </p>
+          )}
         </div>
         {/* Compact period toggle — drives the $period query variable above, so
             switching refetches the comparison. Default = Month. Styled like the
@@ -389,8 +516,16 @@ const TenantKpiComparison: React.FC<{
             current={t.current}
             previous={t.previous}
             tone={t.tone}
+            hidePct={hidePct}
           />
         ))}
+        {salesProgram && (
+          <ConversionTile
+            current={salesProgram.c.conversionPct}
+            previous={salesProgram.p.conversionPct}
+            hidePct={hidePct}
+          />
+        )}
       </div>
 
       {/* Secondary KPIs — compact grid below. */}
@@ -401,6 +536,7 @@ const TenantKpiComparison: React.FC<{
             label={s.label}
             current={s.current}
             previous={s.previous}
+            hidePct={hidePct}
           />
         ))}
       </div>
