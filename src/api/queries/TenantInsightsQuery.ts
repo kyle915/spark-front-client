@@ -20,9 +20,18 @@ import { graphql } from "react-relay";
  * and the panel renders a quiet empty state.
  */
 export const TenantInsightsQuery = graphql`
-  query TenantInsightsQuery($tenantId: ID!) {
-    tenantInsights(tenantId: $tenantId) {
+  query TenantInsightsQuery(
+    $tenantId: ID!
+    $startDate: String
+    $endDate: String
+  ) {
+    tenantInsights(
+      tenantId: $tenantId
+      startDate: $startDate
+      endDate: $endDate
+    ) {
       generatedAt
+      scopeLabel
       items {
         title
         detail

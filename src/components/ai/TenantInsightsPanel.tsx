@@ -141,10 +141,15 @@ const InsightTile: React.FC<{
 
 /* ───────────────────────── panel ───────────────────────── */
 
-const TenantInsightsPanel: React.FC<{ tenantId: string }> = ({ tenantId }) => {
+const TenantInsightsPanel: React.FC<{
+  tenantId: string;
+  /** Inclusive page range; scopes retail-sales programs' cards. */
+  startDate?: string;
+  endDate?: string;
+}> = ({ tenantId, startDate, endDate }) => {
   const data = useLazyLoadQuery<TenantInsightsQueryType>(
     TenantInsightsQuery,
-    { tenantId },
+    { tenantId, startDate: startDate ?? null, endDate: endDate ?? null },
     { fetchPolicy: "store-or-network" },
   );
 
@@ -168,6 +173,9 @@ const TenantInsightsPanel: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             className="mono text-[10px]"
             style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
           >
+            {insights.scopeLabel
+              ? `${insights.scopeLabel.toUpperCase()} · `
+              : ""}
             UPDATED {updated.toUpperCase()}
           </p>
         )}
