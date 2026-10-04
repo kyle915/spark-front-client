@@ -1369,6 +1369,9 @@ function IdentifyStep({
     selectedEventType?.name,
   );
   const atVenue = !recapOnly && eventTypeIsActivation(selectedEventType?.name);
+  // An Event Activation is one venue, so a roaming brand types or GPS-picks
+  // it like a store instead of choosing a market.
+  const marketPicker = isMarket && !atVenue;
 
   const saved = readIdentity(code);
   const [firstName, setFirstName] = useState(saved.firstName);
@@ -1531,7 +1534,7 @@ function IdentifyStep({
       // A tapped "Still need a recap" shift already has its event and program.
       if (hasPrograms && !eventTypeId && !overrides) return setErr("Pick the event you're working.");
       if (!omitPlace) {
-        if (isMarket) {
+        if (marketPicker) {
           if (!mkt) return setErr("Pick your market.");
         } else if (recapOnly) {
           if (!storeName.trim()) return setErr("Enter the store name.");
@@ -1558,7 +1561,7 @@ function IdentifyStep({
                 ...(hasPrograms ? { eventTypeId } : {}),
                 ...(omitPlace
                   ? {}
-                  : isMarket
+                  : marketPicker
                     ? { market: mkt }
                     : { storeName, address: addr }),
               }
@@ -1581,7 +1584,7 @@ function IdentifyStep({
       // session can resume today's open punch.
       const place = omitPlace
         ? String(json.event?.address || "").trim()
-        : isMarket
+        : marketPicker
           ? mkt
           : addr;
       writeIdentity(code, {
@@ -1759,7 +1762,7 @@ function IdentifyStep({
               per market, and the individual spots get logged as stops while
               they work — far better data than a store address they'd have to
               pick before they know where they'll end up. */}
-          {isMarket ? (
+          {marketPicker ? (
             <>
               <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
                 Pick your market. You'll log each spot you sample as you go.
