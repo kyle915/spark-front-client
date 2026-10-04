@@ -1684,7 +1684,7 @@ function IdentifyStep({
             >
               {eventTypes.map((t) => {
                 const selected = eventTypeId === t.id;
-                const description = eventTypeDescription(t.name);
+                const description = eventTypeDescription(t.name, { roaming: isMarket });
                 return (
                   <button
                     key={t.id}
@@ -3985,7 +3985,7 @@ function MultiselectFieldInput({
     isProductsSampledMultiselect(field) &&
     Boolean(onSampleQtyChange) &&
     products.length > 0;
-  const qtyUnit = productSampleQtyUnit(qtyContextName ?? field.name);
+  const qtyUnit = productSampleQtyUnit(qtyContextName ?? field.name, qtyLabel);
   const searchable = field.options.length > 24;
   const visibleOptions = useMemo(() => {
     const q = skuFilter.trim().toLowerCase();
@@ -4028,7 +4028,7 @@ function MultiselectFieldInput({
       </label>
       {qtyMode ? (
         <p style={{ fontSize: 13, opacity: 0.6, margin: "4px 0 0" }}>
-          {productSampleQtyHelper(qtyContextName ?? field.name)}
+          {productSampleQtyHelper(qtyContextName ?? field.name, qtyLabel)}
           {searchable ? ` Search filters the list (${arr.length} selected).` : null}
         </p>
       ) : null}

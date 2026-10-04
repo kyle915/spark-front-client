@@ -41,6 +41,15 @@ describe("eventTypeDescription", () => {
     );
   });
 
+  it("keeps a roaming brand's street sampling under Retail Sampling", () => {
+    const retail = eventTypeDescription("Retail Sampling", { roaming: true });
+    const activation = eventTypeDescription("Event Activation", { roaming: true });
+    expect(retail).toContain("market shift");
+    expect(activation).toContain("single venue");
+    expect(activation).not.toContain("street");
+    expect(eventTypeDescription("Product Seeding", { roaming: true })).toContain("cases");
+  });
+
   it("returns null for unrelated program names", () => {
     expect(eventTypeDescription("Event")).toBeNull();
     expect(eventTypeDescription("Demo Table")).toBeNull();
