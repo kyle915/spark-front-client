@@ -122,6 +122,35 @@ export function formatPeriodDeltaLabel(delta: PeriodDelta): string {
   }
 }
 
+/**
+ * Change in a rate (conversion, trial %) between two periods — always in
+ * percentage points, never a relative %. `sparseNote` is the API's shared
+ * recap-count rule (`SPARSE_BASE_MIN_RECAPS` on either side); when it is
+ * set the change is hidden and the note says why.
+ */
+export type RateDelta =
+  | { kind: "pts"; pts: number }
+  | { kind: "sparse"; note: string }
+  | { kind: "none" };
+
+export function computeRateDelta(
+  cur: number | null | undefined,
+  prev: number | null | undefined,
+  sparseNote: string | null | undefined,
+): RateDelta {
+  if (sparseNote) return { kind: "sparse", note: sparseNote };
+  if (cur == null || prev == null) return { kind: "none" };
+  return { kind: "pts", pts: Math.round((cur - prev) * 10) / 10 };
+}
+
+/** "+1.4 pts" / "-0.3 pts" / "+0.0 pts"; "n/a" when hidden or not comparable. */
+export function formatRateDeltaLabel(delta: RateDelta): string {
+  if (delta.kind !== "pts") return "n/a";
+  return delta.pts < 0
+    ? `${delta.pts.toFixed(1)} pts`
+    : `+${delta.pts.toFixed(1)} pts`;
+}
+
 /** Whether the delta should use the orange (down / caution) tone. */
 export function periodDeltaIsNegative(delta: PeriodDelta): boolean {
   return (

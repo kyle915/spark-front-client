@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   ABSURD_PCT_THRESHOLD,
   computePeriodDelta,
+  computeRateDelta,
   formatPeriodDeltaLabel,
+  formatRateDeltaLabel,
   periodDeltaIsNegative,
   periodDeltaNote,
 } from "./periodDelta";
@@ -86,5 +88,31 @@ describe("formatPeriodDeltaLabel", () => {
     ).toBe("↑ >500%");
     expect(periodDeltaIsNegative({ kind: "down", pct: -3 })).toBe(true);
     expect(periodDeltaIsNegative({ kind: "up", pct: 3 })).toBe(false);
+  });
+});
+
+describe("computeRateDelta", () => {
+  it("reports a rate change in points, not relative %", () => {
+    const d = computeRateDelta(23.8, 22.4, null);
+    expect(d).toEqual({ kind: "pts", pts: 1.4 });
+    expect(formatRateDeltaLabel(d)).toBe("+1.4 pts");
+    expect(formatRateDeltaLabel(computeRateDelta(20, 21.3, null))).toBe(
+      "-1.3 pts",
+    );
+    expect(formatRateDeltaLabel(computeRateDelta(20, 20.02, null))).toBe(
+      "+0.0 pts",
+    );
+  });
+
+  it("hides the change behind the shared sparse note", () => {
+    const note = "Aug 4 – Sep 3, 2026 had only 9 recaps — % changes hidden.";
+    const d = computeRateDelta(24, 6, note);
+    expect(d).toEqual({ kind: "sparse", note });
+    expect(formatRateDeltaLabel(d)).toBe("n/a");
+  });
+
+  it("is none when either rate is missing", () => {
+    expect(computeRateDelta(24, null, null)).toEqual({ kind: "none" });
+    expect(computeRateDelta(undefined, 20, undefined)).toEqual({ kind: "none" });
   });
 });

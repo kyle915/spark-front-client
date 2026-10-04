@@ -22,6 +22,9 @@ export const TenantConversionKpisQuery = graphql`
       dryEngagements
       dryRecaps
       unpairedDryRecaps
+      recaps
+      previousRecaps
+      sparseNote
       currentLabel
       previousLabel
     }
