@@ -2879,6 +2879,9 @@ const RecapCustomViewInner = ({
               existingComment={recap.clientSignoffComment}
               existingAt={recap.clientSignoffAt}
               busy={isSigningOff}
+              approved={recap.approved}
+              onApprove={handleApprove}
+              approving={isApproving || approvePhase !== "idle"}
               onSubmit={(status, comment) => {
                 commitSignoff({
                   variables: {
@@ -3175,6 +3178,9 @@ const RecapCustomViewInner = ({
             existingComment={recap.clientSignoffComment}
             existingAt={recap.clientSignoffAt}
             busy={isSigningOff}
+            approved={recap.approved}
+            onApprove={handleApprove}
+            approving={isApproving || approvePhase !== "idle"}
             onSubmit={(status, comment) => {
               commitSignoff({
                 variables: {
