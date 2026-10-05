@@ -385,6 +385,15 @@ const TenantKpiComparison: React.FC<{
       ? { c: comparison.current.program, p: comparison.previous.program }
       : null;
   const hidePct = !!comparison?.sparseNote;
+  // Audience questions missing from some recaps on a side (Brew Dr's Aug
+  // template never asked them): their counts can't be compared as growth.
+  const audienceGapLabel = salesProgram
+    ? salesProgram.p.firstTimeBase < salesProgram.p.consumersSampled
+      ? comparison?.previousLabel
+      : salesProgram.c.firstTimeBase < salesProgram.c.consumersSampled
+        ? comparison?.currentLabel
+        : null
+    : null;
 
   const headline = useMemo(() => {
     if (!comparison) return [];
@@ -434,9 +443,9 @@ const TenantKpiComparison: React.FC<{
       return [
         { label: "Demos", current: sc.demos, previous: sp.demos },
         { label: "Recaps", current: sc.recaps, previous: sp.recaps },
-        { label: "First-time", current: sc.firstTimeConsumers, previous: sp.firstTimeConsumers },
-        { label: "Brand-aware", current: sc.brandAwareConsumers, previous: sp.brandAwareConsumers },
-        { label: "Willing to purchase", current: sc.willingToPurchase, previous: sp.willingToPurchase },
+        { label: "First-time", current: sc.firstTimeConsumers, previous: sp.firstTimeConsumers, audience: true },
+        { label: "Brand-aware", current: sc.brandAwareConsumers, previous: sp.brandAwareConsumers, audience: true },
+        { label: "Willing to purchase", current: sc.willingToPurchase, previous: sp.willingToPurchase, audience: true },
       ];
     }
     return [
@@ -477,6 +486,18 @@ const TenantKpiComparison: React.FC<{
               }}
             >
               {comparison.sparseNote}
+            </p>
+          )}
+          {audienceGapLabel && (
+            <p
+              className="mono text-[10px] mt-1.5"
+              style={{
+                letterSpacing: "0.12em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              {audienceGapLabel} recaps didn't all ask first-time / brand-aware
+              / willing — those % changes hidden.
             </p>
           )}
         </div>
@@ -535,7 +556,7 @@ const TenantKpiComparison: React.FC<{
             label={s.label}
             current={s.current}
             previous={s.previous}
-            hidePct={hidePct}
+            hidePct={hidePct || ("audience" in s && !!audienceGapLabel)}
           />
         ))}
       </div>
