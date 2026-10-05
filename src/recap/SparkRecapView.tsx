@@ -1312,6 +1312,9 @@ const SparkRecapInner: React.FC<{
           existingComment={recap.clientSignoffComment}
           existingAt={recap.clientSignoffAt}
           busy={isSigningOff}
+          approved={recap.approved}
+          onApprove={() => setApproved(true)}
+          approving={isApproving || approvePhase !== "idle"}
           onSubmit={(status, comment) => {
             commitSignoff({
               variables: { input: { recapId: recap.id, status, comment } },
