@@ -7899,6 +7899,7 @@ type TenantProgramMetrics {
   dryPeopleEngaged: Int!
   unpairedDryDemos: Int!
   firstTimeConsumers: Int!
+  firstTimeBase: Int!
   brandAwareConsumers: Int!
   willingToPurchase: Int!
 }
