@@ -50,6 +50,7 @@ export const TenantKpiComparisonQuery = graphql`
           dryDemos
           dryPeopleEngaged
           firstTimeConsumers
+          firstTimeBase
           brandAwareConsumers
           willingToPurchase
         }
@@ -77,6 +78,7 @@ export const TenantKpiComparisonQuery = graphql`
           dryDemos
           dryPeopleEngaged
           firstTimeConsumers
+          firstTimeBase
           brandAwareConsumers
           willingToPurchase
         }

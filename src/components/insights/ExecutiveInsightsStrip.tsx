@@ -228,7 +228,8 @@ const Inner: React.FC<{
     ): { consumers: number; firstTime: number } =>
       side.program
         ? {
-            consumers: side.program.consumersSampled,
+            // Only recaps whose template asked first-time.
+            consumers: side.program.firstTimeBase,
             firstTime: side.program.firstTimeConsumers,
           }
         : {
