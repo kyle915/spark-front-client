@@ -113,10 +113,12 @@ import {
   supportsStandingSecondShift,
 } from "./secondShift";
 import {
-  eventTypeDescription,
   eventTypeIsActivation,
   eventTypeSkipsIdentifyLocation,
   eventTypesUseDescriptorPicker,
+  programDescription,
+  programLabel,
+  type ProgramOption,
 } from "./eventTypeDescriptor";
 
 /**
@@ -214,7 +216,7 @@ type PhotoBucket = {
   accept?: string;
 };
 /** One program on the brand's standing link. `id` is their EventType id. */
-type EventTypeOption = { id: string; name: string };
+type EventTypeOption = ProgramOption;
 /**
  * One BA-facing reference button under the header.
  *
@@ -302,6 +304,8 @@ type Context = {
   // worse version of no dropdown, and single-program brands (Total Wireless,
   // Feel Free) have to look exactly as they do today.
   eventTypes?: EventTypeOption[];
+  // Brand heading for that picker (Torch: "What's your execution type?").
+  programPickerTitle?: string;
   // The brand's BA references, in order — training deck, photo-release QR,
   // the /training/<code> hub. Rendered on the landing screen AND once clocked
   // in: "what am I supposed to say about this SKU" is a question a BA has at
@@ -1251,6 +1255,7 @@ export default function SparkCheckin() {
             locationMode={ctx.locationMode || "address"}
             markets={ctx.markets || []}
             eventTypes={ctx.eventTypes || []}
+            programPickerTitle={ctx.programPickerTitle || ""}
           />
         ) : (
           <CheckedInFlow
@@ -1338,6 +1343,7 @@ function IdentifyStep({
   locationMode = "address",
   markets = [],
   eventTypes = [],
+  programPickerTitle = "",
 }: {
   code: string;
   accent: string;
@@ -1349,6 +1355,7 @@ function IdentifyStep({
   locationMode?: "address" | "market";
   markets?: string[];
   eventTypes?: EventTypeOption[];
+  programPickerTitle?: string;
 }) {
   // Repeat BAs are the norm on a standing link — the same crew works these
   // stores week after week. Remember who they said they were so the second
@@ -1360,6 +1367,7 @@ function IdentifyStep({
   // not a question, so nothing renders and nothing is sent: that's every brand
   // but Liquid Death, and they must look untouched.
   const hasPrograms = eventTypes.length > 1;
+  const pickerTitle = programPickerTitle || "What event are you working?";
   // Deliberately NOT pre-selected. The default would be right most of the time
   // and silently wrong the rest, and a BA scanning a form they've filled twenty
   // times won't re-read a field that already has an answer.
@@ -1532,7 +1540,13 @@ function IdentifyStep({
       // rejecting a request with no program, so this check is the only thing
       // standing between a distracted BA and the wrong recap.
       // A tapped "Still need a recap" shift already has its event and program.
-      if (hasPrograms && !eventTypeId && !overrides) return setErr("Pick the event you're working.");
+      if (hasPrograms && !eventTypeId && !overrides) {
+        return setErr(
+          programPickerTitle
+            ? `Pick one: ${eventTypes.map(programLabel).join(" / ")}.`
+            : "Pick the event you're working.",
+        );
+      }
       if (!omitPlace) {
         if (marketPicker) {
           if (!mkt) return setErr("Pick your market.");
@@ -1672,19 +1686,19 @@ function IdentifyStep({
               BA's recap form and their photo buckets — a retail demo and an
               activation want different fields and different shots. Same control
               as the market picker below so the page reads as one form. */}
-          <h2 style={{ ...h2, marginTop: 22 }}>What event are you working?</h2>
+          <h2 style={{ ...h2, marginTop: 22 }}>{pickerTitle}</h2>
           <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
             This sets up the right recap for your shift.
           </p>
           {eventTypesUseDescriptorPicker(eventTypes) ? (
             <div
               role="radiogroup"
-              aria-label="What event are you working?"
+              aria-label={pickerTitle}
               style={{ display: "flex", flexDirection: "column", gap: 10 }}
             >
               {eventTypes.map((t) => {
                 const selected = eventTypeId === t.id;
-                const description = eventTypeDescription(t.name, { roaming: isMarket });
+                const description = programDescription(t, { roaming: isMarket });
                 return (
                   <button
                     key={t.id}
@@ -1716,7 +1730,7 @@ function IdentifyStep({
                         marginBottom: description ? 4 : 0,
                       }}
                     >
-                      {t.name}
+                      {programLabel(t)}
                     </div>
                     {description ? (
                       <div
@@ -1742,7 +1756,7 @@ function IdentifyStep({
               <option value="">Select your event…</option>
               {eventTypes.map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.name}
+                  {programLabel(t)}
                 </option>
               ))}
             </select>

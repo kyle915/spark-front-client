@@ -46,6 +46,7 @@ const ICON_FOR_KEY: Record<string, string> = {
   sampling: "🧪",
   sales: "🛒",
   new_audience: "✨",
+  emails: "✉️",
   momentum: "📈",
   consumers_sampled: "👥",
 };
