@@ -1130,9 +1130,7 @@ const MasterTrackerInner: React.FC<{
 
   const mapNodeToRow = useCallback((n: RequestNode | null | undefined): Row | null => {
       if (!n) return null;
-      const stateCode = n.retailer?.location?.state?.code ?? n.state?.code;
-      const cityish = n.retailer?.location?.name ?? n.location?.name ?? "";
-      const market = [cityish, stateCode].filter(Boolean).join(", ");
+      const market = n.market ?? "";
       const recapCount = n.recapsFiledCount ?? 0;
       // Due-ness must follow the activation that actually ran (event.date),
       // not Request.date — reschedules update the event in place and leave

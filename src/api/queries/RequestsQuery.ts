@@ -35,6 +35,7 @@ export const RequestsQuery = graphql`
           startTime
           endTime
           address
+          market
           coordinates
           schedulingStatus
           isNonActiveProductRequired

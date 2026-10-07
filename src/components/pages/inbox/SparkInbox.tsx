@@ -185,10 +185,7 @@ const Inner: React.FC = () => {
       const id = String(r.id);
       const reqId = `REQ-${id.slice(-4).toUpperCase()}`;
       const venue = r.retailer?.name ?? r.name ?? "—";
-      const market =
-        [r.retailer?.location?.name, r.retailer?.location?.state?.code]
-          .filter(Boolean)
-          .join(", ") || "—";
+      const market = r.market || "—";
       const requester = r.client?.name ?? r.distributor?.name ?? "—";
 
       if (slug === "pending") {

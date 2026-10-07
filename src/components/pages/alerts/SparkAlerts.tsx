@@ -106,10 +106,7 @@ const Inner: React.FC = () => {
       const slug = (n.status?.slug ?? n.status?.name ?? "").toLowerCase();
       const requester = n.client?.name ?? n.distributor?.name ?? "Someone";
       const venue = n.retailer?.name ?? n.name ?? "an account";
-      const market = n.retailer?.location?.name ?? n.location?.name ?? "";
-      const stateCode =
-        n.retailer?.location?.state?.code ?? n.state?.code ?? "";
-      const locTag = [market, stateCode].filter(Boolean).join(", ");
+      const locTag = n.market ?? "";
       const created = n.createdAt
         ? new Date(n.createdAt).getTime()
         : Number.NaN;

@@ -12,6 +12,7 @@ export const RequestUuidQuery = graphql`
       startTime
       endTime
       address
+      market
       coordinates
       schedulingStatus
       isNonActiveProductRequired
