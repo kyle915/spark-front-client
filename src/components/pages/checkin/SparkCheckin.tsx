@@ -120,6 +120,15 @@ import {
   programLabel,
   type ProgramOption,
 } from "./eventTypeDescriptor";
+import {
+  PROGRAM_MISSING_ERROR,
+  PROGRAM_STEP_TITLE,
+  identifySubmitLabel,
+  prefersReducedMotion,
+  programPickerPrompt,
+  programRequiredHint,
+  revealProgramPicker,
+} from "./programPickerGate";
 
 /**
  * Public, no-login web check-in for a BA working a specific event.
@@ -1367,11 +1376,19 @@ function IdentifyStep({
   // not a question, so nothing renders and nothing is sent: that's every brand
   // but Liquid Death, and they must look untouched.
   const hasPrograms = eventTypes.length > 1;
-  const pickerTitle = programPickerTitle || "What event are you working?";
+  const pickerAriaLabel = programPickerTitle || "Event type";
   // Deliberately NOT pre-selected. The default would be right most of the time
   // and silently wrong the rest, and a BA scanning a form they've filled twenty
   // times won't re-read a field that already has an answer.
   const [eventTypeId, setEventTypeId] = useState("");
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const [pickerMissing, setPickerMissing] = useState(false);
+  const pickProgram = (id: string) => {
+    setEventTypeId(id);
+    if (!id) return;
+    setPickerMissing(false);
+    setErr((e) => (e === PROGRAM_MISSING_ERROR ? null : e));
+  };
   const selectedEventType = eventTypes.find((t) => t.id === eventTypeId);
   const skipWorkLocation = eventTypeSkipsIdentifyLocation(
     selectedEventType?.name,
@@ -1541,11 +1558,9 @@ function IdentifyStep({
       // standing between a distracted BA and the wrong recap.
       // A tapped "Still need a recap" shift already has its event and program.
       if (hasPrograms && !eventTypeId && !overrides) {
-        return setErr(
-          programPickerTitle
-            ? `Pick one: ${eventTypes.map(programLabel).join(" / ")}.`
-            : "Pick the event you're working.",
-        );
+        setPickerMissing(true);
+        revealProgramPicker(pickerRef.current, { reduceMotion: prefersReducedMotion() });
+        return setErr(PROGRAM_MISSING_ERROR);
       }
       if (!omitPlace) {
         if (marketPicker) {
@@ -1686,14 +1701,40 @@ function IdentifyStep({
               BA's recap form and their photo buckets — a retail demo and an
               activation want different fields and different shots. Same control
               as the market picker below so the page reads as one form. */}
-          <h2 style={{ ...h2, marginTop: 22 }}>{pickerTitle}</h2>
-          <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
+          <div
+            ref={pickerRef}
+            tabIndex={-1}
+            role="group"
+            aria-labelledby="spark-checkin-program-title"
+            aria-describedby={pickerMissing ? "spark-checkin-program-missing" : undefined}
+            style={{
+              margin: "22px -12px 0",
+              padding: 10,
+              borderRadius: 16,
+              border: `2px solid ${pickerMissing ? "#EF5A2A" : "transparent"}`,
+              background: pickerMissing ? "rgba(239,90,42,0.06)" : "transparent",
+              outline: "none",
+              transition: "border-color 160ms ease, background-color 160ms ease",
+            }}
+          >
+          <h2 id="spark-checkin-program-title" style={h2}>{PROGRAM_STEP_TITLE}</h2>
+          <p style={{ fontSize: 13, margin: "2px 0 14px", color: "#57534e" }}>
+            <strong style={{ color: "#1c1917" }}>{programRequiredHint({ recapOnly })}</strong>{" "}
             This sets up the right recap for your shift.
           </p>
+          {pickerMissing ? (
+            <p
+              id="spark-checkin-program-missing"
+              role="alert"
+              style={{ ...errText, fontWeight: 700, margin: "-6px 0 12px" }}
+            >
+              {programPickerPrompt(eventTypes, { recapOnly })}
+            </p>
+          ) : null}
           {eventTypesUseDescriptorPicker(eventTypes) ? (
             <div
               role="radiogroup"
-              aria-label={pickerTitle}
+              aria-label={pickerAriaLabel}
               style={{ display: "flex", flexDirection: "column", gap: 10 }}
             >
               {eventTypes.map((t) => {
@@ -1705,7 +1746,7 @@ function IdentifyStep({
                     type="button"
                     role="radio"
                     aria-checked={selected}
-                    onClick={() => setEventTypeId(t.id)}
+                    onClick={() => pickProgram(t.id)}
                     style={{
                       display: "block",
                       width: "100%",
@@ -1751,9 +1792,10 @@ function IdentifyStep({
             <select
               style={{ ...input, appearance: "none" }}
               value={eventTypeId}
-              onChange={(e) => setEventTypeId(e.target.value)}
+              aria-label={pickerAriaLabel}
+              onChange={(e) => pickProgram(e.target.value)}
             >
-              <option value="">Select your event…</option>
+              <option value="">Select your event type…</option>
               {eventTypes.map((t) => (
                 <option key={t.id} value={t.id}>
                   {programLabel(t)}
@@ -1761,6 +1803,7 @@ function IdentifyStep({
               ))}
             </select>
           )}
+          </div>
         </>
       ) : null}
 
@@ -1769,6 +1812,7 @@ function IdentifyStep({
           {!skipWorkLocation ? (
             <>
           <h2 style={{ ...h2, marginTop: 22 }}>
+            {hasPrograms ? "Step 2 · " : ""}
             {recapOnly ? "Which store?" : atVenue ? "Where's the event?" : "Where are you working?"}
           </h2>
 
@@ -1936,7 +1980,11 @@ function IdentifyStep({
       {err ? <p style={errText}>{err}</p> : null}
       {openShift ? null : (
         <button style={{ ...primaryBtn(accent), marginTop: 6 }} disabled={busy} onClick={() => void submit()}>
-          {busy ? "Starting…" : recapOnly ? "Continue to recap" : "Start check-in"}
+          {identifySubmitLabel({
+            busy,
+            recapOnly,
+            needsProgram: needsEventDetails && hasPrograms && !eventTypeId,
+          })}
         </button>
       )}
     </div>
