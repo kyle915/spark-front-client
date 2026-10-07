@@ -4,7 +4,31 @@ import {
   eventTypeIsActivation,
   eventTypeSkipsIdentifyLocation,
   eventTypesUseDescriptorPicker,
+  programDescription,
+  programLabel,
 } from "./eventTypeDescriptor";
+
+describe("program display copy", () => {
+  it("prefers the brand label and helper over the event type name", () => {
+    const guerilla = {
+      id: "3",
+      name: "Guerilla Activation",
+      label: "Guerilla",
+      description: "Street-team sampling.",
+    };
+    expect(programLabel(guerilla)).toBe("Guerilla");
+    expect(programDescription(guerilla)).toBe("Street-team sampling.");
+    expect(eventTypeIsActivation(guerilla.name)).toBe(true);
+  });
+
+  it("falls back to the name and built-in descriptor", () => {
+    const seeding = { id: "4", name: "Product Seeding", label: "", description: "" };
+    expect(programLabel(seeding)).toBe("Product Seeding");
+    expect(programDescription(seeding)).toMatch(/Dropping off cases/);
+    expect(eventTypeSkipsIdentifyLocation(seeding.name)).toBe(true);
+    expect(eventTypesUseDescriptorPicker([{ name: "Kalshi", description: "x" }])).toBe(true);
+  });
+});
 
 describe("eventTypeIsActivation", () => {
   it("is true only for Event Activation programs", () => {

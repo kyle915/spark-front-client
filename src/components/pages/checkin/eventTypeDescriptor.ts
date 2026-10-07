@@ -49,11 +49,36 @@ export function eventTypeDescription(
   return null;
 }
 
+/**
+ * A walk-up program as the API sends it. `name` is the real event type (it
+ * drives the location step); `label` / `description` are optional per-brand
+ * display copy (Torch: "Event", "Guerilla", "Seeding", "Retail").
+ */
+export type ProgramOption = {
+  id: string;
+  name: string;
+  label?: string;
+  description?: string;
+};
+
+/** BA-facing title for a program: brand label, else the event type name. */
+export function programLabel(t: Pick<ProgramOption, "name" | "label">): string {
+  return t.label?.trim() || t.name;
+}
+
+/** Brand helper line, else the built-in descriptor for the event type name. */
+export function programDescription(
+  t: Pick<ProgramOption, "name" | "description">,
+  opts: { roaming?: boolean } = {},
+): string | null {
+  return t.description?.trim() || eventTypeDescription(t.name, opts);
+}
+
 /** True when at least one offered program has BA-facing helper copy. */
 export function eventTypesUseDescriptorPicker(
-  eventTypes: ReadonlyArray<{ name: string }>,
+  eventTypes: ReadonlyArray<Pick<ProgramOption, "name" | "description">>,
 ): boolean {
-  return eventTypes.some((t) => eventTypeDescription(t.name) !== null);
+  return eventTypes.some((t) => programDescription(t) !== null);
 }
 
 /**
