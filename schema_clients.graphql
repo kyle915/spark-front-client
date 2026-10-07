@@ -6780,6 +6780,13 @@ type Request implements Node {
   retailer: Retailer
   location: Location
   state: State
+
+  """
+  "City, ST" from this request's own address (then its location /
+  state). Never the shared banner retailer's location.
+  """
+  market: String
+  marketStateCode: String
   activationPlan: ActivationPlanType
   requestType: RequestType
   status: RequestStatus

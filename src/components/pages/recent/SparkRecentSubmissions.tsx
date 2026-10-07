@@ -130,14 +130,7 @@ const Inner: React.FC = () => {
           const slug = (n.status?.slug ?? n.status?.name ?? "pending")
             .toString()
             .toLowerCase();
-          const stateCode =
-            n.retailer?.location?.state?.code ?? n.state?.code ?? "";
-          const market = [
-            n.retailer?.location?.name ?? n.location?.name ?? "",
-            stateCode,
-          ]
-            .filter(Boolean)
-            .join(", ");
+          const market = n.market ?? "";
           return {
             uuid: String(n.uuid),
             id: String(n.id),

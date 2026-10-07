@@ -28,16 +28,9 @@ export const TrackerListQuery = graphql`
           startTime
           endTime
           address
+          market
           schedulingStatus
           isNonActiveProductRequired
-          location {
-            id
-            name
-          }
-          state {
-            id
-            code
-          }
           activationPlan {
             id
             name
@@ -45,14 +38,6 @@ export const TrackerListQuery = graphql`
           retailer {
             id
             name
-            location {
-              id
-              name
-              state {
-                id
-                code
-              }
-            }
           }
           requestType {
             id

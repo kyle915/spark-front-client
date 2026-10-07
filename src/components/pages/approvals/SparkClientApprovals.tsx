@@ -728,8 +728,7 @@ const ClientRequestApprovalsInner: React.FC = () => {
           (n.status?.slug ?? n.status?.name ?? "").toLowerCase() === "pending",
       )
       .map((n) => {
-        const market = n.retailer?.location?.name ?? n.location?.name ?? "";
-        const st = n.retailer?.location?.state?.code ?? n.state?.code ?? "";
+        const market = n.market ?? "";
         const createdMs = n.createdAt ? new Date(n.createdAt).getTime() : 0;
         const pendingHours = createdMs
           ? Math.max(0, Math.round((Date.now() - createdMs) / 3_600_000))
@@ -739,7 +738,7 @@ const ClientRequestApprovalsInner: React.FC = () => {
           uuid: String(n.uuid),
           reqLabel: reqLabelFromGlobalId(String(n.id)),
           venue: n.retailer?.name ?? n.name ?? "—",
-          where: [market, st].filter(Boolean).join(", "),
+          where: market,
           date: n.date ? fmtDate(n.date) : "",
           requester: n.client?.name ?? n.distributor?.name ?? "",
           typeLabel: n.requestType?.name ?? "Activation",

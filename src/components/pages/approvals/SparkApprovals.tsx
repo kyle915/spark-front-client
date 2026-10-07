@@ -358,9 +358,7 @@ const ApprovalsInner: React.FC = () => {
       decidedCount > 0 ? Math.round((withinSlaCount / decidedCount) * 100) : null;
 
     const toRow = (n: (typeof allNodes)[number]): Row => {
-      const market =
-        n.retailer?.location?.name ?? n.location?.name ?? "—";
-      const stateCode = n.retailer?.location?.state?.code ?? n.state?.code;
+      const market = n.market ?? "—";
       const date = formatDate(n.date);
       const createdMs = n.createdAt
         ? new Date(n.createdAt).getTime()
@@ -373,7 +371,7 @@ const ApprovalsInner: React.FC = () => {
         uuid: String(n.uuid),
         reqId: `REQ-${String(n.id).slice(-4).toUpperCase()}`,
         venue: n.retailer?.name ?? n.name ?? "—",
-        locationDate: `${[market, stateCode].filter(Boolean).join(", ")} · ${date}`,
+        locationDate: `${market} · ${date}`,
         requester: n.client?.name ?? n.distributor?.name ?? "—",
         type: n.requestType?.name ?? "Activation",
         source: "external" as const,
@@ -1700,10 +1698,7 @@ const ApprovalsCopyQueueButtonInner: React.FC = () => {
     for (const n of rows.slice(0, 50)) {
       const reqId = `REQ-${String(n.id).slice(-4).toUpperCase()}`;
       const venue = n.retailer?.name ?? n.name ?? "—";
-      const market =
-        [n.retailer?.location?.name, n.retailer?.location?.state?.code]
-          .filter(Boolean)
-          .join(", ") || "";
+      const market = n.market ?? "";
       const created = n.createdAt
         ? new Date(n.createdAt).toLocaleDateString("en-US", {
             month: "short",

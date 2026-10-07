@@ -334,23 +334,15 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
   const reqId = `REQ-${String(request.id).slice(-4).toUpperCase()}`;
   const venue =
     request.retailer?.name ?? request.retailerName ?? request.name ?? "—";
-  const market = (() => {
-    const city = request.retailer?.location?.name ?? "";
-    const state = request.retailer?.location?.state?.code ?? "";
-    return [city, state].filter(Boolean).join(", ") || "—";
-  })();
+  const market = request.market || "—";
   // The fullest address we can show. New requests store a complete
   // Google-formatted address (street, city, state, ZIP) in `address` — shown
   // verbatim. For older/partial ones (a bare street like REQ-925), append
-  // city/state/ZIP from the linked retailer location when we have it.
+  // the request's own market (city, state).
   const fullAddress = (() => {
     const street = (request.address ?? "").trim();
     if (street && /\b\d{5}\b/.test(street)) return street;
-    const city = request.retailer?.location?.name ?? "";
-    const st = request.retailer?.location?.state?.code ?? "";
-    const zip = request.retailer?.location?.zip ?? "";
-    const region = [st, zip].filter(Boolean).join(" ");
-    const tail = [city, region].filter(
+    const tail = (request.market ?? "").split(", ").filter(
       (p) => p && !street.toLowerCase().includes(p.toLowerCase()),
     );
     return [street, ...tail].filter(Boolean).join(", ") || "—";

@@ -1130,9 +1130,7 @@ const MasterTrackerInner: React.FC<{
 
   const mapNodeToRow = useCallback((n: RequestNode | null | undefined): Row | null => {
       if (!n) return null;
-      const stateCode = n.retailer?.location?.state?.code ?? n.state?.code;
-      const cityish = n.retailer?.location?.name ?? n.location?.name ?? "";
-      const market = [cityish, stateCode].filter(Boolean).join(", ");
+      const market = n.market ?? "";
       const recapCount = n.recapsFiledCount ?? 0;
       // Due-ness must follow the activation that actually ran (event.date),
       // not Request.date — reschedules update the event in place and leave
@@ -2086,6 +2084,16 @@ export default function MasterTracker() {
                 "—"
               )}
             </p>
+            <p
+              className="mono text-[9px] mt-1"
+              style={{
+                letterSpacing: "0.12em",
+                color: "rgba(255,255,255,0.4)",
+              }}
+              title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
+            >
+              ALL-TIME · ALL MARKETS
+            </p>
           </div>
           <div className="spark-card p-4">
             <p className="label-mini">FIRST-TIME</p>
@@ -2100,6 +2108,16 @@ export default function MasterTracker() {
                 "—"
               )}
             </p>
+            <p
+              className="mono text-[9px] mt-1"
+              style={{
+                letterSpacing: "0.12em",
+                color: "rgba(255,255,255,0.4)",
+              }}
+              title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
+            >
+              ALL-TIME · ALL MARKETS
+            </p>
           </div>
           <div className="spark-card p-4">
             <p className="label-mini">PRODUCTS PURCHASED</p>
@@ -2113,6 +2131,16 @@ export default function MasterTracker() {
               ) : (
                 "—"
               )}
+            </p>
+            <p
+              className="mono text-[9px] mt-1"
+              style={{
+                letterSpacing: "0.12em",
+                color: "rgba(255,255,255,0.4)",
+              }}
+              title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
+            >
+              ALL-TIME · ALL MARKETS
             </p>
           </div>
         </div>
