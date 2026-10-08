@@ -36,6 +36,23 @@ export const UpdateCustomRecapMutation = graphql`
         # (the "Corporate Card reverts to No" bug) until the page reloaded.
         usedCorpoCard
         totalEngagements
+        # Derived server-side from the field values, so the KPI strip and
+        # Insights-style numbers repaint from the corrected values.
+        consumersSampled
+        soldUnits
+        peopleEngaged
+        isDryDemo
+        metricEdits {
+          id
+          batch
+          fieldKey
+          fieldLabel
+          oldValue
+          newValue
+          reason
+          editedByName
+          editedAt
+        }
         fillingForAmbassador
         externalBaName
         ambassador {

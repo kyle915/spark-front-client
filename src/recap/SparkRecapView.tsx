@@ -76,6 +76,8 @@ import ReassignRecapModal from "./ReassignRecapModal";
 import { thumbUrl } from "@/utils/thumb";
 import { RecapClientSignoff } from "@/recap/RecapClientSignoff";
 import { RecapDocument } from "@/recap/RecapDocument";
+import { editedNote } from "@/recap/recapEditHistory";
+import { RecapEditHistorySheet } from "@/recap/RecapEditHistorySheet";
 import { recapApprovalMeta } from "@/recap/recapApprovalMeta";
 import { formatRecapProductName } from "@/recap/recapFieldLabel";
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
@@ -442,6 +444,7 @@ const SparkRecapInner: React.FC<{
   const [isZipping, setIsZipping] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [playingVideo, setPlayingVideo] = useState<{
     playSrc: string;
     fileUrl: string;
@@ -452,6 +455,7 @@ const SparkRecapInner: React.FC<{
   // `draft` holds the in-progress string values keyed by field.
   const [editingNumbers, setEditingNumbers] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
+  const [editReason, setEditReason] = useState("");
   // Tracks whether Products Sold was set explicitly (stored value or the
   // admin typed one) vs auto-derived from Cans + Packs. While false, we
   // keep Products Sold = Cans + Packs as the admin edits either — mirrors
@@ -486,6 +490,7 @@ const SparkRecapInner: React.FC<{
   );
 
   const recap = data?.recap;
+  const lastEditedNote = editedNote(recap?.metricEdits);
   const fileCategoryTenantId =
     recap?.event?.tenant?.id ?? recap?.event?.tenantId ?? "0";
   const categoriesData = useLazyLoadQuery<FileRecapCategoriesQueryType>(
@@ -652,6 +657,7 @@ const SparkRecapInner: React.FC<{
         .filter((r) => r.productId),
     );
     setPickedBa(null);
+    setEditReason("");
     setEditingNumbers(true);
   };
 
@@ -786,7 +792,13 @@ const SparkRecapInner: React.FC<{
             corpoCard: (draft.afCorpoCard ?? "").trim() || null,
             wasCorpoCardUsed: accountFeedback?.wasCorpoCardUsed ?? false,
           },
+          editReason: editReason.trim() || null,
         },
+      },
+      // Dashboards read store-or-network; mark everything stale so they
+      // refetch the corrected aggregates on next visit.
+      updater: (store, res) => {
+        if (res?.updateRecap?.success) store.invalidateStore();
       },
       onCompleted: (res) => {
         if (res.updateRecap?.success) {
@@ -1011,6 +1023,17 @@ const SparkRecapInner: React.FC<{
                 >
                   {approvalMeta}
                 </span>
+              ) : null}
+              {!isClient && lastEditedNote ? (
+                <button
+                  type="button"
+                  onClick={() => setHistoryOpen(true)}
+                  className="chip recap-edited-chip"
+                  title="Admin only — see every staff correction and the BA's original values"
+                  data-no-print=""
+                >
+                  {lastEditedNote} · History
+                </button>
               ) : null}
             </div>
             <h1
@@ -1761,7 +1784,20 @@ const SparkRecapInner: React.FC<{
             </div>
           </div>
 
-          <div className="flex gap-2 mt-5">
+          <input
+            value={editReason}
+            onChange={(e) => setEditReason(e.target.value)}
+            maxLength={500}
+            placeholder="Reason for edit (optional)"
+            aria-label="Reason for edit"
+            className="w-full rounded-lg px-3 py-2 text-[15px] mt-5"
+            style={{
+              background: "var(--spark-bg)",
+              border: "1px solid var(--spark-border)",
+              color: "var(--spark-text)",
+            }}
+          />
+          <div className="flex gap-2 mt-3">
             <button
               onClick={saveNumbers}
               disabled={isUpdating}
@@ -1811,6 +1847,14 @@ const SparkRecapInner: React.FC<{
           shareToken={recap.shareToken}
           recapName={recap.name}
           onClose={() => setShareOpen(false)}
+        />
+      )}
+
+      {(recap.metricEdits?.length ?? 0) > 0 && (
+        <RecapEditHistorySheet
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          edits={recap.metricEdits ?? []}
         />
       )}
 
