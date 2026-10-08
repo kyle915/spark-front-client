@@ -15,8 +15,32 @@ export type ActivationBucketKey =
   | "seeding"
   | "other";
 
-/** Recaps list chip: Retail (includes On-prem) / Event / Product Seeding / View all. */
-export type RecapActivationFilter = "all" | "retail" | "event" | "seeding";
+/**
+ * Recap type — spark-api `recaps.recap_types` (template → program → event
+ * program → request type; unknown is retail). Each list row carries it as
+ * `recapType`.
+ */
+export type RecapTypeKey =
+  | "retail"
+  | "onprem"
+  | "event"
+  | "guerilla"
+  | "seeding";
+
+/** Recaps list type chip (`?activation=`). */
+export type RecapActivationFilter = "all" | RecapTypeKey;
+
+const RECAP_TYPE_KEYS: ReadonlySet<string> = new Set<RecapTypeKey>([
+  "retail",
+  "onprem",
+  "event",
+  "guerilla",
+  "seeding",
+]);
+
+export function isRecapTypeKey(value: unknown): value is RecapTypeKey {
+  return typeof value === "string" && RECAP_TYPE_KEYS.has(value);
+}
 
 const BUCKETS: { key: ActivationBucketKey; pattern: RegExp }[] = [
   { key: "retail", pattern: /retail/i },
@@ -49,53 +73,57 @@ export function countsTowardConversion(
   return key === "retail" || key === "onprem";
 }
 
+/** Same CONV rule keyed by the server recap type. */
+export function recapTypeCountsTowardConversion(type: RecapTypeKey): boolean {
+  return type === "retail" || type === "onprem";
+}
+
+/**
+ * A row's recap type: the server's `recapType`, else a name-based guess
+ * (unknown is retail, like the server).
+ */
+export function recapTypeForRow(
+  recapType: string | null | undefined,
+  typeName: string | null | undefined,
+): RecapTypeKey {
+  if (isRecapTypeKey(recapType)) return recapType;
+  if (/guerr?ill?a/i.test(typeName ?? "")) return "guerilla";
+  const bucket = activationBucketForTypeName(typeName);
+  return bucket === "other" ? "retail" : bucket;
+}
+
 /** Normalize `?activation=` from the Recaps list URL. */
 export function normalizeRecapActivationFilter(
   value?: string | null,
 ): RecapActivationFilter {
-  if (value === "retail" || value === "event" || value === "seeding") {
-    return value;
-  }
-  return "all";
+  return isRecapTypeKey(value) ? value : "all";
 }
 
-/**
- * Client-side match for the Recaps list activation chip.
- * Retail folds On-premise in (same as server `activationBucket=retail`).
- */
+/** Client-side match for the Recaps list type chip. */
 export function recapMatchesActivationFilter(
-  requestType: string | null | undefined,
+  recapType: RecapTypeKey,
   filter: RecapActivationFilter,
 ): boolean {
-  if (filter === "all") return true;
-  const key = activationBucketForTypeName(requestType);
-  switch (filter) {
-    case "retail":
-      return key === "retail" || key === "onprem";
-    case "event":
-      return key === "event";
-    case "seeding":
-      return key === "seeding";
-    default: {
-      const _exhaustive: never = filter;
-      return _exhaustive;
-    }
-  }
+  return filter === "all" || recapType === filter;
 }
 
-/** Human label for the active activation chip / filter pill. */
+/** Human label for the active type chip / filter pill. */
 export function recapActivationFilterLabel(
   filter: RecapActivationFilter,
 ): string {
   switch (filter) {
     case "all":
-      return "View all";
+      return "All";
     case "retail":
       return "Retail";
+    case "onprem":
+      return "On-Premise";
     case "event":
       return "Event";
+    case "guerilla":
+      return "Guerilla";
     case "seeding":
-      return "Product Seeding";
+      return "Seeding";
     default: {
       const _exhaustive: never = filter;
       return _exhaustive;

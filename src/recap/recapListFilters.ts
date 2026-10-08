@@ -1,5 +1,8 @@
 import type { RecapActivationFilter } from "@/lib/activationBucket";
-import { normalizeRecapActivationFilter } from "@/lib/activationBucket";
+import {
+  normalizeRecapActivationFilter,
+  recapActivationFilterLabel,
+} from "@/lib/activationBucket";
 
 /**
  * Recaps list filter defaults.
@@ -266,6 +269,86 @@ export function recapsListNavState(
 }
 
 export type { RecapActivationFilter };
+
+/**
+ * Server filters for the Recaps list (`recaps` / `customRecaps`) and its
+ * type chip counts (`recapTypeCounts`), so both read the same rows.
+ */
+export function recapListServerFilters(opts: {
+  tenantId: string;
+  isClient: boolean;
+  statusFilter: RecapListStatus;
+  rmmFilter: string;
+  baName: string;
+  retailerFilter: string;
+  stateFilter: string;
+  dateFrom: string;
+  dateTo: string;
+  activationFilter: RecapActivationFilter;
+}) {
+  const pipeline: RecapListStatus =
+    opts.statusFilter === "draft" ? "needs_review" : opts.statusFilter;
+  // Client view never asks for drafts. The server forces this for real
+  // client logins; this covers the admin-side "Client view" toggle.
+  const approved = opts.isClient
+    ? true
+    : pipeline === "approved" || pipeline === "shared"
+      ? true
+      : pipeline === "needs_review"
+        ? false
+        : null;
+  return {
+    tenantId: opts.tenantId,
+    rmmAsignedId: opts.rmmFilter === "all" ? null : opts.rmmFilter,
+    ambassadorId: null,
+    ambassadorName: opts.baName.trim() || null,
+    approved,
+    shared: sharedQueryFilter(opts.isClient, pipeline),
+    archived: archivedQueryFilter(opts.isClient, pipeline),
+    retailerName: opts.retailerFilter === "all" ? null : opts.retailerFilter,
+    stateCode: opts.stateFilter === "all" ? null : opts.stateFilter,
+    startDate: opts.dateFrom || null,
+    endDate: opts.dateTo || null,
+    recapType:
+      opts.activationFilter === "all" ? null : opts.activationFilter,
+  };
+}
+
+export type RecapTypeChip = {
+  key: RecapActivationFilter;
+  label: string;
+  count: number | null;
+};
+
+/**
+ * Type chips for the list toolbar from `recapTypeCounts`. Empty (hide the
+ * control) when the tenant has one type or none — unless a type is
+ * already picked, so it can still be cleared.
+ */
+export function recapTypeChips(
+  counts: {
+    total: number;
+    types: ReadonlyArray<{ key: string; label: string; count: number }>;
+  } | null,
+  active: RecapActivationFilter,
+): RecapTypeChip[] {
+  const types: RecapTypeChip[] = (counts?.types ?? []).flatMap((t) => {
+    const key = normalizeRecapActivationFilter(t.key);
+    return key === "all" ? [] : [{ key, label: t.label, count: t.count }];
+  });
+  if (active !== "all" && !types.some((t) => t.key === active)) {
+    types.push({
+      key: active,
+      label: recapActivationFilterLabel(active),
+      count: counts ? 0 : null,
+    });
+  }
+  if (types.length < 2 && active === "all") return [];
+  return [
+    { key: "all", label: "All", count: counts ? counts.total : null },
+    ...types,
+  ];
+}
 
 export function recapMatchesBaName(
   baQuery: string,

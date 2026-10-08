@@ -1,4 +1,9 @@
-import { countsTowardConversion } from "@/lib/activationBucket";
+import {
+  countsTowardConversion,
+  recapTypeCountsTowardConversion,
+  type RecapActivationFilter,
+  type RecapTypeKey,
+} from "@/lib/activationBucket";
 
 export type SparkStatTone = "default" | "lime" | "orange";
 
@@ -13,6 +18,8 @@ export type SparkStatItem = {
 
 export type RecapKpiRow = {
   requestType: string | null | undefined;
+  /** Server recap type; when set it decides CONV instead of the name. */
+  recapType?: RecapTypeKey | null;
   engagements: number | null | undefined;
   consumersSampled?: number | null | undefined;
   productsSold: number | null | undefined;
@@ -40,10 +47,18 @@ export function conversionBase(r: RecapKpiRow): number {
   return r.consumersSampled ?? r.engagements ?? 0;
 }
 
+/** Whether a row belongs in CONV at all (Retail + On-Premise only). */
+export function rowCountsTowardConversion(r: RecapKpiRow): boolean {
+  return r.recapType
+    ? recapTypeCountsTowardConversion(r.recapType)
+    : countsTowardConversion(r.requestType);
+}
+
 /**
  * Sum the CONV base / sold for Retail + On-Premise rows only.
- * Event (and unclassified) activations are excluded from CONV. Dry demos
- * count against People engaged; a row with no base adds no sold either.
+ * Event / Guerilla / Seeding (and, by name, unclassified) rows are
+ * excluded from CONV. Dry demos count against People engaged; a row with
+ * no base adds no sold either.
  */
 export function sumConversionBases(rows: RecapKpiRow[]): {
   engagements: number;
@@ -55,7 +70,7 @@ export function sumConversionBases(rows: RecapKpiRow[]): {
   let dryDemos = 0;
   for (const r of rows) {
     if (r.excludeFromAggregates) continue;
-    if (!countsTowardConversion(r.requestType)) continue;
+    if (!rowCountsTowardConversion(r)) continue;
     const base = conversionBase(r);
     if (base <= 0) continue;
     engagements += base;
@@ -84,17 +99,27 @@ export function recapListKpis(input: {
   conversionDryDemos?: number;
   /** 3rd-party recaps in view, left out of Eng / Sold / Conv. */
   notInTotals?: number;
+  /** Active type chip. Event / Guerilla / Seeding have no CONV. */
+  recapType?: RecapActivationFilter;
 }): SparkStatItem[] {
   const notInTotalsHint = input.notInTotals
     ? `excl. ${input.notInTotals} 3rd-party`
     : undefined;
+  const withNotInTotals = (hint: string) =>
+    notInTotalsHint ? `${hint} · ${notInTotalsHint}` : hint;
+  const type = input.recapType ?? "all";
+  const convApplies = type === "all" || recapTypeCountsTowardConversion(type);
   const hasConv =
-    input.conversionEngagements > 0 && input.conversionSold > 0;
+    convApplies &&
+    input.conversionEngagements > 0 &&
+    input.conversionSold > 0;
   const conv = hasConv
     ? `${Math.round(
         (input.conversionSold / input.conversionEngagements) * 100,
       )}%`
     : "—";
+  // Seeding drops cases at accounts — nothing is sampled or sold.
+  const seeding = type === "seeding";
   return [
     {
       label: "In view",
@@ -106,25 +131,32 @@ export function recapListKpis(input: {
     },
     {
       label: "Eng",
-      value: input.engagements.toLocaleString(),
-      hint: notInTotalsHint,
+      value:
+        seeding && input.engagements === 0
+          ? "—"
+          : input.engagements.toLocaleString(),
+      hint: seeding ? withNotInTotals("Drop-offs, not sampling") : notInTotalsHint,
       tone: "lime",
     },
     {
       label: "Sold",
-      value: input.sold.toLocaleString(),
-      hint: notInTotalsHint,
+      value: seeding && input.sold === 0 ? "—" : input.sold.toLocaleString(),
+      hint: seeding
+        ? withNotInTotals("Cases dropped aren't sales")
+        : notInTotalsHint,
     },
     {
       label: "Conv",
       value: conv,
-      hint:
-        (input.conversionDryDemos
-          ? `Retail + on-prem · incl. ${input.conversionDryDemos} dry demo${
-              input.conversionDryDemos === 1 ? "" : "s"
-            } vs people engaged`
-          : "Retail + on-prem") +
-        (notInTotalsHint ? ` · ${notInTotalsHint}` : ""),
+      hint: !convApplies
+        ? "n/a · Retail + on-prem only"
+        : withNotInTotals(
+            input.conversionDryDemos
+              ? `Retail + on-prem · incl. ${input.conversionDryDemos} dry demo${
+                  input.conversionDryDemos === 1 ? "" : "s"
+                } vs people engaged`
+              : "Retail + on-prem",
+          ),
       tone: hasConv ? "lime" : "default",
     },
   ];
