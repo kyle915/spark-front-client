@@ -2760,7 +2760,6 @@ export default function SparkRecapsList() {
                 ))}
               </div>
             )}
-            {/* Desktop: recap type chips next to status */}
             <RecapTypeChips
               chips={typeChips}
               active={activationFilter}
@@ -2779,7 +2778,8 @@ export default function SparkRecapsList() {
               </button>
             )}
             {/* Phone: collapse density / Jump / Map / Select / Pin / dates / export */}
-            <div className="relative md:hidden">
+            {/* Menu anchors to the sticky card, not the button, so it never runs off a phone screen. */}
+            <div className="md:hidden">
               <button
                 type="button"
                 onClick={() => {
@@ -2795,7 +2795,7 @@ export default function SparkRecapsList() {
               </button>
               {toolsOpen && (
                 <div
-                  className="absolute right-0 top-full mt-2 z-40 flex flex-col gap-1 p-2 min-w-[220px] rounded-2xl"
+                  className="absolute inset-x-0 top-full mt-2 z-40 flex flex-col gap-1 p-2 rounded-2xl"
                   style={{
                     background: "rgba(10,13,9,0.98)",
                     border: "1px solid var(--spark-border)",
@@ -2803,12 +2803,6 @@ export default function SparkRecapsList() {
                   }}
                   role="menu"
                 >
-                  <RecapTypeChips
-                    compact
-                    chips={typeChips}
-                    active={activationFilter}
-                    onChange={setActivationFilter}
-                  />
                   <div
                     className="flex overflow-hidden rounded-xl"
                     style={{ border: "1px solid var(--spark-border)" }}
@@ -2966,6 +2960,12 @@ export default function SparkRecapsList() {
                 </div>
               )}
             </div>
+            <RecapTypeChips
+              compact
+              chips={typeChips}
+              active={activationFilter}
+              onChange={setActivationFilter}
+            />
           </div>
 
           {/* Desktop: full control strip (unchanged tools, minus status / New which sit above) */}
