@@ -1,6 +1,7 @@
 /**
- * Compact plans pipeline strip for Insights / Dashboard — shows open plans
- * with Planned→Verified counts. No orphaned KPIs; only ActivationPlan.pipeline.
+ * Compact activation plans pipeline card for the Plans page — shows open
+ * plans with Planned→Verified counts. No orphaned KPIs; only
+ * ActivationPlan.pipeline.
  */
 
 import { Suspense } from "react";
@@ -22,24 +23,15 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
 
   return (
     <div className="spark-card p-5 space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p
-          className="mono text-[10px]"
-          style={{
-            letterSpacing: "0.16em",
-            color: "rgba(255,255,255,0.45)",
-          }}
-        >
-          ACTIVATION PLANS · PIPELINE
-        </p>
-        <Link
-          to="/plans"
-          className="mono text-[10px]"
-          style={{ letterSpacing: "0.14em", color: "var(--spark-lime)" }}
-        >
-          ALL PLANS →
-        </Link>
-      </div>
+      <p
+        className="mono text-[10px]"
+        style={{
+          letterSpacing: "0.16em",
+          color: "rgba(255,255,255,0.45)",
+        }}
+      >
+        ACTIVATION PLANS · PIPELINE
+      </p>
       <div className="space-y-4">
         {plans.slice(0, 5).map((plan) => (
           <div key={plan.id}>
@@ -69,14 +61,14 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   );
 };
 
-export default function PlansPipelineDashboardStrip({
+export default function ActivationPlansPipelineCard({
   tenantId,
 }: {
   tenantId: string | null | undefined;
 }) {
   if (!tenantId) return null;
   // Soft-fail: if API hasn't rolled ActivationPlan yet (or field is
-  // missing), hide the strip instead of blanking Insights / Dashboard.
+  // missing), hide the card instead of blanking the page.
   return (
     <ErrorBoundary fallback={null}>
       <Suspense fallback={null}>
