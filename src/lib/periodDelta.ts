@@ -143,6 +143,25 @@ export function computeRateDelta(
   return { kind: "pts", pts: Math.round((cur - prev) * 10) / 10 };
 }
 
+type AudienceBase = { firstTimeBase: number; consumersSampled: number };
+
+/**
+ * Label of the period whose recaps didn't all ask the audience questions
+ * (first-time / brand-aware / willing), or null when both sides asked
+ * everywhere. Such a period's counts and trial % can't be compared.
+ */
+export function audienceGapLabel(
+  current: AudienceBase | null | undefined,
+  previous: AudienceBase | null | undefined,
+  currentLabel: string,
+  previousLabel: string,
+): string | null {
+  if (!current || !previous) return null;
+  if (previous.firstTimeBase < previous.consumersSampled) return previousLabel;
+  if (current.firstTimeBase < current.consumersSampled) return currentLabel;
+  return null;
+}
+
 /** "+1.4 pts" / "-0.3 pts" / "+0.0 pts"; "n/a" when hidden or not comparable. */
 export function formatRateDeltaLabel(delta: RateDelta): string {
   if (delta.kind !== "pts") return "n/a";

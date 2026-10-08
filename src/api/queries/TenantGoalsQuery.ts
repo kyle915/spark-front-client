@@ -28,6 +28,7 @@ export const TenantGoalsQuery = graphql`
         target
         current
         pacePct
+        last7
       }
     }
   }
