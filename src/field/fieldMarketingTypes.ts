@@ -37,6 +37,8 @@ export type FmEvent = {
   needsFieldSupport: boolean;
   ambassadorCount: number;
   supportTimes: string;
+  startTime: string;
+  endTime: string;
   supportScope: string;
   plannedFullCans: number;
   plannedPourSamples: number;
@@ -48,7 +50,17 @@ export type FmEvent = {
   loggedCases: number | null;
   status: string;
   requestCode: string | null;
+  requestUuid: string | null;
+  requestCancelled: boolean;
+  canBook: boolean;
+  deleteEffect: DeleteEffect;
+  deletedAt: string | null;
+  deletedByName: string;
+  deleteCancelledRequest: boolean;
 };
+
+/** What deleting the row does to its linked request. */
+export type DeleteEffect = "remove" | "cancel_request" | "keep_request";
 
 export type Board = {
   available: boolean;
@@ -57,5 +69,7 @@ export type Board = {
   managers: Manager[];
   kpis: Kpi[];
   events: FmEvent[];
+  deletedEvents: FmEvent[];
+  canRestore: boolean;
   skus: string[];
 };
