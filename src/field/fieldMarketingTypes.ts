@@ -57,6 +57,8 @@ export type FmEvent = {
   deletedAt: string | null;
   deletedByName: string;
   deleteCancelledRequest: boolean;
+  resultsCounted: number;
+  resultsPending: number;
 };
 
 /** What deleting the row does to its linked request. */

@@ -80,6 +80,7 @@ import { recapApprovalMeta } from "@/recap/recapApprovalMeta";
 import { formatRecapProductName } from "@/recap/recapFieldLabel";
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
 import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
+import PushToPlanButton from "@/field/PushToPlanButton";
 
 const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
 
@@ -1154,6 +1155,19 @@ const SparkRecapInner: React.FC<{
             >
               ⇄ Move to event
             </button>
+            )}
+            {!isClient && (
+              <PushToPlanButton
+                recapId={recap.id}
+                kind="legacy"
+                recapName={recap.name}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              />
             )}
             {/* Admin-only recap approval. Nevena: "I don't see where to
                 approve recap." Distinct from request approval — this

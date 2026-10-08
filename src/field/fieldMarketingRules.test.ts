@@ -45,6 +45,8 @@ function row(overrides: Partial<FmEvent> = {}): FmEvent {
     deletedAt: null,
     deletedByName: "",
     deleteCancelledRequest: false,
+    resultsCounted: 0,
+    resultsPending: 0,
     ...overrides,
   };
 }
