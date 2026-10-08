@@ -48,6 +48,8 @@ export type FmEvent = {
   loggedCases: number | null;
   status: string;
   requestCode: string | null;
+  resultsCounted: number;
+  resultsPending: number;
 };
 
 export type Board = {

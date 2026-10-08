@@ -129,6 +129,7 @@ import {
 } from "@/recap/RecapDetailShell";
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
 import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
+import PushToPlanButton from "@/field/PushToPlanButton";
 
 const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
 
@@ -1589,6 +1590,15 @@ const RecapCustomViewInner = ({
                 >
                   ↗ Share
                 </button>
+                {!isClient && (
+                  <PushToPlanButton
+                    recapId={recap.id}
+                    kind="custom"
+                    recapName={recap.name}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                    style={ghostBtn}
+                  />
+                )}
                 {!isClient && (
                   <button
                     onClick={enterEditMode}

@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import useSparkRole from "@/hooks/useSparkRole";
 import { useAuthStore } from "@/store/authStore";
 import FieldMarketingCalendar from "./FieldMarketingCalendar";
+import { postGql } from "./fieldMarketingGql";
+import PlanResultsSheet from "./PlanResultsSheet";
+import { resultsBadge } from "./planResultsFormat";
 import ProgramSwitch from "./ProgramSwitch";
 import {
   downloadCsv,
@@ -35,7 +39,7 @@ const EVENT_FIELDS = `
   skuNames needsFieldSupport ambassadorCount supportTimes supportScope
   plannedFullCans plannedPourSamples plannedEmails
   loggedFullCans loggedPourSamples loggedEmails loggedDays loggedCases
-  status requestCode
+  status requestCode resultsCounted resultsPending
 `;
 
 const BOARD = `
@@ -126,25 +130,6 @@ const FALLBACK_MANAGERS: Manager[] = [
     phone: "972-978-7253",
   },
 ];
-
-async function postGql<T>(
-  query: string,
-  variables: Record<string, unknown>,
-): Promise<T> {
-  const res = await fetch(import.meta.env.VITE_GRAPHQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
-    },
-    body: JSON.stringify({ query, variables }),
-  });
-  const json = await res.json();
-  if (json.errors?.length) {
-    throw new Error(json.errors[0]?.message || "Request failed");
-  }
-  return json.data as T;
-}
 
 function fmtDay(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -264,6 +249,8 @@ const emptyForm = {
 
 export default function FieldMarketing() {
   const { tenantId } = useAuthStore();
+  const { isClient } = useSparkRole();
+  const [resultsFor, setResultsFor] = useState<FmEvent | null>(null);
   // Default: all plans (no date filter). Optional month narrows the table + KPIs.
   const [month, setMonth] = useState("");
   const [marketFilter, setMarketFilter] = useState("");
@@ -783,8 +770,9 @@ export default function FieldMarketing() {
           {month
             ? " Targets are the monthly scorecard for the selected month."
             : " All months shows planned sums only — monthly targets (1,152 cans / 3,456 pours / …) are not scored against a multi-month rollup."}{" "}
-          Logged stays a dash until someone reports a result. 4oz pours are not
-          added into full cans.
+          Logged is the manual log, else approved recaps pushed to the plan, and
+          stays a dash until one of those comes in. 4oz pours are not added into
+          full cans.
         </p>
 
         {showPlanForm ? (
@@ -1168,6 +1156,32 @@ export default function FieldMarketing() {
                         >
                           {rowStatus(row)}
                         </span>
+                        {resultsBadge(
+                          row.resultsCounted,
+                          isClient ? 0 : row.resultsPending,
+                        ) ? (
+                          <button
+                            type="button"
+                            className="block mt-1 mono text-[10px] px-2 py-0.5 rounded-full"
+                            style={{
+                              letterSpacing: "0.08em",
+                              color: row.resultsCounted ? "#c5f546" : "#ef5a2a",
+                              background: row.resultsCounted
+                                ? "rgba(197,245,70,0.10)"
+                                : "rgba(239,90,42,0.10)",
+                              border: row.resultsCounted
+                                ? "1px solid rgba(197,245,70,0.3)"
+                                : "1px solid rgba(239,90,42,0.3)",
+                            }}
+                            onClick={() => setResultsFor(row)}
+                            title="Planned vs actual from the recaps pushed to this plan"
+                          >
+                            {resultsBadge(
+                              row.resultsCounted,
+                              isClient ? 0 : row.resultsPending,
+                            )}
+                          </button>
+                        ) : null}
                       </td>
                       <td className="px-2 py-2 text-right whitespace-nowrap">
                         <div className="inline-flex gap-1 justify-end">
@@ -1322,6 +1336,17 @@ export default function FieldMarketing() {
           </details>
         ) : null}
       </div>
+      {resultsFor ? (
+        <PlanResultsSheet
+          planId={resultsFor.id}
+          planName={resultsFor.name}
+          open
+          onOpenChange={(next) => {
+            if (!next) setResultsFor(null);
+          }}
+          isClient={isClient}
+        />
+      ) : null}
     </Layout>
   );
 }

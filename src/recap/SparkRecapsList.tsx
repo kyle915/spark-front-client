@@ -33,6 +33,8 @@ import SparkGhostButton from "@/shared/SparkGhostButton";
 import { recapFileUrl } from "@/utils/recapFileUrl";
 import ShareRecapModal from "@/recap/components/ShareRecapModal";
 import ShareRecapsBulkModal from "@/recap/components/ShareRecapsBulkModal";
+import PushToPlanSheet from "@/field/PushToPlanSheet";
+import { isTorchTenant } from "@/field/torch";
 import LinkedSheetChip from "@/components/inputs/LinkedSheetChip";
 import EmailCampaignReportModal from "./EmailCampaignReportModal";
 import ImportConnecteamButton from "./ImportConnecteamButton";
@@ -416,7 +418,9 @@ const RecapCard: React.FC<{
   selectMode: boolean;
   showSla: boolean;
   forceApproved?: boolean;
-}> = ({ recap, href, onOpenRequest, onShare, selected, onToggleSelect, selectMode, showSla, forceApproved }) => {
+  // Ops-only: pick which of this recap's numbers count toward a plan.
+  onPushToPlan?: ((recap: Recap) => void) | null;
+}> = ({ recap, href, onOpenRequest, onShare, selected, onToggleSelect, selectMode, showSla, forceApproved, onPushToPlan }) => {
   const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
@@ -654,6 +658,26 @@ const RecapCard: React.FC<{
             title="Share the public /r/:token link"
           >
             ↗ SHARE
+          </button>
+        )}
+        {onPushToPlan && !emptyShell && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onPushToPlan(recap);
+            }}
+            className="mono inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px]"
+            style={{
+              letterSpacing: "0.14em",
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid var(--spark-border)",
+              color: "rgba(255,255,255,0.75)",
+            }}
+            title="Push this recap's metrics to a field marketing plan"
+          >
+            → PLAN
           </button>
         )}
       </div>
@@ -1363,6 +1387,9 @@ const RecapsListFetched: React.FC<{
   setShareTarget,
 }) => {
   const navigate = useNavigate();
+  const { tenantSlug, tenantMeta } = useAuthStore();
+  const plansOn = !isClient && isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
+  const [planTarget, setPlanTarget] = useState<Recap | null>(null);
 
   const page1Legacy = useMemo(
     () => recapsFromConnection(data?.recaps?.edges, mapLegacyRecap),
@@ -1820,6 +1847,7 @@ const RecapsListFetched: React.FC<{
           href={recapHref(r, statusFilter, activationFilter)}
           forceApproved={justApprovedIds.has(r.id)}
           onShare={setShareTarget}
+          onPushToPlan={plansOn ? setPlanTarget : null}
           onOpenRequest={(reqUuid) =>
             navigate(`/request/view/${reqUuid}`, {
               state: { from: "/recaps/list" },
@@ -1836,6 +1864,17 @@ const RecapsListFetched: React.FC<{
         shareToken={shareTarget.shareToken}
         recapName={shareTarget.name}
         onClose={() => setShareTarget(null)}
+      />
+    )}
+    {planTarget && (
+      <PushToPlanSheet
+        open
+        onOpenChange={(next) => {
+          if (!next) setPlanTarget(null);
+        }}
+        recapId={planTarget.id}
+        kind={planTarget.kind}
+        recapName={planTarget.name}
       />
     )}
     </>
