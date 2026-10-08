@@ -10,6 +10,7 @@ import {
   computePeriodDelta,
   computeRateDelta,
   formatRateDeltaLabel,
+  audienceGapLabel,
   periodDeltaNote,
   type PeriodDelta,
 } from "@/lib/periodDelta";
@@ -387,12 +388,13 @@ const TenantKpiComparison: React.FC<{
   const hidePct = !!comparison?.sparseNote;
   // Audience questions missing from some recaps on a side (Brew Dr's Aug
   // template never asked them): their counts can't be compared as growth.
-  const audienceGapLabel = salesProgram
-    ? salesProgram.p.firstTimeBase < salesProgram.p.consumersSampled
-      ? comparison?.previousLabel
-      : salesProgram.c.firstTimeBase < salesProgram.c.consumersSampled
-        ? comparison?.currentLabel
-        : null
+  const audienceGap = comparison
+    ? audienceGapLabel(
+        salesProgram?.c,
+        salesProgram?.p,
+        comparison.currentLabel,
+        comparison.previousLabel,
+      )
     : null;
 
   const headline = useMemo(() => {
@@ -488,7 +490,7 @@ const TenantKpiComparison: React.FC<{
               {comparison.sparseNote}
             </p>
           )}
-          {audienceGapLabel && (
+          {audienceGap && (
             <p
               className="mono text-[10px] mt-1.5"
               style={{
@@ -496,7 +498,7 @@ const TenantKpiComparison: React.FC<{
                 color: "rgba(255,255,255,0.45)",
               }}
             >
-              {audienceGapLabel} recaps didn't all ask first-time / brand-aware
+              {audienceGap} recaps didn't all ask first-time / brand-aware
               / willing — those % changes hidden.
             </p>
           )}
@@ -556,7 +558,7 @@ const TenantKpiComparison: React.FC<{
             label={s.label}
             current={s.current}
             previous={s.previous}
-            hidePct={hidePct || ("audience" in s && !!audienceGapLabel)}
+            hidePct={hidePct || ("audience" in s && !!audienceGap)}
           />
         ))}
       </div>

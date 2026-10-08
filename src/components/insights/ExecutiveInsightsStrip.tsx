@@ -13,6 +13,7 @@ import { TenantSkuPulseQuery } from "@/api/queries/TenantSkuPulseQuery";
 import type { TenantSkuPulseQuery as TenantSkuPulseQueryType } from "@api/queries/__generated__/TenantSkuPulseQuery.graphql";
 import { collapseSamplingKpis } from "@/lib/collapseSamplingKpis";
 import {
+  audienceGapLabel,
   computeRateDelta,
   formatRateDeltaLabel,
   type RateDelta,
@@ -249,12 +250,23 @@ const Inner: React.FC<{
       prev.consumers > 0 && prev.firstTime > 0
         ? Math.round((prev.firstTime / prev.consumers) * 1000) / 10
         : null;
+    const gap = audienceGapLabel(
+      compare.current.program,
+      compare.previous.program,
+      compare.currentLabel,
+      compare.previousLabel,
+    );
     return {
       pct,
       prevPct,
       firstTime: cur.firstTime,
       consumers: cur.consumers,
-      delta: computeRateDelta(pct, prevPct, compare.sparseNote),
+      delta: computeRateDelta(
+        pct,
+        prevPct,
+        compare.sparseNote ||
+          (gap ? `${gap} recaps didn't all ask first-time — change hidden.` : null),
+      ),
       label: compare.currentLabel,
       previousLabel: compare.previousLabel,
     };

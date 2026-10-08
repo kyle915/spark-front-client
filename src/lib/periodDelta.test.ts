@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ABSURD_PCT_THRESHOLD,
+  audienceGapLabel,
   computePeriodDelta,
   computeRateDelta,
   formatPeriodDeltaLabel,
@@ -88,6 +89,21 @@ describe("formatPeriodDeltaLabel", () => {
     ).toBe("↑ >500%");
     expect(periodDeltaIsNegative({ kind: "down", pct: -3 })).toBe(true);
     expect(periodDeltaIsNegative({ kind: "up", pct: 3 })).toBe(false);
+  });
+});
+
+describe("audienceGapLabel", () => {
+  const asked = { firstTimeBase: 120, consumersSampled: 120 };
+  const partial = { firstTimeBase: 40, consumersSampled: 120 };
+
+  it("names the period whose recaps didn't all ask first-time", () => {
+    expect(audienceGapLabel(asked, partial, "Sep 2026", "Aug 2026")).toBe("Aug 2026");
+    expect(audienceGapLabel(partial, asked, "Sep 2026", "Aug 2026")).toBe("Sep 2026");
+  });
+
+  it("is null when both sides asked everywhere or a side has no program", () => {
+    expect(audienceGapLabel(asked, asked, "Sep 2026", "Aug 2026")).toBeNull();
+    expect(audienceGapLabel(asked, null, "Sep 2026", "Aug 2026")).toBeNull();
   });
 });
 

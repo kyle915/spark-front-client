@@ -7833,6 +7833,7 @@ type TenantGoalItem {
   target: Int!
   current: Int!
   pacePct: Float!
+  last7: Int!
 }
 
 type TenantGoals {

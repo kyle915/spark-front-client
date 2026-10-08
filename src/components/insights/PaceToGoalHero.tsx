@@ -1,8 +1,6 @@
 import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate } from "react-router";
-import { ExecutiveSummaryQuery } from "@/api/queries/ExecutiveSummaryQuery";
-import type { ExecutiveSummaryQuery as ExecutiveSummaryQueryType } from "@api/queries/__generated__/ExecutiveSummaryQuery.graphql";
 import { TenantGoalsQuery } from "@/api/queries/TenantGoalsQuery";
 import type { TenantGoalsQuery as TenantGoalsQueryType } from "@api/queries/__generated__/TenantGoalsQuery.graphql";
 import { SetTenantGoalsMutation } from "@/api/mutations/SetTenantGoalsMutation";
@@ -10,8 +8,8 @@ import type { SetTenantGoalsMutation as SetTenantGoalsMutationType } from "@api/
 import { useAlertStore } from "@/store/alertStore";
 
 /**
- * Top Insights bento: pace-to-goal (annual targets) + last-7 delta from the
- * exec summary. DESIGN.md bento tiles — lime/orange on real signals only.
+ * Top Insights bento: pace-to-goal (annual targets) + the same metric over
+ * the last 7 days. DESIGN.md bento tiles — lime/orange on real signals only.
  */
 
 type GoalMetric =
@@ -67,14 +65,8 @@ const Inner: React.FC<{ tenantId: string; chromeless?: boolean }> = ({
     { tenantId, year: null },
     { fetchPolicy: "store-or-network", fetchKey },
   );
-  const paceData = useLazyLoadQuery<ExecutiveSummaryQueryType>(
-    ExecutiveSummaryQuery,
-    { tenantId, windowDays: 7 },
-    { fetchPolicy: "store-or-network" },
-  );
 
   const goals = goalsData?.tenantGoals;
-  const summary = paceData?.executiveSummary;
   const year = goals?.year ?? new Date().getFullYear();
   const elapsed = yearElapsedPct(year);
   const weeksLeft = weeksRemainingInYear(year);
@@ -148,7 +140,7 @@ const Inner: React.FC<{ tenantId: string; chromeless?: boolean }> = ({
     });
   };
 
-  if (!goals && !summary) return null;
+  if (!goals) return null;
 
   const tone = behind
     ? "var(--spark-orange)"
@@ -250,22 +242,9 @@ const Inner: React.FC<{ tenantId: string; chromeless?: boolean }> = ({
         />
         <Tile
           label="Last 7 days"
-          value={
-            summary
-              ? fmt(summary.consumerReach || summary.samplesDistributed || 0)
-              : "—"
-          }
-          hint={
-            summary?.consumerReachDeltaChip ||
-            summary?.recapCountDeltaChip ||
-            summary?.periodLabel ||
-            "No pace window"
-          }
-          accent={
-            summary && (summary.consumerReach > 0 || summary.recapCount > 0)
-              ? "var(--spark-lime)"
-              : undefined
-          }
+          value={primary ? fmt(primary.last7) : "—"}
+          hint={primary ? `${primary.label} · incl. today` : "No pace window"}
+          accent={primary && primary.last7 > 0 ? "var(--spark-lime)" : undefined}
         />
       </div>
 
