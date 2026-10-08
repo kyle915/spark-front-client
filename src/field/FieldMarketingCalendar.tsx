@@ -1,4 +1,5 @@
 import type { FmEvent } from "./fieldMarketingTypes";
+import { isBooked, rowStatus } from "./fieldMarketingRules";
 
 type Props = {
   month: string;
@@ -80,7 +81,7 @@ export default function FieldMarketingCalendar({ month, events, onMonth }: Props
                   <p className="text-xs tabular-nums opacity-60">{day}</p>
                   <ul className="mt-1 space-y-1">
                     {rows.map((row) => {
-                      const booked = row.status === "submitted";
+                      const booked = isBooked(row);
                       return (
                         <li
                           key={row.id}
@@ -93,7 +94,7 @@ export default function FieldMarketingCalendar({ month, events, onMonth }: Props
                         >
                           <span className="block truncate">{row.name}</span>
                           <span className="block opacity-70">
-                            {booked ? "Booked" : "Draft"}
+                            {booked ? "Booked" : rowStatus(row)}
                             {row.marketLabel ? ` · ${row.marketLabel}` : ""}
                           </span>
                         </li>
