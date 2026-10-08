@@ -24,7 +24,6 @@ import type { ClientWeekAheadQuery as ClientWeekAheadQueryType } from "@api/quer
 import AskAiButton from "@/components/ai/AskAiButton";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { requestDateKey } from "@/lib/requestDateKey";
-import PlansPipelineDashboardStrip from "@/plans/PlansPipelineDashboardStrip";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import DashboardProgramSwitch from "@/field/DashboardProgramSwitch";
 import { isTorchTenant } from "@/field/torch";
@@ -331,10 +330,6 @@ const ClientInner: React.FC = () => {
       {torch ? (
         <DashboardProgramSwitch program={program} onChange={choose} />
       ) : null}
-
-      {program === "field" ? null : (
-        <PlansPipelineDashboardStrip tenantId={tenantId} />
-      )}
 
       {program === "field" ? null : (
       <>

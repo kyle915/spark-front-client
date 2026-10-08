@@ -15,7 +15,6 @@ import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import BelowFold from "@/components/insights/BelowFold";
 import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
 import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
-import PlansPipelineDashboardStrip from "@/plans/PlansPipelineDashboardStrip";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import { CountReel } from "@/motion/CountReel";
 import {
@@ -713,10 +712,6 @@ export function InsightsBody({
           </div>
         </div>
       )}
-
-      {tenantId && !torch ? (
-        <PlansPipelineDashboardStrip tenantId={tenantId} />
-      ) : null}
 
       {tenantId && (
         <MarketConcentrationStrip

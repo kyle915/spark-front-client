@@ -14,6 +14,7 @@ import {
   type PlanFormState,
 } from "./fieldMarketingForm";
 import useSparkRole from "@/hooks/useSparkRole";
+import ActivationPlansPipelineCard from "@/plans/ActivationPlansPipelineCard";
 import { postGql } from "./fieldMarketingGql";
 import PlanResultsSheet from "./PlanResultsSheet";
 import { resultsBadge } from "./planResultsFormat";
@@ -603,6 +604,8 @@ export default function FieldMarketing() {
           support="All field marketing plans for Torch — filter by market/RMM or month, see projected results, and push rows to Ignite to execute. Retail sampling stays on Master Tracker."
         />
         <ProgramSwitch active="field" />
+
+        <ActivationPlansPipelineCard tenantId={tenantId} />
 
         {board && !board.available ? (
           <p className="spark-support">
