@@ -631,10 +631,11 @@ const RecapCustomViewInner = ({
   const [editedExternalBaName, setEditedExternalBaName] = useState("");
   const [editedFillingForAmbassador, setEditedFillingForAmbassador] =
     useState(false);
-  // Active dashboard tenant — scopes the BA roster picker to this client
-  // (same as SparkRecapCreate), so the dropdown can't leak another
-  // tenant's ambassadors.
-  const tenantId = useAuthStore((s) => s.tenantId);
+  // The recap's own tenant scopes the BA roster picker and product catalog
+  // so an admin switched to another brand still edits this brand's SKUs.
+  const dashboardTenantId = useAuthStore((s) => s.tenantId);
+  const tenantId =
+    fileCategoryTenantId !== "0" ? fileCategoryTenantId : dashboardTenantId;
   const [commitUpdateCustomRecap, isSavingValues] =
     useMutation<UpdateCustomRecapMutationType>(UpdateCustomRecapMutation);
   const [commitGeneratePdf, isGeneratingPdf] =
