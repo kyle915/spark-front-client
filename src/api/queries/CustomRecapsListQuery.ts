@@ -69,6 +69,7 @@ export const CustomRecapsListQuery = graphql`
             id
             name
           }
+          recapType
           soldUnits
           consumersSampled
           isDryDemo

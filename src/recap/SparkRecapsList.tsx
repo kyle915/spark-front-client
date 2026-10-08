@@ -63,10 +63,10 @@ import {
   recapEmptyKind,
   recapIsEmptyShell,
   recapListStatusWord,
+  recapListServerFilters,
   recapMatchesBaName,
   recapMatchesPipeline,
-  archivedQueryFilter,
-  sharedQueryFilter,
+  recapTypeChips,
   withRecapListReturn,
   type RecapsListNavState,
 } from "./recapListFilters";
@@ -74,9 +74,14 @@ import {
   normalizeRecapActivationFilter,
   recapActivationFilterLabel,
   recapMatchesActivationFilter,
+  recapTypeCountsTowardConversion,
+  recapTypeForRow,
   type RecapActivationFilter,
+  type RecapTypeKey,
 } from "@/lib/activationBucket";
 import { BaNameFilter } from "./BaNameFilter";
+import { RecapTypeChips } from "./RecapTypeChips";
+import { useRecapTypeCounts } from "./useRecapTypeCounts";
 
 // Backend cap. Mirrored from `GenerateCampaignReportPdfInput` —
 // keeps the sticky action bar's button disabled with a friendly
@@ -200,6 +205,9 @@ type Recap = {
   // to a request or the request type hasn't been set. Surfaced in
   // the CSV export so client reports can group by activation type.
   requestType: string | null;
+  // Retail / On-Premise / Event / Guerilla / Seeding — the server's
+  // classification; drives the type chips and which rows feed CONV.
+  recapType: RecapTypeKey;
   shareToken: string | null;
   sharedAt: string | null;
   archivedAt: string | null;
@@ -208,8 +216,9 @@ type Recap = {
 // CONV = products sold ÷ consumers SAMPLED (a sampling program's conversion is
 // sold-per-person-sampled, NOT sold-per-engagement). Falls back to engagements
 // for legacy recaps with no separate sampled count; dry demos divide by People
-// engaged (see conversionBase). `empty` is what to show
-// when there's no base/sold (— for the card, "" for CSV/TSV cells).
+// engaged (see conversionBase). Event / Guerilla / Seeding rows have no CONV.
+// `empty` is what to show when there's no base/sold (— for the card, "" for
+// CSV/TSV cells).
 const conversionStr = (
   r: {
     productsSold: number | null;
@@ -217,9 +226,11 @@ const conversionStr = (
     engagements: number | null;
     isDryDemo: boolean;
     peopleEngaged: number | null;
+    recapType: RecapTypeKey;
   },
   empty: string,
 ): string => {
+  if (!recapTypeCountsTowardConversion(r.recapType)) return empty;
   const base = conversionBase({ ...r, requestType: null });
   if (!base || base <= 0 || !r.productsSold) return empty;
   return `${Math.round((r.productsSold / base) * 100)}%`;
@@ -334,6 +345,7 @@ const mapLegacyRecap = (n: LegacyRecapNode): Recap => {
       ? `R-${String(requestUuid).slice(-4).toUpperCase()}`
       : null,
     requestType,
+    recapType: recapTypeForRow(n.recapType, requestType),
     shareToken: n.shareToken ?? null,
     sharedAt: n.sharedAt ?? null,
     archivedAt: n.archivedAt ?? null,
@@ -377,6 +389,7 @@ const mapCustomRecap = (n: CustomRecapNode): Recap => ({
   requestUuid: null,
   requestShortId: null,
   requestType: n.customRecapTemplate?.name ?? null,
+  recapType: recapTypeForRow(n.recapType, n.customRecapTemplate?.name),
   shareToken: n.shareToken ?? null,
   sharedAt: n.sharedAt ?? null,
   archivedAt: n.archivedAt ?? null,
@@ -1022,31 +1035,7 @@ const RecapsListInner: React.FC<{
   // toggle (which the server can't distinguish from a normal admin).
   const { isClient } = useSparkRole();
   const pipeline = statusFilter === "draft" ? "needs_review" : statusFilter;
-  const approvedFilter = isClient
-    ? true
-    : pipeline === "archived"
-      ? null
-      : pipeline === "approved" || pipeline === "shared"
-        ? true
-        : pipeline === "needs_review"
-          ? false
-          : null;
-  const retailerName = retailerFilter === "all" ? null : retailerFilter;
-  const stateCode = stateFilter === "all" ? null : stateFilter;
   const searchQ = search.trim() || null;
-  // Server-side date bounds. The backend RecapFiltersInput /
-  // CustomRecapFiltersInput both expose inclusive startDate / endDate
-  // (YYYY-MM-DD), so when the user picks a date range we push it into the
-  // query. That matters now that we only load a bounded page: without it
-  // a date filter could only see rows already pulled into the window
-  // (newest first), so a query for an OLDER period would come back empty
-  // until the user clicked "Load more" enough times. Passing the bounds
-  // server-side lets older matches surface in the first page. The
-  // client-side date filter below still runs (belt-and-suspenders, and it
-  // also handles undated rows), so behaviour is unchanged for the no-date
-  // case. Empty string = unbounded on that side → send null.
-  const startDate = dateFrom || null;
-  const endDate = dateTo || null;
   const [baNameQuery, setBaNameQuery] = useState(baName.trim());
   // The recap whose Share modal is open (null = closed). Held here so
   // both the cards grid and the compact list can raise it.
@@ -1055,36 +1044,35 @@ const RecapsListInner: React.FC<{
     const t = window.setTimeout(() => setBaNameQuery(baName.trim()), 250);
     return () => window.clearTimeout(t);
   }, [baName]);
+  // Date bounds, type, status etc. all go server-side so a bounded page
+  // still surfaces older / narrower matches; the client-side pass below
+  // is belt-and-suspenders (and handles undated rows).
   const listFilters = useMemo(
     () =>
       tenantId
-        ? {
+        ? recapListServerFilters({
             tenantId,
-            rmmAsignedId: rmmFilter === "all" ? null : rmmFilter,
-            ambassadorId: null,
-            ambassadorName: baNameQuery || null,
-            approved: approvedFilter,
-            shared: sharedQueryFilter(isClient, pipeline),
-            archived: archivedQueryFilter(isClient, pipeline),
-            retailerName,
-            stateCode,
-            startDate,
-            endDate,
-            activationBucket:
-              activationFilter === "all" ? null : activationFilter,
-          }
+            isClient,
+            statusFilter,
+            rmmFilter,
+            baName: baNameQuery,
+            retailerFilter,
+            stateFilter,
+            dateFrom,
+            dateTo,
+            activationFilter,
+          })
         : null,
     [
       tenantId,
+      isClient,
+      statusFilter,
       rmmFilter,
       baNameQuery,
-      approvedFilter,
-      isClient,
-      pipeline,
-      retailerName,
-      stateCode,
-      startDate,
-      endDate,
+      retailerFilter,
+      stateFilter,
+      dateFrom,
+      dateTo,
       activationFilter,
     ],
   );
@@ -1551,7 +1539,7 @@ const RecapsListFetched: React.FC<{
         emptyShell: recapIsEmptyShell(r),
       });
       const matchActivation = recapMatchesActivationFilter(
-        r.requestType,
+        r.recapType,
         activationFilter,
       );
       // Date range: compare on the yyyy-mm-dd prefix. Each bound is
@@ -2192,6 +2180,48 @@ export default function SparkRecapsList() {
     if (nav?.refreshRecaps || consumeRecapsListNeedsRefresh()) return 1;
     return 0;
   });
+  // Type chip counts read every other list filter, never the type itself.
+  const typeCountVariables = useMemo(
+    () =>
+      tenantId
+        ? {
+            q: search.trim() || null,
+            filters: {
+              ...recapListServerFilters({
+                tenantId,
+                isClient,
+                statusFilter,
+                rmmFilter,
+                baName,
+                retailerFilter,
+                stateFilter,
+                dateFrom,
+                dateTo,
+                activationFilter: "all",
+              }),
+              needsStoreMap: needsStoreMap || null,
+            },
+          }
+        : null,
+    [
+      tenantId,
+      search,
+      isClient,
+      statusFilter,
+      rmmFilter,
+      baName,
+      retailerFilter,
+      stateFilter,
+      dateFrom,
+      dateTo,
+      needsStoreMap,
+    ],
+  );
+  const typeCounts = useRecapTypeCounts(typeCountVariables, refreshKey);
+  const typeChips = useMemo(
+    () => recapTypeChips(typeCounts, activationFilter),
+    [typeCounts, activationFilter],
+  );
   const [commitMarkShared, isMarkingShared] =
     useMutation<MarkRecapsSharedMutationType>(MarkRecapsSharedMutation);
 
@@ -2730,40 +2760,12 @@ export default function SparkRecapsList() {
                 ))}
               </div>
             )}
-            {/* Desktop: activation program chips next to status */}
-            <div
-              className="hidden md:flex rounded-xl overflow-x-auto max-w-full"
-              style={{ border: "1px solid var(--spark-border)" }}
-              title="Filter by activation program (Retail includes On-premise)"
-            >
-              {(
-                [
-                  ["all", "View all"],
-                  ["retail", "Retail"],
-                  ["event", "Event"],
-                  ["seeding", "Product Seeding"],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setActivationFilter(key)}
-                  className="px-2.5 py-2 text-xs font-semibold whitespace-nowrap"
-                  style={{
-                    background:
-                      activationFilter === key
-                        ? "rgba(197,245,70,0.16)"
-                        : "transparent",
-                    color:
-                      activationFilter === key
-                        ? "var(--spark-lime)"
-                        : "rgba(255,255,255,0.65)",
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+            {/* Desktop: recap type chips next to status */}
+            <RecapTypeChips
+              chips={typeChips}
+              active={activationFilter}
+              onChange={setActivationFilter}
+            />
             {!isClient && (
               <button
                 type="button"
@@ -2801,38 +2803,12 @@ export default function SparkRecapsList() {
                   }}
                   role="menu"
                 >
-                  <div
-                    className="flex overflow-hidden rounded-xl"
-                    style={{ border: "1px solid var(--spark-border)" }}
-                  >
-                    {(
-                      [
-                        ["all", "All"],
-                        ["retail", "Retail"],
-                        ["event", "Event"],
-                        ["seeding", "Seeding"],
-                      ] as const
-                    ).map(([key, label]) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setActivationFilter(key)}
-                        className="flex-1 px-2 py-2 text-[11px] font-semibold"
-                        style={{
-                          background:
-                            activationFilter === key
-                              ? "rgba(197,245,70,0.16)"
-                              : "transparent",
-                          color:
-                            activationFilter === key
-                              ? "var(--spark-lime)"
-                              : "rgba(255,255,255,0.65)",
-                        }}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+                  <RecapTypeChips
+                    compact
+                    chips={typeChips}
+                    active={activationFilter}
+                    onChange={setActivationFilter}
+                  />
                   <div
                     className="flex overflow-hidden rounded-xl"
                     style={{ border: "1px solid var(--spark-border)" }}
@@ -3289,6 +3265,7 @@ export default function SparkRecapsList() {
             conversionSold: meta.conversionProducts,
             conversionDryDemos: meta.conversionDryDemos,
             notInTotals: meta.notInTotals,
+            recapType: activationFilter,
           }).map((k) => (
             <SparkBentoTile key={k.label} {...k} />
           ))}

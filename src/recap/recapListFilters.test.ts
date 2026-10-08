@@ -6,14 +6,144 @@ import {
   markRecapsListNeedsRefresh,
   recapEmptyKind,
   recapIsEmptyShell,
+  recapListServerFilters,
   recapListStatusWord,
   recapMatchesBaName,
   recapMatchesPipeline,
+  recapTypeChips,
   recapsListHrefFromReturn,
   recapsListNavState,
   sharedQueryFilter,
   withRecapListReturn,
 } from "./recapListFilters";
+
+describe("recapListServerFilters", () => {
+  const base = {
+    tenantId: "T1",
+    isClient: false,
+    statusFilter: "needs_review" as const,
+    rmmFilter: "all",
+    baName: "  ",
+    retailerFilter: "all",
+    stateFilter: "all",
+    dateFrom: "2026-09-07",
+    dateTo: "",
+    activationFilter: "all" as const,
+  };
+
+  it("sends the type chip as recapType", () => {
+    expect(recapListServerFilters(base).recapType).toBeNull();
+    expect(
+      recapListServerFilters({ ...base, activationFilter: "guerilla" })
+        .recapType,
+    ).toBe("guerilla");
+  });
+
+  it("maps status, dates and dropdowns like the list always has", () => {
+    expect(recapListServerFilters(base)).toEqual({
+      tenantId: "T1",
+      rmmAsignedId: null,
+      ambassadorId: null,
+      ambassadorName: null,
+      approved: false,
+      shared: null,
+      archived: false,
+      retailerName: null,
+      stateCode: null,
+      startDate: "2026-09-07",
+      endDate: null,
+      recapType: null,
+    });
+    expect(
+      recapListServerFilters({
+        ...base,
+        statusFilter: "shared",
+        retailerFilter: "Binny's",
+        stateFilter: "IL",
+        baName: " Weni ",
+      }),
+    ).toMatchObject({
+      approved: true,
+      shared: true,
+      retailerName: "Binny's",
+      stateCode: "IL",
+      ambassadorName: "Weni",
+    });
+    expect(
+      recapListServerFilters({ ...base, statusFilter: "archived" }),
+    ).toMatchObject({ approved: null, archived: true });
+  });
+
+  it("client view is approved-only", () => {
+    expect(
+      recapListServerFilters({ ...base, isClient: true, statusFilter: "all" }),
+    ).toMatchObject({ approved: true, shared: null, archived: false });
+  });
+});
+
+describe("recapTypeChips", () => {
+  const torch = {
+    total: 41,
+    types: [
+      { key: "retail", label: "Retail", count: 30 },
+      { key: "event", label: "Event", count: 6 },
+      { key: "guerilla", label: "Guerilla", count: 3 },
+      { key: "seeding", label: "Seeding", count: 2 },
+    ],
+  };
+
+  it("lists All plus the tenant's types with counts", () => {
+    expect(recapTypeChips(torch, "all")).toEqual([
+      { key: "all", label: "All", count: 41 },
+      { key: "retail", label: "Retail", count: 30 },
+      { key: "event", label: "Event", count: 6 },
+      { key: "guerilla", label: "Guerilla", count: 3 },
+      { key: "seeding", label: "Seeding", count: 2 },
+    ]);
+  });
+
+  it("hides for a single-type tenant", () => {
+    expect(
+      recapTypeChips(
+        { total: 12, types: [{ key: "retail", label: "Retail", count: 12 }] },
+        "all",
+      ),
+    ).toEqual([]);
+    expect(recapTypeChips(null, "all")).toEqual([]);
+  });
+
+  it("keeps a picked type the tenant lacks so it can be cleared", () => {
+    expect(
+      recapTypeChips(
+        { total: 12, types: [{ key: "retail", label: "Retail", count: 12 }] },
+        "guerilla",
+      ),
+    ).toEqual([
+      { key: "all", label: "All", count: 12 },
+      { key: "retail", label: "Retail", count: 12 },
+      { key: "guerilla", label: "Guerilla", count: 0 },
+    ]);
+    expect(recapTypeChips(null, "seeding")).toEqual([
+      { key: "all", label: "All", count: null },
+      { key: "seeding", label: "Seeding", count: null },
+    ]);
+  });
+
+  it("drops keys this build doesn't know", () => {
+    expect(
+      recapTypeChips(
+        {
+          total: 5,
+          types: [
+            { key: "retail", label: "Retail", count: 3 },
+            { key: "mystery", label: "Mystery", count: 2 },
+          ],
+        },
+        "all",
+      ),
+    ).toEqual([]);
+  });
+});
 
 describe("defaultRecapStatus", () => {
   it("defaults the client list to approved, not shared", () => {

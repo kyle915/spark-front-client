@@ -185,6 +185,80 @@ describe("recapListKpis", () => {
   });
 });
 
+describe("recap type on the list strip", () => {
+  const base = {
+    filteredTotal: 4,
+    loaded: 4,
+    total: 4,
+    engagements: 400,
+    sold: 30,
+    conversionEngagements: 0,
+    conversionSold: 0,
+  };
+
+  it("server recap type decides CONV, not the template name", () => {
+    expect(
+      sumConversionBases([
+        {
+          requestType: "Feel Free · Sampling Recap",
+          recapType: "retail",
+          engagements: 100,
+          productsSold: 10,
+        },
+        {
+          requestType: "Torch THC-Retail Sampling",
+          recapType: "guerilla",
+          engagements: 300,
+          productsSold: 20,
+        },
+      ]),
+    ).toEqual({ engagements: 100, sold: 10, dryDemos: 0 });
+  });
+
+  it.each(["event", "guerilla"] as const)(
+    "%s shows Conv as n/a, keeps Eng / Sold",
+    (recapType) => {
+      const kpis = recapListKpis({ ...base, recapType });
+      expect(kpis.find((k) => k.label === "Conv")).toEqual({
+        label: "Conv",
+        value: "—",
+        hint: "n/a · Retail + on-prem only",
+        tone: "default",
+      });
+      expect(kpis.find((k) => k.label === "Eng")?.value).toBe("400");
+      expect(kpis.find((k) => k.label === "Sold")?.value).toBe("30");
+    },
+  );
+
+  it("seeding never reads dropped cases as sampled or sold", () => {
+    const kpis = recapListKpis({
+      ...base,
+      engagements: 0,
+      sold: 0,
+      recapType: "seeding",
+    });
+    expect(kpis.find((k) => k.label === "Eng")).toMatchObject({
+      value: "—",
+      hint: "Drop-offs, not sampling",
+    });
+    expect(kpis.find((k) => k.label === "Sold")).toMatchObject({
+      value: "—",
+      hint: "Cases dropped aren't sales",
+    });
+    expect(kpis.find((k) => k.label === "Conv")?.value).toBe("—");
+  });
+
+  it("retail keeps the Retail + on-prem CONV", () => {
+    const conv = recapListKpis({
+      ...base,
+      conversionEngagements: 200,
+      conversionSold: 30,
+      recapType: "retail",
+    }).find((k) => k.label === "Conv");
+    expect(conv).toMatchObject({ value: "15%", hint: "Retail + on-prem" });
+  });
+});
+
 describe("3rd-party recaps stay out of totals", () => {
   const rows = [
     { requestType: "Retail Sampling", engagements: 100, consumersSampled: 100, productsSold: 20 },
