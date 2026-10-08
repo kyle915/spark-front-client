@@ -1,9 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
-import useSparkRole from "@/hooks/useSparkRole";
+import SparkConfirm from "@/shared/SparkConfirm";
 import { useAuthStore } from "@/store/authStore";
 import FieldMarketingCalendar from "./FieldMarketingCalendar";
+import FieldMarketingPlanForm from "./FieldMarketingPlanForm";
+import {
+  PLAN_ACTIVITIES,
+  emptyPlanForm,
+  formFromRow,
+  planInput,
+  type PlanFormState,
+} from "./fieldMarketingForm";
+import useSparkRole from "@/hooks/useSparkRole";
 import { postGql } from "./fieldMarketingGql";
 import PlanResultsSheet from "./PlanResultsSheet";
 import { resultsBadge } from "./planResultsFormat";
@@ -13,6 +23,17 @@ import {
   fieldMarketingCsv,
   matchesTactic,
 } from "./fieldMarketingExport";
+import {
+  booksWithIgnite,
+  deleteConfirmCopy,
+  hasLogged,
+  isBooked,
+  requestFormHref,
+  rowStatus,
+  showsCans,
+  showsDays,
+  showsPours,
+} from "./fieldMarketingRules";
 import type { Board, FmEvent, Manager } from "./fieldMarketingTypes";
 
 /**
@@ -20,38 +41,48 @@ import type { Board, FmEvent, Manager } from "./fieldMarketingTypes";
  * Dense month table, filter by market/RMM, projected KPI rollups, push to Ignite.
  */
 
-type SubmitPayload = {
-  submitFieldMarketing: {
+type MutatedEvent = {
+  id: string;
+  requestCode: string | null;
+  status: string;
+  market?: string | null;
+  startsOn?: string | null;
+};
+
+type DeletePayload = {
+  deleteFieldMarketing: {
     success: boolean;
     message: string;
-    event: {
-      requestCode: string | null;
-      status: string;
-      market?: string | null;
-      startsOn?: string | null;
-    } | null;
+    requestCode: string | null;
+    requestCancelled: boolean;
+    canUndo: boolean;
   };
 };
+
+type Toast = { message: string; undoId: string | null };
 
 const EVENT_FIELDS = `
   id market marketLabel managerName activity activityLabel name startsOn days
   address notes samplingFormat samplingLabel supportType supportLabel supportOther
-  skuNames needsFieldSupport ambassadorCount supportTimes supportScope
+  skuNames needsFieldSupport ambassadorCount supportTimes startTime endTime supportScope
   plannedFullCans plannedPourSamples plannedEmails
   loggedFullCans loggedPourSamples loggedEmails loggedDays loggedCases
-  status requestCode resultsCounted resultsPending
+  status requestCode requestUuid requestCancelled canBook deleteEffect
+  deletedAt deletedByName deleteCancelledRequest resultsCounted resultsPending
 `;
 
 const BOARD = `
-  query FieldMarketingBoard($month: String, $tenantId: ID, $market: String, $quarter: String, $activity: String) {
-    fieldMarketing(month: $month, tenantId: $tenantId, market: $market, quarter: $quarter, activity: $activity) {
+  query FieldMarketingBoard($month: String, $tenantId: ID, $market: String, $quarter: String, $activity: String, $includeDeleted: Boolean!) {
+    fieldMarketing(month: $month, tenantId: $tenantId, market: $market, quarter: $quarter, activity: $activity, includeDeleted: $includeDeleted) {
       available
       month
       monthLabel
+      canRestore
       managers { market marketLabel name email phone }
       kpis { key label detail target planned logged unit }
       skus
       events { ${EVENT_FIELDS} }
+      deletedEvents { ${EVENT_FIELDS} }
     }
   }
 `;
@@ -59,6 +90,16 @@ const BOARD = `
 const PLAN = `
   mutation PlanFieldMarketing($input: PlanFieldMarketingInput!) {
     planFieldMarketing(input: $input) {
+      success
+      message
+      event { id requestCode status market startsOn }
+    }
+  }
+`;
+
+const UPDATE = `
+  mutation UpdateFieldMarketing($input: UpdateFieldMarketingInput!) {
+    updateFieldMarketing(input: $input) {
       success
       message
       event { id requestCode status market startsOn }
@@ -85,20 +126,28 @@ const LOG = `
   }
 `;
 
-const ACTIVITIES = [
-  { id: "event_activation", label: "Event activation / sponsorship" },
-  { id: "guerilla", label: "Guerilla event" },
-  { id: "product_seeding", label: "Product seeding" },
-  { id: "sales_support", label: "Sales support" },
-];
+const DELETE = `
+  mutation DeleteFieldMarketing($input: DeleteFieldMarketingInput!) {
+    deleteFieldMarketing(input: $input) {
+      success
+      message
+      requestCode
+      requestCancelled
+      canUndo
+    }
+  }
+`;
 
-const SUPPORT_TYPES = [
-  { id: "distributor_meeting", label: "Distributor meeting" },
-  { id: "retail_visit", label: "Retail visit" },
-  { id: "other", label: "Other" },
-];
+const RESTORE = `
+  mutation RestoreFieldMarketing($input: RestoreFieldMarketingInput!) {
+    restoreFieldMarketing(input: $input) {
+      success
+      message
+    }
+  }
+`;
 
-const TACTICS = [{ id: "", label: "All tactics" }, ...ACTIVITIES];
+const TACTICS = [{ id: "", label: "All tactics" }, ...PLAN_ACTIVITIES];
 
 const FALLBACK_MANAGERS: Manager[] = [
   {
@@ -131,6 +180,10 @@ const FALLBACK_MANAGERS: Manager[] = [
   },
 ];
 
+const ORANGE = "var(--spark-orange, #ef5a2a)";
+const STICKY_ACTIONS =
+  "md:sticky md:right-0 bg-[#0A0B0D] md:shadow-[-12px_0_12px_-12px_rgba(0,0,0,0.9)]";
+
 function fmtDay(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   if (!y || !m || !d) return iso;
@@ -145,107 +198,10 @@ function fmtNum(value: number | null | undefined): string {
   return value.toLocaleString();
 }
 
-function hasLogged(row: FmEvent): boolean {
-  return (
-    row.loggedFullCans != null ||
-    row.loggedPourSamples != null ||
-    row.loggedEmails != null ||
-    row.loggedDays != null ||
-    row.loggedCases != null
-  );
-}
-
-function showsCans(activity: string, sampling: string): boolean {
-  if (activity === "full_can") return true;
-  if (activity === "sponsorship" || activity === "event_activation") {
-    return sampling !== "pour";
-  }
-  return activity === "guerilla" && sampling === "full_can";
-}
-
-function showsPours(activity: string, sampling: string): boolean {
-  if (activity === "pour") return true;
-  if (activity === "sponsorship" || activity === "event_activation") {
-    return sampling !== "full_can";
-  }
-  return activity === "guerilla" && sampling === "pour";
-}
-
-function showsDays(activity: string): boolean {
-  return activity === "sponsorship" || activity === "event_activation";
-}
-
 function currentMonthKey(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
-
-function rowStatus(row: FmEvent): string {
-  if (row.status === "submitted") {
-    return row.requestCode ? `Ignite · ${row.requestCode}` : "On plan";
-  }
-  if (hasLogged(row)) return "Logged results";
-  return "Draft";
-}
-
-/** Matches API `_should_create_request` — staffed activation / guerilla book Ignite. */
-function booksWithIgnite(row: FmEvent): boolean {
-  if (row.activity === "event_activation" || row.activity === "sponsorship") {
-    return true;
-  }
-  if (
-    row.activity === "guerilla" ||
-    row.activity === "full_can" ||
-    row.activity === "pour"
-  ) {
-    return Boolean(row.needsFieldSupport);
-  }
-  return false;
-}
-
-function requestFormHref(row: FmEvent): string {
-  const params = new URLSearchParams();
-  params.set("venue", row.name || "");
-  if (row.address) params.set("address", row.address);
-  if (row.startsOn) params.set("date", row.startsOn.slice(0, 10));
-  params.set("requestTypeName", "Event Activation");
-  params.set("schedulingStatus", "needs_scheduling");
-  if (row.ambassadorCount) params.set("baCount", String(row.ambassadorCount));
-  if (row.supportTimes) params.set("loadInTime", row.supportTimes);
-  if (row.managerName) params.set("onsitePoc", row.managerName);
-  const teamParts: string[] = [];
-  if (row.supportScope) teamParts.push(row.supportScope);
-  if (row.samplingLabel) teamParts.push(`Sampling: ${row.samplingLabel}`);
-  if (row.days > 1) teamParts.push(`${row.days} days`);
-  if (row.skuNames?.length) teamParts.push(`SKUs: ${row.skuNames.join(", ")}`);
-  if (teamParts.length) params.set("additionalTeamDetails", teamParts.join(" · "));
-  const noteBits = [
-    row.marketLabel ? `Market: ${row.marketLabel}` : "",
-    row.activityLabel ? `Tactic: ${row.activityLabel}` : "",
-    row.notes || "",
-  ].filter(Boolean);
-  if (noteBits.length) params.set("notes", noteBits.join("\n"));
-  return `/requests/create?${params.toString()}`;
-}
-
-const emptyForm = {
-  market: "miami",
-  activity: "event_activation",
-  name: "",
-  startsOn: "",
-  days: "1",
-  address: "",
-  notes: "",
-  plannedEmails: "",
-  samplingFormat: "",
-  supportType: "distributor_meeting",
-  supportOther: "",
-  skuNames: [] as string[],
-  needsFieldSupport: false,
-  ambassadorCount: "",
-  supportTimes: "",
-  supportScope: "",
-};
 
 export default function FieldMarketing() {
   const { tenantId } = useAuthStore();
@@ -254,20 +210,29 @@ export default function FieldMarketing() {
   // Default: all plans (no date filter). Optional month narrows the table + KPIs.
   const [month, setMonth] = useState("");
   const [marketFilter, setMarketFilter] = useState("");
+  const [tactic, setTactic] = useState("");
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
   const [notice, setNotice] = useState("");
+  const [toast, setToast] = useState<Toast | null>(null);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState<PlanFormState>(emptyPlanForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loggingId, setLoggingId] = useState<string | null>(null);
   const [showPlanForm, setShowPlanForm] = useState(false);
-  const [tactic, setTactic] = useState("");
   const [view, setView] = useState<"list" | "calendar">("list");
   const [exportQuarter, setExportQuarter] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [confirmRow, setConfirmRow] = useState<FmEvent | null>(null);
+  const [confirmBulk, setConfirmBulk] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
   const [logDraft, setLogDraft] = useState({
     cans: "",
     pours: "",
@@ -275,52 +240,49 @@ export default function FieldMarketing() {
     days: "",
     cases: "",
   });
+  const loadSeq = useRef(0);
+  const formRef = useRef<HTMLDivElement | null>(null);
 
-  const load = useCallback(
-    async (nextMonth: string, nextMarket: string) => {
-      setLoading(true);
-      setError("");
-      try {
-        const data = await postGql<{ fieldMarketing: Board }>(BOARD, {
-          month: nextMonth || null,
-          tenantId: tenantId || null,
-          market: nextMarket || null,
-        });
-        setBoard(data.fieldMarketing);
-        // Keep local filter state — server returns "all" when unscoped.
-        const serverMonth = data.fieldMarketing.month || "";
-        setMonth(serverMonth === "all" ? "" : serverMonth || nextMonth);
-        setSelected(new Set());
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Could not load the plan.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [tenantId],
-  );
+  const reload = useCallback(() => setReloadKey((k) => k + 1), []);
 
   useEffect(() => {
-    void load(month, marketFilter);
-    // month changes go through the Month select onChange (calls load).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenantId, marketFilter]);
+    const seq = ++loadSeq.current;
+    setLoading(true);
+    setError("");
+    postGql<{ fieldMarketing: Board }>(BOARD, {
+      month: month || null,
+      tenantId: tenantId || null,
+      market: marketFilter || null,
+      activity: tactic || null,
+      includeDeleted: showDeleted,
+    })
+      .then((data) => {
+        if (seq !== loadSeq.current) return;
+        setBoard(data.fieldMarketing);
+        setSelected(new Set());
+      })
+      .catch((err) => {
+        if (seq !== loadSeq.current) return;
+        setError(err instanceof Error ? err.message : "Could not load the plan.");
+      })
+      .finally(() => {
+        if (seq === loadSeq.current) setLoading(false);
+      });
+  }, [tenantId, month, marketFilter, tactic, showDeleted, reloadKey]);
 
-  const activity = form.activity;
-  const staffed = activity === "event_activation" || activity === "guerilla";
-  const showDays = showsDays(activity);
-  const showSampling = activity === "event_activation" || activity === "guerilla";
-  const showSkus =
-    activity === "event_activation" ||
-    activity === "guerilla" ||
-    activity === "product_seeding";
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 10000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
   const skuOptions = board?.skus ?? [];
-
   const managers = board?.managers?.length ? board.managers : FALLBACK_MANAGERS;
   const events = useMemo(() => {
     const rows = board?.events ?? [];
     return rows.filter((row) => matchesTactic(row.activity, tactic));
   }, [board?.events, tactic]);
+  const deletedEvents = board?.deletedEvents ?? [];
   const kpis = board?.kpis ?? [];
 
   const draftRows = useMemo(
@@ -335,104 +297,105 @@ export default function FieldMarketing() {
 
   const summaryLine = useMemo(() => {
     if (!events.length) return "Nothing in the plan for this filter.";
-    const submitted = events.filter((row) => row.status === "submitted").length;
-    const drafts = events.length - submitted;
-    return `${events.length} in plan · ${drafts} draft · ${submitted} with Ignite`;
-  }, [events]);
+    const booked = events.filter(isBooked).length;
+    const cancelled = events.filter((row) => row.requestCancelled).length;
+    const confirmed = events.filter(
+      (row) => row.status === "submitted" && !isBooked(row) && !row.requestCancelled,
+    ).length;
+    const parts = [
+      `${events.length} in plan`,
+      `${draftRows.length} draft`,
+      `${booked} booked with Ignite`,
+    ];
+    if (confirmed > 0) parts.push(`${confirmed} confirmed (no request)`);
+    if (cancelled > 0) parts.push(`${cancelled} request cancelled`);
+    return parts.join(" · ");
+  }, [events, draftRows]);
 
   const activeManager = marketFilter
     ? managers.find((m) => m.market === marketFilter)
     : null;
 
-
-  async function reloadAfterMutate(opts?: {
-    rowMarket?: string | null;
-    rowStartsOn?: string | null;
-  }) {
-    // Always show the new row: clear optional month filter so all-plans lists it.
-    const nextMonth = "";
-    let nextMarket = marketFilter;
-    if (opts?.rowMarket && marketFilter && opts.rowMarket !== marketFilter) {
-      nextMarket = opts.rowMarket;
+  /** Show the touched row: drop the month filter and follow it to its market. */
+  function reloadShowing(rowMarket?: string | null) {
+    setMonth("");
+    if (rowMarket && marketFilter && rowMarket !== marketFilter) {
+      setMarketFilter(rowMarket);
     }
-    setMonth(nextMonth);
-    setMarketFilter(nextMarket);
-    await load(nextMonth, nextMarket);
+    reload();
+  }
+
+  function openNewForm() {
+    if (showPlanForm && !editingId) {
+      setShowPlanForm(false);
+      return;
+    }
+    setEditingId(null);
+    setFormError("");
+    setForm({ ...emptyPlanForm, market: marketFilter || emptyPlanForm.market });
+    setShowPlanForm(true);
+  }
+
+  function openEdit(row: FmEvent) {
+    setEditingId(row.id);
+    setFormError("");
+    setForm(formFromRow(row));
+    setShowPlanForm(true);
+    setView("list");
+    window.requestAnimationFrame(() =>
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
+  }
+
+  function closeForm() {
+    setShowPlanForm(false);
+    setEditingId(null);
+    setFormError("");
+    setForm({ ...emptyPlanForm, market: marketFilter || emptyPlanForm.market });
   }
 
   async function save(submit: boolean) {
     setSaving(true);
-    setError("");
+    setFormError("");
     setNotice("");
     try {
-      const num = (raw: string) => {
-        const trimmed = raw.trim();
-        if (!trimmed) return 0;
-        const value = Number(trimmed);
-        if (!Number.isFinite(value)) throw new Error("Use whole numbers.");
-        return Math.round(value);
-      };
-      const data = await postGql<{
-        planFieldMarketing: {
-          success: boolean;
-          message: string;
-          event: {
-            requestCode: string | null;
-            market?: string | null;
-            startsOn?: string | null;
-          } | null;
-        };
-      }>(PLAN, {
-        input: {
-          market: form.market,
-          activity: form.activity,
-          name: form.name.trim(),
-          startsOn: form.startsOn,
-          days: showDays ? num(form.days || "1") : 1,
-          address: form.address.trim(),
-          notes: form.notes.trim(),
-          plannedFullCans: 0,
-          plannedPourSamples: 0,
-          plannedEmails: num(form.plannedEmails),
-          samplingFormat: showSampling ? form.samplingFormat : "",
-          supportType: activity === "sales_support" ? form.supportType : "",
-          supportOther:
-            activity === "sales_support" && form.supportType === "other"
-              ? form.supportOther.trim()
-              : "",
-          skuNames: showSkus ? form.skuNames : [],
-          needsFieldSupport: staffed && form.needsFieldSupport,
-          ambassadorCount:
-            staffed && form.needsFieldSupport ? num(form.ambassadorCount || "0") : 0,
-          supportTimes:
-            staffed && form.needsFieldSupport ? form.supportTimes.trim() : "",
-          supportScope:
-            staffed && form.needsFieldSupport ? form.supportScope.trim() : "",
-          submit,
-          tenantId: tenantId || null,
-        },
-      });
-      const ev = data.planFieldMarketing.event;
+      const input = { ...planInput(form), tenantId: tenantId || null };
+      let ev: MutatedEvent | null;
+      if (editingId) {
+        const data = await postGql<{ updateFieldMarketing: { event: MutatedEvent | null } }>(
+          UPDATE,
+          { input: { ...input, eventId: editingId } },
+        );
+        ev = data.updateFieldMarketing.event;
+        if (submit && ev) {
+          const booked = await postGql<{ submitFieldMarketing: { event: MutatedEvent | null } }>(
+            SUBMIT,
+            { input: { eventId: ev.id, tenantId: tenantId || null } },
+          );
+          ev = booked.submitFieldMarketing.event;
+        }
+      } else {
+        const data = await postGql<{ planFieldMarketing: { event: MutatedEvent | null } }>(
+          PLAN,
+          { input: { ...input, submit } },
+        );
+        ev = data.planFieldMarketing.event;
+      }
       const code = ev?.requestCode;
-      setForm({
-        ...emptyForm,
-        market: marketFilter || form.market,
-        activity: form.activity,
-      });
-      setShowPlanForm(false);
+      const savedMarket = form.market;
+      closeForm();
       setNotice(
         submit
           ? code
             ? `Submitted to Ignite · ${code}`
             : "Submitted to Ignite."
-          : "Saved to the plan.",
+          : editingId
+            ? "Plan updated."
+            : "Saved to the plan.",
       );
-      await reloadAfterMutate({
-        rowMarket: form.market,
-        rowStartsOn: form.startsOn,
-      });
+      reloadShowing(savedMarket);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save.");
+      setFormError(err instanceof Error ? err.message : "Could not save.");
     } finally {
       setSaving(false);
     }
@@ -445,25 +408,28 @@ export default function FieldMarketing() {
     setNotice("");
     const codes: string[] = [];
     let lastMarket: string | null = null;
+    let done = 0;
     try {
       for (const eventId of ids) {
-        const data = await postGql<SubmitPayload>(SUBMIT, {
-          input: { eventId, tenantId: tenantId || null },
-        });
+        const data = await postGql<{ submitFieldMarketing: { event: MutatedEvent | null } }>(
+          SUBMIT,
+          { input: { eventId, tenantId: tenantId || null } },
+        );
         const ev = data.submitFieldMarketing.event;
-        const code = ev?.requestCode;
-        if (code) codes.push(code);
+        if (ev?.requestCode) codes.push(ev.requestCode);
         if (ev?.market) lastMarket = ev.market;
+        done += 1;
       }
       setNotice(
         codes.length
           ? `Pushed to Ignite · ${codes.join(", ")}`
           : `Pushed ${ids.length} to Ignite.`,
       );
-      await reloadAfterMutate({ rowMarket: lastMarket });
+      reloadShowing(lastMarket);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not submit.");
-      await reloadAfterMutate();
+      const reason = err instanceof Error ? err.message : "Could not submit.";
+      setError(done ? `${done} of ${ids.length} booked. Then: ${reason}` : reason);
+      reload();
     } finally {
       setSubmitting(false);
     }
@@ -498,9 +464,89 @@ export default function FieldMarketing() {
       });
       setLoggingId(null);
       setNotice("Logged. Scorecard logged totals update from this.");
-      await load(month, marketFilter);
+      reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not log.");
+    }
+  }
+
+  function dropRows(ids: string[]) {
+    const gone = new Set(ids);
+    setBoard((prev) =>
+      prev ? { ...prev, events: prev.events.filter((row) => !gone.has(row.id)) } : prev,
+    );
+    setSelected((prev) => new Set([...prev].filter((id) => !gone.has(id))));
+    if (loggingId && gone.has(loggingId)) setLoggingId(null);
+    if (editingId && gone.has(editingId)) closeForm();
+  }
+
+  async function deleteRow(row: FmEvent) {
+    setDeleting(true);
+    setError("");
+    setNotice("");
+    const snapshot = board;
+    dropRows([row.id]);
+    setConfirmRow(null);
+    try {
+      const data = await postGql<DeletePayload>(DELETE, {
+        input: { eventId: row.id, tenantId: tenantId || null },
+      });
+      const res = data.deleteFieldMarketing;
+      setToast({
+        message: res.canUndo && res.requestCancelled
+          ? `${res.message} Undo brings back the plan only.`
+          : res.message,
+        undoId: res.canUndo ? row.id : null,
+      });
+      reload();
+    } catch (err) {
+      setBoard(snapshot);
+      setError(err instanceof Error ? err.message : "Could not delete.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function deleteSelectedDrafts() {
+    const ids = selectedDraftIds;
+    if (!ids.length) return;
+    setDeleting(true);
+    setError("");
+    setNotice("");
+    setConfirmBulk(false);
+    dropRows(ids);
+    let done = 0;
+    try {
+      for (const eventId of ids) {
+        await postGql<DeletePayload>(DELETE, {
+          input: { eventId, tenantId: tenantId || null },
+        });
+        done += 1;
+      }
+      setToast({ message: `Deleted ${done} draft${done === 1 ? "" : "s"}.`, undoId: null });
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : "Could not delete.";
+      setError(done ? `${done} of ${ids.length} deleted. Then: ${reason}` : reason);
+    } finally {
+      setDeleting(false);
+      reload();
+    }
+  }
+
+  async function restore(id: string) {
+    setRestoringId(id);
+    setError("");
+    try {
+      const data = await postGql<{ restoreFieldMarketing: { message: string } }>(RESTORE, {
+        input: { eventId: id, tenantId: tenantId || null },
+      });
+      setToast(null);
+      setNotice(data.restoreFieldMarketing.message);
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not restore.");
+    } finally {
+      setRestoringId(null);
     }
   }
 
@@ -523,6 +569,7 @@ export default function FieldMarketing() {
         tenantId: tenantId || null,
         market: marketFilter || null,
         activity: tactic || null,
+        includeDeleted: false,
       });
       const rows = (data.fieldMarketing.events ?? []).filter((row) =>
         matchesTactic(row.activity, tactic),
@@ -545,6 +592,8 @@ export default function FieldMarketing() {
     });
   }
 
+  const confirmCopy = confirmRow ? deleteConfirmCopy(confirmRow) : null;
+
   return (
     <Layout>
       <div className="space-y-5 max-w-[1400px] spark-fade-in">
@@ -562,7 +611,7 @@ export default function FieldMarketing() {
         ) : null}
 
         {error ? (
-          <p className="text-sm" style={{ color: "var(--spark-orange, #ef5a2a)" }}>
+          <p className="text-sm" role="alert" style={{ color: ORANGE }}>
             {error}
           </p>
         ) : null}
@@ -582,11 +631,7 @@ export default function FieldMarketing() {
               <select
                 className="select select-bordered select-sm"
                 value={month}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setMonth(next);
-                  void load(next, marketFilter);
-                }}
+                onChange={(e) => setMonth(e.target.value)}
               >
                 <option value="">All months</option>
                 {Array.from({ length: 18 }, (_, i) => {
@@ -626,11 +671,7 @@ export default function FieldMarketing() {
                 className={`pill-btn ${view === "calendar" ? "on" : ""}`}
                 onClick={() => {
                   setView("calendar");
-                  if (!month) {
-                    const next = currentMonthKey();
-                    setMonth(next);
-                    void load(next, marketFilter);
-                  }
+                  if (!month) setMonth(currentMonthKey());
                 }}
               >
                 Calendar
@@ -665,13 +706,20 @@ export default function FieldMarketing() {
             >
               {exporting ? "Exporting…" : "Export CSV"}
             </button>
-            <button
-              type="button"
-              className="spark-btn-ghost"
-              onClick={() => setShowPlanForm((v) => !v)}
-            >
-              {showPlanForm ? "Close form" : "Add to plan"}
+            <button type="button" className="spark-btn-ghost" onClick={openNewForm}>
+              {showPlanForm && !editingId ? "Close form" : "Add to plan"}
             </button>
+            {selectedDraftIds.length ? (
+              <button
+                type="button"
+                className="spark-btn-ghost"
+                style={{ color: ORANGE, borderColor: "rgba(239,90,42,0.45)" }}
+                disabled={deleting}
+                onClick={() => setConfirmBulk(true)}
+              >
+                Delete {selectedDraftIds.length}
+              </button>
+            ) : null}
             <button
               type="button"
               className="spark-btn-primary"
@@ -746,7 +794,7 @@ export default function FieldMarketing() {
               <p className="label-mini mb-2">{kpi.label}</p>
               <p className="text-2xl font-bold tabular-nums" style={{ color: "#c5f546" }}>
                 {fmtNum(kpi.planned)}
-                {month ? (
+                {month && !tactic ? (
                   <span className="text-sm font-normal opacity-55 text-white">
                     {" "}
                     / {kpi.target.toLocaleString()}
@@ -766,260 +814,39 @@ export default function FieldMarketing() {
         </section>
         <p className="text-xs opacity-55">
           Lime number is projected (planned) for the current filter
-          {marketFilter ? " and market" : ""}.
-          {month
+          {marketFilter ? " and market" : ""}
+          {tactic ? " and tactic" : ""}.
+          {month && !tactic
             ? " Targets are the monthly scorecard for the selected month."
-            : " All months shows planned sums only — monthly targets (1,152 cans / 3,456 pours / …) are not scored against a multi-month rollup."}{" "}
+            : tactic
+              ? " One tactic isn't scored against the whole monthly target."
+              : " All months shows planned sums only — monthly targets (1,152 cans / 3,456 pours / …) are not scored against a multi-month rollup."}{" "}
           Logged is the manual log, else approved recaps pushed to the plan, and
           stays a dash until one of those comes in. 4oz pours are not added into
-          full cans.
+          full cans. Deleted plans never count.
         </p>
 
         {showPlanForm ? (
-          <section className="rounded-xl border border-white/10 p-4 space-y-3">
-            <p className="label-mini">Add to plan</p>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <label className="text-sm space-y-1">
-                <span className="opacity-70">Market / RMM</span>
-                <select
-                  className="input input-bordered w-full input-sm"
-                  value={form.market}
-                  onChange={(e) => setForm({ ...form, market: e.target.value })}
-                >
-                  {managers.map((manager) => (
-                    <option key={manager.market} value={manager.market}>
-                      {manager.marketLabel} · {manager.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-sm space-y-1">
-                <span className="opacity-70">Activity</span>
-                <select
-                  className="input input-bordered w-full input-sm"
-                  value={form.activity}
-                  onChange={(e) => setForm({ ...form, activity: e.target.value })}
-                >
-                  {ACTIVITIES.map((row) => (
-                    <option key={row.id} value={row.id}>
-                      {row.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-sm space-y-1">
-                <span className="opacity-70">Name</span>
-                <input
-                  className="input input-bordered w-full input-sm"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="Wynwood product drop"
-                />
-              </label>
-              <label className="text-sm space-y-1">
-                <span className="opacity-70">Date</span>
-                <input
-                  type="date"
-                  className="input input-bordered w-full input-sm"
-                  value={form.startsOn}
-                  onChange={(e) => setForm({ ...form, startsOn: e.target.value })}
-                />
-              </label>
-              {showDays ? (
-                <label className="text-sm space-y-1">
-                  <span className="opacity-70">Days</span>
-                  <input
-                    inputMode="numeric"
-                    className="input input-bordered w-full input-sm"
-                    value={form.days}
-                    onChange={(e) => setForm({ ...form, days: e.target.value })}
-                  />
-                </label>
-              ) : null}
-              {showSampling ? (
-                <label className="text-sm space-y-1">
-                  <span className="opacity-70">
-                    Sampling format{activity === "guerilla" ? "" : " (optional)"}
-                  </span>
-                  <select
-                    className="input input-bordered w-full input-sm"
-                    value={form.samplingFormat}
-                    onChange={(e) =>
-                      setForm({ ...form, samplingFormat: e.target.value })
-                    }
-                  >
-                    <option value="">{activity === "guerilla" ? "Pick one" : "Not set"}</option>
-                    <option value="full_can">Full can</option>
-                    <option value="pour">4oz pour</option>
-                  </select>
-                </label>
-              ) : null}
-              {activity === "sales_support" ? (
-                <label className="text-sm space-y-1">
-                  <span className="opacity-70">Sales support</span>
-                  <select
-                    className="input input-bordered w-full input-sm"
-                    value={form.supportType}
-                    onChange={(e) => setForm({ ...form, supportType: e.target.value })}
-                  >
-                    {SUPPORT_TYPES.map((row) => (
-                      <option key={row.id} value={row.id}>
-                        {row.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-              {activity === "sales_support" && form.supportType === "other" ? (
-                <label className="text-sm space-y-1">
-                  <span className="opacity-70">What kind</span>
-                  <input
-                    className="input input-bordered w-full input-sm"
-                    value={form.supportOther}
-                    onChange={(e) => setForm({ ...form, supportOther: e.target.value })}
-                  />
-                </label>
-              ) : null}
-              <label className="text-sm space-y-1 md:col-span-2">
-                <span className="opacity-70">Address</span>
-                <input
-                  className="input input-bordered w-full input-sm"
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  placeholder="Required before Ignite can execute"
-                />
-              </label>
-              {showSkus ? (
-                <fieldset className="text-sm space-y-1 md:col-span-2">
-                  <legend className="opacity-70">SKUs</legend>
-                  {skuOptions.length === 0 ? (
-                    <p className="text-xs opacity-60">
-                      Black Cherry 10mg, Strawberry Lemonade 10mg, Watermelon Limeade 10mg,
-                      and Nonactive are not in the Torch catalog yet.
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {skuOptions.map((name) => {
-                        const on = form.skuNames.includes(name);
-                        return (
-                          <label key={name} className="inline-flex items-center gap-1.5 text-xs">
-                            <input
-                              type="checkbox"
-                              className="checkbox checkbox-xs"
-                              checked={on}
-                              onChange={() =>
-                                setForm({
-                                  ...form,
-                                  skuNames: on
-                                    ? form.skuNames.filter((sku) => sku !== name)
-                                    : [...form.skuNames, name],
-                                })
-                              }
-                            />
-                            {name}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
-                </fieldset>
-              ) : null}
-              {staffed ? (
-                <label className="text-sm space-y-1">
-                  <span className="opacity-70">Need field support?</span>
-                  <select
-                    className="input input-bordered w-full input-sm"
-                    value={form.needsFieldSupport ? "yes" : "no"}
-                    onChange={(e) =>
-                      setForm({ ...form, needsFieldSupport: e.target.value === "yes" })
-                    }
-                  >
-                    <option value="no">No</option>
-                    <option value="yes">Yes</option>
-                  </select>
-                </label>
-              ) : null}
-              {staffed && form.needsFieldSupport ? (
-                <>
-                  <label className="text-sm space-y-1">
-                    <span className="opacity-70">Brand ambassadors</span>
-                    <input
-                      inputMode="numeric"
-                      className="input input-bordered w-full input-sm"
-                      value={form.ambassadorCount}
-                      onChange={(e) =>
-                        setForm({ ...form, ambassadorCount: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="text-sm space-y-1">
-                    <span className="opacity-70">Times</span>
-                    <input
-                      className="input input-bordered w-full input-sm"
-                      value={form.supportTimes}
-                      onChange={(e) => setForm({ ...form, supportTimes: e.target.value })}
-                      placeholder="4–8pm"
-                    />
-                  </label>
-                  <label className="text-sm space-y-1 md:col-span-2">
-                    <span className="opacity-70">Scope</span>
-                    <input
-                      className="input input-bordered w-full input-sm"
-                      value={form.supportScope}
-                      onChange={(e) => setForm({ ...form, supportScope: e.target.value })}
-                      placeholder="What you need on site"
-                    />
-                  </label>
-                </>
-              ) : null}
-              <label className="text-sm space-y-1">
-                <span className="opacity-70">Emails to capture</span>
-                <input
-                  inputMode="numeric"
-                  className="input input-bordered w-full input-sm"
-                  value={form.plannedEmails}
-                  onChange={(e) => setForm({ ...form, plannedEmails: e.target.value })}
-                />
-              </label>
-              <label className="text-sm space-y-1 md:col-span-2 xl:col-span-4">
-                <span className="opacity-70">Notes</span>
-                <textarea
-                  className="textarea textarea-bordered w-full textarea-sm"
-                  rows={2}
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                />
-              </label>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="spark-btn-ghost"
-                disabled={saving}
-                onClick={() => void save(false)}
-              >
-                Save draft
-              </button>
-              <button
-                type="button"
-                className="spark-btn-primary"
-                disabled={saving}
-                onClick={() => void save(true)}
-              >
-                Save + book with Ignite
-              </button>
-            </div>
-          </section>
+          <div ref={formRef}>
+            <FieldMarketingPlanForm
+              form={form}
+              onChange={setForm}
+              managers={managers}
+              skuOptions={skuOptions}
+              editing={Boolean(editingId)}
+              saving={saving}
+              error={formError}
+              onSave={(submit) => void save(submit)}
+              onCancel={closeForm}
+            />
+          </div>
         ) : null}
 
         {view === "calendar" ? (
           <FieldMarketingCalendar
             month={month || currentMonthKey()}
             events={events}
-            onMonth={(next) => {
-              setMonth(next);
-              void load(next, marketFilter);
-            }}
+            onMonth={setMonth}
           />
         ) : (
         <section className="rounded-xl border border-white/10 overflow-hidden">
@@ -1041,7 +868,7 @@ export default function FieldMarketing() {
                   </th>
                   <th className="px-2 py-2">Date</th>
                   <th className="px-2 py-2">Market</th>
-                  <th className="px-2 py-2">RMM</th>
+                  <th className="px-2 py-2 hidden 2xl:table-cell">RMM</th>
                   <th className="px-2 py-2">Activity</th>
                   <th className="px-2 py-2">Name</th>
                   <th className="px-2 py-2 text-right">Days</th>
@@ -1050,7 +877,7 @@ export default function FieldMarketing() {
                   <th className="px-2 py-2 text-right">Cases</th>
                   <th className="px-2 py-2 text-right">Emails</th>
                   <th className="px-2 py-2">Status</th>
-                  <th className="px-2 py-2 text-right">Actions</th>
+                  <th className={`px-2 py-2 text-right ${STICKY_ACTIONS}`}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1059,12 +886,14 @@ export default function FieldMarketing() {
                     <td colSpan={13} className="px-3 py-8 text-center opacity-55 text-sm">
                       No plan rows
                       {month ? " for this month" : ""}
-                      {marketFilter ? " and market" : ""}. Add to plan to start.
+                      {marketFilter ? " and market" : ""}
+                      {tactic ? " and tactic" : ""}. Add to plan to start.
                     </td>
                   </tr>
                 ) : null}
                 {events.map((row) => {
                   const isDraft = row.status !== "submitted";
+                  const booked = isBooked(row);
                   return (
                     <tr
                       key={row.id}
@@ -1083,14 +912,17 @@ export default function FieldMarketing() {
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap tabular-nums text-sm">
                         {fmtDay(row.startsOn)}
+                        {row.supportTimes ? (
+                          <span className="block text-[11px] opacity-50">{row.supportTimes}</span>
+                        ) : null}
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap text-sm">
                         {row.marketLabel}
                       </td>
-                      <td className="px-2 py-2 whitespace-nowrap text-sm opacity-70">
+                      <td className="px-2 py-2 whitespace-nowrap text-sm opacity-70 hidden 2xl:table-cell">
                         {row.managerName}
                       </td>
-                      <td className="px-2 py-2 text-sm opacity-80 max-w-[160px]">
+                      <td className="px-2 py-2 text-sm opacity-80 max-w-[130px]">
                         <span className="block truncate">{row.activityLabel}</span>
                         {row.supportLabel ? (
                           <span className="block text-[11px] opacity-50 truncate">
@@ -1110,7 +942,7 @@ export default function FieldMarketing() {
                           </span>
                         ) : null}
                       </td>
-                      <td className="px-2 py-2 text-sm font-medium max-w-[220px]">
+                      <td className="px-2 py-2 text-sm font-medium max-w-[160px]">
                         <span className="truncate block" title={row.name}>
                           {row.name}
                         </span>
@@ -1121,11 +953,11 @@ export default function FieldMarketing() {
                           >
                             {row.address}
                           </span>
-                        ) : (
-                          <span className="block text-[11px]" style={{ color: "#ef5a2a" }}>
+                        ) : booksWithIgnite(row) ? (
+                          <span className="block text-[11px]" style={{ color: ORANGE }}>
                             Needs address
                           </span>
-                        )}
+                        ) : null}
                       </td>
                       <td className="px-2 py-2 text-right tabular-nums text-sm">
                         {showsDays(row.activity) ? row.days : "—"}
@@ -1143,19 +975,31 @@ export default function FieldMarketing() {
                         {fmtNum(row.loggedEmails ?? (row.plannedEmails || null))}
                       </td>
                       <td className="px-2 py-2 whitespace-nowrap text-xs">
-                        <span
-                          className="inline-block px-2 py-0.5 rounded border border-white/10"
-                          style={{
-                            color:
-                              row.status === "submitted"
-                                ? "#c5f546"
-                                : hasLogged(row)
-                                  ? "rgba(255,255,255,0.7)"
-                                  : "rgba(255,255,255,0.55)",
-                          }}
-                        >
-                          {rowStatus(row)}
-                        </span>
+                        {booked && row.requestUuid ? (
+                          <Link
+                            to={`/request/view/${row.requestUuid}`}
+                            className="inline-block px-2 py-0.5 rounded border border-white/10 hover:border-white/30"
+                            style={{ color: "#c5f546" }}
+                            title="Open the request"
+                          >
+                            {rowStatus(row)} ↗
+                          </Link>
+                        ) : (
+                          <span
+                            className="inline-block px-2 py-0.5 rounded border border-white/10"
+                            style={{
+                              color: row.requestCancelled
+                                ? ORANGE
+                                : row.status === "submitted"
+                                  ? "#c5f546"
+                                  : hasLogged(row)
+                                    ? "rgba(255,255,255,0.7)"
+                                    : "rgba(255,255,255,0.55)",
+                            }}
+                          >
+                            {rowStatus(row)}
+                          </span>
+                        )}
                         {resultsBadge(
                           row.resultsCounted,
                           isClient ? 0 : row.resultsPending,
@@ -1183,9 +1027,9 @@ export default function FieldMarketing() {
                           </button>
                         ) : null}
                       </td>
-                      <td className="px-2 py-2 text-right whitespace-nowrap">
-                        <div className="inline-flex gap-1 justify-end">
-                          {isDraft ? (
+                      <td className={`px-2 py-2 text-right ${STICKY_ACTIONS}`}>
+                        <div className="flex flex-wrap gap-1 justify-end w-[150px] ml-auto">
+                          {row.canBook ? (
                             <button
                               type="button"
                               className="spark-btn-ghost !px-2 !py-1 text-xs"
@@ -1197,10 +1041,14 @@ export default function FieldMarketing() {
                                   : "Confirm on the plan (no Ignite request for this tactic)"
                               }
                             >
-                              {booksWithIgnite(row) ? "Book Ignite" : "Confirm"}
+                              {booksWithIgnite(row)
+                                ? row.requestCancelled
+                                  ? "Book again"
+                                  : "Book Ignite"
+                                : "Confirm"}
                             </button>
                           ) : null}
-                          {booksWithIgnite(row) ? (
+                          {row.canBook && booksWithIgnite(row) ? (
                             <a
                               className="spark-btn-ghost !px-2 !py-1 text-xs inline-flex items-center"
                               href={requestFormHref(row)}
@@ -1208,6 +1056,15 @@ export default function FieldMarketing() {
                             >
                               Full form
                             </a>
+                          ) : null}
+                          {!booked ? (
+                            <button
+                              type="button"
+                              className="spark-btn-ghost !px-2 !py-1 text-xs"
+                              onClick={() => openEdit(row)}
+                            >
+                              Edit
+                            </button>
                           ) : null}
                           <button
                             type="button"
@@ -1224,6 +1081,16 @@ export default function FieldMarketing() {
                             }}
                           >
                             Log
+                          </button>
+                          <button
+                            type="button"
+                            className="spark-btn-ghost !px-2 !py-1 text-xs"
+                            style={{ color: ORANGE }}
+                            disabled={deleting}
+                            onClick={() => setConfirmRow(row)}
+                            aria-label={`Delete ${row.name}`}
+                          >
+                            Delete
                           </button>
                         </div>
                       </td>
@@ -1320,6 +1187,86 @@ export default function FieldMarketing() {
         </section>
         )}
 
+        {board?.canRestore ? (
+          <div className="space-y-2">
+            <label className="text-xs inline-flex items-center gap-2 opacity-70">
+              <input
+                type="checkbox"
+                className="checkbox checkbox-xs"
+                checked={showDeleted}
+                onChange={(e) => setShowDeleted(e.target.checked)}
+              />
+              Show deleted plans (Ignite admins)
+            </label>
+            {showDeleted ? (
+              <section className="rounded-xl border border-white/10 overflow-hidden">
+                <p className="px-3 pt-3 text-xs opacity-60">
+                  Restoring brings the plan back. A request the delete cancelled stays
+                  cancelled — book the plan again if it's back on.
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="table table-sm w-full">
+                    <thead>
+                      <tr className="border-b border-white/10 text-left text-[11px] uppercase tracking-wider opacity-60">
+                        <th className="px-3 py-2">Date</th>
+                        <th className="px-2 py-2">Market</th>
+                        <th className="px-2 py-2">Name</th>
+                        <th className="px-2 py-2">Deleted</th>
+                        <th className="px-2 py-2">Request</th>
+                        <th className="px-2 py-2 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {deletedEvents.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-3 py-6 text-center opacity-55 text-sm">
+                            No deleted plans for this filter.
+                          </td>
+                        </tr>
+                      ) : null}
+                      {deletedEvents.map((row) => (
+                        <tr key={row.id} className="border-b border-white/5 opacity-80">
+                          <td className="px-3 py-2 whitespace-nowrap tabular-nums text-sm">
+                            {fmtDay(row.startsOn)}
+                          </td>
+                          <td className="px-2 py-2 whitespace-nowrap text-sm">{row.marketLabel}</td>
+                          <td className="px-2 py-2 text-sm">
+                            <span className="block truncate max-w-[240px]">{row.name}</span>
+                            <span className="block text-[11px] opacity-50">{row.activityLabel}</span>
+                          </td>
+                          <td className="px-2 py-2 text-xs opacity-70 whitespace-nowrap">
+                            {row.deletedAt ? new Date(row.deletedAt).toLocaleString() : ""}
+                            {row.deletedByName ? ` · ${row.deletedByName}` : ""}
+                          </td>
+                          <td className="px-2 py-2 text-xs whitespace-nowrap">
+                            {row.requestCode
+                              ? row.deleteCancelledRequest
+                                ? `${row.requestCode} cancelled`
+                                : row.requestUuid
+                                  ? `${row.requestCode} kept`
+                                  : `${row.requestCode} cancelled`
+                              : "—"}
+                          </td>
+                          <td className="px-2 py-2 text-right">
+                            <button
+                              type="button"
+                              className="spark-btn-ghost !px-2 !py-1 text-xs"
+                              disabled={restoringId === row.id}
+                              onClick={() => void restore(row.id)}
+                            >
+                              {restoringId === row.id ? "Restoring…" : "Restore"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            ) : null}
+          </div>
+        ) : null}
+
         {!marketFilter && managers.length ? (
           <details className="text-sm opacity-70">
             <summary className="cursor-pointer label-mini mb-2">RMM directory</summary>
@@ -1336,6 +1283,57 @@ export default function FieldMarketing() {
           </details>
         ) : null}
       </div>
+
+      {confirmRow && confirmCopy ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Delete plan"
+          title={confirmCopy.title}
+          body={confirmCopy.body}
+          confirmLabel={confirmCopy.confirmLabel}
+          busy={deleting}
+          onConfirm={() => void deleteRow(confirmRow)}
+          onCancel={() => setConfirmRow(null)}
+        />
+      ) : null}
+      {confirmBulk ? (
+        <SparkConfirm
+          tone="danger"
+          kicker="Delete plans"
+          title={`Delete ${selectedDraftIds.length} draft${selectedDraftIds.length === 1 ? "" : "s"}?`}
+          body="Drafts aren't booked, so no request changes. They come off the board and out of the projected totals."
+          confirmLabel={`Delete ${selectedDraftIds.length}`}
+          busy={deleting}
+          onConfirm={() => void deleteSelectedDrafts()}
+          onCancel={() => setConfirmBulk(false)}
+        />
+      ) : null}
+      {toast ? (
+        <div
+          className="spark-toast fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-3 flex items-center gap-3 max-w-[min(92vw,520px)]"
+          role="status"
+        >
+          <p className="text-sm">{toast.message}</p>
+          {toast.undoId ? (
+            <button
+              type="button"
+              className="spark-btn-ghost !px-2.5 !py-1 text-xs shrink-0"
+              disabled={restoringId === toast.undoId}
+              onClick={() => toast.undoId && void restore(toast.undoId)}
+            >
+              Undo
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="text-xs opacity-55 shrink-0"
+            aria-label="Dismiss"
+            onClick={() => setToast(null)}
+          >
+            ✕
+          </button>
+        </div>
+      ) : null}
       {resultsFor ? (
         <PlanResultsSheet
           planId={resultsFor.id}

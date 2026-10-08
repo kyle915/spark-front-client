@@ -11,7 +11,12 @@ export async function postGql<T>(
     },
     body: JSON.stringify({ query, variables }),
   });
-  const json = await res.json();
+  let json: { data?: T; errors?: Array<{ message?: string }> };
+  try {
+    json = await res.json();
+  } catch {
+    throw new Error(`Spark didn't answer (${res.status}). Try again.`);
+  }
   if (json.errors?.length) {
     throw new Error(json.errors[0]?.message || "Request failed");
   }
