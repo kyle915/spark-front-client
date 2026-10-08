@@ -100,6 +100,13 @@ type AccountMapPin {
   stateCode: String!
 }
 
+type ActivationPlanDetailResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  activationPlan: ActivationPlanType
+}
+
 type ActivationPlanPipeline {
   planned: Int!
   approved: Int!
@@ -121,60 +128,6 @@ type ActivationPlanType {
   ownerId: ID
   ownerName: String
   ownerEmail: String
-}
-
-type ActivationPlanDetailResponse {
-  success: Boolean!
-  message: String!
-  clientMutationId: ID
-  activationPlan: ActivationPlanType
-}
-
-type AttachRequestsToPlanResponse {
-  success: Boolean!
-  message: String!
-  clientMutationId: ID
-  updatedCount: Int!
-  activationPlan: ActivationPlanType
-}
-
-input CreateActivationPlanInput {
-  clientMutationId: ID = null
-  tenantId: ID = null
-  name: String!
-  conceptBrief: String = null
-  startDate: String = null
-  endDate: String = null
-  markets: [String!] = null
-  ownerId: ID = null
-}
-
-input UpdateActivationPlanInput {
-  clientMutationId: ID = null
-  id: ID!
-  name: String = null
-  conceptBrief: String = null
-  startDate: String = null
-  endDate: String = null
-  markets: [String!] = null
-  ownerId: ID = null
-  clearOwner: Boolean = null
-}
-
-input DeleteActivationPlanInput {
-  clientMutationId: ID = null
-  id: ID!
-}
-
-input AttachRequestsToPlanInput {
-  clientMutationId: ID = null
-  activationPlanId: ID!
-  requestIds: [ID!]!
-}
-
-input DetachRequestsFromPlanInput {
-  clientMutationId: ID = null
-  requestIds: [ID!]!
 }
 
 input ActiveAmbassadorFiltersInput {
@@ -1020,6 +973,20 @@ input AssignGroupToJobInput {
   jobId: ID!
 }
 
+input AttachRequestsToPlanInput {
+  clientMutationId: ID = null
+  activationPlanId: ID!
+  requestIds: [ID!]!
+}
+
+type AttachRequestsToPlanResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  updatedCount: Int!
+  activationPlan: ActivationPlanType
+}
+
 """
 Attendance(id, uuid, clock_time, coordinates, ambassador, job, event, attendace_type, attendance_status, source, timezone, created_by, updated_by, created_at, updated_at)
 """
@@ -1463,6 +1430,20 @@ type CampaignReportPhoto {
 type CampaignReportQuote {
   text: String!
   source: String
+}
+
+input CancelDemoInput {
+  clientMutationId: ID = null
+  requestId: ID = null
+  lookup: String = null
+  reason: String!
+}
+
+type CancelDemoResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  requestCode: String
 }
 
 input CancelShiftInviteInput {
@@ -2012,6 +1993,17 @@ input CreateAcademyModuleInput {
   order: Int! = 0
   published: Boolean! = false
   tenantId: ID = null
+}
+
+input CreateActivationPlanInput {
+  clientMutationId: ID = null
+  tenantId: ID = null
+  name: String!
+  conceptBrief: String = null
+  startDate: String = null
+  endDate: String = null
+  markets: [String!] = null
+  ownerId: ID = null
 }
 
 input CreateAmbassadorGroupInput {
@@ -2836,7 +2828,7 @@ type CustomFormType {
 }
 
 """
-CustomRecap(id, uuid, name, submitted_at, total_engagements, filling_for_ambassador, late, incomplete, approved, approved_by, approved_at, shared_at, archived_at, archived_by, archive_reason, client_signoff_status, client_signoff_comment, client_signoff_at, client_notified_at, used_corpo_card, data_quality_flags, timezone, event, ambassador, external_ba_name, is_third_party, typed_store_name, typed_store_address, store_mapping_status, store_suggestions, job, retailer, location, state, tenant, custom_recap_template, created_by, updated_by, created_at, updated_at)
+CustomRecap(id, uuid, name, submitted_at, total_engagements, filling_for_ambassador, late, incomplete, approved, approved_by, approved_at, shared_at, archived_at, archived_by, archive_reason, client_signoff_status, client_signoff_comment, client_signoff_at, client_notified_at, used_corpo_card, data_quality_flags, timezone, event, ambassador, external_ba_name, is_third_party, exclude_from_aggregates, typed_store_name, typed_store_address, store_mapping_status, store_suggestions, job, retailer, location, state, tenant, custom_recap_template, created_by, updated_by, created_at, updated_at)
 """
 type CustomRecap implements Node {
   """The Globally Unique ID of this object"""
@@ -2888,6 +2880,7 @@ type CustomRecap implements Node {
   customRecapSalePerformance: [CustomRecapSalePerformance!]!
   customRecapFiles: [CustomRecapFile!]!
   customField: [CustomField!]!
+  metricEdits: [RecapMetricEditType!]!
   soldUnits: Int
   consumersSampled: Int
   isDryDemo: Boolean!
@@ -3159,123 +3152,6 @@ input DeclineRequestInput {
   declineReason: String = null
 }
 
-input CancelDemoInput {
-  clientMutationId: ID = null
-  requestId: ID = null
-  lookup: String = null
-  reason: String!
-}
-
-type FieldMarketingManager {
-  market: String!
-  marketLabel: String!
-  name: String!
-  email: String!
-  phone: String!
-}
-
-type FieldMarketingKpi {
-  key: String!
-  label: String!
-  detail: String!
-  target: Int!
-  planned: Int!
-  logged: Int
-  unit: String!
-}
-
-type FieldMarketingEvent {
-  id: String!
-  market: String!
-  marketLabel: String!
-  managerName: String!
-  activity: String!
-  activityLabel: String!
-  name: String!
-  startsOn: String!
-  days: Int!
-  address: String!
-  notes: String!
-  samplingFormat: String!
-  samplingLabel: String!
-  supportType: String!
-  supportLabel: String!
-  supportOther: String!
-  skuNames: [String!]!
-  needsFieldSupport: Boolean!
-  ambassadorCount: Int!
-  supportTimes: String!
-  supportScope: String!
-  plannedFullCans: Int!
-  plannedPourSamples: Int!
-  plannedEmails: Int!
-  loggedFullCans: Int
-  loggedPourSamples: Int
-  loggedEmails: Int
-  loggedDays: Int
-  loggedCases: Int
-  status: String!
-  requestCode: String
-}
-
-type FieldMarketingBoard {
-  available: Boolean!
-  month: String!
-  monthLabel: String!
-  managers: [FieldMarketingManager!]!
-  kpis: [FieldMarketingKpi!]!
-  events: [FieldMarketingEvent!]!
-  skus: [String!]!
-}
-
-input PlanFieldMarketingInput {
-  clientMutationId: ID = null
-  market: String!
-  activity: String!
-  name: String!
-  startsOn: String!
-  days: Int! = 1
-  address: String! = ""
-  notes: String! = ""
-  plannedFullCans: Int! = 0
-  plannedPourSamples: Int! = 0
-  plannedEmails: Int! = 0
-  samplingFormat: String! = ""
-  supportType: String! = ""
-  supportOther: String! = ""
-  skuNames: [String!] = null
-  needsFieldSupport: Boolean! = false
-  ambassadorCount: Int! = 0
-  supportTimes: String! = ""
-  supportScope: String! = ""
-  submit: Boolean! = false
-  tenantId: ID = null
-}
-
-input SubmitFieldMarketingInput {
-  clientMutationId: ID = null
-  eventId: String!
-  tenantId: ID = null
-}
-
-input LogFieldMarketingInput {
-  clientMutationId: ID = null
-  eventId: String!
-  loggedFullCans: Int = null
-  loggedPourSamples: Int = null
-  loggedEmails: Int = null
-  loggedDays: Int = null
-  loggedCases: Int = null
-  tenantId: ID = null
-}
-
-type FieldMarketingEventResponse {
-  success: Boolean!
-  message: String!
-  clientMutationId: ID
-  event: FieldMarketingEvent
-}
-
 type DeclineRequestResponse {
   success: Boolean!
   message: String!
@@ -3283,16 +3159,14 @@ type DeclineRequestResponse {
   request: Request
 }
 
-type CancelDemoResponse {
-  success: Boolean!
-  message: String!
-  clientMutationId: ID
-  requestCode: String
-}
-
 input DeleteAcademyModuleInput {
   clientMutationId: ID = null
   uuid: ID!
+}
+
+input DeleteActivationPlanInput {
+  clientMutationId: ID = null
+  id: ID!
 }
 
 input DeleteAmbassadorGroupInput {
@@ -3359,6 +3233,12 @@ type DeleteCustomRecapResponse {
   message: String!
   clientMutationId: ID
   deletedCustomRecapUuid: String
+}
+
+input DeleteFieldMarketingInput {
+  clientMutationId: ID = null
+  eventId: String!
+  tenantId: ID = null
 }
 
 input DeleteFormInput {
@@ -3464,6 +3344,11 @@ type DeleteSkillResponse {
 input DeleteUserInput {
   clientMutationId: ID = null
   userId: ID!
+}
+
+input DetachRequestsFromPlanInput {
+  clientMutationId: ID = null
+  requestIds: [ID!]!
 }
 
 input DisableAmbassadorInput {
@@ -4007,6 +3892,98 @@ type FieldCallout {
   corridor: String
   date: String
   text: String!
+}
+
+type FieldMarketingBoard {
+  available: Boolean!
+  month: String!
+  monthLabel: String!
+  managers: [FieldMarketingManager!]!
+  kpis: [FieldMarketingKpi!]!
+  events: [FieldMarketingEvent!]!
+  deletedEvents: [FieldMarketingEvent!]!
+  canRestore: Boolean!
+  skus: [String!]!
+}
+
+type FieldMarketingDeleteResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  event: FieldMarketingEvent
+  requestCode: String
+  requestCancelled: Boolean!
+  canUndo: Boolean!
+}
+
+type FieldMarketingEvent {
+  id: String!
+  market: String!
+  marketLabel: String!
+  managerName: String!
+  activity: String!
+  activityLabel: String!
+  name: String!
+  startsOn: String!
+  days: Int!
+  address: String!
+  notes: String!
+  samplingFormat: String!
+  samplingLabel: String!
+  supportType: String!
+  supportLabel: String!
+  supportOther: String!
+  skuNames: [String!]!
+  needsFieldSupport: Boolean!
+  ambassadorCount: Int!
+  supportTimes: String!
+  startTime: String!
+  endTime: String!
+  supportScope: String!
+  plannedFullCans: Int!
+  plannedPourSamples: Int!
+  plannedEmails: Int!
+  loggedFullCans: Int
+  loggedPourSamples: Int
+  loggedEmails: Int
+  loggedDays: Int
+  loggedCases: Int
+  status: String!
+  requestCode: String
+  requestUuid: String
+  requestCancelled: Boolean!
+  canBook: Boolean!
+  deleteEffect: String!
+  deletedAt: String
+  deletedByName: String!
+  deleteCancelledRequest: Boolean!
+  resultsCounted: Int!
+  resultsPending: Int!
+}
+
+type FieldMarketingEventResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  event: FieldMarketingEvent
+}
+
+type FieldMarketingKpi {
+  key: String!
+  label: String!
+  detail: String!
+  target: Int!
+  planned: Int!
+  logged: Int
+  unit: String!
+}
+
+type FieldMarketingManager {
+  market: String!
+  marketLabel: String!
+  name: String!
+  email: String!
+  phone: String!
 }
 
 type FieldSamplingCalloutSummary {
@@ -4922,6 +4899,17 @@ type LocationVisit {
   address: String
 }
 
+input LogFieldMarketingInput {
+  clientMutationId: ID = null
+  eventId: String!
+  loggedFullCans: Int = null
+  loggedPourSamples: Int = null
+  loggedEmails: Int = null
+  loggedDays: Int = null
+  loggedCases: Int = null
+  tenantId: ID = null
+}
+
 input LoginWithMagicTokenInput {
   clientMutationId: ID = null
   token: String!
@@ -5153,19 +5141,11 @@ type Mutation {
   requestBatchTemplateDownloadUrl(input: RequestBatchTemplateInput!): RequestBatchTemplateResponse!
   importRequestsBatch(input: ImportRequestsBatchInput!): RequestBatchImportResponse!
   createRequest(input: CreateRequestInput!): RequestDetailResponse!
-  createActivationPlan(input: CreateActivationPlanInput!): ActivationPlanDetailResponse!
-  updateActivationPlan(input: UpdateActivationPlanInput!): ActivationPlanDetailResponse!
-  deleteActivationPlan(input: DeleteActivationPlanInput!): ActivationPlanDetailResponse!
-  attachRequestsToPlan(input: AttachRequestsToPlanInput!): AttachRequestsToPlanResponse!
-  detachRequestsFromPlan(input: DetachRequestsFromPlanInput!): AttachRequestsToPlanResponse!
   bulkCloneRequest(input: BulkCloneRequestInput!): BulkCloneRequestResponse!
   updateRequest(input: UpdateRequestInput!): RequestDetailResponse!
   approveRequest(input: ApproveRequestInput!): ApproveRequestResponse!
   declineRequest(input: DeclineRequestInput!): DeclineRequestResponse!
   cancelDemo(input: CancelDemoInput!): CancelDemoResponse!
-  planFieldMarketing(input: PlanFieldMarketingInput!): FieldMarketingEventResponse!
-  submitFieldMarketing(input: SubmitFieldMarketingInput!): FieldMarketingEventResponse!
-  logFieldMarketing(input: LogFieldMarketingInput!): FieldMarketingEventResponse!
   deleteRequest(input: DeleteRequestInput!): DeleteRequestResponse!
   upsertRequestReviewed(input: UpsertRequestReviewedInput!): RequestDetailResponse!
   notifyNoteMention(input: NotifyNoteMentionInput!): NotifyNoteMentionResponse!
@@ -5173,6 +5153,19 @@ type Mutation {
   updateRequestStoreManager(input: UpdateRequestStoreManagerInput!): RequestStoreManagerDetailResponse!
   createTimezone(input: CreateTimeZoneInput!): TimeZoneResponse!
   updateTimezone(input: UpdateTimeZoneInput!): TimeZoneResponse!
+  createActivationPlan(input: CreateActivationPlanInput!): ActivationPlanDetailResponse!
+  updateActivationPlan(input: UpdateActivationPlanInput!): ActivationPlanDetailResponse!
+  deleteActivationPlan(input: DeleteActivationPlanInput!): ActivationPlanDetailResponse!
+  attachRequestsToPlan(input: AttachRequestsToPlanInput!): AttachRequestsToPlanResponse!
+  detachRequestsFromPlan(input: DetachRequestsFromPlanInput!): AttachRequestsToPlanResponse!
+  planFieldMarketing(input: PlanFieldMarketingInput!): FieldMarketingEventResponse!
+  submitFieldMarketing(input: SubmitFieldMarketingInput!): FieldMarketingEventResponse!
+  logFieldMarketing(input: LogFieldMarketingInput!): FieldMarketingEventResponse!
+  updateFieldMarketing(input: UpdateFieldMarketingInput!): FieldMarketingEventResponse!
+  deleteFieldMarketing(input: DeleteFieldMarketingInput!): FieldMarketingDeleteResponse!
+  restoreFieldMarketing(input: RestoreFieldMarketingInput!): FieldMarketingEventResponse!
+  pushRecapToPlan(input: PushRecapToPlanInput!): PushRecapToPlanResponse!
+  removeRecapFromPlan(input: RemoveRecapFromPlanInput!): PushRecapToPlanResponse!
   createRecap(input: CreateRecapInput!): RecapDetailResponse!
   updateRecap(input: UpdateRecapInput!): RecapDetailResponse!
   createCustomRecap(input: CreateCustomRecapInput!): CustomRecapDetailResponse!
@@ -5699,6 +5692,78 @@ type PerformanceInsights {
   growthRate: Float!
 }
 
+input PlanFieldMarketingInput {
+  clientMutationId: ID = null
+  market: String!
+  activity: String!
+  name: String!
+  startsOn: String!
+  days: Int! = 1
+  address: String! = ""
+  notes: String! = ""
+  plannedFullCans: Int! = 0
+  plannedPourSamples: Int! = 0
+  plannedEmails: Int! = 0
+  samplingFormat: String! = ""
+  supportType: String! = ""
+  supportOther: String! = ""
+  skuNames: [String!] = null
+  needsFieldSupport: Boolean! = false
+  ambassadorCount: Int! = 0
+  supportTimes: String! = ""
+  startTime: String! = ""
+  endTime: String! = ""
+  supportScope: String! = ""
+  submit: Boolean! = false
+  tenantId: ID = null
+}
+
+type PlanResultRecap {
+  id: String!
+  kind: String!
+  uuid: String!
+  name: String!
+  date: String!
+  baName: String!
+  status: String!
+  auto: Boolean!
+  href: String!
+  metrics: [RecapPlanMetric!]!
+}
+
+type PlanResultRow {
+  key: String!
+  label: String!
+  planned: Float
+  actual: Float
+  unit: String!
+  text: String!
+  note: String!
+  parts: [RecapMetricPart!]!
+}
+
+type PlanResults {
+  planId: String!
+  planName: String!
+  counted: Int!
+  pending: Int!
+  rows: [PlanResultRow!]!
+  recaps: [PlanResultRecap!]!
+}
+
+type PlanSummary {
+  id: String!
+  name: String!
+  startsOn: String!
+  days: Int!
+  market: String!
+  marketLabel: String!
+  managerName: String!
+  activity: String!
+  activityLabel: String!
+  requestCode: String
+}
+
 input PostEventToBoardInput {
   clientMutationId: ID = null
   eventId: ID!
@@ -5753,20 +5818,6 @@ type ProductDetailResponse {
   message: String!
   clientMutationId: ID
   product: Product
-}
-
-type RenameCatalogLabelResponse {
-  success: Boolean!
-  message: String!
-  recapsUpdated: Int!
-  clientMutationId: ID
-}
-
-input RenameCatalogLabelInput {
-  clientMutationId: ID = null
-  name: String!
-  productId: ID = null
-  productTypeId: ID = null
 }
 
 input ProductFiltersInput {
@@ -5851,13 +5902,29 @@ type PushPreferences {
   gigs: Boolean!
 }
 
+input PushRecapToPlanInput {
+  clientMutationId: ID = null
+  recapId: ID!
+  kind: String!
+  planId: String!
+  metricKeys: [String!]!
+  confirmMove: Boolean! = false
+}
+
+type PushRecapToPlanResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  plan: PlanSummary
+  metricKeys: [String!]
+}
+
 type QuarterOption {
   value: String!
   label: String!
 }
 
 type Query {
-  fieldMarketing(month: String = null, tenantId: ID = null, market: String = null, quarter: String = null, activity: String = null): FieldMarketingBoard!
   eventPnl(tenantId: ID!, startDate: String!, endDate: String!): [EventPnlRow!]!
   duplicateEventClusters(tenantId: ID!): [DuplicateEventCluster!]!
   events(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventFiltersInput = null): EventCountableConnection!
@@ -5875,6 +5942,11 @@ type Query {
   eventConfirmations(tenantId: ID!): [EventConfirmationRow!]!
   payrollTimesheet(startDate: String!, endDate: String!, tenantId: ID = null): PayrollTimesheet!
   campaignCost(startDate: String!, endDate: String!, tenantId: ID = null): CampaignCostReport!
+  activationPlans(tenantId: ID = null, first: Int = 50): [ActivationPlanType!]!
+  activationPlan(id: ID = null, uuid: String = null): ActivationPlanType
+  fieldMarketing(month: String = null, tenantId: ID = null, market: String = null, quarter: String = null, activity: String = null, includeDeleted: Boolean! = false): FieldMarketingBoard!
+  recapPlanPicker(recapId: ID!, kind: String!, query: String = null): RecapPlanPicker!
+  fieldMarketingPlanResults(planId: String!): PlanResults!
   eventTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: EventTypeFiltersInput = null): EventTypeCountableConnection!
   eventType(id: ID = null, uuid: ID = null): EventType
   eventStatuses(first: Int = null, after: String = null, last: Int = null, before: String = null, filters: EventStatusFiltersInput = null): EventStatusCountableConnection!
@@ -5905,11 +5977,8 @@ type Query {
   requestStatus(id: ID = null, uuid: ID = null): RequestStatus
   requests(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestFiltersInput = null): RequestCountableConnection!
   trackerStatusCounts(filters: RequestFiltersInput = null, q: String = null): TrackerStatusCounts!
-  activationPlans(tenantId: ID = null, first: Int = null): [ActivationPlanType!]!
-  activationPlan(id: ID = null, uuid: String = null): ActivationPlanType
   sidebarRequestCounts(tenantId: ID = null): SidebarRequestCounts!
   recapListKinds(tenantId: ID = null): RecapListKinds!
-  recapTypeCounts(q: String = null, filters: CustomRecapFiltersInput = null): RecapTypeCounts!
   sidebarAlertCandidates(tenantId: ID = null): [SidebarAlertCandidate!]!
   accountMapPins(tenantId: ID = null, first: Int = null): [AccountMapPin!]!
   request(id: ID = null, uuid: ID = null): Request
@@ -5925,6 +5994,7 @@ type Query {
   timezones(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): TimeZoneCountableConnection!
   publicTimezones(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): TimeZoneCountableConnection!
   recaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RecapFiltersInput = null): RecapCountableConnection!
+  recapTypeCounts(q: String = null, filters: CustomRecapFiltersInput = null): RecapTypeCounts!
   recap(uuid: ID!): Recap
   customRecaps(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: CustomRecapFiltersInput = null): CustomRecapCountableConnection!
   customRecap(id: ID = null, uuid: ID = null): CustomRecap
@@ -6347,6 +6417,7 @@ type Recap implements Node {
   consumerFeedback: [ConsumerFeedback!]!
   accountFeedback: [AccountFeedback!]!
   submittedAt: String
+  metricEdits: [RecapMetricEditType!]!
   recapFile: RecapFile
   recapFileId: ID
   recapFiles: [RecapFile!]!
@@ -6539,15 +6610,21 @@ type RecapListKinds {
   hasCustom: Boolean!
 }
 
-type RecapTypeCount {
-  key: String!
-  label: String!
-  count: Int!
+type RecapMetricEditType {
+  id: ID!
+  batch: String!
+  fieldKey: String!
+  fieldLabel: String!
+  oldValue: String
+  newValue: String
+  reason: String!
+  editedByName: String
+  editedAt: String!
 }
 
-type RecapTypeCounts {
-  total: Int!
-  types: [RecapTypeCount!]!
+type RecapMetricPart {
+  label: String!
+  value: Int!
 }
 
 type RecapMonthlyDataPoint {
@@ -6575,6 +6652,34 @@ type RecapPerformanceInsights {
   topConvertingMarket: TopConvertingMarket
   highestWillingnessToBuy: MarketWithWillingness
   strongestBrandAwareness: MarketWithBrandAwareness
+}
+
+type RecapPlanMetric {
+  key: String!
+  label: String!
+  value: Float
+  text: String!
+  unit: String!
+  parts: [RecapMetricPart!]!
+  defaultOn: Boolean!
+}
+
+type RecapPlanPicker {
+  available: Boolean!
+  executionType: String!
+  executionLabel: String!
+  currentPlan: PlanSummary
+  currentMetricKeys: [String!]!
+  currentAuto: Boolean!
+  metrics: [RecapPlanMetric!]!
+  suggestions: [RecapPlanSuggestion!]!
+}
+
+type RecapPlanSuggestion {
+  plan: PlanSummary!
+  score: Int!
+  reasons: [String!]!
+  linked: Boolean!
 }
 
 type RecapQualityFlag {
@@ -6621,6 +6726,17 @@ type RecapSectionDetailResponse {
   message: String!
   clientMutationId: ID
   recapSection: RecapSection
+}
+
+type RecapTypeCount {
+  key: String!
+  label: String!
+  count: Int!
+}
+
+type RecapTypeCounts {
+  total: Int!
+  types: [RecapTypeCount!]!
 }
 
 input ReceiptCampaignFiltersInput {
@@ -6758,8 +6874,28 @@ input RemoveRecapFileInput {
   id: ID!
 }
 
+input RemoveRecapFromPlanInput {
+  clientMutationId: ID = null
+  recapId: ID!
+  kind: String!
+}
+
+input RenameCatalogLabelInput {
+  clientMutationId: ID = null
+  name: String!
+  productId: ID = null
+  productTypeId: ID = null
+}
+
+type RenameCatalogLabelResponse {
+  success: Boolean!
+  message: String!
+  recapsUpdated: Int!
+  clientMutationId: ID
+}
+
 """
-Request(id, uuid, name, date, deleted_at, start_time, end_time, address, decline_reason, requestor_email, notes, reviewed, scheduling_status, is_non_active_product_required, account_spend_amount, event_assets_needed, load_in_time, onsite_poc, additional_team_details, cases_to_be_shipped, store_number, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, billing_entity, rmm_asigned, location, state, created_by, updated_by, approved_by, created_at, updated_at)
+Request(id, uuid, name, date, deleted_at, start_time, end_time, address, decline_reason, requestor_email, notes, reviewed, scheduling_status, is_non_active_product_required, account_spend_amount, event_assets_needed, load_in_time, onsite_poc, additional_team_details, cases_to_be_shipped, store_number, coordinates, client_name, client_email, distributor_name, distributor_email, retailer_name, retailer_address, retailer_store_contact, store_manager_name, store_manager_phone, timezone, client, distributor, retailer, request_type, status, tenant, activation_plan, billing_entity, rmm_asigned, location, state, created_by, updated_by, approved_by, created_at, updated_at)
 """
 type Request implements Node {
   """The Globally Unique ID of this object"""
@@ -6796,14 +6932,6 @@ type Request implements Node {
   retailer: Retailer
   location: Location
   state: State
-
-  """
-  "City, ST" from this request's own address (then its location /
-  state). Never the shared banner retailer's location.
-  """
-  market: String
-  marketStateCode: String
-  activationPlan: ActivationPlanType
   requestType: RequestType
   status: RequestStatus
   tenantId: ID!
@@ -6818,6 +6946,9 @@ type Request implements Node {
   date: String
   startTime: String
   endTime: String
+  market: String
+  marketStateCode: String
+  activationPlan: ActivationPlanType
   storeManagers: [RequestStoreManager!]!
   products: [Product!]!
   productNames: [String!]!
@@ -7094,6 +7225,12 @@ input ResolveShiftExtensionInput {
   reason: String! = ""
   approvedMinutes: Int = null
   clientMutationId: ID = null
+}
+
+input RestoreFieldMarketingInput {
+  clientMutationId: ID = null
+  eventId: String!
+  tenantId: ID = null
 }
 
 """
@@ -7705,6 +7842,12 @@ type StatusDetailResponse {
   status: Status
 }
 
+input SubmitFieldMarketingInput {
+  clientMutationId: ID = null
+  eventId: String!
+  tenantId: ID = null
+}
+
 type SuggestedAmbassador {
   id: ID!
   uuid: String!
@@ -7873,11 +8016,6 @@ type TenantKpiMonth {
   unitsSold: Int!
 }
 
-type TenantKpiTrendSeries {
-  key: String!
-  label: String!
-}
-
 type TenantKpiTotals {
   events: Int!
   recaps: Int!
@@ -7891,6 +8029,11 @@ type TenantKpiTotals {
   brandAwareConsumers: Int!
   willingToPurchase: Int!
   program: TenantProgramMetrics
+}
+
+type TenantKpiTrendSeries {
+  key: String!
+  label: String!
 }
 
 type TenantKpis {
@@ -7911,23 +8054,6 @@ type TenantKpis {
   program: TenantProgramMetrics
 }
 
-type TenantProgramMetrics {
-  recaps: Int!
-  demos: Int!
-  consumersSampled: Int!
-  unitsSold: Int!
-  cansSold: Int!
-  packsSold: Int!
-  conversionPct: Float
-  dryDemos: Int!
-  dryPeopleEngaged: Int!
-  unpairedDryDemos: Int!
-  firstTimeConsumers: Int!
-  firstTimeBase: Int!
-  brandAwareConsumers: Int!
-  willingToPurchase: Int!
-}
-
 type TenantMetroBreakdown {
   metros: [String!]!
   weeks: [MetroWeek!]!
@@ -7945,6 +8071,23 @@ type TenantProgramHealth {
   missing: Int!
   startDate: String
   endDate: String
+}
+
+type TenantProgramMetrics {
+  recaps: Int!
+  demos: Int!
+  consumersSampled: Int!
+  unitsSold: Int!
+  cansSold: Int!
+  packsSold: Int!
+  conversionPct: Float
+  dryDemos: Int!
+  dryPeopleEngaged: Int!
+  unpairedDryDemos: Int!
+  firstTimeConsumers: Int!
+  firstTimeBase: Int!
+  brandAwareConsumers: Int!
+  willingToPurchase: Int!
 }
 
 type TenantSentiment {
@@ -7993,7 +8136,7 @@ type TenantThemeType implements Node {
 }
 
 """
-Tenant(id, uuid, name, image, request_url_name, slug, checkin_code, checkin_recap_code, default_track_mileage, default_mileage_rate, checkin_location_mode, checkin_markets, checkin_storage_units, checkin_event_type, checkin_training_url, checkin_photo_buckets, checkin_resources, linked_sheet_url, recap_export_sheet_url, master_tracker_tab_name, master_tracker_insert_by_date, master_tracker_layout, linked_sheet_last_sync_at, linked_sheet_last_sync_error, linked_sheet_last_request_id, recap_export_tab_name, recap_export_on_submit, suppress_job_reminder_emails, recap_summary_tab_name, default_external_rmm, recap_recipient_emails, scheduled_report_enabled, client_weekly_digest_enabled, created_by, updated_by, created_at, updated_at)
+Tenant(id, uuid, name, image, request_url_name, slug, checkin_code, checkin_recap_code, checkin_recap_excludes_aggregates, insights_trend_series, default_track_mileage, default_mileage_rate, checkin_location_mode, checkin_markets, checkin_storage_units, checkin_event_type, checkin_program_picker, checkin_training_url, checkin_photo_buckets, checkin_resources, linked_sheet_url, recap_export_sheet_url, master_tracker_tab_name, master_tracker_insert_by_date, master_tracker_layout, linked_sheet_last_sync_at, linked_sheet_last_sync_error, linked_sheet_last_request_id, recap_export_tab_name, recap_export_on_submit, suppress_job_reminder_emails, recap_summary_tab_name, default_external_rmm, recap_recipient_emails, scheduled_report_enabled, client_weekly_digest_enabled, created_by, updated_by, created_at, updated_at)
 """
 type TenantType implements Node {
   """The Globally Unique ID of this object"""
@@ -8176,6 +8319,18 @@ input UpdateAcademyModuleInput {
   body: String = null
   order: Int = null
   published: Boolean = null
+}
+
+input UpdateActivationPlanInput {
+  clientMutationId: ID = null
+  id: ID!
+  name: String = null
+  conceptBrief: String = null
+  startDate: String = null
+  endDate: String = null
+  markets: [String!] = null
+  ownerId: ID = null
+  clearOwner: Boolean = null
 }
 
 input UpdateAmbassadorGroupInput {
@@ -8404,6 +8559,7 @@ input UpdateCustomRecapInput {
   externalBaName: String = null
   customFieldValues: [CustomFieldValueInput!] = null
   id: ID!
+  editReason: String = null
 }
 
 input UpdateCustomRecapMobileFilesInput {
@@ -8492,6 +8648,32 @@ input UpdateEventWithRequestInput {
   clientMutationId: ID = null
   event: UpdateEventInput!
   request: UpdateRequestInput!
+}
+
+input UpdateFieldMarketingInput {
+  clientMutationId: ID = null
+  eventId: String!
+  market: String!
+  activity: String!
+  name: String!
+  startsOn: String!
+  days: Int! = 1
+  address: String! = ""
+  notes: String! = ""
+  plannedFullCans: Int! = 0
+  plannedPourSamples: Int! = 0
+  plannedEmails: Int! = 0
+  samplingFormat: String! = ""
+  supportType: String! = ""
+  supportOther: String! = ""
+  skuNames: [String!] = null
+  needsFieldSupport: Boolean! = false
+  ambassadorCount: Int! = 0
+  supportTimes: String! = ""
+  startTime: String! = ""
+  endTime: String! = ""
+  supportScope: String! = ""
+  tenantId: ID = null
 }
 
 input UpdateFormInput {
@@ -8712,6 +8894,7 @@ input UpdateRecapInput {
   consumerFeedback: ConsumerFeedbackInput = null
   accountFeedback: AccountFeedbackInput = null
   id: ID!
+  editReason: String = null
 }
 
 input UpdateRecapSectionInput {
@@ -8972,13 +9155,13 @@ type UserType {
   isActive: Boolean!
   dateJoined: DateTime!
   status: UserStatusType!
-  id: ID!
-  firstName: String
+  email: String!
+  lastName: String
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
-  lastName: String
-  email: String!
+  firstName: String
+  id: ID!
   archived: Boolean!
   verified: Boolean!
 }

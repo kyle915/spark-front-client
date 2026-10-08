@@ -29,7 +29,13 @@ import { ThirdPartyStoreMap } from "./ThirdPartyStoreMap";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { AmbassadorPicker } from "./AmbassadorPicker";
 import { RecapDetailSkeleton } from "@/layout/PageSkeletons";
-import { buildCustomFieldValuesPayload } from "./customRecapSave";
+import {
+  buildCustomFieldValuesPayload,
+  invalidNumberFieldEdit,
+  totalEngagementsToSend,
+} from "./customRecapSave";
+import { editedNote } from "./recapEditHistory";
+import { RecapEditHistorySheet } from "./RecapEditHistorySheet";
 import {
   DropOffLocationsField,
   DropOffLocationsReadout,
@@ -609,6 +615,10 @@ const RecapCustomViewInner = ({
   // later edit/approve). Now editable; raw string for a controlled input,
   // coerced to int on save and ALWAYS sent so an unrelated edit can't drop it.
   const [editedTotalEngagements, setEditedTotalEngagements] = useState("");
+  const [engagementsTouched, setEngagementsTouched] = useState(false);
+  // Optional note stored on the edit-history rows for this save.
+  const [editReason, setEditReason] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
   // ----- Ambassador / "filling for BA" inline edit -----
   // Mirrors SparkRecapCreate's filling-for flow. editedAmbassadorId holds
   // the picked/inline-created Ambassador's Relay global id (sent as
@@ -676,6 +686,8 @@ const RecapCustomViewInner = ({
     setEditedTotalEngagements(
       recap?.totalEngagements != null ? String(recap.totalEngagements) : "",
     );
+    setEngagementsTouched(false);
+    setEditReason("");
     // Seed the ambassador controls from the recap. A linked Ambassador
     // (FK) seeds the picked id + display name; otherwise seed the
     // free-text write-in. fillingForAmbassador is the typed boolean.
@@ -711,6 +723,7 @@ const RecapCustomViewInner = ({
     setEditedAmbassadorName("");
     setEditedExternalBaName("");
     setEditedFillingForAmbassador(false);
+    setEditReason("");
   }, []);
 
   // Template fields grouped by section. This is the canonical, COMPLETE
@@ -768,6 +781,14 @@ const RecapCustomViewInner = ({
     const allFields = customFieldsBySection.flatMap(
       (section) => section.fields,
     );
+    const badNumber = invalidNumberFieldEdit(allFields, editedValues);
+    if (badNumber) {
+      showAlert(
+        `${badNumber.name}: "${badNumber.value}" isn't a number. Enter 0 or more.`,
+        "warning",
+      );
+      return;
+    }
     const spendValues = { ...editedValues };
     for (const field of allFields) {
       if (
@@ -860,15 +881,13 @@ const RecapCustomViewInner = ({
           productSamples,
           // Typed boolean on CustomRecap — now editable from the view.
           usedCorpoCard: editedUsedCorpoCard,
-          // Typed int on CustomRecap — now editable, and ALWAYS sent so an
-          // unrelated edit can't drop it. Blank → null, and the resolver keeps
-          // the existing value on null, so blanking is a safe no-op.
-          totalEngagements: (() => {
-            const t = editedTotalEngagements.trim();
-            if (!t) return null;
-            const n = Number(t);
-            return Number.isFinite(n) ? Math.round(n) : null;
-          })(),
+          totalEngagements: totalEngagementsToSend({
+            edited: editedTotalEngagements,
+            touched: engagementsTouched,
+            storedTotal: recap.totalEngagements,
+            storedConsumersSampled: recap.consumersSampled,
+          }),
+          editReason: editReason.trim() || null,
           // Adding/clearing the BA on an existing recap. A resolved
           // ambassador FK wins over any write-in server-side; passing null
           // for both clears the link.
@@ -877,10 +896,19 @@ const RecapCustomViewInner = ({
           fillingForAmbassador: editedFillingForAmbassador,
         },
       },
+      // Insights, the Recaps list strip, Master Tracker etc. read
+      // store-or-network; mark everything stale so they refetch the
+      // corrected aggregates on next visit instead of painting old totals.
+      updater: (store, res) => {
+        if (res?.updateCustomRecap?.success) store.invalidateStore();
+      },
       onCompleted: (res) => {
         const payload = res.updateCustomRecap;
         if (payload?.success) {
-          showAlert("Recap values saved.", "success");
+          showAlert(
+            "Recap saved. Insights, Recaps and client views now use these values.",
+            "success",
+          );
           exitEditMode();
           // Mutation selection updates the store; network-only refetch is
           // the safety net so every editable field (title, Metrics, custom
@@ -898,12 +926,16 @@ const RecapCustomViewInner = ({
     recap?.name,
     recap?.event?.id,
     recap?.customRecapTemplate?.id,
+    recap?.totalEngagements,
+    recap?.consumersSampled,
     customFieldsBySection,
     editedValues,
     editedName,
     editedSampleQtys,
     editedUsedCorpoCard,
     editedTotalEngagements,
+    engagementsTouched,
+    editReason,
     editedAmbassadorId,
     editedExternalBaName,
     editedFillingForAmbassador,
@@ -1408,6 +1440,11 @@ const RecapCustomViewInner = ({
     ],
   );
 
+  const lastEditedNote = useMemo(
+    () => editedNote(recap?.metricEdits),
+    [recap?.metricEdits],
+  );
+
   const crumbTitle = useMemo(() => {
     if (!recap) return null;
     const venue =
@@ -1604,7 +1641,7 @@ const RecapCustomViewInner = ({
                     onClick={enterEditMode}
                     className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                     style={ghostBtn}
-                    title="Edit the recap title, field values, and sampled products"
+                    title="Correct metrics, field values, sampled products and title. Changes are logged in edit history."
                   >
                     ✎ Edit recap
                   </button>
@@ -1622,7 +1659,15 @@ const RecapCustomViewInner = ({
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  value={editReason}
+                  onChange={(e) => setEditReason(e.target.value)}
+                  placeholder="Reason for edit (optional)"
+                  aria-label="Reason for edit"
+                  maxLength={500}
+                  className="spark-input text-sm w-64"
+                />
                 <button
                   onClick={exitEditMode}
                   disabled={isSavingValues}
@@ -1664,6 +1709,17 @@ const RecapCustomViewInner = ({
                     <span className="chip chip-orange">INCOMPLETE</span>
                   )}
                   {recap.isThirdParty ? <ThirdPartyRecapBadge notInTotals={recap.excludeFromAggregates} /> : null}
+                  {!isClient && lastEditedNote ? (
+                    <button
+                      type="button"
+                      onClick={() => setHistoryOpen(true)}
+                      className="chip recap-edited-chip"
+                      title="Admin only — see every staff correction and the BA's original values"
+                      data-no-print=""
+                    >
+                      {lastEditedNote} · History
+                    </button>
+                  ) : null}
                 </div>
                 {isEditingValues ? (
                   <input
@@ -1958,9 +2014,10 @@ const RecapCustomViewInner = ({
                       inputMode="numeric"
                       className="spark-input w-24 text-right text-sm"
                       value={editedTotalEngagements}
-                      onChange={(e) =>
-                        setEditedTotalEngagements(e.target.value)
-                      }
+                      onChange={(e) => {
+                        setEditedTotalEngagements(e.target.value);
+                        setEngagementsTouched(true);
+                      }}
                       aria-label="Total engagements"
                     />
                   ) : (
@@ -3005,6 +3062,13 @@ const RecapCustomViewInner = ({
           shareToken={recap.shareToken}
           recapName={recap.name}
           onClose={() => setShareOpen(false)}
+        />
+      )}
+      {(recap.metricEdits?.length ?? 0) > 0 && (
+        <RecapEditHistorySheet
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          edits={recap.metricEdits ?? []}
         />
       )}
     </>

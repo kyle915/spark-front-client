@@ -1192,6 +1192,16 @@ body { background: var(--spark-bg); }
   background: rgba(201, 164, 255, 0.16);
   border-color: rgba(91, 61, 138, 0.35);
 }
+.recap-doc .recap-edited-chip {
+  color: #14160f;
+  background: #fff4d6;
+  border-color: #c9a227;
+  cursor: pointer;
+  text-transform: none;
+}
+.recap-doc .recap-edited-chip:hover {
+  background: #ffeab0;
+}
 .recap-doc .spark-card,
 .recap-doc .kpi {
   background: #ffffff;

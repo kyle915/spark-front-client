@@ -15,6 +15,18 @@ export const RecapQuery = graphql`
         lastName
         email
       }
+      # Staff corrections, newest first. Empty for client / BA viewers.
+      metricEdits {
+        id
+        batch
+        fieldKey
+        fieldLabel
+        oldValue
+        newValue
+        reason
+        editedByName
+        editedAt
+      }
       shareToken
       sharedAt
       archivedAt
