@@ -2895,6 +2895,7 @@ type CustomRecap implements Node {
   accountSpend: Float
   baDisplayName: String
   heroImageUrl: String
+  recapType: String!
   customRecapFilesCount: Int!
   shareToken: String!
   eventDate: String
@@ -3008,6 +3009,7 @@ input CustomRecapFiltersInput {
   shared: Boolean = null
   archived: Boolean = null
   activationBucket: String = null
+  recapType: String = null
   customRecapTemplateId: ID = null
   needsStoreMap: Boolean = null
 }
@@ -5907,6 +5909,7 @@ type Query {
   activationPlan(id: ID = null, uuid: String = null): ActivationPlanType
   sidebarRequestCounts(tenantId: ID = null): SidebarRequestCounts!
   recapListKinds(tenantId: ID = null): RecapListKinds!
+  recapTypeCounts(q: String = null, filters: CustomRecapFiltersInput = null): RecapTypeCounts!
   sidebarAlertCandidates(tenantId: ID = null): [SidebarAlertCandidate!]!
   accountMapPins(tenantId: ID = null, first: Int = null): [AccountMapPin!]!
   request(id: ID = null, uuid: ID = null): Request
@@ -6356,6 +6359,7 @@ type Recap implements Node {
   eventRetailer: String
   eventState: String
   requestUuid: String
+  recapType: String!
   requestTypeName: String
 }
 
@@ -6512,6 +6516,7 @@ input RecapFiltersInput {
   shared: Boolean = null
   archived: Boolean = null
   activationBucket: String = null
+  recapType: String = null
 }
 
 type RecapGlobalKPIByRMM {
@@ -6532,6 +6537,17 @@ type RecapGlobalKPIs {
 type RecapListKinds {
   hasLegacy: Boolean!
   hasCustom: Boolean!
+}
+
+type RecapTypeCount {
+  key: String!
+  label: String!
+  count: Int!
+}
+
+type RecapTypeCounts {
+  total: Int!
+  types: [RecapTypeCount!]!
 }
 
 type RecapMonthlyDataPoint {

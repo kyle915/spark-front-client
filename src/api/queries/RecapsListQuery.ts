@@ -66,6 +66,7 @@ export const RecapsListQuery = graphql`
           eventState
           requestUuid
           requestTypeName
+          recapType
           ambassador {
             id
             user {
