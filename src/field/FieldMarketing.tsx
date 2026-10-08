@@ -178,7 +178,7 @@ const FALLBACK_MANAGERS: Manager[] = [
 
 const ORANGE = "var(--spark-orange, #ef5a2a)";
 const STICKY_ACTIONS =
-  "md:sticky md:right-0 bg-[#0A0B0D] md:shadow-[-12px_0_12px_-12px_rgba(0,0,0,0.9)]";
+  "md:sticky md:right-0 bg-base-100 md:shadow-[-12px_0_12px_-12px_rgba(0,0,0,0.35)]";
 
 async function postGql<T>(
   query: string,
