@@ -17,7 +17,7 @@ export function RecapTypeChips({
     <div
       className={
         compact
-          ? "flex overflow-x-auto rounded-xl"
+          ? "flex md:hidden basis-full overflow-x-auto rounded-xl"
           : "hidden md:flex rounded-xl overflow-x-auto max-w-full"
       }
       style={{ border: "1px solid var(--spark-border)" }}
