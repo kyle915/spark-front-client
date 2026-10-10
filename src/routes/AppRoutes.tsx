@@ -454,6 +454,9 @@ const PublicRecap = lazyDefault(
 const PublicInvoice = lazyDefault(
   () => import("@/public/billing/PublicInvoice"),
 );
+// Public, no-login BA job board. The :token is the brand's board link; BAs
+// book open plan gigs here and get the details by email.
+const PublicJobBoard = lazyDefault(() => import("@/public/jobs/PublicJobBoard"));
 const MagicLinkExchange = lazyDefault(() => import("@/auth/MagicLinkExchange"));
 const ForgotPassword = lazyDefault(() => import("@/auth/ForgotPassword"));
 const ResetPassword = lazyDefault(() => import("@/auth/ResetPassword"));
@@ -533,6 +536,11 @@ const PublicRoutes = {
     {
       path: "/r/:token",
       component: <PublicRecap />,
+      isPublic: true,
+    },
+    {
+      path: "/jobs/:token",
+      component: <PublicJobBoard />,
       isPublic: true,
     },
     // Public, no-login invoice page. The :token is the auth (no tenant

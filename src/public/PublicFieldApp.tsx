@@ -16,6 +16,7 @@ const SparkPublicExpressForm = lazy(
 );
 const PublicRecap = lazy(() => import("@/public/recaps/PublicRecap"));
 const TrainingHub = lazy(() => import("@/public/training/TrainingHub"));
+const PublicJobBoard = lazy(() => import("@/public/jobs/PublicJobBoard"));
 
 const Fallback = () => (
   <div
@@ -39,6 +40,7 @@ export default function PublicFieldApp() {
           <Route path="/spark-form/:tenantSlug" element={<SparkPublicExpressForm />} />
           <Route path="/r/:token" element={<PublicRecap />} />
           <Route path="/training/:code" element={<TrainingHub />} />
+          <Route path="/jobs/:token" element={<PublicJobBoard />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

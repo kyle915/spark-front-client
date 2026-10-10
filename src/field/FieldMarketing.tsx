@@ -6,6 +6,7 @@ import SparkConfirm from "@/shared/SparkConfirm";
 import { useAuthStore } from "@/store/authStore";
 import FieldMarketingCalendar from "./FieldMarketingCalendar";
 import FieldMarketingPlanForm from "./FieldMarketingPlanForm";
+import JobBoardPanel from "./JobBoardPanel";
 import {
   PLAN_ACTIVITIES,
   emptyPlanForm,
@@ -622,6 +623,8 @@ export default function FieldMarketing() {
         <ProgramSwitch active="field" />
 
         <ActivationPlansPipelineCard tenantId={tenantId} />
+
+        {!isClient ? <JobBoardPanel tenantId={tenantId} /> : null}
 
         {board && !board.available ? (
           <p className="spark-support">
