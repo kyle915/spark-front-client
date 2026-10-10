@@ -19,6 +19,8 @@ export const TenantCheckinCodeQuery = graphql`
           name
           requestUrlName
           checkinCode
+          checkinTeamCode
+          checkinTeamTitle
           checkinPhotoBuckets
           checkinEventTypeNames
         }

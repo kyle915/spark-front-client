@@ -50,6 +50,7 @@ export const CustomRecapsListQuery = graphql`
           }
           isThirdParty
           excludeFromAggregates
+          sourceLabel
           storeMappingStatus
           shareToken
           sharedAt

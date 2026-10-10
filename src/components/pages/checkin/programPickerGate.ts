@@ -5,7 +5,11 @@
  * off-screen — so the button, the bottom error and the picker itself all
  * point at what's missing.
  */
-import { programLabel, type ProgramOption } from "./eventTypeDescriptor";
+import {
+  eventTypeIsActivation,
+  programLabel,
+  type ProgramOption,
+} from "./eventTypeDescriptor";
 
 export const PROGRAM_STEP_TITLE = "Step 1 · Select your event type";
 
@@ -44,6 +48,28 @@ export function identifySubmitLabel(opts: {
     return opts.recapOnly ? "Select event type to continue" : "Select event type to start";
   }
   return opts.recapOnly ? "Continue to recap" : "Start check-in";
+}
+
+/**
+ * How the identify step asks "where": a venue for Event / Guerilla
+ * activations, typed store name + address on a no-clock link (agency, or the
+ * client-team link's Retail), else the usual store picker.
+ */
+export type IdentifyPlaceKind = "venue" | "typedStore" | "store";
+
+export function identifyPlaceKind(opts: {
+  recapOnly: boolean;
+  programName?: string | null;
+}): IdentifyPlaceKind {
+  if (eventTypeIsActivation(opts.programName)) return "venue";
+  return opts.recapOnly ? "typedStore" : "store";
+}
+
+/** Subtitle under "File a recap" on a no-clock standing link. */
+export function recapOnlyIntro(opts: { hasPrograms: boolean }): string {
+  return opts.hasPrograms
+    ? "Your name, the event type, then the recap questions."
+    : "Date, your name, the store, then the recap questions.";
 }
 
 type Revealable = {

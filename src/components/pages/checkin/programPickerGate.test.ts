@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  identifyPlaceKind,
   identifySubmitLabel,
   programChoiceList,
   programPickerPrompt,
   programRequiredHint,
+  recapOnlyIntro,
   revealProgramPicker,
 } from "./programPickerGate";
 
@@ -62,6 +64,31 @@ describe("identify submit label", () => {
     );
     expect(identifySubmitLabel({ busy: true, recapOnly: false, needsProgram: false })).toBe(
       "Starting…",
+    );
+  });
+});
+
+describe("identify place step", () => {
+  it("asks for a venue on Event / Guerilla, clock link or not", () => {
+    for (const recapOnly of [false, true]) {
+      expect(identifyPlaceKind({ recapOnly, programName: "Event Activation" })).toBe("venue");
+      expect(identifyPlaceKind({ recapOnly, programName: "Guerilla Activation" })).toBe("venue");
+    }
+  });
+
+  it("keeps the typed store on no-clock Retail and the agency link (no picker)", () => {
+    expect(identifyPlaceKind({ recapOnly: true, programName: "Retail Sampling" })).toBe("typedStore");
+    expect(identifyPlaceKind({ recapOnly: true })).toBe("typedStore");
+    expect(identifyPlaceKind({ recapOnly: false, programName: "Retail Sampling" })).toBe("store");
+    expect(identifyPlaceKind({ recapOnly: false })).toBe("store");
+  });
+
+  it("tells a client-team filer the event type comes before the recap", () => {
+    expect(recapOnlyIntro({ hasPrograms: true })).toBe(
+      "Your name, the event type, then the recap questions.",
+    );
+    expect(recapOnlyIntro({ hasPrograms: false })).toBe(
+      "Date, your name, the store, then the recap questions.",
     );
   });
 });
