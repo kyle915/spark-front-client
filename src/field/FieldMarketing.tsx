@@ -214,6 +214,7 @@ export default function FieldMarketing() {
   const [tactic, setTactic] = useState("");
   const [showDeleted, setShowDeleted] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [revealKey, setRevealKey] = useState(0);
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
@@ -245,6 +246,15 @@ export default function FieldMarketing() {
   const formRef = useRef<HTMLDivElement | null>(null);
 
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  // On phones the form opens below the fold; bring it to the tap.
+  useEffect(() => {
+    if (!revealKey) return;
+    const node = formRef.current;
+    if (!node) return;
+    node.querySelector<HTMLElement>("select, input")?.focus({ preventScroll: true });
+    node.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [revealKey]);
 
   useEffect(() => {
     const seq = ++loadSeq.current;
@@ -335,6 +345,7 @@ export default function FieldMarketing() {
     setFormError("");
     setForm({ ...emptyPlanForm, market: marketFilter || emptyPlanForm.market });
     setShowPlanForm(true);
+    revealForm();
   }
 
   function openEdit(row: FmEvent) {
@@ -343,9 +354,11 @@ export default function FieldMarketing() {
     setForm(formFromRow(row));
     setShowPlanForm(true);
     setView("list");
-    window.requestAnimationFrame(() =>
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
-    );
+    revealForm();
+  }
+
+  function revealForm() {
+    setRevealKey((k) => k + 1);
   }
 
   function closeForm() {
@@ -738,6 +751,22 @@ export default function FieldMarketing() {
           </div>
         </div>
 
+        {showPlanForm ? (
+          <div ref={formRef} className="scroll-mt-4">
+            <FieldMarketingPlanForm
+              form={form}
+              onChange={setForm}
+              managers={managers}
+              skuOptions={skuOptions}
+              editing={Boolean(editingId)}
+              saving={saving}
+              error={formError}
+              onSave={(submit) => void save(submit)}
+              onCancel={closeForm}
+            />
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap gap-2 items-center" role="tablist" aria-label="Market">
           <button
             type="button"
@@ -828,22 +857,6 @@ export default function FieldMarketing() {
           stays a dash until one of those comes in. 4oz pours are not added into
           full cans. Deleted plans never count.
         </p>
-
-        {showPlanForm ? (
-          <div ref={formRef}>
-            <FieldMarketingPlanForm
-              form={form}
-              onChange={setForm}
-              managers={managers}
-              skuOptions={skuOptions}
-              editing={Boolean(editingId)}
-              saving={saving}
-              error={formError}
-              onSave={(submit) => void save(submit)}
-              onCancel={closeForm}
-            />
-          </div>
-        ) : null}
 
         {view === "calendar" ? (
           <FieldMarketingCalendar
