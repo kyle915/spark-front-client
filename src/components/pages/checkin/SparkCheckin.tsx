@@ -113,7 +113,6 @@ import {
   supportsStandingSecondShift,
 } from "./secondShift";
 import {
-  eventTypeIsActivation,
   eventTypeSkipsIdentifyLocation,
   eventTypesUseDescriptorPicker,
   programDescription,
@@ -123,10 +122,12 @@ import {
 import {
   PROGRAM_MISSING_ERROR,
   PROGRAM_STEP_TITLE,
+  identifyPlaceKind,
   identifySubmitLabel,
   prefersReducedMotion,
   programPickerPrompt,
   programRequiredHint,
+  recapOnlyIntro,
   revealProgramPicker,
 } from "./programPickerGate";
 
@@ -1298,7 +1299,7 @@ function Header({ ctx }: { ctx: Context }) {
         <div style={{ marginBottom: 18 }}>
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>File a recap</h1>
           <div style={{ fontSize: 13, opacity: 0.6 }}>
-            Date, your name, the store, then the recap questions.
+            {recapOnlyIntro({ hasPrograms: (ctx.eventTypes?.length ?? 0) > 1 })}
           </div>
         </div>
       );
@@ -1393,7 +1394,12 @@ function IdentifyStep({
   const skipWorkLocation = eventTypeSkipsIdentifyLocation(
     selectedEventType?.name,
   );
-  const atVenue = !recapOnly && eventTypeIsActivation(selectedEventType?.name);
+  const placeKind = identifyPlaceKind({
+    recapOnly,
+    programName: selectedEventType?.name,
+  });
+  const atVenue = placeKind === "venue";
+  const typedStore = placeKind === "typedStore";
   // An Event Activation is one venue, so a roaming brand types or GPS-picks
   // it like a store instead of choosing a market.
   const marketPicker = isMarket && !atVenue;
@@ -1565,7 +1571,7 @@ function IdentifyStep({
       if (!omitPlace) {
         if (marketPicker) {
           if (!mkt) return setErr("Pick your market.");
-        } else if (recapOnly) {
+        } else if (typedStore) {
           if (!storeName.trim()) return setErr("Enter the store name.");
           if (!addr.trim()) return setErr("Enter the store address.");
         } else if (!addr.trim()) {
@@ -1635,7 +1641,7 @@ function IdentifyStep({
 
   return (
     <div style={card}>
-      <h2 style={h2}>Who's working?</h2>
+      <h2 style={h2}>{recapOnly ? "Your name" : "Who's working?"}</h2>
       <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
         {recapOnly
           ? "Your name on this recap. Phone is optional."
@@ -1813,7 +1819,7 @@ function IdentifyStep({
             <>
           <h2 style={{ ...h2, marginTop: 22 }}>
             {hasPrograms ? "Step 2 · " : ""}
-            {recapOnly ? "Which store?" : atVenue ? "Where's the event?" : "Where are you working?"}
+            {typedStore ? "Which store?" : atVenue ? "Where's the event?" : "Where are you working?"}
           </h2>
 
           {/* ROAMING crews pick a market. Their whole day lands on ONE event
@@ -1838,7 +1844,7 @@ function IdentifyStep({
                 ))}
               </select>
             </>
-          ) : recapOnly ? (
+          ) : typedStore ? (
             <>
           <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
             Type the store name and address. Required.

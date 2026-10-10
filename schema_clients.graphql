@@ -2858,6 +2858,7 @@ type CustomRecap implements Node {
   externalBaName: String
   isThirdParty: Boolean!
   excludeFromAggregates: Boolean!
+  sourceLabel: String!
   typedStoreName: String!
   typedStoreAddress: String!
   storeMappingStatus: String!
@@ -8160,6 +8161,8 @@ type TenantType implements Node {
   """
   clientWeeklyDigestEnabled: Boolean!
   checkinCode: String
+  checkinTeamCode: String
+  checkinTeamTitle: String!
   checkinPhotoBuckets: [String!]!
   checkinEventTypeNames: [String!]!
   recapRecipientEmails: String!

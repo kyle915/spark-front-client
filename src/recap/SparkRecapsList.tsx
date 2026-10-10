@@ -13,6 +13,7 @@ import type { RecapsListQuery as RecapsListQueryType } from "@api/queries/__gene
 import { CustomRecapsListQuery } from "@/api/queries/CustomRecapsListQuery";
 import { RecapListKindsQuery } from "@/api/queries/RecapListKindsQuery";
 import type { RecapListKindsQuery as RecapListKindsQueryType } from "@api/queries/__generated__/RecapListKindsQuery.graphql";
+import { RecapSourceBadge } from "@/recap/RecapSourceBadge";
 import { ThirdPartyRecapBadge } from "@/recap/ThirdPartyRecapBadge";
 import { recapApprovalMeta } from "@/recap/recapApprovalMeta";
 import type { CustomRecapsListQuery as CustomRecapsListQueryType } from "@api/queries/__generated__/CustomRecapsListQuery.graphql";
@@ -193,6 +194,9 @@ type Recap = {
   // Distinct from isExternalBa (a write-in name). Drives the list badge.
   isThirdParty: boolean;
   excludeFromAggregates: boolean;
+  // "Submitted by Torch team" — filed via the brand's client-team link.
+  // Counts in totals; display only.
+  sourceLabel: string;
   storeMappingStatus: string;
   // Relay global id of the recap's PRIMARY ambassador (Recap.ambassador /
   // CustomRecap.ambassador), or null for external/unlinked BAs.
@@ -353,6 +357,7 @@ const mapLegacyRecap = (n: LegacyRecapNode): Recap => {
     archivedAt: n.archivedAt ?? null,
     isThirdParty: false,
     excludeFromAggregates: false,
+    sourceLabel: "",
     storeMappingStatus: "",
   };
 };
@@ -397,6 +402,7 @@ const mapCustomRecap = (n: CustomRecapNode): Recap => ({
   archivedAt: n.archivedAt ?? null,
   isThirdParty: Boolean(n.isThirdParty),
   excludeFromAggregates: Boolean(n.excludeFromAggregates),
+  sourceLabel: n.sourceLabel ?? "",
   storeMappingStatus: n.storeMappingStatus ?? "",
 });
 
@@ -568,6 +574,10 @@ const RecapCard: React.FC<{
         <span className="absolute bottom-2 left-2">
           <ThirdPartyRecapBadge notInTotals={recap.excludeFromAggregates} />
         </span>
+      ) : recap.sourceLabel ? (
+        <span className="absolute bottom-2 left-2">
+          <RecapSourceBadge label={recap.sourceLabel} />
+        </span>
       ) : null}
     </div>
 
@@ -583,6 +593,10 @@ const RecapCard: React.FC<{
           ) : recap.storeMappingStatus === "mapped" ? (
             <span className="chip chip-muted">Store mapped</span>
           ) : null}
+        </div>
+      ) : recap.sourceLabel ? (
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+          <RecapSourceBadge label={recap.sourceLabel} />
         </div>
       ) : null}
       <p
@@ -821,6 +835,10 @@ const RecapCompactRow: React.FC<{
             {recap.storeMappingStatus === "unmatched" ? (
               <span className="chip chip-orange chip-sm">Map store</span>
             ) : null}
+          </div>
+        ) : recap.sourceLabel ? (
+          <div className="mt-1 flex items-center gap-1 flex-wrap">
+            <RecapSourceBadge compact label={recap.sourceLabel} />
           </div>
         ) : null}
         <p

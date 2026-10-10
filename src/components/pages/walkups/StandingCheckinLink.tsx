@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { TenantCheckinCodeQuery } from "@/api/queries/TenantCheckinCodeQuery";
 import type { TenantCheckinCodeQuery as TenantCheckinCodeQueryType } from "@api/queries/__generated__/TenantCheckinCodeQuery.graphql";
@@ -137,9 +138,11 @@ const StandingCheckinLink: React.FC = () => {
               String(tenant.uuid) === String(active?.uuid);
             const programs = tenant.checkinEventTypeNames ?? [];
             const buckets = tenant.checkinPhotoBuckets ?? [];
+            const teamCode = (tenant.checkinTeamCode ?? "").trim();
+            const teamUrl = teamCode ? checkinUrl(teamCode) : "";
             return (
+              <Fragment key={tenant.id}>
               <li
-                key={tenant.id}
                 className="rounded-xl p-3"
                 style={{
                   border: isActive
@@ -190,6 +193,45 @@ const StandingCheckinLink: React.FC = () => {
                   </button>
                 </div>
               </li>
+              {teamCode ? (
+                <li
+                  className="rounded-xl p-3"
+                  style={{ border: "1px solid var(--spark-border)" }}
+                >
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">
+                        {tenant.checkinTeamTitle?.trim() ||
+                          `${tenant.name} · Client team recaps (no clock)`}
+                      </p>
+                      <p className="mono text-xs mt-1" style={{ color: "rgba(255,255,255,0.7)" }}>
+                        {teamCode}
+                      </p>
+                      <p className="text-xs mt-1 break-all" style={{ color: "rgba(255,255,255,0.5)" }}>
+                        {teamUrl}
+                      </p>
+                      <p className="text-xs mt-2" style={{ color: "rgba(255,255,255,0.62)" }}>
+                        Name, event type, recap — no clock. Counts in totals.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void copy(teamUrl);
+                      }}
+                      className="px-3 py-2 rounded-xl text-xs font-semibold shrink-0"
+                      style={{
+                        background: "transparent",
+                        color: "var(--spark-text)",
+                        border: "1px solid var(--spark-border)",
+                      }}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </li>
+              ) : null}
+              </Fragment>
             );
           })}
         </ul>

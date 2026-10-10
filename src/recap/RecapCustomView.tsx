@@ -24,6 +24,7 @@ import type { SetCustomRecapFileCategoryMutation as SetCustomRecapFileCategoryMu
 import { GenerateCustomRecapPdfMutation } from "@/api/mutations/GenerateCustomRecapPdfMutation";
 import type { GenerateCustomRecapPdfMutation as GenerateCustomRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateCustomRecapPdfMutation.graphql";
 import { RecapUploader } from "./RecapUploader";
+import { RecapSourceBadge } from "./RecapSourceBadge";
 import { ThirdPartyRecapBadge } from "./ThirdPartyRecapBadge";
 import { ThirdPartyStoreMap } from "./ThirdPartyStoreMap";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -1710,6 +1711,7 @@ const RecapCustomViewInner = ({
                     <span className="chip chip-orange">INCOMPLETE</span>
                   )}
                   {recap.isThirdParty ? <ThirdPartyRecapBadge notInTotals={recap.excludeFromAggregates} /> : null}
+                  <RecapSourceBadge label={recap.sourceLabel} />
                   {!isClient && lastEditedNote ? (
                     <button
                       type="button"
@@ -3131,6 +3133,10 @@ const RecapCustomViewInner = ({
             {recap.isThirdParty ? (
               <div className="flex items-center gap-2 flex-wrap mb-2">
                 <ThirdPartyRecapBadge notInTotals={recap.excludeFromAggregates} />
+              </div>
+            ) : recap.sourceLabel ? (
+              <div className="flex items-center gap-2 flex-wrap mb-2">
+                <RecapSourceBadge label={recap.sourceLabel} />
               </div>
             ) : null}
             <h1

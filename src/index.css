@@ -1192,6 +1192,11 @@ body { background: var(--spark-bg); }
   background: rgba(201, 164, 255, 0.16);
   border-color: rgba(91, 61, 138, 0.35);
 }
+.recap-doc .chip-sky {
+  color: #0f4c63;
+  background: rgba(109, 213, 250, 0.16);
+  border-color: rgba(15, 76, 99, 0.35);
+}
 .recap-doc .recap-edited-chip {
   color: #14160f;
   background: #fff4d6;
