@@ -42,12 +42,14 @@ describe("isPublicFieldPath", () => {
     expect(isPublicFieldPath("/c/campaign-slug")).toBe(true);
     expect(isPublicFieldPath("/invoice/tok")).toBe(true);
     expect(isPublicFieldPath("/live/tok")).toBe(true);
+    expect(isPublicFieldPath("/jobs/AbC_123-x")).toBe(true);
   });
   it("does not match admin or login", () => {
     expect(isPublicFieldPath("/")).toBe(false);
     expect(isPublicFieldPath("/login")).toBe(false);
     expect(isPublicFieldPath("/recap/list")).toBe(false);
     expect(isPublicFieldPath("/request/view/x")).toBe(false);
+    expect(isPublicFieldPath("/jobs")).toBe(false);
   });
 });
 
