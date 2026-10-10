@@ -252,6 +252,9 @@ export default function FieldMarketing() {
     if (!revealKey) return;
     const node = formRef.current;
     if (!node) return;
+    // The sticky topbar wraps to ~150px on phones and would cover the form.
+    const topbar = document.querySelector<HTMLElement>("header.sticky");
+    node.style.scrollMarginTop = `${(topbar?.offsetHeight ?? 0) + 12}px`;
     node.querySelector<HTMLElement>("select, input")?.focus({ preventScroll: true });
     node.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [revealKey]);
@@ -752,7 +755,7 @@ export default function FieldMarketing() {
         </div>
 
         {showPlanForm ? (
-          <div ref={formRef} className="scroll-mt-4">
+          <div ref={formRef}>
             <FieldMarketingPlanForm
               form={form}
               onChange={setForm}
