@@ -31,8 +31,20 @@ import {
 } from "@/recap/spendAmount";
 import {
   FIELD_PHOTO_PREP,
+  makeThumbnail,
   prepareImageForUpload,
 } from "@/utils/compressImageForUpload";
+import {
+  clearDraftPhotos,
+  deleteDraftPhotoFiles,
+  loadDraftPhotos,
+  readDraftPhotos,
+  readOpenRecap,
+  saveDraftPhotoFile,
+  writeDraftPhotos,
+  writeOpenRecap,
+  type DraftPhoto,
+} from "./photoDraft";
 import { browserPlayableContentType } from "@/utils/recapFileUrl";
 import {
   CLOCK_FETCH_TIMEOUT_MS,
@@ -355,6 +367,14 @@ type Photo = {
   /** Failed on connectivity (timeout / dropped), not a server reject. */
   failedOffline?: boolean;
 };
+
+const draftPhotoOf = (p: Photo): DraftPhoto => ({
+  id: p.id,
+  blobName: p.blobName,
+  category: p.category,
+  name: p.file.name,
+  type: p.file.type,
+});
 
 const FALLBACK_ACCENT = "#C4D82E";
 
@@ -798,9 +818,7 @@ const writeIdentity = (code: string, who: Identity): void => {
 // clock-in, so a reload inside one shift restores the draft while the next
 // shift starts clean instead of inheriting yesterday's answers.
 //
-// Text only. Photos are already uploaded to GCS as they're picked, but a
-// restored photo has no File to preview, and half-rendering one is worse than
-// re-picking it — that stays a separate change.
+// Photos ride alongside in photoDraft.ts (bytes in IndexedDB).
 type RecapDraft = {
   v: 1;
   savedAt: number;
@@ -847,10 +865,12 @@ const clearDraft = (code: string, token: string) => {
   } catch {
     /* nothing to do — the draft is disposable by definition */
   }
+  void clearDraftPhotos(code, token);
 };
 
-/** True when this session already has typed answers waiting on-device. */
+/** True when this session already has answers or photos waiting on-device. */
 const hasRecapDraft = (code: string, token: string): boolean => {
+  if (readDraftPhotos(code, token).length > 0) return true;
   const d = readDraft(code, token);
   if (!d) return false;
   if ((d.engagements || "").trim()) return true;
@@ -2125,6 +2145,19 @@ function CheckedInFlow({
   useEffect(() => {
     setDraftWaiting(hasRecapDraft(code, token));
   }, [code, token, showRecap]);
+  // The phone reloaded the page while the recap was open (usually the camera
+  // — see photoDraft.ts): put the BA back in it, photos and all. A "File
+  // another" form isn't reopened as an edit of the filed recap; it waits
+  // behind its button, draft intact.
+  useEffect(() => {
+    if (showRecap || showMileageStep) return;
+    const open = readOpenRecap(code, token);
+    if (open === "existing" || (open === "new" && ctx.recapOnly)) openRecap(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    writeOpenRecap(code, token, showRecap ? (recapAsNew ? "new" : "existing") : null);
+  }, [code, token, showRecap, recapAsNew]);
   // A queued clock-in is the shift they already started. Treat it as on the
   // clock so they can fill the recap offline instead of staring at Clock in.
   const effectiveClock: Clock["state"] =
@@ -3313,6 +3346,16 @@ function RecapForm({
   const uploadOne = async (id: string, original: File) => {
     try {
       const file = await compressImage(original);
+      const thumb = file.type.startsWith("image/") ? await makeThumbnail(file) : null;
+      if (thumb && thumb !== original) {
+        setPhotos((p) =>
+          p.map((ph) => {
+            if (ph.id !== id) return ph;
+            if (ph.previewUrl) URL.revokeObjectURL(ph.previewUrl);
+            return { ...ph, previewUrl: URL.createObjectURL(thumb) };
+          }),
+        );
+      }
       const { blobName } = await putCheckinPhoto({
         code,
         token,
@@ -3320,24 +3363,17 @@ function RecapForm({
         apiOrigin: apiOrigin(),
       });
       setPhotos((p) =>
-        p.map((ph) => {
-          if (ph.id !== id) return ph;
-          let previewUrl = ph.previewUrl;
-          if (file !== original && file.type.startsWith("image/")) {
-            previewUrl = URL.createObjectURL(file);
-            URL.revokeObjectURL(ph.previewUrl);
-          }
-          return {
-            ...ph,
-            file,
-            blobName,
-            previewUrl,
-            state: "done",
-            failReason: null,
-            failedOffline: false,
-          };
-        }),
+        p.map((ph) =>
+          ph.id === id
+            ? { ...ph, file, blobName, state: "done", failReason: null, failedOffline: false }
+            : ph,
+        ),
       );
+      // Uploaded: a reload only needs the blob name and a preview now.
+      if (photosRef.current.some((ph) => ph.id === id)) {
+        if (thumb) void saveDraftPhotoFile(code, token, id, thumb);
+        else void deleteDraftPhotoFiles(code, token, [id]);
+      }
     } catch (error) {
       const failedOffline = isOfflineClockFailure({ error });
       const failReason = failedOffline
@@ -3381,8 +3417,49 @@ function RecapForm({
     // still sees the true remaining room.
     photosRef.current = [...photosRef.current, ...batch];
     setPhotos(photosRef.current);
+    for (const ph of batch) void saveDraftPhotoFile(code, token, ph.id, ph.file);
     await runWithConcurrency(batch, UPLOAD_CONCURRENCY, (ph) => uploadOne(ph.id, ph.file));
   };
+
+  // Put back what the last page life had — "Take photo" often costs the page
+  // (see photoDraft.ts). Unfinished uploads resume from the saved bytes.
+  const photosRestored = useRef(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const saved = await loadDraftPhotos(code, token);
+      if (cancelled) return;
+      photosRestored.current = true;
+      const have = new Set(photosRef.current.map((p) => p.id));
+      const back: Photo[] = saved
+        .filter(({ photo }) => !have.has(photo.id))
+        .map(({ photo, file }): Photo => ({
+          id: photo.id,
+          file: file ?? new File([], photo.name || "photo.jpg", { type: photo.type || "image/jpeg" }),
+          blobName: photo.blobName,
+          previewUrl: file ? URL.createObjectURL(file) : "",
+          state: photo.blobName ? "done" : "uploading",
+          category: photo.category,
+        }));
+      photosRef.current = [...back, ...photosRef.current];
+      setPhotos(photosRef.current);
+      writeDraftPhotos(code, token, photosRef.current.map(draftPhotoOf));
+      await runWithConcurrency(
+        back.filter((p) => p.state === "uploading"),
+        UPLOAD_CONCURRENCY,
+        (ph) => uploadOne(ph.id, ph.file),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, token]);
+
+  useEffect(() => {
+    if (!photosRestored.current) return;
+    writeDraftPhotos(code, token, photos.map(draftPhotoOf));
+  }, [code, token, photos]);
 
   const retryFailed = async () => {
     const stuck = photos.filter((p) => p.state === "failed");
@@ -3399,6 +3476,7 @@ function RecapForm({
     const next = photosRef.current.filter((ph) => ph.id !== id);
     photosRef.current = next;
     setPhotos(next);
+    void deleteDraftPhotoFiles(code, token, [id]);
   };
 
   const submit = async () => {
@@ -4596,7 +4674,7 @@ function PhotoGrid({
                   background: "#111",
                 }}
               />
-            ) : (
+            ) : p.previewUrl ? (
               <img
                 src={p.previewUrl}
                 alt=""
@@ -4607,6 +4685,16 @@ function PhotoGrid({
                   borderRadius: 10,
                   opacity: p.state === "done" ? 1 : 0.5,
                   border: p.state === "failed" ? "2px solid #EF5A2A" : "1px solid rgba(0,0,0,0.1)",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: 10,
+                  background: "#e7e5e4",
+                  border: "1px solid rgba(0,0,0,0.1)",
                 }}
               />
             )}

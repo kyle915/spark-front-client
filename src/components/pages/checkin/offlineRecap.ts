@@ -108,7 +108,7 @@ const memoryStorage: StorageLike = {
   },
 };
 
-function liveStorage(): StorageLike {
+export function liveStorage(): StorageLike {
   try {
     if (typeof window !== "undefined" && window.localStorage) return window.localStorage;
   } catch {
