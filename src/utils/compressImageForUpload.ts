@@ -76,6 +76,19 @@ async function downscaleImage(
 }
 
 /**
+ * Small JPEG for an on-screen tile. A 120px tile showing a 1600px photo still
+ * decodes all of it; a few dozen of those is what gets a phone tab discarded
+ * when the camera opens. Returns the input when it can't shrink it.
+ */
+export async function makeThumbnail(file: File, maxEdge = 320): Promise<File> {
+  try {
+    return await downscaleImage(file, { maxEdge, quality: 0.7, minBytes: 0 });
+  } catch {
+    return file;
+  }
+}
+
+/**
  * Prepare a photo for GCS upload: HEIC/HEIF → JPEG, then downscale.
  * Best-effort — returns the original file on any failure so a flaky
  * decoder never blocks the BA from filing the shot.
