@@ -113,9 +113,28 @@ export async function deleteDraftPhotoFiles(
 }
 
 /**
+ * An in-memory copy of `file`, or null when its bytes can't be read.
+ *
+ * IndexedDB on iOS can hand back a Blob whose backing data never landed —
+ * the tab was killed (the camera again) mid-write. Such a Blob previews as a
+ * broken image and every upload of it fails, so a BA got a wall of FAILED
+ * tiles that Retry could never fix. Reading it here settles it once.
+ */
+export async function readableCopy(file: File): Promise<File | null> {
+  try {
+    const bytes = await file.arrayBuffer();
+    if (bytes.byteLength === 0) return null;
+    return new File([bytes], file.name, { type: file.type });
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Photos to put back on the form. A photo whose bytes are gone is still kept
  * when it already uploaded (it files fine, it just has no preview); one that
- * never uploaded and has no bytes is unrecoverable and dropped.
+ * never uploaded and has no readable bytes is unrecoverable — dropped here and
+ * deleted, so dead entries can't pile up across reloads.
  */
 export async function loadDraftPhotos(
   code: string,
@@ -124,15 +143,29 @@ export async function loadDraftPhotos(
   blobs: PhotoBlobStore = livePhotoStore(),
 ): Promise<RestoredDraftPhoto[]> {
   const out: RestoredDraftPhoto[] = [];
+  const dead: string[] = [];
   for (const photo of readDraftPhotos(code, token, storage)) {
     let file: File | null = null;
     try {
-      file = await blobs.get(draftPhotoBlobId(code, token, photo.id));
+      const stored = await blobs.get(draftPhotoBlobId(code, token, photo.id));
+      file = stored ? await readableCopy(stored) : null;
     } catch {
       file = null;
     }
-    if (!file && !photo.blobName) continue;
+    if (!file && !photo.blobName) {
+      dead.push(photo.id);
+      continue;
+    }
     out.push({ photo, file });
+  }
+  if (dead.length) {
+    writeDraftPhotos(
+      code,
+      token,
+      out.map((r) => r.photo),
+      storage,
+    );
+    await deleteDraftPhotoFiles(code, token, dead, blobs);
   }
   return out;
 }
