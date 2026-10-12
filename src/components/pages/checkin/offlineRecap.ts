@@ -162,6 +162,9 @@ export function idbPhotoStore(): PhotoBlobStore {
           const tx = db.transaction(IDB_STORE, "readwrite");
           tx.oncomplete = () => resolve();
           tx.onerror = () => reject(tx.error ?? new Error("idb put failed"));
+          // A full device (QuotaExceededError) aborts the transaction without
+          // an error event — without this the put never settles.
+          tx.onabort = () => reject(tx.error ?? new Error("idb put aborted"));
           tx.objectStore(IDB_STORE).put(
             { blob: file, name: file.name, type: file.type },
             id,
@@ -199,6 +202,7 @@ export function idbPhotoStore(): PhotoBlobStore {
           const tx = db.transaction(IDB_STORE, "readwrite");
           tx.oncomplete = () => resolve();
           tx.onerror = () => reject(tx.error ?? new Error("idb delete failed"));
+          tx.onabort = () => reject(tx.error ?? new Error("idb delete aborted"));
           const store = tx.objectStore(IDB_STORE);
           for (const id of ids) store.delete(id);
         });

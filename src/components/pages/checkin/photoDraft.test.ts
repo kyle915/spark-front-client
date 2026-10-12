@@ -72,6 +72,49 @@ describe("draft photos survive a page reload", () => {
     expect(back).toEqual([{ photo: meta("done", "recap_files/checkin/evt/x.jpg"), file: null }]);
   });
 
+  it("drops and deletes entries whose saved bytes can't be read (dead IndexedDB blobs)", async () => {
+    const storage = new MemoryStorage();
+    const blobs = memoryPhotoStore();
+    // What iOS hands back after the tab died mid-write: a Blob that throws on read.
+    const dead = cameraShot();
+    Object.defineProperty(dead, "arrayBuffer", {
+      value: () => Promise.reject(new Error("WebKitBlobResource error 1")),
+    });
+    await blobs.put(draftPhotoBlobId(CODE, TOKEN, "dead"), dead);
+    await blobs.put(draftPhotoBlobId(CODE, TOKEN, "empty"), new File([], "image.jpg", { type: "image/jpeg" }));
+    await saveDraftPhotoFile(CODE, TOKEN, "ok", cameraShot(), blobs);
+    await blobs.put(draftPhotoBlobId(CODE, TOKEN, "uploaded"), dead);
+    writeDraftPhotos(
+      CODE,
+      TOKEN,
+      [meta("dead", null), meta("empty", null), meta("ok", null), meta("uploaded", "recap_files/checkin/evt/u.jpg")],
+      storage,
+    );
+
+    const back = await loadDraftPhotos(CODE, TOKEN, storage, blobs);
+
+    expect(back.map((r) => [r.photo.id, r.file ? "file" : "none"])).toEqual([
+      ["ok", "file"],
+      ["uploaded", "none"],
+    ]);
+    expect(readDraftPhotos(CODE, TOKEN, storage).map((p) => p.id)).toEqual(["ok", "uploaded"]);
+    expect(await blobs.get(draftPhotoBlobId(CODE, TOKEN, "dead"))).toBeNull();
+    expect(await blobs.get(draftPhotoBlobId(CODE, TOKEN, "empty"))).toBeNull();
+  });
+
+  it("restored files are in-memory copies, not the stored Blob", async () => {
+    const storage = new MemoryStorage();
+    const blobs = memoryPhotoStore();
+    const stored = cameraShot();
+    await saveDraftPhotoFile(CODE, TOKEN, "a", stored, blobs);
+    writeDraftPhotos(CODE, TOKEN, [meta("a", null)], storage);
+    const [r] = await loadDraftPhotos(CODE, TOKEN, storage, blobs);
+    expect(r.file).not.toBe(stored);
+    expect(r.file?.name).toBe("image.jpg");
+    expect(r.file?.type).toBe("image/jpeg");
+    expect(new Uint8Array(await r.file!.arrayBuffer())).toEqual(new Uint8Array(await stored.arrayBuffer()));
+  });
+
   it("is scoped to the session token, so the next shift starts clean", async () => {
     const storage = new MemoryStorage();
     writeDraftPhotos(CODE, TOKEN, [meta("a", "blob")], storage);

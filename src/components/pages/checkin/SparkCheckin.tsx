@@ -45,6 +45,7 @@ import {
   writeOpenRecap,
   type DraftPhoto,
 } from "./photoDraft";
+import { createLimiter } from "./uploadLimiter";
 import { browserPlayableContentType } from "@/utils/recapFileUrl";
 import {
   CLOCK_FETCH_TIMEOUT_MS,
@@ -366,6 +367,12 @@ type Photo = {
   failReason?: string | null;
   /** Failed on connectivity (timeout / dropped), not a server reject. */
   failedOffline?: boolean;
+  /** `file` is already the compressed upload copy — retries skip re-encoding. */
+  prepared?: boolean;
+  /** The photo's bytes are gone on this phone; no retry can send it. */
+  unrecoverable?: boolean;
+  /** Failed, with an automatic retry scheduled. */
+  autoRetry?: boolean;
 };
 
 const draftPhotoOf = (p: Photo): DraftPhoto => ({
@@ -385,7 +392,34 @@ function telHref(phone: string): string {
 
 // Enough to use the connection, few enough that one stalled PUT doesn't hold
 // up the rest. Serial uploads were the other half of "photos won't upload".
-const UPLOAD_CONCURRENCY = 3;
+// Shared by every pick, restore and retry on the page.
+const photoUploads = createLimiter(3);
+// Decoding a 12MP shot to re-encode it is the memory spike; two at a time.
+const photoPrep = createLimiter(2);
+
+// Weak signal / rate limit / server hiccup: try again on our own before the
+// BA has to notice. After these, the tile waits for Retry.
+const AUTO_RETRY_DELAYS_MS = [5_000, 20_000, 60_000];
+
+const UNREADABLE_PHOTO_MESSAGE =
+  "This photo didn't stay saved on your phone — remove it and take or pick it again.";
+
+function retryableUploadFailure(failedOffline: boolean, reason: string): boolean {
+  return (
+    failedOffline ||
+    /try again|too many|wait a minute|upload failed|couldn't prepare/i.test(reason)
+  );
+}
+
+async function fileIsReadable(file: File): Promise<boolean> {
+  if (file.size === 0) return false;
+  try {
+    await file.slice(0, 64).arrayBuffer();
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Parallel heic2any WASM OOMs iPhone Safari when a BA picks a big Camera Roll
@@ -423,22 +457,6 @@ async function compressImage(file: File): Promise<File> {
   } finally {
     release();
   }
-}
-
-/** Run `fn` over `items` with at most `limit` in flight. */
-async function runWithConcurrency<T>(
-  items: T[],
-  limit: number,
-  fn: (item: T) => Promise<void>,
-): Promise<void> {
-  let cursor = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (cursor < items.length) {
-      const item = items[cursor++];
-      await fn(item);
-    }
-  });
-  await Promise.all(workers);
 }
 
 /**
@@ -3303,6 +3321,7 @@ function RecapForm({
 
   const uploadingCount = photos.filter((p) => p.state === "uploading").length;
   const failedCount = photos.filter((p) => p.state === "failed").length;
+  const doneCount = photos.filter((p) => p.state === "done").length;
   // Store Wi-Fi / one bar keeps navigator.onLine true while every request
   // stalls, so all-photos-timed-out counts as offline and queues the recap.
   const allFailedOffline =
@@ -3341,38 +3360,90 @@ function RecapForm({
 
   const setVal = (id: string, v: string | string[]) => setValues((p) => ({ ...p, [id]: v }));
 
-  // Upload one photo, keyed by its stable id. Compresses first — a raw iPhone
-  // shot is 3-5MB and a BA may file dozens from a parking lot on LTE.
-  const uploadOne = async (id: string, original: File) => {
-    try {
+  // Set once the recap is filed, so a late upload can't write a fresh draft
+  // for a recap that's already in.
+  const submittedRef = useRef(false);
+  const leaveBehindArmed = useRef(false);
+  const retryTimers = useRef(new Map<string, number>());
+  const autoRetriesUsed = useRef(new Map<string, number>());
+  useEffect(() => {
+    const timers = retryTimers.current;
+    return () => {
+      for (const t of timers.values()) window.clearTimeout(t);
+    };
+  }, []);
+  const cancelAutoRetry = (id: string) => {
+    const t = retryTimers.current.get(id);
+    if (t) window.clearTimeout(t);
+    retryTimers.current.delete(id);
+  };
+
+  const patchPhoto = (id: string, patch: Partial<Photo>) =>
+    setPhotos((p) => p.map((ph) => (ph.id === id ? { ...ph, ...patch } : ph)));
+
+  // Compress once — a raw iPhone shot is 3-5MB and a BA may file dozens from a
+  // parking lot on LTE. The compressed copy becomes the photo's file (retries
+  // reuse it) and is what's kept on the device for a reload; the original
+  // never goes to IndexedDB, it's the big write a killed tab leaves half-done.
+  const prepareOne = (id: string, original: File) =>
+    photoPrep(async () => {
       const file = await compressImage(original);
       const thumb = file.type.startsWith("image/") ? await makeThumbnail(file) : null;
-      if (thumb && thumb !== original) {
-        setPhotos((p) =>
-          p.map((ph) => {
-            if (ph.id !== id) return ph;
-            if (ph.previewUrl) URL.revokeObjectURL(ph.previewUrl);
-            return { ...ph, previewUrl: URL.createObjectURL(thumb) };
-          }),
-        );
-      }
-      const { blobName } = await putCheckinPhoto({
-        code,
-        token,
-        file,
-        apiOrigin: apiOrigin(),
-      });
       setPhotos((p) =>
-        p.map((ph) =>
-          ph.id === id
-            ? { ...ph, file, blobName, state: "done", failReason: null, failedOffline: false }
-            : ph,
-        ),
+        p.map((ph) => {
+          if (ph.id !== id) return ph;
+          let previewUrl = ph.previewUrl;
+          if (thumb && thumb !== original) {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            previewUrl = URL.createObjectURL(thumb);
+          }
+          return { ...ph, file, previewUrl, prepared: true };
+        }),
       );
+      if (file.type.startsWith("image/") && !submittedRef.current) {
+        void saveDraftPhotoFile(code, token, id, file);
+      }
+      return { file, thumb };
+    });
+
+  // Upload one photo, keyed by its stable id.
+  const uploadOne = async (id: string, original: File, alreadyPrepared = false) => {
+    try {
+      if (!(await fileIsReadable(original))) {
+        cancelAutoRetry(id);
+        patchPhoto(id, {
+          state: "failed",
+          failReason: UNREADABLE_PHOTO_MESSAGE,
+          failedOffline: false,
+          unrecoverable: true,
+          autoRetry: false,
+        });
+        void deleteDraftPhotoFiles(code, token, [id]);
+        return;
+      }
+      const { file, thumb } = alreadyPrepared
+        ? { file: original, thumb: null }
+        : await prepareOne(id, original);
+      const uploaded = await photoUploads(async () =>
+        // Removed while it waited for a slot — don't spend the upload.
+        photosRef.current.some((ph) => ph.id === id)
+          ? putCheckinPhoto({ code, token, file, apiOrigin: apiOrigin() })
+          : null,
+      );
+      if (!uploaded) return;
+      autoRetriesUsed.current.delete(id);
+      patchPhoto(id, {
+        file,
+        blobName: uploaded.blobName,
+        state: "done",
+        failReason: null,
+        failedOffline: false,
+        autoRetry: false,
+      });
       // Uploaded: a reload only needs the blob name and a preview now.
-      if (photosRef.current.some((ph) => ph.id === id)) {
+      if (photosRef.current.some((ph) => ph.id === id) && !submittedRef.current) {
         if (thumb) void saveDraftPhotoFile(code, token, id, thumb);
-        else void deleteDraftPhotoFiles(code, token, [id]);
+        else if (!file.type.startsWith("image/")) void deleteDraftPhotoFiles(code, token, [id]);
       }
     } catch (error) {
       const failedOffline = isOfflineClockFailure({ error });
@@ -3381,12 +3452,27 @@ function RecapForm({
         : error instanceof Error && error.message.trim()
           ? error.message.trim()
           : "Upload failed — tap Retry.";
-      setPhotos((p) =>
-        p.map((ph) =>
-          ph.id === id ? { ...ph, state: "failed", failReason, failedOffline } : ph,
-        ),
-      );
+      const autoRetry =
+        retryableUploadFailure(failedOffline, failReason) && scheduleAutoRetry(id);
+      patchPhoto(id, { state: "failed", failReason, failedOffline, autoRetry });
     }
+  };
+
+  const scheduleAutoRetry = (id: string): boolean => {
+    if (submittedRef.current) return false;
+    const used = autoRetriesUsed.current.get(id) ?? 0;
+    if (used >= AUTO_RETRY_DELAYS_MS.length) return false;
+    autoRetriesUsed.current.set(id, used + 1);
+    cancelAutoRetry(id);
+    const timer = window.setTimeout(() => {
+      retryTimers.current.delete(id);
+      const ph = photosRef.current.find((p) => p.id === id);
+      if (!ph || ph.state !== "failed" || ph.unrecoverable || submittedRef.current) return;
+      patchPhoto(id, { state: "uploading", autoRetry: false });
+      void uploadOne(id, ph.file, Boolean(ph.prepared));
+    }, AUTO_RETRY_DELAYS_MS[used]);
+    retryTimers.current.set(id, timer);
+    return true;
   };
 
   const uploadFiles = async (files: FileList | null, category: string | null = null) => {
@@ -3417,8 +3503,7 @@ function RecapForm({
     // still sees the true remaining room.
     photosRef.current = [...photosRef.current, ...batch];
     setPhotos(photosRef.current);
-    for (const ph of batch) void saveDraftPhotoFile(code, token, ph.id, ph.file);
-    await runWithConcurrency(batch, UPLOAD_CONCURRENCY, (ph) => uploadOne(ph.id, ph.file));
+    await Promise.all(batch.map((ph) => uploadOne(ph.id, ph.file)));
   };
 
   // Put back what the last page life had — "Take photo" often costs the page
@@ -3443,11 +3528,9 @@ function RecapForm({
         }));
       photosRef.current = [...back, ...photosRef.current];
       setPhotos(photosRef.current);
-      writeDraftPhotos(code, token, photosRef.current.map(draftPhotoOf));
-      await runWithConcurrency(
-        back.filter((p) => p.state === "uploading"),
-        UPLOAD_CONCURRENCY,
-        (ph) => uploadOne(ph.id, ph.file),
+      writeDraftPhotos(code, token, photosRef.current.filter((p) => !p.unrecoverable).map(draftPhotoOf));
+      await Promise.all(
+        back.filter((p) => p.state === "uploading").map((ph) => uploadOne(ph.id, ph.file)),
       );
     })();
     return () => {
@@ -3457,16 +3540,33 @@ function RecapForm({
   }, [code, token]);
 
   useEffect(() => {
-    if (!photosRestored.current) return;
-    writeDraftPhotos(code, token, photos.map(draftPhotoOf));
+    if (!photosRestored.current || submittedRef.current) return;
+    writeDraftPhotos(code, token, photos.filter((p) => !p.unrecoverable).map(draftPhotoOf));
   }, [code, token, photos]);
 
   const retryFailed = async () => {
-    const stuck = photos.filter((p) => p.state === "failed");
+    const stuck = photosRef.current.filter((p) => p.state === "failed" && !p.unrecoverable);
     if (!stuck.length) return;
     setErr(null);
-    setPhotos((p) => p.map((ph) => (ph.state === "failed" ? { ...ph, state: "uploading" } : ph)));
-    await runWithConcurrency(stuck, UPLOAD_CONCURRENCY, (ph) => uploadOne(ph.id, ph.file));
+    const ids = new Set(stuck.map((p) => p.id));
+    for (const id of ids) {
+      cancelAutoRetry(id);
+      autoRetriesUsed.current.delete(id);
+    }
+    setPhotos((p) =>
+      p.map((ph) => (ids.has(ph.id) ? { ...ph, state: "uploading", autoRetry: false } : ph)),
+    );
+    await Promise.all(stuck.map((ph) => uploadOne(ph.id, ph.file, Boolean(ph.prepared))));
+  };
+
+  const removeFailed = () => {
+    const failed = photosRef.current.filter((p) => p.state === "failed");
+    if (!failed.length) return;
+    for (const ph of failed) cancelAutoRetry(ph.id);
+    const next = photosRef.current.filter((p) => p.state !== "failed");
+    photosRef.current = next;
+    setPhotos(next);
+    void deleteDraftPhotoFiles(code, token, failed.map((p) => p.id));
   };
 
   // Keyed by id, never by index. Each bucket renders its OWN filtered slice, so
@@ -3476,6 +3576,7 @@ function RecapForm({
     const next = photosRef.current.filter((ph) => ph.id !== id);
     photosRef.current = next;
     setPhotos(next);
+    cancelAutoRetry(id);
     void deleteDraftPhotoFiles(code, token, [id]);
   };
 
@@ -3536,15 +3637,21 @@ function RecapForm({
       return setErr("Please say whether a corporate card was used.");
     }
     const donePhotos = photos.filter((p) => p.state === "done" && p.blobName);
-    // Only block on uploads genuinely in flight, and say how many. Photos that
-    // FAILED must never block: a BA standing in a parking lot on one bar has
-    // to be able to finish and clock out. The button label tells them exactly
-    // how many they're leaving behind, and Retry is right there.
+    // Photos that FAILED must never block: a BA standing in a parking lot on
+    // one bar has to be able to finish and clock out. The button label tells
+    // them exactly how many they're leaving behind, and Retry is right there.
+    // Uploads still in flight get one warning; a second tap sends what landed.
     if (uploadingCount > 0) {
-      return setErr(
-        `Still uploading ${uploadingCount} photo${uploadingCount === 1 ? "" : "s"} — one moment.`,
-      );
+      const many = `${uploadingCount} photo${uploadingCount === 1 ? "" : "s"}`;
+      if (donePhotos.length === 0) return setErr(`Still uploading ${many} — one moment.`);
+      if (!leaveBehindArmed.current) {
+        leaveBehindArmed.current = true;
+        return setErr(
+          `Still uploading ${many}. Wait for ${uploadingCount === 1 ? "it" : "them"}, or tap Submit again to send the ${donePhotos.length} that finished.`,
+        );
+      }
     }
+    leaveBehindArmed.current = false;
     const offlineNow =
       (typeof navigator !== "undefined" && navigator.onLine === false) || allFailedOffline;
     if (donePhotos.length === 0) {
@@ -3619,7 +3726,7 @@ function RecapForm({
     const queueThisSubmit = async () => {
       const photoFiles: Record<string, File> = {};
       const files = photos
-        .filter((p) => p.state !== "uploading")
+        .filter((p) => p.state !== "uploading" && !p.unrecoverable)
         .map((p) => {
           if (!p.blobName) photoFiles[p.id] = p.file;
           return {
@@ -3700,6 +3807,8 @@ function RecapForm({
       }
       // Filed — the draft has served its purpose. Cleared before the parent
       // unmounts this form so a later shift can't resurrect these answers.
+      submittedRef.current = true;
+      for (const id of [...retryTimers.current.keys()]) cancelAutoRetry(id);
       clearDraft(code, token);
       setSubmitPhase("success");
       await holdActionSuccess();
@@ -4044,14 +4153,27 @@ function RecapForm({
                   ),
                 ];
                 if (reasons.length === 1) return ` ${reasons[0]}`;
+                if (reasons.includes(UNREADABLE_PHOTO_MESSAGE)) {
+                  return " Some didn't stay saved on your phone — tap Remove failed, then take or pick those again.";
+                }
                 if (reasons.some((r) => /too many|wait a minute/i.test(r))) {
                   return " Too many uploads at once — wait a minute, then tap Retry.";
                 }
                 return " Tap Retry — or re-pick from your library (JPEG works best if HEIC keeps failing).";
               })()}
+              {photos.some((p) => p.state === "failed" && p.autoRetry)
+                ? " Retrying automatically…"
+                : ""}
             </span>
-            <button style={{ ...secondaryBtn, width: "auto", padding: "8px 14px", margin: 0 }} onClick={retryFailed}>
-              Retry
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {photos.some((p) => p.state === "failed" && !p.unrecoverable) ? (
+              <button style={{ ...secondaryBtn, flex: 1, padding: "8px 14px", margin: 0 }} onClick={retryFailed}>
+                Retry
+              </button>
+            ) : null}
+            <button style={{ ...secondaryBtn, flex: 1, padding: "8px 14px", margin: 0 }} onClick={removeFailed}>
+              Remove failed
             </button>
           </div>
         </div>
@@ -4081,15 +4203,15 @@ function RecapForm({
         <ActionMorphButton
           style={primaryBtn(accent)}
           onClick={submit}
-          disabled={busy || uploadingCount > 0}
+          disabled={busy || (uploadingCount > 0 && doneCount === 0)}
           phase={submitPhase}
           pendingLabel="Submitting…"
           successLabel="Submitted"
         >
           {allFailedOffline
             ? "Save & send when back online"
-            : failedCount > 0
-              ? `Submit without ${failedCount} photo${failedCount === 1 ? "" : "s"}`
+            : failedCount + uploadingCount > 0 && doneCount > 0
+              ? `Submit without ${failedCount + uploadingCount} photo${failedCount + uploadingCount === 1 ? "" : "s"}`
               : "Submit recap"}
         </ActionMorphButton>
       </div>
