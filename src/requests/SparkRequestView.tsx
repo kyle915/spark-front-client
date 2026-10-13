@@ -908,6 +908,28 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         </div>
       )}
 
+      {request.coBrands && request.coBrands.length > 0 && (
+        <div className="spark-card p-6">
+          <p
+            className="mono text-[10px] mb-3"
+            style={{ letterSpacing: "0.18em", color: "var(--spark-lime)" }}
+          >
+            MULTI-BRAND ACTIVATION · {request.coBrands.length + 1} BRANDS
+          </p>
+          <ul className="space-y-2">
+            {request.coBrands.map((cb) => (
+              <li key={cb.tenantPk} className="text-sm">
+                <span className="font-semibold">{cb.tenantName}</span>
+                <span style={{ color: "rgba(255,255,255,0.55)" }}>
+                  {" · "}
+                  {cb.products.map((p) => p.name).filter(Boolean).join(", ") || "No SKUs"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Internal notes + @-mention. Same panel as Master Tracker
           expanded rows — shares the localStorage bucket, so notes
           added here show up there and vice versa. */}

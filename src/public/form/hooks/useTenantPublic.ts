@@ -7,12 +7,22 @@ type UseTenantPublicOptions = {
   enabled?: boolean;
 };
 
+export type BrandGroupBrand = {
+  pk: number;
+  name: string;
+  requestUrlName: string | null;
+  image: string | null;
+  primaryColor: string | null;
+  isSelf: boolean;
+};
+
 export type TenantPublic = {
   id: string;
   uuid: string;
   name: string | null;
   image: string | null;
   requestUrlName: string;
+  brandGroup?: { name: string; brands: BrandGroupBrand[] } | null;
 };
 
 type TenantPublicResponse = {

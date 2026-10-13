@@ -10,6 +10,12 @@ import {
 } from "./hooks";
 import { useCreateRequest } from "./hooks/useCreateRequest";
 import SharedTimeSlotSelect from "@/components/inputs/TimeSlotSelect";
+import CoBrandPicker from "./components/CoBrandPicker";
+import {
+  coBrandBlocker,
+  coBrandsPayload,
+  type CoBrandSelection,
+} from "./components/coBrandPayload";
 import type { CreateRequestInput } from "./types/CreateRequestByUrl";
 import GooglePlacesInput, { matchTimezoneOption } from "@/components/inputs/GooglePlacesInput";
 import { buildRequestDateTimes } from "./utils/buildPayload";
@@ -82,6 +88,15 @@ function ExpressFormBody() {
   const [timezoneId, setTimezoneId] = useState("");
   const [requestTypeId, setRequestTypeId] = useState("");
   const [productIds, setProductIds] = useState<string[]>([]);
+  const coBrandSiblings = useMemo(
+    () => (tenant?.brandGroup?.brands ?? []).filter((b) => !b.isSelf),
+    [tenant],
+  );
+  // null until answered — only asked when this brand has a brand group.
+  const [multiBrand, setMultiBrand] = useState<boolean | null>(null);
+  const [coBrandSelection, setCoBrandSelection] = useState<CoBrandSelection>({});
+  const coBrandMissing =
+    coBrandSiblings.length > 0 ? coBrandBlocker(multiBrand, coBrandSelection) : "";
   const [requestorEmail, setRequestorEmail] = useState("");
   const [requestorName, setRequestorName] = useState("");
   const [storeContact, setStoreContact] = useState("");
@@ -208,6 +223,7 @@ function ExpressFormBody() {
     !!schedulingStatus &&
     (!showTorchNonActiveFields || !!nonActiveProductRequired) &&
     torchActivationOk &&
+    !coBrandMissing &&
     !submitting;
 
   const submitBlocker =
@@ -221,7 +237,7 @@ function ExpressFormBody() {
             ? "Products"
             : isTorch && !torchActivationOk
               ? "Request"
-              : null;
+              : coBrandMissing || null;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -325,6 +341,9 @@ function ExpressFormBody() {
             )
           : {}),
         products: productIds.map((productId) => ({ productId })),
+        ...(coBrandSiblings.length > 0
+          ? { coBrands: coBrandsPayload(!!multiBrand, coBrandSelection) }
+          : {}),
         details: [{ isTableNeeded: false, tableSize: null }],
         notes: notesPlus,
       };
@@ -360,6 +379,8 @@ function ExpressFormBody() {
       setDate("");
       setExtraDates([]);
       setProductIds([]);
+      setMultiBrand(null);
+      setCoBrandSelection({});
       setNotes("");
       setSchedulingStatus("");
       setNonActiveProductRequired("");
@@ -818,6 +839,22 @@ function ExpressFormBody() {
             </button>
           )}
         </Card>
+
+        {coBrandSiblings.length > 0 && (
+          <Card title="MULTI-BRAND ACTIVATION *">
+            <CoBrandPicker
+              hostName={brandName}
+              siblings={coBrandSiblings}
+              enabled={multiBrand}
+              onEnabledChange={(next) => {
+                setMultiBrand(next);
+                if (!next) setCoBrandSelection({});
+              }}
+              selection={coBrandSelection}
+              onSelectionChange={setCoBrandSelection}
+            />
+          </Card>
+        )}
 
         {showTorchNonActiveFields && (
           <Card title="NON-ACTIVE PRODUCT *">

@@ -25,6 +25,7 @@ import { GenerateCustomRecapPdfMutation } from "@/api/mutations/GenerateCustomRe
 import type { GenerateCustomRecapPdfMutation as GenerateCustomRecapPdfMutationType } from "@/api/mutations/__generated__/GenerateCustomRecapPdfMutation.graphql";
 import { RecapUploader } from "./RecapUploader";
 import { RecapSourceBadge } from "./RecapSourceBadge";
+import { coActivationLabel } from "./coActivationLabel";
 import { ThirdPartyRecapBadge } from "./ThirdPartyRecapBadge";
 import { ThirdPartyStoreMap } from "./ThirdPartyStoreMap";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -1712,6 +1713,7 @@ const RecapCustomViewInner = ({
                   )}
                   {recap.isThirdParty ? <ThirdPartyRecapBadge notInTotals={recap.excludeFromAggregates} /> : null}
                   <RecapSourceBadge label={recap.sourceLabel} />
+                  <RecapSourceBadge label={coActivationLabel(recap.coActivation?.brandNames)} />
                   {!isClient && lastEditedNote ? (
                     <button
                       type="button"
@@ -3134,9 +3136,10 @@ const RecapCustomViewInner = ({
               <div className="flex items-center gap-2 flex-wrap mb-2">
                 <ThirdPartyRecapBadge notInTotals={recap.excludeFromAggregates} />
               </div>
-            ) : recap.sourceLabel ? (
+            ) : recap.sourceLabel || recap.coActivation?.brandNames?.length ? (
               <div className="flex items-center gap-2 flex-wrap mb-2">
                 <RecapSourceBadge label={recap.sourceLabel} />
+                <RecapSourceBadge label={coActivationLabel(recap.coActivation?.brandNames)} />
               </div>
             ) : null}
             <h1

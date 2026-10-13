@@ -5,7 +5,11 @@ export const PUBLIC_TENANT_QUERY = `
       uuid,
       name,
       image,
-      requestUrlName
+      requestUrlName,
+      brandGroup {
+        name
+        brands { pk name requestUrlName image primaryColor isSelf }
+      }
     }
   }
 `;

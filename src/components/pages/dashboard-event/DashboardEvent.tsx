@@ -12,6 +12,11 @@ import { isTorchTenant } from "@/field/torch";
 import { useDashboardProgram } from "@/field/useDashboardProgram";
 import { DashboardSkeleton } from "@/layout/PageSkeletons";
 import { useNavigate } from "react-router";
+import {
+  BrandComparePanel,
+  BrandViewSwitch,
+} from "@/components/brandGroup/BrandCompare";
+import { useBrandView } from "@/components/brandGroup/useBrandView";
 
 /**
  * Compact priority-glance card: shows pending approvals (with SLA
@@ -151,7 +156,9 @@ function DashboardInner() {
   const { tenantId, tenantMeta, tenantSlug } = useAuthStore();
   const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
   const { program, choose } = useDashboardProgram(torch);
-  const { isClient } = useSparkRole();
+  const { isClient, isAdmin } = useSparkRole();
+  const { view, choose: chooseView } = useBrandView();
+  const comparing = view === "compare" && !!tenantId;
   const tenantDisplay = slugToName(tenantMeta?.requestUrlName);
 
   const linkedSheetUrl = tenantId
@@ -183,7 +190,8 @@ function DashboardInner() {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {torch ? (
+          <BrandViewSwitch tenantId={tenantId} view={view} onChange={chooseView} />
+          {torch && !comparing ? (
             <DashboardProgramSwitch program={program} onChange={choose} />
           ) : null}
           {linkedSheetUrl && (
@@ -203,6 +211,7 @@ function DashboardInner() {
               📊 Sheet ↗
             </a>
           )}
+          {comparing ? null : (
           <a
             href="#performance"
             className="px-3 py-2 rounded-xl text-sm font-medium"
@@ -215,9 +224,14 @@ function DashboardInner() {
           >
             Performance ↓
           </a>
+          )}
         </div>
       </div>
 
+      {comparing && tenantId ? (
+        <BrandComparePanel tenantId={tenantId} canManageAccess={isAdmin} />
+      ) : (
+      <>
       {program === "field" ? null : (
         <>
           <Suspense fallback={null}>
@@ -239,6 +253,8 @@ function DashboardInner() {
       <Suspense fallback={<DashboardSkeleton />}>
         <InsightsBody embedded />
       </Suspense>
+      </>
+      )}
     </div>
   );
 }

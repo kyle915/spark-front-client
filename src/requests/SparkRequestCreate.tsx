@@ -46,6 +46,13 @@ import { CreateFormVenueIndexQuery } from "@/api/queries/CreateFormVenueIndexQue
 import type { CreateFormVenueIndexQuery as CreateFormVenueIndexQueryType } from "@api/queries/__generated__/CreateFormVenueIndexQuery.graphql";
 import { DistributorsQuery } from "@/api/queries/DistributorsQuery";
 import type { DistributorsQuery as DistributorsQueryType } from "@api/queries/__generated__/DistributorsQuery.graphql";
+import CoBrandPicker from "@/public/form/components/CoBrandPicker";
+import {
+  coBrandBlocker,
+  coBrandsPayload,
+  type CoBrandSelection,
+} from "@/public/form/components/coBrandPayload";
+import { useTenantPublic } from "@/public/form/hooks/useTenantPublic";
 // Start/End time pickers (TimeSlotSelect) ship inline so the time is
 // set at create time rather than deferred to the edit page. They still
 // default to 12:00 PM – 4:00 PM via useState init.
@@ -165,6 +172,13 @@ const SparkRequestInner: React.FC = () => {
   // event request is silent unless the admin opts in. Clients never see
   // this (their own submissions always notify them via the backend).
   const [notifyRequestor, setNotifyRequestor] = useState(false);
+  const { tenant: publicTenant } = useTenantPublic({ slug: tenantMeta?.requestUrlName });
+  const coBrandSiblings = useMemo(
+    () => (publicTenant?.brandGroup?.brands ?? []).filter((b) => !b.isSelf),
+    [publicTenant],
+  );
+  const [multiBrand, setMultiBrand] = useState<boolean | null>(null);
+  const [coBrandSelection, setCoBrandSelection] = useState<CoBrandSelection>({});
 
   const [commit, isCommitting] = useMutation<RequestMutation>(
     CreateRequestMutation,
@@ -669,6 +683,15 @@ const SparkRequestInner: React.FC = () => {
       showAlert("Pick whether non-active product is required — Yes or No.", "warning");
       return;
     }
+    if (coBrandSiblings.length > 0 && coBrandBlocker(multiBrand, coBrandSelection)) {
+      showAlert(
+        multiBrand === null
+          ? "Pick whether this is a multi-brand activation."
+          : "Pick the other brand(s) and at least one SKU for each.",
+        "warning",
+      );
+      return;
+    }
     if (isTorch && !torchActivationOk) {
       showAlert(
         isOnPremiseRequestType(selectedRequestTypeName)
@@ -777,6 +800,9 @@ const SparkRequestInner: React.FC = () => {
               products: Array.from(selectedProducts).map((productId) => ({
                 productId,
               })),
+              ...(coBrandSiblings.length > 0
+                ? { coBrands: coBrandsPayload(!!multiBrand, coBrandSelection) }
+                : {}),
               ...(activationPlanId
                 ? { activationPlanId }
                 : {}),
@@ -1636,6 +1662,23 @@ const SparkRequestInner: React.FC = () => {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {coBrandSiblings.length > 0 && (
+          <div>
+            <label className="label-mini block mb-1.5">Multi-brand activation? *</label>
+            <CoBrandPicker
+              hostName={publicTenant?.name ?? "this brand"}
+              siblings={coBrandSiblings}
+              enabled={multiBrand}
+              onEnabledChange={(next) => {
+                setMultiBrand(next);
+                if (!next) setCoBrandSelection({});
+              }}
+              selection={coBrandSelection}
+              onSelectionChange={setCoBrandSelection}
+            />
           </div>
         )}
 

@@ -125,6 +125,9 @@ export const GetCustomRecapQuery = graphql`
       isThirdParty
       excludeFromAggregates
       sourceLabel
+      coActivation {
+        brandNames
+      }
       typedStoreName
       typedStoreAddress
       storeMappingStatus

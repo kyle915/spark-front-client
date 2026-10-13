@@ -108,6 +108,8 @@ import {
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { holdActionSuccess, type ActionPhase } from "@/motion/opsMotion";
 import { recapSubmitErrorMessage } from "./recapSubmitError";
+import { useCoBrandRecap, type CoBrandOptions } from "./coBrandRecap";
+import { CoBrandSections, CoBrandToggleCard } from "./CoBrandRecapCards";
 import { TenantLogo } from "@/layout/TenantLogo";
 import { shouldShowSamplingStopCard } from "./samplingStops";
 import PayableMileageStep from "./PayableMileageStep";
@@ -186,6 +188,8 @@ type Template = {
   /** Per-SKU count copy from the template (e.g. "Cans sampled"); empty = generic. */
   sampleQtyLabel?: string;
   sampleQtyTotalLabel?: string;
+  /** Section names answered once per brand on a multi-brand activation. */
+  coBrandSections?: string[];
 };
 type Clock = {
   state: "not_started" | "clocked_in" | "clocked_out";
@@ -291,6 +295,9 @@ type Context = {
     requestUrlName?: string | null;
   };
   template?: Template | null;
+  // Sibling brands (brand group) this BA can also report on; null for
+  // every tenant without a group.
+  coBrands?: CoBrandOptions | null;
   // Labelled photo dropzones, in render order. Absent/empty for every brand
   // that hasn't opted in, which is the signal to keep the single generic grid.
   photoBuckets?: PhotoBucket[];
@@ -2646,6 +2653,7 @@ function CheckedInFlow({
         code={code}
         token={token}
         template={ctx.template ?? null}
+        coBrands={ctx.coBrands ?? null}
         photoBuckets={ctx.photoBuckets}
         storeIdentity={ctx.storeIdentity ?? null}
         accent={accent}
@@ -3170,6 +3178,7 @@ function RecapForm({
   code,
   token,
   template,
+  coBrands = null,
   photoBuckets,
   storeIdentity = null,
   accent,
@@ -3185,6 +3194,7 @@ function RecapForm({
   code: string;
   token: string;
   template: Template | null;
+  coBrands?: CoBrandOptions | null;
   photoBuckets?: PhotoBucket[];
   storeIdentity?: StoreIdentity | null;
   accent: string;
@@ -3269,6 +3279,11 @@ function RecapForm({
   );
   const [savedAt, setSavedAt] = useState<number | null>(
     () => restored.current?.savedAt ?? null,
+  );
+  const coBrand = useCoBrandRecap(coBrands);
+  const perBrandSections = useMemo(
+    () => new Set((template?.coBrandSections ?? []).map((n) => n.trim().toLowerCase())),
+    [template],
   );
   const [busy, setBusy] = useState(false);
   const [submitPhase, setSubmitPhase] = useState<ActionPhase>("idle");
@@ -3633,6 +3648,8 @@ function RecapForm({
         if (stored != null) valuesForSubmit[f.id] = stored;
       }
     }
+    const coBrandErr = coBrand.validate();
+    if (coBrandErr) return setErr(coBrandErr);
     if (usedCorpoCard == null) {
       return setErr("Please say whether a corporate card was used.");
     }
@@ -3722,6 +3739,7 @@ function RecapForm({
     const typed = engagements.trim() === "" ? null : Number(engagements);
     const totalEngagements = fromSamples ?? (Number.isFinite(typed) ? typed : null);
     const submittedAt = new Date().toISOString();
+    const coBrandsBody = coBrand.payload();
 
     const queueThisSubmit = async () => {
       const photoFiles: Record<string, File> = {};
@@ -3749,6 +3767,7 @@ function RecapForm({
         totalEngagements,
         usedCorpoCard,
         ...storeFields,
+        coBrands: coBrandsBody,
         forceNew,
         shiftLabel: forceNew ? shiftLabel : undefined,
         secondShift: Boolean(forceNew && shiftLabel),
@@ -3789,6 +3808,7 @@ function RecapForm({
         totalEngagements,
         usedCorpoCard,
         ...storeFields,
+        ...(coBrandsBody ? { coBrands: coBrandsBody } : {}),
         forceNew,
         ...(forceNew && shiftLabel
           ? { shiftLabel, secondShift: true }
@@ -3920,6 +3940,13 @@ function RecapForm({
           </label>
         </div>
       ) : null}
+      <CoBrandToggleCard
+        state={coBrand}
+        hostName={brandName}
+        accent={accent}
+        cardStyle={card}
+        headingStyle={h2}
+      />
       {template.sections.map((section) => {
         // Mileage moves to the end of the recap (after photos). Skip empty
         // sections that only held mileage fields.
@@ -3927,9 +3954,12 @@ function RecapForm({
           (f) => !isMileageCustomFieldName(f.name),
         );
         if (fields.length === 0) return null;
+        const labelBrand =
+          coBrand.active.length > 0 &&
+          perBrandSections.has(section.name.trim().toLowerCase());
         return (
         <div key={section.id} style={card}>
-          <h2 style={h2}>{section.name}</h2>
+          <h2 style={h2}>{labelBrand ? `${brandName} · ${section.name}` : section.name}</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 4 }}>
             {fields.map((f) => (
               <FieldInput
@@ -3955,6 +3985,29 @@ function RecapForm({
         </div>
         );
       })}
+
+      <CoBrandSections
+        state={coBrand}
+        cardStyle={card}
+        headingStyle={h2}
+        renderField={({ brand, field, value, onChange, sampleQtys, onSampleQtyChange }) => (
+          <FieldInput
+            field={field}
+            value={value}
+            accent={brand.primaryColor || accent}
+            onChange={onChange}
+            onAddPhotos={uploadFiles}
+            photos={[]}
+            onRemovePhoto={removePhoto}
+            products={brand.products}
+            sampleQtys={sampleQtys}
+            onSampleQtyChange={onSampleQtyChange}
+            qtyContextName={brand.name}
+            qtyLabel={template.sampleQtyLabel}
+            qtyTotalLabel={template.sampleQtyTotalLabel}
+          />
+        )}
+      />
 
       {/* Full per-SKU qty grid only when there is no Products Sampled
           multiselect and no Drop-off Locations repeater — LD seeding

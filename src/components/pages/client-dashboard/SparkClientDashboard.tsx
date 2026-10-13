@@ -28,6 +28,11 @@ import SparkPageHeader from "@/shared/SparkPageHeader";
 import DashboardProgramSwitch from "@/field/DashboardProgramSwitch";
 import { isTorchTenant } from "@/field/torch";
 import { useDashboardProgram } from "@/field/useDashboardProgram";
+import {
+  BrandComparePanel,
+  BrandViewSwitch,
+} from "@/components/brandGroup/BrandCompare";
+import { useBrandView } from "@/components/brandGroup/useBrandView";
 
 const AccountMapBody = lazy(() =>
   import("@/components/pages/map/SparkAccountMap").then((m) => ({
@@ -92,6 +97,7 @@ const ClientInner: React.FC = () => {
   const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
   const { program, choose } = useDashboardProgram(torch);
   const counts = useSidebarCounts();
+  const { view: brandView, choose: chooseBrandView } = useBrandView();
 
   // Active tab — Overview / Approvals / Account Map. Persists in the
   // URL hash so deep-links land on the right view and the browser
@@ -249,6 +255,11 @@ const ClientInner: React.FC = () => {
         support="Upcoming schedule and program performance."
         action={<AskAiButton tenantId={tenantId} />}
       />
+
+      <BrandViewSwitch tenantId={tenantId} view={brandView} onChange={chooseBrandView} />
+      {brandView === "compare" && tenantId ? (
+        <BrandComparePanel tenantId={tenantId} canManageAccess={false} />
+      ) : (<>
 
       {/* Tab bar — Overview / Approvals / Account Map. The latter two
           tabs reuse the existing /approvals and /account-map pages by
@@ -569,6 +580,7 @@ const ClientInner: React.FC = () => {
         <InsightsBody embedded />
       </Suspense>
 
+      </>)}
       </>)}
     </div>
   );
