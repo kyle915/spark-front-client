@@ -44,7 +44,7 @@ type JobBoardPending = {
   market: string;
   requestCode: string;
   requestUrl: string;
-  reason: "pending" | "queue" | "no_event" | "other";
+  reason: "no_status" | "pending" | "queue" | "no_event" | "other";
   reasonLabel: string;
   actionLabel: string | null;
   openShifts: number;
