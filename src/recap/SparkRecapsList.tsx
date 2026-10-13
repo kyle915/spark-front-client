@@ -14,6 +14,7 @@ import { CustomRecapsListQuery } from "@/api/queries/CustomRecapsListQuery";
 import { RecapListKindsQuery } from "@/api/queries/RecapListKindsQuery";
 import type { RecapListKindsQuery as RecapListKindsQueryType } from "@api/queries/__generated__/RecapListKindsQuery.graphql";
 import { RecapSourceBadge } from "@/recap/RecapSourceBadge";
+import { coActivationLabel } from "@/recap/coActivationLabel";
 import { ThirdPartyRecapBadge } from "@/recap/ThirdPartyRecapBadge";
 import { recapApprovalMeta } from "@/recap/recapApprovalMeta";
 import type { CustomRecapsListQuery as CustomRecapsListQueryType } from "@api/queries/__generated__/CustomRecapsListQuery.graphql";
@@ -402,7 +403,9 @@ const mapCustomRecap = (n: CustomRecapNode): Recap => ({
   archivedAt: n.archivedAt ?? null,
   isThirdParty: Boolean(n.isThirdParty),
   excludeFromAggregates: Boolean(n.excludeFromAggregates),
-  sourceLabel: n.sourceLabel ?? "",
+  sourceLabel: [n.sourceLabel ?? "", coActivationLabel(n.coActivation?.brandNames)]
+    .filter(Boolean)
+    .join(" · "),
   storeMappingStatus: n.storeMappingStatus ?? "",
 });
 

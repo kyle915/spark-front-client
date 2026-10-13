@@ -89,6 +89,12 @@ export type PendingRecap = {
   usedCorpoCard?: boolean | null;
   storeName?: string;
   storeNumber?: string;
+  /** Multi-brand walk-up: one entry per other brand sampled; [] = single brand. */
+  coBrands?: {
+    tenantId: string;
+    fieldValues: { customFieldId: string; value: string }[];
+    productSamples: { productId: string; quantity: number }[];
+  }[];
 };
 
 export type PhotoBlobStore = {
@@ -282,6 +288,7 @@ export async function enqueueRecap(
     usedCorpoCard?: boolean | null;
     storeName?: string;
     storeNumber?: string;
+    coBrands?: PendingRecap["coBrands"];
     submittedAt?: string;
     nowMs?: number;
     photoFiles?: Record<string, File>;
@@ -309,6 +316,7 @@ export async function enqueueRecap(
     usedCorpoCard: args.usedCorpoCard,
     storeName: args.storeName,
     storeNumber: args.storeNumber,
+    coBrands: args.coBrands,
   };
   writePendingRecap(pending, storage);
   if (args.photoFiles) {
@@ -504,6 +512,7 @@ export async function flushPendingRecap(
       ...(pending.storeName
         ? { storeName: pending.storeName, storeNumber: pending.storeNumber ?? "" }
         : {}),
+      ...(pending.coBrands ? { coBrands: pending.coBrands } : {}),
       forceNew: pending.forceNew,
       ...(pending.forceNew && pending.shiftLabel
         ? { shiftLabel: pending.shiftLabel, secondShift: pending.secondShift ?? true }

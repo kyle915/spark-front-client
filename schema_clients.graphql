@@ -1207,6 +1207,54 @@ input BillingEntityFiltersInput {
   tenantUuid: ID = null
 }
 
+type BrandCompareRow {
+  tenantPk: Int!
+  name: String!
+  recaps: Int!
+  retailRecaps: Int!
+  otherRecaps: Int!
+  coActivationRecaps: Int!
+  consumersSampled: Int!
+  unitsSold: Int!
+  conversionPct: Float
+}
+
+type BrandGroupAccessGrant {
+  userPk: Int!
+  email: String!
+  name: String!
+  grantedAt: String!
+}
+
+type BrandGroupBrandType {
+  pk: Int!
+  name: String!
+  slug: String!
+  requestUrlName: String
+  image: String
+  primaryColor: String
+  isSelf: Boolean!
+}
+
+type BrandGroupCompare {
+  groupPk: Int!
+  groupName: String!
+  startDate: Date
+  endDate: Date
+  coActivationsOnly: Boolean!
+  brands: [BrandCompareRow!]!
+  activations: Int!
+  coActivations: Int!
+  notes: [String!]!
+}
+
+type BrandGroupType {
+  pk: Int!
+  name: String!
+  slug: String!
+  brands: [BrandGroupBrandType!]!
+}
+
 """
 BriefingTemplate(id, uuid, tenant, name, title, body, is_archived, created_by, updated_by, created_at, updated_at)
 """
@@ -1446,6 +1494,12 @@ type CancelDemoResponse {
   requestCode: String
 }
 
+input CancelJobBoardBookingInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+  bookingId: ID!
+}
+
 input CancelShiftInviteInput {
   clientMutationId: ID = null
   ambassadorEventUuid: ID!
@@ -1628,6 +1682,18 @@ type ClientTodayCompletion {
   startDate: String!
   endDate: String!
   lookbackDays: Int!
+}
+
+type CoActivationInfo {
+  key: String!
+  isPrimary: Boolean!
+  brandNames: [String!]!
+}
+
+input CoBrandInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+  productIds: [ID!]!
 }
 
 enum ColorSchemeEnum {
@@ -2622,6 +2688,7 @@ input CreateRequestInput {
   storeManagerPhone: String = null
   details: [CreateRequestDetailInput!]!
   products: [CreateRequestProductInput!]!
+  coBrands: [CoBrandInput!] = null
 }
 
 input CreateRequestProductInput {
@@ -2689,6 +2756,7 @@ input CreateRequestWithDependenciesInput {
   storeManagerPhone: String!
   details: [CreateRequestDetailInput!]!
   products: [CreateRequestProductInput!]!
+  coBrands: [CoBrandInput!] = null
 }
 
 input CreateRetailerInput {
@@ -2828,7 +2896,7 @@ type CustomFormType {
 }
 
 """
-CustomRecap(id, uuid, name, submitted_at, total_engagements, filling_for_ambassador, late, incomplete, approved, approved_by, approved_at, shared_at, archived_at, archived_by, archive_reason, client_signoff_status, client_signoff_comment, client_signoff_at, client_notified_at, used_corpo_card, data_quality_flags, timezone, event, ambassador, external_ba_name, is_third_party, exclude_from_aggregates, typed_store_name, typed_store_address, store_mapping_status, store_suggestions, job, retailer, location, state, tenant, custom_recap_template, created_by, updated_by, created_at, updated_at)
+CustomRecap(id, uuid, name, submitted_at, total_engagements, filling_for_ambassador, late, incomplete, approved, approved_by, approved_at, shared_at, archived_at, archived_by, archive_reason, client_signoff_status, client_signoff_comment, client_signoff_at, client_notified_at, used_corpo_card, data_quality_flags, timezone, event, ambassador, external_ba_name, is_third_party, exclude_from_aggregates, source_label, typed_store_name, typed_store_address, store_mapping_status, store_suggestions, job, retailer, location, state, tenant, custom_recap_template, co_activation_key, co_activation_parent, created_by, updated_by, created_at, updated_at)
 """
 type CustomRecap implements Node {
   """The Globally Unique ID of this object"""
@@ -2882,6 +2950,11 @@ type CustomRecap implements Node {
   customRecapFiles: [CustomRecapFile!]!
   customField: [CustomField!]!
   metricEdits: [RecapMetricEditType!]!
+
+  """
+  Set when this recap is one brand's slice of a multi-brand activation. Names only — never another brand's numbers.
+  """
+  coActivation: CoActivationInfo
   soldUnits: Int
   consumersSampled: Int
   isDryDemo: Boolean!
@@ -3127,6 +3200,9 @@ type CustomUserTypeCountableEdge {
   """The item at the end of the edge"""
   node: CustomUserType!
 }
+
+"""Date (isoformat)"""
+scalar Date
 
 """Date with time (isoformat)"""
 scalar DateTime
@@ -3491,7 +3567,7 @@ type EnqueueCreateGoalsForTenantPayload {
 }
 
 """
-Event(id, uuid, name, date, coordinates, timezone, tenant, request, track_mileage, mileage_rate, exclude_from_dashboard, walkup_code, walkup_code_expires_at, event_type, status, retailer, distributor, start_time, end_time, new_end_time, address, notes, is_national, rmm_asigned, location, state, custom_recap_template, created_by, updated_by, created_at, updated_at)
+Event(id, uuid, name, date, coordinates, timezone, tenant, request, track_mileage, mileage_rate, exclude_from_dashboard, walkup_code, walkup_code_expires_at, event_type, status, retailer, distributor, start_time, end_time, new_end_time, address, notes, is_national, rmm_asigned, location, state, custom_recap_template, co_activation_host, created_by, updated_by, created_at, updated_at)
 """
 type Event implements Node {
   """The Globally Unique ID of this object"""
@@ -4481,6 +4557,72 @@ type JobApplicationResponse {
   applicationUuid: String
 }
 
+type JobBoard {
+  available: Boolean!
+  token: String
+  url: String
+  gigs: [JobBoardGig!]!
+  pending: [JobBoardPendingPlan!]!
+}
+
+type JobBoardBooking {
+  id: ID!
+  name: String!
+  phone: String!
+  email: String!
+  note: String!
+  createdAt: String!
+}
+
+type JobBoardCancelResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+}
+
+type JobBoardGig {
+  id: ID!
+  venue: String!
+  dateLabel: String!
+  timeLabel: String!
+  market: String!
+  typeLabel: String!
+  requestCode: String!
+  requestUrl: String!
+  openShifts: Int!
+  defaultOpenShifts: Int!
+  listed: Boolean!
+  booked: Int!
+  spotsLeft: Int!
+  bookings: [JobBoardBooking!]!
+}
+
+type JobBoardGigResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  gig: JobBoardGig
+}
+
+type JobBoardPendingPlan {
+  id: ID!
+  name: String!
+  startsOn: String
+  market: String!
+  requestCode: String!
+  requestUrl: String!
+  reason: String!
+  reasonLabel: String!
+  actionLabel: String
+  openShifts: Int!
+}
+
+type JobBoardPostPlanResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+}
+
 """
 Per-job attachment. Cloned from the BriefingTemplate at apply
 time but free to drift after.
@@ -5399,6 +5541,7 @@ type Mutation {
   setGoals(input: SetGoalsInput!): Goal!
   enqueueCreateGoalsForTenant(tenantId: ID!, year: Int!): EnqueueCreateGoalsForTenantPayload!
   enqueueCreateGoalsForAllTenants(year: Int!): EnqueueCreateGoalsForAllTenantsPayload!
+  setBrandGroupAccess(tenantId: ID!, email: String!, granted: Boolean!): [BrandGroupAccessGrant!]!
   createAcademyModule(input: CreateAcademyModuleInput!): AcademyModuleResponse!
   updateAcademyModule(input: UpdateAcademyModuleInput!): AcademyModuleResponse!
   deleteAcademyModule(input: DeleteAcademyModuleInput!): AcademyModuleResponse!
@@ -5419,6 +5562,9 @@ type Mutation {
   updateInvoice(input: UpdateInvoiceInput!): InvoiceResponse!
   setInvoiceStatus(input: SetInvoiceStatusInput!): InvoiceResponse!
   deleteInvoice(input: DeleteInvoiceInput!): InvoiceResponse!
+  postJobBoardPlan(input: PostJobBoardPlanInput!): JobBoardPostPlanResponse!
+  setJobBoardGig(input: SetJobBoardGigInput!): JobBoardGigResponse!
+  cancelJobBoardBooking(input: CancelJobBoardBookingInput!): JobBoardCancelResponse!
 }
 
 type MutationNormalOutput {
@@ -5771,6 +5917,12 @@ input PostEventToBoardInput {
   totalHours: Float!
   hourlyRate: Float!
   uniformNotes: String = null
+}
+
+input PostJobBoardPlanInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+  planId: ID!
 }
 
 input PostJobInput {
@@ -6167,6 +6319,9 @@ type Query {
   latestInsights(tenantId: ID = null): Insights
   goals(tenantId: ID!, year: Int!, userId: ID = null, startDate: String = null, endDate: String = null, quarter: String = null): Goal
   goalsList(tenantId: ID!, year: Int = null, userId: ID = null): [Goal!]!
+  canCompareBrands(tenantId: ID!): Boolean!
+  brandGroupCompare(tenantId: ID!, startDate: Date = null, endDate: Date = null, coActivationsOnly: Boolean! = false): BrandGroupCompare
+  brandGroupAccess(tenantId: ID!): [BrandGroupAccessGrant!]!
   getUploadUrl(filePath: String!, contentType: String! = "image/jpeg"): UploadUrlResponse!
   getDownloadUrl(filePath: String!): String!
   academyModulesAdmin(filters: AcademyModuleFiltersInput = null): [AcademyModule!]!
@@ -6186,6 +6341,7 @@ type Query {
   eventReceiptUploadLink(eventId: ID!): EventReceiptUploadLinkType!
   invoices(filters: InvoiceFiltersInput = null): [Invoice!]!
   invoice(id: ID!): Invoice
+  jobBoard(tenantId: ID = null): JobBoard!
 }
 
 """
@@ -6953,6 +7109,9 @@ type Request implements Node {
   storeManagers: [RequestStoreManager!]!
   products: [Product!]!
   productNames: [String!]!
+
+  """Other brands sampled on a multi-brand activation."""
+  coBrands: [RequestCoBrandType!]!
   openShifts: [OpenShiftAdminType!]!
   openShiftsOpen: Int!
   openShiftsTotal: Int!
@@ -7009,6 +7168,12 @@ type RequestBatchTemplateResponse {
   fileUrl: String
   fileBase64: String
   fileName: String
+}
+
+type RequestCoBrandType {
+  tenantPk: Int!
+  tenantName: String!
+  products: [Product!]!
 }
 
 type RequestCountableConnection {
@@ -7516,6 +7681,14 @@ input SetInvoiceStatusInput {
   clientMutationId: ID = null
   id: ID!
   status: String!
+}
+
+input SetJobBoardGigInput {
+  clientMutationId: ID = null
+  tenantId: ID!
+  gigId: ID!
+  openShifts: Int = null
+  listed: Boolean = null
 }
 
 input SetJobBriefingInput {
@@ -8137,7 +8310,7 @@ type TenantThemeType implements Node {
 }
 
 """
-Tenant(id, uuid, name, image, request_url_name, slug, checkin_code, checkin_recap_code, checkin_recap_excludes_aggregates, insights_trend_series, default_track_mileage, default_mileage_rate, checkin_location_mode, checkin_markets, checkin_storage_units, checkin_event_type, checkin_program_picker, checkin_training_url, checkin_photo_buckets, checkin_resources, linked_sheet_url, recap_export_sheet_url, master_tracker_tab_name, master_tracker_insert_by_date, master_tracker_layout, linked_sheet_last_sync_at, linked_sheet_last_sync_error, linked_sheet_last_request_id, recap_export_tab_name, recap_export_on_submit, suppress_job_reminder_emails, recap_summary_tab_name, default_external_rmm, recap_recipient_emails, scheduled_report_enabled, client_weekly_digest_enabled, created_by, updated_by, created_at, updated_at)
+Tenant(id, uuid, name, image, request_url_name, slug, checkin_code, checkin_recap_code, checkin_recap_excludes_aggregates, checkin_team_code, checkin_team_label, checkin_team_title, insights_trend_series, activation_mix_includes_walkups, default_track_mileage, default_mileage_rate, checkin_location_mode, checkin_markets, checkin_storage_units, checkin_event_type, checkin_program_picker, checkin_training_url, checkin_photo_buckets, checkin_resources, linked_sheet_url, recap_export_sheet_url, master_tracker_tab_name, master_tracker_insert_by_date, master_tracker_layout, linked_sheet_last_sync_at, linked_sheet_last_sync_error, linked_sheet_last_request_id, recap_export_tab_name, recap_export_on_submit, suppress_job_reminder_emails, recap_summary_tab_name, default_external_rmm, recap_recipient_emails, scheduled_report_enabled, client_weekly_digest_enabled, brand_group, created_by, updated_by, created_at, updated_at)
 """
 type TenantType implements Node {
   """The Globally Unique ID of this object"""
@@ -8164,6 +8337,9 @@ type TenantType implements Node {
   checkinTeamCode: String
   checkinTeamTitle: String!
   checkinPhotoBuckets: [String!]!
+
+  """Brand group this tenant belongs to (multi-brand activations)."""
+  brandGroup: BrandGroupType
   checkinEventTypeNames: [String!]!
   recapRecipientEmails: String!
   defaultExternalRmm: SparkUserType
@@ -8951,6 +9127,7 @@ input UpdateRequestInput {
   storeManagerPhone: String = null
   details: [CreateRequestDetailInput!]!
   products: [CreateRequestProductInput!]!
+  coBrands: [CoBrandInput!] = null
 }
 
 input UpdateRequestStatusInput {
@@ -9159,12 +9336,12 @@ type UserType {
   dateJoined: DateTime!
   status: UserStatusType!
   email: String!
-  lastName: String
+  firstName: String
 
   """Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."""
   username: String!
-  firstName: String
   id: ID!
+  lastName: String
   archived: Boolean!
   verified: Boolean!
 }

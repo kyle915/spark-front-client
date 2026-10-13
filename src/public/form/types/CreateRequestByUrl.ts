@@ -66,6 +66,9 @@ export interface CreateRequestInput {
   // PRODUCTS
   products: CreateRequestProductInput[];
 
+  // Multi-brand activation: sibling brands (brand group) + their own SKUs.
+  coBrands?: { tenantId: string; productIds: string[] }[];
+
   // DETAILS
   details: CreateRequestDetailInput[];
 

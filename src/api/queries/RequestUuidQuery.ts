@@ -133,6 +133,14 @@ export const RequestUuidQuery = graphql`
           name
         }
       }
+      coBrands {
+        tenantPk
+        tenantName
+        products {
+          id
+          name
+        }
+      }
       tenantId
       tenant {
         id
