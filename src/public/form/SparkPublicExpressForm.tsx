@@ -88,6 +88,7 @@ function ExpressFormBody() {
   const [timezoneId, setTimezoneId] = useState("");
   const [requestTypeId, setRequestTypeId] = useState("");
   const [productIds, setProductIds] = useState<string[]>([]);
+  const [brokenProductImages, setBrokenProductImages] = useState<string[]>([]);
   const coBrandSiblings = useMemo(
     () => (tenant?.brandGroup?.brands ?? []).filter((b) => !b.isSelf),
     [tenant],
@@ -797,23 +798,19 @@ function ExpressFormBody() {
                     boxShadow: selected ? "0 0 18px rgba(197,245,70,0.25)" : "none",
                   }}
                 >
-                  {/* Placeholder sits behind the image; if the image is
-                      missing OR fails to load (dangling ref → 404), onError
-                      hides the <img> and the "NO IMAGE" tile shows through. */}
                   <div className="relative w-full aspect-square" style={{ background: "rgba(255,255,255,0.04)" }}>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="mono text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>NO IMAGE</span>
-                    </div>
-                    {p.image ? (
+                    {p.image && !brokenProductImages.includes(p.id) ? (
                       <img
                         src={p.image}
                         alt={p.name}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                        }}
+                        className="absolute inset-0 w-full h-full object-contain"
+                        onError={() => setBrokenProductImages((cur) => [...cur, p.id])}
                       />
-                    ) : null}
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="mono text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>NO IMAGE</span>
+                      </div>
+                    )}
                   </div>
                   <div className="p-2.5">
                     <p className="text-xs font-semibold leading-tight">{p.name}</p>
