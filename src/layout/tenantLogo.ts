@@ -182,6 +182,17 @@ export function officialFallbackPlate(
   return officialFallbackEntry(input)?.plate ?? "light";
 }
 
+/** Tenants whose API image is a white mark on transparent. */
+const LIGHT_API_MARKS = new Set(["alcoholarmor"]);
+
+export function tenantLogoPlate(
+  input: TenantLogoInput,
+  usingOfficialFallback: boolean,
+): "light" | "dark" {
+  if (usingOfficialFallback) return officialFallbackPlate(input);
+  return keysFor(input).some((key) => LIGHT_API_MARKS.has(key)) ? "dark" : "light";
+}
+
 /** Ordered sources to try: usable API image, then official fallback. */
 export function tenantLogoCandidates(input: TenantLogoInput): string[] {
   const out: string[] = [];

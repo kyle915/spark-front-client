@@ -5,6 +5,7 @@ import {
   shortTenantName,
   tenantInitials,
   tenantLogoCandidates,
+  tenantLogoPlate,
 } from "./tenantLogo";
 
 describe("isUsableApiImage", () => {
@@ -198,5 +199,21 @@ describe("shortTenantName", () => {
   it("falls back to Brand when empty", () => {
     expect(shortTenantName(null)).toBe("Brand");
     expect(shortTenantName("")).toBe("Brand");
+  });
+});
+
+describe("tenantLogoPlate", () => {
+  it("puts white-on-transparent tenant images on a dark plate", () => {
+    expect(tenantLogoPlate({ name: "Alcohol Armor", image: "https://x/aa.png" }, false)).toBe("dark");
+    expect(tenantLogoPlate({ requestUrlName: "alcohol-armor" }, false)).toBe("dark");
+  });
+
+  it("keeps other tenant images on a light plate", () => {
+    expect(tenantLogoPlate({ name: "Wook Water", image: "https://x/ww.png" }, false)).toBe("light");
+  });
+
+  it("uses the official fallback plate when the fallback is shown", () => {
+    expect(tenantLogoPlate({ name: "Luckin Coffee" }, true)).toBe("dark");
+    expect(tenantLogoPlate({ name: "Kalshi" }, true)).toBe("light");
   });
 });
