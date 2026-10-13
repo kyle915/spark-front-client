@@ -211,6 +211,7 @@ function DashboardInner() {
               📊 Sheet ↗
             </a>
           )}
+          {comparing ? null : (
           <a
             href="#performance"
             className="px-3 py-2 rounded-xl text-sm font-medium"
@@ -223,6 +224,7 @@ function DashboardInner() {
           >
             Performance ↓
           </a>
+          )}
         </div>
       </div>
 

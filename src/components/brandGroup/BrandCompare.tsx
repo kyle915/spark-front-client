@@ -147,14 +147,16 @@ function CompareBody({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Kpi label="Activations" value={fmt(cmp.activations)} sub="Multi-brand counted once" />
         <Kpi label="Co-activations" value={fmt(cmp.coActivations)} sub="2+ brands on one shift" />
-        {cmp.brands.slice(0, 2).map((b) => (
-          <Kpi
-            key={b.tenantPk}
-            label={`${b.name} · sampled`}
-            value={fmt(b.consumersSampled)}
-            sub={`${fmt(b.recaps)} recaps`}
-          />
-        ))}
+        <Kpi
+          label="Brand recaps"
+          value={fmt(cmp.brands.reduce((s, b) => s + b.recaps, 0))}
+          sub="One per brand per shift"
+        />
+        <Kpi
+          label="Units sold"
+          value={fmt(cmp.brands.reduce((s, b) => s + b.unitsSold, 0))}
+          sub="Each brand's own sales"
+        />
       </div>
 
       <div className="spark-card p-5 overflow-x-auto">

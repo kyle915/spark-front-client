@@ -30,8 +30,7 @@ export function CoBrandToggleCard({
     <div style={cardStyle}>
       <h2 style={headingStyle}>Multi-brand activation?</h2>
       <p style={{ fontSize: 13, opacity: 0.7, margin: "4px 0 10px" }}>
-        Did you also sample another brand alongside {hostName}? Each brand gets
-        its own results so their numbers stay separate.
+        {`Did you also sample another brand alongside ${hostName}? Each brand gets its own results so their numbers stay separate.`}
       </p>
       <div style={{ display: "flex", gap: 8 }}>
         <button type="button" style={pill(state.enabled === false, accent)} onClick={() => state.setEnabled(false)}>
