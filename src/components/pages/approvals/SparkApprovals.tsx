@@ -254,18 +254,32 @@ const ApprovalRow: React.FC<{
 
 /* ─────────────────── data ─────────────────── */
 
+/** "queue" is Queue for Ignite: also awaiting approval (the sidebar badge counts both). */
+const AWAITING_SLUGS = ["pending", "queue"];
+
+const isAwaiting = (status: { slug?: string | null; name?: string | null } | null | undefined): boolean =>
+  AWAITING_SLUGS.includes((status?.slug ?? status?.name ?? "").toLowerCase());
+
+/**
+ * The queue gets its own fetch: sharing one capped, furthest-date-first page
+ * with approved/declined rows let a long upcoming schedule push pending
+ * requests off the end.
+ */
 const queueVariables = (tenantId: string | null | undefined): ApprovalsListQuery$variables => ({
   first: 300,
+  filters: tenantId ? { tenantId, statusSlugs: AWAITING_SLUGS } : { statusSlugs: AWAITING_SLUGS },
+});
+
+const decidedVariables = (tenantId: string | null | undefined): ApprovalsListQuery$variables => ({
+  first: 300,
   filters: tenantId
-    ? { tenantId, statusSlugs: ["pending", "approved", "declined"] }
-    : { statusSlugs: ["pending", "approved", "declined"] },
+    ? { tenantId, statusSlugs: ["approved", "declined"] }
+    : { statusSlugs: ["approved", "declined"] },
 });
 
 const copyQueueVariables = (tenantId: string | null | undefined): ApprovalsListQuery$variables => ({
   first: 100,
-  filters: tenantId
-    ? { tenantId, statusSlug: "pending" }
-    : { statusSlug: "pending" },
+  filters: tenantId ? { tenantId, statusSlugs: AWAITING_SLUGS } : { statusSlugs: AWAITING_SLUGS },
 });
 
 /**
@@ -278,7 +292,11 @@ function refreshAfterDecision(
   environment: IEnvironment,
   tenantId: string | null | undefined,
 ): void {
-  for (const variables of [queueVariables(tenantId), copyQueueVariables(tenantId)]) {
+  for (const variables of [
+    queueVariables(tenantId),
+    decidedVariables(tenantId),
+    copyQueueVariables(tenantId),
+  ]) {
     fetchQuery<ApprovalsListQueryType>(environment, ApprovalsListQuery, variables)
       .toPromise()
       .catch(() => undefined);
@@ -292,19 +310,26 @@ const ApprovalsInner: React.FC = () => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   const environment = useRelayEnvironment();
-  const data = useLazyLoadQuery<ApprovalsListQueryType>(
+  const queueData = useLazyLoadQuery<ApprovalsListQueryType>(
     ApprovalsListQuery,
     queueVariables(tenantId),
     { fetchPolicy: "store-or-network" },
   );
+  const decidedData = useLazyLoadQuery<ApprovalsListQueryType>(
+    ApprovalsListQuery,
+    decidedVariables(tenantId),
+    { fetchPolicy: "store-or-network" },
+  );
 
-  // Derive everything from the same dataset so the stats reflect what
-  // the queue actually sees (no double-fetch, no stale numbers).
   const { pendingRows, recentlyDecided, stats } = useMemo(() => {
-    const allNodes =
-      data?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+    const seen = new Set<string>();
+    const allNodes = [...(queueData?.requests?.edges ?? []), ...(decidedData?.requests?.edges ?? [])]
+      .map((e) => e?.node)
+      .filter((n): n is NonNullable<typeof n> => {
+        if (!n || seen.has(n.id)) return false;
+        seen.add(n.id);
+        return true;
+      });
 
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -320,7 +345,7 @@ const ApprovalsInner: React.FC = () => {
 
     for (const n of allNodes) {
       const slug = (n.status?.slug ?? n.status?.name ?? "").toLowerCase();
-      if (slug === "pending") {
+      if (isAwaiting(n.status)) {
         pending += 1;
         pendingNodes.push(n);
         continue;
@@ -399,7 +424,7 @@ const ApprovalsInner: React.FC = () => {
         slaPct,
       },
     };
-  }, [data]);
+  }, [queueData, decidedData]);
 
   // Quick-filter the pending queue by venue / requester / req-id.
   const [search, setSearch] = useState("");
@@ -1677,10 +1702,7 @@ const ApprovalsCopyQueueButtonInner: React.FC = () => {
     const rows = (data?.requests?.edges ?? [])
       .map((e) => e?.node)
       .filter((n): n is NonNullable<typeof n> => Boolean(n))
-      .filter((n) => {
-        const slug = (n.status?.slug ?? n.status?.name ?? "").toLowerCase();
-        return slug === "pending";
-      });
+      .filter((n) => isAwaiting(n.status));
     if (rows.length === 0) {
       showAlert("No pending requests to copy.", "info");
       setCopying(false);

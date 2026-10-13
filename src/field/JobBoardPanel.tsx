@@ -43,6 +43,11 @@ type JobBoardPending = {
   startsOn: string | null;
   market: string;
   requestCode: string;
+  requestUrl: string;
+  reason: "no_status" | "pending" | "queue" | "no_event" | "other";
+  reasonLabel: string;
+  actionLabel: string | null;
+  openShifts: number;
 };
 
 type JobBoard = {
@@ -63,8 +68,14 @@ const BOARD_QUERY = `
     jobBoard(tenantId: $tenantId) {
       available token
       gigs { ${GIG_FIELDS} }
-      pending { id name startsOn market requestCode }
+      pending { id name startsOn market requestCode requestUrl reason reasonLabel actionLabel openShifts }
     }
+  }
+`;
+
+const POST_PLAN = `
+  mutation PostJobBoardPlan($input: PostJobBoardPlanInput!) {
+    postJobBoardPlan(input: $input) { success message }
   }
 `;
 
@@ -140,6 +151,8 @@ export default function JobBoardPanel({ tenantId }: { tenantId: string | null | 
   const [copied, setCopied] = useState(false);
   const [cancelling, setCancelling] = useState<{ gig: JobBoardGig; booking: JobBoardBooking } | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
+  const [approving, setApproving] = useState<JobBoardPending | null>(null);
+  const [postingPlan, setPostingPlan] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!tenantId) return;
@@ -212,6 +225,29 @@ export default function JobBoardPanel({ tenantId }: { tenantId: string | null | 
     }
   };
 
+  const postPlan = async (plan: JobBoardPending) => {
+    setPostingPlan(plan.id);
+    setNotice("");
+    try {
+      const data = await postGql<{ postJobBoardPlan: { message: string } }>(POST_PLAN, {
+        input: { tenantId, planId: plan.id },
+      });
+      setNotice(data.postJobBoardPlan.message);
+      setApproving(null);
+      setError("");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't put that plan on the board.");
+    } finally {
+      setPostingPlan(null);
+    }
+  };
+
+  const onPlanAction = (plan: JobBoardPending) => {
+    if (plan.reason === "no_event") void postPlan(plan);
+    else setApproving(plan);
+  };
+
   const liveGigs = board.gigs.filter((g) => g.listed && g.openShifts > 0);
 
   return (
@@ -259,7 +295,7 @@ export default function JobBoardPanel({ tenantId }: { tenantId: string | null | 
 
       {board.gigs.length === 0 ? (
         <p className="spark-support text-sm">
-          No upcoming plan gigs yet. Gigs appear here once a staffed plan's request is approved and on the tracker.
+          No upcoming plan gigs yet. A staffed plan lists here once its request is approved.
         </p>
       ) : (
         <ul className="divide-y" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
@@ -340,18 +376,65 @@ export default function JobBoardPanel({ tenantId }: { tenantId: string | null | 
       )}
 
       {board.pending.length ? (
-        <div className="space-y-1">
-          <p className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: MUTED }}>
-            WAITING ON APPROVAL · NOT ON THE BOARD YET
-          </p>
-          <ul className="text-sm space-y-0.5">
+        <div className="space-y-2">
+          <div>
+            <p className="mono text-[10px]" style={{ letterSpacing: "0.16em", color: MUTED }}>
+              NOT ON THE BOARD YET
+            </p>
+            <p className="spark-support text-xs mt-1">
+              A plan lists once its request is approved. Approve it here and it goes up with the plan's BA count as open
+              shifts.
+            </p>
+          </div>
+          <ul className="divide-y" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
             {board.pending.map((p) => (
-              <li key={p.id} style={{ color: MUTED }}>
-                {startsOnLabel(p.startsOn)} · {p.name} · {p.market} · {p.requestCode}
+              <li
+                key={p.id}
+                className="py-2 flex flex-wrap items-center gap-x-4 gap-y-1"
+                style={{ borderColor: "rgba(255,255,255,0.08)" }}
+              >
+                <div className="min-w-[220px] flex-1">
+                  <p className="text-sm">
+                    {startsOnLabel(p.startsOn)} · {p.name}
+                  </p>
+                  <p className="mono text-[10px] mt-0.5" style={{ letterSpacing: "0.12em", color: MUTED }}>
+                    {[p.market, `${p.openShifts} BA${p.openShifts === 1 ? "" : "s"}`].filter(Boolean).join(" · ").toUpperCase()}{" "}
+                    ·{" "}
+                    <a href={p.requestUrl} className="underline">
+                      {p.requestCode}
+                    </a>
+                  </p>
+                </div>
+                <span className="text-xs" style={{ color: p.actionLabel ? ORANGE : MUTED }}>
+                  {p.reasonLabel}
+                </span>
+                {p.actionLabel ? (
+                  <button
+                    type="button"
+                    className="btn btn-xs btn-primary"
+                    disabled={postingPlan === p.id}
+                    onClick={() => onPlanAction(p)}
+                  >
+                    {postingPlan === p.id ? "Posting…" : p.actionLabel}
+                  </button>
+                ) : null}
               </li>
             ))}
           </ul>
         </div>
+      ) : null}
+
+      {approving ? (
+        <SparkConfirm
+          kicker="Approve & post"
+          title={`Approve ${approving.name}?`}
+          body={`This approves ${approving.requestCode} the same way Approvals does: the submitter gets the usual approval email. It then goes on the job board with ${approving.openShifts} open shift${approving.openShifts === 1 ? "" : "s"}.`}
+          confirmLabel="Approve & post"
+          cancelLabel="Not yet"
+          busy={postingPlan === approving.id}
+          onConfirm={() => void postPlan(approving)}
+          onCancel={() => setApproving(null)}
+        />
       ) : null}
 
       {cancelling ? (
