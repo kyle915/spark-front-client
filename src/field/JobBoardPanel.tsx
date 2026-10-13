@@ -32,6 +32,7 @@ type JobBoardGig = {
   openShifts: number;
   defaultOpenShifts: number;
   listed: boolean;
+  publicNotes: string;
   booked: number;
   spotsLeft: number;
   bookings: JobBoardBooking[];
@@ -59,7 +60,7 @@ type JobBoard = {
 
 const GIG_FIELDS = `
   id venue dateLabel timeLabel market typeLabel requestCode requestUrl
-  openShifts defaultOpenShifts listed booked spotsLeft
+  openShifts defaultOpenShifts listed publicNotes booked spotsLeft
   bookings { id name phone email note createdAt }
 `;
 
@@ -143,6 +144,37 @@ function ShiftsInput({
   );
 }
 
+function PublicNotesInput({
+  gig,
+  busy,
+  onSave,
+}: {
+  gig: JobBoardGig;
+  busy: boolean;
+  onSave: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState(gig.publicNotes);
+  useEffect(() => setDraft(gig.publicNotes), [gig.publicNotes]);
+  return (
+    <label className="block text-xs space-y-1" style={{ color: MUTED }}>
+      <span>Public gig notes · BAs see these on the board and in their booking email</span>
+      <textarea
+        rows={2}
+        maxLength={2000}
+        aria-label={`Public gig notes for ${gig.venue}`}
+        className="textarea textarea-bordered textarea-sm w-full text-sm"
+        placeholder="Optional. e.g. Park in lot C, wear black. Plan and request notes stay internal."
+        value={draft}
+        disabled={busy}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          if (draft.trim() !== gig.publicNotes) onSave(draft.trim());
+        }}
+      />
+    </label>
+  );
+}
+
 export default function JobBoardPanel({ tenantId }: { tenantId: string | null | undefined }) {
   const [board, setBoard] = useState<JobBoard | null>(null);
   const [error, setError] = useState("");
@@ -182,7 +214,10 @@ export default function JobBoardPanel({ tenantId }: { tenantId: string | null | 
   const replaceGig = (gig: JobBoardGig) =>
     setBoard((prev) => (prev ? { ...prev, gigs: prev.gigs.map((g) => (g.id === gig.id ? gig : g)) } : prev));
 
-  const saveGig = async (gig: JobBoardGig, patch: { openShifts?: number; listed?: boolean }) => {
+  const saveGig = async (
+    gig: JobBoardGig,
+    patch: { openShifts?: number; listed?: boolean; publicNotes?: string },
+  ) => {
     setBusyGig(gig.id);
     setNotice("");
     try {
@@ -341,6 +376,11 @@ export default function JobBoardPanel({ tenantId }: { tenantId: string | null | 
                     Show on job board
                   </label>
                 </div>
+                <PublicNotesInput
+                  gig={gig}
+                  busy={busy}
+                  onSave={(value) => void saveGig(gig, { publicNotes: value })}
+                />
                 {gig.bookings.length ? (
                   <ul className="space-y-1 pl-3" style={{ borderLeft: "2px solid rgba(197,245,70,0.35)" }}>
                     {gig.bookings.map((b) => (
