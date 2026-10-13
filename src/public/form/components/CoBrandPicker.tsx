@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { usePublicProducts } from "../hooks";
 import type { BrandGroupBrand } from "../hooks/useTenantPublic";
 import type { CoBrandSelection } from "./coBrandPayload";
@@ -106,6 +107,7 @@ function CoBrandSkus({
   );
   const toggle = (id: string) =>
     onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
+  const [broken, setBroken] = useState<string[]>([]);
 
   return (
     <div
@@ -138,21 +140,20 @@ function CoBrandSkus({
                 className="relative w-full aspect-square"
                 style={{ background: "rgba(255,255,255,0.04)" }}
               >
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="mono text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
-                    NO IMAGE
-                  </span>
-                </div>
-                {p.image ? (
+                {p.image && !broken.includes(p.id) ? (
                   <img
                     src={p.image}
                     alt={p.name}
                     className="absolute inset-0 w-full h-full object-contain p-2"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
+                    onError={() => setBroken((cur) => [...cur, p.id])}
                   />
-                ) : null}
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="mono text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
+                      NO IMAGE
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="p-2.5">
                 <p className="text-xs font-semibold leading-tight">{p.name}</p>

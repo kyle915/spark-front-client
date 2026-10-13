@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import {
-  officialFallbackPlate,
   shortTenantName,
   tenantInitials,
   tenantLogoCandidates,
+  tenantLogoPlate,
   type TenantLogoInput,
 } from "./tenantLogo";
 
@@ -37,10 +37,7 @@ export function TenantLogo({
   const label = shortTenantName(input.name);
   const api = (input.logoUrl ?? input.image)?.trim() ?? "";
   const usingOfficialFallback = !api || src !== api;
-  const headerPlate =
-    usingOfficialFallback && officialFallbackPlate(input) === "dark"
-      ? "dark"
-      : "light";
+  const plate = tenantLogoPlate(input, usingOfficialFallback);
 
   if (variant === "header") {
     if (!src) {
@@ -60,7 +57,7 @@ export function TenantLogo({
       <span
         className={[
           "h-9 max-w-[10rem] px-2 rounded-md overflow-hidden shrink-0 flex items-center justify-center",
-          headerPlate === "dark" ? "bg-black" : "bg-white",
+          plate === "dark" ? "bg-black" : "bg-white",
         ].join(" ")}
       >
         <img
@@ -95,9 +92,7 @@ export function TenantLogo({
     <span
       className={[
         "w-5 h-5 rounded-sm overflow-hidden shrink-0 flex items-center justify-center",
-        usingOfficialFallback && officialFallbackPlate(input) === "dark"
-          ? "bg-black"
-          : "bg-white/95",
+        plate === "dark" ? "bg-black" : "bg-white/95",
       ].join(" ")}
     >
       <img
