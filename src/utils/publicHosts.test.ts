@@ -43,6 +43,7 @@ describe("isPublicFieldPath", () => {
     expect(isPublicFieldPath("/invoice/tok")).toBe(true);
     expect(isPublicFieldPath("/live/tok")).toBe(true);
     expect(isPublicFieldPath("/jobs/AbC_123-x")).toBe(true);
+    expect(isPublicFieldPath("/clock/AbC_123-x")).toBe(true);
   });
   it("does not match admin or login", () => {
     expect(isPublicFieldPath("/")).toBe(false);

@@ -15,6 +15,7 @@ import type { WalkupMutationsBulkRejectMutation as BulkRejectType } from "@api/m
 import { useAlertStore } from "@/store/alertStore";
 import SparkConfirm from "@/shared/SparkConfirm";
 import StandingCheckinLink from "./StandingCheckinLink";
+import ClockLinks from "./ClockLinks";
 
 /**
  * Walk-ups queue — tenant-wide review of self-serve clock-ins created from an
@@ -23,7 +24,7 @@ import StandingCheckinLink from "./StandingCheckinLink";
  * Workspace review queues (Receipts / Approvals).
  */
 type Filter = "pending" | "all";
-type WalkupsTab = "codes" | "queue";
+type WalkupsTab = "codes" | "queue" | "clock";
 type Row = WalkupShiftsQueryType["response"]["walkupShifts"][number];
 type RejectPrompt = { kind: "bulk" } | { kind: "one"; row: Row };
 
@@ -389,7 +390,9 @@ export default function SparkWalkups() {
       <p className="text-sm mb-4" style={{ color: "rgba(255,255,255,0.55)" }}>
         {tab === "codes"
           ? "Standing check-in links for each brand. Share the live code."
-          : "Self-serve clock-ins from a check-in link or event code. Confirm to count their hours (and activate a new BA), or reject."}
+          : tab === "queue"
+            ? "Self-serve clock-ins from a check-in link or event code. Confirm to count their hours (and activate a new BA), or reject."
+            : "Generic clock in/out pages for any crew. Every punch saves GPS and lands in a Google Sheet."}
       </p>
 
       <div className="flex items-center gap-5 mb-5" style={{ borderBottom: "1px solid var(--spark-border)" }}>
@@ -397,6 +400,7 @@ export default function SparkWalkups() {
           [
             ["codes", "Standing codes"],
             ["queue", "Walk-ups"],
+            ["clock", "Clock links"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -427,6 +431,8 @@ export default function SparkWalkups() {
         <Suspense fallback={null}>
           <StandingCheckinLink />
         </Suspense>
+      ) : tab === "clock" ? (
+        <ClockLinks />
       ) : (
         <>
           <div className="flex items-center gap-1 mb-5">

@@ -5564,6 +5564,10 @@ type Mutation {
   deleteInvoice(input: DeleteInvoiceInput!): InvoiceResponse!
   postJobBoardPlan(input: PostJobBoardPlanInput!): JobBoardPostPlanResponse!
   setJobBoardGig(input: SetJobBoardGigInput!): JobBoardGigResponse!
+  createClockLink(input: CreateClockLinkInput!): ClockLinkResponse!
+  updateClockLink(input: UpdateClockLinkInput!): ClockLinkResponse!
+  syncClockSheet(input: ClockLinkIdInput!): ClockLinkResponse!
+  deleteClockSession(input: DeleteClockSessionInput!): ClockActionResponse!
   cancelJobBoardBooking(input: CancelJobBoardBookingInput!): JobBoardCancelResponse!
 }
 
@@ -6342,6 +6346,8 @@ type Query {
   invoices(filters: InvoiceFiltersInput = null): [Invoice!]!
   invoice(id: ID!): Invoice
   jobBoard(tenantId: ID = null): JobBoard!
+  clockLinks: ClockLinks!
+  clockSessions(linkId: ID!, limit: Int! = 100): [ClockSession!]!
 }
 
 """
@@ -9425,3 +9431,89 @@ input WithdrawJobApplicationInput {
 }
 
 scalar dict
+
+type ClockActionResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+}
+
+type ClockLink {
+  id: ID!
+  label: String!
+  url: String!
+  tenantId: ID
+  tenantName: String
+  sheetUrl: String
+  isActive: Boolean!
+  createdAt: String!
+  sessionCount: Int!
+  openCount: Int!
+  lastClockAt: String
+  syncPending: Int!
+  syncError: String
+}
+
+input ClockLinkIdInput {
+  clientMutationId: ID = null
+  linkId: ID!
+}
+
+type ClockLinkResponse {
+  success: Boolean!
+  message: String!
+  clientMutationId: ID
+  link: ClockLink
+}
+
+type ClockLinks {
+  available: Boolean!
+  serviceAccountEmail: String
+  links: [ClockLink!]!
+}
+
+type ClockSession {
+  id: ID!
+  firstName: String!
+  lastName: String!
+  email: String!
+  market: String!
+  address: String!
+  timezone: String!
+  clockInAt: String!
+  clockInGps: String!
+  clockInAccuracyM: Float
+  clockInMapUrl: String
+  clockOutAt: String
+  clockOutGps: String
+  clockOutAccuracyM: Float
+  clockOutMapUrl: String
+  durationMinutes: Int
+  sheetSynced: Boolean!
+  sheetError: String
+}
+
+input CreateClockLinkInput {
+  clientMutationId: ID = null
+  label: String!
+  tenantId: ID = null
+  sheetMode: String! = "create"
+  sheetUrl: String = null
+  shareWith: [String!] = null
+  timezone: String = null
+}
+
+input DeleteClockSessionInput {
+  clientMutationId: ID = null
+  sessionId: ID!
+}
+
+input UpdateClockLinkInput {
+  clientMutationId: ID = null
+  linkId: ID!
+  label: String = null
+  isActive: Boolean = null
+  tenantId: ID = null
+  clearTenant: Boolean! = false
+  sheetUrl: String = null
+}

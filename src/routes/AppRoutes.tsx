@@ -457,6 +457,8 @@ const PublicInvoice = lazyDefault(
 // Public, no-login BA job board. The :token is the brand's board link; BAs
 // book open plan gigs here and get the details by email.
 const PublicJobBoard = lazyDefault(() => import("@/public/jobs/PublicJobBoard"));
+// Public, no-login clock in/out. The :token is the link (see timeclock/ in spark-api).
+const PublicClock = lazyDefault(() => import("@/public/clock/PublicClock"));
 const MagicLinkExchange = lazyDefault(() => import("@/auth/MagicLinkExchange"));
 const ForgotPassword = lazyDefault(() => import("@/auth/ForgotPassword"));
 const ResetPassword = lazyDefault(() => import("@/auth/ResetPassword"));
@@ -541,6 +543,11 @@ const PublicRoutes = {
     {
       path: "/jobs/:token",
       component: <PublicJobBoard />,
+      isPublic: true,
+    },
+    {
+      path: "/clock/:token",
+      component: <PublicClock />,
       isPublic: true,
     },
     // Public, no-login invoice page. The :token is the auth (no tenant

@@ -129,7 +129,7 @@ export function adminRequestUrl(requestUuid: string): string {
 /** True when this first paint should boot the public field entry (no GSI / shell). */
 export function isPublicFieldPath(pathname: string): boolean {
   return (
-    /^\/(checkin|spark-form|r|report|training|c|invoice|live)(\/|$)/.test(pathname) ||
+    /^\/(checkin|spark-form|r|report|training|c|invoice|live|clock)(\/|$)/.test(pathname) ||
     /^\/jobs\/[^/]+/.test(pathname)
   );
 }
