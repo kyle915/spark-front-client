@@ -31,6 +31,8 @@ export function recapStatusLabel(status: PlanResultRecap["status"]): string {
       return "Needs review · not in totals";
     case "archived":
       return "Archived · not in totals";
+    case "third_party":
+      return "3rd party · not in totals";
     default: {
       const unreachable: never = status;
       return unreachable;

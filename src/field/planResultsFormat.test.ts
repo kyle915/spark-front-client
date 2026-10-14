@@ -27,6 +27,7 @@ describe("plan results format", () => {
     expect(recapStatusLabel("approved")).toBe("Approved");
     expect(recapStatusLabel("needs_review")).toMatch(/not in totals/);
     expect(recapStatusLabel("archived")).toMatch(/not in totals/);
+    expect(recapStatusLabel("third_party")).toBe("3rd party · not in totals");
   });
 
   it("labels plan dates and results badges", () => {
