@@ -97,11 +97,13 @@ export function usePublicStoreAccountSearch(
   limit = 8,
 ) {
   const [matches, setMatches] = useState<Retailer[]>([]);
+  const [searchedQ, setSearchedQ] = useState("");
 
   useEffect(() => {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     if (!enabled || !requestUrlName || q.trim().length < 2) {
       setMatches([]);
+      setSearchedQ("");
       return;
     }
     let cancelled = false;
@@ -117,9 +119,12 @@ export function usePublicStoreAccountSearch(
             retailerMatchesSearch(r, q),
           );
           setMatches(hits.slice(0, limit));
+          setSearchedQ(q);
         })
         .catch(() => {
-          if (!cancelled) setMatches([]);
+          if (cancelled) return;
+          setMatches([]);
+          setSearchedQ(q);
         });
     }, 200);
     return () => {
@@ -128,5 +133,5 @@ export function usePublicStoreAccountSearch(
     };
   }, [requestUrlName, q, enabled, limit]);
 
-  return matches;
+  return { matches, searching: enabled && q.trim().length >= 2 && searchedQ !== q };
 }

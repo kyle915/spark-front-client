@@ -100,7 +100,7 @@ function ExpressFormBody() {
     address: string;
   } | null>(null);
   const pickedStoreRef = useRef<string | null>(null);
-  const storeMatches = usePublicStoreAccountSearch(
+  const { matches: storeMatches, searching: storeSearching } = usePublicStoreAccountSearch(
     slug,
     storeQ,
     hasStoreAccounts && !pickedStore,
@@ -532,9 +532,11 @@ function ExpressFormBody() {
                 >
                   {retailerId
                     ? "STORE ON FILE — VENUE AND ADDRESS FILLED IN BELOW."
-                    : storeQ.trim().length >= 2 && storeMatches.length === 0 && !pickedStore
-                      ? "NOT ON FILE — ADD THE NEW STORE BELOW."
-                      : "PICK A SAVED STORE, OR ADD A NEW ONE BELOW."}
+                    : storeSearching
+                      ? "SEARCHING YOUR STORES…"
+                      : storeQ.trim().length >= 2 && storeMatches.length === 0 && !pickedStore
+                        ? "NOT ON FILE — ADD THE NEW STORE BELOW."
+                        : "PICK A SAVED STORE, OR ADD A NEW ONE BELOW."}
                 </p>
               </div>
             </Field>
