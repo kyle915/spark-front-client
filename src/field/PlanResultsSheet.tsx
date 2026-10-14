@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import SparkSheet from "@/shared/SparkSheet";
+import AttachRecapsToPlan from "./AttachRecapsToPlan";
 import { fetchPlanResults, type PlanResults } from "./planResultsApi";
 import {
   fmtMetricValue,
@@ -30,6 +31,7 @@ export default function PlanResultsSheet({
 }) {
   const [results, setResults] = useState<PlanResults | null>(null);
   const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!open) return;
@@ -46,7 +48,7 @@ export default function PlanResultsSheet({
     return () => {
       alive = false;
     };
-  }, [open, planId]);
+  }, [open, planId, reloadKey]);
 
   const rows = results?.rows ?? [];
   // The server already hides unapproved recaps from client logins; the
@@ -83,7 +85,7 @@ export default function PlanResultsSheet({
           <p className="spark-support">
             {isClient
               ? "Results show here once Ignite approves the recaps from this plan."
-              : "No recap metrics on this plan yet. Open a recap and use Push to plan."}
+              : "No recap metrics on this plan yet. Attach a recap below, or open one and use Push to plan."}
           </p>
         ) : null}
 
@@ -192,6 +194,14 @@ export default function PlanResultsSheet({
               </div>
             ))}
           </section>
+        ) : null}
+
+        {!isClient && open ? (
+          <AttachRecapsToPlan
+            planId={planId}
+            refreshKey={reloadKey}
+            onAttached={() => setReloadKey((k) => k + 1)}
+          />
         ) : null}
 
         <p className="text-[11px] opacity-45 pb-2">

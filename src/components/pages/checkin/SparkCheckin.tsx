@@ -113,6 +113,16 @@ import { CoBrandSections, CoBrandToggleCard } from "./CoBrandRecapCards";
 import { TenantLogo } from "@/layout/TenantLogo";
 import { shouldShowSamplingStopCard } from "./samplingStops";
 import PayableMileageStep from "./PayableMileageStep";
+import PlanGigPicker from "./PlanGigPicker";
+import {
+  PLAN_GIG_MISSING_ERROR,
+  PLAN_GIG_NONE,
+  fetchPlanGigs,
+  keepPlanGigAnswer,
+  pickedPlanGig,
+  planGigUnanswered,
+  type PlanGig,
+} from "./planGigs";
 import {
   formatPayableMiles,
   isMileageCustomFieldName,
@@ -1464,6 +1474,40 @@ function IdentifyStep({
   const [locating, setLocating] = useState(false);
   const [unfiled, setUnfiled] = useState<UnfiledShift[]>([]);
   const [openShift, setOpenShift] = useState<OpenShift | null>(null);
+  const [planGigs, setPlanGigs] = useState<PlanGig[]>([]);
+  const [planGigAnswer, setPlanGigAnswer] = useState("");
+  const [planGigMissing, setPlanGigMissing] = useState(false);
+  const planGigRef = useRef<HTMLDivElement>(null);
+  const pickedGig = pickedPlanGig(planGigs, planGigAnswer);
+  // Gigs list per program, so a multi-program link waits for Step 1.
+  const planGigProgram = hasPrograms ? eventTypeId : "";
+  const planGigReady =
+    needsEventDetails && Boolean(eventDate) && (!hasPrograms || Boolean(eventTypeId));
+  useEffect(() => {
+    if (!planGigReady) {
+      setPlanGigs([]);
+      return;
+    }
+    let cancelled = false;
+    void fetchPlanGigs({
+      origin: apiOrigin(),
+      code,
+      eventDate,
+      eventTypeId: planGigProgram,
+    }).then((gigs) => {
+      if (cancelled) return;
+      setPlanGigs(gigs);
+      setPlanGigAnswer((answer) => keepPlanGigAnswer(gigs, answer));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [code, eventDate, planGigProgram, planGigReady]);
+  const pickPlanGig = (value: string) => {
+    setPlanGigAnswer(value);
+    setPlanGigMissing(false);
+    setErr((e) => (e === PLAN_GIG_MISSING_ERROR ? null : e));
+  };
 
   // Picking a known store fills BOTH fields, so the address matches an existing
   // event's exactly and this BA joins it rather than forking a near-duplicate.
@@ -1602,6 +1646,7 @@ function IdentifyStep({
     const mkt = overrides?.market ?? market;
     // Unfiled-shift taps supply an address even when Product Seeding is selected.
     const omitPlace = skipWorkLocation && !overrides?.address && !overrides?.market;
+    const onGig = overrides ? null : pickedGig;
     if (needsEventDetails) {
       // Required, and asked BEFORE the store, because it decides which form the
       // BA gets. The backend falls back to the brand's default rather than
@@ -1613,7 +1658,12 @@ function IdentifyStep({
         revealProgramPicker(pickerRef.current, { reduceMotion: prefersReducedMotion() });
         return setErr(PROGRAM_MISSING_ERROR);
       }
-      if (!omitPlace) {
+      if (!overrides && planGigUnanswered(planGigs, planGigAnswer)) {
+        setPlanGigMissing(true);
+        planGigRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return setErr(PLAN_GIG_MISSING_ERROR);
+      }
+      if (!omitPlace && !onGig) {
         if (marketPicker) {
           if (!mkt) return setErr("Pick your market.");
         } else if (typedStore) {
@@ -1639,6 +1689,11 @@ function IdentifyStep({
                 email,
                 eventDate: date,
                 ...(hasPrograms ? { eventTypeId } : {}),
+                ...(onGig
+                  ? { planEventId: onGig.id }
+                  : !overrides && planGigAnswer === PLAN_GIG_NONE
+                    ? { planEventId: PLAN_GIG_NONE }
+                    : {}),
                 ...(omitPlace
                   ? {}
                   : marketPicker
@@ -1662,7 +1717,7 @@ function IdentifyStep({
       // Remember them for the next event on this same link — including the
       // market/store (or deferred seeding address from the API) so a lost
       // session can resume today's open punch.
-      const place = omitPlace
+      const place = omitPlace || onGig
         ? String(json.event?.address || "").trim()
         : marketPicker
           ? mkt
@@ -1860,7 +1915,17 @@ function IdentifyStep({
 
       {!openShift && needsEventDetails ? (
         <>
-          {!skipWorkLocation ? (
+          <PlanGigPicker
+            gigs={planGigs}
+            value={planGigAnswer}
+            onChange={pickPlanGig}
+            accent={accent}
+            missing={planGigMissing}
+            eventDate={eventDate}
+            today={todayISO()}
+            pickerRef={planGigRef}
+          />
+          {pickedGig ? null : !skipWorkLocation ? (
             <>
           <h2 style={{ ...h2, marginTop: 22 }}>
             {hasPrograms ? "Step 2 · " : ""}
