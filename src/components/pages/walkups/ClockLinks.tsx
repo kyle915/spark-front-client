@@ -271,7 +271,7 @@ function SessionsTable({ linkId, refreshKey, onChanged }: { linkId: string; refr
 
   return (
     <div className="overflow-x-auto mt-3">
-      <table className="w-full text-[12px]" style={{ borderCollapse: "collapse" }}>
+      <table className="w-full text-[12px]" style={{ borderCollapse: "collapse", minWidth: 900 }}>
         <thead>
           <tr className="mono text-[9px]" style={{ color: "rgba(255,255,255,0.45)", letterSpacing: "0.12em" }}>
             {["NAME", "MARKET · ADDRESS", "IN", "OUT", "HRS", "GPS IN", "GPS OUT", "SHEET", ""].map((h) => (
@@ -290,7 +290,7 @@ function SessionsTable({ linkId, refreshKey, onChanged }: { linkId: string; refr
                 </div>
                 <div style={{ color: muted }}>{s.email}</div>
               </td>
-              <td className="py-2 pr-3 align-top" style={{ maxWidth: 220 }}>
+              <td className="py-2 pr-3 align-top" style={{ minWidth: 190, maxWidth: 260 }}>
                 <div>{s.market}</div>
                 <div style={{ color: muted }}>{s.address}</div>
               </td>
@@ -312,7 +312,7 @@ function SessionsTable({ linkId, refreshKey, onChanged }: { linkId: string; refr
                   <span style={{ color: "var(--spark-orange)" }}>{s.sheetError ? "error" : "pending"}</span>
                 )}
               </td>
-              <td className="py-2 align-top text-right">
+              <td className="py-2 align-top text-right whitespace-nowrap">
                 <button
                   type="button"
                   className="text-[11px] underline"
