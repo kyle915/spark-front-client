@@ -1,5 +1,5 @@
 import { useSparkForm } from "../hooks/useSparkForm";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import FormWizard from "./FormWizard";
 import SideSummary from "./SideSummary";
 import { Step1Basic, Step2Products, Step4Details, Step3Clients } from "./steps";
@@ -36,11 +36,13 @@ interface SparkFormProps {
   retailers: {
     id: string;
     name: string;
+    address?: string | null;
     location?: {
       id: string;
       name: string;
     } | null;
   }[];
+  prefersRegionalRetailers?: boolean;
   products: {
     id: string;
     name: string;
@@ -90,6 +92,7 @@ export default function SparkForm(props: SparkFormProps) {
     productTypes,
     distributors,
     retailers,
+    prefersRegionalRetailers = false,
     tenantId,
     requestUrlName,
     timeZones,
@@ -98,6 +101,10 @@ export default function SparkForm(props: SparkFormProps) {
   const { control, watch, reset, trigger, setValue } = useSparkForm();
   const values = watch();
   const [resetSignal, setResetSignal] = useState(0);
+
+  useEffect(() => {
+    if (prefersRegionalRetailers) setValue("isNationalRetailer", false);
+  }, [prefersRegionalRetailers, resetSignal, setValue]);
 
   const { handleSubmit, loading } = useSparkSubmit(
     tenantId,

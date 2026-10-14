@@ -1,29 +1,3 @@
-// import { graphql } from "react-relay";
-
-// export const PublicRetailerQuery = graphql`
-//   query PublicRetailerQuery($requestUrlName: String!, $filters: RetailerFiltersInput, $q: String) {
-//     publicRetailers(requestUrlName: $requestUrlName, filters: $filters, q: $q) {
-//       edges {
-//         node {
-//           __typename
-//           id
-//           uuid
-//           name
-//           tenantId
-//           location {
-//             id
-//             name
-//             state {
-//               id
-//               name
-//             }
-//           }
-//         }
-//       }
-//     }
-//   }
-// `;
-
 export const PUBLIC_RETAILER_QUERY = `
   query PublicRetailerQuery($requestUrlName: String!, $filters: RetailerFiltersInput, $q: String) {
     publicRetailers(requestUrlName: $requestUrlName, filters: $filters, q: $q) {
@@ -32,6 +6,7 @@ export const PUBLIC_RETAILER_QUERY = `
           id
           uuid
           name
+          address
           tenantId
           location {
             id
@@ -43,6 +18,17 @@ export const PUBLIC_RETAILER_QUERY = `
           }
         }
       }
-    } 
+    }
+  }
+`;
+
+export const PUBLIC_RETAILER_MIX_QUERY = `
+  query PublicRetailerMixQuery($requestUrlName: String!) {
+    national: publicRetailers(requestUrlName: $requestUrlName, first: 1, filters: { isNational: true }) {
+      totalCount
+    }
+    regional: publicRetailers(requestUrlName: $requestUrlName, first: 1, filters: { isNational: false }) {
+      totalCount
+    }
   }
 `;
