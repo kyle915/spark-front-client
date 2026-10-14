@@ -169,6 +169,7 @@ function ExpressFormBody() {
     count: number;
     routedTo: string | null;
     requestorName: string;
+    approved: boolean;
   } | null>(null);
 
   const pickStoreAccount = (store: { id: string; name: string; address?: string | null }) => {
@@ -337,6 +338,7 @@ function ExpressFormBody() {
       : [0, 0];
 
     let successes = 0;
+    let allApproved = true;
     let lastRouted: string | null = null;
     const failures: string[] = [];
 
@@ -402,6 +404,7 @@ function ExpressFormBody() {
       try {
         const result = await submit(input);
         successes += 1;
+        if (result?.status?.slug !== "approved") allApproved = false;
         // Grab the RMM the *first* successful submission was routed
         // to. With bulk dates the routing is identical for every row
         // since it's keyed on tenant + product, so one is enough.
@@ -423,6 +426,7 @@ function ExpressFormBody() {
         count: successes,
         routedTo: lastRouted,
         requestorName: requestorName || requestorEmail.split("@")[0],
+        approved: successes > 0 && allApproved,
       });
       setVenue("");
       setAddress("");
@@ -471,8 +475,10 @@ function ExpressFormBody() {
             className="text-[13px] mt-2 leading-relaxed"
             style={{ color: "rgba(255,255,255,0.65)" }}
           >
-            Tell us where you'd like a sample team. Submissions are routed to
-            the applicable {brandName} RMM for approval.
+            Tell us where you'd like a sample team.{" "}
+            {tenant?.autoApproveRequests
+              ? "Submissions are approved automatically and confirmed by email."
+              : `Submissions are routed to the applicable ${brandName} RMM for approval.`}
           </p>
         </div>
 
@@ -1203,7 +1209,9 @@ function ExpressFormBody() {
                   color: "#D6F35F",
                 }}
               >
-                REQUEST RECEIVED · PENDING APPROVAL
+                {confirmation.approved
+                  ? "REQUEST RECEIVED · APPROVED"
+                  : "REQUEST RECEIVED · PENDING APPROVAL"}
               </span>
             </div>
 
@@ -1218,19 +1226,29 @@ function ExpressFormBody() {
                 className="text-sm mt-3"
                 style={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.55 }}
               >
-                {confirmation.count === 1
-                  ? "Your request has been submitted."
-                  : `${confirmation.count} requests have been submitted.`}{" "}
-                {confirmation.routedTo ? (
-                  <>
-                    They've been routed to{" "}
-                    <strong style={{ color: "var(--spark-lime, #c5f546)" }}>
-                      {confirmation.routedTo}
-                    </strong>{" "}
-                    for review.
-                  </>
+                {confirmation.approved ? (
+                  confirmation.count === 1 ? (
+                    "Your request is approved. A confirmation email is on its way."
+                  ) : (
+                    `${confirmation.count} requests are approved. Confirmation emails are on their way.`
+                  )
                 ) : (
-                  <>It's been routed to the {brandName} RMM for review.</>
+                  <>
+                    {confirmation.count === 1
+                      ? "Your request has been submitted."
+                      : `${confirmation.count} requests have been submitted.`}{" "}
+                    {confirmation.routedTo ? (
+                      <>
+                        They've been routed to{" "}
+                        <strong style={{ color: "var(--spark-lime, #c5f546)" }}>
+                          {confirmation.routedTo}
+                        </strong>{" "}
+                        for review.
+                      </>
+                    ) : (
+                      <>It's been routed to the {brandName} RMM for review.</>
+                    )}
+                  </>
                 )}
               </p>
 
@@ -1258,24 +1276,35 @@ function ExpressFormBody() {
                     lineHeight: 1.55,
                   }}
                 >
-                  <li>The brand reviews and approves or declines.</li>
-                  <li>You'll get an email the moment a decision is made.</li>
-                  <li>
-                    If approved, a calendar invite goes to you and the brand
-                    POC automatically.
-                  </li>
+                  {confirmation.approved ? (
+                    <>
+                      <li>Ignite staffs a brand ambassador for the activation.</li>
+                      <li>A calendar invite goes to you and the brand POC.</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>The brand reviews and approves or declines.</li>
+                      <li>You'll get an email the moment a decision is made.</li>
+                      <li>
+                        If approved, a calendar invite goes to you and the brand
+                        POC automatically.
+                      </li>
+                    </>
+                  )}
                 </ol>
               </div>
 
-              <p
-                className="mono text-[10px] mt-4 text-center"
-                style={{
-                  letterSpacing: "0.18em",
-                  color: "rgba(255,255,255,0.45)",
-                }}
-              >
-                MOST APPROVALS COME THROUGH WITHIN 24–48 HOURS
-              </p>
+              {!confirmation.approved && (
+                <p
+                  className="mono text-[10px] mt-4 text-center"
+                  style={{
+                    letterSpacing: "0.18em",
+                    color: "rgba(255,255,255,0.45)",
+                  }}
+                >
+                  MOST APPROVALS COME THROUGH WITHIN 24–48 HOURS
+                </p>
+              )}
 
               {/* Two clear next-step paths. Submitting more from the
                   public link is a common pattern — distributor reps

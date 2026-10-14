@@ -22,6 +22,7 @@ export type TenantPublic = {
   name: string | null;
   image: string | null;
   requestUrlName: string;
+  autoApproveRequests?: boolean | null;
   brandGroup?: { name: string; brands: BrandGroupBrand[] } | null;
 };
 

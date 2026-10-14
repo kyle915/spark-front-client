@@ -6,6 +6,7 @@ export const PUBLIC_TENANT_QUERY = `
       name,
       image,
       requestUrlName,
+      autoApproveRequests,
       brandGroup {
         name
         brands { pk name requestUrlName image primaryColor isSelf }
