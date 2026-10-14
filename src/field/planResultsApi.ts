@@ -63,7 +63,7 @@ export type PlanResultRecap = {
   name: string;
   date: string;
   baName: string;
-  status: "approved" | "needs_review" | "archived";
+  status: "approved" | "needs_review" | "archived" | "third_party";
   auto: boolean;
   href: string;
   metrics: Pick<RecapPlanMetric, "key" | "label" | "text">[];
