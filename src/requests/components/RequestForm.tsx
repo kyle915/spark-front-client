@@ -21,6 +21,9 @@ import {
 } from "@/utils";
 
 import { useMutation } from "react-relay/hooks";
+import { fetchQuery } from "react-relay";
+import environment from "@api/relay/environment";
+import { retailerOptionLabel } from "@/utils/retailerOptionLabel";
 import type { OperationType } from "relay-runtime";
 import { useAlertStore } from "@store/alertStore";
 
@@ -287,8 +290,15 @@ export default function RequestForm({
   // ========================
   // INITIALIZE FORM AND FORM STATE
   // ========================
-  const { handleSubmit, control, watch, setValue, formState, trigger } =
-    useForm<RequestFormValues>({ defaultValues: safeDefaultValues });
+  const {
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    formState,
+    trigger,
+    getFieldState,
+  } = useForm<RequestFormValues>({ defaultValues: safeDefaultValues });
 
   const isDirty = formState.isDirty;
 
@@ -542,6 +552,31 @@ export default function RequestForm({
     queryDocument: RetailersQuery,
     extractNodes: extractRetailers,
   });
+
+  // A brand whose accounts are all regional stores (a preloaded store
+  // roster, no national banners) opens the picker on those stores.
+  useEffect(() => {
+    if (mode !== "create" || !tenantId) return;
+    let cancelled = false;
+    const countRetailers = (isNational: boolean) =>
+      fetchQuery<RetailersQueryType>(
+        environment,
+        RetailersQuery,
+        { filters: { tenantId, isNational }, first: 1 },
+        { fetchPolicy: "network-only" },
+      )
+        .toPromise()
+        .then((data) => data?.retailers?.totalCount ?? 0);
+    Promise.all([countRetailers(true), countRetailers(false)])
+      .then(([national, regional]) => {
+        if (cancelled || getFieldState("isNationalRetailer").isDirty) return;
+        setValue("isNationalRetailer", !(national === 0 && regional > 0));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, tenantId, getFieldState, setValue]);
 
   useEffect(() => {
     if (!retailerId) return;
@@ -1526,7 +1561,7 @@ export default function RequestForm({
                     placeholder="Search retailer..."
                     options={retailersHook.items.map((r) => ({
                       value: r.id,
-                      label: r.name,
+                      label: retailerOptionLabel(r),
                     }))}
                     onSearch={retailersHook.setSearchTerm}
                     disabled={

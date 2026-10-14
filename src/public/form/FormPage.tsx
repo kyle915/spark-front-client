@@ -12,6 +12,7 @@ import {
   usePublicBillingEntities,
   usePublicStates,
   usePublicRetailer,
+  usePublicPrefersRegionalRetailers,
 } from "./hooks";
 
 export default function SparkFormPage() {
@@ -46,6 +47,7 @@ export default function SparkFormPage() {
     retailerQuery,
     isNationalRetailer,
   );
+  const prefersRegionalRetailers = usePublicPrefersRegionalRetailers(slug);
   const { billingEntities } = usePublicBillingEntities(slug, billingEntityQuery);
   const { states } = usePublicStates(stateQuery);
 
@@ -83,6 +85,7 @@ export default function SparkFormPage() {
         productTypes={productTypes}
         distributors={distributors}
         retailers={retailers}
+        prefersRegionalRetailers={prefersRegionalRetailers}
         tenantId={slug}
         requestUrlName={slug}
         timeZones={timeZones}

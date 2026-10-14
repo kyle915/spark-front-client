@@ -1,6 +1,7 @@
 import FormAutocomplete from "@/shared/FormAutocomplete";
 import FormCheckbox from "@/shared/FormCheckbox";
 import FormInputText from "@/shared/FormInputText";
+import { retailerOptionLabel } from "@/utils/retailerOptionLabel";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useWatch, type Control, type UseFormSetValue } from "react-hook-form";
 import type { SparkFormData } from "../../schema/schema";
@@ -16,6 +17,7 @@ interface Step3NewProps {
   retailers: {
     id: string;
     name: string;
+    address?: string | null;
     location?: { id: string; name: string; state?: { id: string; name: string } | null } | null;
   }[];
   onStateSearch: (value: string) => void;
@@ -56,6 +58,7 @@ export function Step3Clients({
   const [selectedRetailer, setSelectedRetailer] = useState<{
     id: string;
     name: string;
+    address?: string | null;
     location?: { id: string; name: string; state?: { id: string; name: string } | null } | null;
   } | null>(null);
 
@@ -321,7 +324,7 @@ export function Step3Clients({
             control={control}
             options={filteredRetailers.map((r) => ({
               value: r.id,
-              label: r.name,
+              label: retailerOptionLabel(r),
             }))}
             placeholder="Search a retailer"
             onSearch={onRetailerSearch}
