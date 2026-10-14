@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import SparkFormLayout, { PublicFormTenantContext } from "./layout/FormLayout";
 import {
@@ -9,6 +9,11 @@ import {
   usePublicDistributors,
 } from "./hooks";
 import { useCreateRequest } from "./hooks/useCreateRequest";
+import {
+  usePublicRetailerMix,
+  usePublicStoreAccountSearch,
+} from "./hooks/usePublicRetailer";
+import { retailerOptionLabel } from "@/utils/retailerOptionLabel";
 import SharedTimeSlotSelect from "@/components/inputs/TimeSlotSelect";
 import CoBrandPicker from "./components/CoBrandPicker";
 import {
@@ -17,7 +22,10 @@ import {
   type CoBrandSelection,
 } from "./components/coBrandPayload";
 import type { CreateRequestInput } from "./types/CreateRequestByUrl";
-import GooglePlacesInput, { matchTimezoneOption } from "@/components/inputs/GooglePlacesInput";
+import GooglePlacesInput, {
+  matchTimezoneOption,
+  resolveAddressPlace,
+} from "@/components/inputs/GooglePlacesInput";
 import { buildRequestDateTimes } from "./utils/buildPayload";
 import {
   isEventActivationRequestType,
@@ -81,6 +89,24 @@ function ExpressFormBody() {
   // gate.
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  // Brand's saved store accounts (preloaded roster). Picking one fills the
+  // venue + address and links the request to that account for as long as
+  // the address is left as-is; any other venue is still typed below.
+  const storeMix = usePublicRetailerMix(slug);
+  const hasStoreAccounts = (storeMix?.regional ?? 0) > 0;
+  const [storeQ, setStoreQ] = useState("");
+  const [pickedStore, setPickedStore] = useState<{
+    id: string;
+    address: string;
+  } | null>(null);
+  const pickedStoreRef = useRef<string | null>(null);
+  const storeMatches = usePublicStoreAccountSearch(
+    slug,
+    storeQ,
+    hasStoreAccounts && !pickedStore,
+  );
+  const retailerId =
+    pickedStore && address.trim() === pickedStore.address.trim() ? pickedStore.id : "";
   const [date, setDate] = useState("");
   const [extraDates, setExtraDates] = useState<string[]>([]);
   const [startTime, setStartTime] = useState("12:00");
@@ -144,6 +170,30 @@ function ExpressFormBody() {
     routedTo: string | null;
     requestorName: string;
   } | null>(null);
+
+  const pickStoreAccount = (store: { id: string; name: string; address?: string | null }) => {
+    const storeAddress = store.address ?? "";
+    pickedStoreRef.current = store.id;
+    setPickedStore({ id: store.id, address: storeAddress });
+    setStoreQ(retailerOptionLabel(store));
+    setVenue(store.name);
+    setAddress(storeAddress);
+    setLatitude(null);
+    setLongitude(null);
+    void resolveAddressPlace(storeAddress).then((place) => {
+      if (!place || pickedStoreRef.current !== store.id) return;
+      setLatitude(place.lat);
+      setLongitude(place.lng);
+      const tz = place.timezoneId ? matchTimezoneOption(place.timezoneId, timeZones) : null;
+      if (tz) setTimezoneId(String(tz.id));
+    });
+  };
+
+  const clearStoreAccount = () => {
+    pickedStoreRef.current = null;
+    setPickedStore(null);
+    setStoreQ("");
+  };
 
   const toggleProduct = (id: string) => {
     const product = products.find((p) => p.id === id);
@@ -323,6 +373,7 @@ function ExpressFormBody() {
         distributorId: distributorId || null,
         distributorName: distributorName,
         distributorEmail: "",
+        retailerId: retailerId || null,
         retailerName: venue,
         retailerAddress: address,
         retailerStoreContact: storeContact,
@@ -427,6 +478,67 @@ function ExpressFormBody() {
 
         {/* Venue + Address */}
         <Card title="VENUE">
+          {hasStoreAccounts && (
+            <Field label={`Your ${brandName} stores`}>
+              <div className="relative">
+                <input
+                  value={storeQ}
+                  onChange={(e) => {
+                    setStoreQ(e.target.value);
+                    pickedStoreRef.current = null;
+                    setPickedStore(null);
+                  }}
+                  className={inputCls}
+                  placeholder="Search by store, street or city"
+                  autoComplete="off"
+                  aria-label={`Search ${brandName} stores`}
+                />
+                {storeMatches.length > 0 && !pickedStore && (
+                  <div
+                    className="absolute left-0 right-0 z-30 mt-1 rounded-xl overflow-hidden"
+                    style={{
+                      background: "var(--spark-surface, #11140e)",
+                      border: "1px solid var(--spark-border, #1f2418)",
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                    }}
+                  >
+                    {storeMatches.map((s) => (
+                      <button
+                        type="button"
+                        key={s.id}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          pickStoreAccount(s);
+                        }}
+                        className="block w-full text-left px-3 py-2.5"
+                        style={{ color: "var(--spark-text, #f2f3ee)", borderTop: "1px solid rgba(255,255,255,0.04)" }}
+                      >
+                        <div className="text-sm font-semibold">{s.name}</div>
+                        {s.address && (
+                          <div className="text-[12px] mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+                            {s.address}
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <p
+                  className="mono text-[10px] mt-1"
+                  style={{
+                    letterSpacing: "0.16em",
+                    color: retailerId ? "var(--spark-lime, #c5f546)" : "rgba(255,255,255,0.45)",
+                  }}
+                >
+                  {retailerId
+                    ? "STORE ON FILE — VENUE AND ADDRESS FILLED IN BELOW."
+                    : storeQ.trim().length >= 2 && storeMatches.length === 0 && !pickedStore
+                      ? "NOT ON FILE — ADD THE NEW STORE BELOW."
+                      : "PICK A SAVED STORE, OR ADD A NEW ONE BELOW."}
+                </p>
+              </div>
+            </Field>
+          )}
           <Field label="Account / Venue Name *">
             <GooglePlacesInput
               value={venue}
@@ -1196,6 +1308,7 @@ function ExpressFormBody() {
                     // this venue's coordinates.
                     setVenue("");
                     setAddress("");
+                    clearStoreAccount();
                     setLatitude(null);
                     setLongitude(null);
                     setDate("");
