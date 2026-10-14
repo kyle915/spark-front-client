@@ -78,6 +78,19 @@ export type PlanResults = {
   recaps: PlanResultRecap[];
 };
 
+export type PlanRecapSuggestion = {
+  recapId: string;
+  kind: RecapKind;
+  name: string;
+  date: string;
+  baName: string;
+  status: PlanResultRecap["status"];
+  href: string;
+  reasons: string[];
+  currentPlanName: string | null;
+  metrics: Pick<RecapPlanMetric, "key" | "label" | "text" | "defaultOn">[];
+};
+
 const PLAN_FIELDS = `
   id name startsOn days market marketLabel managerName activity activityLabel requestCode
 `;
@@ -119,6 +132,25 @@ const RESULTS = `
     }
   }
 `;
+
+const SUGGEST_RECAPS = `
+  query PlanRecapSuggestions($planId: String!) {
+    planRecapSuggestions(planId: $planId) {
+      recapId kind name date baName status href reasons currentPlanName
+      metrics { key label text defaultOn }
+    }
+  }
+`;
+
+export async function fetchPlanRecapSuggestions(
+  planId: string,
+): Promise<PlanRecapSuggestion[]> {
+  const data = await postGql<{ planRecapSuggestions: PlanRecapSuggestion[] }>(
+    SUGGEST_RECAPS,
+    { planId },
+  );
+  return data.planRecapSuggestions;
+}
 
 export async function fetchRecapPlanPicker(
   recapId: string,
