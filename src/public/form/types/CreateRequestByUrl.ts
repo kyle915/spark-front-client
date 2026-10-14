@@ -88,6 +88,7 @@ export interface CreateRequestResponse {
       startTime: string;
       endTime: string;
       address: string;
+      status?: { slug: string | null } | null;
       rmmAsigned?: {
         firstName: string | null;
         lastName: string | null;
