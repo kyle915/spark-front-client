@@ -210,6 +210,39 @@ const timezoneForLatLng = async (lat: number, lng: number): Promise<string | nul
   }
 };
 
+/** Resolve a known full address (a saved store account) to coordinates +
+ * IANA timezone through the same Places services the input uses. Null when
+ * the SDK can't load or Google has no match. */
+export const resolveAddressPlace = async (
+  address: string,
+): Promise<{ lat: number; lng: number; timezoneId: string | null } | null> => {
+  try {
+    await loadMapsSdk();
+  } catch {
+    return null;
+  }
+  const places = window.google?.maps?.places;
+  if (!places || !address.trim()) return null;
+  const placeId = await new Promise<string | null>((resolve) => {
+    new places.AutocompleteService().getPlacePredictions(
+      { input: address, types: ["address"] },
+      (preds) => resolve(preds?.[0]?.place_id ?? null),
+    );
+  });
+  if (!placeId) return null;
+  const loc = await new Promise<{ lat: number; lng: number } | null>((resolve) => {
+    new places.PlacesService(document.createElement("div")).getDetails(
+      { placeId, fields: ["geometry"] },
+      (place) => {
+        const l = place?.geometry?.location;
+        resolve(l ? { lat: l.lat(), lng: l.lng() } : null);
+      },
+    );
+  });
+  if (!loc) return null;
+  return { ...loc, timezoneId: await timezoneForLatLng(loc.lat, loc.lng) };
+};
+
 /**
  * Map a Google IANA tz id (e.g. America/Los_Angeles) to a Spark timezone
  * dropdown option. We pick the DST or STD variant based on whether DST is

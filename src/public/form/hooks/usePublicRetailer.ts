@@ -5,6 +5,7 @@ import {
   PUBLIC_RETAILER_QUERY,
 } from "@/public/api/queries/PublicRetailer.query";
 import { mapQuery } from "../utils/map";
+import { retailerMatchesSearch } from "@/utils/retailerOptionLabel";
 
 interface Retailer {
   id: string;
@@ -63,18 +64,69 @@ export function usePublicRetailer(
  * roster, no national banners) — the picker should open on those, not on an
  * empty "national" list. */
 export function usePublicPrefersRegionalRetailers(requestUrlName: string) {
-  const [prefersRegional, setPrefersRegional] = useState(false);
+  const mix = usePublicRetailerMix(requestUrlName);
+  return !!mix && mix.national === 0 && mix.regional > 0;
+}
+
+/** National vs regional account counts for the brand; null until loaded. */
+export function usePublicRetailerMix(requestUrlName: string) {
+  const [mix, setMix] = useState<{ national: number; regional: number } | null>(null);
 
   useEffect(() => {
     if (!requestUrlName) return;
     gqlRequest<RetailerMix>(PUBLIC_RETAILER_MIX_QUERY, { requestUrlName })
-      .then((data) => {
-        setPrefersRegional(
-          (data.national?.totalCount ?? 0) === 0 && (data.regional?.totalCount ?? 0) > 0,
-        );
-      })
-      .catch(() => setPrefersRegional(false));
+      .then((data) =>
+        setMix({
+          national: data.national?.totalCount ?? 0,
+          regional: data.regional?.totalCount ?? 0,
+        }),
+      )
+      .catch(() => setMix(null));
   }, [requestUrlName]);
 
-  return prefersRegional;
+  return mix;
+}
+
+/** Debounced search over the brand's saved store accounts. The server
+ * matches the longest word against name or address; the rest are narrowed
+ * client-side. */
+export function usePublicStoreAccountSearch(
+  requestUrlName: string,
+  q: string,
+  enabled: boolean,
+  limit = 8,
+) {
+  const [matches, setMatches] = useState<Retailer[]>([]);
+
+  useEffect(() => {
+    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+    if (!enabled || !requestUrlName || q.trim().length < 2) {
+      setMatches([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      gqlRequest<NodeRetailer>(PUBLIC_RETAILER_QUERY, {
+        requestUrlName,
+        filters: { isNational: false },
+        q: words.reduce((a, b) => (b.length > a.length ? b : a), ""),
+      })
+        .then((data) => {
+          if (cancelled) return;
+          const hits = mapQuery(data.publicRetailers?.edges).filter((r) =>
+            retailerMatchesSearch(r, q),
+          );
+          setMatches(hits.slice(0, limit));
+        })
+        .catch(() => {
+          if (!cancelled) setMatches([]);
+        });
+    }, 200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [requestUrlName, q, enabled, limit]);
+
+  return matches;
 }
