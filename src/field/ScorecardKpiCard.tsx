@@ -14,6 +14,10 @@ function fmtNum(value: number | null | undefined): string {
   return value.toLocaleString();
 }
 
+function unitFor(value: number, unit: string): string {
+  return value === 1 && unit.endsWith("s") ? unit.slice(0, -1) : unit;
+}
+
 function pctOf(logged: number | null, target: number): number {
   if (logged == null || target <= 0) return 0;
   return Math.round((logged / target) * 100);
@@ -58,14 +62,14 @@ export default function ScorecardKpiCard({
         ) : null}
       </p>
       <p className="mt-2 text-xs opacity-75">
-        Actual {kpi.unit}
+        Actual {unitFor(kpi.logged ?? 0, kpi.unit)}
         {hasActual ? "" : " · nothing reported yet"}
       </p>
       <p className="mt-1 text-xs opacity-55">
         Planned{" "}
         {kpi.planned == null
           ? "· not forecast on these plans"
-          : `${kpi.planned.toLocaleString()} ${kpi.unit}`}
+          : `${kpi.planned.toLocaleString()} ${unitFor(kpi.planned, kpi.unit)}`}
       </p>
       {showTarget ? (
         <div className="mt-3" aria-hidden>
