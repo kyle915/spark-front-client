@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
 import { useParams } from "react-router";
-import { TenantLogo } from "@/layout/TenantLogo";
+import { TenantLogo } from "@/layout/TenantLogo.tsx";
 import {
   captureGps,
   deviceTimezone,

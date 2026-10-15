@@ -332,33 +332,80 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
     .toLowerCase();
   const chipClass = STATUS_CHIP[slug] ?? "chip chip-muted";
   const reqId = `REQ-${String(request.id).slice(-4).toUpperCase()}`;
+  const stripDateSuffix = (raw: string | null | undefined): string =>
+    (raw ?? "")
+      .trim()
+      .replace(/\s*·\s*\d{4}-\d{2}-\d{2}(?:\s*\(\d+\/\d+\))?\s*$/, "")
+      .trim();
   const venue =
-    request.retailer?.name ?? request.retailerName ?? request.name ?? "—";
+    request.retailer?.name?.trim() ||
+    request.retailerName?.trim() ||
+    stripDateSuffix(request.name) ||
+    "—";
   const market = request.market || "—";
   // The fullest address we can show. New requests store a complete
   // Google-formatted address (street, city, state, ZIP) in `address` — shown
   // verbatim. For older/partial ones (a bare street like REQ-925), append
   // the request's own market (city, state).
   const fullAddress = (() => {
-    const street = (request.address ?? "").trim();
+    const street = (
+      request.address ||
+      request.retailerAddress ||
+      request.retailer?.address ||
+      ""
+    ).trim();
     if (street && /\b\d{5}\b/.test(street)) return street;
     const tail = (request.market ?? "").split(", ").filter(
       (p) => p && !street.toLowerCase().includes(p.toLowerCase()),
     );
     return [street, ...tail].filter(Boolean).join(", ") || "—";
   })();
-  const requestorName = [
-    request.createdBy?.firstName,
-    request.createdBy?.lastName,
-  ]
-    .filter(Boolean)
-    .join(" ") || request.requestorEmail || "—";
-  const approverName = [
-    request.approvedBy?.firstName,
-    request.approvedBy?.lastName,
-  ]
-    .filter(Boolean)
-    .join(" ") || "—";
+  const requestorName =
+    request.client?.name?.trim() ||
+    request.clientName?.trim() ||
+    [request.createdBy?.firstName, request.createdBy?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() ||
+    request.requestorEmail ||
+    request.clientEmail ||
+    "—";
+  const requestorEmail =
+    request.requestorEmail?.trim() ||
+    request.clientEmail?.trim() ||
+    request.client?.email?.trim() ||
+    request.createdBy?.email?.trim() ||
+    null;
+  const approverName =
+    [request.approvedBy?.firstName, request.approvedBy?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() ||
+    request.approvedBy?.email?.trim() ||
+    "—";
+  const distributorName =
+    request.distributor?.name?.trim() ||
+    request.distributorName?.trim() ||
+    null;
+  const distributorEmail =
+    request.distributor?.email?.trim() ||
+    request.distributorEmail?.trim() ||
+    null;
+  const firstStoreManager = (request.storeManagers ?? [])[0] ?? null;
+  const storeManagerName =
+    request.storeManagerName?.trim() ||
+    firstStoreManager?.name?.trim() ||
+    null;
+  const storeManagerPhone =
+    request.storeManagerPhone?.trim() ||
+    firstStoreManager?.phone?.trim() ||
+    null;
+  const storeContact =
+    request.retailer?.storeContact?.trim() ||
+    request.retailerStoreContact?.trim() ||
+    null;
+  const baCountMatch = (request.notes ?? "").match(/(?:^|\n)BA count:\s*(\d+)/i);
+  const baCount = baCountMatch ? baCountMatch[1] : null;
 
   // Approve is available to clients too — the backend `approveRequest`
   // enforces tenant membership + blocks BAs (exactly like the emailed
@@ -689,6 +736,9 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         </p>
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="VENUE">{venue}</Field>
+          {request.storeNumber?.trim() && (
+            <Field label="STORE #">{request.storeNumber.trim()}</Field>
+          )}
           <Field label="MARKET">{market}</Field>
           <Field label="ADDRESS">{fullAddress}</Field>
           <Field label="REQUEST TYPE">
@@ -701,11 +751,18 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               : "—"}
           </Field>
           {request.timezone?.name && (
-            <Field label="TIME ZONE">{request.timezone.name}</Field>
+            <Field label="TIME ZONE">
+              {request.timezone.name}
+              {request.timezone.code ? ` · ${request.timezone.code}` : ""}
+            </Field>
           )}
-          {request.distributor?.name && (
-            <Field label="DISTRIBUTOR">{request.distributor.name}</Field>
+          {distributorName && (
+            <Field label="DISTRIBUTOR">{distributorName}</Field>
           )}
+          {request.billingEntity?.name && (
+            <Field label="BILLING ENTITY">{request.billingEntity.name}</Field>
+          )}
+          {baCount && <Field label="BA COUNT">{baCount}</Field>}
           {request.schedulingStatus && (
             <Field label="SCHEDULING">
               {SCHEDULING_LABEL[request.schedulingStatus] ??
@@ -780,7 +837,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="REQUESTOR">
             {requestorName}
-            {request.requestorEmail && (
+            {requestorEmail && requestorEmail !== requestorName && (
               <div
                 className="mono text-[11px] mt-0.5"
                 style={{
@@ -788,14 +845,14 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                   color: "rgba(255,255,255,0.55)",
                 }}
               >
-                {request.requestorEmail}
+                {requestorEmail}
               </div>
             )}
           </Field>
-          {request.storeManagerName && (
+          {storeManagerName && (
             <Field label="STORE MANAGER">
-              {request.storeManagerName}
-              {request.storeManagerPhone && (
+              {storeManagerName}
+              {storeManagerPhone && (
                 <div
                   className="mono text-[11px] mt-0.5"
                   style={{
@@ -803,15 +860,16 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                     color: "rgba(255,255,255,0.55)",
                   }}
                 >
-                  {request.storeManagerPhone}
+                  {storeManagerPhone}
                 </div>
               )}
             </Field>
           )}
-          {request.retailer?.storeContact && (
-            <Field label="STORE CONTACT">
-              {request.retailer.storeContact}
-            </Field>
+          {storeContact && (
+            <Field label="STORE CONTACT">{storeContact}</Field>
+          )}
+          {distributorEmail && (
+            <Field label="DISTRIBUTOR CONTACT">{distributorEmail}</Field>
           )}
           {request.rmmAsigned && (
             <Field label="ROUTED TO">
@@ -821,6 +879,17 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               ]
                 .filter(Boolean)
                 .join(" ") || "—"}
+              {request.rmmAsigned.email && (
+                <div
+                  className="mono text-[11px] mt-0.5"
+                  style={{
+                    letterSpacing: "0.04em",
+                    color: "rgba(255,255,255,0.55)",
+                  }}
+                >
+                  {request.rmmAsigned.email}
+                </div>
+              )}
             </Field>
           )}
         </div>

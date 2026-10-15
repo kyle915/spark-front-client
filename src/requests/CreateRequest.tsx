@@ -28,7 +28,6 @@ import { useAlertStore } from "@store/alertStore";
 // import { useAuthStore } from "@store/authStore";
 import { useNavigate, useSearchParams } from "react-router";
 import { useAuthStore } from "@/store/authStore";
-import useSparkRole from "@/hooks/useSparkRole";
 import { dateFormat } from "@/public/form/utils/toDate";
 import { buildDateTimeWithOffset } from "@utils/index";
 import CatalogsProvider from "@/shared/CatalogsProvider";
@@ -108,11 +107,6 @@ const CreateRequestForm = ({
 
   const { showAlert } = useAlertStore();
   const navigate = useNavigate();
-
-  // Admin opt-in: email the client a confirmation. Silent by default; the
-  // checkbox is shown to admins only (clients submitting are the client).
-  const { isClient } = useSparkRole();
-  const [notifyRequestor, setNotifyRequestor] = useState(false);
 
   // ========================
   // DATA MAPPING
@@ -334,7 +328,7 @@ const CreateRequestForm = ({
           // Create-only fields
           clientName: formData.clientName!,
           clientEmail: formData.clientEmail!,
-          notifyRequestor: notifyRequestor,
+          notifyRequestor: true,
           distributorName: isJeeterTenant ? "" : formData.distributorName!,
           distributorEmail: isJeeterTenant ? "" : formData.distributorEmail!,
           retailerName: formData.retailerName!,
@@ -406,10 +400,6 @@ const CreateRequestForm = ({
         <RequestForm
           mode="create"
           onSubmit={handleSubmit}
-          // Admin-only: opt in to email the client a confirmation. Clients
-          // submit on their own behalf, so the checkbox is hidden for them.
-          notifyRequestor={notifyRequestor}
-          onNotifyRequestorChange={isClient ? undefined : setNotifyRequestor}
           eventTypes={eventTypes}
           requestTypes={requestTypes}
           timezones={timezones}

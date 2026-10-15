@@ -184,11 +184,6 @@ interface RequestFormProps {
 
   enableContactSection?: boolean;
   contactMode?: "request" | "manual";
-  // Create-only: admin opt-in to email the client a confirmation. When the
-  // handler is provided (CreateRequest passes it for admins), the checkbox
-  // renders near the submit button. Edit path never passes these.
-  notifyRequestor?: boolean;
-  onNotifyRequestorChange?: (checked: boolean) => void;
   requestContactInfo?: Partial<
     Pick<
       RequestFormValues,
@@ -229,8 +224,6 @@ export default function RequestForm({
   onRefetch,
   enableContactSection = false,
   contactMode,
-  notifyRequestor = false,
-  onNotifyRequestorChange,
   requestContactInfo,
   states = [],
   disableStateSelect = false,
@@ -1922,31 +1915,7 @@ export default function RequestForm({
           </section>
 
           {/* FOOTER ACTIONS (optional but matches nice UX) */}
-          <div className="pt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            {/* Admin-only: opt in to email the client a confirmation.
-                Rendered only on create when CreateRequest wires the handler
-                (admins only); edit/update path never passes it. */}
-            {mode === "create" && onNotifyRequestorChange ? (
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-base-100/30 bg-base-200/60 px-4 py-3">
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-primary checkbox-sm mt-0.5"
-                  checked={notifyRequestor}
-                  onChange={(e) => onNotifyRequestorChange(e.target.checked)}
-                />
-                <span className="flex flex-col">
-                  <span className="label-text font-medium text-sm text-base-content/90">
-                    Email the client a confirmation
-                  </span>
-                  <span className="text-xs text-base-content/60">
-                    Off by default — admin-created requests are silent.
-                  </span>
-                </span>
-              </label>
-            ) : (
-              <span className="hidden sm:block" />
-            )}
-
+          <div className="pt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end">
             <div className="flex items-center justify-end gap-2">
               <Link
                 type="button"

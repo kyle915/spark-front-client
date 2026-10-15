@@ -2,7 +2,7 @@ import useTenantPublic, { type TenantPublic } from "../hooks/useTenantPublic";
 import useTenantThemePublic from "../hooks/useTenantThemePublic";
 import type { TenantColorScheme } from "@/utils/tenantThemeConfig";
 import PublicDeadLink from "@/public/PublicDeadLink";
-import { TenantLogo } from "@/layout/TenantLogo";
+import { TenantLogo } from "@/layout/TenantLogo.tsx";
 import { createContext, useEffect, useState } from "react";
 import { Link } from "react-router";
 

@@ -167,11 +167,6 @@ const SparkRequestInner: React.FC = () => {
   const showAlert = useAlertStore((s) => s.showAlert);
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
-  // Admin-only: when creating a request on a client's behalf, optionally
-  // email them the auto-approved confirmation. Default off — an internal
-  // event request is silent unless the admin opts in. Clients never see
-  // this (their own submissions always notify them via the backend).
-  const [notifyRequestor, setNotifyRequestor] = useState(false);
   const { tenant: publicTenant } = useTenantPublic({ slug: tenantMeta?.requestUrlName });
   const coBrandSiblings = useMemo(
     () => (publicTenant?.brandGroup?.brands ?? []).filter((b) => !b.isSelf),
@@ -784,14 +779,17 @@ const SparkRequestInner: React.FC = () => {
               clientName: fullName || undefined,
               clientEmail: email || undefined,
               requestorEmail: email || undefined,
+              retailerName: venue.trim().slice(0, 50) || undefined,
+              retailerAddress: address.trim() || undefined,
+              storeNumber:
+                isRetailSampling && storeNumber.trim()
+                  ? storeNumber.trim()
+                  : undefined,
               distributorId: distributorId || undefined,
               distributorName:
                 distributors.find((d) => String(d.id) === distributorId)?.name ?? undefined,
               notes: notesPlus || undefined,
-              // Admin opt-in only. notifyRequestor is a defined field on
-              // CreateRequestInput (unlike the old `quantity`), so sending it
-              // is safe. Omit when off / for clients to keep the payload clean.
-              notifyRequestor: !isClient && notifyRequestor ? true : undefined,
+              notifyRequestor: true,
               details: [],
               // CreateRequestProductInput only accepts `productId` — sending
               // any extra field (we used to send `quantity: 1`) makes GraphQL
@@ -1728,54 +1726,6 @@ const SparkRequestInner: React.FC = () => {
           />
         </div>
 
-      </div>
-
-      {/* Routing footer */}
-      <div
-        className="spark-card p-5"
-        style={{
-          borderColor: "rgba(197,245,70,0.25)",
-          background:
-            "linear-gradient(180deg, rgba(197,245,70,0.06), transparent)",
-        }}
-      >
-        <p
-          className="mono text-[10px]"
-          style={{
-            letterSpacing: "0.16em",
-            color: "var(--spark-lime)",
-          }}
-        >
-          WHAT HAPPENS NEXT
-        </p>
-        <p
-          className="mt-2 text-sm"
-          style={{ color: "rgba(255,255,255,0.75)" }}
-        >
-          {isClient
-            ? "Submission lands in the RMM's queue. Once approved, Spark auto-posts a job and emails confirmation to your team."
-            : "Internal request — lands on the tracker auto-approved (no RMM routing). The client is only emailed if you tick the box below."}
-        </p>
-        {!isClient && (
-          <label
-            className="mt-3 flex items-center gap-2.5 cursor-pointer select-none"
-            style={{ color: "rgba(255,255,255,0.8)" }}
-          >
-            <input
-              type="checkbox"
-              checked={notifyRequestor}
-              onChange={(e) => setNotifyRequestor(e.target.checked)}
-              style={{
-                accentColor: "var(--spark-lime)",
-                width: 16,
-                height: 16,
-              }}
-            />
-            <span className="text-sm">
-              Email the client a confirmation
-            </span>
-          </label>
-        )}
       </div>
 
       {/* Sticky submit bar — always in view */}

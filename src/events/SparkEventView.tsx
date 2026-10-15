@@ -212,18 +212,87 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
     );
   }
 
-  const slug = (event.status?.name ?? "").toLowerCase();
+  const req = event.request;
+  const stripDateSuffix = (raw: string | null | undefined): string =>
+    (raw ?? "")
+      .trim()
+      .replace(/\s*·\s*\d{4}-\d{2}-\d{2}(?:\s*\(\d+\/\d+\))?\s*$/, "")
+      .trim();
+
+  const slug = (event.status?.name ?? req?.status?.name ?? "").toLowerCase();
   const chipClass = STATUS_CHIP[slug] ?? "chip chip-muted";
   const venue =
-    event.request?.retailer?.name ?? event.retailer?.name ?? "—";
+    req?.retailer?.name?.trim() ||
+    event.retailer?.name?.trim() ||
+    req?.retailerName?.trim() ||
+    stripDateSuffix(req?.name || event.name) ||
+    "—";
   const distributor =
-    event.request?.distributor?.name ?? event.distributor?.name ?? "—";
-  const products = event.request?.products ?? [];
-  const requestUuid = event.request?.uuid;
-  const requestName = event.request?.name;
-  const eventTypeName = event.eventType?.name ?? "—";
+    req?.distributor?.name?.trim() ||
+    event.distributor?.name?.trim() ||
+    req?.distributorName?.trim() ||
+    "—";
+  const products = req?.products ?? [];
+  const coBrands = req?.coBrands ?? [];
+  const requestUuid = req?.uuid;
+  const requestName = req?.name;
+  const eventTypeName =
+    event.eventType?.name ?? req?.requestType?.name ?? "—";
   const scope = event.isNational ? "National" : "Local";
-  const hasNotes = Boolean(event.notes?.trim());
+  const notesText = event.notes?.trim() || req?.notes?.trim() || "";
+  const hasNotes = Boolean(notesText);
+  const baCountMatch = notesText.match(/(?:^|\n)BA count:\s*(\d+)/i);
+  const baCount = baCountMatch ? baCountMatch[1] : null;
+  const market = req?.market?.trim() || null;
+  const storeNumber = req?.storeNumber?.trim() || null;
+  const billingEntityName = req?.billingEntity?.name?.trim() || null;
+  const schedulingStatus = req?.schedulingStatus ?? null;
+  const schedulingLabel =
+    schedulingStatus === "already_scheduled"
+      ? "Already scheduled with account"
+      : schedulingStatus === "needs_scheduling"
+        ? "Ignite needs to schedule"
+        : null;
+  const tz = event.timezone ?? req?.timezone ?? null;
+  const rmmUser = event.rmmAsigned ?? req?.rmmAsigned ?? null;
+  const rmmName = rmmUser
+    ? [rmmUser.firstName, rmmUser.lastName].filter(Boolean).join(" ").trim()
+    : "";
+  const rmmEmail = req?.rmmAsigned?.email?.trim() || null;
+  const requestorName =
+    req?.client?.name?.trim() ||
+    req?.clientName?.trim() ||
+    [req?.createdBy?.firstName, req?.createdBy?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() ||
+    req?.requestorEmail?.trim() ||
+    req?.clientEmail?.trim() ||
+    "—";
+  const requestorEmail =
+    req?.requestorEmail?.trim() ||
+    req?.clientEmail?.trim() ||
+    req?.client?.email?.trim() ||
+    req?.createdBy?.email?.trim() ||
+    null;
+  const approvedByName = req?.approvedBy
+    ? [req.approvedBy.firstName, req.approvedBy.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || req.approvedBy.email?.trim() || null
+    : null;
+  const approvedByEmail = req?.approvedBy?.email?.trim() || null;
+  const firstStoreManager = (req?.storeManagers ?? [])[0] ?? null;
+  const storeManagerName =
+    req?.storeManagerName?.trim() || firstStoreManager?.name?.trim() || null;
+  const storeManagerPhone =
+    req?.storeManagerPhone?.trim() ||
+    firstStoreManager?.phone?.trim() ||
+    req?.retailerStoreContact?.trim() ||
+    req?.retailer?.storeContact?.trim() ||
+    null;
+  const distributorEmail =
+    req?.distributor?.email?.trim() || req?.distributorEmail?.trim() || null;
   const ambassadors = event.ambassadors ?? [];
   const confirmedCount = ambassadors.filter((a) => a.isApproved).length;
   // Recaps filed against this event. The Master Tracker surfaces these as a
@@ -298,13 +367,21 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={chipClass}>● {event.status?.name ?? "—"}</span>
-          {event.eventType?.name && (
+          <span className={chipClass}>
+            ● {event.status?.name ?? req?.status?.name ?? "—"}
+          </span>
+          {eventTypeName !== "—" && (
             <span className="chip chip-sky">{eventTypeName}</span>
           )}
           <span className="chip chip-muted">
             {scope === "National" ? "◉ NATIONAL" : "⌖ LOCAL"}
           </span>
+          {schedulingStatus === "already_scheduled" && (
+            <span className="chip chip-lime">✓ SCHEDULED WITH ACCOUNT</span>
+          )}
+          {schedulingStatus === "needs_scheduling" && (
+            <span className="chip chip-amber">◌ NEEDS SCHEDULING</span>
+          )}
           {recaps.length > 0 && (
             <button
               type="button"
@@ -379,13 +456,17 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
         }}
       >
         <SummaryPill icon="▣">
-          {fmtDate(event.date ?? event.startTime)}
+          {fmtDate(event.date ?? event.startTime ?? req?.date ?? req?.startTime)}
         </SummaryPill>
         <SummaryPill icon="◷">
-          {fmtTime(event.startTime)} – {fmtTime(event.endTime)}
+          {fmtTime(event.startTime ?? req?.startTime)} –{" "}
+          {fmtTime(event.endTime ?? req?.endTime)}
         </SummaryPill>
         <SummaryPill icon="◐">{venue}</SummaryPill>
-        <SummaryPill icon="⌖">{event.address ?? "—"}</SummaryPill>
+        {market && <SummaryPill icon="◈">{market}</SummaryPill>}
+        <SummaryPill icon="⌖">
+          {event.address ?? req?.address ?? req?.retailerAddress ?? "—"}
+        </SummaryPill>
       </div>
 
       {/* Details grid */}
@@ -401,14 +482,64 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           <Field label="ACCOUNT">{venue}</Field>
+          {storeNumber && <Field label="STORE #">{storeNumber}</Field>}
+          {market && <Field label="MARKET">{market}</Field>}
+          <Field label="ADDRESS">
+            {event.address ?? req?.address ?? req?.retailerAddress ?? "—"}
+          </Field>
           <Field label="DISTRIBUTOR">{distributor}</Field>
+          {billingEntityName && (
+            <Field label="BILLING ENTITY">{billingEntityName}</Field>
+          )}
           <Field label="TYPE">{eventTypeName}</Field>
           <Field label="SCOPE">{scope}</Field>
-          <Field label="STATUS">{event.status?.name ?? "—"}</Field>
-          {event.timezone?.name && (
+          <Field label="STATUS">
+            {event.status?.name ?? req?.status?.name ?? "—"}
+          </Field>
+          {schedulingLabel && (
+            <Field label="SCHEDULING">{schedulingLabel}</Field>
+          )}
+          {tz?.name && (
             <Field label="TIMEZONE">
-              {event.timezone.name}
-              {event.timezone.code ? ` · ${event.timezone.code}` : ""}
+              {tz.name}
+              {tz.code ? ` · ${tz.code}` : ""}
+            </Field>
+          )}
+          {baCount && <Field label="BA COUNT">{baCount}</Field>}
+          {req?.isNonActiveProductRequired !== null &&
+            req?.isNonActiveProductRequired !== undefined && (
+              <Field label="Is Non-Active Product Required?">
+                {req.isNonActiveProductRequired ? "Yes" : "No"}
+              </Field>
+            )}
+          {req?.casesToBeShipped?.trim() && (
+            <Field label="How many cases to be shipped?">
+              {req.casesToBeShipped.trim()}
+            </Field>
+          )}
+          {req?.accountSpendAmount?.trim() && (
+            <Field label="Account Spend Amount">
+              {req.accountSpendAmount.trim()}
+            </Field>
+          )}
+          {req?.eventAssetsNeeded?.trim() && (
+            <Field label="What assets are needed at this event?">
+              {req.eventAssetsNeeded.trim()}
+            </Field>
+          )}
+          {req?.loadInTime?.trim() && (
+            <Field label="What time is Load-In">
+              {req.loadInTime.trim()}
+            </Field>
+          )}
+          {req?.onsitePoc?.trim() && (
+            <Field label="Who is the onsite POC">
+              {req.onsitePoc.trim()}
+            </Field>
+          )}
+          {req?.additionalTeamDetails?.trim() && (
+            <Field label="Any additional details for the team to know?">
+              {req.additionalTeamDetails.trim()}
             </Field>
           )}
           {requestUuid && (
@@ -424,17 +555,120 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               </Link>
             </Field>
           )}
-          {event.rmmAsigned && (
-            <Field label="RMM">
-              {[event.rmmAsigned.firstName, event.rmmAsigned.lastName]
-                .filter(Boolean)
-                .join(" ") || "—"}
+          {rmmName && <Field label="RMM">{rmmName}</Field>}
+          {req?.createdAt && (
+            <Field label="SUBMITTED">
+              {fmtDate(req.createdAt)} · {fmtTime(req.createdAt)}
             </Field>
           )}
         </div>
       </div>
 
-      {/* Notes (single source of truth) */}
+      {/* Contacts & Routing from original request */}
+      {req && (
+        <div className="spark-card p-6">
+          <p
+            className="mono text-[10px] mb-4"
+            style={{
+              letterSpacing: "0.18em",
+              color: "var(--spark-lime)",
+            }}
+          >
+            CONTACTS & ROUTING
+          </p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <Field label="REQUESTOR">
+              <div>{requestorName}</div>
+              {requestorEmail && requestorEmail !== requestorName && (
+                <div
+                  className="text-xs mt-0.5"
+                  style={{ color: "rgba(255,255,255,0.45)" }}
+                >
+                  {requestorEmail}
+                </div>
+              )}
+            </Field>
+            <Field label="ROUTED TO / RMM">
+              <div>{rmmName || "Unassigned"}</div>
+              {rmmEmail && (
+                <div
+                  className="text-xs mt-0.5"
+                  style={{ color: "rgba(255,255,255,0.45)" }}
+                >
+                  {rmmEmail}
+                </div>
+              )}
+            </Field>
+            {approvedByName && (
+              <Field label="APPROVED BY">
+                <div>{approvedByName}</div>
+                {approvedByEmail && approvedByEmail !== approvedByName && (
+                  <div
+                    className="text-xs mt-0.5"
+                    style={{ color: "rgba(255,255,255,0.45)" }}
+                  >
+                    {approvedByEmail}
+                  </div>
+                )}
+              </Field>
+            )}
+            <Field label="STORE MANAGER">
+              <div>{storeManagerName || "—"}</div>
+              {storeManagerPhone && (
+                <div
+                  className="text-xs mt-0.5"
+                  style={{ color: "rgba(255,255,255,0.45)" }}
+                >
+                  {storeManagerPhone}
+                </div>
+              )}
+            </Field>
+            {distributorEmail && (
+              <Field label="DISTRIBUTOR CONTACT">{distributorEmail}</Field>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Multi-brand co-activations */}
+      {coBrands.length > 0 && (
+        <div className="spark-card p-6">
+          <p
+            className="mono text-[10px] mb-4"
+            style={{
+              letterSpacing: "0.18em",
+              color: "var(--spark-lime)",
+            }}
+          >
+            MULTI-BRAND ACTIVATION · +{coBrands.length}
+          </p>
+          <div className="space-y-4">
+            {coBrands.map((cb) => (
+              <div
+                key={cb.tenantPk}
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid var(--spark-border)",
+                  borderRadius: 12,
+                  padding: "0.75rem 1rem",
+                }}
+              >
+                <p className="text-sm font-semibold">{cb.tenantName}</p>
+                {cb.products.length > 0 && (
+                  <p
+                    className="text-xs mt-1"
+                    style={{ color: "rgba(255,255,255,0.65)" }}
+                  >
+                    {cb.products.map((p) => p.name).join(", ")}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Notes (single source of truth — event notes or original request notes) */}
       {hasNotes && (
         <div className="spark-card p-6">
           <p
@@ -450,7 +684,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
             className="text-sm leading-relaxed whitespace-pre-wrap"
             style={{ color: "rgba(255,255,255,0.85)" }}
           >
-            {event.notes}
+            {notesText}
           </p>
         </div>
       )}
