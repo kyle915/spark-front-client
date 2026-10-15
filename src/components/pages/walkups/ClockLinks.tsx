@@ -113,7 +113,7 @@ function CreateClockLink({ serviceAccountEmail, onCreated }: { serviceAccountEma
   );
   const [label, setLabel] = useState("");
   const [tenantId, setTenantId] = useState("");
-  const [mode, setMode] = useState<SheetMode>("create");
+  const [mode, setMode] = useState<SheetMode>("paste");
   const [sheetUrl, setSheetUrl] = useState("");
   const [shareWith, setShareWith] = useState(DEFAULT_SHARE);
   const [commit, creating] = useMutation<CreateType>(CreateClockLinkMutation);
@@ -188,8 +188,8 @@ function CreateClockLink({ serviceAccountEmail, onCreated }: { serviceAccountEma
       <div className="flex items-center gap-4 mt-3 text-sm flex-wrap">
         {(
           [
-            ["create", "Create a new Google Sheet"],
             ["paste", "Use my own Sheet"],
+            ["create", "Have Spark create one (Google often blocks this)"],
           ] as const
         ).map(([id, text]) => (
           <label key={id} className="flex items-center gap-2 cursor-pointer">
@@ -211,11 +211,11 @@ function CreateClockLink({ serviceAccountEmail, onCreated }: { serviceAccountEma
         </label>
       ) : (
         <label className="flex flex-col gap-1 text-[11px] mt-3" style={{ color: muted }}>
-          GOOGLE SHEET LINK — SHARE IT WITH{" "}
+          GOOGLE SHEET LINK — MAKE A BLANK SHEET, SHARE IT WITH{" "}
           <span className="mono" style={{ color: "var(--spark-lime)", textTransform: "none" }}>
             {serviceAccountEmail}
           </span>{" "}
-          AS EDITOR FIRST
+          AS EDITOR, PASTE ITS LINK
           <input
             style={fieldStyle}
             value={sheetUrl}
