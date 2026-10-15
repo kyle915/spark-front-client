@@ -20,6 +20,7 @@ import { postGql } from "./fieldMarketingGql";
 import PlanResultsSheet from "./PlanResultsSheet";
 import { resultsBadge } from "./planResultsFormat";
 import ProgramSwitch from "./ProgramSwitch";
+import ScorecardKpiCard from "./ScorecardKpiCard";
 import {
   downloadCsv,
   fieldMarketingCsv,
@@ -81,7 +82,7 @@ const BOARD = `
       monthLabel
       canRestore
       managers { market marketLabel name email phone }
-      kpis { key label detail target planned logged unit }
+      kpis { key label detail target planned logged unit note }
       skus
       events { ${EVENT_FIELDS} }
       deletedEvents { ${EVENT_FIELDS} }
@@ -824,44 +825,28 @@ export default function FieldMarketing() {
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {kpis.map((kpi) => (
-            <article
+            <ScorecardKpiCard
               key={kpi.key}
-              className="rounded-xl border border-white/10 p-3.5"
-              style={{ background: "#0A0B0D" }}
-            >
-              <p className="label-mini mb-2">{kpi.label}</p>
-              <p className="text-2xl font-bold tabular-nums" style={{ color: "#c5f546" }}>
-                {fmtNum(kpi.planned)}
-                {month && !tactic ? (
-                  <span className="text-sm font-normal opacity-55 text-white">
-                    {" "}
-                    / {kpi.target.toLocaleString()}
-                  </span>
-                ) : null}
-              </p>
-              <p className="mt-1.5 text-xs opacity-70">
-                Projected (planned) {kpi.unit}
-                {!month ? " · all dates" : ""}
-              </p>
-              <p className="mt-1 text-xs opacity-55">
-                Logged {fmtNum(kpi.logged)} {kpi.unit}
-              </p>
-              <p className="mt-2 text-[11px] leading-snug opacity-50">{kpi.detail}</p>
-            </article>
+              kpi={kpi}
+              showTarget={Boolean(month) && !tactic}
+              className="rounded-xl border border-white/10 p-3.5 bg-[#0A0B0D]"
+            />
           ))}
         </section>
         <p className="text-xs opacity-55">
-          Lime number is projected (planned) for the current filter
+          Big number is the actual for the current filter
           {marketFilter ? " and market" : ""}
-          {tactic ? " and tactic" : ""}.
+          {tactic ? " and tactic" : ""}: a plan's logged result, else the
+          approved recaps attached to it. It stays a dash until one of those
+          comes in.
           {month && !tactic
             ? " Targets are the monthly scorecard for the selected month."
             : tactic
               ? " One tactic isn't scored against the whole monthly target."
-              : " All months shows planned sums only — monthly targets (1,152 cans / 3,456 pours / …) are not scored against a multi-month rollup."}{" "}
-          Logged is the manual log, else approved recaps pushed to the plan, and
-          stays a dash until one of those comes in. 4oz pours are not added into
-          full cans. Deleted plans never count.
+              : " All months isn't scored against one month's targets (1,152 cans / 3,456 pours / …)."}{" "}
+          Planned is the plan forecast; Event / Guerilla plans don't forecast
+          cans or pours. Cans opened only for 4oz pours aren't converted into
+          pours. Deleted plans never count.
         </p>
 
         {view === "calendar" ? (
