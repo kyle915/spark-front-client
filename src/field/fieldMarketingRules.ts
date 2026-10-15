@@ -12,20 +12,19 @@ export function hasLogged(row: FmEvent): boolean {
   );
 }
 
-export function showsCans(activity: string, sampling: string): boolean {
-  if (activity === "full_can") return true;
-  if (activity === "sponsorship" || activity === "event_activation") {
-    return sampling !== "pour";
-  }
-  return activity === "guerilla" && sampling === "full_can";
+/**
+ * Tactics that forecast / log full cans and 4oz pours. Mirrors the API: a
+ * plan's sampling format is the expected mix, not a limit — an event that
+ * pours and also hands out cans logs both.
+ */
+const SAMPLING_TACTICS = new Set(["sponsorship", "event_activation", "guerilla"]);
+
+export function showsCans(activity: string): boolean {
+  return activity === "full_can" || SAMPLING_TACTICS.has(activity);
 }
 
-export function showsPours(activity: string, sampling: string): boolean {
-  if (activity === "pour") return true;
-  if (activity === "sponsorship" || activity === "event_activation") {
-    return sampling !== "full_can";
-  }
-  return activity === "guerilla" && sampling === "pour";
+export function showsPours(activity: string): boolean {
+  return activity === "pour" || SAMPLING_TACTICS.has(activity);
 }
 
 export function showsDays(activity: string): boolean {

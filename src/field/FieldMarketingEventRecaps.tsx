@@ -24,6 +24,8 @@ type EventRecapRow = {
   samples: number | null;
   samplesLabel: string;
   sampleFormat: string;
+  /** 4oz pours served — separate from cans; null on recaps that didn't ask. */
+  pours: number | null;
   emails: number | null;
   planId: string | null;
   planName: string;
@@ -59,7 +61,7 @@ const QUERY = `
       start end canAttach truncated
       rows {
         id kind uuid date type typeLabel name place cityState market marketLabel
-        baName consumersSampled samples samplesLabel sampleFormat emails
+        baName consumersSampled samples samplesLabel sampleFormat pours emails
         planId planName planCode href
       }
     }
@@ -320,6 +322,11 @@ export default function FieldMarketingEventRecaps({
                       {row.sampleFormat ? (
                         <p className="text-[10px] opacity-50 whitespace-nowrap">
                           {row.sampleFormat}
+                        </p>
+                      ) : null}
+                      {row.pours != null ? (
+                        <p className="text-[10px] opacity-70 whitespace-nowrap">
+                          + {row.pours.toLocaleString()} 4oz pours
                         </p>
                       ) : null}
                     </td>

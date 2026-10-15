@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { planInput, emptyPlanForm } from "./fieldMarketingForm";
-import { TIME_OPTIONS, deleteConfirmCopy, isBooked, rowStatus } from "./fieldMarketingRules";
+import { planInput, emptyPlanForm, formFromRow } from "./fieldMarketingForm";
+import {
+  TIME_OPTIONS,
+  deleteConfirmCopy,
+  isBooked,
+  rowStatus,
+  showsCans,
+  showsPours,
+} from "./fieldMarketingRules";
 import type { FmEvent } from "./fieldMarketingTypes";
 
 function row(overrides: Partial<FmEvent> = {}): FmEvent {
@@ -14,6 +21,7 @@ function row(overrides: Partial<FmEvent> = {}): FmEvent {
     name: "Montrose block party",
     startsOn: "2026-10-24",
     days: 1,
+    setupDay: false,
     address: "1500 Westheimer Rd, Houston, TX",
     notes: "",
     samplingFormat: "",
@@ -114,3 +122,47 @@ describe("plan input", () => {
     expect(seeding.endTime).toBe("");
   });
 });
+
+describe("plan forecasts", () => {
+  it("event and guerilla plans forecast full cans, pours and emails", () => {
+    for (const activity of ["event_activation", "guerilla", "sponsorship"]) {
+      expect(showsCans(activity)).toBe(true);
+      expect(showsPours(activity)).toBe(true);
+    }
+    expect([showsCans("full_can"), showsPours("full_can")]).toEqual([true, false]);
+    expect([showsCans("pour"), showsPours("pour")]).toEqual([false, true]);
+    for (const activity of ["product_seeding", "sales_support", "retail_support"]) {
+      expect(showsCans(activity) || showsPours(activity)).toBe(false);
+    }
+    const input = planInput({
+      ...emptyPlanForm,
+      plannedFullCans: "120",
+      plannedPourSamples: "600",
+      plannedEmails: "80",
+      setupDay: true,
+    });
+    expect(input).toMatchObject({
+      plannedFullCans: 120,
+      plannedPourSamples: 600,
+      plannedEmails: 80,
+      setupDay: true,
+    });
+    const seeding = planInput({
+      ...emptyPlanForm,
+      activity: "product_seeding",
+      plannedFullCans: "120",
+      plannedPourSamples: "600",
+      setupDay: true,
+    });
+    expect(seeding).toMatchObject({ plannedFullCans: 0, plannedPourSamples: 0, setupDay: false });
+  });
+
+  it("an unforecast plan edits as blank boxes, not zeros", () => {
+    const form = formFromRow(row({ plannedPourSamples: 900, setupDay: true }));
+    expect(form.plannedFullCans).toBe("");
+    expect(form.plannedPourSamples).toBe("900");
+    expect(form.plannedEmails).toBe("");
+    expect(form.setupDay).toBe(true);
+  });
+});
+

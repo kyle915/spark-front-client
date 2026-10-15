@@ -10,8 +10,10 @@ import JobBoardPanel from "./JobBoardPanel";
 import {
   PLAN_ACTIVITIES,
   emptyPlanForm,
+  forecastText,
   formFromRow,
   planInput,
+  whole,
   type PlanFormState,
 } from "./fieldMarketingForm";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -65,7 +67,7 @@ type DeletePayload = {
 type Toast = { message: string; undoId: string | null };
 
 const EVENT_FIELDS = `
-  id market marketLabel managerName activity activityLabel name startsOn days
+  id market marketLabel managerName activity activityLabel name startsOn days setupDay
   address notes samplingFormat samplingLabel supportType supportLabel supportOther
   skuNames needsFieldSupport ambassadorCount supportTimes startTime endTime supportScope
   plannedFullCans plannedPourSamples plannedEmails
@@ -123,6 +125,15 @@ const SUBMIT = `
 const LOG = `
   mutation LogFieldMarketing($input: LogFieldMarketingInput!) {
     logFieldMarketing(input: $input) {
+      success
+      message
+    }
+  }
+`;
+
+const FORECAST = `
+  mutation ForecastFieldMarketing($input: ForecastFieldMarketingInput!) {
+    forecastFieldMarketing(input: $input) {
       success
       message
     }
@@ -243,6 +254,13 @@ export default function FieldMarketing() {
     emails: "",
     days: "",
     cases: "",
+  });
+  const [forecastId, setForecastId] = useState<string | null>(null);
+  const [forecastDraft, setForecastDraft] = useState({
+    cans: "",
+    pours: "",
+    emails: "",
+    setupDay: false,
   });
   const loadSeq = useRef(0);
   const formRef = useRef<HTMLDivElement | null>(null);
@@ -468,10 +486,10 @@ export default function FieldMarketing() {
       await postGql(LOG, {
         input: {
           eventId: row.id,
-          loggedFullCans: showsCans(row.activity, row.samplingFormat)
+          loggedFullCans: showsCans(row.activity)
             ? optional(logDraft.cans)
             : null,
-          loggedPourSamples: showsPours(row.activity, row.samplingFormat)
+          loggedPourSamples: showsPours(row.activity)
             ? optional(logDraft.pours)
             : null,
           loggedEmails: optional(logDraft.emails),
@@ -489,6 +507,43 @@ export default function FieldMarketing() {
     }
   }
 
+  function openForecast(row: FmEvent) {
+    if (forecastId === row.id) {
+      setForecastId(null);
+      return;
+    }
+    setLoggingId(null);
+    setForecastId(row.id);
+    setForecastDraft({
+      cans: forecastText(row.plannedFullCans),
+      pours: forecastText(row.plannedPourSamples),
+      emails: forecastText(row.plannedEmails),
+      setupDay: Boolean(row.setupDay),
+    });
+  }
+
+  async function saveForecast(row: FmEvent) {
+    setError("");
+    setNotice("");
+    try {
+      await postGql(FORECAST, {
+        input: {
+          eventId: row.id,
+          plannedFullCans: showsCans(row.activity) ? whole(forecastDraft.cans) : null,
+          plannedPourSamples: showsPours(row.activity) ? whole(forecastDraft.pours) : null,
+          plannedEmails: whole(forecastDraft.emails),
+          setupDay: showsDays(row.activity) ? forecastDraft.setupDay : null,
+          tenantId: tenantId || null,
+        },
+      });
+      setForecastId(null);
+      setNotice("Forecast saved. Planned on the scorecard uses it.");
+      reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save the forecast.");
+    }
+  }
+
   function dropRows(ids: string[]) {
     const gone = new Set(ids);
     setBoard((prev) =>
@@ -496,6 +551,7 @@ export default function FieldMarketing() {
     );
     setSelected((prev) => new Set([...prev].filter((id) => !gone.has(id))));
     if (loggingId && gone.has(loggingId)) setLoggingId(null);
+    if (forecastId && gone.has(forecastId)) setForecastId(null);
     if (editingId && gone.has(editingId)) closeForm();
   }
 
@@ -844,9 +900,10 @@ export default function FieldMarketing() {
             : tactic
               ? " One tactic isn't scored against the whole monthly target."
               : " All months isn't scored against one month's targets (1,152 cans / 3,456 pours / …)."}{" "}
-          Planned is the plan forecast; Event / Guerilla plans don't forecast
-          cans or pours. Cans opened only for 4oz pours aren't converted into
-          pours. Deleted plans never count.
+          Planned is the plan forecast (blank = not forecast). Full cans and
+          4oz pours come from each recap's own counts — cans are never
+          converted into pours. Setup / load-in plans aren't event days.
+          Deleted plans never count.
         </p>
 
         {view === "calendar" ? (
@@ -931,6 +988,11 @@ export default function FieldMarketing() {
                       </td>
                       <td className="px-2 py-2 text-sm opacity-80 max-w-[130px]">
                         <span className="block truncate">{row.activityLabel}</span>
+                        {row.setupDay ? (
+                          <span className="block text-[11px] truncate" style={{ color: ORANGE }}>
+                            Setup / load-in · not an event day
+                          </span>
+                        ) : null}
                         {row.supportLabel ? (
                           <span className="block text-[11px] opacity-50 truncate">
                             {row.supportOther
@@ -967,7 +1029,7 @@ export default function FieldMarketing() {
                         ) : null}
                       </td>
                       <td className="px-2 py-2 text-right tabular-nums text-sm">
-                        {showsDays(row.activity) ? row.days : "—"}
+                        {!showsDays(row.activity) ? "—" : row.setupDay ? "setup" : row.days}
                       </td>
                       <td className="px-2 py-2 text-right tabular-nums text-sm">
                         {fmtNum(row.loggedFullCans ?? (row.plannedFullCans || null))}
@@ -1072,11 +1134,21 @@ export default function FieldMarketing() {
                             >
                               Edit
                             </button>
-                          ) : null}
+                          ) : (
+                            <button
+                              type="button"
+                              className="spark-btn-ghost !px-2 !py-1 text-xs"
+                              onClick={() => openForecast(row)}
+                              title="Planned full cans / 4oz pours / emails for the scorecard"
+                            >
+                              Forecast
+                            </button>
+                          )}
                           <button
                             type="button"
                             className="spark-btn-ghost !px-2 !py-1 text-xs"
                             onClick={() => {
+                              setForecastId(null);
                               setLoggingId(loggingId === row.id ? null : row.id);
                               setLogDraft({
                                 cans: "",
@@ -1107,6 +1179,85 @@ export default function FieldMarketing() {
               </tbody>
             </table>
           </div>
+          {forecastId ? (
+            <div className="border-t border-white/10 p-3 flex flex-wrap gap-2 items-end bg-black/30">
+              {(() => {
+                const row = events.find((r) => r.id === forecastId);
+                if (!row) return null;
+                return (
+                  <>
+                    <p className="text-xs opacity-60 w-full">
+                      Forecast · {row.name} · blank = not forecast
+                    </p>
+                    {showsCans(row.activity) ? (
+                      <label className="text-xs space-y-1">
+                        <span className="opacity-60 block">Planned full cans</span>
+                        <input
+                          className="input input-bordered input-sm"
+                          inputMode="numeric"
+                          value={forecastDraft.cans}
+                          onChange={(e) =>
+                            setForecastDraft({ ...forecastDraft, cans: e.target.value })
+                          }
+                        />
+                      </label>
+                    ) : null}
+                    {showsPours(row.activity) ? (
+                      <label className="text-xs space-y-1">
+                        <span className="opacity-60 block">Planned 4oz pours</span>
+                        <input
+                          className="input input-bordered input-sm"
+                          inputMode="numeric"
+                          value={forecastDraft.pours}
+                          onChange={(e) =>
+                            setForecastDraft({ ...forecastDraft, pours: e.target.value })
+                          }
+                        />
+                      </label>
+                    ) : null}
+                    <label className="text-xs space-y-1">
+                      <span className="opacity-60 block">Planned emails</span>
+                      <input
+                        className="input input-bordered input-sm"
+                        inputMode="numeric"
+                        value={forecastDraft.emails}
+                        onChange={(e) =>
+                          setForecastDraft({ ...forecastDraft, emails: e.target.value })
+                        }
+                      />
+                    </label>
+                    {showsDays(row.activity) ? (
+                      <label className="text-xs inline-flex items-center gap-2 pb-2">
+                        <input
+                          type="checkbox"
+                          className="checkbox checkbox-xs"
+                          checked={forecastDraft.setupDay}
+                          onChange={(e) =>
+                            setForecastDraft({ ...forecastDraft, setupDay: e.target.checked })
+                          }
+                        />
+                        Setup / load-in day (doesn't count as an event day)
+                      </label>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="spark-btn-primary"
+                      onClick={() => void saveForecast(row)}
+                    >
+                      Save forecast
+                    </button>
+                    <button
+                      type="button"
+                      className="spark-btn-ghost"
+                      onClick={() => setForecastId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          ) : null}
           {loggingId ? (
             <div className="border-t border-white/10 p-3 flex flex-wrap gap-2 items-end bg-black/30">
               {(() => {
@@ -1117,7 +1268,7 @@ export default function FieldMarketing() {
                     <p className="text-xs opacity-60 w-full">
                       Log results · {row.name}
                     </p>
-                    {showsCans(row.activity, row.samplingFormat) ? (
+                    {showsCans(row.activity) ? (
                       <input
                         className="input input-bordered input-sm"
                         inputMode="numeric"
@@ -1128,7 +1279,7 @@ export default function FieldMarketing() {
                         }
                       />
                     ) : null}
-                    {showsPours(row.activity, row.samplingFormat) ? (
+                    {showsPours(row.activity) ? (
                       <input
                         className="input input-bordered input-sm"
                         inputMode="numeric"
