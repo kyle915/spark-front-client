@@ -112,6 +112,7 @@ import { useCoBrandRecap, type CoBrandOptions } from "./coBrandRecap";
 import { CoBrandSections, CoBrandToggleCard } from "./CoBrandRecapCards";
 import { TenantLogo } from "@/layout/TenantLogo";
 import { shouldShowSamplingStopCard } from "./samplingStops";
+import { isFieldShown, withoutHiddenValues, type ShowWhen } from "./fieldConditions";
 import PayableMileageStep from "./PayableMileageStep";
 import PlanGigPicker from "./PlanGigPicker";
 import {
@@ -180,6 +181,8 @@ type TemplateField = {
   options: string[];
   /** BA-facing example copy (quality bar). Never submitted as the value. */
   placeholder?: string;
+  /** Shown only while another choice field has this option picked. */
+  showWhen?: ShowWhen | null;
 };
 type TemplateSection = { id: string; name: string; fields: TemplateField[] };
 type TemplateProduct = {
@@ -3687,7 +3690,7 @@ function RecapForm({
     // Required non-photo fields must be answered.
     for (const s of template?.sections ?? []) {
       for (const f of s.fields) {
-        if (!f.required || isPhotoType(f.type)) continue;
+        if (!f.required || isPhotoType(f.type) || !isFieldShown(f, valuesForSubmit)) continue;
         const v = valuesForSubmit[f.id];
         if (isDropOffLocationsField(f)) {
           const dropErr = validateDropOffLocationsValue(
@@ -3746,7 +3749,7 @@ function RecapForm({
       }
     }
 
-    const fieldValues = Object.entries(valuesForSubmit)
+    const fieldValues = Object.entries(withoutHiddenValues(templateFields, valuesForSubmit))
       .map(([id, v]) => ({ customFieldId: id, value: Array.isArray(v) ? JSON.stringify(v) : String(v) }))
       .filter((fv) => fv.value !== "" && fv.value !== "[]");
     // Prefer Drop-off Locations JSON (Product Seeding), then Products Sampled
@@ -4016,7 +4019,7 @@ function RecapForm({
         // Mileage moves to the end of the recap (after photos). Skip empty
         // sections that only held mileage fields.
         const fields = section.fields.filter(
-          (f) => !isMileageCustomFieldName(f.name),
+          (f) => !isMileageCustomFieldName(f.name) && isFieldShown(f, values),
         );
         if (fields.length === 0) return null;
         const labelBrand =

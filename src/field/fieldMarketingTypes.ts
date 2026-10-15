@@ -27,6 +27,8 @@ export type FmEvent = {
   name: string;
   startsOn: string;
   days: number;
+  /** Setup / load-in for another event — never an event day on the scorecard. */
+  setupDay: boolean;
   address: string;
   notes: string;
   samplingFormat: string;

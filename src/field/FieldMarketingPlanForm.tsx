@@ -1,5 +1,11 @@
 import type { Manager } from "./fieldMarketingTypes";
-import { TIME_OPTIONS, isStaffedActivity, showsDays } from "./fieldMarketingRules";
+import {
+  TIME_OPTIONS,
+  isStaffedActivity,
+  showsCans,
+  showsDays,
+  showsPours,
+} from "./fieldMarketingRules";
 import { PLAN_ACTIVITIES, SUPPORT_TYPES, type PlanFormState } from "./fieldMarketingForm";
 
 type Props = {
@@ -126,6 +132,19 @@ export default function FieldMarketingPlanForm({
             />
           </label>
         ) : null}
+        {showsDays(activity) ? (
+          <label className="text-sm flex items-center gap-2 self-end pb-1.5">
+            <input
+              type="checkbox"
+              className="checkbox checkbox-xs"
+              checked={form.setupDay}
+              onChange={(e) => set({ setupDay: e.target.checked })}
+            />
+            <span className="opacity-80">
+              Setup / load-in day <span className="opacity-60">(doesn't count as an event day)</span>
+            </span>
+          </label>
+        ) : null}
         {staffed ? (
           <label className="text-sm space-y-1">
             <span className="opacity-70">
@@ -246,13 +265,38 @@ export default function FieldMarketingPlanForm({
             </label>
           </>
         ) : null}
+        {showsCans(activity) ? (
+          <label className="text-sm space-y-1">
+            <span className="opacity-70">Planned full cans</span>
+            <input
+              inputMode="numeric"
+              className="input input-bordered w-full input-sm"
+              value={form.plannedFullCans}
+              onChange={(e) => set({ plannedFullCans: e.target.value })}
+              placeholder="Blank = not forecast"
+            />
+          </label>
+        ) : null}
+        {showsPours(activity) ? (
+          <label className="text-sm space-y-1">
+            <span className="opacity-70">Planned 4oz pours</span>
+            <input
+              inputMode="numeric"
+              className="input input-bordered w-full input-sm"
+              value={form.plannedPourSamples}
+              onChange={(e) => set({ plannedPourSamples: e.target.value })}
+              placeholder="Blank = not forecast"
+            />
+          </label>
+        ) : null}
         <label className="text-sm space-y-1">
-          <span className="opacity-70">Emails to capture</span>
+          <span className="opacity-70">Planned emails</span>
           <input
             inputMode="numeric"
             className="input input-bordered w-full input-sm"
             value={form.plannedEmails}
             onChange={(e) => set({ plannedEmails: e.target.value })}
+            placeholder="Blank = not forecast"
           />
         </label>
         <label className="text-sm space-y-1 md:col-span-2 xl:col-span-4">
