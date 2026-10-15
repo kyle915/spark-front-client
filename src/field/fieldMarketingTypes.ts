@@ -11,9 +11,10 @@ export type Kpi = {
   label: string;
   detail: string;
   target: number;
-  planned: number;
+  planned: number | null;
   logged: number | null;
   unit: string;
+  note?: string | null;
 };
 
 export type FmEvent = {

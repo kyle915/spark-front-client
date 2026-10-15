@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useAuthStore } from "@/store/authStore";
+import FieldMarketingEventRecaps from "./FieldMarketingEventRecaps";
+import ScorecardKpiCard, { type ScorecardKpi } from "./ScorecardKpiCard";
 
 /**
  * Monthly Field Marketing scorecard for the dashboard.
- * Numbers come from fieldMarketing — projected totals are the SUM of planned
- * FieldMarketingEvent fields for that month (not retail recaps).
+ * Each card leads with the actual result for the month (a plan's manual log,
+ * else approved recaps attached to it) against the monthly target; the plan
+ * forecast is secondary. Not retail recaps. Pours are not added into full cans.
  * Targets: full cans 1,152; pours 3,456; 8 sponsorship days; 4 retail supports; 500 emails.
- * Logged stays blank until someone reports a result. Pours are not added into full cans.
  */
 
 type Manager = {
@@ -18,15 +20,7 @@ type Manager = {
   phone: string;
 };
 
-type Kpi = {
-  key: string;
-  label: string;
-  detail: string;
-  target: number;
-  planned: number;
-  logged: number | null;
-  unit: string;
-};
+type Kpi = ScorecardKpi;
 
 type Board = {
   available: boolean;
@@ -43,7 +37,7 @@ const EMPTY_KPIS: Kpi[] = [
     label: "Full can samples",
     detail: "Product drops, donations, guerilla events. Drives trial and awareness.",
     target: 1152,
-    planned: 0,
+    planned: null,
     logged: null,
     unit: "cans",
   },
@@ -52,7 +46,7 @@ const EMPTY_KPIS: Kpi[] = [
     label: "4oz pour samples",
     detail: "Local sponsorships, events, festivals. 3,456 pours is 1,152 full cans.",
     target: 3456,
-    planned: 0,
+    planned: null,
     logged: null,
     unit: "pours",
   },
@@ -61,7 +55,7 @@ const EMPTY_KPIS: Kpi[] = [
     label: "Local event sponsorships",
     detail: "Minimum days. Builds meaningful local presence.",
     target: 8,
-    planned: 0,
+    planned: null,
     logged: null,
     unit: "days",
   },
@@ -70,7 +64,7 @@ const EMPTY_KPIS: Kpi[] = [
     label: "Retail activations / support",
     detail: "On-premise support, retail check-in, sales and DP meetings.",
     target: 4,
-    planned: 0,
+    planned: null,
     logged: null,
     unit: "activations",
   },
@@ -79,7 +73,7 @@ const EMPTY_KPIS: Kpi[] = [
     label: "Consumer data captured",
     detail: "Email addresses. Builds an addressable audience.",
     target: 500,
-    planned: 0,
+    planned: null,
     logged: null,
     unit: "emails",
   },
@@ -123,7 +117,7 @@ const BOARD = `
       month
       monthLabel
       managers { market marketLabel name email phone }
-      kpis { key label detail target planned logged unit }
+      kpis { key label detail target planned logged unit note }
     }
   }
 `;
@@ -158,50 +152,6 @@ function shiftMonth(month: string, delta: number): string {
 function currentMonth(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function fmtNum(value: number | null): string {
-  if (value == null) return "—";
-  return value.toLocaleString();
-}
-
-function ProgressBar({
-  logged,
-  target,
-}: {
-  logged: number | null;
-  target: number;
-}) {
-  const pct =
-    target > 0 && logged != null
-      ? Math.min(100, Math.round((logged / target) * 100))
-      : 0;
-  return (
-    <div className="mt-3" aria-hidden>
-      <div
-        className="h-1.5 w-full rounded-full overflow-hidden"
-        style={{ background: "rgba(255,255,255,0.08)" }}
-      >
-        <div
-          className="h-full rounded-full transition-[width] duration-500"
-          style={{
-            width: `${pct}%`,
-            background:
-              logged == null
-                ? "transparent"
-                : "var(--spark-lime, #c5f546)",
-            minWidth: logged != null && logged > 0 ? 4 : 0,
-          }}
-        />
-      </div>
-      <p
-        className="mt-1.5 mono text-[9px]"
-        style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.4)" }}
-      >
-        LOGGED {pct}% OF TARGET
-      </p>
-    </div>
-  );
 }
 
 export default function FieldMarketingScorecard() {
@@ -330,35 +280,25 @@ export default function FieldMarketingScorecard() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {kpis.map((kpi) => (
-          <article key={kpi.key} className="spark-card p-4">
-            <p className="label-mini mb-2">{kpi.label}</p>
-            <p
-              className="tab-num text-2xl lg:text-3xl font-bold leading-none"
-              style={{ color: "var(--spark-lime, #c5f546)" }}
-            >
-              {loading && !board ? "…" : fmtNum(kpi.planned)}
-              <span className="text-sm font-normal opacity-60 text-white">
-                {" "}
-                / {kpi.target.toLocaleString()}
-              </span>
-            </p>
-            <p className="mt-2 text-xs opacity-70">
-              Projected (planned) {kpi.unit}
-            </p>
-            <p className="mt-1 text-xs opacity-55">
-              Logged {fmtNum(kpi.logged)} {kpi.unit}
-            </p>
-            <ProgressBar logged={kpi.logged} target={kpi.target} />
-            <p className="mt-2 text-xs leading-snug opacity-60">{kpi.detail}</p>
-          </article>
+          <ScorecardKpiCard key={kpi.key} kpi={kpi} loading={loading && !board} />
         ))}
       </div>
       <p className="text-xs opacity-60">
-        Lime number is projected from the field marketing plan for this month
-        (sums of planned cans / pours / days / activations / emails — not retail
-        recaps). Logged stays a dash until someone reports a result. 4oz pours
-        stay on their own score and are not added into full can samples.
+        Big number is the actual for {board?.monthLabel || "this month"}: a
+        plan's logged result, else the approved recaps attached to it (Event,
+        Guerilla, Seeding — not retail sampling). Event days count days with an
+        approved recap. Full cans come from recaps that served full cans; cans
+        opened only for 4oz pours aren't converted into pours, so log pours on
+        the plan. Planned is the plan forecast, and Event / Guerilla plans
+        don't forecast cans or pours. A dash means nothing reported yet.
       </p>
+
+      <FieldMarketingEventRecaps
+        month={board?.month && board.month !== "all" ? board.month : month}
+        market={marketFilter}
+        managers={managers}
+        onAttached={() => void load(month, marketFilter)}
+      />
     </section>
   );
 }
