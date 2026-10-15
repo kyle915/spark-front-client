@@ -110,9 +110,11 @@ export default function FieldMarketingEventRecaps({
   const [loading, setLoading] = useState(true);
   const [target, setTarget] = useState<EventRecapRow | null>(null);
 
-  useEffect(() => {
+  const [scopedTo, setScopedTo] = useState(market);
+  if (scopedTo !== market) {
+    setScopedTo(market);
     setMarkets(market ? [market] : []);
-  }, [market]);
+  }
 
   useEffect(() => {
     setStart("");
