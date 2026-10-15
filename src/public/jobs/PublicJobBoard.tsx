@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 import { useParams } from "react-router";
-import { TenantLogo } from "@/layout/TenantLogo";
+import { TenantLogo } from "@/layout/TenantLogo.tsx";
 
 const IGNITE_HOME = "https://igniteproductions.co";
 const FALLBACK_ACCENT = "#C4D82E";

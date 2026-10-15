@@ -110,7 +110,7 @@ import { holdActionSuccess, type ActionPhase } from "@/motion/opsMotion";
 import { recapSubmitErrorMessage } from "./recapSubmitError";
 import { useCoBrandRecap, type CoBrandOptions } from "./coBrandRecap";
 import { CoBrandSections, CoBrandToggleCard } from "./CoBrandRecapCards";
-import { TenantLogo } from "@/layout/TenantLogo";
+import { TenantLogo } from "@/layout/TenantLogo.tsx";
 import { shouldShowSamplingStopCard } from "./samplingStops";
 import { isFieldShown, withoutHiddenValues, type ShowWhen } from "./fieldConditions";
 import PayableMileageStep from "./PayableMileageStep";

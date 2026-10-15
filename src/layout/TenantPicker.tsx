@@ -7,7 +7,7 @@ import { TenantQuery } from "@/api/queries/TenantQuery";
 import type { TenantQuery as TenantQueryType } from "@/api/queries/__generated__/TenantQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import { useTenantSelection } from "@/hooks/useTenantSelection";
-import { TenantLogo } from "./TenantLogo";
+import { TenantLogo } from "./TenantLogo.tsx";
 import {
   groupTenantsByLetter,
   loadTenantFavorites,

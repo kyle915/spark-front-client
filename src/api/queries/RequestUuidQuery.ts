@@ -22,6 +22,7 @@ export const RequestUuidQuery = graphql`
       loadInTime
       onsitePoc
       additionalTeamDetails
+      storeNumber
       clientName
       clientEmail
       distributorName
@@ -37,6 +38,7 @@ export const RequestUuidQuery = graphql`
         uuid
         firstName
         lastName
+        email
       }
       client {
         __typename
@@ -89,9 +91,15 @@ export const RequestUuidQuery = graphql`
         }
       }
       requestorEmail
+      storeManagers {
+        id
+        name
+        phone
+      }
       createdBy {
         firstName
         lastName
+        email
         image {
           url
         }
@@ -99,6 +107,7 @@ export const RequestUuidQuery = graphql`
       approvedBy {
         firstName
         lastName
+        email
         image {
           url
         }

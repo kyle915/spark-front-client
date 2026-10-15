@@ -76,8 +76,30 @@ export const EventUuidQuery = graphql`
         name
         date
         startTime
+        endTime
         address
+        market
         coordinates
+        notes
+        schedulingStatus
+        isNonActiveProductRequired
+        casesToBeShipped
+        accountSpendAmount
+        eventAssetsNeeded
+        loadInTime
+        onsitePoc
+        additionalTeamDetails
+        storeNumber
+        requestorEmail
+        clientName
+        clientEmail
+        distributorName
+        distributorEmail
+        retailerName
+        retailerAddress
+        retailerStoreContact
+        storeManagerName
+        storeManagerPhone
         timezone {
           __typename
           id
@@ -91,12 +113,18 @@ export const EventUuidQuery = graphql`
           id
           uuid
           name
+          email
+        }
+        billingEntity {
+          id
+          name
         }
         distributor {
           __typename
           id
           uuid
           name
+          email
           location {
             id
             name
@@ -114,6 +142,8 @@ export const EventUuidQuery = graphql`
           id
           uuid
           name
+          address
+          storeContact
           isNational
           location {
             id
@@ -127,11 +157,24 @@ export const EventUuidQuery = graphql`
             }
           }
         }
+        storeManagers {
+          id
+          name
+          phone
+        }
         products {
           id
           name
           image
           productType {
+            id
+            name
+          }
+        }
+        coBrands {
+          tenantPk
+          tenantName
+          products {
             id
             name
           }
@@ -147,6 +190,24 @@ export const EventUuidQuery = graphql`
           id
           uuid
           name
+          slug
+        }
+        rmmAsigned {
+          id
+          uuid
+          firstName
+          lastName
+          email
+        }
+        createdBy {
+          firstName
+          lastName
+          email
+        }
+        approvedBy {
+          firstName
+          lastName
+          email
         }
         recapsFiledCount
         recapEventUuid
