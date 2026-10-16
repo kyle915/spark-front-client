@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import SparkOverlay from "@/shared/SparkOverlay";
+import { useAlertStore } from "@/store/alertStore";
 
 /**
- * Sales (and ops) ask Ignite to cancel a scheduled demo.
- * Search by store, or paste the REQ number. The email goes to every
- * Ignite user. The request stays on the schedule until ops cancels it.
+ * Cancel a scheduled event / request with comments.
+ * Immediately cancels the event/request and emails both Ignite and the
+ * client/brand with the cancellation comments.
+ * Can be opened pre-bound to a specific `requestId` (from Event or Request
+ * detail pages) or in search mode (from Master Tracker).
  */
 
 type Hit = {
@@ -72,13 +75,26 @@ function storeOf(hit: Hit): string {
   return (hit.retailerName || hit.name || "Request").trim();
 }
 
+export type CancelDemoDialogProps = {
+  open: boolean;
+  onClose: () => void;
+  requestId?: string | null;
+  storeName?: string | null;
+  dateLabel?: string | null;
+  brandName?: string | null;
+  onSent?: (requestCode: string | null) => void;
+};
+
 export default function CancelDemoDialog({
   open,
   onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+  requestId,
+  storeName,
+  dateLabel,
+  brandName,
+  onSent,
+}: CancelDemoDialogProps) {
+  const showAlert = useAlertStore((s) => s.showAlert);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
   const [searching, setSearching] = useState(false);
@@ -86,7 +102,6 @@ export default function CancelDemoDialog({
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sentCode, setSentCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -96,11 +111,10 @@ export default function CancelDemoDialog({
     setReason("");
     setBusy(false);
     setError(null);
-    setSentCode(null);
   }, [open]);
 
   useEffect(() => {
-    if (!open || selected) return;
+    if (!open || selected || requestId) return;
     const text = query.trim();
     if (text.length < 2 || text.toUpperCase().startsWith("REQ-")) {
       setHits([]);
@@ -143,16 +157,17 @@ export default function CancelDemoDialog({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [open, query, selected]);
+  }, [open, query, selected, requestId]);
 
   const submit = async () => {
     const why = reason.trim();
     if (why.length < 3) {
-      setError("Add a reason so Ignite knows why this demo should be cancelled.");
+      setError("Add a cancellation reason or comment.");
       return;
     }
+    const targetRequestId = requestId || selected?.id || null;
     const lookup = query.trim();
-    if (!selected && lookup.length < 2) {
+    if (!targetRequestId && lookup.length < 2) {
       setError("Search for the store, or paste the request number.");
       return;
     }
@@ -161,53 +176,70 @@ export default function CancelDemoDialog({
     try {
       const data = await postGql<{ cancelDemo: CancelResult }>(CANCEL, {
         input: {
-          requestId: selected?.id ?? null,
-          lookup: selected ? null : lookup,
+          requestId: targetRequestId,
+          lookup: targetRequestId ? null : lookup,
           reason: why,
         },
       });
       const result = data.cancelDemo;
       if (!result?.success) {
-        setError(result?.message || "Could not send the cancel email.");
+        setError(result?.message || "Could not cancel the event.");
         return;
       }
-      setSentCode(result.requestCode);
+      showAlert("Event cancelled — confirmation email sent.", "success");
+      onSent?.(result.requestCode ?? null);
+      onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send the cancel email.");
+      setError(
+        err instanceof Error ? err.message : "Could not cancel the event.",
+      );
     } finally {
       setBusy(false);
     }
   };
 
+  const contextSummary = [brandName, storeName, dateLabel]
+    .map((s) => (s ?? "").trim())
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <SparkOverlay open={open} onClose={() => { if (!busy) onClose(); }} size="lg" label="Cancel a demo">
-      <p className="spark-overlay-kicker" style={{ color: "var(--spark-lime)" }}>
-        Cancel demo
+    <SparkOverlay
+      open={open}
+      onClose={() => {
+        if (!busy) onClose();
+      }}
+      size="lg"
+      label="Cancel event"
+    >
+      <p
+        className="spark-overlay-kicker"
+        style={{ color: "var(--spark-orange)" }}
+      >
+        Cancel event
       </p>
-      {sentCode ? (
+      <h2 className="spark-overlay-title">Cancel event</h2>
+      <p className="spark-overlay-copy">
+        {requestId
+          ? contextSummary ||
+            "This immediately cancels the event and emails a confirmation with your comments."
+          : "Search by store, or paste the request number. This immediately cancels the event and emails a confirmation with your comments."}
+      </p>
+      {!requestId && (
         <>
-          <h2 className="spark-overlay-title">Ignite has been emailed.</h2>
-          <p className="spark-overlay-copy">
-            {sentCode} is in their inbox. They will take the demo off the schedule.
-          </p>
-          <div className="spark-overlay-actions">
-            <button type="button" onClick={onClose} className="spark-overlay-action spark-overlay-action-primary">
-              Done
-            </button>
-          </div>
-        </>
-      ) : (
-        <>
-          <h2 className="spark-overlay-title">Which demo?</h2>
-          <p className="spark-overlay-copy">
-            Search by store, or paste the request number. Ignite gets the reason.
-          </p>
           <label className="block mt-4">
-            <span className="spark-overlay-kicker" style={{ color: "rgba(255,255,255,0.45)" }}>
+            <span
+              className="spark-overlay-kicker"
+              style={{ color: "rgba(255,255,255,0.45)" }}
+            >
               Request
             </span>
             <input
-              value={selected ? `${storeOf(selected)} · ${reqCodeOf(selected.id)}` : query}
+              value={
+                selected
+                  ? `${storeOf(selected)} · ${reqCodeOf(selected.id)}`
+                  : query
+              }
               onChange={(e) => {
                 setSelected(null);
                 setQuery(e.target.value);
@@ -226,13 +258,21 @@ export default function CancelDemoDialog({
                 setQuery("");
               }}
               className="mt-2 text-xs"
-              style={{ color: "rgba(255,255,255,0.55)", background: "transparent", border: "none", padding: 0 }}
+              style={{
+                color: "rgba(255,255,255,0.55)",
+                background: "transparent",
+                border: "none",
+                padding: 0,
+              }}
             >
               Clear
             </button>
           ) : null}
           {!selected && hits.length > 0 ? (
-            <ul className="mt-2" style={{ listStyle: "none", margin: "0.5rem 0 0", padding: 0 }}>
+            <ul
+              className="mt-2"
+              style={{ listStyle: "none", margin: "0.5rem 0 0", padding: 0 }}
+            >
               {hits.map((hit) => (
                 <li key={hit.id}>
                   <button
@@ -252,7 +292,10 @@ export default function CancelDemoDialog({
                     }}
                   >
                     <span className="block text-sm">{storeOf(hit)}</span>
-                    <span className="block text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+                    <span
+                      className="block text-xs"
+                      style={{ color: "rgba(255,255,255,0.45)" }}
+                    >
                       {reqCodeOf(hit.id)}
                       {hit.date ? ` · ${hit.date.slice(0, 10)}` : ""}
                     </span>
@@ -262,58 +305,70 @@ export default function CancelDemoDialog({
             </ul>
           ) : null}
           {!selected && searching ? (
-            <p className="mt-2 text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+            <p
+              className="mt-2 text-xs"
+              style={{ color: "rgba(255,255,255,0.45)" }}
+            >
               Searching…
             </p>
           ) : null}
-          <label className="block mt-4">
-            <span className="spark-overlay-kicker" style={{ color: "rgba(255,255,255,0.45)" }}>
-              Reason
-            </span>
-            <textarea
-              value={reason}
-              onChange={(e) => {
-                setReason(e.target.value);
-                setError(null);
-              }}
-              rows={3}
-              placeholder="The account cancelled."
-              className="w-full text-sm"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-                borderRadius: 12,
-                padding: "0.6rem 0.75rem",
-                resize: "vertical",
-              }}
-            />
-          </label>
-          {error ? (
-            <p className="mt-3 text-sm" style={{ color: "var(--spark-orange)" }}>
-              {error}
-            </p>
-          ) : null}
-          <div className="spark-overlay-actions">
-            <button
-              type="button"
-              onClick={submit}
-              disabled={busy}
-              className="spark-overlay-action spark-overlay-action-primary"
-            >
-              {busy ? "Sending…" : "Email Ignite to cancel"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={busy}
-              className="spark-overlay-action spark-overlay-action-cancel"
-            >
-              Close
-            </button>
-          </div>
         </>
       )}
+      <label className="block mt-4">
+        <span
+          className="spark-overlay-kicker"
+          style={{ color: "rgba(255,255,255,0.45)" }}
+        >
+          Cancellation reason / comments (sent in confirmation email)
+        </span>
+        <textarea
+          value={reason}
+          onChange={(e) => {
+            setReason(e.target.value);
+            setError(null);
+          }}
+          rows={3}
+          placeholder="e.g., Store manager asked to reschedule for next week."
+          autoFocus={Boolean(requestId)}
+          className="w-full text-sm mt-1.5"
+          style={{
+            background: "transparent",
+            color: "var(--spark-text)",
+            border: "1px solid var(--spark-border)",
+            borderRadius: 12,
+            padding: "0.6rem 0.75rem",
+            resize: "vertical",
+          }}
+        />
+      </label>
+      {error ? (
+        <p className="mt-3 text-sm" style={{ color: "var(--spark-orange)" }}>
+          {error}
+        </p>
+      ) : null}
+      <div className="spark-overlay-actions">
+        <button
+          type="button"
+          onClick={submit}
+          disabled={busy}
+          className="spark-overlay-action spark-overlay-action-primary"
+          style={{
+            background: "var(--spark-orange)",
+            borderColor: "var(--spark-orange)",
+            color: "#0a0d09",
+          }}
+        >
+          {busy ? "Cancelling…" : "Cancel event"}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={busy}
+          className="spark-overlay-action spark-overlay-action-cancel"
+        >
+          Close
+        </button>
+      </div>
     </SparkOverlay>
   );
 }

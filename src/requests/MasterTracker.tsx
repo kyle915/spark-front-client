@@ -183,17 +183,33 @@ type Row = {
   planName: string | null;
 };
 
+export const parseCalendarDate = (
+  iso: string | null | undefined,
+): Date | null => {
+  if (!iso) return null;
+  const m = iso.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+  }
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const pickIsoDate = (raw: string | null | undefined): string | null => {
+  if (!raw) return null;
+  const m = raw.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : raw.trim() || null;
+};
+
 const fmtDateLabel = (raw: string | null | undefined) => {
   if (!raw) return "—";
-  try {
-    return new Date(raw).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return raw;
-  }
+  const d = parseCalendarDate(raw);
+  if (!d) return raw;
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 };
 
 const fmtTimeRange = (
@@ -282,16 +298,14 @@ const AdminMentionablesLoader: React.FC<{
 
 const fmtGroupHeading = (raw: string): string => {
   if (!raw) return "Undated";
-  try {
-    return new Date(raw).toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return raw;
-  }
+  const d = parseCalendarDate(raw);
+  if (!d) return raw;
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 };
 
 const TrackerTable: React.FC<{
@@ -910,6 +924,7 @@ const TrackerStatusCountsLoader: React.FC<{
   marketFilter: string;
   schedulingFilter: string;
   planId: string | null;
+  refreshKey?: number;
   onCounts: (counts: Record<string, number>, total: number) => void;
   onMarkets: (markets: string[]) => void;
 }> = ({
@@ -920,6 +935,7 @@ const TrackerStatusCountsLoader: React.FC<{
   marketFilter,
   schedulingFilter,
   planId,
+  refreshKey = 0,
   onCounts,
   onMarkets,
 }) => {
@@ -962,6 +978,7 @@ const TrackerStatusCountsLoader: React.FC<{
         marketFilter,
         planId ?? "",
         search,
+        refreshKey,
       ].join("|"),
     [
       tenantId,
@@ -971,6 +988,7 @@ const TrackerStatusCountsLoader: React.FC<{
       marketFilter,
       planId,
       search,
+      refreshKey,
     ],
   );
 
@@ -980,7 +998,10 @@ const TrackerStatusCountsLoader: React.FC<{
       filters,
       q: reqNeedle ? null : search || null,
     },
-    { fetchPolicy: "store-or-network", fetchKey: filterKey },
+    {
+      fetchPolicy: refreshKey > 0 ? "network-only" : "store-or-network",
+      fetchKey: filterKey,
+    },
   );
 
   useEffect(() => {
@@ -1132,11 +1153,14 @@ const MasterTrackerInner: React.FC<{
       if (!n) return null;
       const market = n.market ?? "";
       const recapCount = n.recapsFiledCount ?? 0;
-      // Due-ness must follow the activation that actually ran (event.date),
-      // not Request.date — reschedules update the event in place and leave
-      // the request date stale (Arena Liquor: request Sep 5, event Sep 12).
+      // Prefer startTime's calendar date (which carries the venue's local
+      // offset) before date so a UTC-serialized date never shifts by a day.
       const activationDate =
-        n.event?.date ?? n.startTime ?? n.date ?? null;
+        pickIsoDate(n.event?.startTime) ||
+        pickIsoDate(n.startTime) ||
+        pickIsoDate(n.event?.date) ||
+        pickIsoDate(n.date) ||
+        null;
       const recapStatus: RecapStatus =
         (n.eventsCount ?? 0) === 0
           ? "none"
@@ -1272,13 +1296,15 @@ const MasterTrackerInner: React.FC<{
       case "date-desc":
         out.sort(
           (a, b) =>
-            new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime(),
+            (parseCalendarDate(b.date)?.getTime() ?? 0) -
+            (parseCalendarDate(a.date)?.getTime() ?? 0),
         );
         break;
       case "date-asc":
         out.sort(
           (a, b) =>
-            new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime(),
+            (parseCalendarDate(a.date)?.getTime() ?? 0) -
+            (parseCalendarDate(b.date)?.getTime() ?? 0),
         );
         break;
       case "venue":
@@ -1833,7 +1859,7 @@ export default function MasterTracker() {
               Export CSV{visibleRows.length > 0 ? ` (${visibleRows.length})` : ""}
             </SparkGhostButton>
             <SparkGhostButton onClick={() => setCancelDemoOpen(true)}>
-              Cancel demo
+              Cancel event
             </SparkGhostButton>
             <SparkPrimaryButton
               onClick={() =>
@@ -2167,6 +2193,7 @@ export default function MasterTracker() {
               marketFilter={marketFilter}
               schedulingFilter={schedulingFilter}
               planId={planId}
+              refreshKey={refetchTick}
               onCounts={handleCounts}
               onMarkets={setMarkets}
             />
@@ -2444,7 +2471,11 @@ export default function MasterTracker() {
           </div>
         </div>
       )}
-      <CancelDemoDialog open={cancelDemoOpen} onClose={() => setCancelDemoOpen(false)} />
+      <CancelDemoDialog
+        open={cancelDemoOpen}
+        onClose={() => setCancelDemoOpen(false)}
+        onSent={() => setRefetchTick((t) => t + 1)}
+      />
     </Layout>
   );
 }

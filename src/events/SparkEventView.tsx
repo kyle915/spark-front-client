@@ -20,6 +20,7 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import useSparkRole from "@/hooks/useSparkRole";
+import { useAuthStore } from "@/store/authStore";
 
 import { EventUuidQuery } from "@/api/queries/EventUuidQuery";
 import type { EventUuidQuery as EventUuidQueryType } from "@api/queries/__generated__/EventUuidQuery.graphql";
@@ -27,6 +28,7 @@ import ShiftReplayPanel from "@/requests/ShiftReplayPanel";
 import EventAttendanceTable from "@/requests/EventAttendanceTable";
 import EventMileagePanel from "@/requests/EventMileagePanel";
 import InviteBAModal from "@/requests/InviteBAModal";
+import CancelDemoDialog from "@/requests/CancelDemoDialog";
 import { pickHeroImage } from "@/utils/recapFileUrl";
 
 // Element id the header recap chip scrolls to when an event has >1 recap.
@@ -45,22 +47,79 @@ const STATUS_CHIP: Record<string, string> = {
   canceled: "chip chip-muted",
 };
 
+const KNOWN_ACRONYMS = new Set([
+  "BP",
+  "KSP",
+  "LLC",
+  "USA",
+  "IGA",
+  "HEB",
+  "ABC",
+  "THC",
+  "CBD",
+]);
+
+const cleanVenueTitle = (raw: string | null | undefined): string => {
+  const stripped = (raw ?? "")
+    .trim()
+    .replace(/\s*[·•-]\s*\d{4}-\d{2}-\d{2}(?:\s*\(\d+\/\d+\))?\s*$/, "")
+    .trim();
+  if (!stripped) return "";
+  return stripped
+    .split(/(\s+)/)
+    .map((token) => {
+      if (/^\s+$/.test(token)) return token;
+      const core = token.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "");
+      if (core && KNOWN_ACRONYMS.has(core.toUpperCase())) {
+        return token.replace(core, core.toUpperCase());
+      }
+      if (token === token.toLowerCase() && /[a-z]/.test(token)) {
+        return token.replace(/[a-z]/, (c) => c.toUpperCase());
+      }
+      return token;
+    })
+    .join("");
+};
+
+const cleanDisplayNotes = (raw: string | null | undefined): string =>
+  (raw ?? "")
+    .replace(/(?:^|\n)\s*BA count:\s*\d+\s*(?=\n|$)/gi, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+const parseCalendarDate = (iso: string | null | undefined): Date | null => {
+  if (!iso) return null;
+  const m = iso.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+  }
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
 const fmtDate = (raw: string | null | undefined) => {
   if (!raw) return "—";
-  try {
-    return new Date(raw).toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return raw;
-  }
+  const d = parseCalendarDate(raw);
+  if (!d) return raw;
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 };
 
 const fmtTime = (raw: string | null | undefined) => {
   if (!raw) return "—";
+  const m = raw.match(/(?:^|T)(\d{2}):(\d{2})/);
+  if (m) {
+    const h = parseInt(m[1], 10);
+    if (Number.isFinite(h)) {
+      const meridiem = h >= 12 ? "PM" : "AM";
+      const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+      return `${h12}:${m[2]} ${meridiem}`;
+    }
+  }
   try {
     return new Date(raw).toLocaleTimeString("en-US", {
       hour: "numeric",
@@ -179,27 +238,41 @@ const SummaryPill: React.FC<{
   </span>
 );
 
+const RoleBadge: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span
+    className="mono text-[9px] px-2 py-0.5 rounded-full"
+    style={{
+      letterSpacing: "0.1em",
+      background: "rgba(197,245,70,0.1)",
+      color: "var(--spark-lime)",
+      border: "1px solid rgba(197,245,70,0.28)",
+    }}
+  >
+    {children}
+  </span>
+);
+
 const Inner: React.FC<{ uuid: string; backTo: string }> = ({
   uuid,
   backTo,
 }) => {
   const role = useSparkRole();
+  const { tenantSlug } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  // Bumped after an invite so the Roster panel refetches and shows the
-  // newly-invited BA immediately (otherwise the page looked like "nothing
-  // happened" until a manual reload).
   const [refreshKey, setRefreshKey] = useState(0);
+  const load = () => setRefreshKey((k) => k + 1);
   const data = useLazyLoadQuery<EventUuidQueryType>(
     EventUuidQuery,
     { uuid },
-    { fetchPolicy: "store-and-network", fetchKey: refreshKey },
+    {
+      fetchPolicy: refreshKey > 0 ? "network-only" : "store-and-network",
+      fetchKey: refreshKey,
+    },
   );
   const event = data.event as Event | null;
-  // Admin "Assign BA" modal (same InviteBAModal the Master Tracker row
-  // action uses). The event detail view previously had no way to staff,
-  // even though the tracker row offered it — this closes that gap.
   const [showAssign, setShowAssign] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   if (!event) {
     return (
@@ -213,36 +286,36 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
   }
 
   const req = event.request;
-  const stripDateSuffix = (raw: string | null | undefined): string =>
-    (raw ?? "")
-      .trim()
-      .replace(/\s*·\s*\d{4}-\d{2}-\d{2}(?:\s*\(\d+\/\d+\))?\s*$/, "")
-      .trim();
-
   const slug = (event.status?.name ?? req?.status?.name ?? "").toLowerCase();
+  const reqSlug = (req?.status?.slug ?? req?.status?.name ?? "").toLowerCase();
   const chipClass = STATUS_CHIP[slug] ?? "chip chip-muted";
   const venue =
-    req?.retailer?.name?.trim() ||
-    event.retailer?.name?.trim() ||
-    req?.retailerName?.trim() ||
-    stripDateSuffix(req?.name || event.name) ||
-    "—";
+    cleanVenueTitle(
+      req?.retailer?.name ||
+        event.retailer?.name ||
+        req?.retailerName ||
+        req?.name ||
+        event.name,
+    ) || "—";
+  const displayTitle =
+    cleanVenueTitle(event.name || req?.name) || venue || "Untitled event";
   const distributor =
     req?.distributor?.name?.trim() ||
     event.distributor?.name?.trim() ||
     req?.distributorName?.trim() ||
-    "—";
+    null;
   const products = req?.products ?? [];
   const coBrands = req?.coBrands ?? [];
   const requestUuid = req?.uuid;
-  const requestName = req?.name;
+  const requestName = cleanVenueTitle(req?.name) || null;
   const eventTypeName =
     event.eventType?.name ?? req?.requestType?.name ?? "—";
   const scope = event.isNational ? "National" : "Local";
-  const notesText = event.notes?.trim() || req?.notes?.trim() || "";
-  const hasNotes = Boolean(notesText);
-  const baCountMatch = notesText.match(/(?:^|\n)BA count:\s*(\d+)/i);
+  const rawNotes = event.notes?.trim() || req?.notes?.trim() || "";
+  const baCountMatch = rawNotes.match(/(?:^|\n)\s*BA count:\s*(\d+)/i);
   const baCount = baCountMatch ? baCountMatch[1] : null;
+  const notesText = cleanDisplayNotes(rawNotes);
+  const hasNotes = Boolean(notesText);
   const market = req?.market?.trim() || null;
   const storeNumber = req?.storeNumber?.trim() || null;
   const billingEntityName = req?.billingEntity?.name?.trim() || null;
@@ -282,6 +355,41 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
         .trim() || req.approvedBy.email?.trim() || null
     : null;
   const approvedByEmail = req?.approvedBy?.email?.trim() || null;
+
+  const norm = (s: string | null | undefined) => (s ?? "").trim().toLowerCase();
+  const samePerson = (
+    nameA: string | null | undefined,
+    emailA: string | null | undefined,
+    nameB: string | null | undefined,
+    emailB: string | null | undefined,
+  ): boolean => {
+    if (emailA && emailB && norm(emailA) === norm(emailB)) return true;
+    if (
+      nameA &&
+      nameB &&
+      nameA !== "—" &&
+      nameB !== "—" &&
+      norm(nameA) === norm(nameB)
+    )
+      return true;
+    return false;
+  };
+  const rmmSameAsRequestor = samePerson(
+    requestorName,
+    requestorEmail,
+    rmmName,
+    rmmEmail,
+  );
+  const approverSameAsRequestor = samePerson(
+    requestorName,
+    requestorEmail,
+    approvedByName,
+    approvedByEmail,
+  );
+  const approverSameAsRmm =
+    !rmmSameAsRequestor &&
+    samePerson(rmmName, rmmEmail, approvedByName, approvedByEmail);
+
   const firstStoreManager = (req?.storeManagers ?? [])[0] ?? null;
   const storeManagerName =
     req?.storeManagerName?.trim() || firstStoreManager?.name?.trim() || null;
@@ -291,20 +399,29 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
     req?.retailerStoreContact?.trim() ||
     req?.retailer?.storeContact?.trim() ||
     null;
+  const hasStoreManager = Boolean(storeManagerName || storeManagerPhone);
   const distributorEmail =
     req?.distributor?.email?.trim() || req?.distributorEmail?.trim() || null;
+  const addressText = (
+    event.address ??
+    req?.address ??
+    req?.retailerAddress ??
+    ""
+  ).trim();
+  const primaryDateIso =
+    event.startTime ?? req?.startTime ?? event.date ?? req?.date ?? null;
+  const primaryDateLabel = fmtDate(primaryDateIso);
+  const startRaw = event.startTime ?? req?.startTime ?? null;
+  const endRaw = event.endTime ?? req?.endTime ?? null;
+  const timeRangeLabel =
+    startRaw && endRaw
+      ? `${fmtTime(startRaw)} – ${fmtTime(endRaw)}`
+      : startRaw
+        ? fmtTime(startRaw)
+        : null;
+
   const ambassadors = event.ambassadors ?? [];
   const confirmedCount = ambassadors.filter((a) => a.isApproved).length;
-  // Recaps filed against this event. The Master Tracker surfaces these as a
-  // green "● n RECAP" chip but clicking the event used to dead-end here —
-  // we now mirror SparkRequestView's recap cards + /recap/view route.
-  //
-  // BOTH legacy recaps and custom-template recaps count toward the chip
-  // (and toward /recaps/missing), so we render both here. The two backend
-  // types have different shapes (Recap: recapFiles/productsSold; CustomRecap:
-  // heroImageUrl/soldUnits), so we normalize each into one RecapCard model
-  // and render a single card grid — no duplicated card markup, and the chip
-  // count matches the list.
   const recaps: RecapCard[] = [
     ...(event.recaps ?? [])
       .filter((r): r is NonNullable<typeof r> => Boolean(r))
@@ -313,8 +430,18 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
       .filter((r): r is NonNullable<typeof r> => Boolean(r))
       .map((r) => normalizeCustomRecap(r)),
   ];
-  // Header chip behavior: a single recap jumps straight to its detail; many
-  // recaps smooth-scroll to the bottom Recaps section so the user can pick.
+
+  const isCancelledOrDeclined =
+    ["cancelled", "canceled", "declined", "suspended"].includes(slug) ||
+    ["cancelled", "canceled", "declined", "suspended"].includes(reqSlug);
+  const hasApprovedRecap = recaps.some((r) => r.approved);
+  const cancelTargetId = req?.id || req?.uuid || event.uuid;
+  const canCancelEvent =
+    Boolean(cancelTargetId) && !isCancelledOrDeclined && !hasApprovedRecap;
+  const brandName =
+    billingEntityName ||
+    (tenantSlug ? cleanVenueTitle(tenantSlug.replace(/-/g, " ")) : null);
+
   const onRecapChip = () => {
     if (recaps.length === 1) {
       navigate(recaps[0].viewPath);
@@ -356,14 +483,20 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
             className="display text-4xl font-bold mt-2"
             style={{ letterSpacing: "-0.04em" }}
           >
-            {event.name ?? "Untitled event"}
+            {displayTitle}
           </h1>
           <p
             className="mt-2 text-sm"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "rgba(255,255,255,0.6)" }}
           >
-            Scheduled for{" "}
-            <span style={{ color: "rgba(255,255,255,0.85)" }}>{venue}</span>.
+            {[
+              venue !== "—" && norm(venue) !== norm(displayTitle) ? venue : null,
+              market,
+              primaryDateLabel !== "—" ? primaryDateLabel : null,
+              timeRangeLabel,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -445,8 +578,50 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               </Link>
             </>
           )}
+          {canCancelEvent && (
+            <button
+              type="button"
+              onClick={() => setCancelOpen(true)}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold transition"
+              style={{
+                background: "transparent",
+                color: "var(--spark-orange)",
+                border: "1px solid rgba(239,90,42,0.4)",
+              }}
+            >
+              Cancel event
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Cancellation / decline reason banner */}
+      {isCancelledOrDeclined && req?.declineReason && (
+        <div
+          className="spark-card p-5"
+          style={{
+            borderColor: "rgba(239,90,42,0.4)",
+            background:
+              "linear-gradient(180deg, rgba(239,90,42,0.08), transparent)",
+          }}
+        >
+          <p
+            className="mono text-[10px] mb-1"
+            style={{
+              letterSpacing: "0.18em",
+              color: "var(--spark-orange)",
+            }}
+          >
+            CANCELLATION / DECLINE REASON
+          </p>
+          <p
+            className="text-sm italic"
+            style={{ color: "rgba(255,255,255,0.85)", lineHeight: 1.55 }}
+          >
+            "{req.declineReason}"
+          </p>
+        </div>
+      )}
 
       {/* Summary chips */}
       <div
@@ -455,21 +630,36 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
           padding: "1rem 1.25rem",
         }}
       >
-        <SummaryPill icon="▣">
-          {fmtDate(event.date ?? event.startTime ?? req?.date ?? req?.startTime)}
-        </SummaryPill>
-        <SummaryPill icon="◷">
-          {fmtTime(event.startTime ?? req?.startTime)} –{" "}
-          {fmtTime(event.endTime ?? req?.endTime)}
-        </SummaryPill>
-        <SummaryPill icon="◐">{venue}</SummaryPill>
+        <SummaryPill icon="▣">{primaryDateLabel}</SummaryPill>
+        {timeRangeLabel && (
+          <SummaryPill icon="◷">{timeRangeLabel}</SummaryPill>
+        )}
         {market && <SummaryPill icon="◈">{market}</SummaryPill>}
-        <SummaryPill icon="⌖">
-          {event.address ?? req?.address ?? req?.retailerAddress ?? "—"}
-        </SummaryPill>
+        {addressText && (
+          <SummaryPill icon="⌖">
+            <span className="inline-flex items-center gap-2 flex-wrap">
+              <span>{addressText}</span>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressText)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mono text-[10px] px-2 py-0.5 rounded-md transition"
+                style={{
+                  letterSpacing: "0.1em",
+                  color: "var(--spark-sky)",
+                  background: "rgba(95,184,239,0.1)",
+                  border: "1px solid rgba(95,184,239,0.3)",
+                  textDecoration: "none",
+                }}
+              >
+                Open in Maps ↗
+              </a>
+            </span>
+          </SummaryPill>
+        )}
       </div>
 
-      {/* Details grid */}
+      {/* Account & Venue / Details grid */}
       <div className="spark-card p-6">
         <p
           className="mono text-[10px] mb-4"
@@ -478,20 +668,43 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
             color: "var(--spark-lime)",
           }}
         >
-          DETAILS
+          ACCOUNT & VENUE
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          <Field label="ACCOUNT">{venue}</Field>
+          {venue !== "—" && norm(venue) !== norm(displayTitle) && (
+            <Field label="RETAILER">{venue}</Field>
+          )}
           {storeNumber && <Field label="STORE #">{storeNumber}</Field>}
           {market && <Field label="MARKET">{market}</Field>}
-          <Field label="ADDRESS">
-            {event.address ?? req?.address ?? req?.retailerAddress ?? "—"}
-          </Field>
-          <Field label="DISTRIBUTOR">{distributor}</Field>
+          {addressText && (
+            <Field label="ADDRESS">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span>{addressText}</span>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressText)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mono text-[10px] px-2 py-0.5 rounded-md transition"
+                  style={{
+                    letterSpacing: "0.1em",
+                    color: "var(--spark-sky)",
+                    background: "rgba(95,184,239,0.1)",
+                    border: "1px solid rgba(95,184,239,0.3)",
+                    textDecoration: "none",
+                  }}
+                >
+                  Open in Maps ↗
+                </a>
+              </div>
+            </Field>
+          )}
+          {distributor && <Field label="DISTRIBUTOR">{distributor}</Field>}
           {billingEntityName && (
             <Field label="BILLING ENTITY">{billingEntityName}</Field>
           )}
-          <Field label="TYPE">{eventTypeName}</Field>
+          {eventTypeName !== "—" && (
+            <Field label="TYPE">{eventTypeName}</Field>
+          )}
           <Field label="SCOPE">{scope}</Field>
           <Field label="STATUS">
             {event.status?.name ?? req?.status?.name ?? "—"}
@@ -555,7 +768,6 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               </Link>
             </Field>
           )}
-          {rmmName && <Field label="RMM">{rmmName}</Field>}
           {req?.createdAt && (
             <Field label="SUBMITTED">
               {fmtDate(req.createdAt)} · {fmtTime(req.createdAt)}
@@ -578,7 +790,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
           </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             <Field label="REQUESTOR">
-              <div>{requestorName}</div>
+              <div className="font-medium">{requestorName}</div>
               {requestorEmail && requestorEmail !== requestorName && (
                 <div
                   className="text-xs mt-0.5"
@@ -587,42 +799,64 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                   {requestorEmail}
                 </div>
               )}
-            </Field>
-            <Field label="ROUTED TO / RMM">
-              <div>{rmmName || "Unassigned"}</div>
-              {rmmEmail && (
-                <div
-                  className="text-xs mt-0.5"
-                  style={{ color: "rgba(255,255,255,0.45)" }}
-                >
-                  {rmmEmail}
+              {(rmmSameAsRequestor || approverSameAsRequestor) && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  <RoleBadge>Requestor</RoleBadge>
+                  {rmmSameAsRequestor && <RoleBadge>Assigned RMM</RoleBadge>}
+                  {approverSameAsRequestor && (
+                    <RoleBadge>Auto-approved</RoleBadge>
+                  )}
                 </div>
               )}
             </Field>
-            {approvedByName && (
-              <Field label="APPROVED BY">
-                <div>{approvedByName}</div>
-                {approvedByEmail && approvedByEmail !== approvedByName && (
+            {!rmmSameAsRequestor && (rmmName || rmmEmail) && (
+              <Field label="ASSIGNED RMM">
+                <div className="font-medium">{rmmName || rmmEmail}</div>
+                {rmmEmail && rmmEmail !== rmmName && (
                   <div
                     className="text-xs mt-0.5"
                     style={{ color: "rgba(255,255,255,0.45)" }}
                   >
-                    {approvedByEmail}
+                    {rmmEmail}
+                  </div>
+                )}
+                {approverSameAsRmm && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <RoleBadge>Approved</RoleBadge>
                   </div>
                 )}
               </Field>
             )}
-            <Field label="STORE MANAGER">
-              <div>{storeManagerName || "—"}</div>
-              {storeManagerPhone && (
-                <div
-                  className="text-xs mt-0.5"
-                  style={{ color: "rgba(255,255,255,0.45)" }}
-                >
-                  {storeManagerPhone}
-                </div>
+            {approvedByName &&
+              !approverSameAsRequestor &&
+              !approverSameAsRmm && (
+                <Field label="APPROVED BY">
+                  <div className="font-medium">{approvedByName}</div>
+                  {approvedByEmail && approvedByEmail !== approvedByName && (
+                    <div
+                      className="text-xs mt-0.5"
+                      style={{ color: "rgba(255,255,255,0.45)" }}
+                    >
+                      {approvedByEmail}
+                    </div>
+                  )}
+                </Field>
               )}
-            </Field>
+            {hasStoreManager && (
+              <Field label="STORE MANAGER">
+                {storeManagerName && (
+                  <div className="font-medium">{storeManagerName}</div>
+                )}
+                {storeManagerPhone && (
+                  <div
+                    className="text-xs mt-0.5"
+                    style={{ color: "rgba(255,255,255,0.45)" }}
+                  >
+                    {storeManagerPhone}
+                  </div>
+                )}
+              </Field>
+            )}
             {distributorEmail && (
               <Field label="DISTRIBUTOR CONTACT">{distributorEmail}</Field>
             )}
@@ -1016,9 +1250,9 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                   <div className="p-4">
                     <p
                       className="font-bold text-sm truncate"
-                      title={recap.name ?? event.name ?? "Recap"}
+                      title={recap.name ?? displayTitle}
                     >
-                      {recap.name ?? event.name ?? "Recap"}
+                      {cleanVenueTitle(recap.name) || displayTitle}
                     </p>
                     <p
                       className="mono text-[10px] uppercase mt-1 truncate"
@@ -1028,7 +1262,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                       }}
                     >
                       {baName ? `BY ${baName} · ` : ""}
-                      {fmtDate(recap.createdAt ?? event.date)}
+                      {fmtDate(recap.createdAt ?? primaryDateIso)}
                     </p>
                     <div
                       className="mt-3 pt-3 grid grid-cols-2 gap-2 text-center"
@@ -1116,8 +1350,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
         </div>
       </div>
 
-      {/* Assign-BA modal — same component the Master Tracker row uses.
-          InviteBAModal suspends (loads the BA list), so wrap in Suspense. */}
+      {/* Assign-BA modal */}
       {showAssign && (
         <Suspense fallback={null}>
           <InviteBAModal
@@ -1127,12 +1360,22 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
             onClose={() => setShowAssign(false)}
             onInvited={() => {
               setShowAssign(false);
-              // Refetch so the Roster panel shows the newly-invited BA.
-              setRefreshKey((k) => k + 1);
+              load();
             }}
           />
         </Suspense>
       )}
+
+      {/* Cancel event modal */}
+      <CancelDemoDialog
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        requestId={cancelTargetId ? String(cancelTargetId) : null}
+        storeName={displayTitle}
+        dateLabel={primaryDateLabel !== "—" ? primaryDateLabel : null}
+        brandName={brandName}
+        onSent={() => load()}
+      />
     </div>
   );
 };
@@ -1140,9 +1383,6 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
 export default function SparkEventView() {
   const { uuid } = useParams<{ uuid: string }>();
   const location = useLocation();
-  // Honor an explicit origin (e.g. Master Tracker stamps
-  // from: "/requests/list"); otherwise fall back to the Master Tracker — NOT
-  // the legacy "/events/list" all-events view, which is dead v1 surface.
   const backTo =
     (location.state as { from?: string } | null)?.from ?? "/requests/list";
 
