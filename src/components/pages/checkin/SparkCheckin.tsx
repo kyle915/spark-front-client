@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode, type RefObject } from "react";
 import { useParams } from "react-router";
 import { bucketCountHint, isExpenseReceiptBucket } from "./photoBuckets";
+import { matchingStores, storeNameForPicker, type StoreSuggestion } from "./storeSuggestions";
 import { PHOTO_CAP } from "./photoCap";
 import { isHeicUpload, coerceHeicFile } from "./heicUpload";
 import {
@@ -1399,6 +1400,59 @@ function Header({ ctx }: { ctx: Context }) {
   );
 }
 
+function CheckinStoreSuggestions({
+  hits,
+  onPick,
+}: {
+  hits: StoreSuggestion[];
+  onPick: (store: StoreSuggestion) => void;
+}) {
+  if (hits.length === 0) return null;
+  return (
+    <div
+      role="listbox"
+      style={{
+        marginTop: 6,
+        border: "1px solid rgba(0,0,0,0.12)",
+        borderRadius: 12,
+        overflow: "hidden",
+        background: "#fff",
+        boxShadow: "0 8px 20px rgba(0,0,0,0.08)",
+      }}
+    >
+      {hits.map((store) => {
+        const label = storeNameForPicker(store) || store.address;
+        return (
+          <button
+            key={`${store.name}-${store.address}`}
+            type="button"
+            role="option"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              onPick(store);
+            }}
+            style={{
+              display: "block",
+              width: "100%",
+              textAlign: "left",
+              padding: "10px 12px",
+              background: "#fff",
+              border: 0,
+              borderTop: "1px solid rgba(0,0,0,0.06)",
+              cursor: "pointer",
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#14181a" }}>{label}</div>
+            {label !== store.address ? (
+              <div style={{ fontSize: 12, opacity: 0.62, marginTop: 2 }}>{store.address}</div>
+            ) : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Step 1: identify ────────────────────────────────────────────────────────
 function IdentifyStep({
   code,
@@ -1469,6 +1523,7 @@ function IdentifyStep({
   const [email, setEmail] = useState(saved.email);
   const [storeName, setStoreName] = useState("");
   const [address, setAddress] = useState("");
+  const [storeSuggestField, setStoreSuggestField] = useState<"address" | "name" | null>(null);
   // Default to today — the overwhelmingly common case is a BA checking in for
   // the shift they're standing in.
   const [eventDate, setEventDate] = useState(() => todayISO());
@@ -1515,18 +1570,23 @@ function IdentifyStep({
   // Picking a known store fills BOTH fields, so the address matches an existing
   // event's exactly and this BA joins it rather than forking a near-duplicate.
   //
-  // `l.name` is the matched event's TITLE, not a store name — "8/2/2026 - 1155 E
-  // State St · Retail Sampling". Copying one of those into the store-name box
-  // got it appended in parentheses, producing an event called "8/2/2026 - 1155 E
-  // State St (8/2/2026 - 1155 E State St · Retail Sampling)". Only carry a name
-  // that actually names a store: one that doesn't already contain the address.
+  // `l.name` is sometimes the walk-in event TITLE — "8/2/2026 - 1155 E State St".
+  // Copying one of those into the store-name box got it appended in parentheses.
+  // Only carry a name that actually names a store.
+  const chooseStore = (hit: StoreSuggestion) => {
+    setAddress(hit.address);
+    const label = storeNameForPicker(hit);
+    if (label) setStoreName(label);
+    setStoreSuggestField(null);
+  };
   const pickStore = (value: string) => {
     setAddress(value);
     const hit = recentLocations.find((l) => l.address === value);
-    const looksLikeATitle =
-      hit && normalizePlace(hit.name).includes(normalizePlace(hit.address));
-    if (hit && hit.name && !looksLikeATitle && !storeName.trim()) setStoreName(hit.name);
+    const label = hit ? storeNameForPicker(hit) : "";
+    if (label && !storeName.trim()) setStoreName(label);
   };
+  const addressHits = matchingStores(recentLocations, address);
+  const nameHits = matchingStores(recentLocations, storeName);
 
   // "Use my current location" — the phone knows where it is, so the BA
   // shouldn't have to type a street address one-handed in a parking lot.
@@ -1982,16 +2042,24 @@ function IdentifyStep({
           <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
             {atVenue
               ? "Use the venue's address — anyone else working this event today lands on the same one."
-              : "Pick your store from the list if it's there — that keeps you on the same event as anyone else working with you today."}
+              : "Type the store name or address. Picking it from the list keeps you on the same event as anyone else working there today."}
           </p>
           <input
             style={input}
-            placeholder={atVenue ? "Event / venue address" : "Store address"}
-            list="spark-checkin-stores"
+            placeholder={atVenue ? "Event / venue name or address" : "Store name or address"}
             autoComplete="off"
             value={address}
             onChange={(e) => pickStore(e.target.value)}
+            onFocus={() => setStoreSuggestField("address")}
+            onBlur={() => {
+              window.setTimeout(() => {
+                setStoreSuggestField((cur) => (cur === "address" ? null : cur));
+              }, 180);
+            }}
           />
+          {storeSuggestField === "address" ? (
+            <CheckinStoreSuggestions hits={addressHits} onPick={chooseStore} />
+          ) : null}
           {/* The phone already knows where it is — typing a street address
               one-handed in a parking lot is the worst part of this form. */}
           <button
@@ -2012,21 +2080,22 @@ function IdentifyStep({
           >
             {locating ? "Finding you…" : "📍 Use my current location"}
           </button>
-          {/* Native datalist: real autocomplete on iOS and Android with no
-              dependency and no custom dropdown to fight with on a phone. */}
-          <datalist id="spark-checkin-stores">
-            {recentLocations.map((l) => (
-              <option key={l.address} value={l.address}>
-                {l.name || l.address}
-              </option>
-            ))}
-          </datalist>
           <input
             style={input}
             placeholder={atVenue ? "Event or venue name (optional)" : "Store name (optional)"}
+            autoComplete="off"
             value={storeName}
             onChange={(e) => setStoreName(e.target.value)}
+            onFocus={() => setStoreSuggestField("name")}
+            onBlur={() => {
+              window.setTimeout(() => {
+                setStoreSuggestField((cur) => (cur === "name" ? null : cur));
+              }, 180);
+            }}
           />
+          {storeSuggestField === "name" ? (
+            <CheckinStoreSuggestions hits={nameHits} onPick={chooseStore} />
+          ) : null}
             </>
           )}
             </>
