@@ -1,6 +1,6 @@
 export const PUBLIC_RETAILER_QUERY = `
-  query PublicRetailerQuery($requestUrlName: String!, $filters: RetailerFiltersInput, $q: String) {
-    publicRetailers(requestUrlName: $requestUrlName, filters: $filters, q: $q) {
+  query PublicRetailerQuery($requestUrlName: String!, $filters: RetailerFiltersInput, $q: String, $first: Int) {
+    publicRetailers(requestUrlName: $requestUrlName, filters: $filters, q: $q, first: $first) {
       edges {
         node {
           id

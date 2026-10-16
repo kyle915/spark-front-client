@@ -87,9 +87,8 @@ export function usePublicRetailerMix(requestUrlName: string) {
   return mix;
 }
 
-/** Debounced search over the brand's saved store accounts. The server
- * matches the longest word against name or address; the rest are narrowed
- * client-side. */
+/** Debounced search over the brand's saved store accounts. Every typed
+ * word has to match the trading name or the address. */
 export function usePublicStoreAccountSearch(
   requestUrlName: string,
   q: string,
@@ -100,7 +99,6 @@ export function usePublicStoreAccountSearch(
   const [searchedQ, setSearchedQ] = useState("");
 
   useEffect(() => {
-    const words = q.toLowerCase().split(/\s+/).filter(Boolean);
     if (!enabled || !requestUrlName || q.trim().length < 2) {
       setMatches([]);
       setSearchedQ("");
@@ -111,7 +109,8 @@ export function usePublicStoreAccountSearch(
       gqlRequest<NodeRetailer>(PUBLIC_RETAILER_QUERY, {
         requestUrlName,
         filters: { isNational: false },
-        q: words.reduce((a, b) => (b.length > a.length ? b : a), ""),
+        q: q.trim(),
+        first: Math.max(limit, 20),
       })
         .then((data) => {
           if (cancelled) return;
