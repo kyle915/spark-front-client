@@ -2676,6 +2676,7 @@ input CreateRequestInput {
   additionalTeamDetails: String = null
   casesToBeShipped: String = null
   storeNumber: String = null
+  baCount: Int = null
   activationPlanId: ID = null
   clientName: String = null
   clientEmail: String = null
@@ -2745,6 +2746,7 @@ input CreateRequestWithDependenciesInput {
   additionalTeamDetails: String = null
   casesToBeShipped: String = null
   storeNumber: String = null
+  baCount: Int = null
   clientName: String!
   clientEmail: String!
   distributorName: String!
@@ -7076,6 +7078,7 @@ type Request implements Node {
   additionalTeamDetails: String
   casesToBeShipped: String
   storeNumber: String
+  baCount: Int
   notes: String
   coordinates: [Float!]!
   requestorEmail: String

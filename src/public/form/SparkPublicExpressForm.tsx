@@ -38,6 +38,15 @@ import {
   torchNonActiveGraphqlFields,
   torchNonActiveNoteLines,
 } from "./torchRequestForm";
+import EventActivationSchedule from "./components/EventActivationSchedule";
+import {
+  showsBaCountSelector,
+  showsEventActivationSchedule,
+  showsLegacyBulkDates,
+  visitSlotIssues,
+  visitSlotsForSubmit,
+  type VisitSlot,
+} from "./eventActivationSchedule";
 
 /**
  * Spark v2 — public Express request form.
@@ -109,6 +118,9 @@ function ExpressFormBody() {
     pickedStore && address.trim() === pickedStore.address.trim() ? pickedStore.id : "";
   const [date, setDate] = useState("");
   const [extraDates, setExtraDates] = useState<string[]>([]);
+  const [visitSlots, setVisitSlots] = useState<VisitSlot[]>([
+    { date: "", startTime: "12:00", endTime: "16:00" },
+  ]);
   const [startTime, setStartTime] = useState("12:00");
   const [endTime, setEndTime] = useState("16:00");
   const [timezoneId, setTimezoneId] = useState("");
@@ -242,6 +254,43 @@ function ExpressFormBody() {
   const torchActivationOk =
     !isTorch ||
     torchActivationFieldsComplete(selectedRequestTypeName, torchActivationValues);
+  const multiDateEvent = showsEventActivationSchedule(
+    selectedRequestTypeName,
+    slug,
+  );
+  const legacyBulkDates = showsLegacyBulkDates(slug);
+  const showBaCount = showsBaCountSelector(selectedRequestTypeName, slug);
+  const listedVisits = multiDateEvent
+    ? visitSlots.filter((slot) => slot.date.trim()).length
+    : allDates.length;
+  const scheduleIssue = multiDateEvent ? visitSlotIssues(visitSlots) : null;
+  const wasMultiDateEvent = useRef(false);
+  const visitSlotsRef = useRef(visitSlots);
+  visitSlotsRef.current = visitSlots;
+  useEffect(() => {
+    if (multiDateEvent && !wasMultiDateEvent.current) {
+      setVisitSlots((prev) => {
+        if (prev[0]?.date.trim()) return prev;
+        return [
+          {
+            date,
+            startTime: startTime || "12:00",
+            endTime: endTime || "16:00",
+          },
+          ...prev.slice(1),
+        ];
+      });
+    } else if (!multiDateEvent && wasMultiDateEvent.current) {
+      const first = visitSlotsRef.current[0];
+      if (first) {
+        setDate(first.date);
+        setStartTime(first.startTime || "12:00");
+        setEndTime(first.endTime || "16:00");
+      }
+    }
+    wasMultiDateEvent.current = multiDateEvent;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [multiDateEvent]);
   const torchNonActiveValues = {
     nonActiveProductRequired,
     casesToBeShipped,
@@ -260,13 +309,15 @@ function ExpressFormBody() {
   // approval email carry the complete address instead of a bare street.
   const addressComplete = /\b\d{5}\b/.test(address || "");
 
+  const scheduleReady = multiDateEvent
+    ? !scheduleIssue
+    : !!date && !!startTime && !!endTime;
+
   const canSubmit =
     !!venue &&
     !!address &&
     addressComplete &&
-    !!date &&
-    !!startTime &&
-    !!endTime &&
+    scheduleReady &&
     !!timezoneId &&
     !!requestTypeId &&
     productIds.length > 0 &&
@@ -279,7 +330,7 @@ function ExpressFormBody() {
     !submitting;
 
   const submitBlocker =
-    !venue || !address || !addressComplete || !date || !startTime || !endTime || !timezoneId
+    !venue || !address || !addressComplete || !scheduleReady || !timezoneId
       ? "Venue"
       : productIds.length === 0
         ? "Products"
@@ -299,15 +350,25 @@ function ExpressFormBody() {
       return;
     }
 
+    const submitSlots: VisitSlot[] = multiDateEvent
+      ? visitSlotsForSubmit(visitSlots)
+      : [date, ...(legacyBulkDates ? extraDates : [])]
+          .filter(Boolean)
+          .map((d) => ({ date: d, startTime, endTime }));
+    if (multiDateEvent && scheduleIssue) {
+      setError(scheduleIssue);
+      return;
+    }
+
     const notesPlus = [
       notes,
-      `BA count: ${baCount}`,
+      showBaCount ? `BA count: ${baCount}` : null,
       ...torchNonActiveNoteLines(showTorchNonActiveFields, torchNonActiveValues),
       ...(isTorch
         ? torchActivationNoteLines(selectedRequestTypeName, torchActivationValues)
         : []),
-      allDates.length > 1
-        ? `Bulk submission — ${allDates.length} visits at this venue.`
+      submitSlots.length > 1
+        ? `Bulk submission — ${submitSlots.length} visits at this venue.`
         : null,
     ]
       .filter(Boolean)
@@ -342,7 +403,8 @@ function ExpressFormBody() {
     let lastRouted: string | null = null;
     const failures: string[] = [];
 
-    for (const d of allDates) {
+    for (const slot of submitSlots) {
+      const d = slot.date;
       // Backend Request.date, start_time, and end_time are ALL
       // DateTimeFields on the Django model — they each need to be ISO
       // strings, not bare YYYY-MM-DD or HH:MM. Combine date + time on
@@ -359,11 +421,12 @@ function ExpressFormBody() {
         timeZones,
         timezoneId,
         d,
-        normalizeHourMinute(startTime),
-        normalizeHourMinute(endTime),
+        normalizeHourMinute(slot.startTime),
+        normalizeHourMinute(slot.endTime),
       );
       const input: CreateRequestInput = {
-        name: venue,
+        name:
+          multiDateEvent && submitSlots.length > 1 ? `${venue} · ${d}` : venue,
         date: dateTimes.date,
         startTime: dateTimes.startTime,
         endTime: dateTimes.endTime,
@@ -400,6 +463,7 @@ function ExpressFormBody() {
           : {}),
         details: [{ isTableNeeded: false, tableSize: null }],
         notes: notesPlus,
+        ...(multiDateEvent ? { baCount } : {}),
       };
       try {
         const result = await submit(input);
@@ -434,6 +498,8 @@ function ExpressFormBody() {
       setLongitude(null);
       setDate("");
       setExtraDates([]);
+      setVisitSlots([{ date: "", startTime: "12:00", endTime: "16:00" }]);
+      setBaCount(1);
       setProductIds([]);
       setMultiBrand(null);
       setCoBrandSelection({});
@@ -443,7 +509,7 @@ function ExpressFormBody() {
       setCasesToBeShipped("");
     } else {
       setError(
-        `Submitted ${successes} of ${allDates.length}. Failed: ${failures.join("; ")}`,
+        `Submitted ${successes} of ${submitSlots.length}. Failed: ${failures.join("; ")}`,
       );
     }
   };
@@ -611,6 +677,16 @@ function ExpressFormBody() {
 
         {/* Dates */}
         <Card title="DATES & TIMES">
+          {multiDateEvent ? (
+            <EventActivationSchedule
+              slots={visitSlots}
+              onChange={setVisitSlots}
+              baCount={baCount}
+              onBaCount={setBaCount}
+              inputClassName={inputCls}
+            />
+          ) : (
+            <>
           <Field label="Primary Date *">
             {/* Quick-pick chips for common BA scheduling windows.
                 Saves clicks on mobile vs. spinning the calendar wheel.
@@ -673,7 +749,7 @@ function ExpressFormBody() {
             </div>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
           </Field>
-          {extraDates.map((d, i) => (
+          {legacyBulkDates && extraDates.map((d, i) => (
             <div key={i} className="flex gap-2">
               <input
                 type="date"
@@ -695,6 +771,7 @@ function ExpressFormBody() {
               </button>
             </div>
           ))}
+          {legacyBulkDates && (
           <button
             type="button"
             onClick={() => setExtraDates([...extraDates, ""])}
@@ -703,6 +780,7 @@ function ExpressFormBody() {
           >
             + ANOTHER VISIT AT THIS VENUE
           </button>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Start Time *">
@@ -712,6 +790,8 @@ function ExpressFormBody() {
               <TimeSlotSelect value={endTime} onChange={setEndTime} />
             </Field>
           </div>
+            </>
+          )}
           <Field label="Time Zone *">
             <select value={timezoneId} onChange={(e) => setTimezoneId(e.target.value)} className={inputCls}>
               <option value="">— Select —</option>
@@ -858,6 +938,7 @@ function ExpressFormBody() {
               </Field>
             </>
           )}
+          {showBaCount && !multiDateEvent && (
           <Field label="Brand Ambassadors Needed">
             <div className="flex items-center gap-3">
               <button type="button" onClick={() => setBaCount(Math.max(1, baCount - 1))} className="w-10 h-10 rounded-xl text-lg" style={{ background: "var(--spark-surface-2, #161a12)", border: "1px solid var(--spark-border, #1f2418)" }}>−</button>
@@ -866,6 +947,7 @@ function ExpressFormBody() {
               <span className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}>BAs</span>
             </div>
           </Field>
+          )}
         </Card>
 
         {/* Products */}
@@ -1141,7 +1223,9 @@ function ExpressFormBody() {
           }}
         >
           <div className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}>
-            {allDates.length > 1 ? `${allDates.length} VISITS · ${productIds.length} PRODUCTS · ${baCount} BAs` : `${productIds.length} PRODUCTS · ${baCount} BAs`}
+            {listedVisits > 1 ? `${listedVisits} VISITS · ` : ""}
+            {`${productIds.length} PRODUCTS`}
+            {showBaCount ? ` · ${baCount} BAs` : ""}
             {submitBlocker ? ` · Needs ${submitBlocker}` : ""}
           </div>
           <button
@@ -1155,7 +1239,7 @@ function ExpressFormBody() {
               opacity: canSubmit ? 1 : 0.5,
             }}
           >
-            {submitting ? "Submitting…" : allDates.length > 1 ? `Submit ${allDates.length} Requests` : "Submit Request"}
+            {submitting ? "Submitting…" : listedVisits > 1 ? `Submit ${listedVisits} Requests` : "Submit Request"}
           </button>
         </div>
       </form>

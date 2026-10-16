@@ -16,6 +16,7 @@
  */
 
 import React, { Suspense, useState } from "react";
+import { displayBaCount } from "@/public/form/eventActivationSchedule";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
@@ -312,8 +313,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
     event.eventType?.name ?? req?.requestType?.name ?? "—";
   const scope = event.isNational ? "National" : "Local";
   const rawNotes = event.notes?.trim() || req?.notes?.trim() || "";
-  const baCountMatch = rawNotes.match(/(?:^|\n)\s*BA count:\s*(\d+)/i);
-  const baCount = baCountMatch ? baCountMatch[1] : null;
+  const baCount = displayBaCount(req?.baCount, rawNotes);
   const notesText = cleanDisplayNotes(rawNotes);
   const hasNotes = Boolean(notesText);
   const market = req?.market?.trim() || null;

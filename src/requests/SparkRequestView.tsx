@@ -20,6 +20,7 @@ import EventRosterPanel from "./EventRosterPanel";
 import SmartStaffingPanel from "./SmartStaffingPanel";
 import CancelDemoDialog from "./CancelDemoDialog";
 import { pickHeroImage } from "@/utils/recapFileUrl";
+import { displayBaCount } from "@/public/form/eventActivationSchedule";
 
 type Mentionable = { id: string; name: string; email: string };
 
@@ -493,8 +494,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
     null;
   const hasStoreManager = Boolean(storeManagerName || storeManagerPhone);
   const rawNotes = request.notes?.trim() || "";
-  const baCountMatch = rawNotes.match(/(?:^|\n)\s*BA count:\s*(\d+)/i);
-  const baCount = baCountMatch ? baCountMatch[1] : null;
+  const baCount = displayBaCount(request.baCount, rawNotes);
   const notesText = cleanDisplayNotes(rawNotes);
   const primaryDateIso = request.startTime ?? request.date ?? null;
   const primaryDateLabel = fmtDate(primaryDateIso);
