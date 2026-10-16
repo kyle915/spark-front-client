@@ -8,6 +8,7 @@ export const RequestUuidQuery = graphql`
       uuid
       name
       notes
+      baCount
       date
       startTime
       endTime

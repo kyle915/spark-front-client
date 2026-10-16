@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
@@ -30,6 +30,15 @@ import {
   torchNonActiveGraphqlFields,
   torchNonActiveNoteLines,
 } from "@/public/form/torchRequestForm";
+import EventActivationSchedule from "@/public/form/components/EventActivationSchedule";
+import {
+  showsBaCountSelector,
+  showsEventActivationSchedule,
+  showsLegacyBulkDates,
+  visitSlotIssues,
+  visitSlotsForSubmit,
+  type VisitSlot,
+} from "@/public/form/eventActivationSchedule";
 import { CreateRequestMutation } from "@/api/mutations/RequestMutation";
 import type { RequestMutation } from "@api/mutations/__generated__/RequestMutation.graphql";
 import { CreateDistributorMutation } from "@/api/mutations/CreateDistributorMutation";
@@ -162,7 +171,7 @@ const VenueIndexLoader: React.FC<{
 };
 
 const SparkRequestInner: React.FC = () => {
-  const { user, tenantId, tenantMeta } = useAuthStore();
+  const { user, tenantId, tenantMeta, tenantSlug } = useAuthStore();
   const isTorch = isTorchRequestForm(tenantMeta?.requestUrlName);
   const showAlert = useAlertStore((s) => s.showAlert);
   const navigate = useNavigate();
@@ -397,6 +406,16 @@ const SparkRequestInner: React.FC = () => {
   const torchActivationOk =
     !isTorch ||
     torchActivationFieldsComplete(selectedRequestTypeName, torchActivationValues);
+  const brandSlugs = [tenantMeta?.requestUrlName, tenantSlug];
+  const multiDateEvent = showsEventActivationSchedule(
+    selectedRequestTypeName,
+    ...brandSlugs,
+  );
+  const legacyBulkDates = showsLegacyBulkDates(...brandSlugs);
+  const showBaCount = showsBaCountSelector(
+    selectedRequestTypeName,
+    ...brandSlugs,
+  );
   const torchNonActiveValues = {
     nonActiveProductRequired,
     casesToBeShipped,
@@ -416,7 +435,41 @@ const SparkRequestInner: React.FC = () => {
   // Form is now always flat (no "Add detail" expander).
   const [venueFocused, setVenueFocused] = useState(false);
   // Bulk mode — add multiple dates at the same venue in one shot.
+  // Other tenants share one start/end across those dates. Wook, FAMUS,
+  // and Alcohol Armor Event Activation uses visitSlots instead.
   const [extraDates, setExtraDates] = useState<string[]>([]);
+  const [visitSlots, setVisitSlots] = useState<VisitSlot[]>([
+    { date: qpDate, startTime: qpStart, endTime: qpEnd },
+  ]);
+  const wasMultiDateEvent = useRef(false);
+  const visitSlotsRef = useRef(visitSlots);
+  visitSlotsRef.current = visitSlots;
+  useEffect(() => {
+    if (multiDateEvent && !wasMultiDateEvent.current) {
+      setVisitSlots((prev) => {
+        if (prev[0]?.date.trim()) return prev;
+        return [
+          {
+            date,
+            startTime: startTime || "12:00",
+            endTime: endTime || "16:00",
+          },
+          ...prev.slice(1),
+        ];
+      });
+    } else if (!multiDateEvent && wasMultiDateEvent.current) {
+      const first = visitSlotsRef.current[0];
+      if (first) {
+        setDate(first.date);
+        setStartTime(first.startTime || "12:00");
+        setEndTime(first.endTime || "16:00");
+      }
+    }
+    wasMultiDateEvent.current = multiDateEvent;
+    // Seed or copy back only when Activation Type flips in or out of
+    // the multi-date Event Activation schedule.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [multiDateEvent]);
   // Events at a venue need a BA count; retail samplings usually 1-2.
   const [baCount, setBaCount] = useState<number>(
     Number.isFinite(qpBaCount) && qpBaCount > 0 ? qpBaCount : 1,
@@ -483,6 +536,16 @@ const SparkRequestInner: React.FC = () => {
       if (Array.isArray(draft.extraDates)) {
         setExtraDates(draft.extraDates as string[]);
       }
+      if (Array.isArray(draft.visitSlots)) {
+        const restored = (draft.visitSlots as VisitSlot[]).filter(
+          (slot) =>
+            slot &&
+            typeof slot.date === "string" &&
+            typeof slot.startTime === "string" &&
+            typeof slot.endTime === "string",
+        );
+        if (restored.length > 0) setVisitSlots(restored);
+      }
       setDraftRestored(true);
     } catch {
       /* ignore — bad JSON, quota, etc. */
@@ -513,6 +576,7 @@ const SparkRequestInner: React.FC = () => {
         baCount,
         products: Array.from(selectedProducts),
         extraDates,
+        visitSlots,
         updatedAt: new Date().toISOString(),
       };
       // Skip writing a draft that's still empty — saves 1 KB and keeps
@@ -549,6 +613,7 @@ const SparkRequestInner: React.FC = () => {
     baCount,
     selectedProducts,
     extraDates,
+    visitSlots,
     tenantId,
     draftKey,
   ]);
@@ -638,7 +703,7 @@ const SparkRequestInner: React.FC = () => {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || !venue || !requestTypeId || !timezoneId) {
+    if (!venue || !requestTypeId || !timezoneId || (!multiDateEvent && !date)) {
       showAlert("Fill in venue, date, time, and type.", "warning");
       return;
     }
@@ -696,25 +761,35 @@ const SparkRequestInner: React.FC = () => {
       );
       return;
     }
-    const allDates = [date, ...extraDates.filter(Boolean)];
+    const submitSlots: VisitSlot[] = multiDateEvent
+      ? visitSlotsForSubmit(visitSlots)
+      : [date, ...(legacyBulkDates ? extraDates.filter(Boolean) : [])].map(
+          (d) => ({ date: d, startTime, endTime }),
+        );
+    if (multiDateEvent) {
+      const issue = visitSlotIssues(visitSlots);
+      if (issue) {
+        showAlert(issue, "warning");
+        return;
+      }
+    }
     const geocoded = await geocode(address);
     const coords: ReadonlyArray<number> = geocoded ?? [0, 0];
-    // Embed BA count + bulk size + store number in notes so it's
-    // visible to the RMM until first-class fields are added to the
-    // mutation input. Store number is searchable from the Tracker
-    // even though it's not a typed column yet.
+    // Store number stays in notes (no typed column). BA count is a
+    // real field on Event Activation for Wook / FAMUS / Alcohol Armor;
+    // other tenants still carry the notes line the detail page reads.
     const notesPlus = [
       isRetailSampling && storeNumber.trim()
         ? `Store #: ${storeNumber.trim()}`
         : null,
       notes,
-      `BA count: ${baCount}`,
+      showBaCount ? `BA count: ${baCount}` : null,
       ...torchNonActiveNoteLines(showTorchNonActiveFields, torchNonActiveValues),
       ...(isTorch
         ? torchActivationNoteLines(selectedRequestTypeName, torchActivationValues)
         : []),
-      allDates.length > 1
-        ? `Bulk submission — ${allDates.length} visits at this venue.`
+      submitSlots.length > 1
+        ? `Bulk submission — ${submitSlots.length} visits at this venue.`
         : null,
     ]
       .filter(Boolean)
@@ -726,10 +801,12 @@ const SparkRequestInner: React.FC = () => {
     // instead of a generic "try again". First distinct message is enough.
     const failureReasons: string[] = [];
 
-    for (const d of allDates) {
+    for (let i = 0; i < submitSlots.length; i += 1) {
+      const slot = submitSlots[i];
+      const d = slot.date;
       const composedName =
-        allDates.length > 1
-          ? `${venue} · ${d} (${allDates.indexOf(d) + 1}/${allDates.length})`
+        submitSlots.length > 1
+          ? `${venue} · ${d} (${i + 1}/${submitSlots.length})`
           : `${venue} · ${d}`;
       // The Time Zone dropdown shows one option per region; that option's
       // value is whichever sibling row (STD or DST) happens to be first.
@@ -758,9 +835,10 @@ const SparkRequestInner: React.FC = () => {
               // Backend Request.date / start_time / end_time are all
               // DateTimeField — every one needs an ISO string, not
               // bare YYYY-MM-DD or HH:MM.
-              date: `${d}T${(startTime || "12:00").padEnd(5, "0")}:00`,
-              startTime: `${d}T${(startTime || "12:00").padEnd(5, "0")}:00`,
-              endTime: `${d}T${(endTime || "16:00").padEnd(5, "0")}:00`,
+              date: `${d}T${(slot.startTime || "12:00").padEnd(5, "0")}:00`,
+              startTime: `${d}T${(slot.startTime || "12:00").padEnd(5, "0")}:00`,
+              endTime: `${d}T${(slot.endTime || "16:00").padEnd(5, "0")}:00`,
+              ...(multiDateEvent ? { baCount } : {}),
               timezoneId: resolvedTimezoneId,
               requestTypeId,
               schedulingStatus: schedulingStatus || undefined,
@@ -934,6 +1012,7 @@ const SparkRequestInner: React.FC = () => {
               setNotes("");
               setSelectedProducts(new Set());
               setExtraDates([]);
+              setVisitSlots([{ date: "", startTime: "12:00", endTime: "16:00" }]);
               setBaCount(1);
               setDistributorId("");
               setStoreNumber("");
@@ -1074,32 +1153,46 @@ const SparkRequestInner: React.FC = () => {
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="label-mini block mb-1.5">Visit date *</label>
-              <input
-                style={inputStyle}
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="label-mini block mb-1.5">Start time *</label>
-              <TimeSlotSelect
-                value={startTime}
-                onChange={setStartTime}
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label className="label-mini block mb-1.5">End time *</label>
-              <TimeSlotSelect
-                value={endTime}
-                onChange={setEndTime}
-                style={inputStyle}
-              />
-            </div>
+            {multiDateEvent ? (
+              <div className="sm:col-span-2">
+                <EventActivationSchedule
+                  slots={visitSlots}
+                  onChange={setVisitSlots}
+                  baCount={baCount}
+                  onBaCount={setBaCount}
+                  inputStyle={inputStyle}
+                />
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="label-mini block mb-1.5">Visit date *</label>
+                  <input
+                    style={inputStyle}
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="label-mini block mb-1.5">Start time *</label>
+                  <TimeSlotSelect
+                    value={startTime}
+                    onChange={setStartTime}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label className="label-mini block mb-1.5">End time *</label>
+                  <TimeSlotSelect
+                    value={endTime}
+                    onChange={setEndTime}
+                    style={inputStyle}
+                  />
+                </div>
+              </>
+            )}
             <div>
               <label className="label-mini block mb-1.5">Time zone *</label>
               <select
@@ -1436,8 +1529,9 @@ const SparkRequestInner: React.FC = () => {
             </div>
           )}
 
-          {/* Bulk dates — add more visits at the same venue */}
-          {extraDates.length > 0 && (
+          {/* Bulk dates — other tenants share one start/end. The three
+              brand-group Event Activation forms use per-row times above. */}
+          {legacyBulkDates && extraDates.length > 0 && (
             <div
               className="rounded-xl p-3 space-y-2"
               style={{
@@ -1492,6 +1586,7 @@ const SparkRequestInner: React.FC = () => {
               </p>
             </div>
           )}
+          {legacyBulkDates && (
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <button
               type="button"
@@ -1543,6 +1638,7 @@ const SparkRequestInner: React.FC = () => {
               </div>
             </div>
           </div>
+          )}
 
           {/* Address / start-end time / time zone / RMM routing used
               to live here as their own visible section. Removed — those

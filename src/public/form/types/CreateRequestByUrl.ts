@@ -74,6 +74,9 @@ export interface CreateRequestInput {
 
   // NOTES
   notes: string;
+
+  // Onsite BA headcount. Persisted on Request.ba_count.
+  baCount?: number | null;
 }
 
 export interface CreateRequestResponse {
