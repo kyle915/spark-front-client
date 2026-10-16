@@ -81,6 +81,7 @@ export const EventUuidQuery = graphql`
         market
         coordinates
         notes
+        declineReason
         schedulingStatus
         isNonActiveProductRequired
         casesToBeShipped

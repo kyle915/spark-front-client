@@ -18,6 +18,7 @@ import WalkupCodePanel from "./WalkupCodePanel";
 import InviteBAModal from "./InviteBAModal";
 import EventRosterPanel from "./EventRosterPanel";
 import SmartStaffingPanel from "./SmartStaffingPanel";
+import CancelDemoDialog from "./CancelDemoDialog";
 import { pickHeroImage } from "@/utils/recapFileUrl";
 
 type Mentionable = { id: string; name: string; email: string };
@@ -169,35 +170,73 @@ const NotesLoader: React.FC<{
  * 600+ lines of old-style chrome) with a focused Spark-chrome
  * detail that fits the rest of the v2 app — same dark card, mono
  * labels, status chips, and inline approve/decline actions.
- *
- * Inline approve/decline appears only when the request is pending
- * and the viewer is an admin — saves the trip back to /approvals
- * just to click yes/no.
  */
+
+const KNOWN_ACRONYMS = new Set([
+  "BP",
+  "KSP",
+  "LLC",
+  "USA",
+  "IGA",
+  "HEB",
+  "ABC",
+  "THC",
+  "CBD",
+]);
+
+const cleanVenueTitle = (raw: string | null | undefined): string => {
+  const stripped = (raw ?? "")
+    .trim()
+    .replace(/\s*[·•-]\s*\d{4}-\d{2}-\d{2}(?:\s*\(\d+\/\d+\))?\s*$/, "")
+    .trim();
+  if (!stripped) return "";
+  return stripped
+    .split(/(\s+)/)
+    .map((token) => {
+      if (/^\s+$/.test(token)) return token;
+      const core = token.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, "");
+      if (core && KNOWN_ACRONYMS.has(core.toUpperCase())) {
+        return token.replace(core, core.toUpperCase());
+      }
+      if (token === token.toLowerCase() && /[a-z]/.test(token)) {
+        return token.replace(/[a-z]/, (c) => c.toUpperCase());
+      }
+      return token;
+    })
+    .join("");
+};
+
+const cleanDisplayNotes = (raw: string | null | undefined): string =>
+  (raw ?? "")
+    .replace(/(?:^|\n)\s*BA count:\s*\d+\s*(?=\n|$)/gi, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+const parseCalendarDate = (iso: string | null | undefined): Date | null => {
+  if (!iso) return null;
+  const m = iso.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0);
+  }
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
 
 const fmtDate = (raw: string | null | undefined) => {
   if (!raw) return "—";
-  try {
-    return new Date(raw).toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return raw;
-  }
+  const d = parseCalendarDate(raw);
+  if (!d) return raw;
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 };
 
-// NOTE: backend returns naive ISO strings in the venue's local timezone
-// (see events/types.py::_serialize_dt_for_tz). We render literally so
-// what the form saved is what the view shows, regardless of which tz
-// the admin's browser is in. Going through `new Date()` re-parses as
-// browser-local and was the source of the +/-1h skew on REQ-MJY (12pm
-// Central edit rendered as 2pm because PDT-CDT = +2h).
 const fmtTime = (raw: string | null | undefined) => {
   if (!raw) return "";
-  const m = raw.match(/T(\d{2}):(\d{2})/);
+  const m = raw.match(/(?:^|T)(\d{2}):(\d{2})/);
   if (!m) return raw;
   const h = parseInt(m[1], 10);
   if (!Number.isFinite(h)) return raw;
@@ -213,6 +252,8 @@ const STATUS_CHIP: Record<string, string> = {
   scheduled: "chip chip-sky",
   done: "chip chip-lime",
   declined: "chip chip-muted",
+  cancelled: "chip chip-muted",
+  canceled: "chip chip-muted",
 };
 
 // Friendly labels for the two-value schedulingStatus metadata field.
@@ -284,14 +325,34 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({
   </div>
 );
 
+const RoleBadge: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span
+    className="mono text-[9px] px-2 py-0.5 rounded-full"
+    style={{
+      letterSpacing: "0.1em",
+      background: "rgba(197,245,70,0.1)",
+      color: "var(--spark-lime)",
+      border: "1px solid rgba(197,245,70,0.28)",
+    }}
+  >
+    {children}
+  </span>
+);
+
 const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
   const navigate = useNavigate();
   const showAlert = useAlertStore((s) => s.showAlert);
+  const { tenantSlug } = useAuthStore();
   const role = useSparkRole();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const load = () => setRefreshKey((k) => k + 1);
   const data = useLazyLoadQuery<RequestUuidQueryType>(
     RequestUuidQuery,
     { uuid },
-    { fetchPolicy: "store-and-network" },
+    {
+      fetchPolicy: refreshKey > 0 ? "network-only" : "store-and-network",
+      fetchKey: refreshKey,
+    },
   );
   const request = data.request as Request | null;
 
@@ -300,13 +361,8 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
   const [declineReason, setDeclineReason] = useState("");
   const [approveOpen, setApproveOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
-  // Pick the relay id of the first event on this request to use as the
-  // invite target. Admins can only invite when there's a real event
-  // row to invite TO — pending requests with no event yet don't show
-  // the button.
-  // Pick the first usable event on the request — its id, date, and
-  // address all flow into InviteBAModal so the modal can rank BAs by
-  // locality and flag "already on another shift that day" conflicts.
+  const [cancelOpen, setCancelOpen] = useState(false);
+
   const firstEvent = (request?.events ?? []).find(
     (e): e is NonNullable<typeof e> => Boolean(e),
   );
@@ -332,21 +388,11 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
     .toLowerCase();
   const chipClass = STATUS_CHIP[slug] ?? "chip chip-muted";
   const reqId = `REQ-${String(request.id).slice(-4).toUpperCase()}`;
-  const stripDateSuffix = (raw: string | null | undefined): string =>
-    (raw ?? "")
-      .trim()
-      .replace(/\s*·\s*\d{4}-\d{2}-\d{2}(?:\s*\(\d+\/\d+\))?\s*$/, "")
-      .trim();
   const venue =
-    request.retailer?.name?.trim() ||
-    request.retailerName?.trim() ||
-    stripDateSuffix(request.name) ||
-    "—";
-  const market = request.market || "—";
-  // The fullest address we can show. New requests store a complete
-  // Google-formatted address (street, city, state, ZIP) in `address` — shown
-  // verbatim. For older/partial ones (a bare street like REQ-925), append
-  // the request's own market (city, state).
+    cleanVenueTitle(
+      request.retailer?.name || request.retailerName || request.name,
+    ) || "—";
+  const market = request.market?.trim() || null;
   const fullAddress = (() => {
     const street = (
       request.address ||
@@ -358,7 +404,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
     const tail = (request.market ?? "").split(", ").filter(
       (p) => p && !street.toLowerCase().includes(p.toLowerCase()),
     );
-    return [street, ...tail].filter(Boolean).join(", ") || "—";
+    return [street, ...tail].filter(Boolean).join(", ");
   })();
   const requestorName =
     request.client?.name?.trim() ||
@@ -382,7 +428,50 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
       .join(" ")
       .trim() ||
     request.approvedBy?.email?.trim() ||
-    "—";
+    null;
+  const approverEmail = request.approvedBy?.email?.trim() || null;
+  const rmmName = request.rmmAsigned
+    ? [request.rmmAsigned.firstName, request.rmmAsigned.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim()
+    : "";
+  const rmmEmail = request.rmmAsigned?.email?.trim() || null;
+
+  const norm = (s: string | null | undefined) => (s ?? "").trim().toLowerCase();
+  const samePerson = (
+    nameA: string | null | undefined,
+    emailA: string | null | undefined,
+    nameB: string | null | undefined,
+    emailB: string | null | undefined,
+  ): boolean => {
+    if (emailA && emailB && norm(emailA) === norm(emailB)) return true;
+    if (
+      nameA &&
+      nameB &&
+      nameA !== "—" &&
+      nameB !== "—" &&
+      norm(nameA) === norm(nameB)
+    )
+      return true;
+    return false;
+  };
+  const rmmSameAsRequestor = samePerson(
+    requestorName,
+    requestorEmail,
+    rmmName,
+    rmmEmail,
+  );
+  const approverSameAsRequestor = samePerson(
+    requestorName,
+    requestorEmail,
+    approverName,
+    approverEmail,
+  );
+  const approverSameAsRmm =
+    !rmmSameAsRequestor &&
+    samePerson(rmmName, rmmEmail, approverName, approverEmail);
+
   const distributorName =
     request.distributor?.name?.trim() ||
     request.distributorName?.trim() ||
@@ -399,20 +488,35 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
   const storeManagerPhone =
     request.storeManagerPhone?.trim() ||
     firstStoreManager?.phone?.trim() ||
-    null;
-  const storeContact =
     request.retailer?.storeContact?.trim() ||
     request.retailerStoreContact?.trim() ||
     null;
-  const baCountMatch = (request.notes ?? "").match(/(?:^|\n)BA count:\s*(\d+)/i);
+  const hasStoreManager = Boolean(storeManagerName || storeManagerPhone);
+  const rawNotes = request.notes?.trim() || "";
+  const baCountMatch = rawNotes.match(/(?:^|\n)\s*BA count:\s*(\d+)/i);
   const baCount = baCountMatch ? baCountMatch[1] : null;
+  const notesText = cleanDisplayNotes(rawNotes);
+  const primaryDateIso = request.startTime ?? request.date ?? null;
+  const primaryDateLabel = fmtDate(primaryDateIso);
 
-  // Approve is available to clients too — the backend `approveRequest`
-  // enforces tenant membership + blocks BAs (exactly like the emailed
-  // approval link), so it's safe to expose. Decline stays admin-only: it
-  // sends a decline-reason email to the requestor (an RMM/ops action).
   const canApprove = slug === "pending";
   const canDecline = !role.isClient && slug === "pending";
+  const isCancelledOrDeclined = [
+    "declined",
+    "cancelled",
+    "canceled",
+    "suspended",
+    "done",
+  ].includes(slug);
+  const hasApprovedRecap = (request.events ?? []).some(
+    (ev) =>
+      (ev?.recaps ?? []).some((r) => r?.approved) ||
+      (ev?.customRecaps ?? []).some((r) => r?.approved),
+  );
+  const canCancelEvent = !isCancelledOrDeclined && !hasApprovedRecap;
+  const brandName =
+    request.billingEntity?.name?.trim() ||
+    (tenantSlug ? cleanVenueTitle(tenantSlug.replace(/-/g, " ")) : null);
 
   const confirmApprove = async () => {
     setBusy(true);
@@ -423,8 +527,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
       if (!result.success) throw new Error(result.message || "Approve failed.");
       showAlert(`Approved ${reqId} — event queued for staffing.`, "success");
       setApproveOpen(false);
-      // Re-fetch so the status chip + approved-by show fresh.
-      window.location.reload();
+      load();
     } catch (e) {
       showAlert(`Couldn't approve: ${(e as Error).message}`, "error");
     } finally {
@@ -449,7 +552,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
       showAlert(`Declined ${reqId} — requestor notified.`, "success");
       setDecliningOpen(false);
       setDeclineReason("");
-      window.location.reload();
+      load();
     } catch (e) {
       showAlert(`Couldn't decline: ${(e as Error).message}`, "error");
     } finally {
@@ -491,10 +594,15 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             className="mt-1"
             style={{ color: "rgba(255,255,255,0.6)" }}
           >
-            {market} · {fmtDate(request.date)}
-            {request.startTime && request.endTime
-              ? ` · ${fmtTime(request.startTime)} – ${fmtTime(request.endTime)}`
-              : ""}
+            {[
+              market,
+              primaryDateLabel !== "—" ? primaryDateLabel : null,
+              request.startTime && request.endTime
+                ? `${fmtTime(request.startTime)} – ${fmtTime(request.endTime)}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -514,47 +622,47 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         </div>
       </div>
 
-      {/* Decline reason banner */}
-      {slug === "declined" && request.declineReason && (
-        <div
-          className="spark-card p-5"
-          style={{
-            borderColor: "rgba(239,90,42,0.4)",
-            background:
-              "linear-gradient(180deg, rgba(239,90,42,0.08), transparent)",
-          }}
-        >
-          <p
-            className="mono text-[10px] mb-1"
+      {/* Decline / cancellation reason banner */}
+      {(slug === "declined" || slug === "cancelled" || slug === "canceled") &&
+        request.declineReason && (
+          <div
+            className="spark-card p-5"
             style={{
-              letterSpacing: "0.18em",
-              color: "var(--spark-orange)",
+              borderColor: "rgba(239,90,42,0.4)",
+              background:
+                "linear-gradient(180deg, rgba(239,90,42,0.08), transparent)",
             }}
           >
-            DECLINE REASON
-          </p>
-          <p
-            className="text-sm italic"
-            style={{ color: "rgba(255,255,255,0.85)", lineHeight: 1.55 }}
-          >
-            "{request.declineReason}"
-          </p>
-          <p
-            className="mono text-[10px] mt-2"
-            style={{
-              letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            — {approverName}
-          </p>
-        </div>
-      )}
+            <p
+              className="mono text-[10px] mb-1"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-orange)",
+              }}
+            >
+              CANCELLATION / DECLINE REASON
+            </p>
+            <p
+              className="text-sm italic"
+              style={{ color: "rgba(255,255,255,0.85)", lineHeight: 1.55 }}
+            >
+              "{request.declineReason}"
+            </p>
+            {approverName && (
+              <p
+                className="mono text-[10px] mt-2"
+                style={{
+                  letterSpacing: "0.14em",
+                  color: "rgba(255,255,255,0.45)",
+                }}
+              >
+                — {approverName}
+              </p>
+            )}
+          </div>
+        )}
 
-      {/* Quick actions row. Approve/Decline only when pending +
-          viewer is admin. Duplicate is always available because that's
-          the common pattern: "schedule another visit at the same
-          venue". Edit always available too (legacy edit form). */}
+      {/* Quick actions row */}
       <div className="flex flex-wrap gap-2">
         {canApprove && (
           <button
@@ -588,38 +696,43 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         )}
         <button
           onClick={() => {
-            // Build the prefill query for the create form. We pass
-            // relay IDs as-is since the form's <select> values
-            // compare against the same relay IDs from the catalog.
-            // Date is intentionally omitted — duplicating to a new
-            // date is the whole point.
             const params = new URLSearchParams();
-            if (venue) params.set("venue", venue);
+            if (venue && venue !== "—") params.set("venue", venue);
             if (request.address) params.set("address", request.address);
             if (request.startTime) {
-              try {
-                const d = new Date(request.startTime);
-                params.set(
-                  "startTime",
-                  `${String(d.getHours()).padStart(2, "0")}:${String(
-                    d.getMinutes(),
-                  ).padStart(2, "0")}`,
-                );
-              } catch {
-                /* fall through */
+              const m = request.startTime.match(/(?:^|T)(\d{2}):(\d{2})/);
+              if (m) {
+                params.set("startTime", `${m[1]}:${m[2]}`);
+              } else {
+                try {
+                  const d = new Date(request.startTime);
+                  params.set(
+                    "startTime",
+                    `${String(d.getHours()).padStart(2, "0")}:${String(
+                      d.getMinutes(),
+                    ).padStart(2, "0")}`,
+                  );
+                } catch {
+                  /* fall through */
+                }
               }
             }
             if (request.endTime) {
-              try {
-                const d = new Date(request.endTime);
-                params.set(
-                  "endTime",
-                  `${String(d.getHours()).padStart(2, "0")}:${String(
-                    d.getMinutes(),
-                  ).padStart(2, "0")}`,
-                );
-              } catch {
-                /* fall through */
+              const m = request.endTime.match(/(?:^|T)(\d{2}):(\d{2})/);
+              if (m) {
+                params.set("endTime", `${m[1]}:${m[2]}`);
+              } else {
+                try {
+                  const d = new Date(request.endTime);
+                  params.set(
+                    "endTime",
+                    `${String(d.getHours()).padStart(2, "0")}:${String(
+                      d.getMinutes(),
+                    ).padStart(2, "0")}`,
+                  );
+                } catch {
+                  /* fall through */
+                }
               }
             }
             if (request.requestType?.id)
@@ -645,7 +758,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             if (request.onsitePoc) params.set("onsitePoc", request.onsitePoc);
             if (request.additionalTeamDetails)
               params.set("additionalTeamDetails", request.additionalTeamDetails);
-            if (request.notes) params.set("notes", request.notes);
+            if (notesText) params.set("notes", notesText);
             const productIds = (request.products ?? [])
               .map((p) => (p ? String(p.id) : ""))
               .filter(Boolean)
@@ -712,6 +825,20 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             ✦ Invite BA
           </button>
         )}
+        {canCancelEvent && (
+          <button
+            type="button"
+            onClick={() => setCancelOpen(true)}
+            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{
+              background: "transparent",
+              color: "var(--spark-orange)",
+              border: "1px solid rgba(239,90,42,0.4)",
+            }}
+          >
+            Cancel event
+          </button>
+        )}
       </div>
 
       {inviteOpen && eventForInvite && (
@@ -720,6 +847,10 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           eventDate={eventForInviteDate}
           eventAddress={eventForInviteAddress}
           onClose={() => setInviteOpen(false)}
+          onInvited={() => {
+            setInviteOpen(false);
+            load();
+          }}
         />
       )}
 
@@ -732,24 +863,46 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             color: "var(--spark-lime)",
           }}
         >
-          ACTIVATION DETAILS
+          ACCOUNT & VENUE
         </p>
         <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="VENUE">{venue}</Field>
           {request.storeNumber?.trim() && (
             <Field label="STORE #">{request.storeNumber.trim()}</Field>
           )}
-          <Field label="MARKET">{market}</Field>
-          <Field label="ADDRESS">{fullAddress}</Field>
-          <Field label="REQUEST TYPE">
-            {request.requestType?.name ?? "—"}
-          </Field>
-          <Field label="DATE">{fmtDate(request.date)}</Field>
-          <Field label="TIME">
-            {request.startTime && request.endTime
-              ? `${fmtTime(request.startTime)} – ${fmtTime(request.endTime)}`
-              : "—"}
-          </Field>
+          {market && <Field label="MARKET">{market}</Field>}
+          {fullAddress && (
+            <Field label="ADDRESS">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span>{fullAddress}</span>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mono text-[10px] px-2 py-0.5 rounded-md transition"
+                  style={{
+                    letterSpacing: "0.1em",
+                    color: "var(--spark-sky)",
+                    background: "rgba(95,184,239,0.1)",
+                    border: "1px solid rgba(95,184,239,0.3)",
+                    textDecoration: "none",
+                  }}
+                >
+                  Open in Maps ↗
+                </a>
+              </div>
+            </Field>
+          )}
+          {request.requestType?.name && (
+            <Field label="REQUEST TYPE">{request.requestType.name}</Field>
+          )}
+          {primaryDateLabel !== "—" && (
+            <Field label="DATE">{primaryDateLabel}</Field>
+          )}
+          {request.startTime && request.endTime && (
+            <Field label="TIME">
+              {`${fmtTime(request.startTime)} – ${fmtTime(request.endTime)}`}
+            </Field>
+          )}
           {request.timezone?.name && (
             <Field label="TIME ZONE">
               {request.timezone.name}
@@ -803,9 +956,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         </div>
       </div>
 
-      {/* Venue map — only when coordinates are on the request. Many
-          legacy rows are missing them, so we degrade silently rather
-          than render an empty/grey map. */}
+      {/* Venue map — only when coordinates are on the request */}
       {request.coordinates &&
         request.coordinates.length === 2 &&
         Number.isFinite(Number(request.coordinates[0])) &&
@@ -823,7 +974,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           </div>
         )}
 
-      {/* Contacts */}
+      {/* Contacts & Routing */}
       <div className="spark-card p-6">
         <p
           className="mono text-[10px] mb-4"
@@ -832,11 +983,11 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             color: "var(--spark-sky)",
           }}
         >
-          CONTACTS
+          CONTACTS & ROUTING
         </p>
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Field label="REQUESTOR">
-            {requestorName}
+            <div className="font-medium">{requestorName}</div>
             {requestorEmail && requestorEmail !== requestorName && (
               <div
                 className="mono text-[11px] mt-0.5"
@@ -848,10 +999,60 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                 {requestorEmail}
               </div>
             )}
+            {(rmmSameAsRequestor || approverSameAsRequestor) && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                <RoleBadge>Requestor</RoleBadge>
+                {rmmSameAsRequestor && <RoleBadge>Assigned RMM</RoleBadge>}
+                {approverSameAsRequestor && (
+                  <RoleBadge>Auto-approved</RoleBadge>
+                )}
+              </div>
+            )}
           </Field>
-          {storeManagerName && (
+          {!rmmSameAsRequestor && (rmmName || rmmEmail) && (
+            <Field label="ASSIGNED RMM">
+              <div className="font-medium">{rmmName || rmmEmail}</div>
+              {rmmEmail && rmmEmail !== rmmName && (
+                <div
+                  className="mono text-[11px] mt-0.5"
+                  style={{
+                    letterSpacing: "0.04em",
+                    color: "rgba(255,255,255,0.55)",
+                  }}
+                >
+                  {rmmEmail}
+                </div>
+              )}
+              {approverSameAsRmm && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  <RoleBadge>Approved</RoleBadge>
+                </div>
+              )}
+            </Field>
+          )}
+          {approverName &&
+            !approverSameAsRequestor &&
+            !approverSameAsRmm && (
+              <Field label="APPROVED BY">
+                <div className="font-medium">{approverName}</div>
+                {approverEmail && approverEmail !== approverName && (
+                  <div
+                    className="mono text-[11px] mt-0.5"
+                    style={{
+                      letterSpacing: "0.04em",
+                      color: "rgba(255,255,255,0.55)",
+                    }}
+                  >
+                    {approverEmail}
+                  </div>
+                )}
+              </Field>
+            )}
+          {hasStoreManager && (
             <Field label="STORE MANAGER">
-              {storeManagerName}
+              {storeManagerName && (
+                <div className="font-medium">{storeManagerName}</div>
+              )}
               {storeManagerPhone && (
                 <div
                   className="mono text-[11px] mt-0.5"
@@ -865,38 +1066,14 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               )}
             </Field>
           )}
-          {storeContact && (
-            <Field label="STORE CONTACT">{storeContact}</Field>
-          )}
           {distributorEmail && (
             <Field label="DISTRIBUTOR CONTACT">{distributorEmail}</Field>
-          )}
-          {request.rmmAsigned && (
-            <Field label="ROUTED TO">
-              {[
-                request.rmmAsigned.firstName,
-                request.rmmAsigned.lastName,
-              ]
-                .filter(Boolean)
-                .join(" ") || "—"}
-              {request.rmmAsigned.email && (
-                <div
-                  className="mono text-[11px] mt-0.5"
-                  style={{
-                    letterSpacing: "0.04em",
-                    color: "rgba(255,255,255,0.55)",
-                  }}
-                >
-                  {request.rmmAsigned.email}
-                </div>
-              )}
-            </Field>
           )}
         </div>
       </div>
 
       {/* Notes */}
-      {request.notes && (
+      {notesText && (
         <div className="spark-card p-6">
           <p
             className="mono text-[10px] mb-2"
@@ -911,7 +1088,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             className="text-sm whitespace-pre-wrap"
             style={{ color: "rgba(255,255,255,0.85)", lineHeight: 1.6 }}
           >
-            {request.notes}
+            {notesText}
           </p>
         </div>
       )}
@@ -999,9 +1176,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         </div>
       )}
 
-      {/* Internal notes + @-mention. Same panel as Master Tracker
-          expanded rows — shares the localStorage bucket, so notes
-          added here show up there and vice versa. */}
+      {/* Internal notes + @-mention */}
       <Suspense
         fallback={
           <div
@@ -1018,12 +1193,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         />
       </Suspense>
 
-      {/* Smart staffing + Roster — per event, admin-only. The
-          Smart-staffing panel sits directly above each event's roster:
-          fill status + a server-ranked BA shortlist with a bulk
-          "Invite selected" action. The roster below shows who's
-          already invited / accepted. BAs don't need to see either, so
-          both are gated behind the admin role. */}
+      {/* Smart staffing + Roster — per event, admin-only */}
       {role.isAdmin &&
         (request.events ?? [])
           .filter((e): e is NonNullable<typeof e> => Boolean(e))
@@ -1040,14 +1210,10 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             </Fragment>
           ))}
 
-      {/* Field reports — every recap submitted against the events
-          on this request. Surfaces the photos + headline metrics so
-          you don't have to bounce to /recaps to see what happened. */}
+      {/* Field reports */}
       <FieldReportsPanel request={request} />
 
-      {/* Shift Replay — one panel per event with a GPS trail. Renders
-          nothing for events without any pings, so unmonitored shifts
-          don't pollute the page. */}
+      {/* Shift Replay */}
       {(request.events ?? [])
         .filter((e): e is NonNullable<typeof e> => Boolean(e))
         .map((ev) => (
@@ -1076,7 +1242,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               {fmtDate(request.createdAt)} by {requestorName}
             </p>
           </div>
-          {slug === "approved" && (
+          {slug === "approved" && !approverSameAsRequestor && approverName && (
             <div>
               <p
                 className="mono text-[10px] mb-1"
@@ -1092,7 +1258,9 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               </p>
             </div>
           )}
-          {slug === "declined" && (
+          {(slug === "declined" ||
+            slug === "cancelled" ||
+            slug === "canceled") && (
             <div>
               <p
                 className="mono text-[10px] mb-1"
@@ -1101,10 +1269,11 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                   color: "var(--spark-orange)",
                 }}
               >
-                DECLINED
+                {slug === "declined" ? "DECLINED" : "CANCELLED"}
               </p>
               <p style={{ color: "rgba(255,255,255,0.75)" }}>
-                {fmtDate(request.updatedAt)} by {approverName}
+                {fmtDate(request.updatedAt)}
+                {approverName ? ` by ${approverName}` : ""}
               </p>
             </div>
           )}
@@ -1159,7 +1328,9 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               className="text-sm mt-2"
               style={{ color: "rgba(255,255,255,0.7)" }}
             >
-              <strong>{venue}</strong> · {market} · {fmtDate(request.date)}
+              <strong>{venue}</strong>
+              {market ? ` · ${market}` : ""}
+              {primaryDateLabel !== "—" ? ` · ${primaryDateLabel}` : ""}
             </p>
             <div className="flex justify-end gap-2 mt-5">
               <button
@@ -1281,15 +1452,23 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           </div>
         </div>
       )}
+
+      {/* Cancel event modal */}
+      <CancelDemoDialog
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        requestId={String(request.id || request.uuid)}
+        storeName={venue !== "—" ? venue : null}
+        dateLabel={primaryDateLabel !== "—" ? primaryDateLabel : null}
+        brandName={brandName}
+        onSent={() => load()}
+      />
     </div>
   );
 };
 
 // Field Reports — every recap submitted against the events on this
-// request. We render one row per recap with a hero image, BA name,
-// engagement + sold counts, and a click-through to the recap detail.
-// Empty events get a soft "awaiting recap" placeholder so dispatchers
-// can see at a glance which shifts haven't reported in yet.
+// request.
 type FieldReportsRequest = NonNullable<
   RequestUuidQueryType["response"]["request"]
 >;
@@ -1303,16 +1482,6 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
   );
   if (events.length === 0) return null;
 
-  // Flatten to a flat list of recap rows so the panel reads like a
-  // timeline. Each recap remembers its event so we can show which
-  // shift it came from when a request has multiple events.
-  //
-  // BOTH legacy recaps and custom-template recaps belong here — the
-  // Master Tracker counts both toward the "● n RECAP" chip, so the panel
-  // must show both or it'll under-count vs the list. The two backend
-  // types have different shapes (Recap: recapFiles/productsSold;
-  // CustomRecap: heroImageUrl/soldUnits), so we normalize each into one
-  // RecapCard model and render a single card grid below.
   type Row = {
     eventName: string | null;
     eventDate: string | null;
@@ -1330,29 +1499,27 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
     if (legacy.length === 0 && custom.length === 0) {
       awaiting.push({
         uuid: String(ev.uuid),
-        name: ev.name || "Untitled event",
-        date: ev.date ?? null,
+        name: cleanVenueTitle(ev.name) || "Untitled event",
+        date: ev.startTime ?? ev.date ?? null,
       });
       continue;
     }
     for (const r of legacy) {
       rows.push({
-        eventName: ev.name ?? null,
-        eventDate: ev.date ?? null,
+        eventName: cleanVenueTitle(ev.name) || null,
+        eventDate: ev.startTime ?? ev.date ?? null,
         recap: normalizeLegacyRecap(r),
       });
     }
     for (const r of custom) {
       rows.push({
-        eventName: ev.name ?? null,
-        eventDate: ev.date ?? null,
+        eventName: cleanVenueTitle(ev.name) || null,
+        eventDate: ev.startTime ?? ev.date ?? null,
         recap: normalizeCustomRecap(r),
       });
     }
   }
 
-  // Headline: total recaps + total engagements aggregated across
-  // every event on this request.
   const counted = rows.filter((r) => !r.recap.excludeFromAggregates);
   const totalEngagements = counted.reduce(
     (s, r) => s + (r.recap.totalEngagements ?? 0),
@@ -1374,15 +1541,13 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
   }
   const fmt = (d: string | null) => {
     if (!d) return "";
-    try {
-      return new Date(d).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-    } catch {
-      return d;
-    }
+    const parsed = parseCalendarDate(d);
+    if (!parsed) return d;
+    return parsed.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   return (
@@ -1498,9 +1663,9 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
               <div className="p-4">
                 <p
                   className="font-bold text-sm truncate"
-                  title={recap.name ?? eventName ?? "Recap"}
+                  title={cleanVenueTitle(recap.name) || eventName || "Recap"}
                 >
-                  {recap.name ?? eventName ?? "Recap"}
+                  {cleanVenueTitle(recap.name) || eventName || "Recap"}
                 </p>
                 <p
                   className="mono text-[10px] uppercase mt-1 truncate"

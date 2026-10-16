@@ -56,6 +56,7 @@ export const TrackerListQuery = graphql`
             id
             uuid
             date
+            startTime
             assignedAmbassadorsCount
             confirmedAmbassadorsCount
           }
