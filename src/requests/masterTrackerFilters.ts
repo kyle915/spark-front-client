@@ -9,6 +9,95 @@ export type TrackerDateRange =
 
 export type TrackerSortMode = "date-desc" | "date-asc" | "venue" | "status";
 
+export const VALID_TRACKER_DATE_RANGES: readonly TrackerDateRange[] = [
+  "all",
+  "next7",
+  "next30",
+  "next90",
+  "past7",
+  "past30",
+  "month",
+] as const;
+
+export const VALID_TRACKER_STATUSES = [
+  "active",
+  "pending",
+  "queue",
+  "approved",
+  "scheduled",
+  "done",
+  "all",
+] as const;
+
+export type TrackerUrlState = {
+  status: string;
+  dateRange: TrackerDateRange;
+  market: string;
+  planId: string | null;
+};
+
+/** Parse Master Tracker filter state from URL query params (`?status=`, `?when=`, `?market=`, `?plan=`). */
+export function parseTrackerUrlParams(
+  params: URLSearchParams,
+): TrackerUrlState {
+  const rawStatus = (params.get("status") || "").trim().toLowerCase();
+  const status = (VALID_TRACKER_STATUSES as readonly string[]).includes(
+    rawStatus,
+  )
+    ? rawStatus
+    : "active";
+
+  const rawWhen = (params.get("when") || "").trim().toLowerCase();
+  const dateRange = (VALID_TRACKER_DATE_RANGES as readonly string[]).includes(
+    rawWhen,
+  )
+    ? (rawWhen as TrackerDateRange)
+    : "all";
+
+  const rawMarket = (params.get("market") || "").trim().toUpperCase();
+  const market = rawMarket && rawMarket !== "ALL" ? rawMarket : "all";
+
+  const rawPlan = (params.get("plan") || "").trim();
+  const planId = rawPlan || null;
+
+  return { status, dateRange, market, planId };
+}
+
+/** Merge updated Master Tracker filter values into URLSearchParams, omitting defaults to keep URLs clean. */
+export function buildTrackerUrlParams(
+  current: URLSearchParams,
+  patch: Partial<TrackerUrlState>,
+): URLSearchParams {
+  const next = new URLSearchParams(current);
+
+  if (patch.status !== undefined) {
+    const s = patch.status.trim().toLowerCase();
+    if (s && s !== "active") next.set("status", s);
+    else next.delete("status");
+  }
+
+  if (patch.dateRange !== undefined) {
+    if (patch.dateRange && patch.dateRange !== "all") {
+      next.set("when", patch.dateRange);
+    } else {
+      next.delete("when");
+    }
+  }
+
+  if (patch.market !== undefined) {
+    const m = patch.market.trim().toUpperCase();
+    if (m && m !== "ALL") next.set("market", m);
+    else next.delete("market");
+  }
+
+  if (patch.planId !== undefined) {
+    if (patch.planId) next.set("plan", patch.planId);
+    else next.delete("plan");
+  }
+
+  return next;
+}
+
 const ACTIVE_STATUS_SLUGS = ["pending", "queue", "approved", "scheduled"] as const;
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);

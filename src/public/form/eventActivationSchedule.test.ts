@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   BA_COUNT_MAX,
   blankVisitSlot,
+  buildQuickDatePresets,
   clampBaCount,
+  computeCreateRequestBlocker,
   displayBaCount,
   isEventMultiDateTenant,
   showsBaCountSelector,
@@ -102,5 +104,116 @@ describe("BA count", () => {
     expect(displayBaCount(4, "BA count: 2")).toBe("4");
     expect(displayBaCount(null, "Notes\nBA count: 3")).toBe("3");
     expect(displayBaCount(undefined, "just notes")).toBeNull();
+  });
+});
+
+describe("computeCreateRequestBlocker & quick-date presets", () => {
+  it("allows multi-date Event Activation when top-level date is empty but visitSlots are valid", () => {
+    expect(
+      computeCreateRequestBlocker({
+        venue: "Festival Grounds",
+        multiDateEvent: true,
+        date: "",
+        visitSlots: [
+          row("2026-11-01", "12:00", "16:00"),
+          row("2026-11-02", "14:00", "18:00"),
+        ],
+        schedulingStatus: "already_scheduled",
+      }),
+    ).toBeNull();
+  });
+
+  it("blocks multi-date Event Activation when visitSlots are incomplete", () => {
+    expect(
+      computeCreateRequestBlocker({
+        venue: "Festival Grounds",
+        multiDateEvent: true,
+        date: "2026-11-01",
+        visitSlots: [blankVisitSlot()],
+        schedulingStatus: "already_scheduled",
+      }),
+    ).toBe("Date");
+  });
+
+  it("reports Venue, Date, Scheduling, Products, Request, and Co-brand blockers in order", () => {
+    expect(
+      computeCreateRequestBlocker({
+        venue: "  ",
+        multiDateEvent: false,
+        date: "2026-11-01",
+        visitSlots: [],
+        schedulingStatus: "already_scheduled",
+      }),
+    ).toBe("Venue");
+
+    expect(
+      computeCreateRequestBlocker({
+        venue: "HEB #12",
+        multiDateEvent: false,
+        date: "",
+        visitSlots: [],
+        schedulingStatus: "already_scheduled",
+      }),
+    ).toBe("Date");
+
+    expect(
+      computeCreateRequestBlocker({
+        venue: "HEB #12",
+        multiDateEvent: false,
+        date: "2026-11-01",
+        visitSlots: [],
+        schedulingStatus: "",
+      }),
+    ).toBe("Scheduling");
+
+    expect(
+      computeCreateRequestBlocker({
+        venue: "HEB #12",
+        multiDateEvent: false,
+        date: "2026-11-01",
+        visitSlots: [],
+        schedulingStatus: "needs_scheduling",
+        showTorchNonActiveFields: true,
+        nonActiveProductRequired: "",
+      }),
+    ).toBe("Products");
+
+    expect(
+      computeCreateRequestBlocker({
+        venue: "HEB #12",
+        multiDateEvent: false,
+        date: "2026-11-01",
+        visitSlots: [],
+        schedulingStatus: "needs_scheduling",
+        isTorch: true,
+        torchActivationOk: false,
+      }),
+    ).toBe("Request");
+
+    expect(
+      computeCreateRequestBlocker({
+        venue: "HEB #12",
+        multiDateEvent: false,
+        date: "2026-11-01",
+        visitSlots: [],
+        schedulingStatus: "needs_scheduling",
+        coBrandMissing: "Co-brands",
+      }),
+    ).toBe("Co-brands");
+  });
+
+  it("builds quick-date presets including Today, Tomorrow, Fri, Sat, +7d, and +14d", () => {
+    const presets = buildQuickDatePresets(new Date(2026, 9, 17, 15, 0, 0));
+    expect(presets.map((p) => p.label)).toEqual([
+      "TODAY",
+      "TOMORROW",
+      "FRI · Oct 23",
+      "SAT · Oct 24",
+      "+7D · Oct 24",
+      "+14D · Oct 31",
+    ]);
+    expect(presets[0].iso).toBe("2026-10-17");
+    expect(presets[1].iso).toBe("2026-10-18");
+    expect(presets[5].iso).toBe("2026-10-31");
   });
 });

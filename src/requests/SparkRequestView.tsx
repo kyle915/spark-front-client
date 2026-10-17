@@ -1,6 +1,6 @@
 import { Fragment, Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
-import { useLocation, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import AskAiButton from "@/components/ai/AskAiButton";
 import LocationMap from "@shared/LocationMap";
@@ -258,12 +258,6 @@ const STATUS_CHIP: Record<string, string> = {
   canceled: "chip chip-muted",
 };
 
-// Friendly labels for the two-value schedulingStatus metadata field.
-const SCHEDULING_LABEL: Record<string, string> = {
-  already_scheduled: "Already scheduled with the account",
-  needs_scheduling: "Needs scheduling by Ignite",
-};
-
 type Request = NonNullable<RequestUuidQueryType["response"]["request"]>;
 
 async function callApprovalMutation(
@@ -327,18 +321,32 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({
   </div>
 );
 
-const RoleBadge: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span
-    className="mono text-[9px] px-2 py-0.5 rounded-full"
-    style={{
-      letterSpacing: "0.1em",
-      background: "rgba(197,245,70,0.1)",
-      color: "var(--spark-lime)",
-      border: "1px solid rgba(197,245,70,0.28)",
-    }}
-  >
-    {children}
-  </span>
+const ContactLine: React.FC<{
+  name: string;
+  detail?: string | null;
+  note?: string | null;
+}> = ({ name, detail, note }) => (
+  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-sm">
+    <span className="font-medium" style={{ color: "rgba(255,255,255,0.9)" }}>
+      {name}
+    </span>
+    {detail ? (
+      <span className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+        {detail}
+      </span>
+    ) : null}
+    {note ? (
+      <span
+        className="mono text-[10px]"
+        style={{
+          letterSpacing: "0.12em",
+          color: "rgba(255,255,255,0.45)",
+        }}
+      >
+        {note}
+      </span>
+    ) : null}
+  </div>
 );
 
 const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
@@ -499,6 +507,218 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
   const notesText = cleanDisplayNotes(rawNotes);
   const primaryDateIso = request.startTime ?? request.date ?? null;
   const primaryDateLabel = fmtDate(primaryDateIso);
+  const timeRangeLabel =
+    request.startTime && request.endTime
+      ? `${fmtTime(request.startTime)} – ${fmtTime(request.endTime)}`
+      : request.startTime
+        ? fmtTime(request.startTime)
+        : null;
+  const scope = request.retailer?.isNational ? "National" : "Local";
+  const mapsHref = fullAddress
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`
+    : null;
+  const headerMeta = [
+    primaryDateLabel !== "—" ? primaryDateLabel : null,
+    timeRangeLabel,
+    market,
+    fullAddress && norm(fullAddress) !== norm(market ?? "") ? fullAddress : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const spawnedEvents = (request.events ?? []).filter(
+    (e): e is NonNullable<typeof e> => Boolean(e?.uuid),
+  );
+
+  const venueFacts: {
+    key: string;
+    label: string;
+    wide?: boolean;
+    value: React.ReactNode;
+  }[] = [];
+  if (request.storeNumber?.trim()) {
+    venueFacts.push({
+      key: "store",
+      label: "STORE #",
+      value: request.storeNumber.trim(),
+    });
+  }
+  if (distributorName) {
+    venueFacts.push({
+      key: "distributor",
+      label: "DISTRIBUTOR",
+      value: distributorName,
+    });
+  }
+  if (request.billingEntity?.name?.trim()) {
+    venueFacts.push({
+      key: "billing",
+      label: "BILLING ENTITY",
+      value: request.billingEntity.name.trim(),
+    });
+  }
+  if (request.timezone?.name) {
+    venueFacts.push({
+      key: "tz",
+      label: "TIMEZONE",
+      value: `${request.timezone.name}${request.timezone.code ? ` · ${request.timezone.code}` : ""}`,
+    });
+  }
+  if (baCount) {
+    venueFacts.push({ key: "ba", label: "BA COUNT", value: baCount });
+  }
+  if (request.isNonActiveProductRequired != null) {
+    venueFacts.push({
+      key: "nonactive",
+      label: "Is Non-Active Product Required?",
+      value: request.isNonActiveProductRequired ? "Yes" : "No",
+    });
+  }
+  if (request.casesToBeShipped?.trim()) {
+    venueFacts.push({
+      key: "cases",
+      label: "How many cases to be shipped?",
+      value: request.casesToBeShipped.trim(),
+    });
+  }
+  if (request.accountSpendAmount?.trim()) {
+    venueFacts.push({
+      key: "spend",
+      label: "Account Spend Amount",
+      value: request.accountSpendAmount.trim(),
+    });
+  }
+  if (request.eventAssetsNeeded?.trim()) {
+    venueFacts.push({
+      key: "assets",
+      label: "What assets are needed at this event?",
+      wide: true,
+      value: request.eventAssetsNeeded.trim(),
+    });
+  }
+  if (request.loadInTime?.trim()) {
+    venueFacts.push({
+      key: "loadin",
+      label: "What time is Load-In",
+      value: request.loadInTime.trim(),
+    });
+  }
+  if (request.onsitePoc?.trim()) {
+    venueFacts.push({
+      key: "poc",
+      label: "Who is the onsite POC",
+      value: request.onsitePoc.trim(),
+    });
+  }
+  if (request.additionalTeamDetails?.trim()) {
+    venueFacts.push({
+      key: "team",
+      label: "Any additional details for the team to know?",
+      wide: true,
+      value: request.additionalTeamDetails.trim(),
+    });
+  }
+  if (spawnedEvents.length > 0) {
+    venueFacts.push({
+      key: "events",
+      label:
+        spawnedEvents.length === 1
+          ? "SPAWNED EVENT"
+          : `SPAWNED EVENTS · ${spawnedEvents.length}`,
+      value: (
+        <div className="flex flex-wrap gap-x-4 gap-y-1">
+          {spawnedEvents.map((ev, idx) => {
+            const evLabel =
+              cleanVenueTitle(ev.name) ||
+              (ev.startTime ?? ev.date ? fmtDate(ev.startTime ?? ev.date) : null) ||
+              (spawnedEvents.length === 1 ? "View event" : `Event ${idx + 1}`);
+            return (
+              <Link
+                key={String(ev.uuid)}
+                to={`/event/view/${ev.uuid}`}
+                state={{ from: `/request/view/${request.uuid}` }}
+                style={{ color: "var(--spark-sky)", textDecoration: "none" }}
+              >
+                {evLabel} →
+              </Link>
+            );
+          })}
+        </div>
+      ),
+    });
+  }
+  if (request.createdAt) {
+    const createdTime = fmtTime(request.createdAt);
+    venueFacts.push({
+      key: "submitted",
+      label: "SUBMITTED",
+      value: `${fmtDate(request.createdAt)}${createdTime ? ` · ${createdTime}` : ""}`,
+    });
+  }
+
+  const contactLines: {
+    key: string;
+    name: string;
+    detail: string | null;
+    note: string | null;
+  }[] = [];
+  if ((requestorName && requestorName !== "—") || requestorEmail) {
+    const notes = [
+      rmmSameAsRequestor ? "Assigned RMM" : null,
+      approverSameAsRequestor ? "Auto-approved" : null,
+    ].filter((note): note is string => Boolean(note));
+    contactLines.push({
+      key: "requestor",
+      name: requestorName !== "—" ? requestorName : (requestorEmail ?? "—"),
+      detail:
+        requestorEmail && requestorEmail !== requestorName
+          ? requestorEmail
+          : null,
+      note: notes.length > 0 ? notes.join(" · ") : null,
+    });
+  }
+  if (!rmmSameAsRequestor && (rmmName || rmmEmail)) {
+    contactLines.push({
+      key: "rmm",
+      name: rmmName || rmmEmail || "—",
+      detail: rmmEmail && rmmEmail !== rmmName ? rmmEmail : null,
+      note: approverSameAsRmm ? "Assigned RMM · Approved" : "Assigned RMM",
+    });
+  }
+  if (approverName && !approverSameAsRequestor && !approverSameAsRmm) {
+    contactLines.push({
+      key: "approver",
+      name: approverName,
+      detail:
+        approverEmail && approverEmail !== approverName
+          ? approverEmail
+          : null,
+      note: "Approved",
+    });
+  }
+  if (hasStoreManager) {
+    contactLines.push({
+      key: "store-manager",
+      name: storeManagerName || storeManagerPhone || "Store manager",
+      detail:
+        storeManagerPhone && storeManagerPhone !== storeManagerName
+          ? storeManagerPhone
+          : null,
+      note: "Store manager",
+    });
+  }
+  if (distributorEmail) {
+    contactLines.push({
+      key: "distributor-contact",
+      name: distributorEmail,
+      detail: null,
+      note: "Distributor",
+    });
+  }
+  const approverShownInContacts = Boolean(
+    approverName &&
+      (approverSameAsRequestor || approverSameAsRmm || contactLines.some((c) => c.key === "approver")),
+  );
 
   const canApprove = slug === "pending";
   const canDecline = !role.isClient && slug === "pending";
@@ -577,12 +797,21 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               {reqId}
             </span>
             <span className={chipClass}>
-              {(request.status?.name ?? slug).toUpperCase()}
+              ● {(request.status?.name ?? slug).toUpperCase()}
             </span>
             {request.requestType?.name && (
-              <span className="chip chip-muted">
+              <span className="chip chip-sky">
                 {request.requestType.name.toUpperCase()}
               </span>
+            )}
+            <span className="chip chip-muted">
+              {scope === "National" ? "◉ NATIONAL" : "⌖ LOCAL"}
+            </span>
+            {request.schedulingStatus === "already_scheduled" && (
+              <span className="chip chip-lime">✓ SCHEDULED WITH ACCOUNT</span>
+            )}
+            {request.schedulingStatus === "needs_scheduling" && (
+              <span className="chip chip-amber">◌ NEEDS SCHEDULING</span>
             )}
           </div>
           <h1
@@ -591,20 +820,31 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           >
             {venue}
           </h1>
-          <p
-            className="mt-1"
-            style={{ color: "rgba(255,255,255,0.6)" }}
-          >
-            {[
-              market,
-              primaryDateLabel !== "—" ? primaryDateLabel : null,
-              request.startTime && request.endTime
-                ? `${fmtTime(request.startTime)} – ${fmtTime(request.endTime)}`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
+          {(headerMeta || mapsHref) && (
+            <p
+              className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+              style={{ color: "rgba(255,255,255,0.6)" }}
+            >
+              {headerMeta ? <span>{headerMeta}</span> : null}
+              {mapsHref ? (
+                <a
+                  href={mapsHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mono text-[10px] px-2 py-0.5 rounded-md transition"
+                  style={{
+                    letterSpacing: "0.1em",
+                    color: "var(--spark-sky)",
+                    background: "rgba(95,184,239,0.1)",
+                    border: "1px solid rgba(95,184,239,0.3)",
+                    textDecoration: "none",
+                  }}
+                >
+                  Open in Maps ↗
+                </a>
+              ) : null}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <LinkedSheetChipForView />
@@ -873,107 +1113,30 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
         />
       )}
 
-      {/* Details grid */}
-      <div className="spark-card p-6">
-        <p
-          className="mono text-[10px] mb-4"
-          style={{
-            letterSpacing: "0.18em",
-            color: "var(--spark-lime)",
-          }}
-        >
-          ACCOUNT & VENUE
-        </p>
-        <div className="grid sm:grid-cols-2 gap-4">
-          {request.storeNumber?.trim() && (
-            <Field label="STORE #">{request.storeNumber.trim()}</Field>
-          )}
-          {market && <Field label="MARKET">{market}</Field>}
-          {fullAddress && (
-            <Field label="ADDRESS">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span>{fullAddress}</span>
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mono text-[10px] px-2 py-0.5 rounded-md transition"
-                  style={{
-                    letterSpacing: "0.1em",
-                    color: "var(--spark-sky)",
-                    background: "rgba(95,184,239,0.1)",
-                    border: "1px solid rgba(95,184,239,0.3)",
-                    textDecoration: "none",
-                  }}
-                >
-                  Open in Maps ↗
-                </a>
+      {/* Details grid — only unique facts not already in the header */}
+      {venueFacts.length > 0 && (
+        <div className="spark-card px-5 py-4">
+          <p
+            className="mono text-[10px] mb-3"
+            style={{
+              letterSpacing: "0.18em",
+              color: "var(--spark-lime)",
+            }}
+          >
+            ACCOUNT & VENUE
+          </p>
+          <div className="flex flex-wrap gap-x-10 gap-y-4">
+            {venueFacts.map((fact) => (
+              <div
+                key={fact.key}
+                className={fact.wide ? "basis-full" : undefined}
+              >
+                <Field label={fact.label}>{fact.value}</Field>
               </div>
-            </Field>
-          )}
-          {request.requestType?.name && (
-            <Field label="REQUEST TYPE">{request.requestType.name}</Field>
-          )}
-          {primaryDateLabel !== "—" && (
-            <Field label="DATE">{primaryDateLabel}</Field>
-          )}
-          {request.startTime && request.endTime && (
-            <Field label="TIME">
-              {`${fmtTime(request.startTime)} – ${fmtTime(request.endTime)}`}
-            </Field>
-          )}
-          {request.timezone?.name && (
-            <Field label="TIME ZONE">
-              {request.timezone.name}
-              {request.timezone.code ? ` · ${request.timezone.code}` : ""}
-            </Field>
-          )}
-          {distributorName && (
-            <Field label="DISTRIBUTOR">{distributorName}</Field>
-          )}
-          {request.billingEntity?.name && (
-            <Field label="BILLING ENTITY">{request.billingEntity.name}</Field>
-          )}
-          {baCount && <Field label="BA COUNT">{baCount}</Field>}
-          {request.schedulingStatus && (
-            <Field label="SCHEDULING">
-              {SCHEDULING_LABEL[request.schedulingStatus] ??
-                request.schedulingStatus}
-            </Field>
-          )}
-          {request.isNonActiveProductRequired != null && (
-            <Field label="Is Non-Active Product Required?">
-              {request.isNonActiveProductRequired ? "Yes" : "No"}
-            </Field>
-          )}
-          {request.casesToBeShipped && (
-            <Field label="How many cases to be shipped?">
-              {request.casesToBeShipped}
-            </Field>
-          )}
-          {request.accountSpendAmount && (
-            <Field label="Account Spend Amount">
-              {request.accountSpendAmount}
-            </Field>
-          )}
-          {request.eventAssetsNeeded && (
-            <Field label="What assets are needed at this event?">
-              {request.eventAssetsNeeded}
-            </Field>
-          )}
-          {request.loadInTime && (
-            <Field label="What time is Load-In">{request.loadInTime}</Field>
-          )}
-          {request.onsitePoc && (
-            <Field label="Who is the onsite POC">{request.onsitePoc}</Field>
-          )}
-          {request.additionalTeamDetails && (
-            <Field label="Any additional details for the team to know?">
-              {request.additionalTeamDetails}
-            </Field>
-          )}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Venue map — only when coordinates are on the request */}
       {request.coordinates &&
@@ -993,103 +1156,30 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
           </div>
         )}
 
-      {/* Contacts & Routing */}
-      <div className="spark-card p-6">
-        <p
-          className="mono text-[10px] mb-4"
-          style={{
-            letterSpacing: "0.18em",
-            color: "var(--spark-sky)",
-          }}
-        >
-          CONTACTS & ROUTING
-        </p>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Field label="REQUESTOR">
-            <div className="font-medium">{requestorName}</div>
-            {requestorEmail && requestorEmail !== requestorName && (
-              <div
-                className="mono text-[11px] mt-0.5"
-                style={{
-                  letterSpacing: "0.04em",
-                  color: "rgba(255,255,255,0.55)",
-                }}
-              >
-                {requestorEmail}
-              </div>
-            )}
-            {(rmmSameAsRequestor || approverSameAsRequestor) && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                <RoleBadge>Requestor</RoleBadge>
-                {rmmSameAsRequestor && <RoleBadge>Assigned RMM</RoleBadge>}
-                {approverSameAsRequestor && (
-                  <RoleBadge>Auto-approved</RoleBadge>
-                )}
-              </div>
-            )}
-          </Field>
-          {!rmmSameAsRequestor && (rmmName || rmmEmail) && (
-            <Field label="ASSIGNED RMM">
-              <div className="font-medium">{rmmName || rmmEmail}</div>
-              {rmmEmail && rmmEmail !== rmmName && (
-                <div
-                  className="mono text-[11px] mt-0.5"
-                  style={{
-                    letterSpacing: "0.04em",
-                    color: "rgba(255,255,255,0.55)",
-                  }}
-                >
-                  {rmmEmail}
-                </div>
-              )}
-              {approverSameAsRmm && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  <RoleBadge>Approved</RoleBadge>
-                </div>
-              )}
-            </Field>
-          )}
-          {approverName &&
-            !approverSameAsRequestor &&
-            !approverSameAsRmm && (
-              <Field label="APPROVED BY">
-                <div className="font-medium">{approverName}</div>
-                {approverEmail && approverEmail !== approverName && (
-                  <div
-                    className="mono text-[11px] mt-0.5"
-                    style={{
-                      letterSpacing: "0.04em",
-                      color: "rgba(255,255,255,0.55)",
-                    }}
-                  >
-                    {approverEmail}
-                  </div>
-                )}
-              </Field>
-            )}
-          {hasStoreManager && (
-            <Field label="STORE MANAGER">
-              {storeManagerName && (
-                <div className="font-medium">{storeManagerName}</div>
-              )}
-              {storeManagerPhone && (
-                <div
-                  className="mono text-[11px] mt-0.5"
-                  style={{
-                    letterSpacing: "0.04em",
-                    color: "rgba(255,255,255,0.55)",
-                  }}
-                >
-                  {storeManagerPhone}
-                </div>
-              )}
-            </Field>
-          )}
-          {distributorEmail && (
-            <Field label="DISTRIBUTOR CONTACT">{distributorEmail}</Field>
-          )}
+      {/* Contacts — compact quiet rows */}
+      {contactLines.length > 0 && (
+        <div className="spark-card px-5 py-4">
+          <p
+            className="mono text-[10px] mb-3"
+            style={{
+              letterSpacing: "0.18em",
+              color: "var(--spark-lime)",
+            }}
+          >
+            CONTACTS
+          </p>
+          <div className="space-y-2">
+            {contactLines.map((line) => (
+              <ContactLine
+                key={line.key}
+                name={line.name}
+                detail={line.detail}
+                note={line.note}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Notes */}
       {notesText && (
@@ -1258,10 +1348,10 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               CREATED
             </p>
             <p style={{ color: "rgba(255,255,255,0.75)" }}>
-              {fmtDate(request.createdAt)} by {requestorName}
+              {fmtDate(request.createdAt)}
             </p>
           </div>
-          {slug === "approved" && !approverSameAsRequestor && approverName && (
+          {slug === "approved" && !approverShownInContacts && approverName && (
             <div>
               <p
                 className="mono text-[10px] mb-1"
@@ -1292,7 +1382,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
               </p>
               <p style={{ color: "rgba(255,255,255,0.75)" }}>
                 {fmtDate(request.updatedAt)}
-                {approverName ? ` by ${approverName}` : ""}
+                {approverName && !approverShownInContacts ? ` by ${approverName}` : ""}
               </p>
             </div>
           )}
@@ -1499,7 +1589,6 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
   const events = (request.events ?? []).filter(
     (e): e is NonNullable<typeof e> => Boolean(e),
   );
-  if (events.length === 0) return null;
 
   type Row = {
     eventName: string | null;
@@ -1537,6 +1626,41 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
         recap: normalizeCustomRecap(r),
       });
     }
+  }
+
+  if (rows.length === 0) {
+    return (
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-1">
+        <p
+          className="mono text-[10px]"
+          style={{
+            letterSpacing: "0.18em",
+            color: "var(--spark-lime)",
+          }}
+        >
+          FIELD REPORTS · 0
+        </p>
+        <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+          No recap filed on this request yet.
+        </p>
+        {awaiting.length > 0 && (
+          <Link
+            to={`/event/view/${awaiting[0].uuid}`}
+            state={{ from: `/request/view/${request.uuid}` }}
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.12em",
+              color: "rgba(255,255,255,0.55)",
+              textDecoration: "none",
+            }}
+          >
+            {awaiting.length === 1
+              ? `Open event (${awaiting[0].name}) →`
+              : `Open first of ${awaiting.length} events awaiting recap →`}
+          </Link>
+        )}
+      </div>
+    );
   }
 
   const counted = rows.filter((r) => !r.recap.excludeFromAggregates);
@@ -1577,50 +1701,46 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
+              color: "var(--spark-lime)",
             }}
           >
-            FIELD REPORTS
+            FIELD REPORTS · {rows.length}
           </p>
           <h2
             className="text-lg font-semibold mt-1"
             style={{ color: "rgba(255,255,255,0.92)" }}
           >
-            {rows.length === 0
-              ? "No recaps submitted yet"
-              : `${rows.length} recap${rows.length === 1 ? "" : "s"} submitted`}
+            {`${rows.length} recap${rows.length === 1 ? "" : "s"} submitted`}
           </h2>
         </div>
-        {rows.length > 0 && (
-          <div className="flex items-center gap-4 text-xs">
-            <div>
-              <p
-                className="tab-num font-bold text-base"
-                style={{ color: "var(--spark-lime)" }}
-              >
-                {totalEngagements.toLocaleString()}
-              </p>
-              <p className="label-mini">CONSUMERS</p>
-            </div>
-            <div>
-              <p className="tab-num font-bold text-base">
-                {totalSold.toLocaleString()}
-              </p>
-              <p className="label-mini">SOLD</p>
-            </div>
-            <div>
-              <p
-                className="tab-num font-bold text-base"
-                style={{ color: "var(--spark-lime)" }}
-              >
-                {convBase > 0
-                  ? `${Math.round((convSold / convBase) * 100)}%`
-                  : "—"}
-              </p>
-              <p className="label-mini">CONV</p>
-            </div>
+        <div className="flex items-center gap-4 text-xs">
+          <div>
+            <p
+              className="tab-num font-bold text-base"
+              style={{ color: "var(--spark-lime)" }}
+            >
+              {totalEngagements.toLocaleString()}
+            </p>
+            <p className="label-mini">CONSUMERS</p>
           </div>
-        )}
+          <div>
+            <p className="tab-num font-bold text-base">
+              {totalSold.toLocaleString()}
+            </p>
+            <p className="label-mini">SOLD</p>
+          </div>
+          <div>
+            <p
+              className="tab-num font-bold text-base"
+              style={{ color: "var(--spark-lime)" }}
+            >
+              {convBase > 0
+                ? `${Math.round((convSold / convBase) * 100)}%`
+                : "—"}
+            </p>
+            <p className="label-mini">CONV</p>
+          </div>
+        </div>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1724,54 +1844,30 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
             </div>
           );
         })}
-
-        {awaiting.map((ev) => (
-          <div
-            key={ev.uuid}
-            className="spark-card overflow-hidden"
-            style={{
-              borderStyle: "dashed",
-              opacity: 0.7,
-            }}
-          >
-            <div
-              className="h-32 relative overflow-hidden grid place-items-center"
-              style={{
-                background: "rgba(255,255,255,0.02)",
-              }}
-            >
-              <div className="text-center">
-                <p
-                  className="mono text-[10px]"
-                  style={{
-                    letterSpacing: "0.18em",
-                    color: "var(--spark-orange)",
-                  }}
-                >
-                  AWAITING RECAP
-                </p>
-                <p
-                  className="text-xs mt-1"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
-                >
-                  {ev.name}
-                </p>
-              </div>
-            </div>
-            <div className="p-4">
-              <p
-                className="mono text-[10px] uppercase truncate"
-                style={{
-                  letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.45)",
-                }}
-              >
-                {fmt(ev.date)}
-              </p>
-            </div>
-          </div>
-        ))}
       </div>
+
+      {awaiting.length > 0 && (
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mt-4 pt-3" style={{ borderTop: "1px solid var(--spark-border)" }}>
+          <span
+            className="mono text-[10px]"
+            style={{ letterSpacing: "0.14em", color: "var(--spark-orange)" }}
+          >
+            AWAITING RECAP · {awaiting.length}
+          </span>
+          {awaiting.map((ev) => (
+            <Link
+              key={ev.uuid}
+              to={`/event/view/${ev.uuid}`}
+              state={{ from: `/request/view/${request.uuid}` }}
+              className="text-xs"
+              style={{ color: "rgba(255,255,255,0.65)", textDecoration: "none" }}
+            >
+              {ev.name}
+              {ev.date ? ` (${fmt(ev.date)})` : ""} →
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
