@@ -26,5 +26,10 @@ export const SidebarCountsQuery = graphql`
       statusSlug
     }
     pendingWalkupCount(tenantId: $tenantId)
+    recapsNeedsReview: recapTypeCounts(
+      filters: { tenantId: $tenantId, approved: false, archived: false }
+    ) {
+      total
+    }
   }
 `;

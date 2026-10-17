@@ -18,6 +18,7 @@ export type SidebarCounts = {
   done30d: number;
   alertsUnread: number;
   recapsDue: number;
+  recapsNeedsReview: number;
   pendingWalkups: number;
 };
 
@@ -86,6 +87,7 @@ export function useSidebarCounts(): SidebarCounts {
       done30d: counts?.done30d ?? 0,
       alertsUnread,
       recapsDue: counts?.recapsDue ?? 0,
+      recapsNeedsReview: data?.recapsNeedsReview?.total ?? 0,
       pendingWalkups: data?.pendingWalkupCount ?? 0,
     };
   }, [data]);

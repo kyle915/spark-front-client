@@ -47,6 +47,12 @@ import {
   recapsListHrefFromReturn,
   recapsListNavState,
 } from "./recapListFilters";
+import {
+  getRecapQueueNeighbors,
+  markRecapOpenedInQueue,
+  markRecapReviewedInQueue,
+} from "./recapReviewQueue";
+import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import type { ProductsQuery as ProductsQueryType } from "@/api/queries/__generated__/ProductsQuery.graphql";
 import { CreateProductMutation } from "@/api/mutations/CreateProductMutation";
@@ -819,23 +825,37 @@ const SparkRecapInner: React.FC<{
     });
   };
 
+  const queueInfo = useMemo(() => getRecapQueueNeighbors(uuid), [uuid]);
+  useEffect(() => {
+    markRecapOpenedInQueue(uuid);
+  }, [uuid]);
+
   // Approve / decline the recap itself (distinct from request approval).
   // After success, return to the list with a forced network refetch —
   // Relay updates the Recap node but not the Needs review connection, so
   // store-or-network would keep the row in the queue until a hard refresh.
-  const setApproved = (approved: boolean) => {
+  const setApproved = (approved: boolean, advanceToNext = false) => {
     if (isApproving || approvePhase !== "idle") return;
     if (approved) setApprovePhase("pending");
+    const nextItemHref = advanceToNext
+      ? queueInfo?.nextUnapproved?.href ?? null
+      : null;
     commitApprove({
       variables: { input: { id: recap.id, approved } },
       onCompleted: (res) => {
         if (res.approveRecap?.success) {
+          markRecapReviewedInQueue(uuid, { approved });
+          refreshSidebarCounts();
           showAlert(
             approved ? "Recap approved." : "Recap marked not approved.",
             "success",
           );
-          const goList = () => {
+          const finish = () => {
             markRecapsListNeedsRefresh();
+            if (nextItemHref) {
+              navigate(nextItemHref);
+              return;
+            }
             navigate(
               recapsListHrefFromReturn({
                 searchParams,
@@ -846,10 +866,10 @@ const SparkRecapInner: React.FC<{
           };
           if (approved) {
             setApprovePhase("success");
-            void holdActionSuccess().then(goList);
+            void holdActionSuccess().then(finish);
             return;
           }
-          goList();
+          finish();
         } else {
           setApprovePhase("idle");
           showAlert(
@@ -871,6 +891,8 @@ const SparkRecapInner: React.FC<{
       variables: { input: { id: recap.id, reason: null } },
       onCompleted: (res) => {
         if (res.archiveRecap?.success) {
+          markRecapReviewedInQueue(uuid, { archived: true });
+          refreshSidebarCounts();
           showAlert(
             "Recap archived — kept as proof, hidden from client.",
             "success",
@@ -894,6 +916,8 @@ const SparkRecapInner: React.FC<{
       variables: { input: { id: recap.id } },
       onCompleted: (res) => {
         if (res.unarchiveRecap?.success) {
+          markRecapReviewedInQueue(uuid, { archived: false });
+          refreshSidebarCounts();
           showAlert("Recap restored to Needs review.", "success");
           onRefresh();
         } else {
@@ -932,6 +956,8 @@ const SparkRecapInner: React.FC<{
       variables: { input: { id: recap.id } },
       onCompleted: (res) => {
         if (res.deleteRecap?.success) {
+          markRecapReviewedInQueue(uuid, { removed: true });
+          refreshSidebarCounts();
           showAlert("Recap deleted.", "success");
           navigate(backToListUrl);
         } else {
@@ -1165,17 +1191,19 @@ const SparkRecapInner: React.FC<{
                 subjectLabel={recap.name ?? undefined}
               />
             ) : null}
-            <button
-              onClick={openShare}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              ↗ Share
-            </button>
+            {isClient && (
+              <button
+                onClick={openShare}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                }}
+              >
+                ↗ Share
+              </button>
+            )}
             {!isClient && (
             <button
               onClick={() => setReassignOpen(true)}
@@ -1202,127 +1230,6 @@ const SparkRecapInner: React.FC<{
                   border: "1px solid var(--spark-border)",
                 }}
               />
-            )}
-            {/* Admin-only recap approval. Nevena: "I don't see where to
-                approve recap." Distinct from request approval — this
-                marks the RECAP itself approved. Shows the current state
-                and flips it. */}
-            {isAdmin &&
-              (recap.approved ? (
-                <button
-                  onClick={() => setApproved(false)}
-                  disabled={isApproving}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                  style={{
-                    background: "transparent",
-                    color: "var(--spark-orange)",
-                    border: "1px solid rgba(239,90,42,0.4)",
-                    opacity: isApproving ? 0.5 : 1,
-                  }}
-                  title="This recap is approved — click to un-approve"
-                >
-                  ✓ Approved · undo
-                </button>
-              ) : (
-                <ActionMorphButton
-                  onClick={() => setApproved(true)}
-                  disabled={isApproving || Boolean(recap.archivedAt)}
-                  phase={approvePhase}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                  style={{
-                    background: "var(--spark-lime)",
-                    color: "#0a0d09",
-                    boxShadow: "0 0 18px rgba(197,245,70,0.35)",
-                    opacity: isApproving ? 0.5 : 1,
-                  }}
-                  title={
-                    recap.archivedAt
-                      ? "Unarchive before approving"
-                      : "Approve this recap"
-                  }
-                  pendingLabel="Approving…"
-                  successLabel="Approved"
-                >
-                  Approve recap
-                </ActionMorphButton>
-              ))}
-
-            {isAdmin &&
-              (recap.archivedAt ? (
-                <button
-                  type="button"
-                  onClick={unarchiveRecap}
-                  disabled={isUnarchiving}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                  style={{
-                    background: "transparent",
-                    color: "var(--spark-text)",
-                    border: "1px solid var(--spark-border)",
-                    opacity: isUnarchiving ? 0.5 : 1,
-                  }}
-                  title="Restore this recap to Needs review"
-                >
-                  {isUnarchiving ? "Restoring…" : "Unarchive"}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={archiveRecap}
-                  disabled={isArchiving}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                  style={{
-                    background: "transparent",
-                    color: "rgba(255,255,255,0.7)",
-                    border: "1px solid var(--spark-border)",
-                    opacity: isArchiving ? 0.5 : 1,
-                  }}
-                  title="Park this recap — keep proof, hide from client, leave Needs review"
-                >
-                  {isArchiving ? "Archiving…" : "Archive"}
-                </button>
-              ))}
-
-            {/* Admin-only delete. Removes the recap and frees the event
-                for a new one (see multi-recap-per-event). Confirms first. */}
-            {isAdmin && (
-              <button
-                onClick={deleteRecap}
-                disabled={isDeleting}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                style={{
-                  background: "transparent",
-                  color: "var(--spark-orange)",
-                  border: "1px solid rgba(239,90,42,0.4)",
-                  opacity: isDeleting ? 0.5 : 1,
-                }}
-                title="Delete this recap and free the event for a new one"
-              >
-                {isDeleting ? "Deleting…" : "🗑 Delete"}
-              </button>
-            )}
-
-            {/* Admin-only number editor. Replaced the old dead-route
-                placeholder (which black-screened, then showed a "ping
-                your RMM" toast). Now opens an inline editor for the
-                quantitative fields. Clients stay read-only — they see
-                no Edit affordance. */}
-            {isAdmin && (
-              <button
-                onClick={() =>
-                  editingNumbers ? setEditingNumbers(false) : startEditNumbers()
-                }
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                style={{
-                  background: editingNumbers
-                    ? "var(--spark-lime)"
-                    : "transparent",
-                  color: editingNumbers ? "#0a0d09" : "var(--spark-text)",
-                  border: "1px solid var(--spark-border)",
-                }}
-                title="Edit the recap's numbers (products sold, cans, packs, engagements, spend)"
-              >
-                {editingNumbers ? "✕ Close editor" : "✎ Edit recap"}
-              </button>
             )}
           </div>
         </div>
@@ -2628,10 +2535,23 @@ const SparkRecapInner: React.FC<{
       </div>
       </RecapDocument>
 
-      {/* Ops-only sticky Approve / Share — stays reachable while scrolling
-          photo-first content. Not mounted for clients or /r/:token. */}
+      {/* Ops-only sticky Approve / Share / Edit / Archive / Delete — single
+          predictable action surface while scrolling photo-first content.
+          Not mounted for clients or /r/:token. */}
       {!isClient && (
-        <RecapStickyOpsBar>
+        <RecapStickyOpsBar
+          queueNav={
+            queueInfo
+              ? {
+                  index: queueInfo.index,
+                  total: queueInfo.total,
+                  prevHref: queueInfo.prev?.href ?? null,
+                  nextHref: queueInfo.next?.href ?? null,
+                  onNavigate: (href) => navigate(href),
+                }
+              : null
+          }
+        >
           <button
             type="button"
             onClick={openShare}
@@ -2644,46 +2564,25 @@ const SparkRecapInner: React.FC<{
           >
             ↗ Share
           </button>
-          {isAdmin &&
-            (recap.approved ? (
-              <button
-                type="button"
-                onClick={() => setApproved(false)}
-                disabled={isApproving}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                style={{
-                  background: "transparent",
-                  color: "var(--spark-orange)",
-                  border: "1px solid rgba(239,90,42,0.4)",
-                  opacity: isApproving ? 0.5 : 1,
-                }}
-                title="This recap is approved — click to un-approve"
-              >
-                ✓ Approved · undo
-              </button>
-            ) : (
-              <ActionMorphButton
-                onClick={() => setApproved(true)}
-                disabled={isApproving || Boolean(recap.archivedAt)}
-                phase={approvePhase}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                style={{
-                  background: "var(--spark-lime)",
-                  color: "#0a0d09",
-                  boxShadow: "0 0 18px rgba(197,245,70,0.35)",
-                  opacity: isApproving ? 0.5 : 1,
-                }}
-                title={
-                  recap.archivedAt
-                    ? "Unarchive before approving"
-                    : "Approve this recap"
-                }
-                pendingLabel="Approving…"
-                successLabel="Approved"
-              >
-                Approve recap
-              </ActionMorphButton>
-            ))}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() =>
+                editingNumbers ? setEditingNumbers(false) : startEditNumbers()
+              }
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{
+                background: editingNumbers
+                  ? "var(--spark-lime)"
+                  : "transparent",
+                color: editingNumbers ? "#0a0d09" : "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+              title="Edit the recap's numbers (products sold, cans, packs, engagements, spend)"
+            >
+              {editingNumbers ? "✕ Close editor" : "✎ Edit recap"}
+            </button>
+          )}
           {isAdmin &&
             (recap.archivedAt ? (
               <button
@@ -2717,6 +2616,93 @@ const SparkRecapInner: React.FC<{
               >
                 {isArchiving ? "Archiving…" : "Archive"}
               </button>
+            ))}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={deleteRecap}
+              disabled={isDeleting}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{
+                background: "transparent",
+                color: "var(--spark-orange)",
+                border: "1px solid rgba(239,90,42,0.4)",
+                opacity: isDeleting ? 0.5 : 1,
+              }}
+              title="Delete this recap and free the event for a new one"
+            >
+              {isDeleting ? "Deleting…" : "🗑 Delete"}
+            </button>
+          )}
+          {isAdmin &&
+            (recap.approved ? (
+              <button
+                type="button"
+                onClick={() => setApproved(false)}
+                disabled={isApproving}
+                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-orange)",
+                  border: "1px solid rgba(239,90,42,0.4)",
+                  opacity: isApproving ? 0.5 : 1,
+                }}
+                title="This recap is approved — click to un-approve"
+              >
+                ✓ Approved · undo
+              </button>
+            ) : (
+              <>
+                <ActionMorphButton
+                  onClick={() => setApproved(true, false)}
+                  disabled={isApproving || Boolean(recap.archivedAt)}
+                  phase={approvePhase}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  style={
+                    queueInfo?.nextUnapproved
+                      ? {
+                          background: "transparent",
+                          color: "var(--spark-lime)",
+                          border: "1px solid rgba(197,245,70,0.45)",
+                          opacity: isApproving ? 0.5 : 1,
+                        }
+                      : {
+                          background: "var(--spark-lime)",
+                          color: "#0a0d09",
+                          boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                          opacity: isApproving ? 0.5 : 1,
+                        }
+                  }
+                  title={
+                    recap.archivedAt
+                      ? "Unarchive before approving"
+                      : "Approve this recap and return to list"
+                  }
+                  pendingLabel="Approving…"
+                  successLabel="Approved"
+                >
+                  Approve recap
+                </ActionMorphButton>
+                {queueInfo?.nextUnapproved && !recap.archivedAt && (
+                  <ActionMorphButton
+                    onClick={() => setApproved(true, true)}
+                    disabled={isApproving}
+                    phase={approvePhase}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                    style={{
+                      background: "var(--spark-lime)",
+                      color: "#0a0d09",
+                      boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                      opacity: isApproving ? 0.5 : 1,
+                    }}
+                    title="Approve this recap and advance to the next unapproved recap in the queue"
+                    pendingLabel="Approving…"
+                    successLabel="Approved →"
+                  >
+                    Approve & next →
+                  </ActionMorphButton>
+                )}
+              </>
             ))}
         </RecapStickyOpsBar>
       )}

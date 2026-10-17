@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   archivedQueryFilter,
+  buildRecapListSearchParams,
   consumeRecapsListNeedsRefresh,
   defaultRecapStatus,
   markRecapsListNeedsRefresh,
+  readRecapListUrlFilters,
   recapEmptyKind,
   recapIsEmptyShell,
   recapListServerFilters,
@@ -220,6 +222,93 @@ describe("recap list return href", () => {
     expect(
       recapsListHrefFromReturn({ searchParams: new URLSearchParams() }),
     ).toBe("/recaps/list");
+  });
+
+  it("stashes and restores search, retailer, state, rmm, ba, dates, and page", () => {
+    const detailHref = withRecapListReturn(
+      "/recap/view-custom/abc",
+      "needs_review",
+      "retail",
+      {
+        q: "heb",
+        retailer: "H-E-B",
+        state: "TX",
+        rmm: "42",
+        ba: "Alex",
+        from: "2026-09-01",
+        to: "2026-09-30",
+        page: 2,
+      },
+    );
+    expect(detailHref).toContain("fromQ=heb");
+    expect(detailHref).toContain("fromRetailer=H-E-B");
+    expect(detailHref).toContain("fromState=TX");
+    expect(detailHref).toContain("fromRmm=42");
+    expect(detailHref).toContain("fromBa=Alex");
+    expect(detailHref).toContain("fromFrom=2026-09-01");
+    expect(detailHref).toContain("fromTo=2026-09-30");
+    expect(detailHref).toContain("fromPage=2");
+
+    const [, query = ""] = detailHref.split("?");
+    expect(
+      recapsListHrefFromReturn({ searchParams: new URLSearchParams(query) }),
+    ).toBe(
+      "/recaps/list?status=needs_review&activation=retail&q=heb&retailer=H-E-B&state=TX&rmm=42&ba=Alex&from=2026-09-01&to=2026-09-30&page=2",
+    );
+  });
+
+  it("reads and writes URL search params while omitting default values", () => {
+    const defaults = {
+      isClient: false,
+      defaultFrom: "2026-09-17",
+      defaultTo: "2026-10-17",
+      weekFrom: "2026-10-10",
+    };
+    const cleanParams = buildRecapListSearchParams({
+      ...defaults,
+      status: "needs_review",
+      activation: "all",
+      q: "  ",
+      retailer: "all",
+      state: "all",
+      rmm: "all",
+      ba: "",
+      from: "2026-09-17",
+      to: "2026-10-17",
+      page: 1,
+    });
+    expect(cleanParams.toString()).toBe("");
+
+    const activeParams = buildRecapListSearchParams({
+      ...defaults,
+      status: "approved",
+      activation: "event",
+      q: " Costco ",
+      retailer: "Costco",
+      state: "CA",
+      rmm: "7",
+      ba: "Weni",
+      from: "2026-08-01",
+      to: "2026-08-31",
+      page: 3,
+    });
+    expect(activeParams.toString()).toBe(
+      "status=approved&activation=event&q=Costco&retailer=Costco&state=CA&rmm=7&ba=Weni&from=2026-08-01&to=2026-08-31&page=3",
+    );
+
+    const parsed = readRecapListUrlFilters(activeParams, defaults);
+    expect(parsed).toEqual({
+      status: "approved",
+      activation: "event",
+      q: "Costco",
+      retailer: "Costco",
+      state: "CA",
+      rmm: "7",
+      ba: "Weni",
+      from: "2026-08-01",
+      to: "2026-08-31",
+      page: 3,
+    });
   });
 });
 
