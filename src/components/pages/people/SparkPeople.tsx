@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkOverlay from "@/shared/SparkOverlay";
@@ -21,6 +21,25 @@ import type { SendTestClientReportMutation as SendTestClientReportMutationType }
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import BaActivationPanel from "./BaActivationPanel";
+import {
+  DefaultRmmSelector,
+  PeopleTabsSwitcher,
+  filterRmmCandidates,
+  parseRecapRecipientsList,
+  resolvePeopleTab,
+  type PeopleTab,
+  type PersonRow,
+} from "./peopleRoutingControls";
+
+export {
+  DefaultRmmSelector,
+  PeopleTabsSwitcher,
+  filterRmmCandidates,
+  parseRecapRecipientsList,
+  resolvePeopleTab,
+  type PeopleTab,
+  type PersonRow,
+};
 
 /**
  * Spark v2 — People (user management).
@@ -30,16 +49,6 @@ import BaActivationPanel from "./BaActivationPanel";
  * templates pending Kyle's copy — for now the invite UI captures the
  * inputs and shows a "Email queued" toast.
  */
-
-type PersonRow = {
-  id: string;
-  uuid: string;
-  name: string;
-  email: string;
-  role: string;
-  roleSlug: string;
-  initials: string;
-};
 
 const ROLE_CHIP: Record<string, string> = {
   admin: "chip chip-lime",
@@ -58,8 +67,10 @@ const initialsOf = (name: string) =>
     .toUpperCase() || "?";
 
 const Inner: React.FC<{
+  activeTab: PeopleTab;
+  onChangeTab: (tab: PeopleTab) => void;
   onOpenInvite: (role: "admin" | "client" | "ambassador") => void;
-}> = ({ onOpenInvite }) => {
+}> = ({ activeTab, onChangeTab, onOpenInvite }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   const [search, setSearch] = useState("");
@@ -450,579 +461,578 @@ const Inner: React.FC<{
     }
   };
 
+  const selectedDefaultRmm = useMemo(
+    () => rows.find((r) => r.id === defaultRmmId) ?? null,
+    [rows, defaultRmmId],
+  );
+  const recapRecipientCount = useMemo(
+    () => parseRecapRecipientsList(recapEmails).length,
+    [recapEmails],
+  );
+  const activeDigestCount =
+    Number(Boolean(reportEnabled)) + Number(Boolean(digestEnabled));
+  const routingSummaryText = `Default RMM: ${
+    selectedDefaultRmm?.name ?? "Territory routing"
+  } · ${recapRecipientCount} recipient${
+    recapRecipientCount === 1 ? "" : "s"
+  } · ${activeDigestCount} digest${activeDigestCount === 1 ? "" : "s"} active`;
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="spark-card p-4">
-          <p className="label-mini">EVERYONE</p>
-          <p
-            className="tab-num text-3xl font-bold mt-1"
-            style={{ color: "var(--spark-lime)" }}
-          >
-            {counts.all || "—"}
-          </p>
-        </div>
-        <div className="spark-card p-4">
-          <p className="label-mini">ADMINS</p>
-          <p className="tab-num text-3xl font-bold mt-1">
-            {(counts["spark-admin"] ?? 0) + (counts.admin ?? 0) || "—"}
-          </p>
-        </div>
-        <div className="spark-card p-4">
-          <p className="label-mini">CLIENTS</p>
-          <p
-            className="tab-num text-3xl font-bold mt-1"
-            style={{ color: "var(--spark-sky)" }}
-          >
-            {counts.client || "—"}
-          </p>
-        </div>
-        <div className="spark-card p-4">
-          <p className="label-mini">AMBASSADORS</p>
-          <p className="tab-num text-3xl font-bold mt-1">
-            {counts.ambassador || "—"}
-          </p>
-        </div>
-      </div>
+      <PeopleTabsSwitcher
+        activeTab={activeTab}
+        onChangeTab={onChangeTab}
+        peopleCount={counts.all}
+        summaryText={routingSummaryText}
+      />
 
-      <div className="spark-card p-4 flex flex-wrap items-center gap-2">
-        <span className="label-mini mr-2">ROLE</span>
-        {[
-          { key: "all", label: "Everyone", chip: "chip chip-muted" },
-          { key: "spark-admin", label: "Admins", chip: "chip chip-lime" },
-          { key: "client", label: "Clients", chip: "chip chip-sky" },
-          {
-            key: "ambassador",
-            label: "Ambassadors",
-            chip: "chip chip-purple",
-          },
-        ].map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setRoleFilter(f.key)}
-            className={f.chip}
-            style={
-              roleFilter === f.key
-                ? { outline: "1.5px solid currentColor" }
-                : undefined
-            }
-          >
-            {f.label} · {counts[f.key] ?? counts.all ?? 0}
-          </button>
-        ))}
-        <span className="flex-1" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search…"
-          className="rounded-xl text-xs"
-          style={{
-            padding: "0.45rem 0.9rem",
-            background: "var(--spark-bg)",
-            border: "1px solid var(--spark-border)",
-            color: "var(--spark-text)",
-            maxWidth: 220,
-            outline: "none",
-          }}
-        />
-      </div>
+      {activeTab === "people" ? (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="spark-card p-4">
+              <p className="label-mini">EVERYONE</p>
+              <p
+                className="tab-num text-3xl font-bold mt-1"
+                style={{ color: "var(--spark-lime)" }}
+              >
+                {counts.all || "—"}
+              </p>
+            </div>
+            <div className="spark-card p-4">
+              <p className="label-mini">ADMINS</p>
+              <p className="tab-num text-3xl font-bold mt-1">
+                {(counts["spark-admin"] ?? 0) + (counts.admin ?? 0) || "—"}
+              </p>
+            </div>
+            <div className="spark-card p-4">
+              <p className="label-mini">CLIENTS</p>
+              <p
+                className="tab-num text-3xl font-bold mt-1"
+                style={{ color: "var(--spark-sky)" }}
+              >
+                {counts.client || "—"}
+              </p>
+            </div>
+            <div className="spark-card p-4">
+              <p className="label-mini">AMBASSADORS</p>
+              <p className="tab-num text-3xl font-bold mt-1">
+                {counts.ambassador || "—"}
+              </p>
+            </div>
+          </div>
 
-      {/* Default recipient for external (public-form) requests. Picking
-          a person overrides territory routing — every public request
-          for this tenant lands on them. "None" restores territory rules. */}
-      <div className="spark-card p-4">
-        <p className="label-mini">DEFAULT RECIPIENT FOR EXTERNAL REQUESTS</p>
-        <p
-          className="text-xs mt-1 mb-3"
-          style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
-        >
-          Who should all external (public-form) requests route to? Choose a
-          person to override territory routing, or pick “None” to use it.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={defaultRmmId}
-            disabled={defaultRmmInFlight}
-            onChange={(e) => handleDefaultRmmChange(e.target.value)}
-            className="rounded-xl text-sm"
-            style={{
-              padding: "0.55rem 0.9rem",
-              background: "var(--spark-bg)",
-              border: "1px solid var(--spark-border)",
-              color: "var(--spark-text)",
-              outline: "none",
-              minWidth: 280,
-              opacity: defaultRmmInFlight ? 0.6 : 1,
-            }}
-          >
-            <option value="">— None (territory routing) —</option>
-            {rows.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-                {p.email ? ` · ${p.email}` : ""}
-              </option>
+          <div className="spark-card p-4 flex flex-wrap items-center gap-2">
+            <span className="label-mini mr-2">ROLE</span>
+            {[
+              { key: "all", label: "Everyone", chip: "chip chip-muted" },
+              { key: "spark-admin", label: "Admins", chip: "chip chip-lime" },
+              { key: "client", label: "Clients", chip: "chip chip-sky" },
+              {
+                key: "ambassador",
+                label: "Ambassadors",
+                chip: "chip chip-purple",
+              },
+            ].map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setRoleFilter(f.key)}
+                className={f.chip}
+                style={
+                  roleFilter === f.key
+                    ? { outline: "1.5px solid currentColor" }
+                    : undefined
+                }
+              >
+                {f.label} · {counts[f.key] ?? counts.all ?? 0}
+              </button>
             ))}
-          </select>
-          {defaultRmmInFlight && (
-            <span
-              className="mono text-[10px]"
+            <span className="flex-1" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search…"
+              className="rounded-xl text-xs"
               style={{
-                letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              SAVING…
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Recap-approval email recipients — extra addresses CC'd on the
-          recap-approval email for this brand, in addition to the RMM,
-          client users, and requestor. Free-form text, saved on the
-          button press. */}
-      <div className="spark-card p-4">
-        <p className="label-mini">RECAP EMAIL RECIPIENTS</p>
-        <p
-          className="text-xs mt-1 mb-3"
-          style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
-        >
-          Comma- or newline-separated email addresses that receive the
-          recap-approval email for this brand, in addition to the RMM, client
-          users, and requestor.
-        </p>
-        <textarea
-          value={recapEmails}
-          disabled={recapEmailsInFlight}
-          onChange={(e) => {
-            setRecapEmails(e.target.value);
-            setRecapDirty(true);
-          }}
-          rows={4}
-          placeholder="ross@liquid-death.com, ops@liquid-death.com"
-          className="rounded-xl text-sm w-full"
-          style={{
-            padding: "0.55rem 0.9rem",
-            background: "var(--spark-bg)",
-            border: "1px solid var(--spark-border)",
-            color: "var(--spark-text)",
-            outline: "none",
-            resize: "vertical",
-            minHeight: 96,
-            opacity: recapEmailsInFlight ? 0.6 : 1,
-          }}
-        />
-        <div className="flex flex-wrap items-center gap-3 mt-3">
-          <button
-            onClick={handleSaveRecapEmails}
-            disabled={recapEmailsInFlight || !recapDirty}
-            className="px-4 py-2.5 rounded-xl text-sm font-semibold"
-            style={{
-              background: "var(--spark-lime)",
-              color: "#0a0d09",
-              boxShadow: "0 0 18px rgba(197,245,70,0.35)",
-              opacity: recapEmailsInFlight || !recapDirty ? 0.5 : 1,
-            }}
-          >
-            Save recipients
-          </button>
-          {recapEmailsInFlight && (
-            <span
-              className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.45)",
-              }}
-            >
-              SAVING…
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Monthly client report — automated monthly performance PDF mailed
-          to the recap recipients above on the 1st (for the prior month).
-          Toggle is bound to the tenant's scheduledReportEnabled flag; the
-          "Send me a test" button previews it to the signed-in user only. */}
-      <div className="spark-card p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div style={{ flex: "1 1 320px", minWidth: 0 }}>
-            <p className="label-mini">MONTHLY CLIENT REPORT</p>
-            <p
-              className="text-xs mt-1"
-              style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
-            >
-              When on, this client gets an automated monthly performance
-              report (PDF) emailed to the recap recipients above, on the 1st
-              for the prior month.
-            </p>
-          </div>
-          {/* On/off switch — spark-themed, lime when enabled. */}
-          <button
-            type="button"
-            role="switch"
-            aria-checked={reportEnabled}
-            aria-label="Toggle monthly client report"
-            disabled={reportEnabledInFlight}
-            onClick={() => handleToggleReport(!reportEnabled)}
-            className="rounded-full shrink-0"
-            style={{
-              position: "relative",
-              width: 46,
-              height: 26,
-              padding: 0,
-              border: "1px solid var(--spark-border)",
-              background: reportEnabled
-                ? "var(--spark-lime)"
-                : "var(--spark-surface-2)",
-              boxShadow: reportEnabled
-                ? "0 0 14px rgba(197,245,70,0.35)"
-                : "none",
-              cursor: reportEnabledInFlight ? "default" : "pointer",
-              opacity: reportEnabledInFlight ? 0.6 : 1,
-              transition: "background 0.15s ease, box-shadow 0.15s ease",
-            }}
-          >
-            <span
-              style={{
-                position: "absolute",
-                top: 2,
-                left: reportEnabled ? 22 : 2,
-                width: 20,
-                height: 20,
-                borderRadius: "9999px",
-                background: reportEnabled ? "#0a0d09" : "var(--spark-text)",
-                transition: "left 0.15s ease",
+                padding: "0.45rem 0.9rem",
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+                maxWidth: 220,
+                outline: "none",
               }}
             />
-          </button>
-        </div>
+          </div>
 
-        {/* No-recipients hint — the report has nowhere to go until at least
-            one recap recipient is set above. */}
-        {!hasRecapRecipients && (
-          <p
-            className="text-xs mt-3"
-            style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}
+          <div
+            className="spark-card overflow-hidden"
+            style={{ borderRadius: 20 }}
           >
-            Add at least one recap recipient above first — the report has
-            nowhere to send otherwise.
-          </p>
-        )}
+            <div className="overflow-x-auto">
+              <table
+                className="w-full text-sm"
+                style={{ minWidth: 800 }}
+              >
+                <thead
+                  style={{
+                    background: "var(--spark-surface-2)",
+                    borderBottom: "1px solid var(--spark-border)",
+                  }}
+                >
+                  <tr
+                    className="text-left mono"
+                    style={{
+                      fontSize: 10,
+                      letterSpacing: "0.14em",
+                      color: "rgba(255,255,255,0.45)",
+                    }}
+                  >
+                    <th className="px-4 py-3">PERSON</th>
+                    <th className="px-4 py-3">EMAIL</th>
+                    <th className="px-4 py-3">ROLE</th>
+                    <th className="px-4 py-3 text-right">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleFiltered.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-4 py-10 text-center text-sm"
+                        style={{ color: "rgba(255,255,255,0.55)" }}
+                      >
+                        No people match.
+                      </td>
+                    </tr>
+                  )}
+                  {visibleFiltered.map((p) => (
+                    <tr
+                      key={p.uuid}
+                      style={{ borderBottom: "1px solid var(--spark-border)" }}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span className="spark-avatar">{p.initials}</span>
+                          <span className="font-medium">{p.name}</span>
+                        </div>
+                      </td>
+                      <td
+                        className="px-4 py-3 mono text-xs"
+                        style={{ color: "rgba(255,255,255,0.7)" }}
+                      >
+                        {p.email}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={ROLE_CHIP[p.roleSlug] ?? "chip chip-muted"}
+                        >
+                          {p.role.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="inline-flex items-center gap-3">
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(p.email);
+                              showAlert(`Copied ${p.email}.`, "info");
+                            }}
+                            className="mono text-[10px]"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: "rgba(255,255,255,0.55)",
+                            }}
+                          >
+                            COPY EMAIL
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const res = await fetch(
+                                  import.meta.env.VITE_GRAPHQL_ENDPOINT,
+                                  {
+                                    method: "POST",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                      Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
+                                    },
+                                    body: JSON.stringify({
+                                      query: `
+                                        mutation RequestMagicLink($input: RequestMagicLinkInput!) {
+                                          requestMagicLink(input: $input) { success message }
+                                        }
+                                      `,
+                                      variables: {
+                                        input: {
+                                          email: p.email,
+                                          // Admin-frontend magic-link entry.
+                                          redirect: "/",
+                                        },
+                                      },
+                                    }),
+                                  },
+                                );
+                                const json = await res.json();
+                                const r = json?.data?.requestMagicLink;
+                                if (json.errors?.length || !r?.success) {
+                                  showAlert(
+                                    `Couldn't resend: ${
+                                      r?.message ??
+                                      json.errors?.[0]?.message ??
+                                      "unknown error"
+                                    }`,
+                                    "error",
+                                  );
+                                  return;
+                                }
+                                showAlert(
+                                  `Sign-in link sent to ${p.email}.`,
+                                  "success",
+                                );
+                              } catch (e) {
+                                showAlert(
+                                  `Resend failed: ${(e as Error).message}`,
+                                  "error",
+                                );
+                              }
+                            }}
+                            className="mono text-[10px]"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: "var(--spark-sky)",
+                            }}
+                            title="Re-send a magic-link sign-in email to this user"
+                          >
+                            RESEND LINK
+                          </button>
+                          <button
+                            onClick={() => setRemoving(p)}
+                            className="mono text-[10px]"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: "var(--spark-orange)",
+                            }}
+                          >
+                            REMOVE
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-        <div className="flex flex-wrap items-center gap-3 mt-3">
-          <button
-            onClick={handleSendTestReport}
-            disabled={testReportInFlight}
-            className="px-4 py-2.5 rounded-xl text-sm font-semibold"
-            style={{
-              background: "transparent",
-              color: "var(--spark-text)",
-              border: "1px solid var(--spark-border)",
-              cursor: testReportInFlight ? "default" : "pointer",
-              opacity: testReportInFlight ? 0.5 : 1,
-            }}
-          >
-            Send me a test
-          </button>
-          <span
-            className="text-xs"
-            style={{ color: "rgba(255,255,255,0.4)" }}
-          >
-            The test goes to you, not the client.
-          </span>
-          {testReportInFlight && (
-            <span
-              className="mono text-[10px]"
+          <div className="flex flex-wrap gap-3">
+            <a
+              href="/people/pending"
+              className="px-4 py-3 rounded-2xl text-sm font-semibold inline-flex items-center gap-2"
               style={{
-                letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.45)",
+                background: "transparent",
+                color: "var(--spark-orange)",
+                border: "1px solid rgba(239,90,42,0.45)",
+              }}
+              title="Approve or reject brand ambassadors waiting on you"
+            >
+              ⏳ Pending approvals →
+            </a>
+            <button
+              onClick={() => onOpenInvite("admin")}
+              className="px-4 py-3 rounded-2xl text-sm font-semibold"
+              style={{
+                background: "var(--spark-lime)",
+                color: "#0a0d09",
+                boxShadow: "0 0 20px rgba(197,245,70,0.35)",
               }}
             >
-              SENDING…
-            </span>
-          )}
-        </div>
-      </div>
+              + Invite admin
+            </button>
+            <button
+              onClick={() => onOpenInvite("client")}
+              className="px-4 py-3 rounded-2xl text-sm font-semibold transition"
+              style={{
+                background: "transparent",
+                color: "var(--spark-sky)",
+                border: "1px solid rgba(95,184,239,0.4)",
+              }}
+            >
+              + Invite client
+            </button>
+            <button
+              onClick={() => onOpenInvite("ambassador")}
+              className="px-4 py-3 rounded-2xl text-sm font-semibold transition"
+              style={{
+                background: "transparent",
+                color: "var(--spark-purple)",
+                border: "1px solid rgba(160,139,217,0.4)",
+              }}
+            >
+              + Invite ambassador
+            </button>
+          </div>
 
-      {/* Weekly client digest — Monday rollup email to the same recap
-          recipients. Independent toggle (clientWeeklyDigestEnabled) so the
-          digest and the monthly report roll out per tenant separately. */}
-      <div className="spark-card p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div style={{ flex: "1 1 320px", minWidth: 0 }}>
-            <p className="label-mini">WEEKLY CLIENT DIGEST</p>
+          {/* Booked-BA activation status + resend-welcome. Renders nothing when
+              the workspace has no booked BAs (or for non-admins — the server
+              answers them with an empty list). */}
+          <BaActivationPanel />
+        </>
+      ) : (
+        <div className="space-y-6">
+          {/* Default recipient for external (public-form) requests. Picking
+              a person overrides territory routing — every public request
+              for this tenant lands on them. "None" restores territory rules. */}
+          <div className="spark-card p-4">
+            <p className="label-mini">DEFAULT RECIPIENT FOR EXTERNAL REQUESTS</p>
             <p
-              className="text-xs mt-1"
+              className="text-xs mt-1 mb-3"
               style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
             >
-              When on, this client gets a Monday email rollup — this week at
-              a glance, what's coming up, and anything awaiting their
-              approval — sent to the recap recipients above. Quiet weeks are
-              skipped automatically.
+              Who should all external (public-form) requests route to? Search by
+              name or email to override territory routing, or clear to use it.
             </p>
+            <DefaultRmmSelector
+              rows={rows}
+              selectedId={defaultRmmId}
+              disabled={defaultRmmInFlight}
+              onSelect={handleDefaultRmmChange}
+            />
           </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={digestEnabled}
-            aria-label="Toggle weekly client digest"
-            disabled={digestEnabledInFlight}
-            onClick={() => handleToggleDigest(!digestEnabled)}
-            className="rounded-full shrink-0"
-            style={{
-              position: "relative",
-              width: 46,
-              height: 26,
-              padding: 0,
-              border: "1px solid var(--spark-border)",
-              background: digestEnabled
-                ? "var(--spark-lime)"
-                : "var(--spark-surface-2)",
-              boxShadow: digestEnabled
-                ? "0 0 14px rgba(197,245,70,0.35)"
-                : "none",
-              cursor: digestEnabledInFlight ? "default" : "pointer",
-              opacity: digestEnabledInFlight ? 0.6 : 1,
-              transition: "background 0.15s ease, box-shadow 0.15s ease",
-            }}
-          >
-            <span
+
+          {/* Recap-approval email recipients — extra addresses CC'd on the
+              recap-approval email for this brand, in addition to the RMM,
+              client users, and requestor. Free-form text, saved on the
+              button press. */}
+          <div className="spark-card p-4">
+            <p className="label-mini">RECAP EMAIL RECIPIENTS</p>
+            <p
+              className="text-xs mt-1 mb-3"
+              style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+            >
+              Comma- or newline-separated email addresses that receive the
+              recap-approval email for this brand, in addition to the RMM, client
+              users, and requestor.
+            </p>
+            <textarea
+              value={recapEmails}
+              disabled={recapEmailsInFlight}
+              onChange={(e) => {
+                setRecapEmails(e.target.value);
+                setRecapDirty(true);
+              }}
+              rows={4}
+              placeholder="ross@liquid-death.com, ops@liquid-death.com"
+              className="rounded-xl text-sm w-full"
               style={{
-                position: "absolute",
-                top: 2,
-                left: digestEnabled ? 22 : 2,
-                width: 20,
-                height: 20,
-                borderRadius: "9999px",
-                background: digestEnabled ? "#0a0d09" : "var(--spark-text)",
-                transition: "left 0.15s ease",
+                padding: "0.55rem 0.9rem",
+                background: "var(--spark-bg)",
+                border: "1px solid var(--spark-border)",
+                color: "var(--spark-text)",
+                outline: "none",
+                resize: "vertical",
+                minHeight: 96,
+                opacity: recapEmailsInFlight ? 0.6 : 1,
               }}
             />
-          </button>
-        </div>
-        {!hasRecapRecipients && (
-          <p
-            className="text-xs mt-3"
-            style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}
-          >
-            Add at least one recap recipient above first — the digest has
-            nowhere to send otherwise.
-          </p>
-        )}
-      </div>
-
-      <div
-        className="spark-card overflow-hidden"
-        style={{ borderRadius: 20 }}
-      >
-        <div className="overflow-x-auto">
-          <table
-            className="w-full text-sm"
-            style={{ minWidth: 800 }}
-          >
-            <thead
-              style={{
-                background: "var(--spark-surface-2)",
-                borderBottom: "1px solid var(--spark-border)",
-              }}
-            >
-              <tr
-                className="text-left mono"
+            <div className="flex flex-wrap items-center gap-3 mt-3">
+              <button
+                onClick={handleSaveRecapEmails}
+                disabled={recapEmailsInFlight || !recapDirty}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold"
                 style={{
-                  fontSize: 10,
-                  letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.45)",
+                  background: "var(--spark-lime)",
+                  color: "#0a0d09",
+                  boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                  opacity: recapEmailsInFlight || !recapDirty ? 0.5 : 1,
                 }}
               >
-                <th className="px-4 py-3">PERSON</th>
-                <th className="px-4 py-3">EMAIL</th>
-                <th className="px-4 py-3">ROLE</th>
-                <th className="px-4 py-3 text-right">ACTIONS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleFiltered.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="px-4 py-10 text-center text-sm"
-                    style={{ color: "rgba(255,255,255,0.55)" }}
-                  >
-                    No people match.
-                  </td>
-                </tr>
-              )}
-              {visibleFiltered.map((p) => (
-                <tr
-                  key={p.uuid}
-                  style={{ borderBottom: "1px solid var(--spark-border)" }}
+                Save recipients
+              </button>
+              {recapEmailsInFlight && (
+                <span
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "rgba(255,255,255,0.45)",
+                  }}
                 >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <span className="spark-avatar">{p.initials}</span>
-                      <span className="font-medium">{p.name}</span>
-                    </div>
-                  </td>
-                  <td
-                    className="px-4 py-3 mono text-xs"
-                    style={{ color: "rgba(255,255,255,0.7)" }}
-                  >
-                    {p.email}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={ROLE_CHIP[p.roleSlug] ?? "chip chip-muted"}
-                    >
-                      {p.role.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="inline-flex items-center gap-3">
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(p.email);
-                          showAlert(`Copied ${p.email}.`, "info");
-                        }}
-                        className="mono text-[10px]"
-                        style={{
-                          letterSpacing: "0.14em",
-                          color: "rgba(255,255,255,0.55)",
-                        }}
-                      >
-                        COPY EMAIL
-                      </button>
-                      <button
-                        onClick={async () => {
-                          try {
-                            const res = await fetch(
-                              import.meta.env.VITE_GRAPHQL_ENDPOINT,
-                              {
-                                method: "POST",
-                                headers: {
-                                  "Content-Type": "application/json",
-                                  Authorization: `JWT ${localStorage.getItem("@token") ?? ""}`,
-                                },
-                                body: JSON.stringify({
-                                  query: `
-                                    mutation RequestMagicLink($input: RequestMagicLinkInput!) {
-                                      requestMagicLink(input: $input) { success message }
-                                    }
-                                  `,
-                                  variables: {
-                                    input: {
-                                      email: p.email,
-                                      // Admin-frontend magic-link entry.
-                                      redirect: "/",
-                                    },
-                                  },
-                                }),
-                              },
-                            );
-                            const json = await res.json();
-                            const r = json?.data?.requestMagicLink;
-                            if (json.errors?.length || !r?.success) {
-                              showAlert(
-                                `Couldn't resend: ${
-                                  r?.message ??
-                                  json.errors?.[0]?.message ??
-                                  "unknown error"
-                                }`,
-                                "error",
-                              );
-                              return;
-                            }
-                            showAlert(
-                              `Sign-in link sent to ${p.email}.`,
-                              "success",
-                            );
-                          } catch (e) {
-                            showAlert(
-                              `Resend failed: ${(e as Error).message}`,
-                              "error",
-                            );
-                          }
-                        }}
-                        className="mono text-[10px]"
-                        style={{
-                          letterSpacing: "0.14em",
-                          color: "var(--spark-sky)",
-                        }}
-                        title="Re-send a magic-link sign-in email to this user"
-                      >
-                        RESEND LINK
-                      </button>
-                      <button
-                        onClick={() => setRemoving(p)}
-                        className="mono text-[10px]"
-                        style={{
-                          letterSpacing: "0.14em",
-                          color: "var(--spark-orange)",
-                        }}
-                      >
-                        REMOVE
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  SAVING…
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Monthly client report — automated monthly performance PDF mailed
+              to the recap recipients above on the 1st (for the prior month).
+              Toggle is bound to the tenant's scheduledReportEnabled flag; the
+              "Send me a test" button previews it to the signed-in user only. */}
+          <div className="spark-card p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+                <p className="label-mini">MONTHLY CLIENT REPORT</p>
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+                >
+                  When on, this client gets an automated monthly performance
+                  report (PDF) emailed to the recap recipients above, on the 1st
+                  for the prior month.
+                </p>
+              </div>
+              {/* On/off switch — spark-themed, lime when enabled. */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={reportEnabled}
+                aria-label="Toggle monthly client report"
+                disabled={reportEnabledInFlight}
+                onClick={() => handleToggleReport(!reportEnabled)}
+                className="rounded-full shrink-0"
+                style={{
+                  position: "relative",
+                  width: 46,
+                  height: 26,
+                  padding: 0,
+                  border: "1px solid var(--spark-border)",
+                  background: reportEnabled
+                    ? "var(--spark-lime)"
+                    : "var(--spark-surface-2)",
+                  boxShadow: reportEnabled
+                    ? "0 0 14px rgba(197,245,70,0.35)"
+                    : "none",
+                  cursor: reportEnabledInFlight ? "default" : "pointer",
+                  opacity: reportEnabledInFlight ? 0.6 : 1,
+                  transition: "background 0.15s ease, box-shadow 0.15s ease",
+                }}
+              >
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 2,
+                    left: reportEnabled ? 22 : 2,
+                    width: 20,
+                    height: 20,
+                    borderRadius: "9999px",
+                    background: reportEnabled ? "#0a0d09" : "var(--spark-text)",
+                    transition: "left 0.15s ease",
+                  }}
+                />
+              </button>
+            </div>
+
+            {/* No-recipients hint — the report has nowhere to go until at least
+                one recap recipient is set above. */}
+            {!hasRecapRecipients && (
+              <p
+                className="text-xs mt-3"
+                style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}
+              >
+                Add at least one recap recipient above first — the report has
+                nowhere to send otherwise.
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3 mt-3">
+              <button
+                onClick={handleSendTestReport}
+                disabled={testReportInFlight}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold"
+                style={{
+                  background: "transparent",
+                  color: "var(--spark-text)",
+                  border: "1px solid var(--spark-border)",
+                  cursor: testReportInFlight ? "default" : "pointer",
+                  opacity: testReportInFlight ? 0.5 : 1,
+                }}
+              >
+                Send me a test
+              </button>
+              <span
+                className="text-xs"
+                style={{ color: "rgba(255,255,255,0.4)" }}
+              >
+                The test goes to you, not the client.
+              </span>
+              {testReportInFlight && (
+                <span
+                  className="mono text-[10px]"
+                  style={{
+                    letterSpacing: "0.14em",
+                    color: "rgba(255,255,255,0.45)",
+                  }}
+                >
+                  SENDING…
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Weekly client digest — Monday rollup email to the same recap
+              recipients. Independent toggle (clientWeeklyDigestEnabled) so the
+              digest and the monthly report roll out per tenant separately. */}
+          <div className="spark-card p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+                <p className="label-mini">WEEKLY CLIENT DIGEST</p>
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+                >
+                  When on, this client gets a Monday email rollup — this week at
+                  a glance, what's coming up, and anything awaiting their
+                  approval — sent to the recap recipients above. Quiet weeks are
+                  skipped automatically.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={digestEnabled}
+                aria-label="Toggle weekly client digest"
+                disabled={digestEnabledInFlight}
+                onClick={() => handleToggleDigest(!digestEnabled)}
+                className="rounded-full shrink-0"
+                style={{
+                  position: "relative",
+                  width: 46,
+                  height: 26,
+                  padding: 0,
+                  border: "1px solid var(--spark-border)",
+                  background: digestEnabled
+                    ? "var(--spark-lime)"
+                    : "var(--spark-surface-2)",
+                  boxShadow: digestEnabled
+                    ? "0 0 14px rgba(197,245,70,0.35)"
+                    : "none",
+                  cursor: digestEnabledInFlight ? "default" : "pointer",
+                  opacity: digestEnabledInFlight ? 0.6 : 1,
+                  transition: "background 0.15s ease, box-shadow 0.15s ease",
+                }}
+              >
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 2,
+                    left: digestEnabled ? 22 : 2,
+                    width: 20,
+                    height: 20,
+                    borderRadius: "9999px",
+                    background: digestEnabled ? "#0a0d09" : "var(--spark-text)",
+                    transition: "left 0.15s ease",
+                  }}
+                />
+              </button>
+            </div>
+            {!hasRecapRecipients && (
+              <p
+                className="text-xs mt-3"
+                style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}
+              >
+                Add at least one recap recipient above first — the digest has
+                nowhere to send otherwise.
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-3">
-        <a
-          href="/people/pending"
-          className="px-4 py-3 rounded-2xl text-sm font-semibold inline-flex items-center gap-2"
-          style={{
-            background: "transparent",
-            color: "var(--spark-orange)",
-            border: "1px solid rgba(239,90,42,0.45)",
-          }}
-          title="Approve or reject brand ambassadors waiting on you"
-        >
-          ⏳ Pending approvals →
-        </a>
-        <button
-          onClick={() => onOpenInvite("admin")}
-          className="px-4 py-3 rounded-2xl text-sm font-semibold"
-          style={{
-            background: "var(--spark-lime)",
-            color: "#0a0d09",
-            boxShadow: "0 0 20px rgba(197,245,70,0.35)",
-          }}
-        >
-          + Invite admin
-        </button>
-        <button
-          onClick={() => onOpenInvite("client")}
-          className="px-4 py-3 rounded-2xl text-sm font-semibold transition"
-          style={{
-            background: "transparent",
-            color: "var(--spark-sky)",
-            border: "1px solid rgba(95,184,239,0.4)",
-          }}
-        >
-          + Invite client
-        </button>
-        <button
-          onClick={() => onOpenInvite("ambassador")}
-          className="px-4 py-3 rounded-2xl text-sm font-semibold transition"
-          style={{
-            background: "transparent",
-            color: "var(--spark-purple)",
-            border: "1px solid rgba(160,139,217,0.4)",
-          }}
-        >
-          + Invite ambassador
-        </button>
-      </div>
-
-      {/* Booked-BA activation status + resend-welcome. Renders nothing when
-          the workspace has no booked BAs (or for non-admins — the server
-          answers them with an empty list). */}
-      <BaActivationPanel />
+      )}
 
       {/* Remove confirmation — in Spark chrome, not browser-native confirm().
           Spells out exactly what removing them does (and doesn't do) so kyle
@@ -1588,8 +1598,28 @@ const BulkResults: React.FC<{
 };
 
 export default function SparkPeople() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<PeopleTab>(() =>
+    resolvePeopleTab(searchParams),
+  );
   const [inviteRole, setInviteRole] =
     useState<"admin" | "client" | "ambassador" | null>(null);
+
+  useEffect(() => {
+    setActiveTab(resolvePeopleTab(searchParams));
+  }, [searchParams]);
+
+  const handleChangeTab = (next: PeopleTab) => {
+    setActiveTab(next);
+    const updated = new URLSearchParams(searchParams);
+    if (next === "routing") {
+      updated.set("tab", "routing");
+    } else {
+      updated.delete("tab");
+    }
+    setSearchParams(updated, { replace: true });
+  };
+
   return (
     <Layout>
       <div className="space-y-6 max-w-7xl spark-fade-in">
@@ -1600,15 +1630,25 @@ export default function SparkPeople() {
         />
         <Suspense
           fallback={
-            <div
-              className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading roster…
+            <div className="space-y-6">
+              <PeopleTabsSwitcher
+                activeTab={activeTab}
+                onChangeTab={handleChangeTab}
+              />
+              <div
+                className="spark-card p-8 text-center text-sm"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
+                Loading roster…
+              </div>
             </div>
           }
         >
-          <Inner onOpenInvite={setInviteRole} />
+          <Inner
+            activeTab={activeTab}
+            onChangeTab={handleChangeTab}
+            onOpenInvite={setInviteRole}
+          />
         </Suspense>
       </div>
       {inviteRole && (

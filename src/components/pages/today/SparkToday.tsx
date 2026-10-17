@@ -22,9 +22,7 @@ import SparkPageHeader from "@/shared/SparkPageHeader";
 
 /**
  * "Today's events" — list of events happening today with a Google Maps
- * panel showing event pins. BA clock-in/out positions sync from the
- * mobile app's attendance writes (events_attendance) — UI ready,
- * backend pin sync is the next step.
+ * panel showing event pins and live check-in GPS positions.
  */
 
 const fmtTime12 = (raw: string | null | undefined): string => {
@@ -367,20 +365,20 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             </GMap>
           </APIProvider>
         )}
-        {/* Clock-in/out callout */}
+        {/* Compact map legend overlay */}
         <div
-          className="absolute bottom-4 left-4 z-10 p-3 rounded-xl"
+          className="absolute bottom-3 left-3 z-10 px-2.5 py-1.5 rounded-lg flex flex-wrap items-center gap-x-3 gap-y-1 pointer-events-none"
           style={{
-            background: "rgba(10,13,9,0.85)",
+            background: "rgba(10,13,9,0.82)",
             backdropFilter: "blur(8px)",
             border: "1px solid var(--spark-border)",
-            maxWidth: 260,
+            maxWidth: "calc(100% - 24px)",
           }}
         >
-          <p
-            className="mono text-[10px]"
+          <span
+            className="mono text-[10px] font-semibold"
             style={{
-              letterSpacing: "0.18em",
+              letterSpacing: "0.14em",
               color:
                 pings.length > 0 ? "var(--spark-orange)" : "var(--spark-lime)",
             }}
@@ -388,15 +386,48 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             {pings.length > 0
               ? `${pings.length} BA${pings.length === 1 ? "" : "S"} LIVE`
               : "ON THE GROUND"}
-          </p>
-          <p
-            className="text-xs mt-1"
-            style={{ color: "rgba(255,255,255,0.65)" }}
+          </span>
+          <span
+            className="inline-flex items-center gap-2 text-[11px]"
+            style={{ color: "rgba(255,255,255,0.68)" }}
           >
-            {pings.length > 0
-              ? "Orange = pinged in the last 5 min, blue = within 15, gray = stale. Tap a dot for the BA."
-              : "No live BAs right now. Pings show automatically once a BA clocks in from the mobile app."}
-          </p>
+            <span className="inline-flex items-center gap-1">
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 9999,
+                  background: "var(--spark-orange)",
+                  display: "inline-block",
+                }}
+              />
+              ≤5m
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 9999,
+                  background: "var(--spark-sky)",
+                  display: "inline-block",
+                }}
+              />
+              ≤15m
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 9999,
+                  background: "#8b8e84",
+                  display: "inline-block",
+                }}
+              />
+              &gt;15m
+            </span>
+          </span>
         </div>
       </div>
 
@@ -427,74 +458,85 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
               No events on the books today.
             </li>
           )}
-          {shifts.map((s) => (
-            <li
-              key={s.uuid}
-              onClick={() => {
-                if (s.coords) setOpenKey(s.uuid);
-                else navigate(`/event/view/${s.uuid}`);
-              }}
-              className="px-4 py-3 cursor-pointer transition"
-              style={{ borderBottom: "1px solid var(--spark-border)" }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background =
-                  "rgba(255,255,255,0.02)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "transparent")
-              }
-            >
-              <div className="flex items-start gap-2">
-                <span
-                  className="spark-dot mt-1.5"
-                  style={{
-                    background: s.coords
-                      ? "var(--spark-lime)"
-                      : "var(--spark-orange)",
-                    boxShadow: s.coords
-                      ? "0 0 6px var(--spark-lime)"
-                      : "0 0 6px var(--spark-orange)",
-                  }}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">{s.name}</p>
-                  <p
-                    className="mono text-[10px] uppercase mt-0.5 truncate"
+          {shifts.map((s) => {
+            const liveBaNames = Array.from(
+              new Set(
+                pings
+                  .filter((p) => p.eventUuid === s.uuid && p.baName)
+                  .map((p) => p.baName),
+              ),
+            );
+            return (
+              <li
+                key={s.uuid}
+                onClick={() => {
+                  if (s.coords) setOpenKey(s.uuid);
+                  else navigate(`/event/view/${s.uuid}`);
+                }}
+                className="px-4 py-3 cursor-pointer transition"
+                style={{ borderBottom: "1px solid var(--spark-border)" }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background =
+                    "rgba(255,255,255,0.02)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
+              >
+                <div className="flex items-start gap-2">
+                  <span
+                    className="spark-dot mt-1.5"
                     style={{
-                      letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.55)",
+                      background: s.coords
+                        ? "var(--spark-lime)"
+                        : "var(--spark-orange)",
+                      boxShadow: s.coords
+                        ? "0 0 6px var(--spark-lime)"
+                        : "0 0 6px var(--spark-orange)",
                     }}
-                  >
-                    {s.retailer}
-                    {s.state ? ` · ${s.state}` : ""}
-                  </p>
-                  {s.address && (
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate">{s.name}</p>
                     <p
-                      className="text-xs mt-1 truncate"
-                      style={{ color: "rgba(255,255,255,0.55)" }}
+                      className="mono text-[10px] uppercase mt-0.5 truncate"
+                      style={{
+                        letterSpacing: "0.14em",
+                        color: "rgba(255,255,255,0.55)",
+                      }}
                     >
-                      {s.address}
+                      {s.retailer}
+                      {s.state ? ` · ${s.state}` : ""}
                     </p>
-                  )}
-                  <p
-                    className="mono text-[10px] mt-2"
-                    style={{
-                      letterSpacing: "0.16em",
-                      color: "rgba(255,255,255,0.45)",
-                    }}
-                  >
-                    BA · — · — (assigned from mobile app)
-                  </p>
+                    {s.address && (
+                      <p
+                        className="text-xs mt-1 truncate"
+                        style={{ color: "rgba(255,255,255,0.55)" }}
+                      >
+                        {s.address}
+                      </p>
+                    )}
+                    {liveBaNames.length > 0 && (
+                      <p
+                        className="mono text-[10px] mt-1.5 truncate"
+                        style={{
+                          letterSpacing: "0.14em",
+                          color: "var(--spark-lime)",
+                        }}
+                      >
+                        BA · {liveBaNames.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                  <SparkStat
+                    size="sm"
+                    tone="lime"
+                    value={s.startTime || "—"}
+                    label={s.endTime ? `To ${s.endTime}` : "Start"}
+                  />
                 </div>
-                <SparkStat
-                  size="sm"
-                  tone="lime"
-                  value={s.startTime || "—"}
-                  label={s.endTime ? `To ${s.endTime}` : "Start"}
-                />
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       </div>
       </div>
