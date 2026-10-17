@@ -57,7 +57,7 @@ import {
   spendAmountSubmitError,
 } from "./spendAmount";
 import { useAuthStore } from "@/store/authStore";
-import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router";
 import {
   lazy,
@@ -492,6 +492,7 @@ const RecapCustomViewInner = ({
   const { uuid } = useParams();
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
+  const environment = useRelayEnvironment();
   const [searchParams] = useSearchParams();
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [playingVideo, setPlayingVideo] = useState<{
@@ -1031,7 +1032,7 @@ const RecapCustomViewInner = ({
           const payload = res.approveCustomRecap;
           if (payload?.success) {
             markRecapReviewedInQueue(uuid, { approved: true });
-            refreshSidebarCounts();
+            void refreshSidebarCounts(environment, tenantId);
             showAlert(
               "Recap approved — the requestor and mapped RMM have been emailed.",
               "success",
@@ -1071,6 +1072,8 @@ const RecapCustomViewInner = ({
       searchParams,
       queueInfo?.nextUnapproved?.href,
       uuid,
+      environment,
+      tenantId,
     ],
   );
 
@@ -1081,7 +1084,7 @@ const RecapCustomViewInner = ({
       onCompleted: (res) => {
         if (res.archiveCustomRecap?.success) {
           markRecapReviewedInQueue(uuid, { archived: true });
-          refreshSidebarCounts();
+          void refreshSidebarCounts(environment, tenantId);
           showAlert(
             "Recap archived — kept as proof, hidden from client.",
             "success",
@@ -1105,6 +1108,8 @@ const RecapCustomViewInner = ({
     isArchiving,
     isUnarchiving,
     uuid,
+    environment,
+    tenantId,
   ]);
 
   const handleUnarchive = useCallback(() => {
@@ -1114,7 +1119,7 @@ const RecapCustomViewInner = ({
       onCompleted: (res) => {
         if (res.unarchiveCustomRecap?.success) {
           markRecapReviewedInQueue(uuid, { archived: false });
-          refreshSidebarCounts();
+          void refreshSidebarCounts(environment, tenantId);
           showAlert("Recap restored to Needs review.", "success");
           onRefresh();
         } else {
@@ -1135,6 +1140,8 @@ const RecapCustomViewInner = ({
     isArchiving,
     isUnarchiving,
     uuid,
+    environment,
+    tenantId,
   ]);
 
   // Attach an uploaded blob to this custom recap. RecapUploader fires
@@ -1260,7 +1267,7 @@ const RecapCustomViewInner = ({
         const payload = res.deleteCustomRecap;
         if (payload?.success) {
           markRecapReviewedInQueue(uuid, { removed: true });
-          refreshSidebarCounts();
+          void refreshSidebarCounts(environment, tenantId);
           showAlert("Recap deleted.", "success");
           navigate(backToListUrl);
         } else {
@@ -1269,7 +1276,7 @@ const RecapCustomViewInner = ({
       },
       onError: (err) => showAlert(`Delete failed: ${err.message}`, "error"),
     });
-  }, [recap?.id, commitDelete, showAlert, navigate, backToListUrl, uuid]);
+  }, [recap?.id, commitDelete, showAlert, navigate, backToListUrl, uuid, environment, tenantId]);
 
   const gallerySlot = useCallback(
     (file: (typeof recapFiles)[number]) =>

@@ -14,7 +14,7 @@ import {
   isRecapBodyTab,
   type RecapDetailTab,
 } from "@/recap/RecapDetailShell";
-import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapPhotoReusePanel } from "./RecapPhotoReusePanel";
@@ -53,6 +53,7 @@ import {
   markRecapReviewedInQueue,
 } from "./recapReviewQueue";
 import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
+import { useAuthStore } from "@/store/authStore";
 import { ProductsQuery } from "@/api/queries/ProductsQuery";
 import type { ProductsQuery as ProductsQueryType } from "@/api/queries/__generated__/ProductsQuery.graphql";
 import { CreateProductMutation } from "@/api/mutations/CreateProductMutation";
@@ -450,6 +451,8 @@ const SparkRecapInner: React.FC<{
   const [commitDelete, isDeleting] =
     useMutation<DeleteRecapMutationType>(DeleteRecapMutation);
   const { isAdmin, isClient } = useSparkRole();
+  const environment = useRelayEnvironment();
+  const { tenantId: authTenantId } = useAuthStore();
   const [isZipping, setIsZipping] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -845,7 +848,7 @@ const SparkRecapInner: React.FC<{
       onCompleted: (res) => {
         if (res.approveRecap?.success) {
           markRecapReviewedInQueue(uuid, { approved });
-          refreshSidebarCounts();
+          void refreshSidebarCounts(environment, authTenantId);
           showAlert(
             approved ? "Recap approved." : "Recap marked not approved.",
             "success",
@@ -892,7 +895,7 @@ const SparkRecapInner: React.FC<{
       onCompleted: (res) => {
         if (res.archiveRecap?.success) {
           markRecapReviewedInQueue(uuid, { archived: true });
-          refreshSidebarCounts();
+          void refreshSidebarCounts(environment, authTenantId);
           showAlert(
             "Recap archived — kept as proof, hidden from client.",
             "success",
@@ -917,7 +920,7 @@ const SparkRecapInner: React.FC<{
       onCompleted: (res) => {
         if (res.unarchiveRecap?.success) {
           markRecapReviewedInQueue(uuid, { archived: false });
-          refreshSidebarCounts();
+          void refreshSidebarCounts(environment, authTenantId);
           showAlert("Recap restored to Needs review.", "success");
           onRefresh();
         } else {
@@ -957,7 +960,7 @@ const SparkRecapInner: React.FC<{
       onCompleted: (res) => {
         if (res.deleteRecap?.success) {
           markRecapReviewedInQueue(uuid, { removed: true });
-          refreshSidebarCounts();
+          void refreshSidebarCounts(environment, authTenantId);
           showAlert("Recap deleted.", "success");
           navigate(backToListUrl);
         } else {

@@ -93,7 +93,9 @@ export function saveRecapReviewQueue(opts: {
   }
 }
 
-export function markRecapOpenedInQueue(uuid: string): void {
+export function markRecapOpenedInQueue(
+  uuid: string | null | undefined,
+): void {
   if (!uuid) return;
   try {
     const existing = loadRecapReviewQueue();
@@ -111,7 +113,7 @@ export function markRecapOpenedInQueue(uuid: string): void {
 }
 
 export function markRecapReviewedInQueue(
-  uuid: string,
+  uuid: string | null | undefined,
   patch: { approved?: boolean; archived?: boolean; removed?: boolean },
 ): void {
   if (!uuid) return;

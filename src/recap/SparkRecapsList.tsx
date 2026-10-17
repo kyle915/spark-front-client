@@ -64,7 +64,6 @@ import {
 import {
   buildRecapListSearchParams,
   consumeRecapsListNeedsRefresh,
-  defaultRecapStatus,
   readRecapListUrlFilters,
   recapEmptyKind,
   recapIsEmptyShell,
@@ -83,7 +82,6 @@ import {
   saveRecapReviewQueue,
 } from "./recapReviewQueue";
 import {
-  normalizeRecapActivationFilter,
   recapActivationFilterLabel,
   recapMatchesActivationFilter,
   recapTypeCountsTowardConversion,
@@ -2048,8 +2046,8 @@ export default function SparkRecapsList() {
   // Work-queue default: last 30 days for admin AND client. "All published"
   // clears both bounds so the archive is an explicit choice. Clients used
   // to start at month-start, which made the 30d chip look like a lie.
-  const [dateFrom, setDateFrom] = useState<string>(initialUrlFilters.dateFrom);
-  const [dateTo, setDateTo] = useState<string>(initialUrlFilters.dateTo);
+  const [dateFrom, setDateFrom] = useState<string>(initialUrlFilters.from);
+  const [dateTo, setDateTo] = useState<string>(initialUrlFilters.to);
   const lastSyncedSearchRef = useRef(searchParams.toString());
   const filterSignature = [
     statusFilter,
@@ -2086,8 +2084,8 @@ export default function SparkRecapsList() {
     setStateFilter(parsed.state);
     setRmmFilter(parsed.rmm);
     if (parsed.ba || !baFromNav) setBaName(parsed.ba);
-    setDateFrom(parsed.dateFrom);
-    setDateTo(parsed.dateTo);
+    setDateFrom(parsed.from);
+    setDateTo(parsed.to);
     setPage(parsed.page);
     prevFilterSignatureRef.current = [
       parsed.status,
@@ -2097,8 +2095,8 @@ export default function SparkRecapsList() {
       parsed.state,
       parsed.rmm,
       (parsed.ba || (!baFromNav ? "" : baName)).trim(),
-      parsed.dateFrom,
-      parsed.dateTo,
+      parsed.from,
+      parsed.to,
     ].join("|");
   }, [searchParams, isClient, baFromNav, baName]);
   useEffect(() => {
