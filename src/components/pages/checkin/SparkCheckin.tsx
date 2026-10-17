@@ -58,6 +58,15 @@ import {
   type StoreIdentityDraft,
 } from "./recapDraft";
 import { buildRecapDraftRequest } from "./recapServerDraft";
+import { buildCompletenessItems } from "./checkinCompleteness";
+import { PhotoQualityWarnings, RecapCompletenessChecklist } from "./RecapCompleteness";
+import {
+  analyzePhotoFile,
+  classifyPhotoQuality,
+  qualityMessage,
+  quickPhotoHash,
+  type PhotoQualityWarning,
+} from "./photoQuality";
 import { createLimiter } from "./uploadLimiter";
 import { browserPlayableContentType } from "@/utils/recapFileUrl";
 import {
@@ -3452,6 +3461,10 @@ function RecapForm({
   const cameraRef = useRef<HTMLInputElement | null>(null);
   const photoSeq = useRef(0);
   const photosRestored = useRef(false);
+  const [photoWarnings, setPhotoWarnings] = useState<
+    Record<string, PhotoQualityWarning & { name: string }>
+  >({});
+  const photoHashes = useRef(new Map<string, string>());
 
   // Mileage step → RecapForm can race: lock miles into required field values
   // whenever the itinerary claim arrives (or updates).
@@ -3719,6 +3732,32 @@ function RecapForm({
     return true;
   };
 
+  // Advisory only: warn while the BA is still on site, never block the upload.
+  const assessPhotos = async (batch: Photo[]) => {
+    for (const ph of batch) {
+      if (ph.file.type.startsWith("video/") || ph.file.size === 0) continue;
+      let warning: PhotoQualityWarning | null = null;
+      try {
+        const hash = await quickPhotoHash(ph.file);
+        const prior = photoHashes.current.get(hash);
+        if (prior && prior !== ph.id) {
+          warning = { photoId: ph.id, kind: "duplicate", message: qualityMessage("duplicate") };
+        } else {
+          photoHashes.current.set(hash, ph.id);
+          const stats = await analyzePhotoFile(ph.file);
+          const kind = stats ? classifyPhotoQuality(stats) : null;
+          if (kind) warning = { photoId: ph.id, kind, message: qualityMessage(kind) };
+        }
+      } catch {
+        warning = null;
+      }
+      if (warning && photosRef.current.some((p) => p.id === ph.id)) {
+        const w = warning;
+        setPhotoWarnings((prev) => ({ ...prev, [ph.id]: { ...w, name: ph.file.name } }));
+      }
+    }
+  };
+
   const uploadFiles = async (files: FileList | null, category: string | null = null) => {
     if (!files || !files.length) return;
     const room = Math.max(0, PHOTO_CAP - photosRef.current.length);
@@ -3747,6 +3786,7 @@ function RecapForm({
     // still sees the true remaining room.
     photosRef.current = [...photosRef.current, ...batch];
     setPhotos(photosRef.current);
+    void assessPhotos(batch);
     await Promise.all(batch.map((ph) => uploadOne(ph.id, ph.file)));
   };
 
@@ -3834,6 +3874,14 @@ function RecapForm({
     photosRef.current = next;
     setPhotos(next);
     cancelAutoRetry(id);
+    setPhotoWarnings((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+    for (const [hash, owner] of photoHashes.current) {
+      if (owner === id) photoHashes.current.delete(hash);
+    }
     void deleteDraftPhotoFiles(code, token, [id]);
   };
 
@@ -4102,6 +4150,26 @@ function RecapForm({
   const pendingClock = readPendingClock(code);
   const pendingRecap = readPendingRecap(code);
   const pendingMileage = readPendingMileage(code);
+  const completenessValues = { ...values };
+  if (payableMiles != null && Number.isFinite(payableMiles)) {
+    for (const f of templateFields) {
+      if (!isMileageCustomFieldName(f.name) || isPhotoType(f.type)) continue;
+      const cur = completenessValues[f.id];
+      if (cur == null || (Array.isArray(cur) ? cur.length === 0 : String(cur).trim() === "")) {
+        completenessValues[f.id] = String(payableMiles);
+      }
+    }
+  }
+  const completenessItems = buildCompletenessItems({
+    fields: templateFields,
+    values: completenessValues,
+    buckets,
+    photos: photos.map((p) => ({ category: p.category, state: p.state })),
+    hasPhotoField,
+    usedCorpoCard,
+    storeIdentity: Boolean(storeIdentity),
+    store,
+  });
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -4149,7 +4217,7 @@ function RecapForm({
         </div>
       ) : null}
       {storeIdentity ? (
-        <div style={card}>
+        <div style={card} data-completeness-target="store">
           <h2 style={h2}>Store</h2>
           <label style={label}>
             Store name <span style={{ color: "#EF5A2A" }}>*</span>
@@ -4204,8 +4272,8 @@ function RecapForm({
           <h2 style={h2}>{labelBrand ? `${brandName} · ${section.name}` : section.name}</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 4 }}>
             {fields.map((f) => (
+              <div key={f.id} data-completeness-target={f.id}>
               <FieldInput
-                key={f.id}
                 field={f}
                 value={values[f.id]}
                 accent={accent}
@@ -4222,6 +4290,7 @@ function RecapForm({
                 qtyLabel={template.sampleQtyLabel}
                 qtyTotalLabel={template.sampleQtyTotalLabel}
               />
+              </div>
             ))}
           </div>
         </div>
@@ -4293,13 +4362,15 @@ function RecapForm({
             <label style={{ ...label, marginTop: hideEngagementsInput ? 0 : 10 }}>
               Photos <span style={{ color: "#EF5A2A" }}>*</span>
             </label>
-            <PhotoGrid
-              photos={loosePhotos}
-              onAdd={() => libraryRef.current?.click()}
-              onTake={() => cameraRef.current?.click()}
-              onRemove={removePhoto}
-              accent={accent}
-            />
+            <div data-completeness-target="photos">
+              <PhotoGrid
+                photos={loosePhotos}
+                onAdd={() => libraryRef.current?.click()}
+                onTake={() => cameraRef.current?.click()}
+                onRemove={removePhoto}
+                accent={accent}
+              />
+            </div>
             <PhotoFileInputs
               libraryRef={libraryRef}
               cameraRef={cameraRef}
@@ -4473,6 +4544,20 @@ function RecapForm({
           </div>
         </div>
       ) : null}
+
+      <PhotoQualityWarnings
+        warnings={Object.values(photoWarnings)}
+        onKeep={(photoId) =>
+          setPhotoWarnings((prev) => {
+            const copy = { ...prev };
+            delete copy[photoId];
+            return copy;
+          })
+        }
+        onRetake={removePhoto}
+      />
+
+      <RecapCompletenessChecklist items={completenessItems} />
 
       {err ? <p style={{ ...errText, textAlign: "center" }}>{err}</p> : null}
 
@@ -4797,7 +4882,7 @@ function FieldInput({
 
   if (isPhotoType(field.type)) {
     return (
-      <div>
+      <div data-completeness-target={field.id}>
         <label style={label}>
           {field.name}
           {req}
@@ -4935,7 +5020,7 @@ function CorpoCardYesNo({
     } as const;
   };
   return (
-    <div>
+    <div data-completeness-target="corpo-card">
       <label style={label}>
         Corporate Card Used <span style={{ color: "#EF5A2A" }}>*</span>
       </label>
@@ -4973,7 +5058,7 @@ function PhotoBucketZone({
   const hint = bucketCountHint(done, bucket.min);
 
   return (
-    <div>
+    <div data-completeness-target={`bucket:${bucket.id}`}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
         <label style={{ ...label, marginBottom: 0, flex: 1 }}>{bucket.name}</label>
         {hint ? (
@@ -5323,16 +5408,18 @@ const card: CSSProperties = {
 const h2: CSSProperties = { fontSize: 16, fontWeight: 700, margin: 0 };
 const label: CSSProperties = {
   display: "block",
-  fontSize: 13,
-  fontWeight: 600,
+  fontSize: 14,
+  fontWeight: 700,
   marginBottom: 4,
-  opacity: 0.8,
+  color: "#1c1917",
+  opacity: 1,
 };
 const input: CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
-  padding: "11px 12px",
-  fontSize: 15,
+  padding: "13px 12px",
+  minHeight: 48,
+  fontSize: 16,
   borderRadius: 12,
   border: "1px solid rgba(0,0,0,0.15)",
   background: "#fff",
@@ -5352,24 +5439,25 @@ const photoBadge: CSSProperties = {
 };
 const photoRemove: CSSProperties = {
   position: "absolute",
-  top: -6,
-  right: -6,
-  width: 20,
-  height: 20,
+  top: -8,
+  right: -8,
+  width: 32,
+  height: 32,
   borderRadius: 999,
   border: "none",
   background: "#14181a",
   color: "#fff",
-  fontSize: 14,
-  lineHeight: "20px",
+  fontSize: 18,
+  lineHeight: "32px",
   cursor: "pointer",
   padding: 0,
+  zIndex: 1,
 };
 function primaryBtn(accent: string): CSSProperties {
   return {
     flex: 1,
-    padding: "12px 16px",
-    minHeight: 44,
+    padding: "14px 16px",
+    minHeight: 52,
     borderRadius: 12,
     border: "none",
     background: accent,
@@ -5381,8 +5469,8 @@ function primaryBtn(accent: string): CSSProperties {
 }
 const secondaryBtn: CSSProperties = {
   flex: 1,
-  padding: "12px 16px",
-  minHeight: 44,
+  padding: "14px 16px",
+  minHeight: 52,
   borderRadius: 12,
   border: "1px solid rgba(0,0,0,0.18)",
   background: "transparent",
