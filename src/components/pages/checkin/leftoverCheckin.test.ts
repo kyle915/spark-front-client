@@ -1,16 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   CHECK_IN_SOMEWHERE_ELSE,
+  clockInForTodayLabel,
   eventCalendarDate,
+  finishPriorRecapLabel,
   isLeftoverCheckinSession,
   isPastDayWalkupSession,
   isStaleWalkupSession,
-  LEFTOVER_BANNER_BODY,
-  LEFTOVER_PRIMARY_CTA,
-  LEFTOVER_SECONDARY_CTA,
+  newDayPrimaryLabel,
+  offerFinishPriorRecap,
   PAST_DAY_NO_CLOCK,
   START_OVER_LINK,
   walkupDayKind,
+  walkupDayLabel,
 } from "@/components/pages/checkin/leftoverCheckin";
 import { supportsStandingSecondShift } from "@/components/pages/checkin/secondShift";
 
@@ -47,11 +49,45 @@ describe("leftoverCheckin", () => {
   });
 
   it("uses outcome-first CTA copy (not clear/delete language)", () => {
-    expect(LEFTOVER_PRIMARY_CTA).toBe("Start today's shift");
-    expect(LEFTOVER_SECONDARY_CTA).toBe("Stay on that day");
-    expect(LEFTOVER_BANNER_BODY.toLowerCase()).toContain("stay on the record");
-    expect(LEFTOVER_PRIMARY_CTA.toLowerCase()).not.toContain("clear");
+    expect(clockInForTodayLabel("2026-10-16")).toBe("Clock in for Friday, Oct 16");
+    expect(finishPriorRecapLabel("2026-10-15T12:00:00Z")).toBe(
+      "Finish Thursday's recap",
+    );
+    expect(walkupDayLabel("2026-10-16")).toBe("Friday, Oct 16");
+    expect(newDayPrimaryLabel("2026-10-16", true)).toBe(
+      "File a recap for Friday, Oct 16",
+    );
+    expect(clockInForTodayLabel("2026-10-16").toLowerCase()).not.toContain("clear");
     expect(CHECK_IN_SOMEWHERE_ELSE.toLowerCase()).not.toContain("log another");
+  });
+
+  it("offers Finish only for an unsubmitted prior recap", () => {
+    expect(
+      offerFinishPriorRecap({ hasRecap: true, clockState: "clocked_out" }),
+    ).toBe(false);
+    expect(
+      offerFinishPriorRecap({
+        hasRecap: false,
+        clockState: "clocked_out",
+        hasUnsubmittedWork: false,
+      }),
+    ).toBe(false);
+    expect(
+      offerFinishPriorRecap({
+        hasRecap: false,
+        clockState: "clocked_out",
+        hasUnsubmittedWork: true,
+      }),
+    ).toBe(true);
+    expect(
+      offerFinishPriorRecap({ hasRecap: false, clockState: "clocked_in" }),
+    ).toBe(true);
+    expect(
+      offerFinishPriorRecap({ hasRecap: false, recapOnly: true, clockState: "not_started" }),
+    ).toBe(true);
+    expect(
+      offerFinishPriorRecap({ hasRecap: true, recapOnly: true }),
+    ).toBe(false);
   });
 
   it("makes same-day start-over read as a new-shift reset", () => {

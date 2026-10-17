@@ -45,8 +45,8 @@ export function shouldDropSessionToken(opts: {
  * landing. Writing that landing into the cache was half of the bug:
  * refresh replaced "On the clock" with identify before the token wipe.
  *
- * Leftover prior-day caches must NOT be kept — the leftover banner owns that
- * path so BAs can Start today's shift without looking mid-shift.
+ * Leftover prior-day caches must NOT be kept — the new-day gate owns that
+ * path so BAs clock in for today without opening yesterday's recap.
  */
 export function shouldKeepCachedSession(opts: {
   incomingHasSession: boolean;

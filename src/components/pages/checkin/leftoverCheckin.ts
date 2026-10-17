@@ -7,9 +7,10 @@
  *
  * ``isStaleWalkupSession`` / ``walkupDayKind`` detect that leftover
  * token+date case. Do NOT auto-wipe localStorage on date mismatch: that
- * fights mid-shift recovery. The leftover banner + "Start today's shift"
- * is the BA-facing path; same-day open punches must survive temporary
- * navigation (release QR / PR #577).
+ * fights mid-shift recovery. On a new calendar day the page leads with a
+ * gate ("Clock in for Friday, Oct 16") and does not open the old recap.
+ * Same-day open punches must survive temporary navigation (release QR /
+ * PR #577) and keep "Continue your recap" / "Clocking in for a new shift?".
  *
  * Second shift (same calendar day, Feel Free market) is a different flow —
  * see ``secondShift.ts``. These must never look alike:
@@ -18,27 +19,8 @@
  *                  on the same day
  */
 
-/** Banner title when the restored session's event date is not today. */
-export const LEFTOVER_BANNER_TITLE = "This isn't today's shift";
-
-/** Primary CTA — outcome-first, not "clear/delete" language. */
-export const LEFTOVER_PRIMARY_CTA = "Start today's shift";
-
-export const LEFTOVER_PRIMARY_CTA_RECAP = "Start a new recap";
-
+/** Shown on the primary button while clear-clock is in flight. */
 export const LEFTOVER_PRIMARY_BUSY = "Starting…";
-
-/** Secondary — BA intentionally finishing / viewing the prior day. */
-export const LEFTOVER_SECONDARY_CTA = "Stay on that day";
-
-export const LEFTOVER_BANNER_BODY =
-  "You're still on that day's check-in. Start today's shift to clock in for today — punches already saved for that day stay on the record.";
-
-export const LEFTOVER_BANNER_BODY_RECAP =
-  "This form is for that day, not today. Start a new recap to pick today's date.";
-
-/** Escape hatch when leftover (same action as primary CTA). */
-export const LEFTOVER_ESCAPE_LINK = "Need today's check-in? Start today's shift";
 
 /** Same-day wrong-store / new-shift start-over (not leftover). */
 export const START_OVER_LINK = "Clocking in for a new shift? Tap here";
@@ -77,6 +59,79 @@ export function isLeftoverCheckinSession(
   today: string,
 ): boolean {
   return walkupDayKind(eventDate, today) === "leftover_prior_day";
+}
+
+/**
+ * "Friday, Oct 16" from a civil YYYY-MM-DD (or an Event.date ISO).
+ * Noon UTC matches ``eventCalendarDate`` so the weekday cannot slip.
+ */
+export function walkupDayLabel(iso: string | null | undefined): string | null {
+  const cal = eventCalendarDate(iso);
+  if (!cal) return null;
+  const d = new Date(`${cal}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+/** Primary new-day gate. Example: "Clock in for Friday, Oct 16". */
+export function clockInForTodayLabel(today: string): string {
+  const day = walkupDayLabel(today);
+  return day ? `Clock in for ${day}` : "Clock in for today";
+}
+
+/** Recap-only standing links have no punch. Same date, different verb. */
+export function fileRecapForTodayLabel(today: string): string {
+  const day = walkupDayLabel(today);
+  return day ? `File a recap for ${day}` : "File a recap for today";
+}
+
+export function newDayPrimaryLabel(today: string, recapOnly?: boolean): string {
+  return recapOnly ? fileRecapForTodayLabel(today) : clockInForTodayLabel(today);
+}
+
+/** "Thursday" from the saved shift's calendar date. */
+export function priorShiftWeekday(eventDate: string | null | undefined): string | null {
+  const cal = eventCalendarDate(eventDate);
+  if (!cal) return null;
+  const d = new Date(`${cal}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+/** Secondary new-day gate. Example: "Finish Thursday's recap". */
+export function finishPriorRecapLabel(eventDate: string | null | undefined): string {
+  const day = priorShiftWeekday(eventDate);
+  return day ? `Finish ${day}'s recap` : "Finish that recap";
+}
+
+/**
+ * Whether the new-day gate offers "Finish Thursday's recap".
+ *
+ * Filed recaps (``hasRecap``) and empty clock-out stubs are not offered.
+ * An empty stub is a clock-out with nothing filed and nothing started on
+ * the device. A shift still on the clock, a recap-only session, or any
+ * on-device draft / queued submit that never landed can still be filed.
+ */
+export function offerFinishPriorRecap(opts: {
+  hasRecap: boolean;
+  clockState?: string | null;
+  recapOnly?: boolean;
+  /** Draft answers, photos, or a queued submit that has not been filed. */
+  hasUnsubmittedWork?: boolean;
+}): boolean {
+  if (opts.hasRecap) return false;
+  if (opts.recapOnly) return true;
+  if (opts.clockState === "clocked_in") return true;
+  if (opts.hasUnsubmittedWork) return true;
+  return false;
 }
 
 export const PAST_DAY_NO_CLOCK =
