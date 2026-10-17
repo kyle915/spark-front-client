@@ -21,6 +21,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useSidebarCounts } from "@/hooks/useSidebarCounts";
 import { ClientWeekAheadQuery } from "@/api/queries/ClientWeekAheadQuery";
 import type { ClientWeekAheadQuery as ClientWeekAheadQueryType } from "@api/queries/__generated__/ClientWeekAheadQuery.graphql";
+import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { requestDateKey } from "@/lib/requestDateKey";
@@ -253,7 +254,11 @@ const ClientInner: React.FC = () => {
         eyebrow="YOUR PROGRAM · MONTH AHEAD"
         title="Today"
         support="Upcoming schedule and program performance."
-        action={<AskAiButton tenantId={tenantId} />}
+        action={
+          <Suspense fallback={<AskAiButton tenantId={tenantId} />}>
+            <ActiveTenantAskAi />
+          </Suspense>
+        }
       />
 
       <BrandViewSwitch tenantId={tenantId} view={brandView} onChange={chooseBrandView} />
