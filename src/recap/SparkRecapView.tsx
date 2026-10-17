@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState, useTransition } from "react";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { StatusMorph } from "@/motion/StatusMorph";
 import {
@@ -51,7 +51,9 @@ import {
   getRecapQueueNeighbors,
   markRecapOpenedInQueue,
   markRecapReviewedInQueue,
+  recapQueueWarmTargets,
 } from "./recapReviewQueue";
+import { prefetchRecapDetails } from "./prefetchRecapDetail";
 import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import { useAuthStore } from "@/store/authStore";
 import { ProductsQuery } from "@/api/queries/ProductsQuery";
@@ -496,7 +498,9 @@ const SparkRecapInner: React.FC<{
     // refreshKey lives ABOVE Suspense so a network refetch that suspends
     // doesn't remount this tree and reset the key (re-serving stale store).
     {
-      fetchPolicy: refreshKey === 0 ? "store-and-network" : "network-only",
+      // store-or-network paints a recap that Next already prefetched,
+      // instead of waiting on a second network round trip.
+      fetchPolicy: refreshKey === 0 ? "store-or-network" : "network-only",
       fetchKey: refreshKey,
     },
   );
@@ -829,9 +833,16 @@ const SparkRecapInner: React.FC<{
   };
 
   const queueInfo = useMemo(() => getRecapQueueNeighbors(uuid), [uuid]);
+  const [queueNavPending, startQueueNav] = useTransition();
+  const goToQueueRecap = (href: string) => {
+    startQueueNav(() => {
+      navigate(href);
+    });
+  };
   useEffect(() => {
     markRecapOpenedInQueue(uuid);
-  }, [uuid]);
+    prefetchRecapDetails(environment, recapQueueWarmTargets(uuid));
+  }, [uuid, environment]);
 
   // Approve / decline the recap itself (distinct from request approval).
   // After success, return to the list with a forced network refetch —
@@ -856,7 +867,7 @@ const SparkRecapInner: React.FC<{
           const finish = () => {
             markRecapsListNeedsRefresh();
             if (nextItemHref) {
-              navigate(nextItemHref);
+              goToQueueRecap(nextItemHref);
               return;
             }
             navigate(
@@ -2550,7 +2561,8 @@ const SparkRecapInner: React.FC<{
                   total: queueInfo.total,
                   prevHref: queueInfo.prev?.href ?? null,
                   nextHref: queueInfo.next?.href ?? null,
-                  onNavigate: (href) => navigate(href),
+                  pending: queueNavPending,
+                  onNavigate: goToQueueRecap,
                 }
               : null
           }

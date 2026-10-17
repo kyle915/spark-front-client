@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getRecapQueueNeighbors,
   loadRecapReviewQueue,
+  recapQueueWarmTargets,
   markRecapOpenedInQueue,
   markRecapReviewedInQueue,
   pickNextReviewItem,
@@ -129,5 +130,16 @@ describe("recapReviewQueue", () => {
     expect(pickNextReviewItem(list)?.uuid).toBe("u-3");
     markRecapOpenedInQueue("u-3");
     expect(pickNextReviewItem(list)?.uuid).toBe("u-1");
+  });
+
+  it("warms the next recaps before the previous one", () => {
+    saveRecapReviewQueue({ items: sampleItems });
+    const targets = recapQueueWarmTargets("u-1");
+    expect(targets.map((item) => item.uuid).slice(0, 3)).toEqual([
+      "u-2",
+      "u-3",
+      "u-4",
+    ]);
+    expect(targets.some((item) => item.uuid === "u-1")).toBe(false);
   });
 });

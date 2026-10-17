@@ -185,6 +185,25 @@ export function getRecapQueueNeighbors(
   };
 }
 
+/** Recaps to fetch before the reviewer clicks Prev/Next. Next ones first. */
+export function recapQueueWarmTargets(
+  currentUuid: string | null | undefined,
+  queue: RecapReviewQueueState | null = loadRecapReviewQueue(),
+  ahead = 3,
+): RecapReviewQueueItem[] {
+  if (!currentUuid || !queue || ahead < 1) return [];
+  const idx = queue.items.findIndex((item) => item.uuid === currentUuid);
+  if (idx === -1) return [];
+  const targets: RecapReviewQueueItem[] = [];
+  for (let step = 1; step <= ahead; step += 1) {
+    const item = queue.items[idx + step];
+    if (item) targets.push(item);
+  }
+  const prev = idx > 0 ? queue.items[idx - 1] : null;
+  if (prev) targets.push(prev);
+  return targets;
+}
+
 /**
  * Picks the next recap to review from the currently visible list.
  * When `lastOpenedUuid` is present in the list, advances past it to the

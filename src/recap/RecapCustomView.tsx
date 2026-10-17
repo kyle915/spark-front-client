@@ -66,6 +66,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useTransition,
   Suspense,
 } from "react";
 import {
@@ -77,7 +78,9 @@ import {
   getRecapQueueNeighbors,
   markRecapOpenedInQueue,
   markRecapReviewedInQueue,
+  recapQueueWarmTargets,
 } from "./recapReviewQueue";
+import { prefetchRecapDetails } from "./prefetchRecapDetail";
 import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { StatusMorph } from "@/motion/StatusMorph";
@@ -1011,9 +1014,19 @@ const RecapCustomViewInner = ({
   }, [recap?.id, existingPdfUrl, commitGeneratePdf, showAlert]);
 
   const queueInfo = useMemo(() => getRecapQueueNeighbors(uuid), [uuid]);
+  const [queueNavPending, startQueueNav] = useTransition();
+  const goToQueueRecap = useCallback(
+    (href: string) => {
+      startQueueNav(() => {
+        navigate(href);
+      });
+    },
+    [navigate],
+  );
   useEffect(() => {
     markRecapOpenedInQueue(uuid);
-  }, [uuid]);
+    prefetchRecapDetails(environment, recapQueueWarmTargets(uuid));
+  }, [uuid, environment]);
 
   // Approve the custom recap → backend emails the requestor + mapped RMM
   // (with the PDF). Then return to the list with a forced network refetch
@@ -1041,7 +1054,7 @@ const RecapCustomViewInner = ({
             void holdActionSuccess().then(() => {
               markRecapsListNeedsRefresh();
               if (nextItemHref) {
-                navigate(nextItemHref);
+                goToQueueRecap(nextItemHref);
                 return;
               }
               navigate(
@@ -1068,6 +1081,7 @@ const RecapCustomViewInner = ({
       commitApprove,
       showAlert,
       approvePhase,
+      goToQueueRecap,
       navigate,
       searchParams,
       queueInfo?.nextUnapproved?.href,
@@ -2986,7 +3000,8 @@ const RecapCustomViewInner = ({
                   total: queueInfo.total,
                   prevHref: queueInfo.prev?.href ?? null,
                   nextHref: queueInfo.next?.href ?? null,
-                  onNavigate: (href) => navigate(href),
+                  pending: queueNavPending,
+                  onNavigate: goToQueueRecap,
                 }
               : null
           }
