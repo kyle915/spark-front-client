@@ -8,6 +8,8 @@ import { TenantBrandedRecap, recapBrandBtn } from "@/recap/TenantBrandedRecap";
 import { RecapDocument } from "@/recap/RecapDocument";
 import { RecapShareFieldSections } from "@/recap/RecapFieldRows";
 import PublicDeadLink from "@/public/PublicDeadLink";
+import { RecapComments } from "./RecapComments";
+import type { RecapCommentItem } from "./recapCommentValidation";
 import { PhotoLightbox } from "@/shared/PhotoLightbox";
 import { RecapVideoPlayer } from "@/shared/RecapVideoPlayer";
 import { thumbUrl } from "@/utils/thumb";
@@ -59,6 +61,7 @@ type PublicRecapPayload = {
   photos: PublicPhoto[];
   brand?: PublicBrand | null;
   clientSignoff?: PublicSignoff | null;
+  comments?: RecapCommentItem[];
   sharedAt?: string | null;
   viewCount?: number | null;
   lastViewedAt?: string | null;
@@ -118,11 +121,16 @@ const PublicRecap: React.FC = () => {
   const signoffUrl = token
     ? `${origin}/api/public/recap/${encodeURIComponent(token)}/signoff`
     : "";
+  const commentsUrl = token
+    ? `${origin}/api/public/recap/${encodeURIComponent(token)}/comments`
+    : "";
 
   const [recap, setRecap] = useState<PublicRecapPayload | null>(null);
   const [loadErr, setLoadErr] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
   const [signoffBusy, setSignoffBusy] = useState(false);
+  const [commentBusy, setCommentBusy] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [playingVideo, setPlayingVideo] = useState<{
@@ -215,6 +223,36 @@ const PublicRecap: React.FC = () => {
       if (payload) setRecap(payload);
     } finally {
       setSignoffBusy(false);
+    }
+  };
+
+  const submitComment = async (input: {
+    authorName: string;
+    authorEmail: string;
+    body: string;
+  }) => {
+    if (!commentsUrl) return;
+    setCommentBusy(true);
+    setCommentError(null);
+    try {
+      const res = await fetch(commentsUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCommentError(
+          (json as ApiError).message || "Couldn't post your comment.",
+        );
+        return;
+      }
+      const payload = (json as { recap?: PublicRecapPayload }).recap;
+      if (payload) setRecap(payload);
+    } catch {
+      setCommentError("We couldn't post your comment. Check your connection and try again.");
+    } finally {
+      setCommentBusy(false);
     }
   };
 
@@ -479,6 +517,15 @@ const PublicRecap: React.FC = () => {
             busy={signoffBusy}
             onSubmit={submitSignoff}
           />
+
+          {recap.approved ? (
+            <RecapComments
+              comments={recap.comments ?? []}
+              busy={commentBusy}
+              error={commentError}
+              onSubmit={submitComment}
+            />
+          ) : null}
         </div>,
         <div className="flex items-center gap-2">
           <button

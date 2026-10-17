@@ -11,6 +11,13 @@ import {
   isPlottableLatLng,
   venuePinKey,
 } from "@/shared/map/accountMapPins";
+import {
+  coverageColor,
+  coverageFromVisitCount,
+  coverageLabel,
+  parseCoverageClass,
+  type CoverageClass,
+} from "@/shared/map/accountCoverage";
 import Layout from "@/layout/Layout";
 import { AccountMapQuery } from "@/api/queries/AccountMapQuery";
 import type { AccountMapQuery as AccountMapQueryType } from "@api/queries/__generated__/AccountMapQuery.graphql";
@@ -34,22 +41,21 @@ import SparkFilterBar from "@/shared/SparkFilterBar";
 
 type Status = "recent" | "scheduled" | "unvisited";
 
-const STATUS_COLOR: Record<Status, string> = {
-  recent: "#c5f546",
-  scheduled: "#5fb8ef",
-  unvisited: "#ef5a2a",
-};
-
 type Account = {
   key: string;
   name: string;
   market: string;
   state: string; // 2-letter code, "" if unknown
   status: Status;
+  coverage: CoverageClass;
+  visitCount: number;
+  planned: boolean;
   coords: { lat: number; lng: number };
   lastDate: string | null;
   address: string;
 };
+
+type CoverageFilter = "all" | CoverageClass | "planned";
 
 /** City + ST from a US one-line address when Location FKs are empty. */
 function marketFromAddress(address: string | null | undefined): {
@@ -134,7 +140,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
   const { isClient } = useSparkRole();
-  const [filter, setFilter] = useState<"all" | Status>("all");
+  const [filter, setFilter] = useState<CoverageFilter>("all");
   const [search, setSearch] = useState("");
   const [stateFilter, setStateFilter] = useState<string>("all");
   // Single-select retailer filter. "all" = no filter. Values are the
@@ -168,13 +174,13 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
       const stateCode = r.stateCode || parsed.state;
       const cityish = r.locationName || parsed.city;
       const market = [cityish, stateCode].filter(Boolean).join(", ");
-      const statusSlug = (r.statusSlug ?? "").toLowerCase();
+      // Coverage is server-computed from filed recaps only. Request
+      // status never makes a store Sampled — future work is `planned`.
+      const coverage = parseCoverageClass(r.coverageClass);
+      const visitCount = Number(r.visitCount ?? 0) || 0;
+      const planned = Boolean(r.planned);
       const inferred: Status =
-        statusSlug === "done" || statusSlug === "completed"
-          ? "recent"
-          : statusSlug === "scheduled" || statusSlug === "approved"
-            ? "scheduled"
-            : "unvisited";
+        coverage !== "never_visited" ? "recent" : planned ? "scheduled" : "unvisited";
       const existing = map.get(key);
       if (!existing) {
         map.set(key, {
@@ -183,17 +189,23 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           market: market || "—",
           state: stateCode || "",
           status: inferred,
+          coverage,
+          visitCount,
+          planned,
           coords: { lat, lng },
           lastDate: r.date ?? null,
           address: r.address ?? "",
         });
       } else {
-        if (inferred === "recent") existing.status = "recent";
-        else if (
-          inferred === "scheduled" &&
-          existing.status === "unvisited"
-        )
-          existing.status = "scheduled";
+        existing.visitCount = Math.max(existing.visitCount, visitCount);
+        existing.coverage = coverageFromVisitCount(existing.visitCount);
+        existing.planned = existing.planned || planned;
+        existing.status =
+          existing.coverage !== "never_visited"
+            ? "recent"
+            : existing.planned
+              ? "scheduled"
+              : "unvisited";
         if (r.date && (!existing.lastDate || r.date > existing.lastDate)) {
           existing.lastDate = r.date;
         }
@@ -215,6 +227,9 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             market: market || "—",
             state: (u.state || "").toString().toUpperCase().slice(0, 2),
             status: u.status,
+            coverage: "never_visited",
+            visitCount: 0,
+            planned: false,
             coords: { lat, lng },
             lastDate: null,
             address: u.address ?? "",
@@ -254,7 +269,13 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return accounts.filter((a) => {
-      if (filter !== "all" && a.status !== filter) return false;
+      if (filter === "planned" && !a.planned) return false;
+      if (
+        filter !== "all" &&
+        filter !== "planned" &&
+        a.coverage !== filter
+      )
+        return false;
       if (stateFilter !== "all" && a.state !== stateFilter) return false;
       if (retailerFilter !== "all" && a.name !== retailerFilter) return false;
       if (
@@ -268,14 +289,25 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     });
   }, [accounts, filter, stateFilter, retailerFilter, search]);
 
+  const serverCoverage = data?.accountMapCoverage;
   const counts = useMemo(
     () => ({
-      all: accounts.length,
-      recent: accounts.filter((a) => a.status === "recent").length,
-      scheduled: accounts.filter((a) => a.status === "scheduled").length,
-      unvisited: accounts.filter((a) => a.status === "unvisited").length,
+      all: serverCoverage?.rosterTotal ?? accounts.length,
+      sampled:
+        serverCoverage?.sampled ??
+        accounts.filter((a) => a.coverage === "sampled").length,
+      repeat:
+        serverCoverage?.repeat ??
+        accounts.filter((a) => a.coverage === "repeat").length,
+      neverVisited:
+        serverCoverage?.neverVisited ??
+        accounts.filter((a) => a.coverage === "never_visited").length,
+      planned:
+        serverCoverage?.planned ??
+        accounts.filter((a) => a.planned).length,
+      pins: accounts.length,
     }),
-    [accounts],
+    [accounts, serverCoverage],
   );
 
   const center = useMemo(() => {
@@ -293,7 +325,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
       <SparkPageHeader
         eyebrow={`${isClient ? "YOUR ACCOUNTS · " : "ACCOUNT MAP · "}${counts.all} VENUES`}
         title="Plan from the map."
-        support="Click any pin to see the account and schedule a demo."
+        support="Coverage counts filed recaps only — Sampled is 1 visit, Repeat is 2+, and future work is labelled Planned. Click any pin to schedule a demo."
       />
 
       {/* Uploader */}
@@ -311,30 +343,30 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           </p>
         </div>
         <div className="spark-card p-4">
-          <p className="label-mini">VISITED</p>
+          <p className="label-mini">SAMPLED · 1 VISIT</p>
           <p
             className="tab-num text-3xl font-bold mt-1"
             style={{ color: "var(--spark-lime)" }}
           >
-            {counts.recent || "—"}
+            {counts.sampled || "—"}
           </p>
         </div>
         <div className="spark-card p-4">
-          <p className="label-mini">SCHEDULED</p>
+          <p className="label-mini">REPEAT · 2+ VISITS</p>
           <p
             className="tab-num text-3xl font-bold mt-1"
             style={{ color: "var(--spark-sky)" }}
           >
-            {counts.scheduled || "—"}
+            {counts.repeat || "—"}
           </p>
         </div>
         <div className="spark-card p-4">
-          <p className="label-mini">NEEDS VISIT</p>
+          <p className="label-mini">NEVER VISITED</p>
           <p
             className="tab-num text-3xl font-bold mt-1"
             style={{ color: "var(--spark-orange)" }}
           >
-            {counts.unvisited || "—"}
+            {counts.neverVisited || "—"}
           </p>
         </div>
       </div>
@@ -353,10 +385,11 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
       >
         {(
           [
-            { key: "all" as const, label: "All", chip: "chip chip-muted", n: counts.all },
-            { key: "recent" as const, label: "Visited", chip: "chip chip-lime", n: counts.recent },
-            { key: "scheduled" as const, label: "Scheduled", chip: "chip chip-sky", n: counts.scheduled },
-            { key: "unvisited" as const, label: "Needs visit", chip: "chip chip-orange", n: counts.unvisited },
+            { key: "all" as const, label: "All", chip: "chip chip-muted", n: counts.pins },
+            { key: "sampled" as const, label: "Sampled", chip: "chip chip-lime", n: counts.sampled },
+            { key: "repeat" as const, label: "Repeat", chip: "chip chip-sky", n: counts.repeat },
+            { key: "never_visited" as const, label: "Never visited", chip: "chip chip-orange", n: counts.neverVisited },
+            { key: "planned" as const, label: "Planned", chip: "chip chip-muted", n: counts.planned },
           ]
         ).map((f) => (
           <button
@@ -516,7 +549,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                   pins={filtered.map((a) => ({
                     id: a.key,
                     position: a.coords,
-                    color: STATUS_COLOR[a.status],
+                    color: coverageColor(a.coverage),
                     title: a.name,
                     onClick: () => setOpenKey(a.key),
                   }))}
@@ -525,12 +558,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                   (() => {
                     const a = filtered.find((x) => x.key === openKey);
                     if (!a) return null;
-                    const statusLabel =
-                      a.status === "recent"
-                        ? "Recently visited"
-                        : a.status === "scheduled"
-                          ? "Scheduled"
-                          : "Needs visit";
+                    const statusLabel = `${coverageLabel(a.coverage)} · ${a.visitCount} filed visit${a.visitCount === 1 ? "" : "s"}${a.planned ? " · Planned" : ""}`;
                     const fmtLast = (() => {
                       if (!a.lastDate) return null;
                       try {
@@ -573,8 +601,8 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                                 width: 8,
                                 height: 8,
                                 borderRadius: 4,
-                                background: STATUS_COLOR[a.status],
-                                boxShadow: `0 0 4px ${STATUS_COLOR[a.status]}`,
+                                background: coverageColor(a.coverage),
+                                boxShadow: `0 0 4px ${coverageColor(a.coverage)}`,
                               }}
                             />
                             <span
@@ -779,8 +807,8 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                   <span
                     className="spark-dot mt-1.5 shrink-0"
                     style={{
-                      background: STATUS_COLOR[a.status],
-                      boxShadow: `0 0 6px ${STATUS_COLOR[a.status]}`,
+                      background: coverageColor(a.coverage),
+                      boxShadow: `0 0 6px ${coverageColor(a.coverage)}`,
                     }}
                   />
                   <div className="flex-1 min-w-0">

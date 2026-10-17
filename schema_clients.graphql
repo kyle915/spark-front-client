@@ -98,6 +98,17 @@ type AccountMapPin {
   retailerName: String!
   locationName: String!
   stateCode: String!
+  coverageClass: String!
+  visitCount: Int!
+  planned: Boolean!
+}
+
+type AccountMapCoverage {
+  rosterTotal: Int!
+  sampled: Int!
+  repeat: Int!
+  neverVisited: Int!
+  planned: Int!
 }
 
 type ActivationPlanDetailResponse {
@@ -6141,6 +6152,7 @@ type Query {
   recapListKinds(tenantId: ID = null): RecapListKinds!
   sidebarAlertCandidates(tenantId: ID = null): [SidebarAlertCandidate!]!
   accountMapPins(tenantId: ID = null, first: Int = null): [AccountMapPin!]!
+  accountMapCoverage(tenantId: ID = null): AccountMapCoverage!
   request(id: ID = null, uuid: ID = null): Request
   activityLogs(first: Int = 50, kind: String = null): [RequestActivityLogEntry!]!
   requestStoreManagers(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null, filters: RequestStoreManagerFiltersInput = null): RequestStoreManagerCountableConnection!
