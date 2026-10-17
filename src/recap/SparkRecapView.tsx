@@ -87,6 +87,7 @@ import PushToPlanButton from "@/field/PushToPlanButton";
 
 const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
 const RecapReviewerSummary = lazy(() => import("./RecapReviewerSummary"));
+const RecapReviewChecks = lazy(() => import("./RecapReviewChecks"));
 
 /**
  * Spark v2 — Recap Detail.
@@ -1328,6 +1329,12 @@ const SparkRecapInner: React.FC<{
           </div>
         </div>
       </div>
+
+      {!isClient && (
+        <Suspense fallback={null}>
+          <RecapReviewChecks recapId={recap.id} isCustom={false} />
+        </Suspense>
+      )}
 
       <RecapDetailTabs
         value={detailTab}
