@@ -36,11 +36,23 @@ import SparkGhostButton from "@/shared/SparkGhostButton";
 import SparkFilterBar from "@/shared/SparkFilterBar";
 import SparkEmptyState from "@/shared/SparkEmptyState";
 import {
+  buildTrackerUrlParams,
+  parseTrackerUrlParams,
   trackerDateRangeToServer,
   trackerSortToServer,
   trackerStatusToServer,
+  VALID_TRACKER_DATE_RANGES,
   type TrackerDateRange,
 } from "@/requests/masterTrackerFilters";
+import InternalNotesPanel from "./InternalNotesPanel";
+import BulkCloneModal from "./BulkCloneModal";
+import InviteBAModal from "./InviteBAModal";
+import PostToBoardModal from "./PostToBoardModal";
+import DeleteRequestModal from "./DeleteRequestModal";
+import CancelDemoDialog from "./CancelDemoDialog";
+import ProgramSwitch from "@/field/ProgramSwitch";
+import { isTorchTenant } from "@/field/torch";
+import { isRecapDue } from "../lib/recapDue";
 
 /**
  * Spark v2 — Master Tracker
@@ -241,16 +253,6 @@ const fmtTimeRange = (
 
 /* ─────────────────────────── TABLE ────────────────────────────── */
 
-import InternalNotesPanel from "./InternalNotesPanel";
-import BulkCloneModal from "./BulkCloneModal";
-import InviteBAModal from "./InviteBAModal";
-import PostToBoardModal from "./PostToBoardModal";
-import DeleteRequestModal from "./DeleteRequestModal";
-import CancelDemoDialog from "./CancelDemoDialog";
-import ProgramSwitch from "@/field/ProgramSwitch";
-import { isTorchTenant } from "@/field/torch";
-import { isRecapDue } from "../lib/recapDue";
-
 type Mentionable = { id: string; name: string; email: string };
 
 // Fallback roster used only when the live admin lookup hasn't loaded
@@ -403,14 +405,15 @@ const TrackerTable: React.FC<{
       className="spark-card overflow-hidden"
       style={{ borderRadius: 20 }}
     >
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[75vh]">
         <table
           className="w-full text-sm"
           style={{ minWidth: 1200 }}
         >
           <thead
+            className="sticky top-0 z-10"
             style={{
-              background: "var(--spark-surface-2)",
+              background: "var(--spark-surface-2, #0A0B0D)",
               borderBottom: "1px solid var(--spark-border)",
             }}
           >
@@ -423,18 +426,69 @@ const TrackerTable: React.FC<{
               }}
             >
               {selectionEnabled ? (
-                <th className="px-3 py-3 w-10" aria-label="Select" />
+                <th
+                  className="px-3 py-3 w-10 sticky top-0 z-10"
+                  style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
+                  aria-label="Select"
+                />
               ) : null}
-              <th className="px-4 py-3 spark-table-sticky-date">DATE</th>
-              <th className="px-4 py-3">STATUS</th>
-              <th className="px-4 py-3">MARKET</th>
-              <th className="px-4 py-3">VENUE</th>
-              <th className="px-4 py-3 spark-table-hide-sm">ADDRESS</th>
-              <th className="px-4 py-3">TYPE</th>
-              <th className="px-4 py-3 text-right">CONSUMERS</th>
-              <th className="px-4 py-3 text-right">1ST-TIME</th>
-              <th className="px-4 py-3">RECAP</th>
-              <th className="px-4 py-3">NOTES</th>
+              <th className="px-4 py-3 sticky top-0 spark-table-sticky-date">
+                DATE
+              </th>
+              <th
+                className="px-4 py-3 sticky top-0 z-10"
+                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
+              >
+                STATUS
+              </th>
+              <th
+                className="px-4 py-3 sticky top-0 z-10"
+                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
+              >
+                MARKET
+              </th>
+              <th
+                className="px-4 py-3 sticky top-0 z-10"
+                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
+              >
+                VENUE
+              </th>
+              <th
+                className="px-4 py-3 sticky top-0 z-10 spark-table-hide-sm"
+                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
+              >
+                ADDRESS
+              </th>
+              <th
+                className="px-4 py-3 sticky top-0 z-10"
+                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
+              >
+                TYPE
+              </th>
+              <th
+                className="px-4 py-3 text-right sticky top-0 z-10"
+                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
+              >
+                CONSUMERS
+              </th>
+              <th
+                className="px-4 py-3 text-right sticky top-0 z-10"
+                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
+              >
+                1ST-TIME
+              </th>
+              <th
+                className="px-4 py-3 sticky top-0 z-10"
+                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
+              >
+                RECAP
+              </th>
+              <th
+                className="px-4 py-3 sticky top-0 z-10"
+                style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
+              >
+                NOTES
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -1466,7 +1520,11 @@ export default function MasterTracker() {
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const torchProgram = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
   const { isClient, isAdmin } = useSparkRole();
-  const [activeStatus, setActiveStatus] = useState<string>("active");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialUrlState = parseTrackerUrlParams(searchParams);
+  const [activeStatus, setActiveStatus] = useState<string>(
+    initialUrlState.status,
+  );
   // "By RMM" group is on the roadmap — needs rmmAsigned info per row,
   // which requires extending RequestsQuery.
   const [groupBy, setGroupBy] = useState<"none" | "date">("none");
@@ -1481,7 +1539,9 @@ export default function MasterTracker() {
   const [visibleRows, setVisibleRows] = useState<Row[]>([]);
   // Date-range / scheduling filters are applied server-side via
   // RequestFiltersInput (see masterTrackerFilters.ts + trackerStatusCounts).
-  const [dateRange, setDateRange] = useState<TrackerDateRange>("all");
+  const [dateRange, setDateRange] = useState<TrackerDateRange>(
+    initialUrlState.dateRange,
+  );
   // Client-side sort for venue / status urgency; date sort is server-side.
   const [sortMode, setSortMode] = useState<
     "date-desc" | "date-asc" | "venue" | "status"
@@ -1489,42 +1549,62 @@ export default function MasterTracker() {
   // Market filter — options come from trackerStatusCounts.marketCodes.
   // `?market=CA` from Insights geo drill pre-selects a state.
   // `?plan=<id>` from Activation Plan detail scopes rows to that plan.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const marketFromUrl = (searchParams.get("market") || "").toUpperCase();
-  const planFromUrl = searchParams.get("plan") || null;
   const [marketFilter, setMarketFilter] = useState<string>(
-    marketFromUrl || "all",
+    initialUrlState.market,
   );
-  const [planId, setPlanId] = useState<string | null>(planFromUrl);
+  const [planId, setPlanId] = useState<string | null>(initialUrlState.planId);
+
+  const statusParam = searchParams.get("status");
+  const whenParam = searchParams.get("when");
+  const marketParam = searchParams.get("market");
+  const planParam = searchParams.get("plan");
   useEffect(() => {
-    if (marketFromUrl) setMarketFilter(marketFromUrl);
-  }, [marketFromUrl]);
-  useEffect(() => {
-    setPlanId(planFromUrl);
-  }, [planFromUrl]);
-  const whenFromUrl = searchParams.get("when") || "";
-  useEffect(() => {
-    const allowed = ["all", "next7", "next30", "next90", "past7", "past30", "month"] as const;
-    if ((allowed as readonly string[]).includes(whenFromUrl)) {
-      setDateRange(whenFromUrl as TrackerDateRange);
-    }
-  }, [whenFromUrl]);
+    const parsed = parseTrackerUrlParams(searchParams);
+    setActiveStatus(parsed.status);
+    setDateRange(parsed.dateRange);
+    setMarketFilter(parsed.market);
+    setPlanId(parsed.planId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusParam, whenParam, marketParam, planParam]);
+
   const [markets, setMarkets] = useState<string[]>([]);
   // Scheduling-status filter — server-side via schedulingStatus.
   const [schedulingFilter, setSchedulingFilter] = useState<string>("all");
 
+  const updateStatusFilter = (nextStatus: string) => {
+    setActiveStatus(nextStatus);
+    setSearchParams(
+      buildTrackerUrlParams(searchParams, { status: nextStatus }),
+      { replace: true },
+    );
+  };
+  const updateDateRangeFilter = (nextRange: TrackerDateRange) => {
+    setDateRange(nextRange);
+    setSearchParams(
+      buildTrackerUrlParams(searchParams, { dateRange: nextRange }),
+      { replace: true },
+    );
+  };
+  const updateMarketFilter = (nextMarket: string) => {
+    setMarketFilter(nextMarket);
+    setSearchParams(
+      buildTrackerUrlParams(searchParams, { market: nextMarket }),
+      { replace: true },
+    );
+  };
   const clearPlanFilter = () => {
     setPlanId(null);
-    const next = new URLSearchParams(searchParams);
-    next.delete("plan");
-    setSearchParams(next, { replace: true });
+    setSearchParams(
+      buildTrackerUrlParams(searchParams, { planId: null }),
+      { replace: true },
+    );
   };
   const setPlanFilter = (nextPlanId: string | null) => {
     setPlanId(nextPlanId);
-    const next = new URLSearchParams(searchParams);
-    if (nextPlanId) next.set("plan", nextPlanId);
-    else next.delete("plan");
-    setSearchParams(next, { replace: true });
+    setSearchParams(
+      buildTrackerUrlParams(searchParams, { planId: nextPlanId }),
+      { replace: true },
+    );
   };
 
   // Saved views — everything a "view" captures, and how to re-apply one.
@@ -1553,22 +1633,30 @@ export default function MasterTracker() {
     ],
   );
   const applyView = (v: TrackerViewSnapshot) => {
-    setActiveStatus(v.activeStatus ?? "active");
+    const nextStatus = v.activeStatus ?? "active";
+    const nextRange =
+      VALID_TRACKER_DATE_RANGES.find((d) => d === v.dateRange) ?? "all";
+    const nextMarket = v.marketFilter ?? "all";
+    setActiveStatus(nextStatus);
     setGroupBy(v.groupBy === "date" ? "date" : "none");
     setSearch(v.search ?? "");
     setRmmFilter(v.rmmFilter ?? "all");
-    setDateRange(
-      (["all", "next7", "next30", "next90", "past7", "past30", "month"] as const).find(
-        (d) => d === v.dateRange,
-      ) ?? "all",
-    );
+    setDateRange(nextRange);
     setSortMode(
       (["date-desc", "date-asc", "venue", "status"] as const).find(
         (m) => m === v.sortMode,
       ) ?? "date-desc",
     );
-    setMarketFilter(v.marketFilter ?? "all");
+    setMarketFilter(nextMarket);
     setSchedulingFilter(v.schedulingFilter ?? "all");
+    setSearchParams(
+      buildTrackerUrlParams(searchParams, {
+        status: nextStatus,
+        dateRange: nextRange,
+        market: nextMarket,
+      }),
+      { replace: true },
+    );
   };
   // Source row for the "⎘ Clone ×N" modal. null = closed.
   const [cloneSource, setCloneSource] = useState<{
@@ -1933,7 +2021,7 @@ export default function MasterTracker() {
             return (
               <button
                 key={f.key}
-                onClick={() => setActiveStatus(f.key)}
+                onClick={() => updateStatusFilter(f.key)}
                 className={f.chip}
                 style={
                   active
@@ -1952,11 +2040,7 @@ export default function MasterTracker() {
           <FilterSelect
             label="WHEN"
             value={dateRange}
-            onChange={(v) =>
-              setDateRange(
-                v as "all" | "next7" | "next30" | "past7" | "past30" | "month",
-              )
-            }
+            onChange={(v) => updateDateRangeFilter(v as TrackerDateRange)}
             options={[
               { value: "all", label: "All dates" },
               { value: "next7", label: "Next 7 days" },
@@ -1970,7 +2054,7 @@ export default function MasterTracker() {
           <FilterSelect
             label="MARKET"
             value={marketFilter}
-            onChange={setMarketFilter}
+            onChange={updateMarketFilter}
             options={[
               { value: "all", label: "All markets" },
               ...markets.map((m) => ({ value: m, label: m })),
@@ -2015,7 +2099,15 @@ export default function MasterTracker() {
                 setMarketFilter("all");
                 setSchedulingFilter("all");
                 setSortMode("date-desc");
-                if (planId) setPlanFilter(null);
+                setPlanId(null);
+                setSearchParams(
+                  buildTrackerUrlParams(searchParams, {
+                    dateRange: "all",
+                    market: "all",
+                    planId: null,
+                  }),
+                  { replace: true },
+                );
               }}
               className="mono text-[10px] px-3 py-1.5 rounded-xl"
               style={{

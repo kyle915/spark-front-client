@@ -32,6 +32,8 @@ import {
 } from "@/public/form/torchRequestForm";
 import EventActivationSchedule from "@/public/form/components/EventActivationSchedule";
 import {
+  buildQuickDatePresets,
+  computeCreateRequestBlocker,
   showsBaCountSelector,
   showsEventActivationSchedule,
   showsLegacyBulkDates,
@@ -474,6 +476,27 @@ const SparkRequestInner: React.FC = () => {
   const [baCount, setBaCount] = useState<number>(
     Number.isFinite(qpBaCount) && qpBaCount > 0 ? qpBaCount : 1,
   );
+  const quickDatePresets = useMemo(() => buildQuickDatePresets(), []);
+  const coBrandMissing =
+    coBrandSiblings.length > 0
+      ? coBrandBlocker(multiBrand, coBrandSelection)
+      : null;
+  const submitBlocker = computeCreateRequestBlocker({
+    venue,
+    multiDateEvent,
+    date,
+    visitSlots,
+    schedulingStatus,
+    showTorchNonActiveFields,
+    nonActiveProductRequired,
+    isTorch,
+    torchActivationOk,
+    coBrandMissing,
+  });
+  const canSubmit = !isCommitting && !submitBlocker;
+  const listedVisits = multiDateEvent
+    ? visitSlots.filter((slot) => slot.date.trim()).length
+    : (date ? 1 : 0) + (legacyBulkDates ? extraDates.filter(Boolean).length : 0);
   const [distributorId, setDistributorId] = useState(qpDistributorId);
   // Distributor input is an autocomplete: type to filter the existing
   // distributor list; if nothing matches, offer to create-on-the-fly.
@@ -1165,8 +1188,33 @@ const SparkRequestInner: React.FC = () => {
               </div>
             ) : (
               <>
-                <div>
+                <div className="sm:col-span-2">
                   <label className="label-mini block mb-1.5">Visit date *</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {quickDatePresets.map((p) => {
+                      const selected = date === p.iso;
+                      return (
+                        <button
+                          key={p.label}
+                          type="button"
+                          onClick={() => setDate(p.iso)}
+                          className="mono text-[10px] px-2.5 py-1.5 rounded-lg transition"
+                          style={{
+                            letterSpacing: "0.14em",
+                            background: selected
+                              ? "var(--spark-lime, #c5f546)"
+                              : "rgba(255,255,255,0.04)",
+                            color: selected ? "#0a0d09" : "rgba(255,255,255,0.7)",
+                            border: selected
+                              ? "1px solid var(--spark-lime, #c5f546)"
+                              : "1px solid rgba(255,255,255,0.1)",
+                          }}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                   <input
                     style={inputStyle}
                     type="date"
@@ -1846,45 +1894,40 @@ const SparkRequestInner: React.FC = () => {
           >
             ⛁ DETAILED FORM →
           </button>
-          <button
-            type="submit"
-            disabled={
-              isCommitting ||
-              !venue ||
-              !date ||
-              !schedulingStatus ||
-              (showTorchNonActiveFields && !nonActiveProductRequired) ||
-              (isTorch && !torchActivationOk)
-            }
-            className="px-6 py-3 rounded-2xl text-sm font-semibold transition"
-            style={{
-              background: "var(--spark-lime)",
-              color: "#0a0d09",
-              boxShadow:
-                !venue ||
-                !date ||
-                !schedulingStatus ||
-                (showTorchNonActiveFields && !nonActiveProductRequired) ||
-                (isTorch && !torchActivationOk)
+          <div className="flex items-center gap-3 flex-wrap">
+            <div
+              className="mono text-[10px]"
+              style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}
+            >
+              {listedVisits > 1 ? `${listedVisits} VISITS · ` : ""}
+              {`${selectedProducts.size} PRODUCTS`}
+              {showBaCount ? ` · ${baCount} BAs` : ""}
+              {submitBlocker ? (
+                <span style={{ color: "var(--spark-orange, #ef5a2a)" }}>
+                  {` · Needs: ${submitBlocker}`}
+                </span>
+              ) : null}
+            </div>
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="px-6 py-3 rounded-2xl text-sm font-semibold transition"
+              style={{
+                background: "var(--spark-lime)",
+                color: "#0a0d09",
+                boxShadow: !canSubmit
                   ? "none"
                   : "0 0 24px rgba(197,245,70,0.35)",
-              opacity:
-                isCommitting ||
-                !venue ||
-                !date ||
-                !schedulingStatus ||
-                (showTorchNonActiveFields && !nonActiveProductRequired) ||
-                (isTorch && !torchActivationOk)
-                  ? 0.5
-                  : 1,
-            }}
-          >
-            {isCommitting
-              ? "Submitting…"
-              : isClient
-                ? "Submit & route to RMM →"
-                : "Create internal request →"}
-          </button>
+                opacity: !canSubmit ? 0.5 : 1,
+              }}
+            >
+              {isCommitting
+                ? "Submitting…"
+                : isClient
+                  ? "Submit & route to RMM →"
+                  : "Create internal request →"}
+            </button>
+          </div>
         </div>
       </div>
     </form>

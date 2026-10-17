@@ -106,3 +106,80 @@ export function displayBaCount(
   const match = (notes ?? "").match(/(?:^|\n)\s*BA count:\s*(\d+)/i);
   return match ? match[1] : null;
 }
+
+export type CreateRequestBlockerInput = {
+  venue: string;
+  multiDateEvent: boolean;
+  date: string;
+  visitSlots: VisitSlot[];
+  schedulingStatus: string;
+  showTorchNonActiveFields?: boolean;
+  nonActiveProductRequired?: string;
+  isTorch?: boolean;
+  torchActivationOk?: boolean;
+  coBrandMissing?: string | null;
+};
+
+/**
+ * Returns a human-readable section/field name blocking internal Create Request
+ * submission, or `null` when ready to submit. Checks `visitSlots` when
+ * `multiDateEvent` is true and top-level `date` otherwise.
+ */
+export function computeCreateRequestBlocker(
+  input: CreateRequestBlockerInput,
+): string | null {
+  if (!input.venue.trim()) return "Venue";
+  const scheduleReady = input.multiDateEvent
+    ? !visitSlotIssues(input.visitSlots)
+    : Boolean(input.date.trim());
+  if (!scheduleReady) return "Date";
+  if (!input.schedulingStatus.trim()) return "Scheduling";
+  if (input.showTorchNonActiveFields && !input.nonActiveProductRequired?.trim()) {
+    return "Products";
+  }
+  if (input.isTorch && input.torchActivationOk === false) {
+    return "Request";
+  }
+  if (input.coBrandMissing) {
+    return input.coBrandMissing;
+  }
+  return null;
+}
+
+export type QuickDatePreset = {
+  label: string;
+  iso: string;
+};
+
+/** Build quick-date preset chips relative to `baseDate` (defaults to today). */
+export function buildQuickDatePresets(baseDate = new Date()): QuickDatePreset[] {
+  const today = new Date(baseDate);
+  today.setHours(0, 0, 0, 0);
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const addDays = (n: number) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + n);
+    return d;
+  };
+  const nextDow = (target: number) => {
+    const d = new Date(today);
+    const diff = (target - d.getDay() + 7) % 7 || 7;
+    d.setDate(d.getDate() + diff);
+    return d;
+  };
+  const fmtChip = (d: Date) =>
+    d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+
+  return [
+    { label: "TODAY", iso: fmt(today) },
+    { label: "TOMORROW", iso: fmt(addDays(1)) },
+    { label: `FRI · ${fmtChip(nextDow(5))}`, iso: fmt(nextDow(5)) },
+    { label: `SAT · ${fmtChip(nextDow(6))}`, iso: fmt(nextDow(6)) },
+    { label: `+7D · ${fmtChip(addDays(7))}`, iso: fmt(addDays(7)) },
+    { label: `+14D · ${fmtChip(addDays(14))}`, iso: fmt(addDays(14)) },
+  ];
+}
