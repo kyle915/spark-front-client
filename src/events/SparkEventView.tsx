@@ -5,14 +5,15 @@
  * stacked daisy badges) with a focused Spark-chrome detail page.
  *
  * Layout principles:
- *   - One header with the event name + status / type / scope chips
- *   - One summary chip-row (date, time, account, address)
- *   - Notes shown ONCE in a single panel (legacy had it in 3 places)
- *   - Details + products grouped into one structured grid
- *   - Roster panel (admin-only) appears below details, surfacing
- *     invited + accepted BAs for this event
- *   - Shift Replay panel — GPS trail if any pings exist
- *   - Back link respects history state, falls back to the Master Tracker
+ *   - One header: store name, one meta line (date, time, city, address),
+ *     and the status chips once. Cancel, assign, and edit stay here.
+ *   - Account & venue only shows facts the header does not (map link,
+ *     timezone, the associated request, and anything else unique).
+ *   - Contacts are one quiet row per person.
+ *   - Empty roster and recaps are a single line. Filled states keep
+ *     the real cards.
+ *   - Notes shown once. Shift Replay stays below when GPS pings exist.
+ *   - Back link respects history state, falls back to the Master Tracker.
  */
 
 import React, { Suspense, useState } from "react";
@@ -219,39 +220,32 @@ const Field: React.FC<{
   </div>
 );
 
-const SummaryPill: React.FC<{
-  icon: string;
-  children: React.ReactNode;
-}> = ({ icon, children }) => (
-  <span
-    className="flex items-center gap-2 text-sm"
-    style={{ color: "rgba(255,255,255,0.75)" }}
-  >
-    <span
-      aria-hidden
-      style={{
-        color: "rgba(255,255,255,0.45)",
-        fontFamily: "JetBrains Mono, monospace",
-      }}
-    >
-      {icon}
+const ContactLine: React.FC<{
+  name: string;
+  detail?: string | null;
+  note?: string | null;
+}> = ({ name, detail, note }) => (
+  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-sm">
+    <span className="font-medium" style={{ color: "rgba(255,255,255,0.9)" }}>
+      {name}
     </span>
-    <span>{children}</span>
-  </span>
-);
-
-const RoleBadge: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span
-    className="mono text-[9px] px-2 py-0.5 rounded-full"
-    style={{
-      letterSpacing: "0.1em",
-      background: "rgba(197,245,70,0.1)",
-      color: "var(--spark-lime)",
-      border: "1px solid rgba(197,245,70,0.28)",
-    }}
-  >
-    {children}
-  </span>
+    {detail ? (
+      <span className="text-xs" style={{ color: "rgba(255,255,255,0.45)" }}>
+        {detail}
+      </span>
+    ) : null}
+    {note ? (
+      <span
+        className="mono text-[10px]"
+        style={{
+          letterSpacing: "0.12em",
+          color: "rgba(255,255,255,0.45)",
+        }}
+      >
+        {note}
+      </span>
+    ) : null}
+  </div>
 );
 
 const Inner: React.FC<{ uuid: string; backTo: string }> = ({
@@ -321,12 +315,6 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
   const storeNumber = req?.storeNumber?.trim() || null;
   const billingEntityName = req?.billingEntity?.name?.trim() || null;
   const schedulingStatus = req?.schedulingStatus ?? null;
-  const schedulingLabel =
-    schedulingStatus === "already_scheduled"
-      ? "Already scheduled with account"
-      : schedulingStatus === "needs_scheduling"
-        ? "Ignite needs to schedule"
-        : null;
   const tz = event.timezone ?? req?.timezone ?? null;
   const rmmUser = event.rmmAsigned ?? req?.rmmAsigned ?? null;
   const rmmName = rmmUser
@@ -443,6 +431,213 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
     billingEntityName ||
     (tenantSlug ? cleanVenueTitle(tenantSlug.replace(/-/g, " ")) : null);
 
+  const mapsHref = addressText
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressText)}`
+    : null;
+  const headerMeta = [
+    primaryDateLabel !== "—" ? primaryDateLabel : null,
+    timeRangeLabel,
+    market,
+    addressText && norm(addressText) !== norm(market ?? "") ? addressText : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const venueFacts: {
+    key: string;
+    label: string;
+    wide?: boolean;
+    value: React.ReactNode;
+  }[] = [];
+  if (venue !== "—" && norm(venue) !== norm(displayTitle)) {
+    venueFacts.push({ key: "retailer", label: "RETAILER", value: venue });
+  }
+  if (storeNumber) {
+    venueFacts.push({ key: "store", label: "STORE #", value: storeNumber });
+  }
+  if (mapsHref) {
+    venueFacts.push({
+      key: "map",
+      label: "MAP",
+      value: (
+        <a
+          href={mapsHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "var(--spark-sky)", textDecoration: "none" }}
+        >
+          Open in Maps ↗
+        </a>
+      ),
+    });
+  }
+  if (distributor) {
+    venueFacts.push({
+      key: "distributor",
+      label: "DISTRIBUTOR",
+      value: distributor,
+    });
+  }
+  if (billingEntityName) {
+    venueFacts.push({
+      key: "billing",
+      label: "BILLING ENTITY",
+      value: billingEntityName,
+    });
+  }
+  if (tz?.name) {
+    venueFacts.push({
+      key: "tz",
+      label: "TIMEZONE",
+      value: `${tz.name}${tz.code ? ` · ${tz.code}` : ""}`,
+    });
+  }
+  if (baCount) {
+    venueFacts.push({ key: "ba", label: "BA COUNT", value: baCount });
+  }
+  if (
+    req?.isNonActiveProductRequired !== null &&
+    req?.isNonActiveProductRequired !== undefined
+  ) {
+    venueFacts.push({
+      key: "nonactive",
+      label: "Is Non-Active Product Required?",
+      value: req.isNonActiveProductRequired ? "Yes" : "No",
+    });
+  }
+  if (req?.casesToBeShipped?.trim()) {
+    venueFacts.push({
+      key: "cases",
+      label: "How many cases to be shipped?",
+      value: req.casesToBeShipped.trim(),
+    });
+  }
+  if (req?.accountSpendAmount?.trim()) {
+    venueFacts.push({
+      key: "spend",
+      label: "Account Spend Amount",
+      value: req.accountSpendAmount.trim(),
+    });
+  }
+  if (req?.eventAssetsNeeded?.trim()) {
+    venueFacts.push({
+      key: "assets",
+      label: "What assets are needed at this event?",
+      wide: true,
+      value: req.eventAssetsNeeded.trim(),
+    });
+  }
+  if (req?.loadInTime?.trim()) {
+    venueFacts.push({
+      key: "loadin",
+      label: "What time is Load-In",
+      value: req.loadInTime.trim(),
+    });
+  }
+  if (req?.onsitePoc?.trim()) {
+    venueFacts.push({
+      key: "poc",
+      label: "Who is the onsite POC",
+      value: req.onsitePoc.trim(),
+    });
+  }
+  if (req?.additionalTeamDetails?.trim()) {
+    venueFacts.push({
+      key: "team",
+      label: "Any additional details for the team to know?",
+      wide: true,
+      value: req.additionalTeamDetails.trim(),
+    });
+  }
+  if (requestUuid) {
+    venueFacts.push({
+      key: "request",
+      label: "ASSOCIATED REQUEST",
+      value: (
+        <Link
+          to={`/request/view/${requestUuid}`}
+          style={{ color: "var(--spark-sky)", textDecoration: "none" }}
+        >
+          {requestName ?? "View request →"}
+        </Link>
+      ),
+    });
+  }
+  if (req?.createdAt) {
+    venueFacts.push({
+      key: "submitted",
+      label: "SUBMITTED",
+      value: `${fmtDate(req.createdAt)} · ${fmtTime(req.createdAt)}`,
+    });
+  }
+
+  const contactLines: {
+    key: string;
+    name: string;
+    detail: string | null;
+    note: string | null;
+  }[] = [];
+  if ((requestorName && requestorName !== "—") || requestorEmail) {
+    const notes = [
+      rmmSameAsRequestor ? "Assigned RMM" : null,
+      approverSameAsRequestor ? "Auto-approved" : null,
+    ].filter((note): note is string => Boolean(note));
+    contactLines.push({
+      key: "requestor",
+      name: requestorName !== "—" ? requestorName : (requestorEmail ?? "—"),
+      detail:
+        requestorEmail && requestorEmail !== requestorName
+          ? requestorEmail
+          : null,
+      note: notes.length > 0 ? notes.join(" · ") : null,
+    });
+  }
+  if (!rmmSameAsRequestor && (rmmName || rmmEmail)) {
+    contactLines.push({
+      key: "rmm",
+      name: rmmName || rmmEmail || "—",
+      detail: rmmEmail && rmmEmail !== rmmName ? rmmEmail : null,
+      note: approverSameAsRmm ? "Assigned RMM · Approved" : "Assigned RMM",
+    });
+  }
+  if (approvedByName && !approverSameAsRequestor && !approverSameAsRmm) {
+    contactLines.push({
+      key: "approver",
+      name: approvedByName,
+      detail:
+        approvedByEmail && approvedByEmail !== approvedByName
+          ? approvedByEmail
+          : null,
+      note: "Approved",
+    });
+  }
+  if (hasStoreManager) {
+    contactLines.push({
+      key: "store-manager",
+      name: storeManagerName || storeManagerPhone || "Store manager",
+      detail:
+        storeManagerPhone && storeManagerPhone !== storeManagerName
+          ? storeManagerPhone
+          : null,
+      note: "Store manager",
+    });
+  }
+  if (distributorEmail) {
+    contactLines.push({
+      key: "distributor-contact",
+      name: distributorEmail,
+      detail: null,
+      note: "Distributor",
+    });
+  }
+
+  const filedElsewhere = event.request?.recapsFiledCount ?? 0;
+  const siblingEventUuid = event.request?.recapEventUuid ?? null;
+  const recapLivesOnSibling =
+    filedElsewhere > 0 &&
+    Boolean(siblingEventUuid) &&
+    siblingEventUuid !== event.uuid;
+
   const onRecapChip = () => {
     if (recaps.length === 1) {
       navigate(recaps[0].viewPath);
@@ -469,38 +664,26 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
       </Link>
 
       {/* Header */}
-      <div className="flex items-end justify-between flex-wrap gap-4">
-        <div className="min-w-0 flex-1">
-          <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
-          >
-            EVENT
-          </p>
-          <h1
-            className="display text-4xl font-bold mt-2"
-            style={{ letterSpacing: "-0.04em" }}
-          >
-            {displayTitle}
-          </h1>
-          <p
-            className="mt-2 text-sm"
-            style={{ color: "rgba(255,255,255,0.6)" }}
-          >
-            {[
-              venue !== "—" && norm(venue) !== norm(displayTitle) ? venue : null,
-              market,
-              primaryDateLabel !== "—" ? primaryDateLabel : null,
-              timeRangeLabel,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
+      <div>
+        <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-3">
+          <div className="min-w-0">
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.18em",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              EVENT
+            </p>
+            <h1
+              className="display text-4xl font-bold mt-2"
+              style={{ letterSpacing: "-0.04em" }}
+            >
+              {displayTitle}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
           <span className={chipClass}>
             ● {event.status?.name ?? req?.status?.name ?? "—"}
           </span>
@@ -601,7 +784,16 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               Cancel event
             </button>
           )}
+          </div>
         </div>
+        {headerMeta ? (
+          <p
+            className="mt-2 text-sm"
+            style={{ color: "rgba(255,255,255,0.6)" }}
+          >
+            {headerMeta}
+          </p>
+        ) : null}
       </div>
 
       {/* Cancellation / decline reason banner */}
@@ -632,243 +824,50 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
         </div>
       )}
 
-      {/* Summary chips */}
-      <div
-        className="spark-card flex items-center gap-6 flex-wrap"
-        style={{
-          padding: "1rem 1.25rem",
-        }}
-      >
-        <SummaryPill icon="▣">{primaryDateLabel}</SummaryPill>
-        {timeRangeLabel && (
-          <SummaryPill icon="◷">{timeRangeLabel}</SummaryPill>
-        )}
-        {market && <SummaryPill icon="◈">{market}</SummaryPill>}
-        {addressText && (
-          <SummaryPill icon="⌖">
-            <span className="inline-flex items-center gap-2 flex-wrap">
-              <span>{addressText}</span>
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressText)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mono text-[10px] px-2 py-0.5 rounded-md transition"
-                style={{
-                  letterSpacing: "0.1em",
-                  color: "var(--spark-sky)",
-                  background: "rgba(95,184,239,0.1)",
-                  border: "1px solid rgba(95,184,239,0.3)",
-                  textDecoration: "none",
-                }}
-              >
-                Open in Maps ↗
-              </a>
-            </span>
-          </SummaryPill>
-        )}
-      </div>
-
-      {/* Account & Venue / Details grid */}
-      <div className="spark-card p-6">
-        <p
-          className="mono text-[10px] mb-4"
-          style={{
-            letterSpacing: "0.18em",
-            color: "var(--spark-lime)",
-          }}
-        >
-          ACCOUNT & VENUE
-        </p>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {venue !== "—" && norm(venue) !== norm(displayTitle) && (
-            <Field label="RETAILER">{venue}</Field>
-          )}
-          {storeNumber && <Field label="STORE #">{storeNumber}</Field>}
-          {market && <Field label="MARKET">{market}</Field>}
-          {addressText && (
-            <Field label="ADDRESS">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span>{addressText}</span>
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressText)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mono text-[10px] px-2 py-0.5 rounded-md transition"
-                  style={{
-                    letterSpacing: "0.1em",
-                    color: "var(--spark-sky)",
-                    background: "rgba(95,184,239,0.1)",
-                    border: "1px solid rgba(95,184,239,0.3)",
-                    textDecoration: "none",
-                  }}
-                >
-                  Open in Maps ↗
-                </a>
-              </div>
-            </Field>
-          )}
-          {distributor && <Field label="DISTRIBUTOR">{distributor}</Field>}
-          {billingEntityName && (
-            <Field label="BILLING ENTITY">{billingEntityName}</Field>
-          )}
-          {eventTypeName !== "—" && (
-            <Field label="TYPE">{eventTypeName}</Field>
-          )}
-          <Field label="SCOPE">{scope}</Field>
-          <Field label="STATUS">
-            {event.status?.name ?? req?.status?.name ?? "—"}
-          </Field>
-          {schedulingLabel && (
-            <Field label="SCHEDULING">{schedulingLabel}</Field>
-          )}
-          {tz?.name && (
-            <Field label="TIMEZONE">
-              {tz.name}
-              {tz.code ? ` · ${tz.code}` : ""}
-            </Field>
-          )}
-          {baCount && <Field label="BA COUNT">{baCount}</Field>}
-          {req?.isNonActiveProductRequired !== null &&
-            req?.isNonActiveProductRequired !== undefined && (
-              <Field label="Is Non-Active Product Required?">
-                {req.isNonActiveProductRequired ? "Yes" : "No"}
-              </Field>
-            )}
-          {req?.casesToBeShipped?.trim() && (
-            <Field label="How many cases to be shipped?">
-              {req.casesToBeShipped.trim()}
-            </Field>
-          )}
-          {req?.accountSpendAmount?.trim() && (
-            <Field label="Account Spend Amount">
-              {req.accountSpendAmount.trim()}
-            </Field>
-          )}
-          {req?.eventAssetsNeeded?.trim() && (
-            <Field label="What assets are needed at this event?">
-              {req.eventAssetsNeeded.trim()}
-            </Field>
-          )}
-          {req?.loadInTime?.trim() && (
-            <Field label="What time is Load-In">
-              {req.loadInTime.trim()}
-            </Field>
-          )}
-          {req?.onsitePoc?.trim() && (
-            <Field label="Who is the onsite POC">
-              {req.onsitePoc.trim()}
-            </Field>
-          )}
-          {req?.additionalTeamDetails?.trim() && (
-            <Field label="Any additional details for the team to know?">
-              {req.additionalTeamDetails.trim()}
-            </Field>
-          )}
-          {requestUuid && (
-            <Field label="ASSOCIATED REQUEST">
-              <Link
-                to={`/request/view/${requestUuid}`}
-                style={{
-                  color: "var(--spark-sky)",
-                  textDecoration: "none",
-                }}
-              >
-                {requestName ?? "View request →"}
-              </Link>
-            </Field>
-          )}
-          {req?.createdAt && (
-            <Field label="SUBMITTED">
-              {fmtDate(req.createdAt)} · {fmtTime(req.createdAt)}
-            </Field>
-          )}
-        </div>
-      </div>
-
-      {/* Contacts & Routing from original request */}
-      {req && (
-        <div className="spark-card p-6">
+      {venueFacts.length > 0 && (
+        <div className="spark-card px-5 py-4">
           <p
-            className="mono text-[10px] mb-4"
+            className="mono text-[10px] mb-3"
             style={{
               letterSpacing: "0.18em",
               color: "var(--spark-lime)",
             }}
           >
-            CONTACTS & ROUTING
+            ACCOUNT & VENUE
           </p>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            <Field label="REQUESTOR">
-              <div className="font-medium">{requestorName}</div>
-              {requestorEmail && requestorEmail !== requestorName && (
-                <div
-                  className="text-xs mt-0.5"
-                  style={{ color: "rgba(255,255,255,0.45)" }}
-                >
-                  {requestorEmail}
-                </div>
-              )}
-              {(rmmSameAsRequestor || approverSameAsRequestor) && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  <RoleBadge>Requestor</RoleBadge>
-                  {rmmSameAsRequestor && <RoleBadge>Assigned RMM</RoleBadge>}
-                  {approverSameAsRequestor && (
-                    <RoleBadge>Auto-approved</RoleBadge>
-                  )}
-                </div>
-              )}
-            </Field>
-            {!rmmSameAsRequestor && (rmmName || rmmEmail) && (
-              <Field label="ASSIGNED RMM">
-                <div className="font-medium">{rmmName || rmmEmail}</div>
-                {rmmEmail && rmmEmail !== rmmName && (
-                  <div
-                    className="text-xs mt-0.5"
-                    style={{ color: "rgba(255,255,255,0.45)" }}
-                  >
-                    {rmmEmail}
-                  </div>
-                )}
-                {approverSameAsRmm && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    <RoleBadge>Approved</RoleBadge>
-                  </div>
-                )}
-              </Field>
-            )}
-            {approvedByName &&
-              !approverSameAsRequestor &&
-              !approverSameAsRmm && (
-                <Field label="APPROVED BY">
-                  <div className="font-medium">{approvedByName}</div>
-                  {approvedByEmail && approvedByEmail !== approvedByName && (
-                    <div
-                      className="text-xs mt-0.5"
-                      style={{ color: "rgba(255,255,255,0.45)" }}
-                    >
-                      {approvedByEmail}
-                    </div>
-                  )}
-                </Field>
-              )}
-            {hasStoreManager && (
-              <Field label="STORE MANAGER">
-                {storeManagerName && (
-                  <div className="font-medium">{storeManagerName}</div>
-                )}
-                {storeManagerPhone && (
-                  <div
-                    className="text-xs mt-0.5"
-                    style={{ color: "rgba(255,255,255,0.45)" }}
-                  >
-                    {storeManagerPhone}
-                  </div>
-                )}
-              </Field>
-            )}
-            {distributorEmail && (
-              <Field label="DISTRIBUTOR CONTACT">{distributorEmail}</Field>
-            )}
+          <div className="flex flex-wrap gap-x-10 gap-y-4">
+            {venueFacts.map((fact) => (
+              <div
+                key={fact.key}
+                className={fact.wide ? "basis-full" : undefined}
+              >
+                <Field label={fact.label}>{fact.value}</Field>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {contactLines.length > 0 && (
+        <div className="spark-card px-5 py-4">
+          <p
+            className="mono text-[10px] mb-3"
+            style={{
+              letterSpacing: "0.18em",
+              color: "var(--spark-lime)",
+            }}
+          >
+            CONTACTS
+          </p>
+          <div className="space-y-2">
+            {contactLines.map((line) => (
+              <ContactLine
+                key={line.key}
+                name={line.name}
+                detail={line.detail}
+                note={line.note}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -1004,9 +1003,9 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
         </div>
       )}
 
-      {/* Roster — invited + confirmed BAs staffed on this event */}
-      <div className="spark-card p-6">
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+      {/* Roster — a line when empty; cards only once people are assigned. */}
+      {ambassadors.length === 0 ? (
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-1">
           <p
             className="mono text-[10px]"
             style={{
@@ -1014,9 +1013,40 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               color: "var(--spark-lime)",
             }}
           >
-            ROSTER · {ambassadors.length}
+            ROSTER · 0
           </p>
-          {ambassadors.length > 0 && (
+          <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+            No brand ambassadors assigned yet.
+          </p>
+          {role.isAdmin && (
+            <button
+              type="button"
+              onClick={() => setShowAssign(true)}
+              className="text-xs font-semibold"
+              style={{
+                color: "var(--spark-lime)",
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+              }}
+            >
+              Assign BA
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="spark-card p-6">
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+            <p
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.18em",
+                color: "var(--spark-lime)",
+              }}
+            >
+              ROSTER · {ambassadors.length}
+            </p>
             <p
               className="mono text-[10px]"
               style={{
@@ -1027,32 +1057,7 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               {confirmedCount} CONFIRMED · {ambassadors.length - confirmedCount}{" "}
               INVITED
             </p>
-          )}
-        </div>
-        {ambassadors.length === 0 ? (
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <p
-              className="text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              No brand ambassadors assigned yet.
-            </p>
-            {role.isAdmin && (
-              <button
-                type="button"
-                onClick={() => setShowAssign(true)}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold transition"
-                style={{
-                  background: "var(--spark-lime)",
-                  color: "#0a0d09",
-                  border: "1px solid var(--spark-lime)",
-                }}
-              >
-                ✚ Assign BA
-              </button>
-            )}
           </div>
-        ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {ambassadors.map((a) => (
               <div
@@ -1109,97 +1114,82 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Recaps — field reports filed against this event. Mirrors the
-          recap cards on SparkRequestView; the header chip scrolls here. */}
-      <div id={RECAPS_SECTION_ID} className="spark-card p-6">
-        <p
-          className="mono text-[10px] mb-4"
-          style={{
-            letterSpacing: "0.18em",
-            color: "var(--spark-lime)",
-          }}
+      {/* Recaps — a line when empty; cards once a report is filed.
+          The header chip scrolls to this id. */}
+      {recaps.length === 0 ? (
+        <div
+          id={RECAPS_SECTION_ID}
+          className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-1"
         >
-          RECAPS · {recaps.length}
-        </p>
-        {recaps.length === 0 ? (
-          <div
-            className="spark-card overflow-hidden"
-            style={{ borderStyle: "dashed", opacity: 0.7 }}
+          <p
+            className="mono text-[10px]"
+            style={{
+              letterSpacing: "0.18em",
+              color: "var(--spark-lime)",
+            }}
           >
-            <div
-              className="h-32 relative overflow-hidden grid place-items-center"
-              style={{ background: "rgba(255,255,255,0.02)" }}
+            RECAPS · 0
+          </p>
+          <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+            No recap filed on this event yet.
+          </p>
+          {recapLivesOnSibling && siblingEventUuid ? (
+            <button
+              type="button"
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.12em",
+                color: "var(--spark-lime)",
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+              }}
+              onClick={() =>
+                navigate(`/event/view/${siblingEventUuid}`, {
+                  state: { from: location.pathname },
+                })
+              }
             >
-              <div className="text-center px-4">
-                <p
-                  className="mono text-[10px]"
-                  style={{
-                    letterSpacing: "0.18em",
-                    color: "var(--spark-orange)",
-                  }}
-                >
-                  AWAITING RECAP
-                </p>
-                <p
-                  className="text-xs mt-1"
-                  style={{ color: "rgba(255,255,255,0.55)" }}
-                >
-                  No recap filed on this event yet.
-                </p>
-                {(() => {
-                  const filed = event.request?.recapsFiledCount ?? 0;
-                  const sibling = event.request?.recapEventUuid;
-                  if (filed > 0 && sibling && sibling !== event.uuid) {
-                    return (
-                      <button
-                        type="button"
-                        className="mt-3 mono text-[10px] px-3 py-1.5 rounded-lg"
-                        style={{
-                          letterSpacing: "0.12em",
-                          color: "var(--spark-lime)",
-                          border: "1px solid rgba(197,245,70,0.35)",
-                          background: "rgba(197,245,70,0.08)",
-                        }}
-                        onClick={() =>
-                          navigate(`/event/view/${sibling}`, {
-                            state: { from: location.pathname },
-                          })
-                        }
-                      >
-                        ● {filed} RECAP{filed === 1 ? "" : "S"} ON LINKED SHIFT →
-                      </button>
-                    );
-                  }
-                  if (requestUuid) {
-                    return (
-                      <button
-                        type="button"
-                        className="mt-3 mono text-[10px] px-3 py-1.5 rounded-lg"
-                        style={{
-                          letterSpacing: "0.12em",
-                          color: "rgba(255,255,255,0.7)",
-                          border: "1px solid var(--spark-border)",
-                          background: "transparent",
-                        }}
-                        onClick={() =>
-                          navigate(`/request/view/${requestUuid}`, {
-                            state: { from: location.pathname },
-                          })
-                        }
-                      >
-                        OPEN REQUEST FIELD REPORTS →
-                      </button>
-                    );
-                  }
-                  return null;
-                })()}
-              </div>
-            </div>
-          </div>
-        ) : (
+              {filedElsewhere} RECAP{filedElsewhere === 1 ? "" : "S"} ON LINKED
+              SHIFT →
+            </button>
+          ) : requestUuid ? (
+            <button
+              type="button"
+              className="mono text-[10px]"
+              style={{
+                letterSpacing: "0.12em",
+                color: "rgba(255,255,255,0.55)",
+                background: "transparent",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+              }}
+              onClick={() =>
+                navigate(`/request/view/${requestUuid}`, {
+                  state: { from: location.pathname },
+                })
+              }
+            >
+              Open request field reports →
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <div id={RECAPS_SECTION_ID} className="spark-card p-6">
+          <p
+            className="mono text-[10px] mb-4"
+            style={{
+              letterSpacing: "0.18em",
+              color: "var(--spark-lime)",
+            }}
+          >
+            RECAPS · {recaps.length}
+          </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {recaps.map((recap) => {
               const { hero, baName, fileCount } = recap;
@@ -1302,8 +1292,8 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* GPS trail */}
       <ShiftReplayPanel eventUuid={String(event.uuid)} />
