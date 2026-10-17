@@ -1,6 +1,9 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useParams } from "react-router";
 import { isExpenseReceiptBucket } from "./photoBuckets";
+import { advisoryFromPhotoCheck, requestPhotoCheck, sha256Hex } from "./photoCheck";
+import { applyVoiceFills, type VoiceFill } from "./voiceDraft";
+import { VoiceRecapCard } from "./VoiceRecapCard";
 import { matchingStores, storeNameForPicker, type StoreSuggestion } from "./storeSuggestions";
 import { PHOTO_CAP } from "./photoCap";
 import {
@@ -3070,6 +3073,39 @@ function RecapForm({
   const patchPhoto = (id: string, patch: Partial<Photo>) =>
     setPhotos((p) => p.map((ph) => (ph.id === id ? { ...ph, ...patch } : ph)));
 
+  const keepPhotoCheck = (id: string) => {
+    setPhotos((current) =>
+      current.map((photo) =>
+        photo.id === id && photo.check ? { ...photo, check: { ...photo.check, dismissed: true } } : photo,
+      ),
+    );
+  };
+
+  // Classify after the compressed copy exists. The upload is not waiting on this.
+  const runPhotoCheck = (id: string, file: File) => {
+    if (!token || !file.type.startsWith("image/")) return;
+    const category = photosRef.current.find((photo) => photo.id === id)?.category ?? null;
+    const bucketName = (photoBuckets ?? []).find((bucket) => bucket.id === category)?.name ?? null;
+    void requestPhotoCheck({
+      origin: apiOrigin(),
+      code,
+      session: token,
+      file,
+      contentType: file.type || "image/jpeg",
+      category,
+    }).then((result) => {
+      if (!photosRef.current.some((photo) => photo.id === id)) return;
+      const advisory = advisoryFromPhotoCheck(result, bucketName);
+      patchPhoto(id, {
+        check: {
+          kind: advisory.kind,
+          message: advisory.message,
+          dismissed: false,
+        },
+      });
+    });
+  };
+
   // Compress once — a raw iPhone shot is 3-5MB and a BA may file dozens from a
   // parking lot on LTE. The compressed copy becomes the photo's file (retries
   // reuse it) and is what's kept on the device for a reload; the original
@@ -3077,6 +3113,7 @@ function RecapForm({
   const prepareOne = (id: string, original: File) =>
     photoPrep(async () => {
       const file = await compressImage(original);
+      const digest = file.type.startsWith("image/") ? await sha256Hex(file).catch(() => "") : "";
       const thumb = file.type.startsWith("image/") ? await makeThumbnail(file) : null;
       setPhotos((p) =>
         p.map((ph) => {
@@ -3086,11 +3123,12 @@ function RecapForm({
             if (previewUrl) URL.revokeObjectURL(previewUrl);
             previewUrl = URL.createObjectURL(thumb);
           }
-          return { ...ph, file, previewUrl, prepared: true };
+          return { ...ph, file, previewUrl, prepared: true, ...(digest ? { sha256: digest } : {}) };
         }),
       );
       if (file.type.startsWith("image/") && !submittedRef.current) {
         void saveDraftPhotoFile(code, token, id, file);
+        void runPhotoCheck(id, file);
       }
       return { file, thumb };
     });
@@ -3242,6 +3280,7 @@ function RecapForm({
           previewUrl: file ? URL.createObjectURL(file) : "",
           state: photo.blobName ? "done" : "uploading",
           category: photo.category,
+          ...(photo.sha256 ? { sha256: photo.sha256 } : {}),
         }));
       const seen = new Set([...have, ...fromDevice.map((p) => p.id)]);
       const fromServer: Photo[] = (restored.current?.photos ?? [])
@@ -3253,6 +3292,7 @@ function RecapForm({
           previewUrl: "",
           state: "done",
           category: photo.category,
+          ...(photo.sha256 ? { sha256: photo.sha256 } : {}),
         }));
       const back = [...fromDevice, ...fromServer];
       photosRef.current = [...back, ...photosRef.current];
@@ -3473,6 +3513,7 @@ function RecapForm({
             id: p.id,
             blobName: p.blobName,
             category: p.category,
+            ...(p.sha256 ? { sha256: p.sha256 } : {}),
             filename: p.file.name || "photo.jpg",
             contentType: browserPlayableContentType({
               type: p.file.type,
@@ -3525,7 +3566,11 @@ function RecapForm({
         session: token,
         idempotencyKey: existing && existing.token === token ? existing.id : undefined,
         fieldValues,
-        files: donePhotos.map((p) => ({ blobName: p.blobName, category: p.category })),
+        files: donePhotos.map((p) => ({
+          blobName: p.blobName,
+          category: p.category,
+          ...(p.sha256 ? { sha256: p.sha256 } : {}),
+        })),
         productSamples,
         totalEngagements,
         usedCorpoCard,
@@ -3689,6 +3734,20 @@ function RecapForm({
         cardStyle={card}
         headingStyle={h2}
       />
+      {token ? (
+        <div style={card}>
+          <VoiceRecapCard
+            origin={apiOrigin()}
+            code={code}
+            session={token}
+            fields={templateFields}
+            accent={accent}
+            onApply={(fills: VoiceFill[]) =>
+              setValues((current) => applyVoiceFills(current, fills, templateFields))
+            }
+          />
+        </div>
+      ) : null}
       {template.sections.map((section) => {
         // Mileage moves to the end of the recap (after photos). Skip empty
         // sections that only held mileage fields.
@@ -3713,6 +3772,7 @@ function RecapForm({
                 onAddPhotos={uploadFiles}
                 photos={loosePhotos}
                 onRemovePhoto={removePhoto}
+                onKeepPhoto={keepPhotoCheck}
                 products={template.products}
                 sampleQtys={samples}
                 onSampleQtyChange={(productId, qty) =>
@@ -3800,6 +3860,11 @@ function RecapForm({
                 onAdd={() => libraryRef.current?.click()}
                 onTake={() => cameraRef.current?.click()}
                 onRemove={removePhoto}
+                onKeep={keepPhotoCheck}
+                onRetake={(id) => {
+                  removePhoto(id);
+                  cameraRef.current?.click();
+                }}
                 accent={accent}
               />
             </div>
@@ -3855,6 +3920,7 @@ function RecapForm({
                   photos={photos.filter((p) => p.category === b.id)}
                   onAdd={uploadFiles}
                   onRemove={removePhoto}
+                  onKeep={keepPhotoCheck}
                   accent={accent}
                 />
               </Fragment>
@@ -4273,6 +4339,7 @@ function FieldInput({
   onAddPhotos,
   photos,
   onRemovePhoto,
+  onKeepPhoto,
   products = [],
   sampleQtys = {},
   onSampleQtyChange,
@@ -4287,6 +4354,7 @@ function FieldInput({
   onAddPhotos: (files: FileList | null) => void;
   photos: Photo[];
   onRemovePhoto: (id: string) => void;
+  onKeepPhoto?: (id: string) => void;
   products?: TemplateProduct[];
   sampleQtys?: Record<string, string>;
   onSampleQtyChange?: (productId: string, qty: string) => void;
@@ -4324,6 +4392,11 @@ function FieldInput({
           onAdd={() => libraryRef.current?.click()}
           onTake={() => cameraRef.current?.click()}
           onRemove={onRemovePhoto}
+          onKeep={onKeepPhoto}
+          onRetake={(id) => {
+            onRemovePhoto(id);
+            cameraRef.current?.click();
+          }}
           accent={accent}
         />
         <PhotoFileInputs

@@ -6191,6 +6191,7 @@ type Query {
   tenantInsights(tenantId: ID!, startDate: String = null, endDate: String = null): TenantInsights!
   tenantSentiment(tenantId: ID!, year: Int = null): TenantSentiment
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
+  recapPhotoReuse(recapId: ID!, isCustom: Boolean! = false): RecapPhotoReuseResult!
   fileTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): FileTypeCountableConnection!
   fileType(uuid: ID!): FileType
   tenantBaActivation(tenantId: ID!): [BaActivationRow!]!
@@ -6856,6 +6857,27 @@ type RecapQualityFlag {
 type RecapQualityResult {
   score: Int!
   flags: [RecapQualityFlag!]!
+}
+
+"""
+Photo reuse check for one recap. A check, not a score.
+"""
+type RecapPhotoReuseResult {
+  items: [RecapPhotoReuseItem!]!
+}
+
+type RecapPhotoReuseItem {
+  fileId: String!
+  fileUrl: String!
+  status: String!
+  label: String!
+  matches: [RecapPhotoReuseMatch!]!
+}
+
+type RecapPhotoReuseMatch {
+  recapId: String!
+  eventDate: String!
+  fileUrl: String!
 }
 
 """
