@@ -22,7 +22,7 @@ import { Palette, PencilIcon, TagIcon, Archive } from "lucide-react";
 // EVERY route loads with `lazy(() => import(...))` — fetched when the
 // route is visited. The router has a single top-level Suspense boundary
 // so each route doesn't need its own. The hot paths (tracker, dashboard,
-// request views, approvals) are additionally WARMED during browser idle
+// approvals) are additionally WARMED during browser idle
 // via prefetchHotRoutes() below — typically while the user is still on
 // the login screen — so they open instantly without being eagerly
 // bundled into the entry (eager bundling put ~700KB+ of page code and,
@@ -104,9 +104,11 @@ import AdminOnly from "@/layout/AdminOnly";
 // but that dragged ~700KB into EVERY first paint — including the login
 // screen — and SparkRequestView's LocationMap pulled the whole 340KB
 // leaflet vendor chunk in with it. Lazy + prefetch keeps first paint
-// light while the tracker/dashboard still open instantly: the loaders
+// light while the tracker/dashboard still open instantly: those loaders
 // below are kicked off during browser idle right after boot (see
 // prefetchHotRoutes), so by the time anyone clicks, the chunk is cached.
+// SparkRequestView stays out of that idle list — its LocationMap import
+// would download the Leaflet vendor chunk on every admin boot.
 const loadDashboardEvents = () =>
   import("@/components/pages/dashboard-event/DashboardEvent");
 const loadMasterTracker = () => import("@/requests/MasterTracker");
@@ -125,15 +127,15 @@ const SparkRequestEdit = lazyDefault(loadSparkRequestEdit);
 const SparkApprovals = lazyDefault(loadSparkApprovals);
 const SparkRequestCreate = lazyDefault(loadSparkRequestCreate);
 
-/** Warm the hot-path chunks during browser idle so the first click on
- * Tracker / a request / the dashboard hits a cached module instead of the
- * network. Fired once from App boot, AFTER first paint — failures are
- * irrelevant (the route falls back to loading on demand). */
+/** Warm dashboard and tracker chunks during browser idle so the first
+ * click hits a cached module instead of the network. Request view is
+ * omitted: it statically imports Leaflet. Fired once from App boot,
+ * AFTER first paint — failures are irrelevant (the route falls back to
+ * loading on demand). */
 export function prefetchHotRoutes(): void {
   const warm = () => {
     loadDashboardEvents().catch(() => {});
     loadMasterTracker().catch(() => {});
-    loadSparkRequestView().catch(() => {});
     loadSparkRequestEdit().catch(() => {});
     loadSparkApprovals().catch(() => {});
     loadSparkRequestCreate().catch(() => {});

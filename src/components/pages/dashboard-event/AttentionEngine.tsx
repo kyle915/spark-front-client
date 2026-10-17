@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import { HomeAttentionQuery } from "@/api/queries/HomeAttentionQuery";
@@ -8,8 +8,9 @@ import { useAuthStore } from "@/store/authStore";
 /**
  * Data-driven "What needs you" engine.
  *
- * Home "What needs you" engine. Dashboard-only skinny request fetch —
- * the sidebar badges use server scalars instead of this document.
+ * Two filtered request reads — pending/queue, and the next 7 days —
+ * instead of one unfiltered tracker page. Sidebar badges stay on
+ * server scalars and do not use this document.
  */
 
 type AttentionItem = {
@@ -18,6 +19,8 @@ type AttentionItem = {
   cta: string;
   to: string;
 };
+
+const ATTENTION_CAP = 2000;
 
 const ageHours = (dateStr: string): number => {
   try {
@@ -40,83 +43,158 @@ const isUpcomingWithin = (raw: string | null | undefined, days: number) => {
   }
 };
 
-export const AttentionEngine: React.FC = () => {
-  const navigate = useNavigate();
-  const { tenantId } = useAuthStore();
+const isoLocalDay = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
 
+const requestNodes = (data: HomeAttentionQueryType["response"]) =>
+  data?.requests?.edges
+    ?.map((e) => e?.node)
+    ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+
+const statusSlug = (node: {
+  status?: { slug?: string | null; name?: string | null } | null;
+}) => (node.status?.slug ?? node.status?.name ?? "").toLowerCase();
+
+const StalePendingAttention: React.FC<{
+  tenantId: string | null;
+  onCount: (count: number) => void;
+}> = ({ tenantId, onCount }) => {
   const data = useLazyLoadQuery<HomeAttentionQueryType>(
     HomeAttentionQuery,
-    { first: 2000, filters: tenantId ? { tenantId } : null },
+    {
+      first: ATTENTION_CAP,
+      filters: {
+        ...(tenantId ? { tenantId } : {}),
+        statusSlugs: ["pending", "queue"],
+      },
+    },
     { fetchPolicy: "store-or-network" },
   );
+  const count = requestNodes(data).filter((r) => {
+    const slug = statusSlug(r);
+    if (!(slug === "pending" || slug === "queue")) return false;
+    return ageHours(r.createdAt) > 24;
+  }).length;
+  useEffect(() => {
+    onCount(count);
+  }, [count, onCount]);
+  return null;
+};
 
-  const items: AttentionItem[] = useMemo(() => {
-    const out: AttentionItem[] = [];
-    const requests =
-      data?.requests?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
+const UpcomingUnscheduledAttention: React.FC<{
+  tenantId: string | null;
+  startDate: string;
+  endDate: string;
+  onCount: (count: number) => void;
+}> = ({ tenantId, startDate, endDate, onCount }) => {
+  const data = useLazyLoadQuery<HomeAttentionQueryType>(
+    HomeAttentionQuery,
+    {
+      first: ATTENTION_CAP,
+      filters: {
+        ...(tenantId ? { tenantId } : {}),
+        startDate,
+        endDate,
+      },
+    },
+    { fetchPolicy: "store-or-network" },
+  );
+  const count = requestNodes(data).filter((r) => {
+    if (!isUpcomingWithin(r.date, 7)) return false;
+    const slug = statusSlug(r);
+    return slug !== "scheduled" && slug !== "done" && slug !== "completed";
+  }).length;
+  useEffect(() => {
+    onCount(count);
+  }, [count, onCount]);
+  return null;
+};
 
-    const stalePending = requests.filter((r) => {
-      const slug = (r.status?.slug ?? r.status?.name ?? "").toLowerCase();
-      if (!(slug === "pending" || slug === "queue")) return false;
-      return ageHours(r.createdAt) > 24;
+const AttentionRow: React.FC<{ item: AttentionItem }> = ({ item }) => {
+  const navigate = useNavigate();
+  return (
+    <div
+      className="flex items-center justify-between gap-3 py-3"
+      style={{ borderTop: "1px solid var(--spark-border)" }}
+    >
+      <p className="text-sm" style={{ color: "rgba(255,255,255,0.88)" }}>
+        {item.fact}
+      </p>
+      <button
+        type="button"
+        onClick={() => navigate(item.to)}
+        className="text-sm font-medium shrink-0"
+        style={{
+          background: "transparent",
+          color: "rgba(255,255,255,0.72)",
+          border: "none",
+          padding: 0,
+        }}
+      >
+        {item.cta}
+      </button>
+    </div>
+  );
+};
+
+export const AttentionEngine: React.FC = () => {
+  const { tenantId } = useAuthStore();
+  const today = new Date();
+  const end = new Date(today);
+  end.setDate(today.getDate() + 7);
+  const startDate = isoLocalDay(today);
+  const endDate = isoLocalDay(end);
+  const [staleCount, setStaleCount] = useState<number | null>(null);
+  const [upcomingCount, setUpcomingCount] = useState<number | null>(null);
+  const onStaleCount = useCallback((count: number) => {
+    setStaleCount((prev) => (prev === count ? prev : count));
+  }, []);
+  const onUpcomingCount = useCallback((count: number) => {
+    setUpcomingCount((prev) => (prev === count ? prev : count));
+  }, []);
+
+  const items: AttentionItem[] = [];
+  if ((staleCount ?? 0) > 0) {
+    items.push({
+      id: "stale-pending",
+      fact: `${staleCount} waiting more than 24 hours`,
+      cta: "Review now",
+      to: "/approvals",
     });
-    if (stalePending.length > 0) {
-      out.push({
-        id: "stale-pending",
-        fact: `${stalePending.length} waiting more than 24 hours`,
-        cta: "Review now",
-        to: "/approvals",
-      });
-    }
-
-    const upcomingUnscheduled = requests.filter((r) => {
-      if (!isUpcomingWithin(r.date, 7)) return false;
-      const slug = (r.status?.slug ?? r.status?.name ?? "").toLowerCase();
-      return slug !== "scheduled" && slug !== "done" && slug !== "completed";
+  }
+  if ((upcomingCount ?? 0) > 0) {
+    items.push({
+      id: "upcoming-unscheduled",
+      fact: `${upcomingCount} upcoming, not scheduled`,
+      cta: "Open tracker",
+      to: "/requests/list",
     });
-    if (upcomingUnscheduled.length > 0) {
-      out.push({
-        id: "upcoming-unscheduled",
-        fact: `${upcomingUnscheduled.length} upcoming, not scheduled`,
-        cta: "Open tracker",
-        to: "/requests/list",
-      });
-    }
-
-    return out;
-  }, [data]);
-
-  if (items.length === 0) return null;
+  }
 
   return (
-    <div className="flex flex-col">
-      {items.map((it) => (
-        <div
-          key={it.id}
-          className="flex items-center justify-between gap-3 py-3"
-          style={{ borderTop: "1px solid var(--spark-border)" }}
-        >
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.88)" }}>
-            {it.fact}
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate(it.to)}
-            className="text-sm font-medium shrink-0"
-            style={{
-              background: "transparent",
-              color: "rgba(255,255,255,0.72)",
-              border: "none",
-              padding: 0,
-            }}
-          >
-            {it.cta}
-          </button>
+    <>
+      <StalePendingAttention
+        tenantId={tenantId ?? null}
+        onCount={onStaleCount}
+      />
+      <UpcomingUnscheduledAttention
+        tenantId={tenantId ?? null}
+        startDate={startDate}
+        endDate={endDate}
+        onCount={onUpcomingCount}
+      />
+      {items.length > 0 ? (
+        <div className="flex flex-col">
+          {items.map((it) => (
+            <AttentionRow key={it.id} item={it} />
+          ))}
         </div>
-      ))}
-    </div>
+      ) : null}
+    </>
   );
 };
 

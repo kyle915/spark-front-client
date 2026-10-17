@@ -148,10 +148,17 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const [retailerFilter, setRetailerFilter] = useState<string>("all");
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [uploaded, setUploaded] = useState<UploadedAccount[]>([]);
+  // This component only commits after the pin query resolves, so the
+  // effect mounts Maps JS on the following paint — the pin list first.
+  const [mapsReady, setMapsReady] = useState(false);
 
   useEffect(() => {
     if (tenantId) setUploaded(loadUploadedAccounts(tenantId));
   }, [tenantId]);
+
+  useEffect(() => {
+    setMapsReady(true);
+  }, []);
 
   const data = useLazyLoadQuery<AccountMapQueryType>(
     AccountMapQuery,
@@ -533,6 +540,24 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                   GET A KEY →
                 </a>
               </div>
+            </div>
+          ) : !mapsReady ? (
+            <div
+              className="absolute inset-0 grid place-items-center px-6"
+              style={{
+                background:
+                  "linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2))",
+              }}
+            >
+              <p
+                className="mono text-[10px]"
+                style={{
+                  letterSpacing: "0.18em",
+                  color: "rgba(255,255,255,0.45)",
+                }}
+              >
+                LOADING MAP
+              </p>
             </div>
           ) : (
             <APIProvider apiKey={apiKey} libraries={["marker"]}>

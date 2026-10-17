@@ -7,7 +7,9 @@
  *   3. Approvals + account map tabs
  *
  * Month-ahead uses slim ClientWeekAheadQuery (date + retailer over
- * the selected horizon). Sidebar badge counts come from useSidebarCounts.
+ * the selected horizon) under its own Suspense, so the header and
+ * program cards are not blocked on that list. Sidebar badge counts
+ * come from useSidebarCounts.
  * Approvals / map tabs lazy-load their bodies. Legacy /insights
  * redirects here.
  */
@@ -92,46 +94,14 @@ const dayKey = (d: Date) => {
 
 const isoDay = (d: Date) => dayKey(d);
 
-const ClientInner: React.FC = () => {
+const WeekAheadPanel: React.FC<{
+  tenantId: string | null;
+  horizonDays: AheadHorizon;
+  onHorizonDays: (days: AheadHorizon) => void;
+  dateWindow: { startDate: string; endDate: string };
+  torch: boolean;
+}> = ({ tenantId, horizonDays, onHorizonDays, dateWindow, torch }) => {
   const navigate = useNavigate();
-  const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
-  const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
-  const { program, choose } = useDashboardProgram(torch);
-  const counts = useSidebarCounts();
-  const { view: brandView, choose: chooseBrandView } = useBrandView();
-
-  // Active tab — Overview / Approvals / Account Map. Persists in the
-  // URL hash so deep-links land on the right view and the browser
-  // back button traverses between tabs without unmounting the
-  // dashboard chrome.
-  const [activeTab, setActiveTab] = useState<TabKey>(readTabFromHash);
-  useEffect(() => {
-    const onHashChange = () => setActiveTab(readTabFromHash());
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
-  const switchTab = (next: TabKey) => {
-    setActiveTab(next);
-    // Use replaceState — no extra back-stack entry per tab click; the
-    // hashchange listener above keeps state in sync if someone
-    // navigates via the URL bar.
-    const url = new URL(window.location.href);
-    url.hash = next === "overview" ? "" : next;
-    window.history.replaceState(null, "", url.toString());
-  };
-
-  // Horizon: 7 / 30 / 90 days ahead. Defaults to month-ahead (30).
-  // Intentionally NOT RequestsQuery first:2000 — that pulls products,
-  // openShifts, nested location trees this page never renders.
-  const [horizonDays, setHorizonDays] = useState<AheadHorizon>(30);
-
-  const dateWindow = useMemo(() => {
-    const today = startOfDay(new Date());
-    const end = new Date(today);
-    end.setDate(today.getDate() + horizonDays);
-    return { startDate: isoDay(today), endDate: isoDay(end) };
-  }, [horizonDays]);
-
   const data = useLazyLoadQuery<ClientWeekAheadQueryType>(
     ClientWeekAheadQuery,
     {
@@ -247,108 +217,8 @@ const ClientInner: React.FC = () => {
   const totalThisWeek = aheadBuckets.reduce((s, b) => s + b.count, 0);
   const trackerWhen =
     horizonDays === 7 ? "next7" : horizonDays === 30 ? "next30" : "next90";
-
   return (
-    <div className="space-y-6 max-w-7xl spark-fade-in">
-      <SparkPageHeader
-        eyebrow="YOUR PROGRAM · MONTH AHEAD"
-        title="Today"
-        support="Upcoming schedule and program performance."
-        action={
-          <Suspense fallback={<AskAiButton tenantId={tenantId} />}>
-            <ActiveTenantAskAi />
-          </Suspense>
-        }
-      />
-
-      <BrandViewSwitch tenantId={tenantId} view={brandView} onChange={chooseBrandView} />
-      {brandView === "compare" && tenantId ? (
-        <BrandComparePanel tenantId={tenantId} canManageAccess={false} />
-      ) : (<>
-
-      {/* Tab bar — Overview / Approvals / Account Map. The latter two
-          tabs reuse the existing /approvals and /account-map pages by
-          embedding their Layout-less bodies. Active tab is reflected
-          in the URL hash so /client-dashboard#approvals deep-links
-          straight to that view. */}
-      <div
-        role="tablist"
-        aria-label="Dashboard views"
-        className="flex items-center gap-1 border-b"
-        style={{ borderColor: "var(--spark-border)" }}
-      >
-        {(
-          [
-            { key: "overview", label: "Overview" },
-            {
-              key: "approvals",
-              label: `Approvals${counts.approvals > 0 ? ` · ${counts.approvals}` : ""}`,
-            },
-            { key: "map", label: "Account map" },
-          ] as { key: TabKey; label: string }[]
-        ).map((t) => {
-          const active = activeTab === t.key;
-          return (
-            <button
-              key={t.key}
-              role="tab"
-              aria-selected={active}
-              onClick={() => switchTab(t.key)}
-              className="px-4 py-2.5 text-sm font-semibold transition relative -mb-px"
-              style={{
-                color: active
-                  ? "var(--spark-text)"
-                  : "rgba(255,255,255,0.55)",
-                borderBottom: active
-                  ? "2px solid var(--spark-lime)"
-                  : "2px solid transparent",
-              }}
-            >
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Tab content */}
-      {activeTab === "approvals" && (
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading approvals…
-            </div>
-          }
-        >
-          <ApprovalsBody />
-        </Suspense>
-      )}
-
-      {activeTab === "map" && (
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading account map…
-            </div>
-          }
-        >
-          <AccountMapBody />
-        </Suspense>
-      )}
-
-      {activeTab === "overview" && (<>
-
-      {torch ? (
-        <DashboardProgramSwitch program={program} onChange={choose} />
-      ) : null}
-
-      {program === "field" ? null : (
-      <>
+    <>
       {/* Month-ahead bars */}
       <div className="spark-card p-5">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -366,7 +236,7 @@ const ClientInner: React.FC = () => {
               <button
                 key={d}
                 type="button"
-                onClick={() => setHorizonDays(d)}
+                onClick={() => onHorizonDays(d)}
                 className="mono text-[9px] px-2 py-1 rounded-lg"
                 style={{
                   letterSpacing: "0.12em",
@@ -578,7 +448,168 @@ const ClientInner: React.FC = () => {
           </div>
         </div>
       </div>
-      </>
+    </>
+  );
+};
+
+const ClientInner: React.FC = () => {
+  const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
+  const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
+  const { program, choose } = useDashboardProgram(torch);
+  const counts = useSidebarCounts();
+  const { view: brandView, choose: chooseBrandView } = useBrandView();
+
+  // Active tab — Overview / Approvals / Account Map. Persists in the
+  // URL hash so deep-links land on the right view and the browser
+  // back button traverses between tabs without unmounting the
+  // dashboard chrome.
+  const [activeTab, setActiveTab] = useState<TabKey>(readTabFromHash);
+  useEffect(() => {
+    const onHashChange = () => setActiveTab(readTabFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+  const switchTab = (next: TabKey) => {
+    setActiveTab(next);
+    // Use replaceState — no extra back-stack entry per tab click; the
+    // hashchange listener above keeps state in sync if someone
+    // navigates via the URL bar.
+    const url = new URL(window.location.href);
+    url.hash = next === "overview" ? "" : next;
+    window.history.replaceState(null, "", url.toString());
+  };
+
+  // Horizon: 7 / 30 / 90 days ahead. Defaults to month-ahead (30).
+  // Intentionally NOT RequestsQuery first:2000 — that pulls products,
+  // openShifts, nested location trees this page never renders.
+  const [horizonDays, setHorizonDays] = useState<AheadHorizon>(30);
+
+  const dateWindow = useMemo(() => {
+    const today = startOfDay(new Date());
+    const end = new Date(today);
+    end.setDate(today.getDate() + horizonDays);
+    return { startDate: isoDay(today), endDate: isoDay(end) };
+  }, [horizonDays]);
+
+
+  return (
+    <div className="space-y-6 max-w-7xl spark-fade-in">
+      <SparkPageHeader
+        eyebrow="YOUR PROGRAM · MONTH AHEAD"
+        title="Today"
+        support="Upcoming schedule and program performance."
+        action={
+          <Suspense fallback={<AskAiButton tenantId={tenantId} />}>
+            <ActiveTenantAskAi />
+          </Suspense>
+        }
+      />
+
+      <BrandViewSwitch tenantId={tenantId} view={brandView} onChange={chooseBrandView} />
+      {brandView === "compare" && tenantId ? (
+        <BrandComparePanel tenantId={tenantId} canManageAccess={false} />
+      ) : (<>
+
+      {/* Tab bar — Overview / Approvals / Account Map. The latter two
+          tabs reuse the existing /approvals and /account-map pages by
+          embedding their Layout-less bodies. Active tab is reflected
+          in the URL hash so /client-dashboard#approvals deep-links
+          straight to that view. */}
+      <div
+        role="tablist"
+        aria-label="Dashboard views"
+        className="flex items-center gap-1 border-b"
+        style={{ borderColor: "var(--spark-border)" }}
+      >
+        {(
+          [
+            { key: "overview", label: "Overview" },
+            {
+              key: "approvals",
+              label: `Approvals${counts.approvals > 0 ? ` · ${counts.approvals}` : ""}`,
+            },
+            { key: "map", label: "Account map" },
+          ] as { key: TabKey; label: string }[]
+        ).map((t) => {
+          const active = activeTab === t.key;
+          return (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={active}
+              onClick={() => switchTab(t.key)}
+              className="px-4 py-2.5 text-sm font-semibold transition relative -mb-px"
+              style={{
+                color: active
+                  ? "var(--spark-text)"
+                  : "rgba(255,255,255,0.55)",
+                borderBottom: active
+                  ? "2px solid var(--spark-lime)"
+                  : "2px solid transparent",
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab content */}
+      {activeTab === "approvals" && (
+        <Suspense
+          fallback={
+            <div
+              className="spark-card p-8 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Loading approvals…
+            </div>
+          }
+        >
+          <ApprovalsBody />
+        </Suspense>
+      )}
+
+      {activeTab === "map" && (
+        <Suspense
+          fallback={
+            <div
+              className="spark-card p-8 text-center text-sm"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              Loading account map…
+            </div>
+          }
+        >
+          <AccountMapBody />
+        </Suspense>
+      )}
+
+      {activeTab === "overview" && (<>
+
+      {torch ? (
+        <DashboardProgramSwitch program={program} onChange={choose} />
+      ) : null}
+
+      {program === "field" ? null : (
+        <Suspense
+          fallback={
+            <div
+              className="spark-card p-5 text-sm"
+              style={{ color: "rgba(255,255,255,0.45)" }}
+            >
+              Loading the month ahead…
+            </div>
+          }
+        >
+          <WeekAheadPanel
+            tenantId={tenantId ?? null}
+            horizonDays={horizonDays}
+            onHorizonDays={setHorizonDays}
+            dateWindow={dateWindow}
+            torch={torch}
+          />
+        </Suspense>
       )}
 
       <Suspense fallback={<DashboardSkeleton />}>
