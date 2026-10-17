@@ -42,6 +42,13 @@ export type CoBrandSubmit = {
 
 type Values = Record<string, string | string[]>;
 
+export type CoBrandDraftState = {
+  enabled: boolean | null;
+  selected: string[];
+  values: Record<string, Values>;
+  samples: Record<string, Record<string, string>>;
+};
+
 export const isPhoto = (type: string) => type.includes("photo") || type.includes("image");
 
 const isEmpty = (v: string | string[] | undefined) =>
@@ -52,15 +59,20 @@ const isEmpty = (v: string | string[] | undefined) =>
  * Each picked brand gets its own answers + per-SKU sample counts, submitted
  * as a separate slice so that brand's numbers land on its own dashboard.
  */
-export function useCoBrandRecap(options: CoBrandOptions | null | undefined) {
+export function useCoBrandRecap(
+  options: CoBrandOptions | null | undefined,
+  initial?: CoBrandDraftState | null,
+) {
   const brands = useMemo(() => options?.brands ?? [], [options]);
   const requested = options?.requestedTenantIds ?? [];
   const [enabled, setEnabled] = useState<boolean | null>(
-    requested.length > 0 ? true : null,
+    initial ? initial.enabled : requested.length > 0 ? true : null,
   );
-  const [selected, setSelected] = useState<string[]>(requested);
-  const [values, setValues] = useState<Record<string, Values>>({});
-  const [samples, setSamples] = useState<Record<string, Record<string, string>>>({});
+  const [selected, setSelected] = useState<string[]>(initial?.selected ?? requested);
+  const [values, setValues] = useState<Record<string, Values>>(initial?.values ?? {});
+  const [samples, setSamples] = useState<Record<string, Record<string, string>>>(
+    initial?.samples ?? {},
+  );
 
   const active = enabled ? brands.filter((b) => selected.includes(b.tenantId)) : [];
 

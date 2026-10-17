@@ -36,16 +36,28 @@ import {
   prepareImageForUpload,
 } from "@/utils/compressImageForUpload";
 import {
-  clearDraftPhotos,
   deleteDraftPhotoFiles,
   loadDraftPhotos,
-  readDraftPhotos,
   readOpenRecap,
   saveDraftPhotoFile,
   writeDraftPhotos,
   writeOpenRecap,
   type DraftPhoto,
 } from "./photoDraft";
+import {
+  asRecapDraft,
+  clearDraft,
+  draftHasAnswers,
+  draftSavedLabel,
+  hasRecapDraft,
+  pickRestoredDraft,
+  readDraft,
+  writeDraft,
+  type DraftScope,
+  type RecapDraft,
+  type StoreIdentityDraft,
+} from "./recapDraft";
+import { buildRecapDraftRequest } from "./recapServerDraft";
 import { createLimiter } from "./uploadLimiter";
 import { browserPlayableContentType } from "@/utils/recapFileUrl";
 import {
@@ -319,6 +331,10 @@ type Context = {
     clock: Clock;
     hasRecap: boolean;
     pendingReview: boolean;
+    /** Unfiled answers for this shift. Absent until a draft has been saved. */
+    recapDraft?: RecapDraft | null;
+    /** Second filing on the same event. Never the open shift's answers. */
+    additionalRecapDraft?: RecapDraft | null;
     mileage?: Mileage;
     stops?: SamplingStop[];
     payableMileage?: PayableMileageState;
@@ -841,82 +857,9 @@ const writeIdentity = (code: string, who: Identity): void => {
   }
 };
 
-// Draft of the recap answers, so a BA never retypes a shift's worth of notes.
-//
-// The page already survived a reload for IDENTITY and the session TOKEN, but
-// everything typed into the recap lived in React state alone. On a phone that
-// is not a rare edge: iOS discards a backgrounded tab under memory pressure,
-// so a BA who answers a call mid-recap comes back to an empty form. That is
-// exactly the "deletes content if momentarily idle" the Feel Free team hit.
-//
-// Keyed by code + SESSION TOKEN, not code alone: the token is minted per
-// clock-in, so a reload inside one shift restores the draft while the next
-// shift starts clean instead of inheriting yesterday's answers.
-//
-// Photos ride alongside in photoDraft.ts (bytes in IndexedDB).
-type RecapDraft = {
-  v: 1;
-  savedAt: number;
-  values: Record<string, string | string[]>;
-  samples: Record<string, string>;
-  engagements: string;
-  usedCorpoCard?: boolean | null;
-  store?: StoreIdentityDraft;
-};
-
+// Answers autosave in recapDraft.ts (device) and recapServerDraft.ts
+// (unfiled server copy). Photos stay in photoDraft.ts.
 type StoreIdentity = { name: string; number: string };
-type StoreIdentityDraft = StoreIdentity & { noNumber: boolean };
-
-const DRAFT_KEY = (code: string, token: string) =>
-  `@spark.checkin.draft/${code}/${token.slice(-24)}`;
-
-// Every accessor is guarded: Safari private mode throws on localStorage, and a
-// storage failure must never be the reason a BA can't file their recap.
-const readDraft = (code: string, token: string): RecapDraft | null => {
-  try {
-    const raw = window.localStorage.getItem(DRAFT_KEY(code, token));
-    if (!raw) return null;
-    const d = JSON.parse(raw) as RecapDraft;
-    if (!d || d.v !== 1) return null;
-    return d;
-  } catch {
-    return null;
-  }
-};
-
-const writeDraft = (code: string, token: string, draft: Omit<RecapDraft, "v" | "savedAt">) => {
-  try {
-    const payload: RecapDraft = { v: 1, savedAt: Date.now(), ...draft };
-    window.localStorage.setItem(DRAFT_KEY(code, token), JSON.stringify(payload));
-    return payload.savedAt;
-  } catch {
-    return null;
-  }
-};
-
-const clearDraft = (code: string, token: string) => {
-  try {
-    window.localStorage.removeItem(DRAFT_KEY(code, token));
-  } catch {
-    /* nothing to do — the draft is disposable by definition */
-  }
-  void clearDraftPhotos(code, token);
-};
-
-/** True when this session already has answers or photos waiting on-device. */
-const hasRecapDraft = (code: string, token: string): boolean => {
-  if (readDraftPhotos(code, token).length > 0) return true;
-  const d = readDraft(code, token);
-  if (!d) return false;
-  if ((d.engagements || "").trim()) return true;
-  if (d.usedCorpoCard === true || d.usedCorpoCard === false) return true;
-  if (Object.keys(d.samples || {}).some((k) => (d.samples[k] || "").trim())) {
-    return true;
-  }
-  return Object.values(d.values || {}).some((v) =>
-    Array.isArray(v) ? v.length > 0 : Boolean(String(v || "").trim()),
-  );
-};
 
 async function postCheckinClock(
   code: string,
@@ -2313,12 +2256,14 @@ function CheckedInFlow({
   );
   // Local draft (typed answers) — same phone, same session token. Lets the
   // clocked-in CTA say Continue instead of File when they already started.
-  const [draftWaiting, setDraftWaiting] = useState(() =>
-    hasRecapDraft(code, token),
+  const [draftWaiting, setDraftWaiting] = useState(
+    () => hasRecapDraft(code, token) || draftHasAnswers(ctx.session?.recapDraft),
   );
   useEffect(() => {
-    setDraftWaiting(hasRecapDraft(code, token));
-  }, [code, token, showRecap]);
+    setDraftWaiting(
+      hasRecapDraft(code, token) || draftHasAnswers(ctx.session?.recapDraft),
+    );
+  }, [code, token, showRecap, ctx.session?.recapDraft]);
   // The phone reloaded the page while the recap was open (usually the camera
   // — see photoDraft.ts): put the BA back in it, photos and all. A "File
   // another" form isn't reopened as an edit of the filed recap; it waits
@@ -2827,6 +2772,11 @@ function CheckedInFlow({
         brandName={ctx.brand.name || ""}
         eventDate={ctx.event?.date}
         forceNew={(recapAsNew || Boolean(ctx.recapOnly && hasRecap)) && ctx.mode === "tenant"}
+        serverDraft={
+          (recapAsNew || Boolean(ctx.recapOnly && hasRecap)) && ctx.mode === "tenant"
+            ? (ctx.session?.additionalRecapDraft ?? null)
+            : (ctx.session?.recapDraft ?? null)
+        }
         payableMiles={
           confirmedPayableMiles ??
           (recapAsNew ? null : activePayable?.claim?.payableMiles) ??
@@ -3372,6 +3322,7 @@ function RecapForm({
   forceNew = false,
   shiftLabel,
   payableMiles = null,
+  serverDraft = null,
   onCancel,
   onSubmitted,
   onQueued,
@@ -3389,6 +3340,8 @@ function RecapForm({
   shiftLabel?: string;
   /** When set, pre-fills the Mileage field from the itinerary (editable for detours). */
   payableMiles?: number | null;
+  /** Server copy for this scope. A cleared browser restores from here. */
+  serverDraft?: RecapDraft | null;
   onCancel: () => void;
   onSubmitted: () => Promise<void>;
   onQueued: () => void;
@@ -3404,7 +3357,10 @@ function RecapForm({
   // harmless rather than a wrong number.
   // A restored draft wins over the brand prefill: if the BA edited Event Name
   // before the tab was discarded, their wording is the answer, not ours.
-  const restored = useRef<RecapDraft | null>(readDraft(code, token));
+  const draftScope: DraftScope = forceNew ? "additional" : "shift";
+  const restored = useRef<RecapDraft | null>(
+    pickRestoredDraft(readDraft(code, token, draftScope), asRecapDraft(serverDraft)),
+  );
 
   const [values, setValues] = useState<Record<string, string | string[]>>(() => {
     const seed: Record<string, string | string[]> = {};
@@ -3465,7 +3421,7 @@ function RecapForm({
   const [savedAt, setSavedAt] = useState<number | null>(
     () => restored.current?.savedAt ?? null,
   );
-  const coBrand = useCoBrandRecap(coBrands);
+  const coBrand = useCoBrandRecap(coBrands, restored.current?.coBrands ?? null);
   const perBrandSections = useMemo(
     () => new Set((template?.coBrandSections ?? []).map((n) => n.trim().toLowerCase())),
     [template],
@@ -3476,22 +3432,7 @@ function RecapForm({
   const libraryRef = useRef<HTMLInputElement | null>(null);
   const cameraRef = useRef<HTMLInputElement | null>(null);
   const photoSeq = useRef(0);
-
-  // Debounced so a BA typing a long answer isn't writing to storage per
-  // keystroke, but short enough that "momentarily idle" is already saved.
-  useEffect(() => {
-    const t = window.setTimeout(() => {
-      const at = writeDraft(code, token, {
-        values,
-        samples,
-        engagements,
-        usedCorpoCard,
-        ...(storeIdentity ? { store } : {}),
-      });
-      if (at) setSavedAt(at);
-    }, 500);
-    return () => window.clearTimeout(t);
-  }, [code, token, values, samples, engagements, usedCorpoCard, storeIdentity, store]);
+  const photosRestored = useRef(false);
 
   // Mileage step → RecapForm can race: lock miles into required field values
   // whenever the itinerary claim arrives (or updates).
@@ -3564,6 +3505,90 @@ function RecapForm({
   // for a recap that's already in.
   const submittedRef = useRef(false);
   const leaveBehindArmed = useRef(false);
+
+  const persistDraft = useCallback(
+    (keepalive = false) => {
+      if (submittedRef.current) return;
+      const snapshot: Omit<RecapDraft, "v" | "savedAt"> = {
+        values,
+        samples,
+        engagements,
+        usedCorpoCard,
+        ...(storeIdentity ? { store } : {}),
+        ...(coBrands
+          ? {
+              coBrands: {
+                enabled: coBrand.enabled,
+                selected: coBrand.selected,
+                values: coBrand.values,
+                samples: coBrand.samples,
+              },
+            }
+          : {}),
+      };
+      if (photosRestored.current) {
+        snapshot.photos = photosRef.current
+          .filter((p) => !p.unrecoverable)
+          .map(draftPhotoOf);
+      }
+      const at = writeDraft(code, token, snapshot, draftScope);
+      if (at) setSavedAt(at);
+      const saved = readDraft(code, token, draftScope);
+      if (!saved) return;
+      const req = buildRecapDraftRequest({
+        code,
+        session: token,
+        scope: draftScope,
+        draft: photosRestored.current ? saved : { ...saved, photos: undefined },
+      });
+      if (!photosRestored.current) {
+        delete (req.body.draft as { photos?: unknown }).photos;
+      }
+      void fetch(`${apiOrigin()}${req.path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req.body),
+        keepalive,
+      }).catch(() => {
+        /* the device copy already landed */
+      });
+    },
+    [
+      code,
+      token,
+      draftScope,
+      values,
+      samples,
+      engagements,
+      usedCorpoCard,
+      storeIdentity,
+      store,
+      coBrands,
+      coBrand.enabled,
+      coBrand.selected,
+      coBrand.values,
+      coBrand.samples,
+      photos,
+    ],
+  );
+
+  useEffect(() => {
+    const t = window.setTimeout(() => persistDraft(false), 500);
+    return () => window.clearTimeout(t);
+  }, [persistDraft]);
+
+  useEffect(() => {
+    const flush = () => {
+      if (document.visibilityState === "hidden") persistDraft(true);
+    };
+    const onHide = () => persistDraft(true);
+    document.addEventListener("visibilitychange", flush);
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      document.removeEventListener("visibilitychange", flush);
+      window.removeEventListener("pagehide", onHide);
+    };
+  }, [persistDraft]);
   const retryTimers = useRef(new Map<string, number>());
   const autoRetriesUsed = useRef(new Map<string, number>());
   useEffect(() => {
@@ -3708,7 +3733,8 @@ function RecapForm({
 
   // Put back what the last page life had — "Take photo" often costs the page
   // (see photoDraft.ts). Unfinished uploads resume from the saved bytes.
-  const photosRestored = useRef(false);
+  // Blob names already on the server draft come back too, without replacing
+  // the on-device bytes.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -3716,7 +3742,7 @@ function RecapForm({
       if (cancelled) return;
       photosRestored.current = true;
       const have = new Set(photosRef.current.map((p) => p.id));
-      const back: Photo[] = saved
+      const fromDevice: Photo[] = saved
         .filter(({ photo }) => !have.has(photo.id))
         .map(({ photo, file }): Photo => ({
           id: photo.id,
@@ -3726,6 +3752,18 @@ function RecapForm({
           state: photo.blobName ? "done" : "uploading",
           category: photo.category,
         }));
+      const seen = new Set([...have, ...fromDevice.map((p) => p.id)]);
+      const fromServer: Photo[] = (restored.current?.photos ?? [])
+        .filter((photo) => photo.blobName && !seen.has(photo.id))
+        .map((photo): Photo => ({
+          id: photo.id,
+          file: new File([], photo.name || "photo.jpg", { type: photo.type || "image/jpeg" }),
+          blobName: photo.blobName,
+          previewUrl: "",
+          state: "done",
+          category: photo.category,
+        }));
+      const back = [...fromDevice, ...fromServer];
       photosRef.current = [...back, ...photosRef.current];
       setPhotos(photosRef.current);
       writeDraftPhotos(code, token, photosRef.current.filter((p) => !p.unrecoverable).map(draftPhotoOf));
@@ -4419,39 +4457,73 @@ function RecapForm({
 
       {err ? <p style={{ ...errText, textAlign: "center" }}>{err}</p> : null}
 
-      {/* Say it out loud. Half the Feel Free feedback was not knowing whether
-          anything was kept — a BA who doesn't trust the form retypes into
-          Notes first, which is the friction we're removing. */}
-      {savedAt ? (
-        <p
-          style={{
-            fontSize: 12,
-            opacity: 0.55,
-            textAlign: "center",
-            margin: 0,
-          }}
-        >
-          Saved on this device — you can close this and come back.
-        </p>
-      ) : null}
-      <div style={{ display: "flex", gap: 10 }}>
-        <button style={secondaryBtn} onClick={onCancel} disabled={busy}>
-          Back
-        </button>
-        <ActionMorphButton
-          style={primaryBtn(accent)}
-          onClick={submit}
-          disabled={busy || (uploadingCount > 0 && doneCount === 0)}
-          phase={submitPhase}
-          pendingLabel="Submitting…"
-          successLabel="Submitted"
-        >
-          {allFailedOffline
-            ? "Save & send when back online"
-            : failedCount + uploadingCount > 0 && doneCount > 0
-              ? `Submit without ${failedCount + uploadingCount} photo${failedCount + uploadingCount === 1 ? "" : "s"}`
-              : "Submit recap"}
-        </ActionMorphButton>
+      <div
+        style={{
+          position: "sticky",
+          bottom: 0,
+          zIndex: 2,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          marginTop: 4,
+          paddingTop: 10,
+          paddingBottom: 4,
+          background: "#faf7f1",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, minHeight: 18 }}>
+          {savedAt ? (
+            <p
+              aria-live="polite"
+              style={{
+                fontSize: 12,
+                opacity: 0.7,
+                textAlign: "center",
+                margin: 0,
+              }}
+            >
+              {draftSavedLabel(savedAt)}
+            </p>
+          ) : (
+            <span />
+          )}
+          <button
+            type="button"
+            onClick={() => persistDraft(false)}
+            disabled={busy}
+            style={{
+              border: "none",
+              background: "transparent",
+              color: "#1c1917",
+              fontSize: 13,
+              fontWeight: 600,
+              textDecoration: "underline",
+              cursor: "pointer",
+              padding: "4px 2px",
+            }}
+          >
+            Save
+          </button>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button style={secondaryBtn} onClick={onCancel} disabled={busy}>
+            Back
+          </button>
+          <ActionMorphButton
+            style={primaryBtn(accent)}
+            onClick={submit}
+            disabled={busy || (uploadingCount > 0 && doneCount === 0)}
+            phase={submitPhase}
+            pendingLabel="Submitting…"
+            successLabel="Submitted"
+          >
+            {allFailedOffline
+              ? "Save & send when back online"
+              : failedCount + uploadingCount > 0 && doneCount > 0
+                ? `Submit without ${failedCount + uploadingCount} photo${failedCount + uploadingCount === 1 ? "" : "s"}`
+                : "Submit recap"}
+          </ActionMorphButton>
+        </div>
       </div>
     </div>
   );
