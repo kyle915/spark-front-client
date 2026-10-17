@@ -70,6 +70,7 @@ export type PendingRecapFile = {
   category: string | null;
   filename: string;
   contentType: string;
+  sha256?: string;
 };
 
 export type PendingRecap = {
@@ -505,7 +506,11 @@ export async function flushPendingRecap(
       session: pending.token,
       idempotencyKey: pending.id,
       fieldValues: pending.fieldValues,
-      files: uploaded.map((f) => ({ blobName: f.blobName, category: f.category })),
+      files: uploaded.map((f) => ({
+        blobName: f.blobName,
+        category: f.category,
+        ...(f.sha256 ? { sha256: f.sha256 } : {}),
+      })),
       productSamples: pending.productSamples,
       totalEngagements: pending.totalEngagements,
       usedCorpoCard: pending.usedCorpoCard,

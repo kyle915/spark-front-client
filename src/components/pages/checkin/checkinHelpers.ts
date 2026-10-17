@@ -25,6 +25,7 @@ export const draftPhotoOf = (p: Photo): DraftPhoto => ({
   category: p.category,
   name: p.file.name,
   type: p.file.type,
+  ...(p.sha256 ? { sha256: p.sha256 } : {}),
 });
 
 export const FALLBACK_ACCENT = "#C4D82E";

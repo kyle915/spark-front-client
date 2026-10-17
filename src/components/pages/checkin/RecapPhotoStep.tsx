@@ -61,12 +61,14 @@ export function PhotoBucketZone({
   photos,
   onAdd,
   onRemove,
+  onKeep,
   accent,
 }: {
   bucket: PhotoBucket;
   photos: Photo[];
   onAdd: (files: FileList | null, category: string | null) => void;
   onRemove: (id: string) => void;
+  onKeep?: (id: string) => void;
   accent: string;
 }) {
   const libraryRef = useRef<HTMLInputElement | null>(null);
@@ -107,6 +109,11 @@ export function PhotoBucketZone({
         onAdd={() => libraryRef.current?.click()}
         onTake={() => cameraRef.current?.click()}
         onRemove={onRemove}
+        onKeep={onKeep}
+        onRetake={(id) => {
+          onRemove(id);
+          cameraRef.current?.click();
+        }}
         accent={accent}
         allowVideo={Boolean(bucket.accept?.includes("video"))}
       />
@@ -174,6 +181,8 @@ export function PhotoGrid({
   onAdd,
   onTake,
   onRemove,
+  onKeep,
+  onRetake,
   accent,
   allowVideo = false,
 }: {
@@ -181,6 +190,8 @@ export function PhotoGrid({
   onAdd: () => void;
   onTake: () => void;
   onRemove: (id: string) => void;
+  onKeep?: (id: string) => void;
+  onRetake?: (id: string) => void;
   accent: string;
   allowVideo?: boolean;
 }) {
@@ -214,7 +225,8 @@ export function PhotoGrid({
         {photos.map((p) => {
           const isVideo = p.file.type.startsWith("video/");
           return (
-          <div key={p.id} style={{ position: "relative", width: 120, height: 120 }}>
+          <div key={p.id} style={{ width: 120 }}>
+          <div style={{ position: "relative", width: 120, height: 120 }}>
             {isVideo ? (
               <video
                 src={p.previewUrl}
@@ -275,6 +287,30 @@ export function PhotoGrid({
             <button onClick={() => onRemove(p.id)} style={photoRemove} aria-label="Remove photo">
               ×
             </button>
+          </div>
+          {p.check && !p.check.dismissed && p.check.message ? (
+            <div style={{ marginTop: 6 }}>
+              <p style={{ fontSize: 12, margin: 0, lineHeight: 1.35 }}>{p.check.message}</p>
+              {p.check.kind === "warn" || p.check.kind === "unavailable" ? (
+                <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                  {p.check.kind === "warn" && onRetake ? (
+                    <button type="button" onClick={() => onRetake(p.id)} style={{ fontSize: 12, fontWeight: 700 }}>
+                      Retake
+                    </button>
+                  ) : null}
+                  {onKeep ? (
+                    <button type="button" onClick={() => onKeep(p.id)} style={{ fontSize: 12, fontWeight: 700 }}>
+                      Keep
+                    </button>
+                  ) : null}
+                </div>
+              ) : onKeep ? (
+                <button type="button" onClick={() => onKeep(p.id)} style={{ fontSize: 12, fontWeight: 700, marginTop: 6 }}>
+                  Keep
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           </div>
           );
         })}

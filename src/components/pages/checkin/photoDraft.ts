@@ -22,6 +22,8 @@ export type DraftPhoto = {
   category: string | null;
   name: string;
   type: string;
+  /** SHA-256 of the compressed upload copy, when the browser could hash it. */
+  sha256?: string;
 };
 
 export type RestoredDraftPhoto = { photo: DraftPhoto; file: File | null };
@@ -56,13 +58,18 @@ export function readDraftPhotos(
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isDraftPhoto).map((p) => ({
-      id: p.id,
-      blobName: p.blobName || null,
-      category: p.category ?? null,
-      name: typeof p.name === "string" ? p.name : "",
-      type: typeof p.type === "string" ? p.type : "",
-    }));
+    return parsed.filter(isDraftPhoto).map((p) => {
+      const photo: DraftPhoto = {
+        id: p.id,
+        blobName: p.blobName || null,
+        category: p.category ?? null,
+        name: typeof p.name === "string" ? p.name : "",
+        type: typeof p.type === "string" ? p.type : "",
+      };
+      const digest = (p as { sha256?: unknown }).sha256;
+      if (typeof digest === "string" && /^[a-f0-9]{64}$/.test(digest)) photo.sha256 = digest;
+      return photo;
+    });
   } catch {
     return [];
   }

@@ -230,6 +230,10 @@ export type Photo = {
   unrecoverable?: boolean;
   /** Failed, with an automatic retry scheduled. */
   autoRetry?: boolean;
+  /** SHA-256 of the compressed copy sent with the recap. */
+  sha256?: string;
+  /** Advisory photo check. Never blocks the upload. */
+  check?: { kind: "pending" | "unavailable" | "warn" | "ok"; message: string; dismissed: boolean };
 };
 
 
