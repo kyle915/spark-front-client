@@ -87,7 +87,6 @@ import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } fro
 import PushToPlanButton from "@/field/PushToPlanButton";
 
 const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
-const RecapReviewerSummary = lazy(() => import("./RecapReviewerSummary"));
 const RecapReviewChecks = lazy(() => import("./RecapReviewChecks"));
 
 /**
@@ -991,16 +990,6 @@ const SparkRecapInner: React.FC<{
           : ""}
         {` / ${fmtDate(fieldDate)}`}
       </RecapDetailBackLink>
-
-      {!isClient && (
-        <Suspense fallback={null}>
-          <RecapReviewerSummary
-            recapId={recap.id}
-            isCustom={false}
-            needsReview={!recap.approved && !recap.archivedAt}
-          />
-        </Suspense>
-      )}
 
       <RecapDocument status={recap.approved ? "APPROVED" : "DRAFT"}>
       <div className="space-y-6">
