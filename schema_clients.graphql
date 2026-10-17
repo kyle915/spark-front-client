@@ -5339,6 +5339,7 @@ type Mutation {
   setCustomRecapFileCategory(input: SetCustomRecapFileCategoryInput!): CustomRecapDetailResponse!
   deleteRecapFile(input: DeleteRecapFileInput!): RecapFileDetailResponse!
   approveRecap(input: ApproveRecapInput!): RecapDetailResponse!
+  summarizeRecap(recapId: ID!, isCustom: Boolean! = false): RecapReviewerSummary
   approveCustomRecap(input: ApproveCustomRecapInput!): CustomRecapDetailResponse!
   archiveRecap(input: ArchiveRecapInput!): RecapDetailResponse!
   unarchiveRecap(input: UnarchiveRecapInput!): RecapDetailResponse!
@@ -6192,7 +6193,9 @@ type Query {
   tenantWeeklyNarration(tenantId: ID!): TenantWeeklyNarration
   tenantSentiment(tenantId: ID!, year: Int = null): TenantSentiment
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
+  recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
   recapPhotoReuse(recapId: ID!, isCustom: Boolean! = false): RecapPhotoReuseResult!
+  recapReviewChecks(recapId: ID!, isCustom: Boolean! = false): [RecapReviewCheck!]!
   fileTypes(first: Int = null, after: String = null, last: Int = null, before: String = null, q: String = null): FileTypeCountableConnection!
   fileType(uuid: ID!): FileType
   tenantBaActivation(tenantId: ID!): [BaActivationRow!]!
@@ -6858,6 +6861,39 @@ type RecapQualityFlag {
 type RecapQualityResult {
   score: Int!
   flags: [RecapQualityFlag!]!
+}
+
+type RecapReviewFlag {
+  code: String!
+  label: String!
+  severity: String!
+}
+
+type RecapFeedbackExtract {
+  themes: [String!]!
+  competitorProducts: [String!]!
+  objections: [String!]!
+  purchaseIntent: String
+  quotes: [String!]!
+}
+
+"""
+Ops reviewer note for one recap. Lives on the admin detail page only.
+"""
+type RecapReviewerSummary {
+  whatHappened: String!
+  looksOff: [RecapReviewFlag!]!
+  followUpQuestion: String!
+  cached: Boolean!
+  source: String!
+  feedback: RecapFeedbackExtract
+}
+
+type RecapReviewCheck {
+  code: String!
+  label: String!
+  status: String!
+  detail: String!
 }
 
 """

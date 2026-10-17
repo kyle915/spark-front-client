@@ -16,6 +16,7 @@ import {
   type JumpOrigin,
 } from "@/motion/opsMotion";
 import SparkOverlay from "@/shared/SparkOverlay";
+import { askAiModalTitle } from "./askAiSubjectName";
 
 /**
  * Reusable "Ask AI" surface — a prominent button that opens a pop-up modal
@@ -73,7 +74,7 @@ function scopeCopy(
     case "tenant":
       return {
         kicker: "Ask AI",
-        title: tenantName ? `Ask about ${tenantName}.` : "Ask about this client.",
+        title: askAiModalTitle(tenantName),
         blurb:
           "Answers draw on this client's whole program — every event, recap, and KPI we have.",
         placeholder: "Ask anything about this client's program…",
