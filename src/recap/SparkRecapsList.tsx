@@ -268,7 +268,7 @@ const SlaHours: React.FC<{ since: string }> = ({ since }) => {
   const hours = ms / 3_600_000;
   const days = hours / 24;
   const label = hours < 24 ? `${Math.max(1, Math.round(hours))}h since event` : `${Math.round(days)}d since event`;
-  const color = days > 9 ? "var(--spark-orange)" : hours > 3 ? "#f5c042" : "rgba(255,255,255,0.4)";
+  const color = days > 9 ? "var(--spark-orange)" : hours > 3 ? "#f5c042" : "var(--spark-faint, rgba(255,255,255,0.38))";
   return (
     <p className="mono text-[10px] mt-1" style={{ letterSpacing: "0.12em", color }} title="Time since the activation — 3h is the sell, not 9 days.">
       {label}
@@ -556,7 +556,7 @@ const RecapCard: React.FC<{
         style={{
           fontSize: 9,
           letterSpacing: "0.14em",
-          color: "rgba(255,255,255,0.55)",
+          color: "var(--spark-muted, rgba(255,255,255,0.5))",
         }}
       >
         R-{recap.uuid.slice(-4).toUpperCase()}
@@ -614,7 +614,7 @@ const RecapCard: React.FC<{
         className="mono text-[10px] uppercase mt-1 truncate"
         style={{
           letterSpacing: "0.14em",
-          color: "rgba(255,255,255,0.45)",
+          color: "var(--spark-muted, rgba(255,255,255,0.5))",
         }}
       >
         {/* BA FIRST. "Who filed this" is the first thing ops asks of a
@@ -632,7 +632,7 @@ const RecapCard: React.FC<{
         className="mono text-[10px] mt-1"
         style={{
           letterSpacing: "0.12em",
-          color: emptyShell ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.55)",
+          color: emptyShell ? "var(--spark-muted, rgba(255,255,255,0.5))" : "var(--spark-muted, rgba(255,255,255,0.5))",
         }}
       >
         {completeness}
@@ -651,7 +651,7 @@ const RecapCard: React.FC<{
       {emptyShell ? (
         <p
           className="text-[12px] mt-1"
-          style={{ color: "rgba(255,255,255,0.5)" }}
+          style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
         >
           BA clocked out — recap not filed
         </p>
@@ -868,7 +868,7 @@ const RecapCompactRow: React.FC<{
         ) : null}
         <p
           className="mono text-[10px] truncate"
-          style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.45)" }}
+          style={{ letterSpacing: "0.12em", color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
         >
           {recap.retailerName && recap.retailerName !== "—"
             ? recap.retailerName
@@ -1768,7 +1768,7 @@ const RecapsListFetched: React.FC<{
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.16em",
-            color: "rgba(255,255,255,0.45)",
+            color: "var(--spark-muted, rgba(255,255,255,0.5))",
           }}
         >
           Loading more recaps…
@@ -1782,7 +1782,7 @@ const RecapsListFetched: React.FC<{
           </p>
           <p
             className="mono text-[11px] mt-2 break-words"
-            style={{ color: "rgba(255,255,255,0.4)" }}
+            style={{ color: "var(--spark-faint, rgba(255,255,255,0.38))" }}
           >
             {loadMoreError.slice(0, 300)}
           </p>
@@ -1805,7 +1805,7 @@ const RecapsListFetched: React.FC<{
       <>
       <div
         className="spark-card p-8 text-center text-sm"
-        style={{ color: "rgba(255,255,255,0.55)" }}
+        style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
       >
         {emptyKind === "queue" ? (
           <>
@@ -3505,7 +3505,7 @@ export default function SparkRecapsList() {
               <div className="flex items-center justify-between px-1 pb-1">
                 <span
                   className="mono text-[10px]"
-                  style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+                  style={{ letterSpacing: "0.14em", color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
                 >
                   EXPORT / IMPORT
                 </span>
@@ -3685,7 +3685,7 @@ export default function SparkRecapsList() {
             title="From date (inclusive)"
             placeholder="From"
           />
-          <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>
+          <span style={{ color: "var(--spark-faint, rgba(255,255,255,0.38))", fontSize: 12 }}>
             →
           </span>
           <input
@@ -3715,7 +3715,7 @@ export default function SparkRecapsList() {
               className="rounded-xl text-xs px-3 py-2"
               style={{
                 background: "transparent",
-                color: "rgba(255,255,255,0.55)",
+                color: "var(--spark-muted, rgba(255,255,255,0.5))",
                 border: "1px solid var(--spark-border)",
               }}
               title="Clear date range"
@@ -3816,7 +3816,7 @@ export default function SparkRecapsList() {
               className="mono text-[10px]"
               style={{
                 letterSpacing: "0.16em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-muted, rgba(255,255,255,0.5))",
               }}
             >
               Showing {meta.loaded} of {Math.max(meta.total, meta.loaded)}
@@ -3866,7 +3866,7 @@ export default function SparkRecapsList() {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.14em",
-              color: "rgba(255,255,255,0.55)",
+              color: "var(--spark-muted, rgba(255,255,255,0.5))",
             }}
           >
             ✕ CLEAR

@@ -583,7 +583,7 @@ const Inner: React.FC<{
                     style={{
                       fontSize: 10,
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.45)",
+                      color: "var(--spark-muted, rgba(255,255,255,0.5))",
                     }}
                   >
                     <th className="px-4 py-3">PERSON</th>
@@ -598,7 +598,7 @@ const Inner: React.FC<{
                       <td
                         colSpan={4}
                         className="px-4 py-10 text-center text-sm"
-                        style={{ color: "rgba(255,255,255,0.55)" }}
+                        style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
                       >
                         No people match.
                       </td>
@@ -638,7 +638,7 @@ const Inner: React.FC<{
                             className="mono text-[10px]"
                             style={{
                               letterSpacing: "0.14em",
-                              color: "rgba(255,255,255,0.55)",
+                              color: "var(--spark-muted, rgba(255,255,255,0.5))",
                             }}
                           >
                             COPY EMAIL
@@ -784,7 +784,7 @@ const Inner: React.FC<{
             <p className="label-mini">DEFAULT RECIPIENT FOR EXTERNAL REQUESTS</p>
             <p
               className="text-xs mt-1 mb-3"
-              style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+              style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))", lineHeight: 1.5 }}
             >
               Who should all external (public-form) requests route to? Search by
               name or email to override territory routing, or clear to use it.
@@ -805,7 +805,7 @@ const Inner: React.FC<{
             <p className="label-mini">RECAP EMAIL RECIPIENTS</p>
             <p
               className="text-xs mt-1 mb-3"
-              style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+              style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))", lineHeight: 1.5 }}
             >
               Comma- or newline-separated email addresses that receive the
               recap-approval email for this brand, in addition to the RMM, client
@@ -851,7 +851,7 @@ const Inner: React.FC<{
                   className="mono text-[10px]"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--spark-muted, rgba(255,255,255,0.5))",
                   }}
                 >
                   SAVING…
@@ -870,7 +870,7 @@ const Inner: React.FC<{
                 <p className="label-mini">MONTHLY CLIENT REPORT</p>
                 <p
                   className="text-xs mt-1"
-                  style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+                  style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))", lineHeight: 1.5 }}
                 >
                   When on, this client gets an automated monthly performance
                   report (PDF) emailed to the recap recipients above, on the 1st
@@ -923,7 +923,7 @@ const Inner: React.FC<{
             {!hasRecapRecipients && (
               <p
                 className="text-xs mt-3"
-                style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}
+                style={{ color: "var(--spark-faint, rgba(255,255,255,0.38))", lineHeight: 1.5 }}
               >
                 Add at least one recap recipient above first — the report has
                 nowhere to send otherwise.
@@ -947,7 +947,7 @@ const Inner: React.FC<{
               </button>
               <span
                 className="text-xs"
-                style={{ color: "rgba(255,255,255,0.4)" }}
+                style={{ color: "var(--spark-faint, rgba(255,255,255,0.38))" }}
               >
                 The test goes to you, not the client.
               </span>
@@ -956,7 +956,7 @@ const Inner: React.FC<{
                   className="mono text-[10px]"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--spark-muted, rgba(255,255,255,0.5))",
                   }}
                 >
                   SENDING…
@@ -974,7 +974,7 @@ const Inner: React.FC<{
                 <p className="label-mini">WEEKLY CLIENT DIGEST</p>
                 <p
                   className="text-xs mt-1"
-                  style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}
+                  style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))", lineHeight: 1.5 }}
                 >
                   When on, this client gets a Monday email rollup — this week at
                   a glance, what's coming up, and anything awaiting their
@@ -1024,7 +1024,7 @@ const Inner: React.FC<{
             {!hasRecapRecipients && (
               <p
                 className="text-xs mt-3"
-                style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}
+                style={{ color: "var(--spark-faint, rgba(255,255,255,0.38))", lineHeight: 1.5 }}
               >
                 Add at least one recap recipient above first — the digest has
                 nowhere to send otherwise.
@@ -1108,7 +1108,7 @@ const Inner: React.FC<{
                 className="mono text-[11px] px-3"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
                 }}
               >
                 CANCEL
@@ -1358,7 +1358,7 @@ const InviteModal: React.FC<{
                       letterSpacing: "0.14em",
                       background:
                         tab === t ? "var(--spark-lime)" : "transparent",
-                      color: tab === t ? "#0a0d09" : "rgba(255,255,255,0.55)",
+                      color: tab === t ? "#0a0d09" : "var(--spark-muted, rgba(255,255,255,0.5))",
                       fontWeight: tab === t ? 700 : 400,
                     }}
                   >
@@ -1389,7 +1389,7 @@ const InviteModal: React.FC<{
                     className="mono text-[10px] mt-1.5"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.45)",
+                      color: "var(--spark-muted, rgba(255,255,255,0.5))",
                     }}
                   >
                     CLIENTS WILL ONLY SEE THIS TENANT'S DASHBOARD + REQUESTS
@@ -1443,7 +1443,7 @@ const InviteModal: React.FC<{
                     className="mono text-[10px] mt-1.5"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "rgba(255,255,255,0.45)",
+                      color: "var(--spark-muted, rgba(255,255,255,0.5))",
                     }}
                   >
                     NEW EMAILS GET THE WELCOME INVITE · EXISTING ACCOUNTS JUST
@@ -1461,7 +1461,7 @@ const InviteModal: React.FC<{
               className="mono text-[11px]"
               style={{
                 letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.55)",
+                color: "var(--spark-muted, rgba(255,255,255,0.5))",
               }}
             >
               CANCEL
@@ -1528,7 +1528,7 @@ const BulkResults: React.FC<{
             </p>
             <p
               className="mono text-[9px] mt-0.5"
-              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+              style={{ letterSpacing: "0.16em", color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
             >
               {s.label}
             </p>
@@ -1553,7 +1553,7 @@ const BulkResults: React.FC<{
                 </p>
                 <p
                   className="text-[11px] truncate"
-                  style={{ color: "rgba(255,255,255,0.45)" }}
+                  style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
                 >
                   {r.message}
                 </p>
@@ -1577,7 +1577,7 @@ const BulkResults: React.FC<{
         <button
           onClick={onInviteMore}
           className="mono text-[11px]"
-          style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.55)" }}
+          style={{ letterSpacing: "0.14em", color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
         >
           ← INVITE MORE
         </button>
@@ -1637,7 +1637,7 @@ export default function SparkPeople() {
               />
               <div
                 className="spark-card p-8 text-center text-sm"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
               >
                 Loading roster…
               </div>

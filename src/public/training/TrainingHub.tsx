@@ -6,14 +6,21 @@
  * no auth, holds no state, and renders whatever `GET /api/public/training/
  * <code>` returns — the backend owns the content, this owns the presentation.
  *
- * Deliberately single-theme (Liquid Death black). The wrapper has to sit next
- * to the field guide it links into without looking like a different product,
- * and the guide commits hard to the brand's world.
+ * Tenant-skinned: Liquid Death keeps its own cream/blood/Bungee world (the
+ * field guide it links into commits hard to that look). Every other brand
+ * gets the neutral Spark dark chrome plus its own logo/name — never LD's
+ * skin borrowed by accident. The hub payload carries no accent/logo, so
+ * the logo resolves through the same tenant-logo candidates check-in uses.
  */
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useParams } from "react-router";
 import PublicDeadLink from "@/public/PublicDeadLink";
+import {
+  normalizeTenantKey,
+  tenantLogoCandidates,
+  tenantLogoPlate,
+} from "@/layout/tenantLogo";
 
 type ResourceKind = "video" | "pdf" | "link" | "page";
 
@@ -59,6 +66,74 @@ const BLOOD = "#D9251D";
 const GOLD = "#FFD83D";
 const MUTED = "#8C8880"; // warm grey, biased toward the cream rather than pure
 
+export type TrainingHubTheme = {
+  isLiquidDeath: boolean;
+  displayFont: string;
+  bg: string;
+  text: string;
+  accent: string;
+  secondary: string;
+  muted: string;
+  cardBg: string;
+  cardBorder: string;
+  description: string;
+  buttonBg: string;
+  buttonColor: string;
+  videoButtonBg: string;
+};
+
+export function isLiquidDeathBrand(
+  brandName: string | null | undefined,
+): boolean {
+  return normalizeTenantKey(brandName).includes("liquiddeath");
+}
+
+/** LD keeps its guide skin; everyone else gets neutral Spark dark + lime. */
+export function trainingHubTheme(
+  brandName: string | null | undefined,
+): TrainingHubTheme {
+  if (isLiquidDeathBrand(brandName)) {
+    return {
+      isLiquidDeath: true,
+      displayFont: DISPLAY,
+      bg: INK,
+      text: CREAM,
+      accent: BLOOD,
+      secondary: GOLD,
+      muted: MUTED,
+      cardBg: "#121110",
+      cardBorder: "rgba(244,239,227,0.14)",
+      description: "rgba(244,239,227,0.72)",
+      buttonBg: CREAM,
+      buttonColor: INK,
+      videoButtonBg: GOLD,
+    };
+  }
+  return {
+    isLiquidDeath: false,
+    displayFont:
+      "'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
+    bg: "#0A0B0D",
+    text: "#F2F3EE",
+    accent: "#c5f546",
+    secondary: "#c5f546",
+    muted: "rgba(242,243,238,0.55)",
+    cardBg: "#11140e",
+    cardBorder: "rgba(255,255,255,0.08)",
+    description: "rgba(242,243,238,0.72)",
+    buttonBg: "#c5f546",
+    buttonColor: "#0A0B0D",
+    videoButtonBg: "#c5f546",
+  };
+}
+
+/** Same official marks check-in / spark-form resolve; null when unknown. */
+export function trainingHubLogoSrc(
+  brandName: string | null | undefined,
+): string | null {
+  return tenantLogoCandidates({ name: brandName ?? "" })[0] ?? null;
+}
+
 const KIND_LABEL: Record<ResourceKind, string> = {
   page: "Guide",
   video: "Video",
@@ -71,7 +146,15 @@ function openExternally(url: string) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-function ResourceCard({ res, index }: { res: Resource; index: number }) {
+function ResourceCard({
+  res,
+  index,
+  theme,
+}: {
+  res: Resource;
+  index: number;
+  theme: TrainingHubTheme;
+}) {
   const [playing, setPlaying] = useState(false);
   const isVideo = res.kind === "video";
   const selfHostedVideo = isVideo && !res.embedUrl;
@@ -80,8 +163,8 @@ function ResourceCard({ res, index }: { res: Resource; index: number }) {
     <li
       style={{
         listStyle: "none",
-        border: `1px solid rgba(244,239,227,0.14)`,
-        background: "#121110",
+        border: `1px solid ${theme.cardBorder}`,
+        background: theme.cardBg,
         display: "flex",
         flexDirection: "column",
       }}
@@ -90,10 +173,10 @@ function ResourceCard({ res, index }: { res: Resource; index: number }) {
         <div
           aria-hidden="true"
           style={{
-            fontFamily: DISPLAY,
+            fontFamily: theme.displayFont,
             fontSize: 34,
             lineHeight: 1,
-            color: BLOOD,
+            color: theme.accent,
             minWidth: 40,
           }}
         >
@@ -106,7 +189,7 @@ function ResourceCard({ res, index }: { res: Resource; index: number }) {
               fontFamily: MONO,
               fontSize: 10,
               letterSpacing: "0.18em",
-              color: MUTED,
+              color: theme.muted,
               textTransform: "uppercase",
               marginBottom: 8,
               display: "flex",
@@ -116,16 +199,16 @@ function ResourceCard({ res, index }: { res: Resource; index: number }) {
           >
             <span>{KIND_LABEL[res.kind]}</span>
             {res.metaLabel ? (
-              <span style={{ color: GOLD }}>{res.metaLabel}</span>
+              <span style={{ color: theme.secondary }}>{res.metaLabel}</span>
             ) : null}
           </div>
 
           <h2
             style={{
-              fontFamily: DISPLAY,
+              fontFamily: theme.displayFont,
               fontSize: "clamp(20px, 5vw, 26px)",
               lineHeight: 1.1,
-              color: CREAM,
+              color: theme.text,
               margin: "0 0 8px",
               textWrap: "balance",
             }}
@@ -139,7 +222,7 @@ function ResourceCard({ res, index }: { res: Resource; index: number }) {
                 fontFamily: BODY,
                 fontSize: 15,
                 lineHeight: 1.55,
-                color: "rgba(244,239,227,0.72)",
+                color: theme.description,
                 margin: "0 0 16px",
                 maxWidth: "60ch",
               }}
@@ -159,8 +242,8 @@ function ResourceCard({ res, index }: { res: Resource; index: number }) {
                 fontSize: 12,
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
-                color: INK,
-                background: CREAM,
+                color: theme.buttonColor,
+                background: theme.buttonBg,
                 border: "none",
                 padding: "11px 18px",
                 cursor: "pointer",
@@ -180,8 +263,8 @@ function ResourceCard({ res, index }: { res: Resource; index: number }) {
                 fontSize: 12,
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
-                color: INK,
-                background: GOLD,
+                color: theme.buttonColor,
+                background: theme.videoButtonBg,
                 border: "none",
                 padding: "11px 18px",
                 cursor: "pointer",
@@ -265,12 +348,13 @@ export default function TrainingHub() {
     void load();
   }, [load]);
 
+  const theme = trainingHubTheme(hub?.brandName);
   const shell = (children: ReactNode) => (
     <div
       style={{
         minHeight: "100vh",
-        background: INK,
-        color: CREAM,
+        background: theme.bg,
+        color: theme.text,
         fontFamily: BODY,
         padding: "0 0 64px",
       }}
@@ -289,7 +373,7 @@ export default function TrainingHub() {
           fontSize: 12,
           letterSpacing: "0.18em",
           textTransform: "uppercase",
-          color: MUTED,
+          color: theme.muted,
           paddingTop: 80,
         }}
       >
@@ -311,24 +395,55 @@ export default function TrainingHub() {
     );
   }
 
+  const logoSrc = theme.isLiquidDeath
+    ? null
+    : trainingHubLogoSrc(hub.brandName);
+  const logoPlate = tenantLogoPlate({ name: hub.brandName }, true);
+
   return shell(
     <>
       <header style={{ padding: "56px 0 36px" }}>
         <div
           style={{
-            fontFamily: MONO,
-            fontSize: 10,
-            letterSpacing: "0.24em",
-            textTransform: "uppercase",
-            color: BLOOD,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
             marginBottom: 14,
           }}
         >
-          {hub.brandName || "Brand Ambassador"} · Training
+          {logoSrc ? (
+            <img
+              src={logoSrc}
+              alt={hub.brandName || "Brand"}
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+              style={{
+                width: 44,
+                height: 44,
+                objectFit: "contain",
+                borderRadius: 10,
+                padding: 6,
+                background: logoPlate === "dark" ? "#0A0B0D" : "#fff",
+                border: `1px solid ${theme.cardBorder}`,
+              }}
+            />
+          ) : null}
+          <div
+            style={{
+              fontFamily: MONO,
+              fontSize: 10,
+              letterSpacing: "0.24em",
+              textTransform: "uppercase",
+              color: theme.accent,
+            }}
+          >
+            {hub.brandName || "Brand Ambassador"} · Training
+          </div>
         </div>
         <h1
           style={{
-            fontFamily: DISPLAY,
+            fontFamily: theme.displayFont,
             fontSize: "clamp(34px, 9vw, 56px)",
             lineHeight: 0.98,
             margin: "0 0 14px",
@@ -341,7 +456,7 @@ export default function TrainingHub() {
           <p
             style={{
               fontSize: 17,
-              color: GOLD,
+              color: theme.secondary,
               margin: "0 0 18px",
               fontWeight: 600,
             }}
@@ -354,7 +469,7 @@ export default function TrainingHub() {
             style={{
               fontSize: 16,
               lineHeight: 1.6,
-              color: "rgba(244,239,227,0.72)",
+              color: theme.description,
               margin: 0,
               maxWidth: "62ch",
             }}
@@ -374,7 +489,7 @@ export default function TrainingHub() {
         }}
       >
         {hub.resources.map((res, i) => (
-          <ResourceCard key={res.id} res={res} index={i} />
+          <ResourceCard key={res.id} res={res} index={i} theme={theme} />
         ))}
       </ul>
 
@@ -382,11 +497,11 @@ export default function TrainingHub() {
         style={{
           marginTop: 48,
           paddingTop: 22,
-          borderTop: "1px solid rgba(244,239,227,0.14)",
+          borderTop: `1px solid ${theme.cardBorder}`,
           fontFamily: MONO,
           fontSize: 11,
           letterSpacing: "0.1em",
-          color: MUTED,
+          color: theme.muted,
           lineHeight: 1.8,
         }}
       >
