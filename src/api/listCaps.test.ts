@@ -15,10 +15,30 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(src("./queries/TenantCheckinCodeQuery.ts")).toContain("first: 500");
   });
 
-  it("account map pin fetch uses the API ceiling of 2000", () => {
-    expect(src("../components/pages/map/SparkAccountMap.tsx")).toContain(
-      "first: 2000",
+  it("home attention does not download an unfiltered 2000-row tracker page", () => {
+    const attention = src(
+      "../components/pages/dashboard-event/AttentionEngine.tsx",
     );
+    expect(attention).toContain('statusSlugs: ["pending", "queue"]');
+    expect(attention).toContain("startDate");
+    expect(attention).toContain("endDate");
+    expect(attention).not.toContain(
+      "filters: tenantId ? { tenantId } : null",
+    );
+  });
+
+  it("idle prefetch keeps dashboard and tracker warm without the request map chunk", () => {
+    const routes = src("../routes/AppRoutes.tsx");
+    const warm = routes.slice(routes.indexOf("export function prefetchHotRoutes"));
+    expect(warm).toContain("loadDashboardEvents()");
+    expect(warm).toContain("loadMasterTracker()");
+    expect(warm).not.toContain("loadSparkRequestView()");
+  });
+
+  it("account map still caps pins at 2000 and mounts Maps after that query", () => {
+    const map = src("../components/pages/map/SparkAccountMap.tsx");
+    expect(map).toContain("first: 2000");
+    expect(map).toContain("setMapsReady(true)");
   });
 
   it("sidebar badges do not download the 2000-request list", () => {

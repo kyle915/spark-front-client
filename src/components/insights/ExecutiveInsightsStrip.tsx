@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { TenantActivationBreakdownQuery } from "@/api/queries/TenantActivationBreakdownQuery";
@@ -154,56 +154,110 @@ const SkuPulseLoader: React.FC<{
   return null;
 };
 
-const Inner: React.FC<{
+type ConvValue = TenantConversionKpisQueryType["response"]["tenantConversionKpis"];
+type CadenceValue = TenantFieldCadenceQueryType["response"]["tenantFieldCadence"];
+type CompareValue = TenantKpiComparisonQueryType["response"]["tenantKpiComparison"];
+type MixValue = TenantActivationBreakdownQueryType["response"]["tenantActivationBreakdown"];
+
+/** One query per sibling so the four pulse reads start together. */
+const ConversionPulseQuery: React.FC<{
   tenantId: string;
+  startDate: string;
+  endDate: string;
+  onData: (value: ConvValue) => void;
+}> = ({ tenantId, startDate, endDate, onData }) => {
+  const data = useLazyLoadQuery<TenantConversionKpisQueryType>(
+    TenantConversionKpisQuery,
+    { tenantId, startDate, endDate },
+    { fetchPolicy: "store-or-network" },
+  );
+  const value = data.tenantConversionKpis;
+  useEffect(() => {
+    onData(value);
+  }, [value, onData]);
+  return null;
+};
+
+const CadencePulseQuery: React.FC<{
+  tenantId: string;
+  onData: (value: CadenceValue) => void;
+}> = ({ tenantId, onData }) => {
+  const data = useLazyLoadQuery<TenantFieldCadenceQueryType>(
+    TenantFieldCadenceQuery,
+    { tenantId },
+    { fetchPolicy: "store-or-network" },
+  );
+  const value = data.tenantFieldCadence;
+  useEffect(() => {
+    onData(value);
+  }, [value, onData]);
+  return null;
+};
+
+const ComparePulseQuery: React.FC<{
+  tenantId: string;
+  period: "month" | "quarter" | "year";
+  onData: (value: CompareValue) => void;
+}> = ({ tenantId, period, onData }) => {
+  const data = useLazyLoadQuery<TenantKpiComparisonQueryType>(
+    TenantKpiComparisonQuery,
+    { tenantId, period },
+    { fetchPolicy: "store-or-network" },
+  );
+  const value = data.tenantKpiComparison;
+  useEffect(() => {
+    onData(value);
+  }, [value, onData]);
+  return null;
+};
+
+const MixPulseQuery: React.FC<{
+  tenantId: string;
+  startDate: string;
+  endDate: string;
+  onData: (value: MixValue) => void;
+}> = ({ tenantId, startDate, endDate, onData }) => {
+  const data = useLazyLoadQuery<TenantActivationBreakdownQueryType>(
+    TenantActivationBreakdownQuery,
+    { tenantId, startDate, endDate },
+    { fetchPolicy: "store-or-network" },
+  );
+  const value = data.tenantActivationBreakdown;
+  useEffect(() => {
+    onData(value);
+  }, [value, onData]);
+  return null;
+};
+
+const PulseCard: React.FC<{
   startDate: string;
   endDate: string;
   rangeLabel: string;
   comparisonPeriod: "month" | "quarter" | "year";
   chromeless?: boolean;
+  conv: ConvValue;
+  cadence: CadenceValue;
+  compare: CompareValue;
+  mixData: MixValue;
+  skuState: { topSkus: SkuRow[]; totalSamples: number };
 }> = ({
-  tenantId,
   startDate,
   endDate,
   rangeLabel,
   comparisonPeriod,
   chromeless = false,
+  conv,
+  cadence,
+  compare,
+  mixData,
+  skuState,
 }) => {
   const { showAlert } = useAlertStore();
   const [copying, setCopying] = useState(false);
-  const [skuState, setSkuState] = useState<{
-    topSkus: SkuRow[];
-    totalSamples: number;
-  }>({ topSkus: [], totalSamples: 0 });
-
-  const convData = useLazyLoadQuery<TenantConversionKpisQueryType>(
-    TenantConversionKpisQuery,
-    { tenantId, startDate, endDate },
-    { fetchPolicy: "store-or-network" },
-  );
-  const cadenceData = useLazyLoadQuery<TenantFieldCadenceQueryType>(
-    TenantFieldCadenceQuery,
-    { tenantId },
-    { fetchPolicy: "store-or-network" },
-  );
-  const compareData = useLazyLoadQuery<TenantKpiComparisonQueryType>(
-    TenantKpiComparisonQuery,
-    { tenantId, period: comparisonPeriod },
-    { fetchPolicy: "store-or-network" },
-  );
-  const mixData = useLazyLoadQuery<TenantActivationBreakdownQueryType>(
-    TenantActivationBreakdownQuery,
-    { tenantId, startDate, endDate },
-    { fetchPolicy: "store-or-network" },
-  );
-
-  const conv = convData.tenantConversionKpis;
-  const cadence = cadenceData.tenantFieldCadence;
-  const compare = compareData.tenantKpiComparison;
   const topSkus = skuState.topSkus;
 
   const mix = useMemo((): MixBucket[] => {
-    const buckets = mixData.tenantActivationBreakdown?.buckets ?? [];
+    const buckets = mixData?.buckets ?? [];
     return (["retail", "onprem", "event"] as const).map((key) => {
       const row = buckets.find((b) => b.key === key);
       return {
@@ -337,17 +391,6 @@ const Inner: React.FC<{
       className={chromeless ? undefined : "spark-card p-5 lg:p-6"}
       style={chromeless ? undefined : { borderRadius: 22 }}
     >
-      <ErrorBoundary fallback={null}>
-        <Suspense fallback={null}>
-          <SkuPulseLoader
-            tenantId={tenantId}
-            startDate={startDate}
-            endDate={endDate}
-            onData={setSkuState}
-          />
-        </Suspense>
-      </ErrorBoundary>
-
       <div className="flex items-end justify-between mb-4 flex-wrap gap-3">
         <div className="min-w-0">
           <p
@@ -552,7 +595,7 @@ const Inner: React.FC<{
   );
 };
 
-export default function ExecutiveInsightsStrip(props: {
+type PulseProps = {
   tenantId: string;
   startDate: string;
   endDate: string;
@@ -560,10 +603,110 @@ export default function ExecutiveInsightsStrip(props: {
   comparisonPeriod: "month" | "quarter" | "year";
   /** Skip outer spark-card when nested in a connected bento. */
   chromeless?: boolean;
-}) {
+};
+
+function useReported<T>(onSame: (prev: T, next: T) => boolean) {
+  const [slot, setSlot] = useState<{ seen: true; value: T } | { seen: false }>(
+    { seen: false },
+  );
+  const onData = useCallback(
+    (value: T) => {
+      setSlot((prev) =>
+        prev.seen && onSame(prev.value, value) ? prev : { seen: true, value },
+      );
+    },
+    [onSame],
+  );
+  return { slot, onData };
+}
+
+const sameRef = <T,>(prev: T, next: T) => prev === next;
+
+function PulseQueries(props: PulseProps) {
+  const { tenantId, startDate, endDate, comparisonPeriod } = props;
+  const conv = useReported<ConvValue>(sameRef);
+  const cadence = useReported<CadenceValue>(sameRef);
+  const compare = useReported<CompareValue>(sameRef);
+  const mix = useReported<MixValue>(sameRef);
+  const [skuState, setSkuState] = useState<{
+    topSkus: SkuRow[];
+    totalSamples: number;
+  }>({ topSkus: [], totalSamples: 0 });
+  const onSku = useCallback(
+    (next: { topSkus: SkuRow[]; totalSamples: number }) => {
+      setSkuState((prev) =>
+        prev.totalSamples === next.totalSamples &&
+        prev.topSkus.length === next.topSkus.length &&
+        prev.topSkus.every(
+          (row, i) =>
+            row.product === next.topSkus[i]?.product &&
+            row.samples === next.topSkus[i]?.samples,
+        )
+          ? prev
+          : next,
+      );
+    },
+    [],
+  );
+
   return (
-    <Suspense fallback={null}>
-      <Inner {...props} />
-    </Suspense>
+    <>
+      <ErrorBoundary fallback={null}>
+        <Suspense fallback={null}>
+          <SkuPulseLoader
+            tenantId={tenantId}
+            startDate={startDate}
+            endDate={endDate}
+            onData={onSku}
+          />
+        </Suspense>
+      </ErrorBoundary>
+      <Suspense fallback={null}>
+        <ConversionPulseQuery
+          tenantId={tenantId}
+          startDate={startDate}
+          endDate={endDate}
+          onData={conv.onData}
+        />
+        <CadencePulseQuery tenantId={tenantId} onData={cadence.onData} />
+        <ComparePulseQuery
+          tenantId={tenantId}
+          period={comparisonPeriod}
+          onData={compare.onData}
+        />
+        <MixPulseQuery
+          tenantId={tenantId}
+          startDate={startDate}
+          endDate={endDate}
+          onData={mix.onData}
+        />
+        {conv.slot.seen &&
+        cadence.slot.seen &&
+        compare.slot.seen &&
+        mix.slot.seen ? (
+          <PulseCard
+            startDate={startDate}
+            endDate={endDate}
+            rangeLabel={props.rangeLabel}
+            comparisonPeriod={comparisonPeriod}
+            chromeless={props.chromeless}
+            conv={conv.slot.value}
+            cadence={cadence.slot.value}
+            compare={compare.slot.value}
+            mixData={mix.slot.value}
+            skuState={skuState}
+          />
+        ) : null}
+      </Suspense>
+    </>
+  );
+}
+
+export default function ExecutiveInsightsStrip(props: PulseProps) {
+  return (
+    <PulseQueries
+      key={`${props.tenantId}|${props.startDate}|${props.endDate}|${props.comparisonPeriod}`}
+      {...props}
+    />
   );
 }

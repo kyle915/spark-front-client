@@ -776,12 +776,6 @@ export function InsightsBody({
       )}
 
       {tenantId && (
-        <Suspense fallback={null}>
-          <TenantSentimentCard tenantId={tenantId} />
-        </Suspense>
-      )}
-
-      {tenantId && (
         <BelowFold
           fallback={
             <div
@@ -793,6 +787,9 @@ export function InsightsBody({
           }
         >
           <div className="space-y-6 lg:space-y-8">
+            <Suspense fallback={null}>
+              <TenantSentimentCard tenantId={tenantId} />
+            </Suspense>
             <Suspense fallback={null}>
               <TenantGeoHeatmap
                 tenantId={tenantId}
