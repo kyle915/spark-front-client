@@ -461,7 +461,14 @@ const onStub = (label: string) => {
   el.id = id;
   el.className = "spark-toast fixed bottom-6 left-6 z-50 px-4 py-3 max-w-xs";
   el.style.cssText = "border-color: var(--spark-border);";
-  el.innerHTML = `<p style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;color:var(--spark-lime);margin-bottom:0.25rem;">COMING SOON</p><p style="font-size:0.875rem;color:var(--spark-text);">${label} ships in a later phase.</p>`;
+  const kicker = document.createElement("p");
+  kicker.style.cssText =
+    "font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.16em;color:var(--spark-lime);margin-bottom:0.25rem;";
+  kicker.textContent = "COMING SOON";
+  const body = document.createElement("p");
+  body.style.cssText = "font-size:0.875rem;color:var(--spark-text);";
+  body.textContent = `${label} ships in a later phase.`;
+  el.append(kicker, body);
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 2400);
 };
@@ -503,6 +510,12 @@ const SidebarNav: React.FC<{
           text: String(counts.approvals),
           tone: counts.approvalsSlaBreach > 0 ? "orange" : "gold",
           blink: counts.approvalsSlaBreach > 0,
+        };
+      if (it.to === "/recaps/list" && !isClient && counts.recapsNeedsReview > 0)
+        chip = {
+          text: String(counts.recapsNeedsReview),
+          tone: "gold",
+          blink: counts.recapsNeedsReview > 10,
         };
       if (it.to === "/recaps/missing" && counts.recapsDue > 0)
         chip = {

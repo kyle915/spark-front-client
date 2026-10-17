@@ -57,7 +57,7 @@ import {
   spendAmountSubmitError,
 } from "./spendAmount";
 import { useAuthStore } from "@/store/authStore";
-import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { useLazyLoadQuery, useMutation, useRelayEnvironment } from "react-relay/hooks";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router";
 import {
   lazy,
@@ -73,6 +73,12 @@ import {
   recapsListHrefFromReturn,
   recapsListNavState,
 } from "./recapListFilters";
+import {
+  getRecapQueueNeighbors,
+  markRecapOpenedInQueue,
+  markRecapReviewedInQueue,
+} from "./recapReviewQueue";
+import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { StatusMorph } from "@/motion/StatusMorph";
 import {
@@ -486,6 +492,7 @@ const RecapCustomViewInner = ({
   const { uuid } = useParams();
   const navigate = useNavigate();
   const { isClient } = useSparkRole();
+  const environment = useRelayEnvironment();
   const [searchParams] = useSearchParams();
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [playingVideo, setPlayingVideo] = useState<{
@@ -1003,50 +1010,72 @@ const RecapCustomViewInner = ({
     });
   }, [recap?.id, existingPdfUrl, commitGeneratePdf, showAlert]);
 
+  const queueInfo = useMemo(() => getRecapQueueNeighbors(uuid), [uuid]);
+  useEffect(() => {
+    markRecapOpenedInQueue(uuid);
+  }, [uuid]);
+
   // Approve the custom recap → backend emails the requestor + mapped RMM
   // (with the PDF). Then return to the list with a forced network refetch
-  // so Needs review drops the row (connection cache stays stale otherwise).
-  const handleApprove = useCallback(() => {
-    if (!recap?.id || approvePhase !== "idle") return;
-    setApprovePhase("pending");
-    commitApprove({
-      variables: { input: { id: recap.id as string, approved: true } },
-      onCompleted: (res) => {
-        const payload = res.approveCustomRecap;
-        if (payload?.success) {
-          showAlert(
-            "Recap approved — the requestor and mapped RMM have been emailed.",
-            "success",
-          );
-          setApprovePhase("success");
-          void holdActionSuccess().then(() => {
-            markRecapsListNeedsRefresh();
-            navigate(
-              recapsListHrefFromReturn({
-                searchParams,
-                fallbackStatus: "approved",
-              }),
-              { state: recapsListNavState(true) },
+  // so Needs review drops the row (connection cache stays stale otherwise),
+  // or advance to the next unapproved recap in the review queue.
+  const handleApprove = useCallback(
+    (advanceToNext = false) => {
+      if (!recap?.id || approvePhase !== "idle") return;
+      setApprovePhase("pending");
+      const nextItemHref = advanceToNext
+        ? queueInfo?.nextUnapproved?.href ?? null
+        : null;
+      commitApprove({
+        variables: { input: { id: recap.id as string, approved: true } },
+        onCompleted: (res) => {
+          const payload = res.approveCustomRecap;
+          if (payload?.success) {
+            markRecapReviewedInQueue(uuid, { approved: true });
+            void refreshSidebarCounts(environment, tenantId);
+            showAlert(
+              "Recap approved — the requestor and mapped RMM have been emailed.",
+              "success",
             );
-          });
-        } else {
+            setApprovePhase("success");
+            void holdActionSuccess().then(() => {
+              markRecapsListNeedsRefresh();
+              if (nextItemHref) {
+                navigate(nextItemHref);
+                return;
+              }
+              navigate(
+                recapsListHrefFromReturn({
+                  searchParams,
+                  fallbackStatus: "approved",
+                }),
+                { state: recapsListNavState(true) },
+              );
+            });
+          } else {
+            setApprovePhase("idle");
+            showAlert(payload?.message ?? "Approve failed.", "error");
+          }
+        },
+        onError: (err) => {
           setApprovePhase("idle");
-          showAlert(payload?.message ?? "Approve failed.", "error");
-        }
-      },
-      onError: (err) => {
-        setApprovePhase("idle");
-        showAlert(`Approve failed: ${err.message}`, "error");
-      },
-    });
-  }, [
-    recap?.id,
-    commitApprove,
-    showAlert,
-    approvePhase,
-    navigate,
-    searchParams,
-  ]);
+          showAlert(`Approve failed: ${err.message}`, "error");
+        },
+      });
+    },
+    [
+      recap?.id,
+      commitApprove,
+      showAlert,
+      approvePhase,
+      navigate,
+      searchParams,
+      queueInfo?.nextUnapproved?.href,
+      uuid,
+      environment,
+      tenantId,
+    ],
+  );
 
   const handleArchive = useCallback(() => {
     if (!recap?.id || isArchiving || isUnarchiving) return;
@@ -1054,6 +1083,8 @@ const RecapCustomViewInner = ({
       variables: { input: { id: recap.id as string, reason: null } },
       onCompleted: (res) => {
         if (res.archiveCustomRecap?.success) {
+          markRecapReviewedInQueue(uuid, { archived: true });
+          void refreshSidebarCounts(environment, tenantId);
           showAlert(
             "Recap archived — kept as proof, hidden from client.",
             "success",
@@ -1076,6 +1107,9 @@ const RecapCustomViewInner = ({
     onRefresh,
     isArchiving,
     isUnarchiving,
+    uuid,
+    environment,
+    tenantId,
   ]);
 
   const handleUnarchive = useCallback(() => {
@@ -1084,6 +1118,8 @@ const RecapCustomViewInner = ({
       variables: { input: { id: recap.id as string } },
       onCompleted: (res) => {
         if (res.unarchiveCustomRecap?.success) {
+          markRecapReviewedInQueue(uuid, { archived: false });
+          void refreshSidebarCounts(environment, tenantId);
           showAlert("Recap restored to Needs review.", "success");
           onRefresh();
         } else {
@@ -1103,6 +1139,9 @@ const RecapCustomViewInner = ({
     onRefresh,
     isArchiving,
     isUnarchiving,
+    uuid,
+    environment,
+    tenantId,
   ]);
 
   // Attach an uploaded blob to this custom recap. RecapUploader fires
@@ -1227,6 +1266,8 @@ const RecapCustomViewInner = ({
       onCompleted: (res) => {
         const payload = res.deleteCustomRecap;
         if (payload?.success) {
+          markRecapReviewedInQueue(uuid, { removed: true });
+          void refreshSidebarCounts(environment, tenantId);
           showAlert("Recap deleted.", "success");
           navigate(backToListUrl);
         } else {
@@ -1235,7 +1276,7 @@ const RecapCustomViewInner = ({
       },
       onError: (err) => showAlert(`Delete failed: ${err.message}`, "error"),
     });
-  }, [recap?.id, commitDelete, showAlert, navigate, backToListUrl]);
+  }, [recap?.id, commitDelete, showAlert, navigate, backToListUrl, uuid, environment, tenantId]);
 
   const gallerySlot = useCallback(
     (file: (typeof recapFiles)[number]) =>
@@ -1544,58 +1585,11 @@ const RecapCustomViewInner = ({
                       </span>
                     ) : null}
                   </>
-                ) : !isClient ? (
-                  <ActionMorphButton
-                    onClick={handleApprove}
-                    disabled={isApproving || Boolean(recap.archivedAt)}
-                    phase={approvePhase}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                    style={{ ...limeBtn, opacity: isApproving ? 0.5 : 1 }}
-                    title={
-                      recap.archivedAt
-                        ? "Unarchive before approving"
-                        : "Approve recap and email the requestor + mapped RMM"
-                    }
-                    pendingLabel="Approving…"
-                    successLabel="Approved"
-                  >
-                    Approve recap
-                  </ActionMorphButton>
                 ) : (
                   <span className="chip chip-orange">
                     <StatusMorph value="Needs review" />
                   </span>
                 )}
-                {!isClient &&
-                  (recap.archivedAt ? (
-                    <button
-                      type="button"
-                      onClick={handleUnarchive}
-                      disabled={isUnarchiving}
-                      className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                      style={{
-                        ...ghostBtn,
-                        opacity: isUnarchiving ? 0.5 : 1,
-                      }}
-                      title="Restore this recap to Needs review"
-                    >
-                      {isUnarchiving ? "Restoring…" : "Unarchive"}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleArchive}
-                      disabled={isArchiving}
-                      className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                      style={{
-                        ...ghostBtn,
-                        opacity: isArchiving ? 0.5 : 1,
-                      }}
-                      title="Park this recap — keep proof, hide from client"
-                    >
-                      {isArchiving ? "Archiving…" : "Archive"}
-                    </button>
-                  ))}
                 {recap.archivedAt ? (
                   <span className="chip chip-orange">
                     <StatusMorph value="Archived" />
@@ -1634,13 +1628,15 @@ const RecapCustomViewInner = ({
                     : `⬇ Photos (${flatImages.length})`}
                 </button>
                 )}
-                <button
-                  onClick={openShare}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                  style={ghostBtn}
-                >
-                  ↗ Share
-                </button>
+                {isClient && (
+                  <button
+                    onClick={openShare}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                    style={ghostBtn}
+                  >
+                    ↗ Share
+                  </button>
+                )}
                 {!isClient && (
                   <PushToPlanButton
                     recapId={recap.id}
@@ -1649,27 +1645,6 @@ const RecapCustomViewInner = ({
                     className="px-4 py-2 rounded-xl text-sm font-semibold transition"
                     style={ghostBtn}
                   />
-                )}
-                {!isClient && (
-                  <button
-                    onClick={enterEditMode}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                    style={ghostBtn}
-                    title="Correct metrics, field values, sampled products and title. Changes are logged in edit history."
-                  >
-                    ✎ Edit recap
-                  </button>
-                )}
-                {!isClient && (
-                  <button
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                    className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                    style={{ ...dangerBtn, opacity: isDeleting ? 0.5 : 1 }}
-                    title="Delete this recap and free the event for a new one"
-                  >
-                    {isDeleting ? "Deleting…" : "Delete"}
-                  </button>
                 )}
               </div>
             ) : (
@@ -3002,8 +2977,20 @@ const RecapCustomViewInner = ({
           </RecapDocument>
       </div>
 
-      {!isEditingValues && (
-        <RecapStickyOpsBar>
+      {!isEditingValues && !isClient && (
+        <RecapStickyOpsBar
+          queueNav={
+            queueInfo
+              ? {
+                  index: queueInfo.index,
+                  total: queueInfo.total,
+                  prevHref: queueInfo.prev?.href ?? null,
+                  nextHref: queueInfo.next?.href ?? null,
+                  onNavigate: (href) => navigate(href),
+                }
+              : null
+          }
+        >
           <button
             type="button"
             onClick={openShare}
@@ -3012,52 +2999,95 @@ const RecapCustomViewInner = ({
           >
             ↗ Share
           </button>
+          <button
+            type="button"
+            onClick={enterEditMode}
+            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+            style={ghostBtn}
+            title="Correct metrics, field values, sampled products and title. Changes are logged in edit history."
+          >
+            ✎ Edit recap
+          </button>
+          {recap.archivedAt ? (
+            <button
+              type="button"
+              onClick={handleUnarchive}
+              disabled={isUnarchiving}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{ ...ghostBtn, opacity: isUnarchiving ? 0.5 : 1 }}
+              title="Restore this recap to Needs review"
+            >
+              {isUnarchiving ? "Restoring…" : "Unarchive"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleArchive}
+              disabled={isArchiving}
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+              style={{ ...ghostBtn, opacity: isArchiving ? 0.5 : 1 }}
+              title="Park this recap — keep proof, hide from client"
+            >
+              {isArchiving ? "Archiving…" : "Archive"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+            style={{ ...dangerBtn, opacity: isDeleting ? 0.5 : 1 }}
+            title="Delete this recap and free the event for a new one"
+          >
+            {isDeleting ? "Deleting…" : "Delete"}
+          </button>
           {recap.approved ? (
             <span className="chip chip-lime">
               <StatusMorph value="Approved" />
             </span>
-          ) : !isClient ? (
-            <ActionMorphButton
-              onClick={handleApprove}
-              disabled={isApproving || Boolean(recap.archivedAt)}
-              phase={approvePhase}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-              style={{ ...limeBtn, opacity: isApproving ? 0.5 : 1 }}
-              title={
-                recap.archivedAt
-                  ? "Unarchive before approving"
-                  : "Approve recap and email the requestor + mapped RMM"
-              }
-              pendingLabel="Approving…"
-              successLabel="Approved"
-            >
-              Approve recap
-            </ActionMorphButton>
-          ) : null}
-          {!isClient &&
-            (recap.archivedAt ? (
-              <button
-                type="button"
-                onClick={handleUnarchive}
-                disabled={isUnarchiving}
+          ) : (
+            <>
+              <ActionMorphButton
+                onClick={() => handleApprove(false)}
+                disabled={isApproving || Boolean(recap.archivedAt)}
+                phase={approvePhase}
                 className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                style={{ ...ghostBtn, opacity: isUnarchiving ? 0.5 : 1 }}
-                title="Restore this recap to Needs review"
+                style={
+                  queueInfo?.nextUnapproved
+                    ? {
+                        background: "transparent",
+                        color: "var(--spark-lime)",
+                        border: "1px solid rgba(197,245,70,0.45)",
+                        opacity: isApproving ? 0.5 : 1,
+                      }
+                    : { ...limeBtn, opacity: isApproving ? 0.5 : 1 }
+                }
+                title={
+                  recap.archivedAt
+                    ? "Unarchive before approving"
+                    : "Approve recap and email the requestor + mapped RMM"
+                }
+                pendingLabel="Approving…"
+                successLabel="Approved"
               >
-                {isUnarchiving ? "Restoring…" : "Unarchive"}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleArchive}
-                disabled={isArchiving}
-                className="px-4 py-2 rounded-xl text-sm font-semibold transition"
-                style={{ ...ghostBtn, opacity: isArchiving ? 0.5 : 1 }}
-                title="Park this recap — keep proof, hide from client"
-              >
-                {isArchiving ? "Archiving…" : "Archive"}
-              </button>
-            ))}
+                Approve recap
+              </ActionMorphButton>
+              {queueInfo?.nextUnapproved && !recap.archivedAt && (
+                <ActionMorphButton
+                  onClick={() => handleApprove(true)}
+                  disabled={isApproving}
+                  phase={approvePhase}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold transition"
+                  style={{ ...limeBtn, opacity: isApproving ? 0.5 : 1 }}
+                  title="Approve recap and advance to the next unapproved recap in the queue"
+                  pendingLabel="Approving…"
+                  successLabel="Approved →"
+                >
+                  Approve & next →
+                </ActionMorphButton>
+              )}
+            </>
+          )}
         </RecapStickyOpsBar>
       )}
 

@@ -62,8 +62,9 @@ import {
   recapsListPageVariables,
 } from "./recapsListPagination";
 import {
+  buildRecapListSearchParams,
   consumeRecapsListNeedsRefresh,
-  defaultRecapStatus,
+  readRecapListUrlFilters,
   recapEmptyKind,
   recapIsEmptyShell,
   recapListStatusWord,
@@ -72,10 +73,15 @@ import {
   recapMatchesPipeline,
   recapTypeChips,
   withRecapListReturn,
+  type RecapListReturnFilters,
   type RecapsListNavState,
 } from "./recapListFilters";
 import {
-  normalizeRecapActivationFilter,
+  markRecapOpenedInQueue,
+  pickNextReviewItem,
+  saveRecapReviewQueue,
+} from "./recapReviewQueue";
+import {
   recapActivationFilterLabel,
   recapMatchesActivationFilter,
   recapTypeCountsTowardConversion,
@@ -442,7 +448,8 @@ const RecapCard: React.FC<{
   forceApproved?: boolean;
   // Ops-only: pick which of this recap's numbers count toward a plan.
   onPushToPlan?: ((recap: Recap) => void) | null;
-}> = ({ recap, href, onOpenRequest, onShare, selected, onToggleSelect, selectMode, showSla, forceApproved, onPushToPlan }) => {
+  onOpenRecap?: ((recap: Recap) => void) | null;
+}> = ({ recap, href, onOpenRequest, onShare, selected, onToggleSelect, selectMode, showSla, forceApproved, onPushToPlan, onOpenRecap }) => {
   const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
@@ -482,6 +489,7 @@ const RecapCard: React.FC<{
         they still receive their own clicks instead of the overlay. */}
     <Link
       to={href}
+      onClick={() => onOpenRecap?.(recap)}
       aria-label={`Open recap ${recap.name}`}
       className="absolute inset-0 z-[1]"
     />
@@ -750,17 +758,25 @@ const recapHref = (
   r: Recap,
   listStatus?: StatusKey,
   listActivation?: RecapActivationFilter,
+  extra?: RecapListReturnFilters | null,
 ) =>
   withRecapListReturn(
     r.kind === "custom" ? `/recap/view-custom/${r.uuid}` : `/recap/view/${r.uuid}`,
     listStatus,
     listActivation,
+    extra,
   );
 
-const reviewRecapPath = (kind: "legacy" | "custom", uuid: string) =>
+const reviewRecapPath = (
+  kind: "legacy" | "custom",
+  uuid: string,
+  extra?: RecapListReturnFilters | null,
+) =>
   withRecapListReturn(
     kind === "custom" ? `/recap/view-custom/${uuid}` : `/recap/view/${uuid}`,
     "needs_review",
+    "all",
+    extra,
   );
 
 const RecapCompactRow: React.FC<{
@@ -771,7 +787,8 @@ const RecapCompactRow: React.FC<{
   selectMode: boolean;
   onToggleSelect: () => void;
   forceApproved?: boolean;
-}> = ({ recap, href, selected, focused, selectMode, onToggleSelect, forceApproved }) => {
+  onOpenRecap?: ((recap: Recap) => void) | null;
+}> = ({ recap, href, selected, focused, selectMode, onToggleSelect, forceApproved, onOpenRecap }) => {
   const [heroFailed, setHeroFailed] = useState(false);
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
@@ -790,7 +807,12 @@ const RecapCompactRow: React.FC<{
         outlineOffset: -1,
       }}
     >
-      <Link to={href} aria-label={`Open recap ${recap.name}`} className="absolute inset-0 z-[1]" />
+      <Link
+        to={href}
+        onClick={() => onOpenRecap?.(recap)}
+        aria-label={`Open recap ${recap.name}`}
+        className="absolute inset-0 z-[1]"
+      />
       {(selectMode || selected) && (
         <label
           onClick={(e) => e.stopPropagation()}
@@ -1068,7 +1090,11 @@ const RecapsListInner: React.FC<{
   density: "cards" | "compact";
   focusedId: string | null;
   needsStoreMap: boolean;
-}> = ({ search, retailerFilter, stateFilter, rmmFilter, baName, statusFilter, activationFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId, needsStoreMap }) => {
+  targetPage: number;
+  onPageChange: (page: number) => void;
+  returnFilters?: RecapListReturnFilters | null;
+  onOpenRecap?: ((recap: Recap) => void) | null;
+}> = ({ search, retailerFilter, stateFilter, rmmFilter, baName, statusFilter, activationFilter, dateFrom, dateTo, sortKey, onMeta, onVisibleRecapsChange, selectedIds, onToggleSelected, selectMode, queueEmpty, filterChips, onClearFilters, justApprovedIds, refreshKey, density, focusedId, needsStoreMap, targetPage, onPageChange, returnFilters, onOpenRecap }) => {
   const { tenantId } = useAuthStore();
   // Client view (an Ignite admin toggled into client mode, or a genuine
   // client login) must NOT see unapproved drafts — only approved recaps.
@@ -1192,6 +1218,10 @@ const RecapsListInner: React.FC<{
     environment,
     shareTarget,
     setShareTarget,
+    targetPage,
+    onPageChange,
+    returnFilters,
+    onOpenRecap,
   } as const;
 
   // Mount both page queries in one component when both kinds exist so
@@ -1296,6 +1326,10 @@ const RecapsBothLive: React.FC<{
   environment: ReturnType<typeof useRelayEnvironment>;
   shareTarget: Recap | null;
   setShareTarget: Dispatch<SetStateAction<Recap | null>>;
+  targetPage: number;
+  onPageChange: (page: number) => void;
+  returnFilters?: RecapListReturnFilters | null;
+  onOpenRecap?: ((recap: Recap) => void) | null;
 }> = ({ legacyVariables, customVariables, fetchPolicy, fetchKey, ...rest }) => {
   const data = useLazyLoadQuery<RecapsListQueryType>(
     RecapsListQuery,
@@ -1356,6 +1390,10 @@ const RecapsListFetched: React.FC<{
   environment: ReturnType<typeof useRelayEnvironment>;
   shareTarget: Recap | null;
   setShareTarget: Dispatch<SetStateAction<Recap | null>>;
+  targetPage: number;
+  onPageChange: (page: number) => void;
+  returnFilters?: RecapListReturnFilters | null;
+  onOpenRecap?: ((recap: Recap) => void) | null;
 }> = ({
   data,
   customData,
@@ -1394,6 +1432,10 @@ const RecapsListFetched: React.FC<{
   environment,
   shareTarget,
   setShareTarget,
+  targetPage,
+  onPageChange,
+  returnFilters,
+  onOpenRecap,
 }) => {
   const navigate = useNavigate();
   const { tenantSlug, tenantMeta } = useAuthStore();
@@ -1417,6 +1459,7 @@ const RecapsListFetched: React.FC<{
   const [customHasMore, setCustomHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const [loadedPages, setLoadedPages] = useState(1);
   const loadingMoreRef = useRef(false);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -1439,6 +1482,7 @@ const RecapsListFetched: React.FC<{
     setExtraCustom([]);
     setLoadMoreError(null);
     setLoadingMore(false);
+    setLoadedPages(1);
     loadingMoreRef.current = false;
   }, [firstPageKey]);
 
@@ -1519,6 +1563,11 @@ const RecapsListFetched: React.FC<{
           Boolean(customPage.customRecaps.pageInfo.hasNextPage),
         );
       }
+      setLoadedPages((prev) => {
+        const nextPage = prev + 1;
+        if (nextPage > targetPage) onPageChange(nextPage);
+        return nextPage;
+      });
     } catch (err) {
       const message =
         err instanceof Error && err.message
@@ -1540,6 +1589,8 @@ const RecapsListFetched: React.FC<{
     searchQ,
     listFilters,
     customListFilters,
+    targetPage,
+    onPageChange,
   ]);
 
   const retailers = useMemo(
@@ -1641,6 +1692,12 @@ const RecapsListFetched: React.FC<{
   const displayed = filtered;
 
   const hasMore = legacyHasMore || customHasMore;
+
+  useEffect(() => {
+    if (targetPage <= loadedPages) return;
+    if (!hasMore || loadingMore || loadMoreError) return;
+    void loadMore();
+  }, [targetPage, loadedPages, hasMore, loadingMore, loadMoreError, loadMore]);
 
   useEffect(() => {
     if (!hasMore || loadingMore || loadMoreError) return;
@@ -1827,12 +1884,13 @@ const RecapsListFetched: React.FC<{
             <RecapCompactRow
               key={r.uuid}
               recap={r}
-              href={recapHref(r, statusFilter, activationFilter)}
+              href={recapHref(r, statusFilter, activationFilter, returnFilters)}
               selected={selectedIds.has(r.id)}
               focused={focusedId === r.uuid}
               selectMode={selectMode}
               onToggleSelect={() => onToggleSelected(r.id)}
               forceApproved={justApprovedIds.has(r.id)}
+              onOpenRecap={onOpenRecap}
             />
           ))}
         </div>
@@ -1853,10 +1911,11 @@ const RecapsListFetched: React.FC<{
           onToggleSelect={() => onToggleSelected(r.id)}
           selectMode={selectMode}
           showSla={pipeline === "needs_review"}
-          href={recapHref(r, statusFilter, activationFilter)}
+          href={recapHref(r, statusFilter, activationFilter, returnFilters)}
           forceApproved={justApprovedIds.has(r.id)}
           onShare={setShareTarget}
           onPushToPlan={plansOn ? setPlanTarget : null}
+          onOpenRecap={onOpenRecap}
           onOpenRequest={(reqUuid) =>
             navigate(`/request/view/${reqUuid}`, {
               state: { from: "/recaps/list" },
@@ -1934,10 +1993,22 @@ export default function SparkRecapsList() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
-  const statusFromUrl = searchParams.get("status");
-  const activationFromUrl = searchParams.get("activation");
-  const rangeFromUrl = searchParams.get("range");
-  const [search, setSearch] = useState("");
+  const baFromNav =
+    typeof (location.state as { baName?: unknown } | null)?.baName === "string"
+      ? String((location.state as { baName: string }).baName)
+      : "";
+  const initialUrlFilters = useMemo(
+    () =>
+      readRecapListUrlFilters(searchParams, {
+        isClient,
+        defaultFrom: DAYS_30_ISO,
+        defaultTo: TODAY_ISO,
+        weekFrom: DAYS_7_ISO,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  const [search, setSearch] = useState(initialUrlFilters.q);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [density, setDensity] = useState<"cards" | "compact">(() => {
     try {
@@ -1950,72 +2021,121 @@ export default function SparkRecapsList() {
   });
   const [focusedIdx, setFocusedIdx] = useState(-1);
   const [showHelp, setShowHelp] = useState(false);
-  const [retailerFilter, setRetailerFilter] = useState("all");
-  const [stateFilter, setStateFilter] = useState("all");
-  const [rmmFilter, setRmmFilter] = useState("all");
-  const baFromNav =
-    typeof (location.state as { baName?: unknown } | null)?.baName === "string"
-      ? String((location.state as { baName: string }).baName)
-      : "";
-  const [baName, setBaName] = useState(baFromNav);
-  const [statusFilter, setStatusFilterState] = useState<StatusKey>(() =>
-    defaultRecapStatus(isClient, statusFromUrl),
+  const [retailerFilter, setRetailerFilter] = useState(
+    initialUrlFilters.retailer,
+  );
+  const [stateFilter, setStateFilter] = useState(initialUrlFilters.state);
+  const [rmmFilter, setRmmFilter] = useState(initialUrlFilters.rmm);
+  const [baName, setBaName] = useState(initialUrlFilters.ba || baFromNav);
+  const [statusFilter, setStatusFilterState] = useState<StatusKey>(
+    initialUrlFilters.status,
   );
   const [activationFilter, setActivationFilterState] =
-    useState<RecapActivationFilter>(() =>
-      normalizeRecapActivationFilter(activationFromUrl),
-    );
-  /** User-driven tab change — keep `?status=` in sync so Back restores it. */
-  const setStatusFilter = useCallback(
-    (next: StatusKey) => {
-      setStatusFilterState(next);
-      const pipeline = next === "draft" ? "needs_review" : next;
-      if (searchParams.get("status") === pipeline) return;
-      const params = new URLSearchParams(searchParams);
-      params.set("status", pipeline);
-      setSearchParams(params, { replace: true });
-    },
-    [searchParams, setSearchParams],
-  );
-  /** Keep `?activation=` in sync (omit when View all). */
-  const setActivationFilter = useCallback(
-    (next: RecapActivationFilter) => {
-      setActivationFilterState(next);
-      const params = new URLSearchParams(searchParams);
-      if (next === "all") params.delete("activation");
-      else params.set("activation", next);
-      if (params.toString() === searchParams.toString()) return;
-      setSearchParams(params, { replace: true });
-    },
-    [searchParams, setSearchParams],
-  );
+    useState<RecapActivationFilter>(initialUrlFilters.activation);
+  const [page, setPage] = useState<number>(initialUrlFilters.page);
+  const setStatusFilter = useCallback((next: StatusKey) => {
+    setStatusFilterState(next);
+    setPage(1);
+  }, []);
+  const setActivationFilter = useCallback((next: RecapActivationFilter) => {
+    setActivationFilterState(next);
+    setPage(1);
+  }, []);
   const [needsStoreMap, setNeedsStoreMap] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   // Work-queue default: last 30 days for admin AND client. "All published"
   // clears both bounds so the archive is an explicit choice. Clients used
   // to start at month-start, which made the 30d chip look like a lie.
-  const [dateFrom, setDateFrom] = useState<string>(() => {
-    if (rangeFromUrl === "week") return DAYS_7_ISO;
-    return DAYS_30_ISO;
-  });
-  const [dateTo, setDateTo] = useState<string>(TODAY_ISO);
+  const [dateFrom, setDateFrom] = useState<string>(initialUrlFilters.from);
+  const [dateTo, setDateTo] = useState<string>(initialUrlFilters.to);
+  const lastSyncedSearchRef = useRef(searchParams.toString());
+  const filterSignature = [
+    statusFilter,
+    activationFilter,
+    search.trim(),
+    retailerFilter,
+    stateFilter,
+    rmmFilter,
+    baName.trim(),
+    dateFrom,
+    dateTo,
+  ].join("|");
+  const prevFilterSignatureRef = useRef(filterSignature);
   useEffect(() => {
-    const status = searchParams.get("status");
-    if (status) {
-      setStatusFilterState(defaultRecapStatus(isClient, status));
-    } else if (isClient) {
-      setStatusFilterState((s) =>
-        s === "all" || s === "approved" ? s : "approved",
-      );
+    if (prevFilterSignatureRef.current !== filterSignature) {
+      prevFilterSignatureRef.current = filterSignature;
+      setPage(1);
     }
-    setActivationFilterState(
-      normalizeRecapActivationFilter(searchParams.get("activation")),
-    );
-    if (searchParams.get("range") === "week") {
-      setDateFrom(DAYS_7_ISO);
-      setDateTo(TODAY_ISO);
+  }, [filterSignature]);
+  useEffect(() => {
+    const incoming = searchParams.toString();
+    if (incoming === lastSyncedSearchRef.current) return;
+    lastSyncedSearchRef.current = incoming;
+    const parsed = readRecapListUrlFilters(searchParams, {
+      isClient,
+      defaultFrom: DAYS_30_ISO,
+      defaultTo: TODAY_ISO,
+      weekFrom: DAYS_7_ISO,
+    });
+    setStatusFilterState(parsed.status);
+    setActivationFilterState(parsed.activation);
+    setSearch(parsed.q);
+    setRetailerFilter(parsed.retailer);
+    setStateFilter(parsed.state);
+    setRmmFilter(parsed.rmm);
+    if (parsed.ba || !baFromNav) setBaName(parsed.ba);
+    setDateFrom(parsed.from);
+    setDateTo(parsed.to);
+    setPage(parsed.page);
+    prevFilterSignatureRef.current = [
+      parsed.status,
+      parsed.activation,
+      parsed.q.trim(),
+      parsed.retailer,
+      parsed.state,
+      parsed.rmm,
+      (parsed.ba || (!baFromNav ? "" : baName)).trim(),
+      parsed.from,
+      parsed.to,
+    ].join("|");
+  }, [searchParams, isClient, baFromNav, baName]);
+  useEffect(() => {
+    const nextParams = buildRecapListSearchParams({
+      isClient,
+      status: statusFilter,
+      activation: activationFilter,
+      q: search,
+      retailer: retailerFilter,
+      state: stateFilter,
+      rmm: rmmFilter,
+      ba: baName,
+      from: dateFrom,
+      to: dateTo,
+      page,
+      defaultFrom: DAYS_30_ISO,
+      defaultTo: TODAY_ISO,
+      weekFrom: DAYS_7_ISO,
+    });
+    const nextStr = nextParams.toString();
+    lastSyncedSearchRef.current = nextStr;
+    if (nextStr !== searchParams.toString()) {
+      setSearchParams(nextParams, { replace: true });
     }
-  }, [searchParams, isClient]);
+  }, [
+    isClient,
+    statusFilter,
+    activationFilter,
+    search,
+    retailerFilter,
+    stateFilter,
+    rmmFilter,
+    baName,
+    dateFrom,
+    dateTo,
+    page,
+    searchParams,
+    setSearchParams,
+  ]);
   useEffect(() => {
     if (baFromNav) setBaName(baFromNav);
   }, [baFromNav]);
@@ -2047,14 +2167,134 @@ export default function SparkRecapsList() {
   const onMeta = useMemo(() => (next: Meta) => setMeta(next), []);
 
   const [visibleRecaps, setVisibleRecaps] = useState<Recap[]>([]);
+  const [justApprovedIds, setJustApprovedIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  const returnFilters = useMemo<RecapListReturnFilters>(
+    () => ({
+      q: search,
+      retailer: retailerFilter,
+      state: stateFilter,
+      rmm: rmmFilter,
+      ba: baName,
+      from:
+        (dateFrom === DAYS_30_ISO || dateFrom === DAYS_7_ISO) &&
+        dateTo === TODAY_ISO
+          ? ""
+          : dateFrom,
+      to:
+        (dateFrom === DAYS_30_ISO || dateFrom === DAYS_7_ISO) &&
+        dateTo === TODAY_ISO
+          ? ""
+          : dateTo,
+      range:
+        dateFrom === DAYS_7_ISO && dateTo === TODAY_ISO
+          ? "week"
+          : !dateFrom && !dateTo
+            ? "all"
+            : null,
+      page,
+    }),
+    [
+      search,
+      retailerFilter,
+      stateFilter,
+      rmmFilter,
+      baName,
+      dateFrom,
+      dateTo,
+      page,
+    ],
+  );
+
+  const currentReturnHref = useMemo(() => {
+    const qs = buildRecapListSearchParams({
+      isClient,
+      status: statusFilter,
+      activation: activationFilter,
+      q: search,
+      retailer: retailerFilter,
+      state: stateFilter,
+      rmm: rmmFilter,
+      ba: baName,
+      from: dateFrom,
+      to: dateTo,
+      page,
+      defaultFrom: DAYS_30_ISO,
+      defaultTo: TODAY_ISO,
+      weekFrom: DAYS_7_ISO,
+    }).toString();
+    return qs ? `/recaps/list?${qs}` : "/recaps/list";
+  }, [
+    isClient,
+    statusFilter,
+    activationFilter,
+    search,
+    retailerFilter,
+    stateFilter,
+    rmmFilter,
+    baName,
+    dateFrom,
+    dateTo,
+    page,
+  ]);
+
+  const queueItems = useMemo(
+    () =>
+      visibleRecaps
+        .filter((r) => !recapIsEmptyShell(r))
+        .map((r) => ({
+          uuid: r.uuid,
+          isCustom: r.kind === "custom",
+          href: recapHref(r, statusFilter, activationFilter, returnFilters),
+          approved: r.approved || justApprovedIds.has(r.id),
+          archived: Boolean(r.archivedAt),
+        })),
+    [
+      visibleRecaps,
+      statusFilter,
+      activationFilter,
+      returnFilters,
+      justApprovedIds,
+    ],
+  );
+
+  useEffect(() => {
+    if (isClient || queueItems.length === 0) return;
+    saveRecapReviewQueue({
+      items: queueItems,
+      returnHref: currentReturnHref,
+    });
+  }, [isClient, queueItems, currentReturnHref]);
+
+  const handleOpenRecap = useCallback(
+    (r: Recap) => {
+      if (!isClient && queueItems.length > 0) {
+        saveRecapReviewQueue({
+          items: queueItems,
+          lastOpenedUuid: r.uuid,
+          returnHref: currentReturnHref,
+        });
+      } else {
+        markRecapOpenedInQueue(r.uuid);
+      }
+    },
+    [isClient, queueItems, currentReturnHref],
+  );
 
   const openNextReview = useCallback(async () => {
     if (isClient || !tenantId || reviewNextBusy) return;
     const onNeedsReview =
       statusFilter === "needs_review" || statusFilter === "draft";
-    const first = visibleRecaps[0];
-    if (onNeedsReview && first) {
-      navigate(recapHref(first, "needs_review", activationFilter));
+    const nextInVisible = pickNextReviewItem(queueItems);
+    if (onNeedsReview && nextInVisible) {
+      saveRecapReviewQueue({
+        items: queueItems,
+        lastOpenedUuid: nextInVisible.uuid,
+        returnHref: currentReturnHref,
+      });
+      navigate(nextInVisible.href);
       return;
     }
     setReviewNextBusy(true);
@@ -2066,55 +2306,72 @@ export default function SparkRecapsList() {
       };
       const [legacy, custom] = await Promise.all([
         fetchQuery<RecapsListQueryType>(environment, RecapsListQuery, {
-          last: 1,
+          last: 10,
           filters,
         }).toPromise(),
         fetchQuery<CustomRecapsListQueryType>(
           environment,
           CustomRecapsListQuery,
-          { last: 1, filters },
+          { last: 10, filters },
         ).toPromise(),
       ]);
       const picks: { kind: "legacy" | "custom"; uuid: string; at: string }[] =
         [];
-      const legacyNode = legacy?.recaps?.edges?.[0]?.node;
-      if (legacyNode?.uuid) {
-        picks.push({
-          kind: "legacy",
-          uuid: String(legacyNode.uuid),
-          at: legacyNode.createdAt || legacyNode.eventDate || "",
-        });
+      for (const edge of legacy?.recaps?.edges ?? []) {
+        const legacyNode = edge?.node;
+        if (legacyNode?.uuid) {
+          picks.push({
+            kind: "legacy",
+            uuid: String(legacyNode.uuid),
+            at: legacyNode.createdAt || legacyNode.eventDate || "",
+          });
+        }
       }
-      const customNode = custom?.customRecaps?.edges?.[0]?.node;
-      if (customNode?.uuid) {
-        picks.push({
-          kind: "custom",
-          uuid: String(customNode.uuid),
-          at: customNode.createdAt || customNode.eventDate || "",
-        });
+      for (const edge of custom?.customRecaps?.edges ?? []) {
+        const customNode = edge?.node;
+        if (customNode?.uuid) {
+          picks.push({
+            kind: "custom",
+            uuid: String(customNode.uuid),
+            at: customNode.createdAt || customNode.eventDate || "",
+          });
+        }
       }
       picks.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
-      const next = picks[0];
+      const fetchedQueueItems = picks.map((p) => ({
+        uuid: p.uuid,
+        isCustom: p.kind === "custom",
+        href: reviewRecapPath(p.kind, p.uuid, returnFilters),
+        approved: false,
+        archived: false,
+      }));
+      const next = pickNextReviewItem(fetchedQueueItems);
       if (!next) {
         showAlert("Nothing waiting for review.", "info");
         return;
       }
-      navigate(reviewRecapPath(next.kind, next.uuid));
+      saveRecapReviewQueue({
+        items: fetchedQueueItems,
+        lastOpenedUuid: next.uuid,
+        returnHref: currentReturnHref,
+      });
+      navigate(next.href);
     } catch {
       showAlert("Couldn't open the next recap.", "error");
     } finally {
       setReviewNextBusy(false);
     }
   }, [
-    activationFilter,
+    currentReturnHref,
     environment,
     isClient,
     navigate,
+    queueItems,
+    returnFilters,
     reviewNextBusy,
     showAlert,
     statusFilter,
     tenantId,
-    visibleRecaps,
   ]);
 
   useEffect(() => {
@@ -2178,7 +2435,8 @@ export default function SparkRecapsList() {
         setFocusedIdx((i) => Math.max(0, (i < 0 ? 0 : i) - 1));
       } else if (e.key === "Enter" && focused) {
         e.preventDefault();
-        navigate(recapHref(focused, statusFilter, activationFilter));
+        handleOpenRecap(focused);
+        navigate(recapHref(focused, statusFilter, activationFilter, returnFilters));
       } else if (e.key === "Escape" && focusedIdx !== -1) {
         e.preventDefault();
         setFocusedIdx(-1);
@@ -2186,7 +2444,7 @@ export default function SparkRecapsList() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [focusedIdx, navigate, showHelp, statusFilter, activationFilter, visibleRecaps]);
+  }, [focusedIdx, handleOpenRecap, navigate, returnFilters, showHelp, statusFilter, activationFilter, visibleRecaps]);
 
   // ─── Campaign report multi-select ────────────────────────────
   // Set of recap.id (relay id) the user has ticked. Survives filter
@@ -2230,9 +2488,6 @@ export default function SparkRecapsList() {
   const [commitBulkApprove, isBulkApproving] =
     useMutation<BulkApproveRecapsMutationType>(BulkApproveRecapsMutation);
   const [approvePhase, setApprovePhase] = useState<ActionPhase>("idle");
-  const [justApprovedIds, setJustApprovedIds] = useState<Set<string>>(
-    () => new Set(),
-  );
   // Detail approve/archive sets refreshRecaps / session flag so we skip
   // store-or-network and drop the row from Needs review without F5.
   const [refreshKey, setRefreshKey] = useState(() => {
@@ -3545,6 +3800,10 @@ export default function SparkRecapsList() {
             refreshKey={refreshKey}
             density={density}
             needsStoreMap={needsStoreMap}
+            targetPage={page}
+            onPageChange={setPage}
+            returnFilters={returnFilters}
+            onOpenRecap={handleOpenRecap}
             focusedId={
               focusedIdx >= 0 ? visibleRecaps[focusedIdx]?.uuid ?? null : null
             }

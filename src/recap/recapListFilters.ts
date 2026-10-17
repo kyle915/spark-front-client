@@ -183,18 +183,68 @@ export function normalizeRecapListStatus(
   return null;
 }
 
+export type RecapListReturnFilters = {
+  q?: string | null;
+  retailer?: string | null;
+  state?: string | null;
+  rmm?: string | null;
+  ba?: string | null;
+  from?: string | null;
+  to?: string | null;
+  range?: string | null;
+  page?: number | null;
+};
+
 export function withRecapListReturn(
   href: string,
   listStatus?: string | null,
   listActivation?: string | null,
+  extra?: RecapListReturnFilters | null,
 ): string {
   const status = normalizeRecapListStatus(listStatus);
   const activation = normalizeRecapActivationFilter(listActivation);
-  if (!status && activation === "all") return href;
+  const qVal = extra?.q?.trim() || "";
+  const retailer =
+    extra?.retailer && extra.retailer !== "all" ? extra.retailer : "";
+  const state = extra?.state && extra.state !== "all" ? extra.state : "";
+  const rmm = extra?.rmm && extra.rmm !== "all" ? extra.rmm : "";
+  const ba = extra?.ba?.trim() || "";
+  const from = extra?.from?.trim() || "";
+  const to = extra?.to?.trim() || "";
+  const range = extra?.range?.trim() || "";
+  const page =
+    extra?.page && Number.isFinite(extra.page) && extra.page > 1
+      ? Math.floor(extra.page)
+      : null;
+
+  if (
+    !status &&
+    activation === "all" &&
+    !qVal &&
+    !retailer &&
+    !state &&
+    !rmm &&
+    !ba &&
+    !from &&
+    !to &&
+    !range &&
+    !page
+  ) {
+    return href;
+  }
   const [path, query = ""] = href.split("?");
   const params = new URLSearchParams(query);
   if (status) params.set("fromStatus", status);
   if (activation !== "all") params.set("fromActivation", activation);
+  if (qVal) params.set("fromQ", qVal);
+  if (retailer) params.set("fromRetailer", retailer);
+  if (state) params.set("fromState", state);
+  if (rmm) params.set("fromRmm", rmm);
+  if (ba) params.set("fromBa", ba);
+  if (from) params.set("fromFrom", from);
+  if (to) params.set("fromTo", to);
+  if (range) params.set("fromRange", range);
+  if (page) params.set("fromPage", String(page));
   const q = params.toString();
   return q ? `${path}?${q}` : path;
 }
@@ -210,6 +260,20 @@ export function recapsListHrefFromReturn(opts: {
   const fromActivation = normalizeRecapActivationFilter(
     opts.searchParams.get("fromActivation") ?? opts.fallbackActivation,
   );
+  const fromQ = (opts.searchParams.get("fromQ") ?? "").trim();
+  const fromRetailer = opts.searchParams.get("fromRetailer") ?? "";
+  const fromState = opts.searchParams.get("fromState") ?? "";
+  const fromRmm = opts.searchParams.get("fromRmm") ?? "";
+  const fromBa = (opts.searchParams.get("fromBa") ?? "").trim();
+  const fromFrom =
+    opts.searchParams.get("fromFrom") ??
+    opts.searchParams.get("fromDateFrom") ??
+    "";
+  const fromTo =
+    opts.searchParams.get("fromTo") ??
+    opts.searchParams.get("fromDateTo") ??
+    "";
+  const fromRange = opts.searchParams.get("fromRange") ?? "";
   const pageRaw = Number(opts.searchParams.get("fromPage") ?? "");
   const page =
     Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : null;
@@ -218,10 +282,155 @@ export function recapsListHrefFromReturn(opts: {
   const params = new URLSearchParams();
   if (fromStatus) params.set("status", fromStatus);
   if (fromActivation !== "all") params.set("activation", fromActivation);
+  if (fromQ) params.set("q", fromQ);
+  if (fromRetailer && fromRetailer !== "all") {
+    params.set("retailer", fromRetailer);
+  }
+  if (fromState && fromState !== "all") params.set("state", fromState);
+  if (fromRmm && fromRmm !== "all") params.set("rmm", fromRmm);
+  if (fromBa) params.set("ba", fromBa);
+  if (fromFrom) params.set("from", fromFrom);
+  if (fromTo) params.set("to", fromTo);
+  if (fromRange && !fromFrom && !fromTo) params.set("range", fromRange);
   if (page && page > 1) params.set("page", String(page));
   if (after) params.set("after", after);
   const q = params.toString();
   return q ? `/recaps/list?${q}` : "/recaps/list";
+}
+
+export type ParsedRecapListUrlFilters = {
+  status: RecapListStatus;
+  activation: RecapActivationFilter;
+  q: string;
+  retailer: string;
+  state: string;
+  rmm: string;
+  ba: string;
+  from: string;
+  to: string;
+  page: number;
+};
+
+export function readRecapListUrlFilters(
+  searchParams: {
+    get: (key: string) => string | null;
+    has?: (key: string) => boolean;
+  },
+  opts: {
+    isClient: boolean;
+    defaultFrom: string;
+    defaultTo: string;
+    weekFrom: string;
+  },
+): ParsedRecapListUrlFilters {
+  const status = defaultRecapStatus(opts.isClient, searchParams.get("status"));
+  const activation = normalizeRecapActivationFilter(
+    searchParams.get("activation"),
+  );
+  const q = searchParams.get("q") ?? "";
+  const retailer = searchParams.get("retailer") || "all";
+  const state = searchParams.get("state") || "all";
+  const rmm = searchParams.get("rmm") || "all";
+  const ba = searchParams.get("ba") ?? "";
+  const range = searchParams.get("range");
+  const hasFrom = searchParams.has
+    ? searchParams.has("from")
+    : searchParams.get("from") !== null;
+  const hasTo = searchParams.has
+    ? searchParams.has("to")
+    : searchParams.get("to") !== null;
+
+  let from = opts.defaultFrom;
+  let to = opts.defaultTo;
+  if (hasFrom || hasTo) {
+    from = searchParams.get("from") ?? "";
+    to = searchParams.get("to") ?? "";
+  } else if (range === "all") {
+    from = "";
+    to = "";
+  } else if (range === "week") {
+    from = opts.weekFrom;
+    to = opts.defaultTo;
+  }
+
+  const pageRaw = Number(searchParams.get("page") ?? "");
+  const page =
+    Number.isFinite(pageRaw) && pageRaw >= 1 ? Math.floor(pageRaw) : 1;
+
+  return {
+    status,
+    activation,
+    q,
+    retailer,
+    state,
+    rmm,
+    ba,
+    from,
+    to,
+    page,
+  };
+}
+
+export function buildRecapListSearchParams(opts: {
+  isClient: boolean;
+  status: RecapListStatus;
+  activation: RecapActivationFilter;
+  q: string;
+  retailer: string;
+  state: string;
+  rmm: string;
+  ba: string;
+  from: string;
+  to: string;
+  defaultFrom: string;
+  defaultTo: string;
+  weekFrom?: string;
+  page?: number;
+}): URLSearchParams {
+  const params = new URLSearchParams();
+  const pipeline = opts.status === "draft" ? "needs_review" : opts.status;
+  const defaultStatus = defaultRecapStatus(opts.isClient, null);
+  if (pipeline !== defaultStatus) {
+    params.set("status", pipeline);
+  }
+  if (opts.activation && opts.activation !== "all") {
+    params.set("activation", opts.activation);
+  }
+  const qVal = opts.q.trim();
+  if (qVal) params.set("q", qVal);
+  if (opts.retailer && opts.retailer !== "all") {
+    params.set("retailer", opts.retailer);
+  }
+  if (opts.state && opts.state !== "all") {
+    params.set("state", opts.state);
+  }
+  if (opts.rmm && opts.rmm !== "all") {
+    params.set("rmm", opts.rmm);
+  }
+  const baVal = opts.ba.trim();
+  if (baVal) params.set("ba", baVal);
+
+  const isDefaultWindow =
+    opts.from === opts.defaultFrom && opts.to === opts.defaultTo;
+  if (!isDefaultWindow) {
+    if (!opts.from && !opts.to) {
+      params.set("range", "all");
+    } else if (
+      opts.weekFrom &&
+      opts.from === opts.weekFrom &&
+      opts.to === opts.defaultTo
+    ) {
+      params.set("range", "week");
+    } else {
+      if (opts.from) params.set("from", opts.from);
+      if (opts.to) params.set("to", opts.to);
+    }
+  }
+
+  if (opts.page && Number.isFinite(opts.page) && opts.page > 1) {
+    params.set("page", String(Math.floor(opts.page)));
+  }
+  return params;
 }
 
 /**
