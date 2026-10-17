@@ -1,5 +1,9 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  CHECK_IN_ANOTHER_GIG_HINT,
   CHECK_IN_SOMEWHERE_ELSE,
   clockInForTodayLabel,
   eventCalendarDate,
@@ -59,6 +63,27 @@ describe("leftoverCheckin", () => {
     );
     expect(clockInForTodayLabel("2026-10-16").toLowerCase()).not.toContain("clear");
     expect(CHECK_IN_SOMEWHERE_ELSE.toLowerCase()).not.toContain("log another");
+  });
+
+  it("names the clocked-out escape as another gig with plain helper copy", () => {
+    expect(CHECK_IN_SOMEWHERE_ELSE).toBe("Check-in for another gig");
+    expect(CHECK_IN_SOMEWHERE_ELSE.toLowerCase()).not.toContain("somewhere else");
+    expect(CHECK_IN_ANOTHER_GIG_HINT).toBe("Starting a different store or event?");
+  });
+
+  it("keeps the another-gig button out of the Time Clock button row", () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const src = readFileSync(join(here, "SparkCheckin.tsx"), "utf8");
+    const rowStart = src.indexOf('effectiveClock === "clocked_out" && !hasRecap');
+    const clockedOutRow = src.slice(rowStart, src.indexOf("{queuedClock ?", rowStart));
+    expect(clockedOutRow).toContain("File recap");
+    expect(clockedOutRow).not.toContain("CHECK_IN_SOMEWHERE_ELSE");
+    // The only render of the label is the standalone button below the card,
+    // with its helper copy and the existing start-another handler.
+    expect(src.match(/\{CHECK_IN_SOMEWHERE_ELSE\}/g)).toHaveLength(1);
+    const standalone = src.slice(src.indexOf("{CHECK_IN_ANOTHER_GIG_HINT}"));
+    expect(standalone).toContain("onClick={() => onStartAnother()}");
+    expect(standalone).toContain("{CHECK_IN_SOMEWHERE_ELSE}");
   });
 
   it("offers Finish only for an unsubmitted prior recap", () => {

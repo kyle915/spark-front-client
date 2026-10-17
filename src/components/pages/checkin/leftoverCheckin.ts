@@ -28,8 +28,13 @@ export const START_OVER_LINK = "Clocking in for a new shift? Tap here";
 /**
  * Clocked-out escape when the BA needs a different place/day — avoid
  * "Log another shift/event", which reads like a second punch on this day.
+ * Rendered as its own large button below the Time Clock card, never inside
+ * the current shift's Clock in / File recap row.
  */
-export const CHECK_IN_SOMEWHERE_ELSE = "Check in somewhere else";
+export const CHECK_IN_SOMEWHERE_ELSE = "Check-in for another gig";
+
+/** Helper copy above the another-gig button, outside the Time Clock card. */
+export const CHECK_IN_ANOTHER_GIG_HINT = "Starting a different store or event?";
 
 export const CLEAR_LEFTOVER_ERROR =
   "Couldn't start today's shift. Check your connection and try again.";

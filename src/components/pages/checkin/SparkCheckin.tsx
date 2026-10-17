@@ -94,6 +94,7 @@ import {
   type PendingMileage,
 } from "./offlineMileage";
 import {
+  CHECK_IN_ANOTHER_GIG_HINT,
   CHECK_IN_SOMEWHERE_ELSE,
   CLEAR_LEFTOVER_ERROR,
   finishPriorRecapLabel,
@@ -3132,14 +3133,6 @@ function CheckedInFlow({
               <button style={secondaryBtn} onClick={() => openRecap(false)}>
                 {draftWaiting ? "Continue your recap" : "File recap"}
               </button>
-              {ctx.mode === "tenant" && !leftover ? (
-                <button
-                  style={secondaryBtn}
-                  onClick={() => onStartAnother()}
-                >
-                  {CHECK_IN_SOMEWHERE_ELSE}
-                </button>
-              ) : null}
             </>
           ) : null}
         </div>
@@ -3162,6 +3155,32 @@ function CheckedInFlow({
           <p style={errText}>{msg}</p>
         ) : null}
       </div>
+
+      {/* Another gig — deliberately outside the Time Clock card so it cannot
+          be mistaken for an action on this shift. Same start-another flow as
+          before; Clock in / File recap above stay with the current shift. */}
+      {effectiveClock === "clocked_out" && !hasRecap && ctx.mode === "tenant" && !leftover ? (
+        <div>
+          <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 8px", textAlign: "center" }}>
+            {CHECK_IN_ANOTHER_GIG_HINT}
+          </p>
+          <button
+            style={{
+              ...secondaryBtn,
+              width: "100%",
+              flex: "none",
+              minHeight: 56,
+              padding: "16px 18px",
+              fontSize: 16,
+              fontWeight: 700,
+              background: "#fff",
+            }}
+            onClick={() => onStartAnother()}
+          >
+            {CHECK_IN_SOMEWHERE_ELSE}
+          </button>
+        </div>
+      ) : null}
 
       {/* Same-day wrong store / new shift. A new calendar day uses the gate
           above instead of this link. */}
