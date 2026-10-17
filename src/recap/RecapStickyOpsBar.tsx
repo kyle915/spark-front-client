@@ -6,6 +6,8 @@ export type RecapStickyQueueNav = {
   prevHref: string | null;
   nextHref: string | null;
   onNavigate: (href: string) => void;
+  /** True while the next recap page is still resolving. */
+  pending?: boolean;
 };
 
 /**
@@ -38,6 +40,7 @@ export function RecapStickyOpsBar({
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (isTypingTarget(e.target)) return;
       if (document.querySelector('[role="dialog"]')) return;
+      if (queueNav.pending) return;
       if (e.key === "[" || e.key === "k") {
         if (queueNav.prevHref) {
           e.preventDefault();
@@ -83,7 +86,7 @@ export function RecapStickyOpsBar({
         >
           <button
             type="button"
-            disabled={!queueNav.prevHref}
+            disabled={!queueNav.prevHref || queueNav.pending}
             onClick={() => {
               if (queueNav.prevHref) queueNav.onNavigate(queueNav.prevHref);
             }}
@@ -105,11 +108,11 @@ export function RecapStickyOpsBar({
               color: "rgba(255,255,255,0.7)",
             }}
           >
-            {queueNav.index} of {queueNav.total}
+            {queueNav.pending ? "Loading…" : `${queueNav.index} of ${queueNav.total}`}
           </span>
           <button
             type="button"
-            disabled={!queueNav.nextHref}
+            disabled={!queueNav.nextHref || queueNav.pending}
             onClick={() => {
               if (queueNav.nextHref) queueNav.onNavigate(queueNav.nextHref);
             }}
