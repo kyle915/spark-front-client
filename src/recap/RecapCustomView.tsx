@@ -1,4 +1,5 @@
 import Layout from "@/layout/Layout";
+import AskAiButton from "@/components/ai/AskAiButton";
 import { GetCustomRecapQuery } from "@/api/queries/CustomRecapsQuery";
 import type { CustomRecapsQueryDetailsQuery as CustomRecapsQueryDetailsQueryType } from "@/api/queries/__generated__/CustomRecapsQueryDetailsQuery.graphql";
 import { FileRecapCategoriesQuery } from "@/api/queries/FileRecapCategoriesQuery";
@@ -1519,6 +1520,14 @@ const RecapCustomViewInner = ({
                 updated from the mutation's selection set). */}
             {!isEditingValues ? (
               <div className="flex items-center gap-2 flex-wrap">
+                {!isClient && tenantId ? (
+                  <AskAiButton
+                    tenantId={tenantId}
+                    scope="recap"
+                    recapId={String(recap.id)}
+                    subjectLabel={recap.name ?? undefined}
+                  />
+                ) : null}
                 {recap.approved ? (
                   <>
                     <span className="chip chip-lime">

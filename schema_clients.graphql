@@ -6175,7 +6175,7 @@ type Query {
   campaignReport(requestId: ID!): CampaignReport
   campaignReportAiSummary(requestId: ID!): CampaignReportAiSummary!
   campaignReportAiAnswer(requestId: ID!, question: String!): CampaignReportAiAnswer!
-  tenantAiAnswer(tenantId: ID!, question: String!): TenantAiAnswer!
+  tenantAiAnswer(tenantId: ID!, question: String!, recapId: ID = null, eventId: ID = null): TenantAiAnswer!
   tenantKpis(tenantId: ID!, year: Int = null): TenantKpis!
   tenantActivationBreakdown(tenantId: ID!, startDate: String = null, endDate: String = null): TenantActivationBreakdown!
   tenantProgramHealth(tenantId: ID!, startDate: String = null, endDate: String = null): TenantProgramHealth!
@@ -6190,6 +6190,7 @@ type Query {
   tenantBaLeaderboard(tenantId: ID!, year: Int = null, startDate: String = null, endDate: String = null): [BaLeaderboardEntry!]!
   tenantGoals(tenantId: ID!, year: Int = null): TenantGoals!
   tenantInsights(tenantId: ID!, startDate: String = null, endDate: String = null): TenantInsights!
+  tenantWeeklyNarration(tenantId: ID!): TenantWeeklyNarration
   tenantSentiment(tenantId: ID!, year: Int = null): TenantSentiment
   recapQualityFlags(recapId: ID!, isCustom: Boolean! = false): RecapQualityResult!
   recapReviewerSummary(recapId: ID!, isCustom: Boolean! = false, generateIfMissing: Boolean! = false): RecapReviewerSummary
@@ -8237,6 +8238,14 @@ type TenantInsights {
   generatedAt: String
   items: [TenantInsightItem!]!
   scopeLabel: String
+}
+
+type TenantWeeklyNarration {
+  weekStart: String!
+  weekEnd: String!
+  body: String!
+  filedRecaps: Int!
+  generatedAt: String!
 }
 
 type TenantKpiComparison {

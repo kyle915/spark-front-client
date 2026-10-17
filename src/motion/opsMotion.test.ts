@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   ASK_AI_FOLLOWUPS,
+  EVENT_ASK_AI_FOLLOWUPS,
+  RECAP_ASK_AI_FOLLOWUPS,
   jumpOriginCss,
   recapReviewStatus,
   thoughtLabel,
@@ -35,6 +37,12 @@ describe("Ask AI follow-ups", () => {
       "Which BAs filed late?",
       "Which venues had zero samples?",
     ]);
+    expect(RECAP_ASK_AI_FOLLOWUPS).toEqual([
+      "What did shoppers say?",
+      "Anything off in the photos?",
+      "Which numbers were filed?",
+    ]);
+    expect(EVENT_ASK_AI_FOLLOWUPS[0]).toBe("What did shoppers say?");
   });
 });
 

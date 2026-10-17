@@ -16,8 +16,18 @@ import { graphql } from "react-relay";
  * the data) to show muted instead.
  */
 export const TenantAiAnswerQuery = graphql`
-  query TenantAiAnswerQuery($tenantId: ID!, $question: String!) {
-    tenantAiAnswer(tenantId: $tenantId, question: $question) {
+  query TenantAiAnswerQuery(
+    $tenantId: ID!
+    $question: String!
+    $recapId: ID
+    $eventId: ID
+  ) {
+    tenantAiAnswer(
+      tenantId: $tenantId
+      question: $question
+      recapId: $recapId
+      eventId: $eventId
+    ) {
       ok
       answer
       reason

@@ -15,6 +15,7 @@ import type { DashboardFilters } from "@/components/filters/FiltersPanel";
 import BelowFold from "@/components/insights/BelowFold";
 import PaceToGoalHero from "@/components/insights/PaceToGoalHero";
 import ExecutiveInsightsStrip from "@/components/insights/ExecutiveInsightsStrip";
+import WeeklyNarrationCard from "@/components/ai/WeeklyNarrationCard";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import { CountReel } from "@/motion/CountReel";
 import {
@@ -760,6 +761,8 @@ export function InsightsBody({
           />
         </Suspense>
       )}
+
+      {tenantId && <WeeklyNarrationCard tenantId={tenantId} />}
 
       {tenantId && (
         <Suspense fallback={null}>
