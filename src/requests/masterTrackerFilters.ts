@@ -5,7 +5,14 @@ export type TrackerDateRange =
   | "next90"
   | "past7"
   | "past30"
-  | "month";
+  | "month"
+  | "custom";
+
+/** Inclusive YYYY-MM-DD bounds for `when=custom&from=…&to=…`. */
+export type TrackerCustomRange = {
+  startDate: string;
+  endDate: string;
+};
 
 export type TrackerSortMode = "date-desc" | "date-asc" | "venue" | "status";
 
@@ -17,6 +24,7 @@ export const VALID_TRACKER_DATE_RANGES: readonly TrackerDateRange[] = [
   "past7",
   "past30",
   "month",
+  "custom",
 ] as const;
 
 export const VALID_TRACKER_STATUSES = [
@@ -34,9 +42,31 @@ export type TrackerUrlState = {
   dateRange: TrackerDateRange;
   market: string;
   planId: string | null;
+  /** Set only when `dateRange === "custom"` and from/to are valid. */
+  customRange: TrackerCustomRange | null;
 };
 
-/** Parse Master Tracker filter state from URL query params (`?status=`, `?when=`, `?market=`, `?plan=`). */
+const ISO_DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export function isTrackerIsoDay(value: string | null | undefined): boolean {
+  if (!value || !ISO_DAY_RE.test(value)) return false;
+  const d = new Date(`${value}T00:00:00Z`);
+  return (
+    Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === value
+  );
+}
+
+function parseCustomRange(
+  params: URLSearchParams,
+): TrackerCustomRange | null {
+  const from = (params.get("from") || "").trim();
+  const to = (params.get("to") || "").trim();
+  if (!isTrackerIsoDay(from) || !isTrackerIsoDay(to)) return null;
+  if (from > to) return null;
+  return { startDate: from, endDate: to };
+}
+
+/** Parse Master Tracker filter state from URL query params (`?status=`, `?when=`, `?market=`, `?plan=`, plus `?from=&to=` for `when=custom`). */
 export function parseTrackerUrlParams(
   params: URLSearchParams,
 ): TrackerUrlState {
@@ -48,11 +78,19 @@ export function parseTrackerUrlParams(
     : "active";
 
   const rawWhen = (params.get("when") || "").trim().toLowerCase();
-  const dateRange = (VALID_TRACKER_DATE_RANGES as readonly string[]).includes(
+  let dateRange = (VALID_TRACKER_DATE_RANGES as readonly string[]).includes(
     rawWhen,
   )
     ? (rawWhen as TrackerDateRange)
     : "all";
+
+  // `when=custom` is only meaningful with a valid inclusive from/to pair;
+  // otherwise fall back to "all" rather than inventing a range.
+  let customRange: TrackerCustomRange | null = null;
+  if (dateRange === "custom") {
+    customRange = parseCustomRange(params);
+    if (!customRange) dateRange = "all";
+  }
 
   const rawMarket = (params.get("market") || "").trim().toUpperCase();
   const market = rawMarket && rawMarket !== "ALL" ? rawMarket : "all";
@@ -60,7 +98,7 @@ export function parseTrackerUrlParams(
   const rawPlan = (params.get("plan") || "").trim();
   const planId = rawPlan || null;
 
-  return { status, dateRange, market, planId };
+  return { status, dateRange, market, planId, customRange };
 }
 
 /** Merge updated Master Tracker filter values into URLSearchParams, omitting defaults to keep URLs clean. */
@@ -81,6 +119,25 @@ export function buildTrackerUrlParams(
       next.set("when", patch.dateRange);
     } else {
       next.delete("when");
+    }
+    // A preset range supersedes any custom bounds carried in the URL.
+    if (patch.dateRange !== "custom") {
+      next.delete("from");
+      next.delete("to");
+    }
+  }
+
+  if (patch.customRange !== undefined) {
+    if (patch.customRange) {
+      next.set("when", "custom");
+      next.set("from", patch.customRange.startDate);
+      next.set("to", patch.customRange.endDate);
+    } else {
+      next.delete("from");
+      next.delete("to");
+      if (patch.dateRange === undefined && next.get("when") === "custom") {
+        next.delete("when");
+      }
     }
   }
 
@@ -103,11 +160,22 @@ const ACTIVE_STATUS_SLUGS = ["pending", "queue", "approved", "scheduled"] as con
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 /** Map tracker date chips to inclusive YYYY-MM-DD bounds for RequestFiltersInput. */
-export function trackerDateRangeToServer(dateRange: TrackerDateRange): {
+export function trackerDateRangeToServer(
+  dateRange: TrackerDateRange,
+  customRange?: TrackerCustomRange | null,
+): {
   startDate?: string;
   endDate?: string;
 } {
   if (dateRange === "all") return {};
+  if (dateRange === "custom") {
+    return customRange &&
+      isTrackerIsoDay(customRange.startDate) &&
+      isTrackerIsoDay(customRange.endDate) &&
+      customRange.startDate <= customRange.endDate
+      ? { startDate: customRange.startDate, endDate: customRange.endDate }
+      : {};
+  }
 
   const today = new Date();
   const todayIso = isoDate(today);

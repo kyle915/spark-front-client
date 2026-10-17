@@ -27,6 +27,8 @@ import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { requestDateKey } from "@/lib/requestDateKey";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { buildTrackerUrlParams } from "@/requests/masterTrackerFilters";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import DashboardProgramSwitch from "@/field/DashboardProgramSwitch";
 import { isTorchTenant } from "@/field/torch";
@@ -43,9 +45,9 @@ const AccountMapBody = lazy(() =>
   })),
 );
 
-const ApprovalsBody = lazy(() =>
-  import("@/components/pages/approvals/SparkApprovals").then((m) => ({
-    default: m.ApprovalsBody,
+const ClientApprovalsBody = lazy(() =>
+  import("@/components/pages/approvals/SparkClientApprovals").then((m) => ({
+    default: m.ClientApprovalsBody,
   })),
 );
 
@@ -66,6 +68,9 @@ type DayBucket = {
   key: string; // YYYY-MM-DD
   label: string; // "Mon May 26"
   count: number;
+  /** Inclusive YYYY-MM-DD bounds this bucket counts — tracker drill-down. */
+  startDate: string;
+  endDate: string;
 };
 
 // ────────────────────────────────────────────────────────────
@@ -106,6 +111,10 @@ const WeekAheadPanel: React.FC<{
     ClientWeekAheadQuery,
     {
       // Busy tenants can schedule hundreds of demos in a quarter window.
+      // Keep first:1000 — the query is already server-bounded to the
+      // visible horizon (startDate/endDate below), and lowering the cap
+      // would silently truncate buckets/top-retailers for busy tenants
+      // at 90d, undercounting the panel.
       first: 1000,
       filters: tenantId
         ? {
@@ -126,11 +135,19 @@ const WeekAheadPanel: React.FC<{
   const aheadBuckets: DayBucket[] = useMemo(() => {
     const today = startOfDay(new Date());
     const buckets: DayBucket[] = [];
+    const horizonEnd = new Date(today);
+    horizonEnd.setDate(today.getDate() + horizonDays - 1);
     if (horizonDays === 7) {
       for (let i = 0; i < 7; i++) {
         const d = new Date(today);
         d.setDate(today.getDate() + i);
-        buckets.push({ key: dayKey(d), label: fmtDayLabel(d), count: 0 });
+        buckets.push({
+          key: dayKey(d),
+          label: fmtDayLabel(d),
+          count: 0,
+          startDate: dayKey(d),
+          endDate: dayKey(d),
+        });
       }
     } else if (horizonDays === 30) {
       for (let w = 0; w < 5; w++) {
@@ -138,19 +155,34 @@ const WeekAheadPanel: React.FC<{
         start.setDate(today.getDate() + w * 7);
         const end = new Date(start);
         end.setDate(start.getDate() + 6);
+        // Last weekly bucket is partial — clamp to the counted horizon.
+        const clampedEnd = end > horizonEnd ? horizonEnd : end;
         buckets.push({
           key: `w${w}-${dayKey(start)}`,
           label: `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
           count: 0,
+          startDate: dayKey(start),
+          endDate: dayKey(clampedEnd),
         });
       }
     } else {
       for (let m = 0; m < 3; m++) {
         const start = new Date(today.getFullYear(), today.getMonth() + m, 1);
+        const monthEnd = new Date(
+          today.getFullYear(),
+          today.getMonth() + m + 1,
+          0,
+        );
+        // Clamp to the counted horizon (today → today+horizon-1) so the
+        // drill-down shows exactly the events this bucket counted.
+        const clampedStart = start < today ? today : start;
+        const clampedEnd = monthEnd > horizonEnd ? horizonEnd : monthEnd;
         buckets.push({
           key: `m-${start.getFullYear()}-${start.getMonth()}`,
           label: start.toLocaleDateString("en-US", { month: "short" }),
           count: 0,
+          startDate: dayKey(clampedStart),
+          endDate: dayKey(clampedEnd),
         });
       }
     }
@@ -283,9 +315,26 @@ const WeekAheadPanel: React.FC<{
           {aheadBuckets.map((b) => {
             const heightPct = (b.count / maxWeekCount) * 100;
             return (
-              <div
+              <button
                 key={b.key}
-                className="flex flex-col items-stretch gap-2"
+                type="button"
+                onClick={() => {
+                  const params = buildTrackerUrlParams(
+                    new URLSearchParams(),
+                    {
+                      dateRange: "custom",
+                      customRange: {
+                        startDate: b.startDate,
+                        endDate: b.endDate,
+                      },
+                    },
+                  );
+                  navigate(`/requests/list?${params.toString()}`);
+                }}
+                aria-label={`${b.count} event${b.count === 1 ? "" : "s"} · ${b.label} (${b.startDate} to ${b.endDate}). View in Master Tracker`}
+                title={`${b.count} event${b.count === 1 ? "" : "s"} — view in Master Tracker`}
+                className="flex flex-col items-stretch gap-2 rounded-md text-left transition hover:opacity-80 focus-visible:outline-2"
+                style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
               >
                 <div
                   className="rounded-md self-stretch"
@@ -325,7 +374,7 @@ const WeekAheadPanel: React.FC<{
                     {b.label.toUpperCase()}
                   </p>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -556,18 +605,30 @@ const ClientInner: React.FC = () => {
 
       {/* Tab content */}
       {activeTab === "approvals" && (
-        <Suspense
+        <ErrorBoundary
           fallback={
             <div
               className="spark-card p-8 text-center text-sm"
               style={{ color: "rgba(255,255,255,0.55)" }}
             >
-              Loading approvals…
+              Approvals couldn&rsquo;t load — the rest of your dashboard
+              still works.
             </div>
           }
         >
-          <ApprovalsBody />
-        </Suspense>
+          <Suspense
+            fallback={
+              <div
+                className="spark-card p-8 text-center text-sm"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
+                Loading approvals…
+              </div>
+            }
+          >
+            <ClientApprovalsBody />
+          </Suspense>
+        </ErrorBoundary>
       )}
 
       {activeTab === "map" && (
