@@ -141,6 +141,7 @@ import PushToPlanButton from "@/field/PushToPlanButton";
 import { RecapPhotoReusePanel } from "./RecapPhotoReusePanel";
 
 const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
+const RecapReviewerSummary = lazy(() => import("./RecapReviewerSummary"));
 
 // Custom-field type → control kind. Field-type names are lowercase by
 // convention (text / number / image / longtext / select / multiselect);
@@ -1691,6 +1692,16 @@ const RecapCustomViewInner = ({
               </div>
             )}
           </div>
+
+          {!isClient && (
+            <Suspense fallback={null}>
+              <RecapReviewerSummary
+                recapId={recap.id}
+                isCustom
+                needsReview={!recap.approved && !recap.archivedAt}
+              />
+            </Suspense>
+          )}
 
           <RecapDocument status={recap.approved ? "APPROVED" : "DRAFT"}>
           <div className="space-y-6">
