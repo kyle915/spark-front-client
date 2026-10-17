@@ -18,6 +18,7 @@ import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import { RecapPhotoReusePanel } from "./RecapPhotoReusePanel";
+import AskAiButton from "@/components/ai/AskAiButton";
 import { RecapDetailSkeleton } from "@/layout/PageSkeletons";
 import { RecapQuery } from "@/api/queries/RecapQuery";
 import type { RecapQuery as RecapQueryType } from "@api/queries/__generated__/RecapQuery.graphql";
@@ -1155,6 +1156,14 @@ const SparkRecapInner: React.FC<{
                 ? `Zipping ${allFiles.length}…`
                 : `⬇ Download photos (${allFiles.length})`}
             </button>
+            {!isClient && fileCategoryTenantId !== "0" ? (
+              <AskAiButton
+                tenantId={String(fileCategoryTenantId)}
+                scope="recap"
+                recapId={String(recap.id)}
+                subjectLabel={recap.name ?? undefined}
+              />
+            ) : null}
             <button
               onClick={openShare}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition"

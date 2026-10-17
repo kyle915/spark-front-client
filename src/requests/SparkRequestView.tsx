@@ -2,6 +2,7 @@ import { Fragment, Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useLocation, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
+import AskAiButton from "@/components/ai/AskAiButton";
 import LocationMap from "@shared/LocationMap";
 import { useAlertStore } from "@/store/alertStore";
 import { useAuthStore } from "@/store/authStore";
@@ -664,6 +665,24 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
 
       {/* Quick actions row */}
       <div className="flex flex-wrap gap-2">
+        {role.isAdmin && request.tenantId
+          ? (request.events ?? [])
+              .filter((ev): ev is NonNullable<typeof ev> => Boolean(ev?.id))
+              .map((ev) => (
+                <AskAiButton
+                  key={String(ev.id)}
+                  tenantId={String(request.tenant?.id ?? request.tenantId)}
+                  scope="event"
+                  eventId={String(ev.id)}
+                  subjectLabel={ev.name || "this event"}
+                  label={
+                    (request.events ?? []).filter(Boolean).length > 1
+                      ? `Ask AI · ${ev.name || "event"}`
+                      : undefined
+                  }
+                />
+              ))
+          : null}
         {canApprove && (
           <button
             onClick={() => setApproveOpen(true)}

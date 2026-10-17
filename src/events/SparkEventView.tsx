@@ -20,6 +20,7 @@ import { displayBaCount } from "@/public/form/eventActivationSchedule";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 import Layout from "@/layout/Layout";
+import AskAiButton from "@/components/ai/AskAiButton";
 import useSparkRole from "@/hooks/useSparkRole";
 import { useAuthStore } from "@/store/authStore";
 
@@ -550,6 +551,14 @@ const Inner: React.FC<{ uuid: string; backTo: string }> = ({
                 LINKED SHIFT
               </button>
             )}
+          {role.isAdmin && event.tenantId ? (
+            <AskAiButton
+              tenantId={String(event.tenantId)}
+              scope="event"
+              eventId={String(event.id)}
+              subjectLabel={event.name ?? undefined}
+            />
+          ) : null}
           {role.isAdmin && (
             <>
               <button

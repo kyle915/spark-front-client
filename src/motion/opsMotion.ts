@@ -10,6 +10,20 @@ export const ASK_AI_FOLLOWUPS = [
   "Which venues had zero samples?",
 ] as const;
 
+export const RECAP_ASK_AI_FOLLOWUPS = [
+  "What did shoppers say?",
+  "Anything off in the photos?",
+  "Which numbers were filed?",
+] as const;
+
+export const EVENT_ASK_AI_FOLLOWUPS = [
+  "What did shoppers say?",
+  "Anything off in the photos?",
+  "What was filed on this event?",
+] as const;
+
+export type AskAiScope = "tenant" | "recap" | "event";
+
 export function thoughtSeconds(elapsedMs: number): number {
   if (!Number.isFinite(elapsedMs) || elapsedMs < 0) return 1;
   return Math.max(1, Math.round(elapsedMs / 1000));

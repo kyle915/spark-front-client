@@ -7,9 +7,12 @@ import AiMarkdown from "./AiMarkdown";
 import AiChartView, { type AiChart } from "./AiChartView";
 import {
   ASK_AI_FOLLOWUPS,
+  EVENT_ASK_AI_FOLLOWUPS,
+  RECAP_ASK_AI_FOLLOWUPS,
   jumpOriginFromElement,
   thoughtLabel,
   thoughtSeconds,
+  type AskAiScope,
   type JumpOrigin,
 } from "@/motion/opsMotion";
 import SparkOverlay from "@/shared/SparkOverlay";
@@ -53,12 +56,73 @@ const limeBtn: React.CSSProperties = {
   boxShadow: "0 0 24px rgba(197,245,70,0.35)",
 };
 
+type ScopeCopy = {
+  kicker: string;
+  title: string;
+  blurb: string;
+  placeholder: string;
+  followups: readonly string[];
+};
+
+function scopeCopy(
+  scope: AskAiScope,
+  tenantName?: string,
+  subjectLabel?: string,
+): ScopeCopy {
+  switch (scope) {
+    case "tenant":
+      return {
+        kicker: "Ask AI",
+        title: tenantName ? `Ask about ${tenantName}.` : "Ask about this client.",
+        blurb:
+          "Answers draw on this client's whole program — every event, recap, and KPI we have.",
+        placeholder: "Ask anything about this client's program…",
+        followups: ASK_AI_FOLLOWUPS,
+      };
+    case "recap":
+      return {
+        kicker: "Ask AI · this recap",
+        title: subjectLabel ? `Ask about ${subjectLabel}.` : "Ask about this recap.",
+        blurb:
+          "Answers use only this recap's filed fields, notes, stored KPIs, and photo metadata.",
+        placeholder: "Ask about this recap…",
+        followups: RECAP_ASK_AI_FOLLOWUPS,
+      };
+    case "event":
+      return {
+        kicker: "Ask AI · this event",
+        title: subjectLabel ? `Ask about ${subjectLabel}.` : "Ask about this event.",
+        blurb:
+          "Answers use only this event's filed recaps, notes, stored KPIs, and photo metadata.",
+        placeholder: "Ask about this event…",
+        followups: EVENT_ASK_AI_FOLLOWUPS,
+      };
+    default: {
+      const _never: never = scope;
+      return _never;
+    }
+  }
+}
+
 const AskAiModal: React.FC<{
   tenantId: string;
   tenantName?: string;
+  scope: AskAiScope;
+  recapId?: string | null;
+  eventId?: string | null;
+  subjectLabel?: string;
   origin?: JumpOrigin | null;
   onClose: () => void;
-}> = ({ tenantId, tenantName, origin = null, onClose }) => {
+}> = ({
+  tenantId,
+  tenantName,
+  scope,
+  recapId,
+  eventId,
+  subjectLabel,
+  origin = null,
+  onClose,
+}) => {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiAnswerResult | null>(null);
@@ -88,7 +152,12 @@ const AskAiModal: React.FC<{
       const data = await fetchQuery<TenantAiAnswerQueryType>(
         environment,
         TenantAiAnswerQuery,
-        { tenantId, question: q },
+        {
+          tenantId,
+          question: q,
+          recapId: scope === "recap" ? recapId ?? null : null,
+          eventId: scope === "event" ? eventId ?? null : null,
+        },
         { fetchPolicy: "network-only" },
       ).toPromise();
 
@@ -117,27 +186,24 @@ const AskAiModal: React.FC<{
       setThoughtFor(thoughtSeconds(Date.now() - startedAt.current));
       setLoading(false);
     }
-  }, [tenantId, question]);
+  }, [tenantId, question, scope, recapId, eventId]);
+
+  const copy = scopeCopy(scope, tenantName, subjectLabel);
 
   return (
     <SparkOverlay
       onClose={onClose}
       origin={origin}
       size="lg"
-      label="Ask AI about this client"
+      label={copy.title}
     >
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="spark-overlay-kicker" style={{ color: "var(--spark-lime)" }}>
-              Ask AI
+              {copy.kicker}
             </p>
-            <h2 className="spark-overlay-title">
-              {tenantName ? `Ask about ${tenantName}.` : "Ask about this client."}
-            </h2>
-            <p className="spark-overlay-copy">
-              Answers draw on this client&apos;s whole program — every event,
-              recap, and KPI we have.
-            </p>
+            <h2 className="spark-overlay-title">{copy.title}</h2>
+            <p className="spark-overlay-copy">{copy.blurb}</p>
           </div>
           <button
             type="button"
@@ -166,7 +232,7 @@ const AskAiModal: React.FC<{
             onChange={(e) => setQuestion(e.target.value)}
             disabled={loading}
             autoFocus
-            placeholder="Ask anything about this client's program…"
+            placeholder={copy.placeholder}
             className="flex-1 min-w-[220px] px-4 py-2 rounded-xl text-sm transition disabled:opacity-60"
             style={{
               background: "rgba(255,255,255,0.04)",
@@ -198,7 +264,7 @@ const AskAiModal: React.FC<{
                 <AiMarkdown>{result.answer}</AiMarkdown>
                 {result.chart ? <AiChartView chart={result.chart} /> : null}
                 <div className="spark-ops-followups">
-                  {ASK_AI_FOLLOWUPS.map((chip) => (
+                  {copy.followups.map((chip) => (
                     <button
                       key={chip}
                       type="button"
@@ -230,13 +296,29 @@ const AskAiButton: React.FC<{
   tenantName?: string;
   className?: string;
   variant?: "lime" | "text";
-}> = ({ tenantId, tenantName, className, variant = "lime" }) => {
+  scope?: AskAiScope;
+  recapId?: string | null;
+  eventId?: string | null;
+  subjectLabel?: string;
+  label?: string;
+}> = ({
+  tenantId,
+  tenantName,
+  className,
+  variant = "lime",
+  scope = "tenant",
+  recapId,
+  eventId,
+  subjectLabel,
+  label,
+}) => {
   const [open, setOpen] = useState(false);
   const [origin, setOrigin] = useState<JumpOrigin | null>(null);
 
-  // No tenant in scope → nothing to ask about. Hide rather than render a
-  // dead button.
   if (!tenantId) return null;
+  if (scope === "recap" && !recapId) return null;
+  if (scope === "event" && !eventId) return null;
+  const buttonLabel = label ?? (variant === "text" ? "Ask AI" : "✨ Ask AI");
 
   return (
     <>
@@ -265,12 +347,16 @@ const AskAiButton: React.FC<{
         }
         title="Ask AI a question about this client's program"
       >
-        {variant === "text" ? "Ask AI" : "✨ Ask AI"}
+        {buttonLabel}
       </button>
       {open && (
         <AskAiModal
           tenantId={tenantId}
           tenantName={tenantName}
+          scope={scope}
+          recapId={recapId}
+          eventId={eventId}
+          subjectLabel={subjectLabel}
           origin={origin}
           onClose={() => setOpen(false)}
         />
