@@ -8,9 +8,9 @@
  *   second shift = same calendar day, first filing already done
  *   leftover     = restored session whose event date is NOT today
  *
- * Never offer second-shift UI on a leftover prior-day session — even after
- * the BA taps "Stay on that day" — or the two flows become one confusing
- * prompt.
+ * Never offer second-shift UI on a leftover prior-day session — even if
+ * they open that day's recap to finish it — or the two flows become one
+ * confusing prompt.
  */
 
 import {

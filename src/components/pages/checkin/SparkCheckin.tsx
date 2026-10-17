@@ -84,16 +84,12 @@ import {
 import {
   CHECK_IN_SOMEWHERE_ELSE,
   CLEAR_LEFTOVER_ERROR,
+  finishPriorRecapLabel,
   isLeftoverCheckinSession,
   isPastDayWalkupSession,
-  LEFTOVER_BANNER_BODY,
-  LEFTOVER_BANNER_BODY_RECAP,
-  LEFTOVER_BANNER_TITLE,
-  LEFTOVER_ESCAPE_LINK,
   LEFTOVER_PRIMARY_BUSY,
-  LEFTOVER_PRIMARY_CTA,
-  LEFTOVER_PRIMARY_CTA_RECAP,
-  LEFTOVER_SECONDARY_CTA,
+  newDayPrimaryLabel,
+  offerFinishPriorRecap,
   PAST_DAY_NO_CLOCK,
   START_OVER_LINK,
 } from "./leftoverCheckin";
@@ -1270,6 +1266,16 @@ export default function SparkCheckin() {
   const identified = Boolean(token && ctx?.session);
   // Filed content only — the API's has_recap() ignores empty clock-out stubs.
   const hasRecap = Boolean(ctx?.session?.hasRecap);
+  const priorDaySession =
+    identified &&
+    ctx?.mode === "tenant" &&
+    isLeftoverCheckinSession(ctx?.event?.date, todayISO());
+  // True only while they chose to file the prior day's recap. Until then the
+  // new-day gate is the page, so yesterday's event title stays off screen.
+  const [priorRecapOpen, setPriorRecapOpen] = useState(false);
+  useEffect(() => {
+    if (!priorDaySession) setPriorRecapOpen(false);
+  }, [priorDaySession]);
 
   if (loadErr) {
     return (
@@ -1302,16 +1308,21 @@ export default function SparkCheckin() {
     );
   }
 
+  const hidePriorEvent = Boolean(priorDaySession && !priorRecapOpen);
+
   return (
     <Shell brand={ctx.brand}>
       <div style={{ width: "100%", maxWidth: 560 }}>
-        <Header ctx={ctx} />
+        {hidePriorEvent ? null : <Header ctx={ctx} />}
         {/* Sits directly under the header so it's present on the landing
             screen AND after clock-in — the BA asks "how do I pitch this?"
             at the table, not before they leave the house, and the
             photo-release QR is only ever needed with a consumer
-            standing in front of them. */}
-        <ResourceButtons resources={checkinResources(ctx)} accent={accent} />
+            standing in front of them. On a new-day gate the clock-in
+            button leads; guides sit under it. */}
+        {hidePriorEvent ? null : (
+          <ResourceButtons resources={checkinResources(ctx)} accent={accent} />
+        )}
         {!identified ? (
           <IdentifyStep
             code={code}
@@ -1336,8 +1347,12 @@ export default function SparkCheckin() {
             hasRecap={hasRecap}
             onRefresh={refresh}
             onStartAnother={startAnother}
+            onPriorRecapOpen={setPriorRecapOpen}
           />
         )}
+        {hidePriorEvent ? (
+          <ResourceButtons resources={checkinResources(ctx)} accent={accent} />
+        ) : null}
         <p style={{ fontSize: 11, opacity: 0.4, marginTop: 22, textAlign: "center" }}>
           Spark by Ignite
         </p>
@@ -2189,6 +2204,7 @@ function CheckedInFlow({
   hasRecap,
   onRefresh,
   onStartAnother,
+  onPriorRecapOpen,
 }: {
   code: string;
   token: string;
@@ -2198,6 +2214,7 @@ function CheckedInFlow({
   onStartAnother: () => void;
   hasRecap: boolean;
   onRefresh: () => Promise<void>;
+  onPriorRecapOpen: (open: boolean) => void;
 }) {
   const [busy, setBusy] = useState<"" | "in" | "out">("");
   const [inPhase, setInPhase] = useState<ActionPhase>("idle");
@@ -2270,19 +2287,14 @@ function CheckedInFlow({
     setShowRecap(true);
   };
   const [msg, setMsg] = useState<string | null>(null);
-  const [keepLeftover, setKeepLeftover] = useState(false);
   const [clearing, setClearing] = useState(false);
   const today = todayISO();
-  // Prior-day leftover banner (any standing code). Hidden only after the BA
-  // explicitly chooses "Stay on that day".
+  // Prior calendar day: the gate is the page until they open that recap.
   const leftover =
-    ctx.mode === "tenant" &&
-    !keepLeftover &&
-    isLeftoverCheckinSession(ctx.event?.date, today);
+    ctx.mode === "tenant" && isLeftoverCheckinSession(ctx.event?.date, today);
   const pastDay = isPastDayWalkupSession(ctx.event?.date, ctx.event?.startTime);
-  // Second shift is Feel Free + same calendar day only. Gate on the event
-  // date (not keepLeftover) so "Stay on that day" never shows "second shift
-  // today" on a prior-day session.
+  // Second shift is Feel Free + same calendar day only. A prior-day session
+  // never presents as a second shift, including while they finish that recap.
   const secondShiftOk = supportsStandingSecondShift({
     mode: ctx.mode,
     brand: ctx.brand,
@@ -2313,10 +2325,20 @@ function CheckedInFlow({
   // behind its button, draft intact.
   useEffect(() => {
     if (showRecap || showMileageStep) return;
+    // A new calendar day must not reopen yesterday's report. The gate leads.
+    if (
+      ctx.mode === "tenant" &&
+      isLeftoverCheckinSession(ctx.event?.date, todayISO())
+    ) {
+      return;
+    }
     const open = readOpenRecap(code, token);
     if (open === "existing" || (open === "new" && ctx.recapOnly)) openRecap(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    onPriorRecapOpen(showRecap || showMileageStep);
+  }, [onPriorRecapOpen, showMileageStep, showRecap]);
   useEffect(() => {
     writeOpenRecap(code, token, showRecap ? (recapAsNew ? "new" : "existing") : null);
   }, [code, token, showRecap, recapAsNew]);
@@ -2695,7 +2717,15 @@ function CheckedInFlow({
         payableMileage={activePayable}
         forceNew={recapAsNew && ctx.mode === "tenant"}
         busy={busy !== ""}
-        onBack={() => setShowMileageStep(false)}
+        onBack={() => {
+          setShowMileageStep(false);
+          if (
+            ctx.mode === "tenant" &&
+            isLeftoverCheckinSession(ctx.event?.date, todayISO())
+          ) {
+            setShowRecap(false);
+          }
+        }}
         onContinue={(miles) => {
           if (miles != null && Number.isFinite(miles)) {
             setConfirmedPayableMiles(miles);
@@ -2803,6 +2833,14 @@ function CheckedInFlow({
           null
         }
         onCancel={() => {
+          if (
+            ctx.mode === "tenant" &&
+            isLeftoverCheckinSession(ctx.event?.date, todayISO())
+          ) {
+            setShowMileageStep(false);
+            setShowRecap(false);
+            return;
+          }
           if (ctx.recapOnly && !hasRecap) onStartAnother();
           else setShowRecap(false);
         }}
@@ -2816,6 +2854,65 @@ function CheckedInFlow({
           setQueuedRecap(readPendingRecap(code));
         }}
       />
+    );
+  }
+
+  if (leftover) {
+    const offerFinish = offerFinishPriorRecap({
+      hasRecap,
+      clockState: effectiveClock,
+      recapOnly: ctx.recapOnly,
+      hasUnsubmittedWork: draftWaiting || Boolean(queuedRecap),
+    });
+    const finishLabel = finishPriorRecapLabel(ctx.event?.date);
+    return (
+      <div style={card}>
+        <div
+          style={{
+            fontSize: 12,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            opacity: 0.5,
+          }}
+        >
+          Today
+        </div>
+        <button
+          type="button"
+          style={{
+            ...primaryBtn(accent),
+            width: "100%",
+            flex: "none",
+            marginTop: 14,
+            minHeight: 56,
+            padding: "16px 18px",
+            fontSize: 18,
+          }}
+          disabled={clearing || busy !== ""}
+          onClick={() => void clearClockIn()}
+        >
+          {clearing ? LEFTOVER_PRIMARY_BUSY : newDayPrimaryLabel(today, ctx.recapOnly)}
+        </button>
+        {offerFinish ? (
+          <button
+            type="button"
+            style={{
+              ...secondaryBtn,
+              width: "100%",
+              flex: "none",
+              marginTop: 10,
+              minHeight: 40,
+              padding: "8px 12px",
+              fontSize: 14,
+            }}
+            disabled={clearing}
+            onClick={() => openRecap(false)}
+          >
+            {finishLabel}
+          </button>
+        ) : null}
+        {msg ? <p style={errText}>{msg}</p> : null}
+      </div>
     );
   }
 
@@ -2926,53 +3023,6 @@ function CheckedInFlow({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {leftover ? (
-        <div
-          style={{
-            ...card,
-            borderColor: "rgba(239, 90, 42, 0.35)",
-            background: "#fffaf7",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 12,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "#ef5a2a",
-            }}
-          >
-            {LEFTOVER_BANNER_TITLE}
-          </div>
-          <p style={{ fontSize: 15, fontWeight: 700, margin: "6px 0 4px" }}>
-            {fmtDay(ctx.event?.date)}
-            {ctx.event?.address ? ` · ${ctx.event.address}` : ""}
-          </p>
-          <p style={{ fontSize: 13, opacity: 0.7, margin: "0 0 12px" }}>
-            {ctx.recapOnly ? LEFTOVER_BANNER_BODY_RECAP : LEFTOVER_BANNER_BODY}
-          </p>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button
-              style={primaryBtn(accent)}
-              disabled={clearing || busy !== ""}
-              onClick={() => void clearClockIn()}
-            >
-              {clearing
-                ? LEFTOVER_PRIMARY_BUSY
-                : ctx.recapOnly
-                  ? LEFTOVER_PRIMARY_CTA_RECAP
-                  : LEFTOVER_PRIMARY_CTA}
-            </button>
-            <button
-              style={secondaryBtn}
-              disabled={clearing}
-              onClick={() => setKeepLeftover(true)}
-            >
-              {LEFTOVER_SECONDARY_CTA}
-            </button>
-          </div>
-        </div>
-      ) : null}
       <div style={card}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <div>
@@ -3163,21 +3213,19 @@ function CheckedInFlow({
         ) : null}
       </div>
 
-      {/* Wrong store / new shift on a shared standing link — BAs need a clear
-          escape before they punch the wrong day. Not offered mid-shift on a
-          per-event link, where there is no other event to move to. */}
-      {ctx.mode === "tenant" && (clockState === "clocked_in" || clockState === "not_started") ? (
+      {/* Same-day wrong store / new shift. A new calendar day uses the gate
+          above instead of this link. */}
+      {ctx.mode === "tenant" && !leftover && (clockState === "clocked_in" || clockState === "not_started") ? (
         <button
-          onClick={() => (leftover ? void clearClockIn() : onStartAnother())}
+          onClick={() => onStartAnother()}
           style={{
             background: "none",
             border: "none",
             padding: "8px 4px",
-            fontSize: leftover ? 13 : 15,
-            fontWeight: leftover ? 600 : 700,
+            fontSize: 15,
+            fontWeight: 700,
             lineHeight: 1.35,
-            color: leftover ? "inherit" : accent,
-            opacity: leftover ? 0.75 : 1,
+            color: accent,
             textDecoration: "underline",
             textUnderlineOffset: 3,
             cursor: "pointer",
@@ -3186,7 +3234,7 @@ function CheckedInFlow({
             maxWidth: "100%",
           }}
         >
-          {leftover ? LEFTOVER_ESCAPE_LINK : START_OVER_LINK}
+          {START_OVER_LINK}
         </button>
       ) : null}
 
