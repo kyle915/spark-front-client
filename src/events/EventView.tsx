@@ -10,7 +10,7 @@ const EventViewContent = ({ uuid, from }: { uuid: string; from: string }) => {
   const { event } = useLazyLoadQuery<EventUuidQueryType>(
     EventUuidQuery,
     { uuid },
-    { fetchPolicy: "network-only" },
+    { fetchPolicy: "store-and-network" },
   );
 
   if (!event) {

@@ -9,6 +9,8 @@ import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { RequestUuidQuery } from "@api/queries/RequestUuidQuery";
 import type { RequestUuidQuery as RequestUuidQueryType } from "@api/queries/__generated__/RequestUuidQuery.graphql";
+import { RequestFieldReportsQuery } from "@api/queries/RequestFieldReportsQuery";
+import type { RequestFieldReportsQuery as RequestFieldReportsQueryType } from "@api/queries/__generated__/RequestFieldReportsQuery.graphql";
 import { UsersQuery } from "@api/queries/UsersQuery";
 import type { UsersQuery as UsersQueryType } from "@api/queries/__generated__/UsersQuery.graphql";
 import InternalNotesPanel from "./InternalNotesPanel";
@@ -46,12 +48,14 @@ type RecapCard = {
   fileCount: number;
 };
 
-type RequestEvent = NonNullable<
-  NonNullable<RequestUuidQueryType["response"]["request"]>["events"]
+type FieldReportsEvent = NonNullable<
+  NonNullable<RequestFieldReportsQueryType["response"]["request"]>["events"]
 >[number];
-type LegacyRecap = NonNullable<NonNullable<RequestEvent>["recaps"]>[number];
+type LegacyRecap = NonNullable<
+  NonNullable<FieldReportsEvent>["recaps"]
+>[number];
 type CustomRecap = NonNullable<
-  NonNullable<RequestEvent>["customRecaps"]
+  NonNullable<FieldReportsEvent>["customRecaps"]
 >[number];
 
 const baNameFrom = (
@@ -360,7 +364,10 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
     RequestUuidQuery,
     { uuid },
     {
-      fetchPolicy: refreshKey > 0 ? "network-only" : "store-and-network",
+      // Cold open: serve the Relay store when warm (e.g. navigated from
+      // the tracker) instead of refetching; explicit refresh (load())
+      // still goes network-only via refreshKey / fetchKey.
+      fetchPolicy: refreshKey > 0 ? "network-only" : "store-or-network",
       fetchKey: refreshKey,
     },
   );
@@ -1319,8 +1326,20 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             </Fragment>
           ))}
 
-      {/* Field reports */}
-      <FieldReportsPanel request={request} />
+      {/* Field reports — lazy recap/file tree in its own Suspense so
+          the header/account sections above paint first. */}
+      <Suspense
+        fallback={
+          <div
+            className="spark-card p-5 text-sm"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+          >
+            Loading field reports…
+          </div>
+        }
+      >
+        <FieldReportsLoader requestUuid={String(request.uuid)} />
+      </Suspense>
 
       {/* Shift Replay */}
       {(request.events ?? [])
@@ -1577,10 +1596,23 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
 };
 
 // Field Reports — every recap submitted against the events on this
-// request.
+// request. Fetched by a separate lazy query (RequestFieldReportsQuery)
+// so the fat recap/recapFiles tree never blocks the request header.
 type FieldReportsRequest = NonNullable<
-  RequestUuidQueryType["response"]["request"]
+  RequestFieldReportsQueryType["response"]["request"]
 >;
+
+const FieldReportsLoader: React.FC<{ requestUuid: string }> = ({
+  requestUuid,
+}) => {
+  const data = useLazyLoadQuery<RequestFieldReportsQueryType>(
+    RequestFieldReportsQuery,
+    { uuid: requestUuid },
+    { fetchPolicy: "store-or-network" },
+  );
+  if (!data.request) return null;
+  return <FieldReportsPanel request={data.request} />;
+};
 
 const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
   request,
