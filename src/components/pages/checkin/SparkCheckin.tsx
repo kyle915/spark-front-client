@@ -112,6 +112,10 @@ import {
 } from "./photoQuality";
 import { browserPlayableContentType } from "@/utils/recapFileUrl";
 import {
+  computeUploadProgress,
+  formatUploadProgress,
+} from "./uploadProgress";
+import {
   CLOCK_FETCH_TIMEOUT_MS,
   clearCachedContext,
   clearPendingClock,
@@ -2900,6 +2904,13 @@ function RecapForm({
     Record<string, PhotoQualityWarning & { name: string }>
   >({});
   const photoHashes = useRef(new Map<string, string>());
+  // Deferred (post-upload) SHA-256 digests, keyed by photo id. The digest
+  // used to be awaited before the PUT could start; now it lands when it
+  // lands and submit merges it from this ref.
+  const shaByPhotoId = useRef(new Map<string, string>());
+  const shaPending = useRef(new Map<string, Promise<void>>());
+  const shaOf = (p: Photo): string | undefined =>
+    p.sha256 ?? shaByPhotoId.current.get(p.id);
 
   // Mileage step → RecapForm can race: lock miles into required field values
   // whenever the itinerary claim arrives (or updates).
@@ -2928,6 +2939,7 @@ function RecapForm({
   }, [payableMiles, template]);
 
   const uploadingCount = photos.filter((p) => p.state === "uploading").length;
+  const uploadProgress = computeUploadProgress(photos);
   const failedCount = photos.filter((p) => p.state === "failed").length;
   const doneCount = photos.filter((p) => p.state === "done").length;
   // Store Wi-Fi / one bar keeps navigator.onLine true while every request
@@ -3106,31 +3118,55 @@ function RecapForm({
     });
   };
 
+  // Advisory work that must never delay the PUT: SHA-256 (full-file digest),
+  // the tile thumbnail, and the server photo check. All of it runs after the
+  // upload has landed and patches the photo when it finishes — warnings and
+  // digests merge in whenever they arrive, and nothing here can reject.
+  const runDeferredPhotoChecks = (id: string, file: File) => {
+    if (!file.type.startsWith("image/") || submittedRef.current) return;
+    if (!photosRef.current.some((ph) => ph.id === id)) return;
+    const shaTask = (async () => {
+      const digest = await sha256Hex(file).catch(() => "");
+      if (!digest) return;
+      shaByPhotoId.current.set(id, digest);
+      patchPhoto(id, { sha256: digest });
+    })();
+    shaPending.current.set(id, shaTask);
+    void shaTask.finally(() => {
+      if (shaPending.current.get(id) === shaTask) shaPending.current.delete(id);
+    });
+    void (async () => {
+      const thumb = await makeThumbnail(file).catch(() => null);
+      if (!thumb || thumb === file) return;
+      if (!photosRef.current.some((ph) => ph.id === id)) return;
+      setPhotos((p) =>
+        p.map((ph) => {
+          if (ph.id !== id) return ph;
+          if (ph.previewUrl) URL.revokeObjectURL(ph.previewUrl);
+          return { ...ph, previewUrl: URL.createObjectURL(thumb) };
+        }),
+      );
+      if (!submittedRef.current) void saveDraftPhotoFile(code, token, id, thumb);
+    })();
+    runPhotoCheck(id, file);
+  };
+
   // Compress once — a raw iPhone shot is 3-5MB and a BA may file dozens from a
   // parking lot on LTE. The compressed copy becomes the photo's file (retries
   // reuse it) and is what's kept on the device for a reload; the original
   // never goes to IndexedDB, it's the big write a killed tab leaves half-done.
+  // Only compression stays on the critical path (the PUT needs those bytes);
+  // digest / thumbnail / photo-check moved to runDeferredPhotoChecks.
   const prepareOne = (id: string, original: File) =>
     photoPrep(async () => {
       const file = await compressImage(original);
-      const digest = file.type.startsWith("image/") ? await sha256Hex(file).catch(() => "") : "";
-      const thumb = file.type.startsWith("image/") ? await makeThumbnail(file) : null;
       setPhotos((p) =>
-        p.map((ph) => {
-          if (ph.id !== id) return ph;
-          let previewUrl = ph.previewUrl;
-          if (thumb && thumb !== original) {
-            if (previewUrl) URL.revokeObjectURL(previewUrl);
-            previewUrl = URL.createObjectURL(thumb);
-          }
-          return { ...ph, file, previewUrl, prepared: true, ...(digest ? { sha256: digest } : {}) };
-        }),
+        p.map((ph) => (ph.id === id ? { ...ph, file, prepared: true } : ph)),
       );
       if (file.type.startsWith("image/") && !submittedRef.current) {
         void saveDraftPhotoFile(code, token, id, file);
-        void runPhotoCheck(id, file);
       }
-      return { file, thumb };
+      return { file };
     });
 
   // Upload one photo, keyed by its stable id.
@@ -3148,8 +3184,8 @@ function RecapForm({
         void deleteDraftPhotoFiles(code, token, [id]);
         return;
       }
-      const { file, thumb } = alreadyPrepared
-        ? { file: original, thumb: null }
+      const { file } = alreadyPrepared
+        ? { file: original }
         : await prepareOne(id, original);
       const uploaded = await photoUploads(async () =>
         // Removed while it waited for a slot — don't spend the upload.
@@ -3168,9 +3204,11 @@ function RecapForm({
         autoRetry: false,
       });
       // Uploaded: a reload only needs the blob name and a preview now.
+      // Digest / thumbnail / advisory check run from here, off the upload
+      // path — the tile is already "done" before any of them start.
       if (photosRef.current.some((ph) => ph.id === id) && !submittedRef.current) {
-        if (thumb) void saveDraftPhotoFile(code, token, id, thumb);
-        else if (!file.type.startsWith("image/")) void deleteDraftPhotoFiles(code, token, [id]);
+        if (file.type.startsWith("image/")) runDeferredPhotoChecks(id, file);
+        else void deleteDraftPhotoFiles(code, token, [id]);
       }
     } catch (error) {
       const failedOffline = isOfflineClockFailure({ error });
@@ -3203,29 +3241,67 @@ function RecapForm({
   };
 
   // Advisory only: warn while the BA is still on site, never block the upload.
+  // Runs concurrently per photo (it used to walk the batch one photo at a
+  // time) and is launched after the uploads, so its CPU never delays a PUT.
+  // Duplicate resolution stays deterministic: hashes may land in any order,
+  // but the earliest photo in pick order keeps the hash and later copies warn.
   const assessPhotos = async (batch: Photo[]) => {
-    for (const ph of batch) {
-      if (ph.file.type.startsWith("video/") || ph.file.size === 0) continue;
-      let warning: PhotoQualityWarning | null = null;
-      try {
-        const hash = await quickPhotoHash(ph.file);
-        const prior = photoHashes.current.get(hash);
-        if (prior && prior !== ph.id) {
-          warning = { photoId: ph.id, kind: "duplicate", message: qualityMessage("duplicate") };
-        } else {
-          photoHashes.current.set(hash, ph.id);
-          const stats = await analyzePhotoFile(ph.file);
-          const kind = stats ? classifyPhotoQuality(stats) : null;
-          if (kind) warning = { photoId: ph.id, kind, message: qualityMessage(kind) };
+    const targets = batch.filter(
+      (ph) => !ph.file.type.startsWith("video/") && ph.file.size > 0,
+    );
+    const hashed = await Promise.all(
+      targets.map(async (ph) => {
+        try {
+          return { ph, hash: await quickPhotoHash(ph.file) };
+        } catch {
+          return { ph, hash: null as string | null };
         }
-      } catch {
-        warning = null;
-      }
-      if (warning && photosRef.current.some((p) => p.id === ph.id)) {
-        const w = warning;
-        setPhotoWarnings((prev) => ({ ...prev, [ph.id]: { ...w, name: ph.file.name } }));
+      }),
+    );
+    const duplicates = new Set<string>();
+    for (const { ph, hash } of hashed) {
+      if (!hash) continue;
+      const prior = photoHashes.current.get(hash);
+      if (prior && prior !== ph.id) {
+        duplicates.add(ph.id);
+        if (photosRef.current.some((p) => p.id === ph.id)) {
+          setPhotoWarnings((prev) => ({
+            ...prev,
+            [ph.id]: {
+              photoId: ph.id,
+              kind: "duplicate" as const,
+              message: qualityMessage("duplicate"),
+              name: ph.file.name,
+            },
+          }));
+        }
+      } else {
+        photoHashes.current.set(hash, ph.id);
       }
     }
+    await Promise.all(
+      targets
+        .filter((ph) => !duplicates.has(ph.id))
+        .map(async (ph) => {
+          try {
+            const stats = await analyzePhotoFile(ph.file);
+            const kind = stats ? classifyPhotoQuality(stats) : null;
+            if (kind && photosRef.current.some((p) => p.id === ph.id)) {
+              setPhotoWarnings((prev) => ({
+                ...prev,
+                [ph.id]: {
+                  photoId: ph.id,
+                  kind,
+                  message: qualityMessage(kind),
+                  name: ph.file.name,
+                },
+              }));
+            }
+          } catch {
+            /* advisory only — a failed check is no warning, never an error */
+          }
+        }),
+    );
   };
 
   const uploadFiles = async (files: FileList | null, category: string | null = null) => {
@@ -3256,8 +3332,11 @@ function RecapForm({
     // still sees the true remaining room.
     photosRef.current = [...photosRef.current, ...batch];
     setPhotos(photosRef.current);
+    // Uploads start first; quality/duplicate assessment runs alongside and
+    // merges its warnings in as they land.
+    const uploads = batch.map((ph) => uploadOne(ph.id, ph.file));
     void assessPhotos(batch);
-    await Promise.all(batch.map((ph) => uploadOne(ph.id, ph.file)));
+    await Promise.all(uploads);
   };
 
   // Put back what the last page life had — "Take photo" often costs the page
@@ -3354,6 +3433,8 @@ function RecapForm({
     for (const [hash, owner] of photoHashes.current) {
       if (owner === id) photoHashes.current.delete(hash);
     }
+    shaByPhotoId.current.delete(id);
+    shaPending.current.delete(id);
     void deleteDraftPhotoFiles(code, token, [id]);
   };
 
@@ -3415,6 +3496,11 @@ function RecapForm({
     if (usedCorpoCard == null) {
       return setErr("Please say whether a corporate card was used.");
     }
+    // Digests are computed after upload now; give any still-running one a
+    // moment so the recap carries it, but never let one block filing.
+    if (shaPending.current.size > 0) {
+      await Promise.allSettled([...shaPending.current.values()]);
+    }
     const donePhotos = photos.filter((p) => p.state === "done" && p.blobName);
     // Photos that FAILED must never block: a BA standing in a parking lot on
     // one bar has to be able to finish and clock out. The button label tells
@@ -3422,11 +3508,13 @@ function RecapForm({
     // Uploads still in flight get one warning; a second tap sends what landed.
     if (uploadingCount > 0) {
       const many = `${uploadingCount} photo${uploadingCount === 1 ? "" : "s"}`;
-      if (donePhotos.length === 0) return setErr(`Still uploading ${many} — one moment.`);
+      const progress = ` (${uploadProgress.percent}% done)`;
+      if (donePhotos.length === 0)
+        return setErr(`Still uploading ${many}${progress} — one moment.`);
       if (!leaveBehindArmed.current) {
         leaveBehindArmed.current = true;
         return setErr(
-          `Still uploading ${many}. Wait for ${uploadingCount === 1 ? "it" : "them"}, or tap Submit again to send the ${donePhotos.length} that finished.`,
+          `Still uploading ${many}${progress}. Wait for ${uploadingCount === 1 ? "it" : "them"}, or tap Submit again to send the ${donePhotos.length} that finished.`,
         );
       }
     }
@@ -3513,7 +3601,7 @@ function RecapForm({
             id: p.id,
             blobName: p.blobName,
             category: p.category,
-            ...(p.sha256 ? { sha256: p.sha256 } : {}),
+            ...(shaOf(p) ? { sha256: shaOf(p) } : {}),
             filename: p.file.name || "photo.jpg",
             contentType: browserPlayableContentType({
               type: p.file.type,
@@ -3569,7 +3657,7 @@ function RecapForm({
         files: donePhotos.map((p) => ({
           blobName: p.blobName,
           category: p.category,
-          ...(p.sha256 ? { sha256: p.sha256 } : {}),
+          ...(shaOf(p) ? { sha256: shaOf(p) } : {}),
         })),
         productSamples,
         totalEngagements,
@@ -3998,8 +4086,8 @@ function RecapForm({
       })()}
 
       {uploadingCount > 0 ? (
-        <p style={{ textAlign: "center", fontSize: 13, opacity: 0.7 }}>
-          Uploading photos… {photos.length - uploadingCount} of {photos.length} done
+        <p style={{ textAlign: "center", fontSize: 13, opacity: 0.7 }} aria-live="polite">
+          {formatUploadProgress(uploadProgress)}
         </p>
       ) : null}
 
