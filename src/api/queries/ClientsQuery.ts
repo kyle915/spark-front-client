@@ -1,9 +1,10 @@
 import { graphql } from "react-relay";
 
 export const ClientsQuery = graphql`
-  query ClientsQuery($filters: ClientFiltersInput!) {
-    clients(filters: $filters) {
+  query ClientsQuery($filters: ClientFiltersInput!, $first: Int, $after: String) {
+    clients(filters: $filters, first: $first, after: $after) {
       edges {
+        cursor
         node {
           __typename
           id
@@ -13,6 +14,11 @@ export const ClientsQuery = graphql`
           tenantId
         }
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
   }
 `;

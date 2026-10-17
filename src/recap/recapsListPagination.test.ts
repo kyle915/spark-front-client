@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   appendUniqueByUuid,
+  domWindowForIndex,
+  expandDomWindow,
   recapsListPageVariables,
+  RECAPS_DOM_WINDOW_SIZE,
   RECAPS_PAGE_SIZE,
 } from "./recapsListPagination";
 
@@ -32,6 +35,22 @@ describe("recapsListPageVariables", () => {
     expect(page2.first).toBe(50);
     expect(page2.after).toBe(page1EndCursor);
     expect(page2).not.toEqual({ first: 100, after: null });
+  });
+});
+
+describe("DOM window", () => {
+  it("expands by one chunk and clamps to the filtered total", () => {
+    expect(expandDomWindow(RECAPS_DOM_WINDOW_SIZE, 500)).toBe(
+      RECAPS_DOM_WINDOW_SIZE * 2,
+    );
+    expect(expandDomWindow(RECAPS_DOM_WINDOW_SIZE, 70)).toBe(70);
+    expect(expandDomWindow(0, 0)).toBe(RECAPS_DOM_WINDOW_SIZE);
+  });
+
+  it("grows to include a keyboard-focused row beyond the window", () => {
+    expect(domWindowForIndex(60, 10, 500)).toBe(60);
+    expect(domWindowForIndex(60, 119, 500)).toBe(120);
+    expect(domWindowForIndex(60, -1, 500)).toBe(60);
   });
 });
 

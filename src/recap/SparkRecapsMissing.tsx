@@ -103,6 +103,50 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
   // "Sending…" without freezing the others.
   const [nudgingId, setNudgingId] = useState<string | null>(null);
 
+  // Event-level selection for bulk nudge (nudging an event nudges every
+  // assigned BA on it via the same per-BA mutation).
+  const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
+  const [isBulkNudging, setIsBulkNudging] = useState(false);
+  const toggleEvent = (eventUuid: string) =>
+    setSelectedEvents((prev) => {
+      const next = new Set(prev);
+      if (next.has(eventUuid)) next.delete(eventUuid);
+      else next.add(eventUuid);
+      return next;
+    });
+  const selectedRows = useMemo(
+    () => rows.filter((r) => selectedEvents.has(r.eventUuid)),
+    [rows, selectedEvents],
+  );
+  const selectedBaCount = useMemo(
+    () =>
+      selectedRows.reduce((n, r) => n + r.assignedAmbassadors.length, 0),
+    [selectedRows],
+  );
+  const allSelected =
+    rows.length > 0 && rows.every((r) => selectedEvents.has(r.eventUuid));
+  const toggleAll = () =>
+    setSelectedEvents(
+      allSelected ? new Set() : new Set(rows.map((r) => r.eventUuid)),
+    );
+
+  type NudgeResult = {
+    success: boolean;
+    message?: string | null;
+    devicesNotified?: number | null;
+  };
+  const nudgeOne = (ambassadorEventUuid: string): Promise<NudgeResult> =>
+    new Promise((resolve) => {
+      commitNudge({
+        variables: { input: { ambassadorEventUuid } },
+        onCompleted: (res) =>
+          resolve(
+            res.nudgeAmbassadorForRecap ?? { success: false, message: null },
+          ),
+        onError: (err) => resolve({ success: false, message: err.message }),
+      });
+    });
+
   const nudge = (
     ambassadorEventUuid: string,
     venueLabel: string,
@@ -110,29 +154,53 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
   ) => {
     if (isNudging) return;
     setNudgingId(ambassadorEventUuid);
-    commitNudge({
-      variables: { input: { ambassadorEventUuid } },
-      onCompleted: (res) => {
-        setNudgingId(null);
-        const r = res.nudgeAmbassadorForRecap;
-        if (r?.success) {
-          showAlert(
-            `${name} nudged for ${venueLabel}${
-              r.devicesNotified != null
-                ? ` (${r.devicesNotified} device${r.devicesNotified === 1 ? "" : "s"})`
-                : ""
-            }.`,
-            "success",
-          );
-        } else {
-          showAlert(r?.message ?? "Nudge failed.", "warning");
-        }
-      },
-      onError: (err) => {
-        setNudgingId(null);
-        showAlert(err.message, "error");
-      },
+    void nudgeOne(ambassadorEventUuid).then((r) => {
+      setNudgingId(null);
+      if (r.success) {
+        showAlert(
+          `${name} nudged for ${venueLabel}${
+            r.devicesNotified != null
+              ? ` (${r.devicesNotified} device${r.devicesNotified === 1 ? "" : "s"})`
+              : ""
+          }.`,
+          "success",
+        );
+      } else {
+        showAlert(r.message ?? "Nudge failed.", "warning");
+      }
     });
+  };
+
+  const nudgeSelected = async () => {
+    if (isBulkNudging || isNudging || selectedBaCount === 0) return;
+    setIsBulkNudging(true);
+    let okCount = 0;
+    const failures: string[] = [];
+    // Sequential — same mutation as the per-row button, one BA at a time.
+    for (const row of selectedRows) {
+      for (const ba of row.assignedAmbassadors) {
+        setNudgingId(ba.ambassadorEventUuid);
+        const r = await nudgeOne(ba.ambassadorEventUuid);
+        if (r.success) okCount += 1;
+        else failures.push(`${ba.name}: ${r.message ?? "nudge failed"}`);
+      }
+    }
+    setNudgingId(null);
+    setIsBulkNudging(false);
+    setSelectedEvents(new Set());
+    if (failures.length === 0) {
+      showAlert(
+        `Nudged ${okCount} BA${okCount === 1 ? "" : "s"} across ${selectedRows.length} event${selectedRows.length === 1 ? "" : "s"}.`,
+        "success",
+      );
+    } else if (okCount > 0) {
+      showAlert(
+        `Nudged ${okCount}, failed ${failures.length}: ${failures[0]}`,
+        "warning",
+      );
+    } else {
+      showAlert(`Nudge failed: ${failures[0] ?? "unknown error"}`, "error");
+    }
   };
 
   if (rows.length === 0) {
@@ -238,12 +306,21 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
         style={{ paddingBottom: 2 }}
       >
         <span
-          className="mono"
+          className="mono flex items-center gap-3"
           style={{
             letterSpacing: "0.16em",
             color: "rgba(255,255,255,0.45)",
           }}
         >
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleAll}
+              aria-label="Select all events"
+            />
+            ALL
+          </label>
           {rows.length} EVENT{rows.length === 1 ? "" : "S"} OWING A RECAP
         </span>
         <button
@@ -259,6 +336,46 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
           ⇣ EXPORT CSV
         </button>
       </div>
+      {selectedEvents.size > 0 && (
+        <div
+          className="flex items-center gap-3 flex-wrap px-4 py-3 rounded-xl"
+          style={{
+            background: "rgba(197,245,70,0.08)",
+            border: "1px solid rgba(197,245,70,0.28)",
+          }}
+        >
+          <span
+            className="mono text-[11px]"
+            style={{ letterSpacing: "0.16em", color: "var(--spark-lime)" }}
+          >
+            {selectedEvents.size} SELECTED · {selectedBaCount} BA
+            {selectedBaCount === 1 ? "" : "S"}
+          </span>
+          <button
+            type="button"
+            onClick={() => void nudgeSelected()}
+            disabled={isBulkNudging || isNudging || selectedBaCount === 0}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+            style={{ background: "var(--spark-lime)", color: "#0a0d09" }}
+            title={
+              selectedBaCount === 0
+                ? "Selected events have no assigned BA to nudge"
+                : "Push 'Don't forget your recap' to every assigned BA on the selected events"
+            }
+          >
+            {isBulkNudging ? "Nudging…" : "🔔 Nudge selected"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedEvents(new Set())}
+            disabled={isBulkNudging}
+            className="mono text-[10px] disabled:opacity-50"
+            style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.55)" }}
+          >
+            ✕ CLEAR
+          </button>
+        </div>
+      )}
       {rows.map((row) => {
         const chip = overdueChipStyle(row.hoursOverdue ?? null);
         const venueLabel = row.venue || row.eventName;
@@ -269,6 +386,13 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
             style={{ borderRadius: 14 }}
           >
             <div className="flex items-start justify-between gap-3 flex-wrap">
+              <input
+                type="checkbox"
+                checked={selectedEvents.has(row.eventUuid)}
+                onChange={() => toggleEvent(row.eventUuid)}
+                aria-label={`Select ${venueLabel}`}
+                className="mt-1 shrink-0"
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <span
@@ -408,7 +532,7 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
                         onClick={() =>
                           nudge(ba.ambassadorEventUuid, venueLabel, ba.name)
                         }
-                        disabled={busy || isNudging}
+                        disabled={busy || isNudging || isBulkNudging}
                         className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
                         style={{
                           background: "transparent",
