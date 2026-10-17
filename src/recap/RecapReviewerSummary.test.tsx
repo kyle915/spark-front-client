@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { RecapReviewerSummaryCard } from "./RecapReviewerSummary";
+import { RecapReviewerSummaryCard } from "./RecapReviewerSummaryCard";
 
 const summary = {
   whatHappened: "Store demo filed 12 engagements.",
