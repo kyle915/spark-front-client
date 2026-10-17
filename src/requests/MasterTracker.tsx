@@ -42,6 +42,7 @@ import {
   trackerSortToServer,
   trackerStatusToServer,
   VALID_TRACKER_DATE_RANGES,
+  type TrackerCustomRange,
   type TrackerDateRange,
 } from "@/requests/masterTrackerFilters";
 import InternalNotesPanel from "./InternalNotesPanel";
@@ -975,6 +976,7 @@ const TrackerStatusCountsLoader: React.FC<{
   search: string;
   rmmFilter: string;
   dateRange: TrackerDateRange;
+  customRange: TrackerCustomRange | null;
   marketFilter: string;
   schedulingFilter: string;
   planId: string | null;
@@ -986,6 +988,7 @@ const TrackerStatusCountsLoader: React.FC<{
   search,
   rmmFilter,
   dateRange,
+  customRange,
   marketFilter,
   schedulingFilter,
   planId,
@@ -999,7 +1002,9 @@ const TrackerStatusCountsLoader: React.FC<{
   }, [search]);
 
   const filters = useMemo(() => {
-    const dateBounds = reqNeedle ? {} : trackerDateRangeToServer(dateRange);
+    const dateBounds = reqNeedle
+      ? {}
+      : trackerDateRangeToServer(dateRange, customRange);
     return {
       tenantId,
       rmmAsigned: rmmFilter === "all" ? null : rmmFilter,
@@ -1016,6 +1021,7 @@ const TrackerStatusCountsLoader: React.FC<{
     tenantId,
     rmmFilter,
     dateRange,
+    customRange,
     schedulingFilter,
     marketFilter,
     planId,
@@ -1028,6 +1034,8 @@ const TrackerStatusCountsLoader: React.FC<{
         tenantId,
         rmmFilter,
         dateRange,
+        customRange?.startDate ?? "",
+        customRange?.endDate ?? "",
         schedulingFilter,
         marketFilter,
         planId ?? "",
@@ -1038,6 +1046,7 @@ const TrackerStatusCountsLoader: React.FC<{
       tenantId,
       rmmFilter,
       dateRange,
+      customRange,
       schedulingFilter,
       marketFilter,
       planId,
@@ -1082,6 +1091,7 @@ const MasterTrackerInner: React.FC<{
   rmmFilter: string;
   groupBy: "none" | "date";
   dateRange: TrackerDateRange;
+  customRange: TrackerCustomRange | null;
   sortMode: "date-desc" | "date-asc" | "venue" | "status";
   marketFilter: string;
   schedulingFilter: string;
@@ -1103,6 +1113,7 @@ const MasterTrackerInner: React.FC<{
   rmmFilter,
   groupBy,
   dateRange,
+  customRange,
   sortMode,
   marketFilter,
   schedulingFilter,
@@ -1129,7 +1140,9 @@ const MasterTrackerInner: React.FC<{
 
   const serverFilters = useMemo(() => {
     if (!tenantId) return null;
-    const dateBounds = reqNeedle ? {} : trackerDateRangeToServer(dateRange);
+    const dateBounds = reqNeedle
+      ? {}
+      : trackerDateRangeToServer(dateRange, customRange);
     const statusBounds = reqNeedle ? {} : trackerStatusToServer(activeStatus);
     const sortBounds = reqNeedle ? {} : trackerSortToServer(sortMode);
     return {
@@ -1147,6 +1160,7 @@ const MasterTrackerInner: React.FC<{
     tenantId,
     rmmFilter,
     dateRange,
+    customRange,
     activeStatus,
     sortMode,
     schedulingFilter,
@@ -1161,6 +1175,8 @@ const MasterTrackerInner: React.FC<{
         tenantId,
         rmmFilter,
         dateRange,
+        customRange?.startDate ?? "",
+        customRange?.endDate ?? "",
         activeStatus,
         sortMode,
         schedulingFilter,
@@ -1173,6 +1189,7 @@ const MasterTrackerInner: React.FC<{
       tenantId,
       rmmFilter,
       dateRange,
+      customRange,
       activeStatus,
       sortMode,
       schedulingFilter,
@@ -1542,6 +1559,8 @@ export default function MasterTracker() {
   const [dateRange, setDateRange] = useState<TrackerDateRange>(
     initialUrlState.dateRange,
   );
+  const [customRange, setCustomRange] =
+    useState<TrackerCustomRange | null>(initialUrlState.customRange);
   // Client-side sort for venue / status urgency; date sort is server-side.
   const [sortMode, setSortMode] = useState<
     "date-desc" | "date-asc" | "venue" | "status"
@@ -1558,14 +1577,17 @@ export default function MasterTracker() {
   const whenParam = searchParams.get("when");
   const marketParam = searchParams.get("market");
   const planParam = searchParams.get("plan");
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
   useEffect(() => {
     const parsed = parseTrackerUrlParams(searchParams);
     setActiveStatus(parsed.status);
     setDateRange(parsed.dateRange);
+    setCustomRange(parsed.customRange);
     setMarketFilter(parsed.market);
     setPlanId(parsed.planId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusParam, whenParam, marketParam, planParam]);
+  }, [statusParam, whenParam, marketParam, planParam, fromParam, toParam]);
 
   const [markets, setMarkets] = useState<string[]>([]);
   // Scheduling-status filter — server-side via schedulingStatus.
@@ -1580,6 +1602,7 @@ export default function MasterTracker() {
   };
   const updateDateRangeFilter = (nextRange: TrackerDateRange) => {
     setDateRange(nextRange);
+    if (nextRange !== "custom") setCustomRange(null);
     setSearchParams(
       buildTrackerUrlParams(searchParams, { dateRange: nextRange }),
       { replace: true },
@@ -1634,8 +1657,11 @@ export default function MasterTracker() {
   );
   const applyView = (v: TrackerViewSnapshot) => {
     const nextStatus = v.activeStatus ?? "active";
-    const nextRange =
+    const foundRange =
       VALID_TRACKER_DATE_RANGES.find((d) => d === v.dateRange) ?? "all";
+    // Saved views don't capture custom from/to bounds, so a stored
+    // "custom" would have no range to apply — fall back to all dates.
+    const nextRange = foundRange === "custom" ? "all" : foundRange;
     const nextMarket = v.marketFilter ?? "all";
     setActiveStatus(nextStatus);
     setGroupBy(v.groupBy === "date" ? "date" : "none");
@@ -1648,6 +1674,7 @@ export default function MasterTracker() {
       ) ?? "date-desc",
     );
     setMarketFilter(nextMarket);
+    setCustomRange(null);
     setSchedulingFilter(v.schedulingFilter ?? "all");
     setSearchParams(
       buildTrackerUrlParams(searchParams, {
@@ -2049,6 +2076,14 @@ export default function MasterTracker() {
               { value: "month", label: "This month" },
               { value: "past7", label: "Past 7 days" },
               { value: "past30", label: "Past 30 days" },
+              ...(dateRange === "custom" && customRange
+                ? [
+                    {
+                      value: "custom",
+                      label: `Custom · ${customRange.startDate} → ${customRange.endDate}`,
+                    },
+                  ]
+                : []),
             ]}
           />
           <FilterSelect
@@ -2089,6 +2124,7 @@ export default function MasterTracker() {
             ]}
           />
           {(dateRange !== "all" ||
+            customRange !== null ||
             marketFilter !== "all" ||
             schedulingFilter !== "all" ||
             sortMode !== "date-desc" ||
@@ -2096,6 +2132,7 @@ export default function MasterTracker() {
             <button
               onClick={() => {
                 setDateRange("all");
+                setCustomRange(null);
                 setMarketFilter("all");
                 setSchedulingFilter("all");
                 setSortMode("date-desc");
@@ -2282,6 +2319,7 @@ export default function MasterTracker() {
               search={search}
               rmmFilter={rmmFilter}
               dateRange={dateRange}
+              customRange={customRange}
               marketFilter={marketFilter}
               schedulingFilter={schedulingFilter}
               planId={planId}
@@ -2323,6 +2361,7 @@ export default function MasterTracker() {
             rmmFilter={rmmFilter}
             groupBy={groupBy}
             dateRange={dateRange}
+            customRange={customRange}
             sortMode={sortMode}
             marketFilter={marketFilter}
             schedulingFilter={schedulingFilter}

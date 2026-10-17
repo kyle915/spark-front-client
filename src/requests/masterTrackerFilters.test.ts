@@ -35,6 +35,7 @@ describe("masterTrackerFilters", () => {
       dateRange: "all",
       market: "all",
       planId: null,
+      customRange: null,
     });
 
     expect(
@@ -46,6 +47,7 @@ describe("masterTrackerFilters", () => {
       dateRange: "next30",
       market: "CA",
       planId: "42",
+      customRange: null,
     });
 
     expect(
@@ -57,7 +59,71 @@ describe("masterTrackerFilters", () => {
       dateRange: "all",
       market: "all",
       planId: null,
+      customRange: null,
     });
+  });
+
+  it("parses a custom from/to range and rejects invalid ones", () => {
+    expect(
+      parseTrackerUrlParams(
+        new URLSearchParams("when=custom&from=2026-10-19&to=2026-10-25"),
+      ),
+    ).toMatchObject({
+      dateRange: "custom",
+      customRange: { startDate: "2026-10-19", endDate: "2026-10-25" },
+    });
+
+    for (const qs of [
+      "when=custom&from=2026-10-25&to=2026-10-19",
+      "when=custom&from=2026-02-30&to=2026-10-19",
+      "when=custom&from=2026-10-19",
+      "when=next7&from=2026-10-19&to=2026-10-25",
+    ]) {
+      expect(parseTrackerUrlParams(new URLSearchParams(qs))).toMatchObject({
+        customRange: null,
+      });
+    }
+    expect(
+      parseTrackerUrlParams(
+        new URLSearchParams("when=custom&from=bad&to=2026-10-19"),
+      ).dateRange,
+    ).toBe("all");
+  });
+
+  it("maps a custom range to server bounds", () => {
+    expect(
+      trackerDateRangeToServer("custom", {
+        startDate: "2026-10-19",
+        endDate: "2026-10-25",
+      }),
+    ).toEqual({ startDate: "2026-10-19", endDate: "2026-10-25" });
+    expect(trackerDateRangeToServer("custom", null)).toEqual({});
+    expect(
+      trackerDateRangeToServer("custom", {
+        startDate: "2026-10-25",
+        endDate: "2026-10-19",
+      }),
+    ).toEqual({});
+  });
+
+  it("builds and clears custom range params", () => {
+    const built = buildTrackerUrlParams(new URLSearchParams(), {
+      dateRange: "custom",
+      customRange: { startDate: "2026-10-19", endDate: "2026-10-25" },
+    });
+    expect(built.get("when")).toBe("custom");
+    expect(built.get("from")).toBe("2026-10-19");
+    expect(built.get("to")).toBe("2026-10-25");
+
+    const preset = buildTrackerUrlParams(built, { dateRange: "next7" });
+    expect(preset.get("when")).toBe("next7");
+    expect(preset.get("from")).toBeNull();
+    expect(preset.get("to")).toBeNull();
+
+    const cleared = buildTrackerUrlParams(built, { customRange: null });
+    expect(cleared.get("when")).toBeNull();
+    expect(cleared.get("from")).toBeNull();
+    expect(cleared.get("to")).toBeNull();
   });
 
   it("builds URL search params while omitting default values", () => {
