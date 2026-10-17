@@ -13,6 +13,7 @@ import {
   type JumpOrigin,
 } from "@/motion/opsMotion";
 import SparkOverlay from "@/shared/SparkOverlay";
+import { askAiModalTitle } from "./askAiSubjectName";
 
 /**
  * Reusable "Ask AI" surface — a prominent button that opens a pop-up modal
@@ -132,7 +133,7 @@ const AskAiModal: React.FC<{
               Ask AI
             </p>
             <h2 className="spark-overlay-title">
-              {tenantName ? `Ask about ${tenantName}.` : "Ask about this client."}
+              {askAiModalTitle(tenantName)}
             </h2>
             <p className="spark-overlay-copy">
               Answers draw on this client&apos;s whole program — every event,

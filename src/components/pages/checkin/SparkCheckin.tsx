@@ -1,9 +1,57 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type ReactNode, type RefObject } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useParams } from "react-router";
-import { bucketCountHint, isExpenseReceiptBucket } from "./photoBuckets";
+import { isExpenseReceiptBucket } from "./photoBuckets";
+import { advisoryFromPhotoCheck, requestPhotoCheck, sha256Hex } from "./photoCheck";
+import { applyVoiceFills, type VoiceFill } from "./voiceDraft";
+import { VoiceRecapCard } from "./VoiceRecapCard";
 import { matchingStores, storeNameForPicker, type StoreSuggestion } from "./storeSuggestions";
 import { PHOTO_CAP } from "./photoCap";
-import { isHeicUpload, coerceHeicFile } from "./heicUpload";
+import {
+  AUTO_RETRY_DELAYS_MS,
+  CHECKIN_MAX_FUTURE_DAYS,
+  CHECKIN_MAX_PAST_DAYS,
+  FALLBACK_ACCENT,
+  UNREADABLE_PHOTO_MESSAGE,
+  apiOrigin,
+  checkinResources,
+  choiceKind,
+  compressImage,
+  draftPhotoOf,
+  fetchWithTimeout,
+  fileIsReadable,
+  flushQueuedRecap,
+  fmtDay,
+  fmtTime,
+  isPhotoType,
+  normalizePlace,
+  photoPrep,
+  photoUploads,
+  postCheckinClock,
+  postCheckinPayableMileage,
+  postCheckinRecap,
+  readIdentity,
+  retryableUploadFailure,
+  shiftedISO,
+  telHref,
+  todayISO,
+  writeIdentity,
+} from "./checkinHelpers";
+import type {
+  CheckinResource,
+  Clock,
+  Context,
+  EventTypeOption,
+  Photo,
+  PhotoBucket,
+  StoreIdentity,
+  StoreOption,
+  Template,
+  TemplateField,
+  TemplateProduct,
+  UnfiledShift,
+} from "./checkinTypes";
+import { card, errText, h2, input, label, primaryBtn, resourceCard, secondaryBtn, wrap } from "./checkinStyles";
+import { CorpoCardYesNo, PhotoBucketZone, PhotoFileInputs, PhotoGrid } from "./RecapPhotoStep";
 import {
   engagementsFromSamplesGiven,
   templateHasConsumersSampledField,
@@ -30,11 +78,7 @@ import {
   spendAmountError,
   spendAmountStored,
 } from "@/recap/spendAmount";
-import {
-  FIELD_PHOTO_PREP,
-  makeThumbnail,
-  prepareImageForUpload,
-} from "@/utils/compressImageForUpload";
+import { makeThumbnail } from "@/utils/compressImageForUpload";
 import {
   deleteDraftPhotoFiles,
   loadDraftPhotos,
@@ -42,7 +86,6 @@ import {
   saveDraftPhotoFile,
   writeDraftPhotos,
   writeOpenRecap,
-  type DraftPhoto,
 } from "./photoDraft";
 import {
   asRecapDraft,
@@ -67,7 +110,6 @@ import {
   quickPhotoHash,
   type PhotoQualityWarning,
 } from "./photoQuality";
-import { createLimiter } from "./uploadLimiter";
 import { browserPlayableContentType } from "@/utils/recapFileUrl";
 import {
   CLOCK_FETCH_TIMEOUT_MS,
@@ -83,10 +125,8 @@ import {
   type PendingClockIn,
 } from "./offlineClock";
 import {
-  RECAP_FETCH_TIMEOUT_MS,
   clearPendingRecap,
   enqueueRecap,
-  flushPendingRecap,
   offlineRecapBanner,
   putCheckinPhoto,
   NO_SIGNAL_PHOTO_MESSAGE,
@@ -126,12 +166,11 @@ import {
 } from "./checkinSession";
 import { ActionMorphButton } from "@/motion/ActionMorphButton";
 import { holdActionSuccess, type ActionPhase } from "@/motion/opsMotion";
-import { recapSubmitErrorMessage } from "./recapSubmitError";
 import { useCoBrandRecap, type CoBrandOptions } from "./coBrandRecap";
 import { CoBrandSections, CoBrandToggleCard } from "./CoBrandRecapCards";
 import { TenantLogo } from "@/layout/TenantLogo.tsx";
 import { shouldShowSamplingStopCard } from "./samplingStops";
-import { isFieldShown, withoutHiddenValues, type ShowWhen } from "./fieldConditions";
+import { isFieldShown, withoutHiddenValues } from "./fieldConditions";
 import PayableMileageStep from "./PayableMileageStep";
 import PlanGigPicker from "./PlanGigPicker";
 import {
@@ -162,7 +201,6 @@ import {
   eventTypesUseDescriptorPicker,
   programDescription,
   programLabel,
-  type ProgramOption,
 } from "./eventTypeDescriptor";
 import {
   PROGRAM_MISSING_ERROR,
@@ -190,359 +228,6 @@ import {
  * is kept in localStorage keyed by the code, so a returning link resumes where
  * the BA left off (clocked in → clock out → recap → done).
  */
-
-// ── Types mirroring the backend payload (ambassadors/checkin_web.build_public_context)
-type TemplateField = {
-  id: string;
-  name: string;
-  required: boolean;
-  type: string; // number | text | long_text | select | multiselect | photo | ...
-  options: string[];
-  /** BA-facing example copy (quality bar). Never submitted as the value. */
-  placeholder?: string;
-  /** Shown only while another choice field has this option picked. */
-  showWhen?: ShowWhen | null;
-};
-type TemplateSection = { id: string; name: string; fields: TemplateField[] };
-type TemplateProduct = {
-  id: string;
-  name: string;
-  imageUrl: string | null;
-  /** ProductType name when the API includes it (for Category — Name match). */
-  category?: string | null;
-};
-type Template = {
-  id: string;
-  name: string;
-  productSamples: boolean;
-  sections: TemplateSection[];
-  products: TemplateProduct[];
-  /** Per-SKU count copy from the template (e.g. "Cans sampled"); empty = generic. */
-  sampleQtyLabel?: string;
-  sampleQtyTotalLabel?: string;
-  /** Section names answered once per brand on a multi-brand activation. */
-  coBrandSections?: string[];
-};
-type Clock = {
-  state: "not_started" | "clocked_in" | "clocked_out";
-  clockInAt: string | null;
-  clockOutAt: string | null;
-};
-type MileageLeg = {
-  uuid: string;
-  status: string;
-  startedAt: string | null;
-  endedAt: string | null;
-  miles: number | null;
-  amount: number | null;
-};
-/**
- * Odometer state for this BA on this event. `enabled` mirrors the gig's
- * track_mileage toggle, so the control is absent entirely for brands that
- * don't reimburse driving.
- */
-type Mileage = {
-  enabled: boolean;
-  active: MileageLeg | null;
-  legs: MileageLeg[];
-  totalMiles: number;
-  totalAmount: number;
-};
-type SamplingStop = {
-  uuid: string;
-  name: string;
-  address: string;
-  lat: number | null;
-  lng: number | null;
-  recordedAt: string | null;
-};
-/**
- * One labelled photo dropzone on the recap step.
- *
- * `id` is the brand's own FileRecapCategory id — sent back with every photo
- * dropped here so the recap PDF can separate the table shot from the shelf
- * shot from the receipt, instead of piling all of them into one category.
- * `min` is a nudge the BA can see ("3 of 8 suggested"), never a gate: a BA in a
- * store parking lot on one bar has to be able to finish and clock out. Nothing
- * reads it but the counter in `PhotoBucketZone` — not `submit`, not the API.
- */
-type PhotoBucket = {
-  id: string;
-  name: string;
-  helper: string;
-  min: number;
-  /** Optional MIME accept for the bucket's file inputs (e.g. image/*,video/*). */
-  accept?: string;
-};
-/** One program on the brand's standing link. `id` is their EventType id. */
-type EventTypeOption = ProgramOption;
-/**
- * One BA-facing reference button under the header.
- *
- * `kind` is a RENDERING instruction, not a file type, and `image` is the one
- * that earns the whole shape: Feel Free's photo release is a QR a CONSUMER
- * scans off the BA's screen to sign their own release. A hyperlink cannot
- * serve that — you can't scan a code with the phone displaying it — so an
- * `image` opens a big inline viewer instead of navigating. `link` and `pdf`
- * both open a new tab and differ only in the affordance the button shows.
- *
- * The backend sanitises these (tenants.models.normalize_checkin_resources),
- * so `url` is already known to be http(s) or root-relative by the time it is
- * here.
- */
-type CheckinResource = {
-  label: string;
-  kind?: "link" | "pdf" | "image";
-  url: string;
-  note?: string;
-};
-type StoreOption = { name: string; address: string };
-type UnfiledShift = {
-  eventDate: string | null;
-  name: string;
-  address: string;
-  clockInAt: string | null;
-  clockOutAt: string | null;
-  clockState: string;
-};
-type Context = {
-  // OPTIONAL on a standing tenant link: until the BA picks a store + date there
-  // is no event yet, so nothing here may be dereferenced unguarded.
-  event?: {
-    uuid: string;
-    name: string;
-    address: string | null;
-    startTime: string | null;
-    endTime: string | null;
-    date?: string | null;
-    storeManagerName?: string | null;
-    storeManagerPhone?: string | null;
-  };
-  brand: {
-    name: string;
-    primaryColor: string | null;
-    /** Same tenant.image URL tenantPublic / spark-form feed TenantLogo. */
-    image?: string | null;
-    logoUrl?: string | null;
-    requestUrlName?: string | null;
-  };
-  template?: Template | null;
-  // Sibling brands (brand group) this BA can also report on; null for
-  // every tenant without a group.
-  coBrands?: CoBrandOptions | null;
-  // Labelled photo dropzones, in render order. Absent/empty for every brand
-  // that hasn't opted in, which is the signal to keep the single generic grid.
-  photoBuckets?: PhotoBucket[];
-  // Present only for brands whose recap title must be "Store Name #1234"
-  // (Torch); the values prefill the recap form's Store boxes.
-  storeIdentity?: StoreIdentity | null;
-  session?: {
-    ambassadorName: string;
-    clock: Clock;
-    hasRecap: boolean;
-    pendingReview: boolean;
-    /** Unfiled answers for this shift. Absent until a draft has been saved. */
-    recapDraft?: RecapDraft | null;
-    /** Second filing on the same event. Never the open shift's answers. */
-    additionalRecapDraft?: RecapDraft | null;
-    mileage?: Mileage;
-    stops?: SamplingStop[];
-    payableMileage?: PayableMileageState;
-  };
-  // Tenant-link mode — ONE durable link shared across every activation, so BAs
-  // never type an event code. `needsEventDetails` means ask for store + date on
-  // the identify step; the API then finds-or-creates the event.
-  mode?: "tenant";
-  needsEventDetails?: boolean;
-  // 3rd-party / agency URL: skip punch, go name + date + store + questions.
-  recapOnly?: boolean;
-  recentLocations?: StoreOption[];
-  // Roaming brands (Feel Free) pick a MARKET instead of typing a store
-  // address: the event is keyed on the market so a whole crew shares one, and
-  // the individual spots are logged as stops during the shift.
-  locationMode?: "address" | "market";
-  markets?: string[];
-  // The programs this brand runs off this ONE link (Liquid Death: Retail
-  // Sampling and Event Activation). The BA's pick is stamped on the event,
-  // which is what decides their recap form and their photo buckets.
-  //
-  // Fewer than two and the page must ask NOTHING: a one-option dropdown is a
-  // worse version of no dropdown, and single-program brands (Total Wireless,
-  // Feel Free) have to look exactly as they do today.
-  eventTypes?: EventTypeOption[];
-  // Brand heading for that picker (Torch: "What's your execution type?").
-  programPickerTitle?: string;
-  // The brand's BA references, in order — training deck, photo-release QR,
-  // the /training/<code> hub. Rendered on the landing screen AND once clocked
-  // in: "what am I supposed to say about this SKU" is a question a BA has at
-  // the table, not at home, and the release QR is needed mid-shift by
-  // definition.
-  resources?: CheckinResource[];
-  // Standing link only: shifts this BA already clocked that still need a recap.
-  unfiledShifts?: UnfiledShift[];
-  // Legacy single-URL twin of `resources`, still sent by the API. Read only as
-  // a fallback (see `checkinResources`) so this page keeps working against an
-  // API that predates the list.
-  trainingUrl?: string;
-  // Standing GET with a bearer that failed: expired / bad_session / …
-  // Absent on a clean landing (no token) and on a restored session.
-  sessionError?: string;
-  error?: string;
-  message?: string;
-};
-
-// `id` is what upload results are keyed on. It used to be the array index
-// captured before the loop — which meant picking N photos at once wrote every
-// result to the SAME slot, leaving the other N-1 stuck on "uploading" forever
-// and permanently wedging the Submit button. Never key async results by index.
-type Photo = {
-  id: string;
-  file: File;
-  blobName: string | null;
-  previewUrl: string;
-  state: "uploading" | "done" | "failed";
-  // Which labelled bucket this was dropped into, or null for the generic grid
-  // (every brand without buckets). Sent per file on submit; the backend
-  // validates it against that brand's own buckets and falls back to its
-  // "photos" category for anything it doesn't recognise.
-  category: string | null;
-  /** Last upload error — shown on the Retry banner so BAs know why. */
-  failReason?: string | null;
-  /** Failed on connectivity (timeout / dropped), not a server reject. */
-  failedOffline?: boolean;
-  /** `file` is already the compressed upload copy — retries skip re-encoding. */
-  prepared?: boolean;
-  /** The photo's bytes are gone on this phone; no retry can send it. */
-  unrecoverable?: boolean;
-  /** Failed, with an automatic retry scheduled. */
-  autoRetry?: boolean;
-};
-
-const draftPhotoOf = (p: Photo): DraftPhoto => ({
-  id: p.id,
-  blobName: p.blobName,
-  category: p.category,
-  name: p.file.name,
-  type: p.file.type,
-});
-
-const FALLBACK_ACCENT = "#C4D82E";
-
-function telHref(phone: string): string {
-  const cleaned = phone.replace(/[^\d+]/g, "");
-  return cleaned ? `tel:${cleaned}` : "";
-}
-
-// Enough to use the connection, few enough that one stalled PUT doesn't hold
-// up the rest. Serial uploads were the other half of "photos won't upload".
-// Shared by every pick, restore and retry on the page.
-const photoUploads = createLimiter(3);
-// Decoding a 12MP shot to re-encode it is the memory spike; two at a time.
-const photoPrep = createLimiter(2);
-
-// Weak signal / rate limit / server hiccup: try again on our own before the
-// BA has to notice. After these, the tile waits for Retry.
-const AUTO_RETRY_DELAYS_MS = [5_000, 20_000, 60_000];
-
-const UNREADABLE_PHOTO_MESSAGE =
-  "This photo didn't stay saved on your phone — remove it and take or pick it again.";
-
-function retryableUploadFailure(failedOffline: boolean, reason: string): boolean {
-  return (
-    failedOffline ||
-    /try again|too many|wait a minute|upload failed|couldn't prepare/i.test(reason)
-  );
-}
-
-async function fileIsReadable(file: File): Promise<boolean> {
-  if (file.size === 0) return false;
-  try {
-    await file.slice(0, 64).arrayBuffer();
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Parallel heic2any WASM OOMs iPhone Safari when a BA picks a big Camera Roll
- * batch. JPEG/PNG downscale can still run concurrent with PUTs; HEIC decode
- * waits its turn.
- */
-let heicPrepChain: Promise<void> = Promise.resolve();
-
-/** HEIC decode can hang on iPhone Safari — don't leave the tile on "uploading". */
-const HEIC_PREP_TIMEOUT_MS = 20_000;
-
-/** HEIC→JPEG + field downscale (see FIELD_PHOTO_PREP). Videos pass through. */
-async function compressImage(file: File): Promise<File> {
-  if (file.type.startsWith("video/") && !isHeicUpload(file)) return file;
-  const coerced = await coerceHeicFile(file);
-  if (!isHeicUpload(coerced)) {
-    return prepareImageForUpload(coerced, FIELD_PHOTO_PREP);
-  }
-  let release!: () => void;
-  const gate = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const prev = heicPrepChain;
-  heicPrepChain = prev.then(() => gate);
-  await prev;
-  try {
-    const prepared = prepareImageForUpload(coerced, FIELD_PHOTO_PREP);
-    const timed = new Promise<File>((_resolve, reject) => {
-      window.setTimeout(
-        () => reject(new Error("Photo took too long to convert — try JPEG, or tap Retry.")),
-        HEIC_PREP_TIMEOUT_MS,
-      );
-    });
-    return await Promise.race([prepared, timed]);
-  } finally {
-    release();
-  }
-}
-
-/**
- * The resources to show, tolerating an API that only sends `trainingUrl`.
- *
- * The backend ships both keys during the deploy gap, but this page can also be
- * loaded against an older API, so the legacy field is folded into the same shape
- * rather than handled separately. Label and subtitle match what this component
- * hard-coded before the list existed, so a brand's card never silently rewords.
- */
-function checkinResources(ctx: Context): CheckinResource[] {
-  if (ctx.resources?.length) return ctx.resources;
-  const legacy = (ctx.trainingUrl || "").trim();
-  if (!legacy) return [];
-  return [
-    {
-      label: "BA reference & training",
-      kind: "link",
-      url: legacy,
-      note: "Field guide, video, product sheets",
-    },
-  ];
-}
-
-/** Shared chrome, so an opens-a-tab button and an opens-a-viewer button match. */
-const resourceCard = (accent: string) =>
-  ({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    width: "100%",
-    padding: "13px 16px",
-    borderRadius: 12,
-    border: `1px solid ${accent}55`,
-    background: `${accent}14`,
-    color: "inherit",
-    textDecoration: "none",
-    textAlign: "left",
-    font: "inherit",
-    cursor: "pointer",
-    minHeight: 44,
-  }) as const;
 
 /**
  * Full-screen QR viewer.
@@ -750,256 +435,6 @@ function ResourceButtons({
     </>
   );
 }
-
-function apiOrigin(): string {
-  try {
-    return new URL(import.meta.env.VITE_GRAPHQL_ENDPOINT as string).origin;
-  } catch {
-    return "";
-  }
-}
-
-async function fetchWithTimeout(
-  url: string,
-  init: RequestInit,
-  timeoutMs = CLOCK_FETCH_TIMEOUT_MS,
-): Promise<Response> {
-  const ctrl = new AbortController();
-  const timer = window.setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: ctrl.signal });
-  } finally {
-    window.clearTimeout(timer);
-  }
-}
-
-const isPhotoType = (t: string) => t.includes("photo") || t.includes("image");
-const choiceKind = (t: string): "select" | "multiselect" | null => {
-  if (t === "multiselect" || t.includes("multi")) return "multiselect";
-  if (t === "select" || t.includes("dropdown")) return "select";
-  return null;
-};
-
-// Local calendar date as YYYY-MM-DD for the date input. Uses the LOCAL parts,
-// never toISOString() — that converts to UTC first, so a BA checking in after
-// ~5pm Pacific would be handed tomorrow's date.
-// Bounds for the "date you're working" picker, mirroring the server's window
-// (CHECKIN_MAX_PAST_DAYS / CHECKIN_MAX_FUTURE_DAYS in events/checkin_views.py).
-// Kept in the picker as well as on the server so a BA sees the limit in the
-// calendar instead of typing a date and getting an error back.
-const CHECKIN_MAX_PAST_DAYS = 90;
-const CHECKIN_MAX_FUTURE_DAYS = 14;
-
-const shiftedISO = (days: number): string => {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-};
-
-const todayISO = (): string => {
-  const d = new Date();
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-};
-
-/**
- * TS twin of the backend's `normalize_place` (ambassadors/checkin_web.py).
- * Must stay in step with it: the server keys find-or-create on this shape, so
- * this is how the page decides a GPS-derived address is "the same store" as
- * one already on the list rather than a new one.
- */
-const normalizePlace = (value: string): string =>
-  (value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^\w\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-/**
- * Who this phone said they were last time, per link.
- *
- * A standing link is worked by the same handful of BAs all season, so making
- * them retype their name and cell for every event is the difference between a
- * tool they use and one they avoid. Stored per code, on their own device.
- *
- * Name and cell only for PII — plus the last market/store they used on this
- * link so a lost session can re-identify and resume today's open punch without
- * retyping (Michelle / Feel Free: left for the release QR, came back blank).
- */
-type Identity = {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  email: string;
-  /** Last market or store address submitted on identify for this code. */
-  lastPlace?: string;
-  /** Last program id — needed when Product Seeding omitted a place. */
-  lastEventTypeId?: string;
-};
-const IDENTITY_KEY = (code: string) => `@spark.checkin.who/${code}`;
-
-const readIdentity = (code: string): Identity => {
-  const empty: Identity = { firstName: "", lastName: "", phone: "", email: "" };
-  try {
-    const raw = window.localStorage.getItem(IDENTITY_KEY(code));
-    if (!raw) return empty;
-    const p = JSON.parse(raw) as Partial<Identity>;
-    return {
-      firstName: p.firstName || "",
-      lastName: p.lastName || "",
-      phone: p.phone || "",
-      email: p.email || "",
-      lastPlace: (p.lastPlace || "").trim() || undefined,
-      lastEventTypeId: (p.lastEventTypeId || "").trim() || undefined,
-    };
-  } catch {
-    return empty;
-  }
-};
-
-const writeIdentity = (code: string, who: Identity): void => {
-  try {
-    window.localStorage.setItem(IDENTITY_KEY(code), JSON.stringify(who));
-  } catch {
-    /* private mode / quota — prefill is a convenience, never required */
-  }
-};
-
-// Answers autosave in recapDraft.ts (device) and recapServerDraft.ts
-// (unfiled server copy). Photos stay in photoDraft.ts.
-type StoreIdentity = { name: string; number: string };
-
-async function postCheckinClock(
-  code: string,
-  body: Record<string, unknown>,
-): Promise<{ ok: boolean; status: number; alreadyIn?: boolean }> {
-  const res = await fetchWithTimeout(
-    `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/clock`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    },
-  );
-  let alreadyIn = false;
-  try {
-    const json = (await res.clone().json()) as { alreadyIn?: boolean; clock?: Clock };
-    alreadyIn = Boolean(json.alreadyIn || json.clock?.state === "clocked_in");
-  } catch {
-    /* gateway / empty */
-  }
-  return { ok: res.ok, status: res.status, alreadyIn };
-}
-
-async function postCheckinPayableMileage(
-  code: string,
-  body: Record<string, unknown>,
-): Promise<{
-  ok: boolean;
-  status: number;
-  claim?: PayableMileageClaim | null;
-  payableMileage?: PayableMileageState | null;
-  message?: string;
-}> {
-  const res = await fetchWithTimeout(
-    `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/payable-mileage`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    },
-  );
-  let claim: PayableMileageClaim | null | undefined;
-  let payableMileage: PayableMileageState | null | undefined;
-  let message: string | undefined;
-  try {
-    const json = (await res.clone().json()) as {
-      claim?: PayableMileageClaim;
-      payableMileage?: PayableMileageState;
-      message?: string;
-      error?: string;
-    };
-    claim = json.claim ?? json.payableMileage?.claim ?? null;
-    payableMileage = json.payableMileage;
-    message = json.message || json.error;
-  } catch {
-    /* gateway / empty */
-  }
-  return { ok: res.ok, status: res.status, claim, payableMileage, message };
-}
-
-async function postCheckinRecap(
-  code: string,
-  body: Record<string, unknown>,
-): Promise<{ ok: boolean; status: number; already?: boolean; message?: string }> {
-  const res = await fetchWithTimeout(
-    `${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/recap`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    },
-    RECAP_FETCH_TIMEOUT_MS,
-  );
-  let already = false;
-  let success: boolean | undefined;
-  let message: string | undefined;
-  try {
-    const json = (await res.clone().json()) as {
-      already?: boolean;
-      alreadySubmitted?: boolean;
-      hasRecap?: boolean;
-      success?: boolean;
-      message?: string;
-      error?: string;
-    };
-    already = Boolean(json.already || json.alreadySubmitted || json.hasRecap);
-    success = json.success;
-    message = recapSubmitErrorMessage(json, res.status);
-  } catch {
-    message = recapSubmitErrorMessage(null, res.status);
-  }
-  if (res.status === 409) already = true;
-  return { ok: res.ok && success !== false, status: res.status, already, message };
-}
-
-async function flushQueuedRecap(code: string) {
-  const pending = readPendingRecap(code);
-  const result = await flushPendingRecap({
-    code,
-    postRecap: (body) => postCheckinRecap(code, body),
-    putPhoto: async (file, sessionToken) => {
-      const compressed = await compressImage(file);
-      return putCheckinPhoto({
-        code,
-        token: sessionToken,
-        file: compressed,
-        apiOrigin: apiOrigin(),
-      });
-    },
-  });
-  if ((result === "flushed" || result === "already") && pending) {
-    clearDraft(code, pending.token);
-  }
-  return result;
-}
-
-const fmtTime = (iso: string | null): string => {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }).replace(":00", "");
-};
-
-const fmtDay = (iso: string | null | undefined): string => {
-  if (!iso) return "";
-  const raw = String(iso);
-  const d = new Date(raw.includes("T") ? raw : `${raw.slice(0, 10)}T12:00:00`);
-  if (isNaN(d.getTime())) return raw.slice(0, 10);
-  return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
-};
 
 export default function SparkCheckin() {
   const { code = "" } = useParams<{ code: string }>();
@@ -3638,6 +3073,39 @@ function RecapForm({
   const patchPhoto = (id: string, patch: Partial<Photo>) =>
     setPhotos((p) => p.map((ph) => (ph.id === id ? { ...ph, ...patch } : ph)));
 
+  const keepPhotoCheck = (id: string) => {
+    setPhotos((current) =>
+      current.map((photo) =>
+        photo.id === id && photo.check ? { ...photo, check: { ...photo.check, dismissed: true } } : photo,
+      ),
+    );
+  };
+
+  // Classify after the compressed copy exists. The upload is not waiting on this.
+  const runPhotoCheck = (id: string, file: File) => {
+    if (!token || !file.type.startsWith("image/")) return;
+    const category = photosRef.current.find((photo) => photo.id === id)?.category ?? null;
+    const bucketName = (photoBuckets ?? []).find((bucket) => bucket.id === category)?.name ?? null;
+    void requestPhotoCheck({
+      origin: apiOrigin(),
+      code,
+      session: token,
+      file,
+      contentType: file.type || "image/jpeg",
+      category,
+    }).then((result) => {
+      if (!photosRef.current.some((photo) => photo.id === id)) return;
+      const advisory = advisoryFromPhotoCheck(result, bucketName);
+      patchPhoto(id, {
+        check: {
+          kind: advisory.kind,
+          message: advisory.message,
+          dismissed: false,
+        },
+      });
+    });
+  };
+
   // Compress once — a raw iPhone shot is 3-5MB and a BA may file dozens from a
   // parking lot on LTE. The compressed copy becomes the photo's file (retries
   // reuse it) and is what's kept on the device for a reload; the original
@@ -3645,6 +3113,7 @@ function RecapForm({
   const prepareOne = (id: string, original: File) =>
     photoPrep(async () => {
       const file = await compressImage(original);
+      const digest = file.type.startsWith("image/") ? await sha256Hex(file).catch(() => "") : "";
       const thumb = file.type.startsWith("image/") ? await makeThumbnail(file) : null;
       setPhotos((p) =>
         p.map((ph) => {
@@ -3654,11 +3123,12 @@ function RecapForm({
             if (previewUrl) URL.revokeObjectURL(previewUrl);
             previewUrl = URL.createObjectURL(thumb);
           }
-          return { ...ph, file, previewUrl, prepared: true };
+          return { ...ph, file, previewUrl, prepared: true, ...(digest ? { sha256: digest } : {}) };
         }),
       );
       if (file.type.startsWith("image/") && !submittedRef.current) {
         void saveDraftPhotoFile(code, token, id, file);
+        void runPhotoCheck(id, file);
       }
       return { file, thumb };
     });
@@ -3810,6 +3280,7 @@ function RecapForm({
           previewUrl: file ? URL.createObjectURL(file) : "",
           state: photo.blobName ? "done" : "uploading",
           category: photo.category,
+          ...(photo.sha256 ? { sha256: photo.sha256 } : {}),
         }));
       const seen = new Set([...have, ...fromDevice.map((p) => p.id)]);
       const fromServer: Photo[] = (restored.current?.photos ?? [])
@@ -3821,6 +3292,7 @@ function RecapForm({
           previewUrl: "",
           state: "done",
           category: photo.category,
+          ...(photo.sha256 ? { sha256: photo.sha256 } : {}),
         }));
       const back = [...fromDevice, ...fromServer];
       photosRef.current = [...back, ...photosRef.current];
@@ -4041,6 +3513,7 @@ function RecapForm({
             id: p.id,
             blobName: p.blobName,
             category: p.category,
+            ...(p.sha256 ? { sha256: p.sha256 } : {}),
             filename: p.file.name || "photo.jpg",
             contentType: browserPlayableContentType({
               type: p.file.type,
@@ -4093,7 +3566,11 @@ function RecapForm({
         session: token,
         idempotencyKey: existing && existing.token === token ? existing.id : undefined,
         fieldValues,
-        files: donePhotos.map((p) => ({ blobName: p.blobName, category: p.category })),
+        files: donePhotos.map((p) => ({
+          blobName: p.blobName,
+          category: p.category,
+          ...(p.sha256 ? { sha256: p.sha256 } : {}),
+        })),
         productSamples,
         totalEngagements,
         usedCorpoCard,
@@ -4257,6 +3734,20 @@ function RecapForm({
         cardStyle={card}
         headingStyle={h2}
       />
+      {token ? (
+        <div style={card}>
+          <VoiceRecapCard
+            origin={apiOrigin()}
+            code={code}
+            session={token}
+            fields={templateFields}
+            accent={accent}
+            onApply={(fills: VoiceFill[]) =>
+              setValues((current) => applyVoiceFills(current, fills, templateFields))
+            }
+          />
+        </div>
+      ) : null}
       {template.sections.map((section) => {
         // Mileage moves to the end of the recap (after photos). Skip empty
         // sections that only held mileage fields.
@@ -4281,6 +3772,7 @@ function RecapForm({
                 onAddPhotos={uploadFiles}
                 photos={loosePhotos}
                 onRemovePhoto={removePhoto}
+                onKeepPhoto={keepPhotoCheck}
                 products={template.products}
                 sampleQtys={samples}
                 onSampleQtyChange={(productId, qty) =>
@@ -4368,6 +3860,11 @@ function RecapForm({
                 onAdd={() => libraryRef.current?.click()}
                 onTake={() => cameraRef.current?.click()}
                 onRemove={removePhoto}
+                onKeep={keepPhotoCheck}
+                onRetake={(id) => {
+                  removePhoto(id);
+                  cameraRef.current?.click();
+                }}
                 accent={accent}
               />
             </div>
@@ -4423,6 +3920,7 @@ function RecapForm({
                   photos={photos.filter((p) => p.category === b.id)}
                   onAdd={uploadFiles}
                   onRemove={removePhoto}
+                  onKeep={keepPhotoCheck}
                   accent={accent}
                 />
               </Fragment>
@@ -4841,6 +4339,7 @@ function FieldInput({
   onAddPhotos,
   photos,
   onRemovePhoto,
+  onKeepPhoto,
   products = [],
   sampleQtys = {},
   onSampleQtyChange,
@@ -4855,6 +4354,7 @@ function FieldInput({
   onAddPhotos: (files: FileList | null) => void;
   photos: Photo[];
   onRemovePhoto: (id: string) => void;
+  onKeepPhoto?: (id: string) => void;
   products?: TemplateProduct[];
   sampleQtys?: Record<string, string>;
   onSampleQtyChange?: (productId: string, qty: string) => void;
@@ -4892,6 +4392,11 @@ function FieldInput({
           onAdd={() => libraryRef.current?.click()}
           onTake={() => cameraRef.current?.click()}
           onRemove={onRemovePhoto}
+          onKeep={onKeepPhoto}
+          onRetake={(id) => {
+            onRemovePhoto(id);
+            cameraRef.current?.click();
+          }}
           accent={accent}
         />
         <PhotoFileInputs
@@ -4987,318 +4492,6 @@ function FieldInput({
 }
 
 
-/**
- * One labelled dropzone. Its own hidden input and its own slice of `photos`,
- * so a bucket never shows — or removes — another bucket's shots.
- *
- * The count is live and advisory. A BA who's short on consumer shots can see it
- * at a glance ("3 of 8 suggested"), but nothing here blocks Submit: failed
- * uploads already don't, and a soft target must not be stricter than a failed
- * upload. What the chip says, and why it must not look like a validation
- * error, is `bucketCountHint`.
- */
-function CorpoCardYesNo({
-  value,
-  accent,
-  onChange,
-}: {
-  value: boolean | null;
-  accent: string;
-  onChange: (next: boolean) => void;
-}) {
-  const choice = (yes: boolean) => {
-    const selected = value === yes;
-    return {
-      flex: 1,
-      minHeight: 44,
-      borderRadius: 10,
-      border: selected ? `2px solid ${accent}` : "1px solid #d6d3c8",
-      background: selected ? accent : "#fff",
-      color: selected ? "#111" : "#1c1917",
-      fontWeight: 600,
-      fontSize: 15,
-    } as const;
-  };
-  return (
-    <div data-completeness-target="corpo-card">
-      <label style={label}>
-        Corporate Card Used <span style={{ color: "#EF5A2A" }}>*</span>
-      </label>
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <button type="button" style={choice(true)} onClick={() => onChange(true)}>
-          Yes
-        </button>
-        <button type="button" style={choice(false)} onClick={() => onChange(false)}>
-          No
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function PhotoBucketZone({
-  bucket,
-  photos,
-  onAdd,
-  onRemove,
-  accent,
-}: {
-  bucket: PhotoBucket;
-  photos: Photo[];
-  onAdd: (files: FileList | null, category: string | null) => void;
-  onRemove: (id: string) => void;
-  accent: string;
-}) {
-  const libraryRef = useRef<HTMLInputElement | null>(null);
-  const cameraRef = useRef<HTMLInputElement | null>(null);
-  // Count what actually landed, not what was picked — a photo still uploading
-  // or failed isn't in the client's report yet, so counting it would tell a BA
-  // they're done when they aren't.
-  const done = photos.filter((p) => p.state === "done").length;
-  const hint = bucketCountHint(done, bucket.min);
-
-  return (
-    <div data-completeness-target={`bucket:${bucket.id}`}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-        <label style={{ ...label, marginBottom: 0, flex: 1 }}>{bucket.name}</label>
-        {hint ? (
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 700,
-              // Keep "0 of 8 suggested" on one line; the label beside it is
-              // flex:1 and wraps instead.
-              whiteSpace: "nowrap",
-              // Muted until the target is reached, green once it is. NEVER the
-              // #EF5A2A this page uses for a required field — see
-              // `bucketCountHint`.
-              ...(hint.met ? { color: "#2E7D32" } : { opacity: 0.5 }),
-            }}
-          >
-            {hint.text}
-          </span>
-        ) : null}
-      </div>
-      {bucket.helper ? (
-        <p style={{ fontSize: 12, opacity: 0.6, margin: "2px 0 0" }}>{bucket.helper}</p>
-      ) : null}
-      <PhotoGrid
-        photos={photos}
-        onAdd={() => libraryRef.current?.click()}
-        onTake={() => cameraRef.current?.click()}
-        onRemove={onRemove}
-        accent={accent}
-        allowVideo={Boolean(bucket.accept?.includes("video"))}
-      />
-      <PhotoFileInputs
-        libraryRef={libraryRef}
-        cameraRef={cameraRef}
-        onFiles={(files) => onAdd(files, bucket.id)}
-        accept={bucket.accept || "image/*"}
-      />
-    </div>
-  );
-}
-
-/**
- * Library picker first, camera second.
- *
- * `capture="environment"` on the ONLY file input opens the camera on iOS and
- * blocks Camera Roll multi-select — the "Take photo" tile Kyle screenshotted
- * on Consumer Sampling Pictures. The library input has no capture attribute
- * and is `multiple`, so iOS offers Photo Library / Files and a BA can pick
- * the table, product, receipts, and crowd shots in one go. HEIC stays on
- * `accept="image/*"` (listing MIME types falls back to the Files app). Buckets
- * that opt into video pass `accept="image/*,video/*"` so library + camera
- * can add both.
- */
-function PhotoFileInputs({
-  libraryRef,
-  cameraRef,
-  onFiles,
-  accept = "image/*",
-}: {
-  libraryRef: RefObject<HTMLInputElement | null>;
-  cameraRef: RefObject<HTMLInputElement | null>;
-  onFiles: (files: FileList | null) => void;
-  accept?: string;
-}) {
-  const handle = (e: ChangeEvent<HTMLInputElement>) => {
-    onFiles(e.target.files);
-    e.target.value = "";
-  };
-  return (
-    <>
-      <input
-        ref={libraryRef}
-        type="file"
-        accept={accept}
-        multiple
-        style={{ display: "none" }}
-        onChange={handle}
-      />
-      <input
-        ref={cameraRef}
-        type="file"
-        accept={accept}
-        capture="environment"
-        style={{ display: "none" }}
-        onChange={handle}
-      />
-    </>
-  );
-}
-
-function PhotoGrid({
-  photos,
-  onAdd,
-  onTake,
-  onRemove,
-  accent,
-  allowVideo = false,
-}: {
-  photos: Photo[];
-  onAdd: () => void;
-  onTake: () => void;
-  onRemove: (id: string) => void;
-  accent: string;
-  allowVideo?: boolean;
-}) {
-  const tile: CSSProperties = {
-    minWidth: 120,
-    minHeight: 120,
-    borderRadius: 16,
-    background: "transparent",
-    fontWeight: 700,
-    cursor: "pointer",
-    padding: "16px 12px",
-  };
-  const done = photos.filter((p) => p.state === "done").length;
-  const atCap = photos.length >= PHOTO_CAP;
-  const mediaWord = allowVideo ? "photos/videos" : "photos";
-
-  return (
-    <div>
-      <p
-        style={{
-          fontSize: 12,
-          fontWeight: 700,
-          letterSpacing: "0.08em",
-          opacity: 0.55,
-          margin: "0 0 6px",
-        }}
-      >
-        {done}/{PHOTO_CAP}
-      </p>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-        {photos.map((p) => {
-          const isVideo = p.file.type.startsWith("video/");
-          return (
-          <div key={p.id} style={{ position: "relative", width: 120, height: 120 }}>
-            {isVideo ? (
-              <video
-                src={p.previewUrl}
-                muted
-                playsInline
-                style={{
-                  width: 120,
-                  height: 120,
-                  objectFit: "cover",
-                  borderRadius: 10,
-                  opacity: p.state === "done" ? 1 : 0.5,
-                  border: p.state === "failed" ? "2px solid #EF5A2A" : "1px solid rgba(0,0,0,0.1)",
-                  background: "#111",
-                }}
-              />
-            ) : p.previewUrl ? (
-              <img
-                src={p.previewUrl}
-                alt=""
-                style={{
-                  width: 120,
-                  height: 120,
-                  objectFit: "cover",
-                  borderRadius: 10,
-                  opacity: p.state === "done" ? 1 : 0.5,
-                  border: p.state === "failed" ? "2px solid #EF5A2A" : "1px solid rgba(0,0,0,0.1)",
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 120,
-                  height: 120,
-                  borderRadius: 10,
-                  background: "#e7e5e4",
-                  border: "1px solid rgba(0,0,0,0.1)",
-                }}
-              />
-            )}
-            <span
-              style={{
-                ...photoBadge,
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                background:
-                  p.state === "failed"
-                    ? "rgba(239,90,42,0.72)"
-                    : p.state === "uploading"
-                      ? "rgba(20,24,26,0.55)"
-                      : "rgba(46,125,50,0.55)",
-                color: "#fff",
-              }}
-            >
-              {p.state === "done" && isVideo ? "video" : p.state}
-            </span>
-            <button onClick={() => onRemove(p.id)} style={photoRemove} aria-label="Remove photo">
-              ×
-            </button>
-          </div>
-          );
-        })}
-        {!atCap ? (
-          <>
-            <button
-              type="button"
-              onClick={onAdd}
-              style={{
-                ...tile,
-                border: `2px dashed ${accent}`,
-                fontSize: 15,
-                color: accent,
-              }}
-            >
-              {allowVideo ? "Upload media" : "Upload photos"}
-            </button>
-            <button
-              type="button"
-              onClick={onTake}
-              style={{
-                ...tile,
-                border: "2px dashed rgba(0,0,0,0.22)",
-                fontSize: 13,
-                color: "inherit",
-                opacity: 0.75,
-              }}
-            >
-              {allowVideo ? "Take photo/video" : "Take photo"}
-            </button>
-          </>
-        ) : null}
-      </div>
-      <p style={{ fontSize: 12, opacity: 0.55, margin: "6px 0 0" }}>
-        {atCap
-          ? `Limit ${PHOTO_CAP} ${mediaWord}. Remove one to add another.`
-          : allowVideo
-            ? "You can select many photos or videos from your library."
-            : "You can select many from your library. iPhone photos are fine."}
-      </p>
-    </div>
-  );
-}
-
 // ── Chrome ──────────────────────────────────────────────────────────────────
 // Matches /approve cream chrome so a dead or live check-in link still
 // looks like Ignite — not a blank Tailwind canvas, and never /login.
@@ -5389,93 +4582,3 @@ function Shell({
   );
 }
 
-const wrap: CSSProperties = {
-  minHeight: "100dvh",
-  background: "#faf7f1",
-  color: "#1c1917",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "flex-start",
-  padding: "48px 20px 56px",
-  fontFamily: "system-ui, -apple-system, sans-serif",
-};
-const card: CSSProperties = {
-  background: "#fff",
-  border: "1px solid rgba(0,0,0,0.08)",
-  borderRadius: 18,
-  padding: 18,
-};
-const h2: CSSProperties = { fontSize: 16, fontWeight: 700, margin: 0 };
-const label: CSSProperties = {
-  display: "block",
-  fontSize: 14,
-  fontWeight: 700,
-  marginBottom: 4,
-  color: "#1c1917",
-  opacity: 1,
-};
-const input: CSSProperties = {
-  width: "100%",
-  boxSizing: "border-box",
-  padding: "13px 12px",
-  minHeight: 48,
-  fontSize: 16,
-  borderRadius: 12,
-  border: "1px solid rgba(0,0,0,0.15)",
-  background: "#fff",
-  color: "#14181a",
-  marginTop: 8,
-  outline: "none",
-};
-const errText: CSSProperties = { color: "#EF5A2A", fontSize: 13, marginTop: 10, marginBottom: 0 };
-const photoBadge: CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: 20,
-  color: "#fff",
-};
-const photoRemove: CSSProperties = {
-  position: "absolute",
-  top: -8,
-  right: -8,
-  width: 32,
-  height: 32,
-  borderRadius: 999,
-  border: "none",
-  background: "#14181a",
-  color: "#fff",
-  fontSize: 18,
-  lineHeight: "32px",
-  cursor: "pointer",
-  padding: 0,
-  zIndex: 1,
-};
-function primaryBtn(accent: string): CSSProperties {
-  return {
-    flex: 1,
-    padding: "14px 16px",
-    minHeight: 52,
-    borderRadius: 12,
-    border: "none",
-    background: accent,
-    color: "#0a0d09",
-    fontSize: 15,
-    fontWeight: 700,
-    cursor: "pointer",
-  };
-}
-const secondaryBtn: CSSProperties = {
-  flex: 1,
-  padding: "14px 16px",
-  minHeight: 52,
-  borderRadius: 12,
-  border: "1px solid rgba(0,0,0,0.18)",
-  background: "transparent",
-  color: "#14181a",
-  fontSize: 15,
-  fontWeight: 600,
-  cursor: "pointer",
-};

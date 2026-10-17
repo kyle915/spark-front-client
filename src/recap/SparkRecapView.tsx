@@ -17,6 +17,7 @@ import {
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { Navigate, useNavigate, useParams, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
+import { RecapPhotoReusePanel } from "./RecapPhotoReusePanel";
 import { RecapDetailSkeleton } from "@/layout/PageSkeletons";
 import { RecapQuery } from "@/api/queries/RecapQuery";
 import type { RecapQuery as RecapQueryType } from "@api/queries/__generated__/RecapQuery.graphql";
@@ -1354,6 +1355,7 @@ const SparkRecapInner: React.FC<{
         <RecapQualityPanel recapId={recap.id} isCustom={false} />
       </Suspense>
       )}
+      {!isClient && <RecapPhotoReusePanel recapId={recap.id} isCustom={false} />}
       {isClient && (
         <RecapClientSignoff
           existingStatus={recap.clientSignoffStatus}

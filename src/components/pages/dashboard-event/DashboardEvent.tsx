@@ -4,6 +4,7 @@ import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import useSidebarCounts from "@/hooks/useSidebarCounts";
 import AttentionEngine from "./AttentionEngine";
+import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
 import ClockSummaryCard from "@/components/dashboard/ClockSummaryCard";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
@@ -137,21 +138,6 @@ const TodaysSnapshot: React.FC = () => {
  * /insights redirects here.
  */
 
-const slugToName = (slug: string | null | undefined): string => {
-  if (!slug) return "—";
-  const parts = slug.split("-").filter(Boolean);
-  const drop = new Set(["ighn", "ig", "ign"]);
-  const isCode = (t: string) => /[a-z]/i.test(t) && /[0-9]/.test(t);
-  const brand =
-    parts.length > 1 &&
-    (drop.has(parts[0].toLowerCase()) || isCode(parts[0]))
-      ? parts.slice(1)
-      : parts;
-  return brand
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
-    .join(" ");
-};
-
 function DashboardInner() {
   const { tenantId, tenantMeta, tenantSlug } = useAuthStore();
   const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
@@ -159,7 +145,6 @@ function DashboardInner() {
   const { isClient, isAdmin } = useSparkRole();
   const { view, choose: chooseView } = useBrandView();
   const comparing = view === "compare" && !!tenantId;
-  const tenantDisplay = slugToName(tenantMeta?.requestUrlName);
 
   const linkedSheetUrl = tenantId
     ? (() => {
@@ -182,11 +167,11 @@ function DashboardInner() {
             Dashboard
           </h1>
           <div className="mt-2">
-            <AskAiButton
-              tenantId={tenantId}
-              tenantName={tenantDisplay}
-              variant="text"
-            />
+            <Suspense
+              fallback={<AskAiButton tenantId={tenantId} variant="text" />}
+            >
+              <ActiveTenantAskAi variant="text" />
+            </Suspense>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
