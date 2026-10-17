@@ -17,6 +17,7 @@ const DASHBOARD_QUERIES = [
   "src/api/queries/EventDashboardConsumersQuery.ts",
   "src/api/queries/TenantInsightsQuery.ts",
   "src/api/queries/RecapDashboardQuery.ts",
+  "src/api/queries/ClientWeekAheadQuery.ts",
 ];
 
 describe("dashboard does not require tenantWeeklyNarration", () => {
@@ -26,7 +27,14 @@ describe("dashboard does not require tenantWeeklyNarration", () => {
     }
     const insights = read("src/components/pages/insights/SparkInsights.tsx");
     expect(insights).toContain("<WeeklyNarrationCard");
+    expect(insights).toContain("<ActivationBreakdown");
     expect(insights).not.toContain("tenantWeeklyNarration");
+
+    const clientDash = read(
+      "src/components/pages/client-dashboard/SparkClientDashboard.tsx",
+    );
+    expect(clientDash).not.toContain("tenantWeeklyNarration");
+    expect(clientDash).toContain("<InsightsBody");
   });
 
   it("loads narration from its own query behind a quiet error boundary", () => {
@@ -36,6 +44,7 @@ describe("dashboard does not require tenantWeeklyNarration", () => {
 
     const card = read("src/components/ai/WeeklyNarrationCard.tsx");
     expect(card).toContain("TenantWeeklyNarrationQuery");
+    expect(card).not.toMatch(/if\s*\(\s*isClient/);
     expect(card).toMatch(
       /<ErrorBoundary fallback=\{null\}>[\s\S]*<WeeklyNarrationBody/,
     );

@@ -3,14 +3,14 @@ import { useLazyLoadQuery } from "react-relay/hooks";
 import { TenantWeeklyNarrationQuery } from "@/api/queries/TenantWeeklyNarrationQuery";
 import type { TenantWeeklyNarrationQuery as TenantWeeklyNarrationQueryType } from "@api/queries/__generated__/TenantWeeklyNarrationQuery.graphql";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import useSparkRole from "@/hooks/useSparkRole";
 import AiMarkdown from "./AiMarkdown";
 
 /**
- * Admin-only weekly paragraph stored by the narration job. Mounted beside
- * Insights. The read does not call the model.
+ * Stored weekly paragraph from the narration job. Shown on the admin
+ * dashboard and the client dashboard. The read does not call the model
+ * and this card never sends email.
  *
- * The query stays off the dashboard document. If the live API has not
+ * The query stays off the page document. If the live API has not
  * shipped `tenantWeeklyNarration` yet, the boundary renders nothing so
  * the rest of the dashboard still loads.
  */
@@ -78,8 +78,7 @@ const WeeklyNarrationBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
 };
 
 const WeeklyNarrationCard: React.FC<{ tenantId: string }> = ({ tenantId }) => {
-  const { isClient } = useSparkRole();
-  if (isClient || !tenantId) return null;
+  if (!tenantId) return null;
   return (
     <ErrorBoundary fallback={null}>
       <Suspense fallback={null}>
