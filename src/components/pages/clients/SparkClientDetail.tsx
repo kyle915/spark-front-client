@@ -31,6 +31,7 @@ import { Link, useLocation, useParams } from "react-router";
 import Layout from "@/layout/Layout";
 import useSparkRole from "@/hooks/useSparkRole";
 import AskAiButton from "@/components/ai/AskAiButton";
+import { askAiSubjectName } from "@/components/ai/askAiSubjectName";
 import TenantKpiCharts from "@/components/ai/TenantKpiCharts";
 import TenantKpiComparison from "@/components/ai/TenantKpiComparison";
 import TenantGoalsPanel from "@/components/ai/TenantGoalsPanel";
@@ -109,7 +110,10 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         </div>
         {/* Ask AI about THIS client — scoped to the route's tenant id,
             not the viewer's active workspace. */}
-        <AskAiButton tenantId={tenantId} tenantName={state?.clientName} />
+        <AskAiButton
+          tenantId={tenantId}
+          tenantName={askAiSubjectName(state?.clientName)}
+        />
       </div>
 
       {/* Aggregated program KPIs + 12-month trend for this client.
