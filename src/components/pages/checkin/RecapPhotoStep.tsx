@@ -1,7 +1,7 @@
 import { useRef, type ChangeEvent, type CSSProperties, type RefObject } from "react";
 import { PHOTO_CAP } from "./photoCap";
 import { bucketCountHint } from "./photoBuckets";
-import { label, photoBadge, photoRemove } from "./checkinStyles";
+import { helperText, label, photoBadge, photoRemove } from "./checkinStyles";
 import type { Photo, PhotoBucket } from "./checkinTypes";
 
 // Photo step components extracted from SparkCheckin.tsx in the step split —
@@ -94,7 +94,7 @@ export function PhotoBucketZone({
               // Muted until the target is reached, green once it is. NEVER the
               // #EF5A2A this page uses for a required field — see
               // `bucketCountHint`.
-              ...(hint.met ? { color: "#2E7D32" } : { opacity: 0.5 }),
+              ...(hint.met ? { color: "#2E7D32" } : { color: "#44403c" }),
             }}
           >
             {hint.text}
@@ -102,7 +102,7 @@ export function PhotoBucketZone({
         ) : null}
       </div>
       {bucket.helper ? (
-        <p style={{ fontSize: 12, opacity: 0.6, margin: "2px 0 0" }}>{bucket.helper}</p>
+        <p style={{ ...helperText, fontSize: 12, margin: "2px 0 0" }}>{bucket.helper}</p>
       ) : null}
       <PhotoGrid
         photos={photos}
@@ -212,10 +212,11 @@ export function PhotoGrid({
     <div>
       <p
         style={{
+          color: "#44403c",
           fontSize: 12,
           fontWeight: 700,
           letterSpacing: "0.08em",
-          opacity: 0.55,
+          opacity: 1,
           margin: "0 0 6px",
         }}
       >
@@ -336,7 +337,7 @@ export function PhotoGrid({
                 border: "2px dashed rgba(0,0,0,0.22)",
                 fontSize: 13,
                 color: "inherit",
-                opacity: 0.75,
+                opacity: 1,
               }}
             >
               {allowVideo ? "Take photo/video" : "Take photo"}
@@ -344,7 +345,7 @@ export function PhotoGrid({
           </>
         ) : null}
       </div>
-      <p style={{ fontSize: 12, opacity: 0.55, margin: "6px 0 0" }}>
+      <p style={{ color: "#44403c", fontSize: 12, opacity: 1, margin: "6px 0 0" }}>
         {atCap
           ? `Limit ${PHOTO_CAP} ${mediaWord}. Remove one to add another.`
           : allowVideo

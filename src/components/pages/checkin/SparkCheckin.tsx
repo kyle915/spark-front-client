@@ -312,8 +312,10 @@ function QrViewer({
             background: "rgba(255,255,255,0.08)",
             color: "#fff",
             borderRadius: 999,
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
+            minWidth: 44,
+            minHeight: 44,
             fontSize: 20,
             lineHeight: 1,
             cursor: "pointer",
@@ -399,7 +401,7 @@ function ResourceButtons({
               <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <span style={{ fontSize: 14, fontWeight: 600 }}>{r.label}</span>
                 {r.note ? (
-                  <span style={{ fontSize: 12.5, opacity: 0.7 }}>{r.note}</span>
+                  <span style={{ color: "#44403c", fontSize: 12.5, opacity: 1 }}>{r.note}</span>
                 ) : null}
               </span>
               <span style={{ fontSize: 18, opacity: 0.6 }} aria-hidden="true">
@@ -764,7 +766,7 @@ function Header({ ctx }: { ctx: Context }) {
       return (
         <div style={{ marginBottom: 18 }}>
           <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>File a recap</h1>
-          <div style={{ fontSize: 13, opacity: 0.6 }}>
+          <div style={{ color: "#44403c", fontSize: 13, opacity: 1 }}>
             {recapOnlyIntro({ hasPrograms: (ctx.eventTypes?.length ?? 0) > 1 })}
           </div>
         </div>
@@ -773,7 +775,7 @@ function Header({ ctx }: { ctx: Context }) {
     return (
       <div style={{ marginBottom: 18 }}>
         <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>Start your shift</h1>
-        <div style={{ fontSize: 13, opacity: 0.6 }}>Clock in, work, then file your recap — all from this page.</div>
+        <div style={{ color: "#44403c", fontSize: 13, opacity: 1 }}>Clock in, work, then file your recap — all from this page.</div>
       </div>
     );
   }
@@ -797,12 +799,12 @@ function Header({ ctx }: { ctx: Context }) {
   return (
     <div style={{ marginBottom: 18 }}>
       <h1 style={{ fontSize: 24, fontWeight: 800, margin: "4px 0 2px", lineHeight: 1.15 }}>{ev.name}</h1>
-      <div style={{ fontSize: 13, opacity: 0.6 }}>
+      <div style={{ color: "#44403c", fontSize: 13, opacity: 1 }}>
         {when}
         {when && window_ ? " · " : ""}
         {window_}
       </div>
-      {ev.address ? <div style={{ fontSize: 13, opacity: 0.55, marginTop: 2 }}>{ev.address}</div> : null}
+      {ev.address ? <div style={{ color: "#44403c", fontSize: 13, opacity: 1, marginTop: 2 }}>{ev.address}</div> : null}
     </div>
   );
 }
@@ -851,7 +853,7 @@ function CheckinStoreSuggestions({
           >
             <div style={{ fontSize: 14, fontWeight: 600, color: "#14181a" }}>{label}</div>
             {label !== store.address ? (
-              <div style={{ fontSize: 12, opacity: 0.62, marginTop: 2 }}>{store.address}</div>
+              <div style={{ color: "#44403c", fontSize: 12, opacity: 1, marginTop: 2 }}>{store.address}</div>
             ) : null}
           </button>
         );
@@ -1212,7 +1214,7 @@ function IdentifyStep({
   return (
     <div style={card}>
       <h2 style={h2}>{recapOnly ? "Your name" : "Who's working?"}</h2>
-      <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
+      <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "0 0 14px" }}>
         {recapOnly
           ? "Your name on this recap. Phone is optional."
           : "Tell us who you are so your lead can confirm your hours. Already clocked in? Use the same phone number to pick up your shift."}
@@ -1408,7 +1410,7 @@ function IdentifyStep({
               pick before they know where they'll end up. */}
           {marketPicker ? (
             <>
-              <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
+              <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "0 0 14px" }}>
                 Pick your market. You'll log each spot you sample as you go.
               </p>
               <select
@@ -1426,7 +1428,7 @@ function IdentifyStep({
             </>
           ) : typedStore ? (
             <>
-          <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
+          <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "0 0 14px" }}>
             Type the store name and address. Required.
           </p>
           <input
@@ -1446,7 +1448,7 @@ function IdentifyStep({
             </>
           ) : (
             <>
-          <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 14px" }}>
+          <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "0 0 14px" }}>
             {atVenue
               ? "Use the venue's address — anyone else working this event today lands on the same one."
               : "Type the store name or address. Picking it from the list keeps you on the same event as anyone else working there today."}
@@ -1507,7 +1509,7 @@ function IdentifyStep({
           )}
             </>
           ) : (
-            <p style={{ fontSize: 13, opacity: 0.6, margin: "14px 0 0" }}>
+            <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "14px 0 0" }}>
               Drop-off location and mileage are on the Product Seeding recap —
               no store step here.
             </p>
@@ -1518,7 +1520,7 @@ function IdentifyStep({
               <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 6px" }}>
                 Still need a recap
               </p>
-              <p style={{ fontSize: 12, opacity: 0.55, margin: "0 0 8px" }}>
+              <p style={{ color: "#44403c", fontSize: 12, opacity: 1, margin: "0 0 8px" }}>
                 You already clocked these days. Tap one to file it — even if it
                 was Friday.
               </p>
@@ -1552,10 +1554,10 @@ function IdentifyStep({
             </div>
           ) : null}
 
-          <label style={{ fontSize: 12, opacity: 0.6, display: "block", margin: "10px 0 4px" }}>
+          <label style={{ color: "#44403c", fontSize: 12, opacity: 1, display: "block", margin: "10px 0 4px" }}>
             {recapOnly ? "Date of this recap" : "Date you're working"}
           </label>
-          <p style={{ fontSize: 12, opacity: 0.55, margin: "0 0 6px" }}>
+          <p style={{ color: "#44403c", fontSize: 12, opacity: 1, margin: "0 0 6px" }}>
             {recapOnly
               ? "The day the sampling happened. You can pick any day in the last "
               : "Working a past shift? Change this to the day you actually worked. You can pick any day in the last "}
@@ -1741,6 +1743,22 @@ function CheckedInFlow({
   const effectiveClock: Clock["state"] =
     queuedClock && clockState === "not_started" ? "clocked_in" : clockState;
   const clockInAt = queuedClock?.clockedInAt ?? ctx.session?.clock.clockInAt ?? null;
+
+  const shiftActionsRef = useRef<HTMLDivElement | null>(null);
+  const [shiftActionsAway, setShiftActionsAway] = useState(false);
+  useEffect(() => {
+    const node = shiftActionsRef.current;
+    if (!node) {
+      setShiftActionsAway(false);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => setShiftActionsAway(entry ? !entry.isIntersecting : false),
+      { threshold: 0.2 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [showRecap, showMileageStep, leftover, effectiveClock, hasRecap, pastDay, secondShiftOk]);
 
   const post = (path: string, body: Record<string, unknown>, timeoutMs?: number) =>
     fetchWithTimeout(
@@ -2268,10 +2286,11 @@ function CheckedInFlow({
       <div style={card}>
         <div
           style={{
+            color: "#44403c",
             fontSize: 12,
             letterSpacing: "0.08em",
             textTransform: "uppercase",
-            opacity: 0.5,
+            opacity: 1,
           }}
         >
           Today
@@ -2320,11 +2339,11 @@ function CheckedInFlow({
       <div style={{ ...card, textAlign: "center" }}>
         <div style={{ fontSize: 40, marginBottom: 6 }}>✓</div>
         <h2 style={{ ...h2, marginBottom: 6 }}>You're all set</h2>
-        <p style={{ fontSize: 14, opacity: 0.7 }}>
+        <p style={{ color: "#44403c", fontSize: 14, opacity: 1 }}>
           Your recap is in{pending ? " and is pending your lead's confirmation" : ""}. Thanks for the great work!
         </p>
         {ctx.event?.date ? (
-          <p style={{ fontSize: 13, opacity: 0.55, marginTop: 8 }}>
+          <p style={{ color: "#44403c", fontSize: 13, opacity: 1, marginTop: 8 }}>
             {fmtDay(ctx.event.date)}
             {ctx.event.address ? ` · ${ctx.event.address}` : ""}
           </p>
@@ -2350,7 +2369,7 @@ function CheckedInFlow({
                 <p style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px" }}>
                   {SECOND_SHIFT_PROMPT}
                 </p>
-                <p style={{ fontSize: 13, opacity: 0.65, margin: "0 0 12px" }}>
+                <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "0 0 12px" }}>
                   {SECOND_SHIFT_HINT}
                 </p>
                 {!ctx.recapOnly ? (
@@ -2420,25 +2439,125 @@ function CheckedInFlow({
     );
   }
 
+  const renderShiftActions = (compact: boolean) => {
+    const fit = (base: CSSProperties): CSSProperties =>
+      compact
+        ? { ...base, flex: 1, minHeight: 44, padding: "10px 12px", fontSize: 14 }
+        : base;
+    return (
+      <>
+          {effectiveClock === "not_started" && !leftover && pastDay ? (
+            <button style={fit(primaryBtn(accent))} onClick={() => openRecap(false)}>
+              {queuedRecap
+                ? "Edit saved recap"
+                : draftWaiting
+                  ? "Continue your recap"
+                  : "File recap"}
+            </button>
+          ) : null}
+          {effectiveClock === "not_started" && !leftover && !pastDay ? (
+            <ActionMorphButton
+              style={fit(primaryBtn(accent))}
+              disabled={busy !== ""}
+              onClick={() => clock("in")}
+              phase={inPhase}
+              pendingLabel="Clocking in…"
+              successLabel="Clocked in"
+            >
+              Clock in
+            </ActionMorphButton>
+          ) : null}
+
+          {/* Recap first — that's the intended order, so it stays the primary
+              button. But clock out is ALWAYS reachable. BAs reported being
+              unable to "sign out": their recap wouldn't submit (photos), and
+              clock out only appeared after a recap existed, so a failed upload
+              silently kept them on the clock with no way to end the shift.
+              Never gate ending a shift on another action succeeding. */}
+          {effectiveClock === "clocked_in" && !hasRecap ? (
+            <>
+              <button style={fit(primaryBtn(accent))} onClick={() => openRecap(false)}>
+                {queuedRecap
+                  ? "Edit saved recap"
+                  : draftWaiting
+                    ? "Continue your recap"
+                    : "File recap"}
+              </button>
+              <button style={fit(secondaryBtn)} disabled={busy !== ""} onClick={() => clock("out")}>
+                {busy === "out" ? "Clocking out…" : "Clock out"}
+              </button>
+            </>
+          ) : null}
+
+          {effectiveClock === "clocked_in" && hasRecap ? (
+            <>
+              <button style={fit(primaryBtn(accent))} disabled={busy !== ""} onClick={() => clock("out")}>
+                {busy === "out" ? "Clocking out…" : "Clock out"}
+              </button>
+              <button style={fit(secondaryBtn)} onClick={() => openRecap(false)}>
+                Edit recap
+              </button>
+              {secondShiftOk ? (
+                <button style={fit(secondaryBtn)} onClick={() => openRecap(true)}>
+                  File {SECOND_SHIFT_LABEL.toLowerCase()}
+                </button>
+              ) : ctx.mode === "tenant" ? (
+                <button style={fit(secondaryBtn)} onClick={() => openRecap(true)}>
+                  File another
+                </button>
+              ) : null}
+            </>
+          ) : null}
+
+          {/* Clocked out with no recap — an older shift, or the auto-clock-out
+              cron closed them. Still let them file it, but this must NOT be
+              the only way out: a BA whose last shift ended without a recap
+              would otherwise be trapped on that dead event forever, unable to
+              start today's. Hence the escape hatch below. */}
+          {effectiveClock === "clocked_out" && !hasRecap ? (
+            <>
+              {ctx.mode === "tenant" && !ctx.recapOnly && !leftover && !pastDay ? (
+                <button style={fit(primaryBtn(accent))} disabled={busy !== ""} onClick={() => clock("in")}>
+                  {busy === "in" ? "Clocking in…" : "Clock in"}
+                </button>
+              ) : null}
+              <button style={fit(secondaryBtn)} onClick={() => openRecap(false)}>
+                {draftWaiting ? "Continue your recap" : "File recap"}
+              </button>
+            </>
+          ) : null}
+      </>
+    );
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+        paddingBottom: shiftActionsAway
+          ? "calc(72px + env(safe-area-inset-bottom, 0px))"
+          : 0,
+      }}
+    >
       <div style={card}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <div>
-            <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.5 }}>
+            <div style={{ color: "#44403c", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", opacity: 1 }}>
               Time clock
             </div>
             <div style={{ fontSize: 16, fontWeight: 700, marginTop: 2 }}>
               {effectiveClock === "clocked_in" ? "On the clock" : effectiveClock === "clocked_out" ? "Clocked out" : "Not started"}
             </div>
             {ctx.event?.date ? (
-              <div style={{ fontSize: 12, opacity: 0.55, marginTop: 2 }}>
+              <div style={{ color: "#44403c", fontSize: 12, opacity: 1, marginTop: 2 }}>
                 {fmtDay(ctx.event.date)}
                 {ctx.event.address ? ` · ${ctx.event.address}` : ""}
               </div>
             ) : null}
             {clockInAt ? (
-              <div style={{ fontSize: 12, opacity: 0.55, marginTop: 2 }}>
+              <div style={{ color: "#44403c", fontSize: 12, opacity: 1, marginTop: 2 }}>
                 In {fmtTime(clockInAt)}
                 {ctx.session?.clock.clockOutAt ? ` · Out ${fmtTime(ctx.session.clock.clockOutAt)}` : ""}
                 {queuedClock ? " · saved on this device" : ""}
@@ -2502,87 +2621,8 @@ function CheckedInFlow({
             still fresh, and makes the clock reflect the real end of work.
             Nobody can get stranded on the clock: the auto-clock-out cron
             closes anything left open. */}
-        <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-          {effectiveClock === "not_started" && !leftover && pastDay ? (
-            <button style={primaryBtn(accent)} onClick={() => openRecap(false)}>
-              {queuedRecap
-                ? "Edit saved recap"
-                : draftWaiting
-                  ? "Continue your recap"
-                  : "File recap"}
-            </button>
-          ) : null}
-          {effectiveClock === "not_started" && !leftover && !pastDay ? (
-            <ActionMorphButton
-              style={primaryBtn(accent)}
-              disabled={busy !== ""}
-              onClick={() => clock("in")}
-              phase={inPhase}
-              pendingLabel="Clocking in…"
-              successLabel="Clocked in"
-            >
-              Clock in
-            </ActionMorphButton>
-          ) : null}
-
-          {/* Recap first — that's the intended order, so it stays the primary
-              button. But clock out is ALWAYS reachable. BAs reported being
-              unable to "sign out": their recap wouldn't submit (photos), and
-              clock out only appeared after a recap existed, so a failed upload
-              silently kept them on the clock with no way to end the shift.
-              Never gate ending a shift on another action succeeding. */}
-          {effectiveClock === "clocked_in" && !hasRecap ? (
-            <>
-              <button style={primaryBtn(accent)} onClick={() => openRecap(false)}>
-                {queuedRecap
-                  ? "Edit saved recap"
-                  : draftWaiting
-                    ? "Continue your recap"
-                    : "File recap"}
-              </button>
-              <button style={secondaryBtn} disabled={busy !== ""} onClick={() => clock("out")}>
-                {busy === "out" ? "Clocking out…" : "Clock out"}
-              </button>
-            </>
-          ) : null}
-
-          {effectiveClock === "clocked_in" && hasRecap ? (
-            <>
-              <button style={primaryBtn(accent)} disabled={busy !== ""} onClick={() => clock("out")}>
-                {busy === "out" ? "Clocking out…" : "Clock out"}
-              </button>
-              <button style={secondaryBtn} onClick={() => openRecap(false)}>
-                Edit recap
-              </button>
-              {secondShiftOk ? (
-                <button style={secondaryBtn} onClick={() => openRecap(true)}>
-                  File {SECOND_SHIFT_LABEL.toLowerCase()}
-                </button>
-              ) : ctx.mode === "tenant" ? (
-                <button style={secondaryBtn} onClick={() => openRecap(true)}>
-                  File another
-                </button>
-              ) : null}
-            </>
-          ) : null}
-
-          {/* Clocked out with no recap — an older shift, or the auto-clock-out
-              cron closed them. Still let them file it, but this must NOT be
-              the only way out: a BA whose last shift ended without a recap
-              would otherwise be trapped on that dead event forever, unable to
-              start today's. Hence the escape hatch below. */}
-          {effectiveClock === "clocked_out" && !hasRecap ? (
-            <>
-              {ctx.mode === "tenant" && !ctx.recapOnly && !leftover && !pastDay ? (
-                <button style={primaryBtn(accent)} disabled={busy !== ""} onClick={() => clock("in")}>
-                  {busy === "in" ? "Clocking in…" : "Clock in"}
-                </button>
-              ) : null}
-              <button style={secondaryBtn} onClick={() => openRecap(false)}>
-                {draftWaiting ? "Continue your recap" : "File recap"}
-              </button>
-            </>
-          ) : null}
+        <div ref={shiftActionsRef} style={{ display: "flex", gap: 10, marginTop: 14 }}>
+          {renderShiftActions(false)}
         </div>
         {queuedClock ? (
           <p style={{ ...errText, color: "#92400e" }}>
@@ -2609,7 +2649,7 @@ function CheckedInFlow({
           before; Clock in / File recap above stay with the current shift. */}
       {effectiveClock === "clocked_out" && !hasRecap && ctx.mode === "tenant" && !leftover ? (
         <div>
-          <p style={{ fontSize: 13, opacity: 0.6, margin: "0 0 8px", textAlign: "center" }}>
+          <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "0 0 8px", textAlign: "center" }}>
             {CHECK_IN_ANOTHER_GIG_HINT}
           </p>
           <button
@@ -2662,7 +2702,7 @@ function CheckedInFlow({
           <p style={{ fontSize: 14, fontWeight: 600, margin: 0 }}>
             Log your stop
           </p>
-          <p style={{ fontSize: 12, opacity: 0.55, margin: "4px 0 10px" }}>
+          <p style={{ color: "#44403c", fontSize: 12, opacity: 1, margin: "4px 0 10px" }}>
             Where are you sampling? Tap this at each spot. We grab the
             location for you — the name is just so you recognise it later.
           </p>
@@ -2746,7 +2786,7 @@ function CheckedInFlow({
             </p>
           ) : null}
 
-          <p style={{ fontSize: 12, opacity: 0.55, marginTop: 8 }}>
+          <p style={{ color: "#44403c", fontSize: 12, opacity: 1, marginTop: 8 }}>
             {mileage.active
               ? "Tap Stop when you park. We measure the driving distance between where you started and where you stopped."
               : "Tap Start before you pull away, Stop when you park. Log each leg separately."}
@@ -2755,21 +2795,49 @@ function CheckedInFlow({
       ) : null}
 
       {effectiveClock === "not_started" ? (
-        <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>
+        <p style={{ color: "#44403c", fontSize: 13, opacity: 1, textAlign: "center" }}>
           {pastDay ? PAST_DAY_NO_CLOCK : "Clock in when you arrive to start your shift."}
         </p>
       ) : null}
       {effectiveClock === "clocked_in" && !hasRecap ? (
-        <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>
+        <p style={{ color: "#44403c", fontSize: 13, opacity: 1, textAlign: "center" }}>
           {draftWaiting
             ? "Your answers are saved on this phone. Continue your recap whenever you're ready — reopen this check-in link if you leave."
             : "You're on the clock. File your recap when you're done. If it won't go through, clock out anyway — you can come back and file it after."}
         </p>
       ) : null}
       {effectiveClock === "clocked_in" && hasRecap ? (
-        <p style={{ fontSize: 13, opacity: 0.6, textAlign: "center" }}>
+        <p style={{ color: "#44403c", fontSize: 13, opacity: 1, textAlign: "center" }}>
           Recap's in. Clock out to finish your shift.
         </p>
+      ) : null}
+      {shiftActionsAway ? (
+        <div
+          style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 20,
+            display: "flex",
+            justifyContent: "center",
+            pointerEvents: "none",
+            padding: "10px 20px calc(10px + env(safe-area-inset-bottom, 0px))",
+            background: "linear-gradient(180deg, rgba(250,247,241,0), #faf7f1 36%)",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 560,
+              display: "flex",
+              gap: 8,
+              pointerEvents: "auto",
+            }}
+          >
+            {renderShiftActions(true)}
+          </div>
+        </div>
       ) : null}
     </div>
   );
@@ -3739,7 +3807,7 @@ function RecapForm({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {eventDate ? (
-        <p style={{ fontSize: 13, opacity: 0.65, margin: 0 }}>
+        <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: 0 }}>
           Recap for {fmtDay(eventDate)}
           {forceNew && shiftLabel
             ? ` · ${shiftLabel}`
@@ -3979,7 +4047,7 @@ function RecapForm({
       {buckets.length > 0 ? (
         <div style={card}>
           <h2 style={h2}>Photos</h2>
-          <p style={{ fontSize: 13, opacity: 0.6, margin: "6px 0 0" }}>
+          <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "6px 0 0" }}>
             Put each shot in its own group so they land in the right place on
             the client report.
           </p>
@@ -4086,7 +4154,7 @@ function RecapForm({
       })()}
 
       {uploadingCount > 0 ? (
-        <p style={{ textAlign: "center", fontSize: 13, opacity: 0.7 }} aria-live="polite">
+        <p style={{ color: "#44403c", textAlign: "center", fontSize: 13, opacity: 1 }} aria-live="polite">
           {formatUploadProgress(uploadProgress)}
         </p>
       ) : null}
@@ -4157,7 +4225,7 @@ function RecapForm({
           gap: 8,
           marginTop: 4,
           paddingTop: 10,
-          paddingBottom: 4,
+          paddingBottom: "calc(4px + env(safe-area-inset-bottom, 0px))",
           background: "#faf7f1",
         }}
       >
@@ -4166,8 +4234,9 @@ function RecapForm({
             <p
               aria-live="polite"
               style={{
+                color: "#44403c",
                 fontSize: 12,
-                opacity: 0.7,
+                opacity: 1,
                 textAlign: "center",
                 margin: 0,
               }}
@@ -4295,7 +4364,7 @@ function MultiselectFieldInput({
         {req}
       </label>
       {qtyMode ? (
-        <p style={{ fontSize: 13, opacity: 0.6, margin: "4px 0 0" }}>
+        <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "4px 0 0" }}>
           {productSampleQtyHelper(qtyContextName ?? field.name, qtyLabel)}
           {searchable ? ` Search filters the list (${arr.length} selected).` : null}
         </p>
@@ -4335,7 +4404,7 @@ function MultiselectFieldInput({
         })}
       </div>
       {searchable && visibleOptions.length === 0 ? (
-        <p style={{ fontSize: 13, opacity: 0.5, marginTop: 8 }}>
+        <p style={{ color: "#44403c", fontSize: 13, opacity: 1, marginTop: 8 }}>
           No SKUs match “{skuFilter.trim()}”.
         </p>
       ) : null}
@@ -4351,11 +4420,12 @@ function MultiselectFieldInput({
           {qtyLabel ? (
             <div
               style={{
+                color: "#44403c",
                 display: "flex",
                 justifyContent: "flex-end",
                 fontSize: 12,
                 fontWeight: 600,
-                opacity: 0.65,
+                opacity: 1,
               }}
             >
               <span style={{ width: 88, textAlign: "center" }}>{qtyLabel}</span>

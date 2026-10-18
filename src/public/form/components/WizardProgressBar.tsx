@@ -10,7 +10,10 @@ export default function WizardProgressBar({ step, total }: Props) {
 
   return (
     <div className="w-full mb-6">
-      <div className="h-2 bg-base-300 rounded-full overflow-hidden">
+      <div
+        className="bg-base-300 rounded-full overflow-hidden"
+        style={{ height: 12 }}
+      >
         <motion.div
           className="h-full bg-primary"
           initial={{ width: 0 }}

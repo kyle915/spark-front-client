@@ -689,6 +689,7 @@ export const SparkSidebar: React.FC = () => {
           <button
             type="button"
             className="md:hidden btn btn-ghost btn-sm btn-square"
+            style={{ minWidth: "var(--spark-hit, 44px)", minHeight: "var(--spark-hit, 44px)" }}
             aria-label="Close menu"
             onClick={() => setOpen(false)}
           >

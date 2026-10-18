@@ -1424,11 +1424,12 @@ function ExpressFormBody() {
         )}
         {/* Sticky submit */}
         <div
-          className="sticky bottom-0 -mx-1 sm:mx-0 px-3 py-3 flex items-center justify-between gap-3 flex-wrap"
+          className="sticky bottom-0 -mx-1 sm:mx-0 px-3 pt-3 flex items-center justify-between gap-3 flex-wrap"
           style={{
             background: "rgba(10,13,9,0.9)",
             backdropFilter: "blur(12px)",
             borderTop: "1px solid var(--spark-border, #1f2418)",
+            paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom, 0px))",
           }}
         >
           <div className="mono text-[10px]" style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.5)" }}>
@@ -1724,10 +1725,10 @@ const TimeSlotSelect: React.FC<{
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <label className="block">
     <span
-      className="mono text-[9px] block mb-1"
+      className="mono text-[11px] block mb-1"
       style={{
-        letterSpacing: "0.16em",
-        color: "rgba(255,255,255,0.5)",
+        letterSpacing: "0.14em",
+        color: "rgba(255,255,255,0.82)",
       }}
     >
       {label.toUpperCase()}

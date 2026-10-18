@@ -277,7 +277,12 @@ const PublicRecap: React.FC = () => {
         status={recap ? (recap.approved ? "APPROVED" : "DRAFT") : null}
         actions={actions}
       >
-        <main className="recap-doc-body">{children}</main>
+        <main
+          className="recap-doc-body"
+          style={{ paddingBottom: "calc(2.5rem + env(safe-area-inset-bottom, 0px))" }}
+        >
+          {children}
+        </main>
       </RecapDocument>
     </TenantBrandedRecap>
   );
@@ -479,7 +484,7 @@ const PublicRecap: React.FC = () => {
                     i === 0
                       ? {
                           boxShadow:
-                            "0 0 28px color-mix(in srgb, var(--recap-brand, #c5f546) 25%, transparent)",
+                            "0 8px 22px color-mix(in srgb, var(--recap-brand, #c5f546) 10%, transparent)",
                         }
                       : undefined
                   }

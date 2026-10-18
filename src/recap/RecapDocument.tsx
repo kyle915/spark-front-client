@@ -26,7 +26,14 @@ export function RecapDocument({
       className={`recap-doc ${page ? "recap-doc-page" : ""} ${className ?? ""}`}
       data-recap-doc=""
     >
-      <header className="recap-doc-header">
+      <header
+        className="recap-doc-header"
+        style={
+          page
+            ? { paddingTop: "calc(1rem + env(safe-area-inset-top, 0px))" }
+            : undefined
+        }
+      >
         <SparkMark height={28} />
         <div className="flex items-center gap-2 flex-wrap">
           {actions}

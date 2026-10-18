@@ -30,6 +30,7 @@ import { requestDateKey } from "@/lib/requestDateKey";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { buildTrackerUrlParams } from "@/requests/masterTrackerFilters";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import { TenantLogo } from "@/layout/TenantLogo.tsx";
 import DashboardProgramSwitch from "@/field/DashboardProgramSwitch";
 import { isTorchTenant } from "@/field/torch";
 import { useDashboardProgram } from "@/field/useDashboardProgram";
@@ -520,16 +521,28 @@ const ClientInner: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl spark-fade-in">
-      <SparkPageHeader
-        eyebrow="YOUR PROGRAM · MONTH AHEAD"
-        title="Today"
-        support="Upcoming schedule and program performance."
-        action={
-          <Suspense fallback={<AskAiButton tenantId={tenantId} />}>
-            <ActiveTenantAskAi />
-          </Suspense>
-        }
-      />
+      <div className="flex items-start gap-3">
+        <TenantLogo
+          variant="header"
+          tone="dark"
+          name={tenantMeta?.requestUrlName}
+          requestUrlName={tenantMeta?.requestUrlName}
+          tenantSlug={tenantSlug}
+          image={tenantMeta?.logo}
+        />
+        <div className="min-w-0 flex-1">
+          <SparkPageHeader
+            eyebrow="YOUR PROGRAM · MONTH AHEAD"
+            title="Today"
+            support="Upcoming schedule and program performance."
+            action={
+              <Suspense fallback={<AskAiButton tenantId={tenantId} />}>
+                <ActiveTenantAskAi />
+              </Suspense>
+            }
+          />
+        </div>
+      </div>
 
       <BrandViewSwitch tenantId={tenantId} view={brandView} onChange={chooseBrandView} />
       {brandView === "compare" && tenantId ? (
