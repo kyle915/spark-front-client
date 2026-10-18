@@ -486,8 +486,11 @@ function InsightsTimeline({
 /** Program analytics body — embedded on Dashboard (admin + client). */
 export function InsightsBody({
   embedded = false,
+  omitNarration = false,
 }: {
   embedded?: boolean;
+  /** Client home renders the narration card above the Performance disclosure. */
+  omitNarration?: boolean;
 }) {
   const { tenantId, tenantSlug, tenantMeta } = useAuthStore();
   const torch = isTorchTenant(tenantSlug, tenantMeta?.requestUrlName);
@@ -762,7 +765,7 @@ export function InsightsBody({
         </Suspense>
       )}
 
-      {tenantId && <WeeklyNarrationCard tenantId={tenantId} />}
+      {tenantId && !omitNarration && <WeeklyNarrationCard tenantId={tenantId} />}
 
       {tenantId && (
         <Suspense fallback={null}>

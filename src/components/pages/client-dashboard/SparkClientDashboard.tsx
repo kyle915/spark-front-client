@@ -25,6 +25,7 @@ import { ClientWeekAheadQuery } from "@/api/queries/ClientWeekAheadQuery";
 import type { ClientWeekAheadQuery as ClientWeekAheadQueryType } from "@api/queries/__generated__/ClientWeekAheadQuery.graphql";
 import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
+import WeeklyNarrationCard from "@/components/ai/WeeklyNarrationCard";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { requestDateKey } from "@/lib/requestDateKey";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -510,6 +511,26 @@ const ClientInner: React.FC = () => {
   // Intentionally NOT RequestsQuery first:2000 — that pulls products,
   // openShifts, nested location trees this page never renders.
   const [horizonDays, setHorizonDays] = useState<AheadHorizon>(30);
+  const [performanceOpen, setPerformanceOpen] = useState(
+    () =>
+      typeof window !== "undefined" && window.location.hash === "#performance",
+  );
+  useEffect(() => {
+    const openFromHash = () => {
+      if (window.location.hash === "#performance") setPerformanceOpen(true);
+    };
+    window.addEventListener("hashchange", openFromHash);
+    return () => window.removeEventListener("hashchange", openFromHash);
+  }, []);
+  const togglePerformance = () => {
+    setPerformanceOpen((open) => {
+      const next = !open;
+      const url = new URL(window.location.href);
+      url.hash = next ? "performance" : "";
+      window.history.replaceState(null, "", url.toString());
+      return next;
+    });
+  };
 
   const dateWindow = useMemo(() => {
     const today = startOfDay(new Date());
@@ -533,7 +554,7 @@ const ClientInner: React.FC = () => {
         <div className="min-w-0 flex-1">
           <SparkPageHeader
             eyebrow="YOUR PROGRAM · MONTH AHEAD"
-            title="Today"
+            title="Home"
             support="Upcoming schedule and program performance."
             action={
               <Suspense fallback={<AskAiButton tenantId={tenantId} />}>
@@ -664,9 +685,46 @@ const ClientInner: React.FC = () => {
         </Suspense>
       )}
 
-      <Suspense fallback={<DashboardSkeleton />}>
-        <InsightsBody embedded />
-      </Suspense>
+      {tenantId ? <WeeklyNarrationCard tenantId={tenantId} /> : null}
+
+      <section className="spark-card overflow-hidden" style={{ borderRadius: 20 }}>
+        <button
+          type="button"
+          className="w-full text-left px-5 py-4 flex items-center justify-between gap-3"
+          aria-expanded={performanceOpen}
+          aria-controls="client-performance"
+          onClick={togglePerformance}
+        >
+          <span>
+            <span
+              className="mono block text-[10px]"
+              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
+            >
+              PERFORMANCE
+            </span>
+            <span className="block text-sm font-semibold mt-1">
+              Pace, charts, markets, and timeline
+            </span>
+          </span>
+          <span
+            className="mono text-[10px]"
+            style={{ letterSpacing: "0.14em", color: "var(--spark-lime)" }}
+          >
+            {performanceOpen ? "HIDE" : "SHOW"}
+          </span>
+        </button>
+        {performanceOpen ? (
+          <div
+            id="client-performance"
+            className="px-5 pb-5"
+            style={{ borderTop: "1px solid var(--spark-border)" }}
+          >
+            <Suspense fallback={<DashboardSkeleton />}>
+              <InsightsBody embedded omitNarration />
+            </Suspense>
+          </div>
+        ) : null}
+      </section>
 
       </>)}
       </>)}
