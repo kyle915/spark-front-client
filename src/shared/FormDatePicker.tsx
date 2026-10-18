@@ -142,20 +142,19 @@ export default function FormDatePicker<T extends FieldValues>({
               type="button"
               disabled={disabled}
               popoverTarget={popoverId}
-              className={`w-full min-h-11 input input-bordered rounded-full px-3 pr-12 flex items-center text-left transition-colors ${
-                error ? "input-error" : ""
-              } ${
-                disabled
-                  ? "disabled:bg-base-200/50 disabled:border-base-300 disabled:text-base-content/40 disabled:cursor-not-allowed"
-                  : ""
+              className={`spark-input w-full min-h-11 rounded-lg px-3 pr-12 flex items-center text-left focus:outline-none ${
+                disabled ? "cursor-not-allowed opacity-50" : ""
               }`}
-              style={{ anchorName: anchorVar } as React.CSSProperties}
+              style={
+                {
+                  anchorName: anchorVar,
+                  ...(error
+                    ? { borderColor: "var(--color-error, #ff5470)" }
+                    : {}),
+                } as React.CSSProperties
+              }
             >
-              <span
-                className={
-                  field.value ? "text-base-content" : "text-base-content/50"
-                }
-              >
+              <span className={field.value ? "" : "opacity-50"}>
                 {field.value ? formatDate(field.value) : placeholder}
               </span>
             </button>
@@ -169,7 +168,7 @@ export default function FormDatePicker<T extends FieldValues>({
                     e.stopPropagation();
                     field.onChange("");
                   }}
-                  className="p-1 hover:bg-base-200 rounded-full text-base-content/50 hover:text-base-content transition-colors"
+                  className="rounded-md p-1 text-white/50 transition-colors hover:bg-white/10 hover:text-white"
                 >
                   <XMarkIcon className="w-4 h-4" />
                 </button>
@@ -188,12 +187,26 @@ export default function FormDatePicker<T extends FieldValues>({
           <div
             id={popoverId}
             popover="auto"
-            className="dropdown bg-base-100 rounded-box shadow-xl p-3 mt-2 overflow-hidden w-[calc(100vw-2.5rem)] sm:w-[320px] max-w-full"
-            style={{ positionAnchor: anchorVar } as React.CSSProperties}
+            className="dropdown mt-2 w-[calc(100vw-2.5rem)] max-w-full overflow-hidden rounded-xl border p-3 shadow-xl sm:w-[320px]"
+            style={
+              {
+                positionAnchor: anchorVar,
+                background: "var(--spark-bg, #0a0d09)",
+                borderColor: "var(--spark-border, #1f2418)",
+                color: "var(--spark-text, #f2f3ee)",
+              } as React.CSSProperties
+            }
           >
             <calendar-date
               locale="en"
               className="cally mx-auto"
+              style={
+                {
+                  color: "var(--spark-text, #f2f3ee)",
+                  "--color-accent": "#c5f546",
+                  "--color-text-on-accent": "#0a0b0d",
+                } as React.CSSProperties
+              }
               value={
                 field.value && /^\d{4}-\d{2}-\d{2}$/.test(toDatePart(field.value))
                   ? toDatePart(field.value)
@@ -224,10 +237,10 @@ export default function FormDatePicker<T extends FieldValues>({
             </calendar-date>
 
             {/* Footer actions */}
-            <div className="mt-2 flex justify-between border-t border-base-200 pt-2">
+            <div className="mt-2 flex justify-between border-t border-white/10 pt-2">
               <button
                 type="button"
-                className="btn btn-ghost btn-sm"
+                className="rounded-lg px-2 py-1 text-sm text-white/70 hover:bg-white/5 hover:text-white"
                 onClick={() => {
                   const minimumDate = getMinimumDate();
                   const targetDate = minimumDate ?? new Date();
@@ -246,7 +259,7 @@ export default function FormDatePicker<T extends FieldValues>({
 
               <button
                 type="button"
-                className="btn btn-ghost btn-sm text-error"
+                className="rounded-lg px-2 py-1 text-sm text-[#ff5470] hover:bg-white/5"
                 onClick={() => {
                   field.onChange("");
                 }}

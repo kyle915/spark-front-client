@@ -39,14 +39,17 @@ const FormInputPassword = <T extends FieldValues>({
                             placeholder={placeholder ?? label}
                             disabled={disabled}
                             value={field.value ?? ""}
-                            className={`text-gray-400 input input-bordered w-full rounded-full px-4 py-2 pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                                error ? "input-error" : ""
-                            }`}
+                            className="spark-input input w-full rounded-lg px-4 py-2 pr-12 focus:outline-none"
+                            style={
+                                error
+                                    ? { borderColor: "var(--color-error, #ff5470)" }
+                                    : undefined
+                            }
                             data-testid={String(name)}
                         />
                         <button
                             type="button"
-                            className="btn btn-ghost btn-xs absolute right-3 top-1/2 -translate-y-1/2"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-white/55 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#c5f546]"
                             onClick={() => setShowPassword((prev) => !prev)}
                             aria-label={showPassword ? "Hide password" : "Show password"}
                         >

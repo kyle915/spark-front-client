@@ -40,9 +40,12 @@ const FormInputText = <T extends FieldValues>({
             type={type}
             placeholder={placeholder}
             disabled={disabled}
-            className={`text-gray-400 input input-bordered w-full rounded-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-              error ? "input-error" : ""
-            }`}
+            className="spark-input input w-full rounded-lg px-4 py-2 focus:outline-none"
+            style={
+              error
+                ? { borderColor: "var(--color-error, #ff5470)" }
+                : undefined
+            }
             data-testid={String(name)}
           />
 

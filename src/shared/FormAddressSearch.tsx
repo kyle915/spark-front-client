@@ -110,9 +110,12 @@ const FormAddressSearch = <T extends FieldValues>({
           onFocus={() => setShowResults(true)}
           placeholder={placeholder}
           disabled={disabled}
-          className={`text-gray-400 input input-bordered w-full rounded-full px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-            error ? "input-error" : ""
-          }`}
+          className="spark-input input w-full rounded-lg px-4 py-2 pr-10 focus:outline-none"
+          style={
+            error
+              ? { borderColor: "var(--color-error, #ff5470)" }
+              : undefined
+          }
           autoComplete="off"
           data-testid={String(name)}
         />
@@ -121,7 +124,14 @@ const FormAddressSearch = <T extends FieldValues>({
         )}
 
         {showResults && !disabled && (results.length > 0 || searchError) && (
-          <div className="absolute z-[1200] mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow-lg max-h-60 overflow-auto">
+          <div
+            className="absolute z-[1200] mt-1 w-full max-h-60 overflow-auto rounded-[10px] border shadow-lg"
+            style={{
+              background: "var(--spark-bg, #0a0d09)",
+              borderColor: "var(--spark-border, #1f2418)",
+              color: "var(--spark-text, #f2f3ee)",
+            }}
+          >
             {searchError && (
               <div className="px-4 py-2 text-sm text-error">{searchError}</div>
             )}
@@ -129,13 +139,13 @@ const FormAddressSearch = <T extends FieldValues>({
               <button
                 key={`${result.lat}-${result.lng}-${idx}`}
                 type="button"
-                className="w-full text-left px-4 py-2 hover:bg-base-200"
+                className="w-full px-4 py-2 text-left hover:bg-white/5"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSelect(result)}
               >
                 <p className="text-sm font-semibold">{result.label}</p>
                 {result.description && (
-                  <p className="text-xs text-base-content/70">
+                  <p className="text-xs text-white/55">
                     {result.description}
                   </p>
                 )}

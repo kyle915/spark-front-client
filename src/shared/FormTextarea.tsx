@@ -34,8 +34,12 @@ const FormTextarea = <T extends FieldValues>({
                     rows={rows}
                     placeholder={placeholder ?? label}
                     disabled={disabled}
-                    className={`textarea textarea-bordered w-full rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${error ? "textarea-error" : ""
-                        }`}
+                    className="spark-input w-full min-h-[5rem] rounded-lg px-4 py-2 focus:outline-none"
+                    style={
+                        error
+                            ? { borderColor: "var(--color-error, #ff5470)" }
+                            : undefined
+                    }
                     data-testid={String(name)}
                 />
                 {error && (
