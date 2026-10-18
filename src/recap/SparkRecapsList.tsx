@@ -24,6 +24,10 @@ import { GenerateCampaignReportPdfMutation } from "@/api/mutations/GenerateCampa
 import type { GenerateCampaignReportPdfMutation as GenerateCampaignReportPdfMutationType } from "@api/mutations/__generated__/GenerateCampaignReportPdfMutation.graphql";
 import { BulkApproveRecapsMutation } from "@/api/mutations/BulkApproveRecapsMutation";
 import type { BulkApproveRecapsMutation as BulkApproveRecapsMutationType } from "@api/mutations/__generated__/BulkApproveRecapsMutation.graphql";
+import { ArchiveRecapMutation } from "@/api/mutations/ArchiveRecapMutation";
+import type { ArchiveRecapMutation as ArchiveRecapMutationType } from "@/api/mutations/__generated__/ArchiveRecapMutation.graphql";
+import { ArchiveCustomRecapMutation } from "@/api/mutations/ArchiveCustomRecapMutation";
+import type { ArchiveCustomRecapMutation as ArchiveCustomRecapMutationType } from "@/api/mutations/__generated__/ArchiveCustomRecapMutation.graphql";
 import { MarkRecapsSharedMutation } from "@/api/mutations/MarkRecapsSharedMutation";
 import type { MarkRecapsSharedMutation as MarkRecapsSharedMutationType } from "@api/mutations/__generated__/MarkRecapsSharedMutation.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -59,8 +63,12 @@ import {
 } from "@/shared/sparkStat";
 import {
   appendUniqueByUuid,
+  domWindowForIndex,
+  expandDomWindow,
   recapsListPageVariables,
+  RECAPS_DOM_WINDOW_SIZE,
 } from "./recapsListPagination";
+import { partitionRecapsForBulkArchive } from "./recapBulkArchive";
 import {
   buildRecapListSearchParams,
   consumeRecapsListNeedsRefresh,
@@ -1462,6 +1470,10 @@ const RecapsListFetched: React.FC<{
   const [loadedPages, setLoadedPages] = useState(1);
   const loadingMoreRef = useRef(false);
   const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+  // DOM window (see recapsListPagination): render only the first N filtered
+  // rows; fetch/queue/selection/exports keep using the full filtered set.
+  const [visibleCount, setVisibleCount] = useState(RECAPS_DOM_WINDOW_SIZE);
+  const windowSentinelRef = useRef<HTMLDivElement | null>(null);
 
   const firstPageKey = [
     refreshKey,
@@ -1483,8 +1495,14 @@ const RecapsListFetched: React.FC<{
     setLoadMoreError(null);
     setLoadingMore(false);
     setLoadedPages(1);
+    setVisibleCount(RECAPS_DOM_WINDOW_SIZE);
     loadingMoreRef.current = false;
   }, [firstPageKey]);
+
+  // Sorting reorders the same rows — restart the window so the top is shown.
+  useEffect(() => {
+    setVisibleCount(RECAPS_DOM_WINDOW_SIZE);
+  }, [sortKey]);
 
   useEffect(() => {
     if (extraLegacy.length > 0) return;
@@ -1685,11 +1703,43 @@ const RecapsListFetched: React.FC<{
     });
   }, [recaps, search, retailerFilter, stateFilter, baName, statusFilter, activationFilter, dateFrom, dateTo, sortKey, justApprovedIds, isClient, pipeline, needsStoreMap]);
 
-  // We paint every loaded row that matches the client-side filters.
-  // Pagination now lives at the FETCH layer (`limit` / "Load more"), so
-  // there's no separate client-side display slice — `filtered` is what
-  // renders.
+  // `filtered` is the full loaded + filter-matching set: it feeds the
+  // review queue (via onVisibleRecapsChange), selection, counts and
+  // exports. Only the DOM is windowed — `windowed` is what paints, so
+  // queue/selection semantics are unchanged when rows are off-window.
   const displayed = filtered;
+  const windowed = filtered.slice(0, visibleCount);
+  const canExpandWindow = windowed.length < filtered.length;
+  const expandWindow = useCallback(
+    () => setVisibleCount((c) => expandDomWindow(c, filtered.length)),
+    [filtered.length],
+  );
+
+  // Keyboard focus (j/k in the parent) can land past the window — grow to it.
+  useEffect(() => {
+    if (!focusedId) return;
+    const idx = filtered.findIndex((r) => r.uuid === focusedId);
+    if (idx >= 0) {
+      setVisibleCount((c) => domWindowForIndex(c, idx, filtered.length));
+    }
+  }, [focusedId, filtered]);
+
+  // Auto-grow the window as its sentinel nears the viewport. The fetch
+  // sentinel below only mounts once the window covers all filtered rows,
+  // so scrolling expands DOM first, then fetches the next server page.
+  useEffect(() => {
+    if (!canExpandWindow) return;
+    const el = windowSentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) expandWindow();
+      },
+      { rootMargin: "240px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [canExpandWindow, expandWindow, windowed.length]);
 
   const hasMore = legacyHasMore || customHasMore;
 
@@ -1760,7 +1810,23 @@ const RecapsListFetched: React.FC<{
 
   const listFooter = (
     <div className="flex flex-col items-center gap-2 py-4">
-      {hasMore && !loadMoreError ? (
+      {canExpandWindow ? (
+        <>
+          <div ref={windowSentinelRef} className="h-8 w-full" />
+          <button
+            type="button"
+            onClick={expandWindow}
+            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            style={{
+              background: "transparent",
+              color: "var(--spark-text)",
+              border: "1px solid var(--spark-border)",
+            }}
+          >
+            Show more recaps ({windowed.length} of {filtered.length} loaded)
+          </button>
+        </>
+      ) : hasMore && !loadMoreError ? (
         <div ref={loadMoreSentinelRef} className="h-8 w-full" />
       ) : null}
       {loadingMore ? (
@@ -1880,7 +1946,7 @@ const RecapsListFetched: React.FC<{
       <div>
         <p className="spark-inset-label">Recaps</p>
         <div className="spark-inset-group">
-          {displayed.map((r) => (
+          {windowed.map((r) => (
             <RecapCompactRow
               key={r.uuid}
               recap={r}
@@ -1903,7 +1969,7 @@ const RecapsListFetched: React.FC<{
   return (
     <>
     <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {displayed.map((r) => (
+      {windowed.map((r) => (
         <RecapCard
           key={r.uuid}
           recap={r}
@@ -2487,6 +2553,11 @@ export default function SparkRecapsList() {
     );
   const [commitBulkApprove, isBulkApproving] =
     useMutation<BulkApproveRecapsMutationType>(BulkApproveRecapsMutation);
+  const [commitArchiveRecap] =
+    useMutation<ArchiveRecapMutationType>(ArchiveRecapMutation);
+  const [commitArchiveCustomRecap] =
+    useMutation<ArchiveCustomRecapMutationType>(ArchiveCustomRecapMutation);
+  const [isBulkArchiving, setIsBulkArchiving] = useState(false);
   const [approvePhase, setApprovePhase] = useState<ActionPhase>("idle");
   // Detail approve/archive sets refreshRecaps / session flag so we skip
   // store-or-network and drop the row from Needs review without F5.
@@ -2640,6 +2711,80 @@ export default function SparkRecapsList() {
         showAlert(err.message, "error");
       },
     });
+  };
+
+  // Bulk archive — manual ops only (AI never archives). Reuses the detail
+  // pages' single-recap mutations sequentially, split by kind: stamps
+  // archived_at only, never touches approved, sends no client email.
+  // Already-archived rows are skipped by the partition helper.
+  const archiveSelected = async () => {
+    if (selectedIds.size === 0 || isBulkArchiving) return;
+    const targets = partitionRecapsForBulkArchive(visibleRecaps, selectedIds);
+    const total = targets.recapIds.length + targets.customRecapIds.length;
+    if (total === 0) {
+      showAlert("Selected recaps are already archived.", "info");
+      return;
+    }
+    const ok = window.confirm(
+      `Archive ${total} recap${total === 1 ? "" : "s"}? They stay on file as proof, leave Needs review, and are hidden from clients. Approval status is unchanged and no client email is sent.`,
+    );
+    if (!ok) return;
+    setIsBulkArchiving(true);
+    let okCount = 0;
+    const failures: string[] = [];
+    const archiveOne = (
+      kind: "legacy" | "custom",
+      id: string,
+    ): Promise<void> =>
+      new Promise((resolve) => {
+        const done = (success: boolean, message?: string | null) => {
+          if (success) okCount += 1;
+          else failures.push(message ?? "archive failed");
+          resolve();
+        };
+        if (kind === "custom") {
+          commitArchiveCustomRecap({
+            variables: { input: { id, reason: null } },
+            onCompleted: (res) =>
+              done(
+                Boolean(res.archiveCustomRecap?.success),
+                res.archiveCustomRecap?.message,
+              ),
+            onError: (err) => done(false, err.message),
+          });
+        } else {
+          commitArchiveRecap({
+            variables: { input: { id, reason: null } },
+            onCompleted: (res) =>
+              done(
+                Boolean(res.archiveRecap?.success),
+                res.archiveRecap?.message,
+              ),
+            onError: (err) => done(false, err.message),
+          });
+        }
+      });
+    // Sequential like bulk approve in SparkApprovals — avoids hammering API.
+    for (const id of targets.recapIds) await archiveOne("legacy", id);
+    for (const id of targets.customRecapIds) await archiveOne("custom", id);
+    setIsBulkArchiving(false);
+    if (okCount > 0) {
+      clearSelection();
+      setRefreshKey((k) => k + 1);
+    }
+    if (failures.length === 0) {
+      showAlert(
+        `Archived ${okCount} recap${okCount === 1 ? "" : "s"} — kept as proof, hidden from clients.`,
+        "success",
+      );
+    } else if (okCount > 0) {
+      showAlert(
+        `Archived ${okCount}, failed ${failures.length}: ${failures[0]}`,
+        "warning",
+      );
+    } else {
+      showAlert(`Archive failed: ${failures[0] ?? "unknown error"}`, "error");
+    }
   };
 
   // Bulk Share / Email modal. The selected Recap objects (visible ∩
@@ -3895,6 +4040,18 @@ export default function SparkRecapsList() {
             >
               Approve selected
             </ActionMorphButton>
+          )}
+          {!isClient && (
+            <button
+              type="button"
+              onClick={() => void archiveSelected()}
+              disabled={isBulkArchiving || isBulkApproving}
+              className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-40"
+              style={ghostBtn}
+              title="Archive stamps archived_at only — approval is unchanged and no client email is sent"
+            >
+              {isBulkArchiving ? "Archiving…" : "Archive selected"}
+            </button>
           )}
           <button
             type="button"

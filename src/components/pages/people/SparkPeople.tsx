@@ -126,6 +126,12 @@ const Inner: React.FC<{
     for (const r of rows) c[r.roleSlug] = (c[r.roleSlug] ?? 0) + 1;
     return c;
   }, [rows]);
+  // UsersQuery is capped at first:500 and search/role filter client-side, so
+  // beyond 500 people the list would silently truncate. Surface it instead
+  // of pretending the filtered list is complete (totalCount is already in
+  // the query selection — no extra fetch).
+  const totalPeople = data?.users?.totalCount ?? rows.length;
+  const peopleTruncated = totalPeople > rows.length;
   void navigate;
 
   // Remove flow — Spark-chrome modal + optimistic local removal so the
@@ -562,6 +568,22 @@ const Inner: React.FC<{
               }}
             />
           </div>
+
+          {peopleTruncated && (
+            <p
+              className="text-xs px-4 py-3 rounded-xl mb-3"
+              style={{
+                background: "rgba(255,200,60,0.08)",
+                border: "1px solid rgba(255,200,60,0.25)",
+                color: "rgba(255,255,255,0.75)",
+              }}
+              role="status"
+            >
+              Showing the first {rows.length} of {totalPeople} people — this
+              list is capped, so search and role filters only apply to the
+              loaded {rows.length}. People beyond the cap are not shown.
+            </p>
+          )}
 
           <div
             className="spark-card overflow-hidden"

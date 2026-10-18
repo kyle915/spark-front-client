@@ -24,6 +24,36 @@ export function recapsListPageVariables(
   return { first: RECAPS_PAGE_SIZE, after };
 }
 
+/**
+ * DOM window for the recaps grid (MasterTracker `visibleCount` pattern).
+ *
+ * Infinite scroll can append unbounded 50-row pages to `filtered`; mounting
+ * every loaded card janks the tab. We render only the first
+ * `RECAPS_DOM_WINDOW_SIZE` filtered rows and grow the window on scroll /
+ * "Show more". This caps DOM only — fetch, the review queue, selection and
+ * exports all keep reading the full filtered set.
+ */
+export const RECAPS_DOM_WINDOW_SIZE = 60;
+
+/** Grow the DOM window by one chunk, clamped to the filtered total. */
+export function expandDomWindow(current: number, total: number): number {
+  if (total <= 0) return RECAPS_DOM_WINDOW_SIZE;
+  return Math.min(total, Math.max(current, 0) + RECAPS_DOM_WINDOW_SIZE);
+}
+
+/** Window size that includes `index` (e.g. keyboard-focused row), or current. */
+export function domWindowForIndex(
+  current: number,
+  index: number,
+  total: number,
+): number {
+  if (index < 0 || index < current) return current;
+  const needed = index + 1;
+  const grown =
+    Math.ceil(needed / RECAPS_DOM_WINDOW_SIZE) * RECAPS_DOM_WINDOW_SIZE;
+  return Math.min(Math.max(total, RECAPS_DOM_WINDOW_SIZE), grown);
+}
+
 /** Append page-N rows without duplicating uuids already on screen. */
 export function appendUniqueByUuid<T extends { uuid: string }>(
   loaded: T[],

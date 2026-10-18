@@ -32,7 +32,9 @@ const Inner: React.FC = () => {
 
   const data = useLazyLoadQuery<ClientsQueryType>(
     ClientsQuery,
-    { filters: tenantId ? { tenantId } : {} },
+    // Explicit page size (connection default is small) + totalCount so a
+    // truncated list is surfaced below instead of silently capped.
+    { filters: tenantId ? { tenantId } : {}, first: 500 },
     { fetchPolicy: "store-or-network" },
   );
 
@@ -41,6 +43,8 @@ const Inner: React.FC = () => {
       .map((e) => e?.node)
       .filter((n): n is ClientNode => Boolean(n));
   }, [data]);
+  const totalClients = data?.clients?.totalCount ?? clients.length;
+  const clientsTruncated = totalClients > clients.length;
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -64,6 +68,22 @@ const Inner: React.FC = () => {
           </SparkPrimaryButton>
         }
       />
+
+      {clientsTruncated && (
+        <p
+          className="text-xs px-4 py-3 rounded-xl max-w-md"
+          style={{
+            background: "rgba(255,200,60,0.08)",
+            border: "1px solid rgba(255,200,60,0.25)",
+            color: "rgba(255,255,255,0.75)",
+          }}
+          role="status"
+        >
+          Showing the first {clients.length} of {totalClients} clients — this
+          list is capped, so search only applies to the loaded {clients.length}.
+          Clients beyond the cap are not shown.
+        </p>
+      )}
 
       <input
         value={search}
