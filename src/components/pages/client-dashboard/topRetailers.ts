@@ -95,7 +95,7 @@ export function rankUpcomingRetailers(
     bucket.labels.set(trimmed, (bucket.labels.get(trimmed) ?? 0) + 1);
   }
 
-  const named = [...buckets.entries()]
+  const named: RankedRetailer[] = [...buckets.entries()]
     .map(([key, bucket]) => ({
       key,
       name: preferredLabel(bucket.labels),
