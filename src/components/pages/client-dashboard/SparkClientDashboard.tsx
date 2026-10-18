@@ -517,26 +517,6 @@ const ClientInner: React.FC = () => {
   // Intentionally NOT RequestsQuery first:2000 — that pulls products,
   // openShifts, nested location trees this page never renders.
   const [horizonDays, setHorizonDays] = useState<AheadHorizon>(30);
-  const [performanceOpen, setPerformanceOpen] = useState(
-    () =>
-      typeof window !== "undefined" && window.location.hash === "#performance",
-  );
-  useEffect(() => {
-    const openFromHash = () => {
-      if (window.location.hash === "#performance") setPerformanceOpen(true);
-    };
-    window.addEventListener("hashchange", openFromHash);
-    return () => window.removeEventListener("hashchange", openFromHash);
-  }, []);
-  const togglePerformance = () => {
-    setPerformanceOpen((open) => {
-      const next = !open;
-      const url = new URL(window.location.href);
-      url.hash = next ? "performance" : "";
-      window.history.replaceState(null, "", url.toString());
-      return next;
-    });
-  };
 
   const dateWindow = useMemo(() => {
     const today = startOfDay(new Date());
@@ -693,43 +673,30 @@ const ClientInner: React.FC = () => {
 
       {tenantId ? <WeeklyNarrationCard tenantId={tenantId} /> : null}
 
-      <section className="spark-card overflow-hidden" style={{ borderRadius: 20 }}>
-        <button
-          type="button"
-          className="w-full text-left px-5 py-4 flex items-center justify-between gap-3"
-          aria-expanded={performanceOpen}
-          aria-controls="client-performance"
-          onClick={togglePerformance}
-        >
-          <span>
-            <span
-              className="mono block text-[10px]"
-              style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
-            >
-              PERFORMANCE
-            </span>
-            <span className="block text-sm font-semibold mt-1">
-              Pace, charts, markets, and timeline
-            </span>
-          </span>
+      <section
+        id="client-performance"
+        className="spark-card overflow-hidden"
+        style={{ borderRadius: 20 }}
+      >
+        <div className="px-5 py-4">
           <span
-            className="mono text-[10px]"
-            style={{ letterSpacing: "0.14em", color: "var(--spark-lime)" }}
+            className="mono block text-[10px]"
+            style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
           >
-            {performanceOpen ? "HIDE" : "SHOW"}
+            PERFORMANCE
           </span>
-        </button>
-        {performanceOpen ? (
-          <div
-            id="client-performance"
-            className="px-5 pb-5"
-            style={{ borderTop: "1px solid var(--spark-border)" }}
-          >
-            <Suspense fallback={<DashboardSkeleton />}>
-              <InsightsBody embedded omitNarration />
-            </Suspense>
-          </div>
-        ) : null}
+          <span className="block text-sm font-semibold mt-1">
+            Pace, charts, markets, and timeline
+          </span>
+        </div>
+        <div
+          className="px-5 pb-5"
+          style={{ borderTop: "1px solid var(--spark-border)" }}
+        >
+          <Suspense fallback={<DashboardSkeleton />}>
+            <InsightsBody embedded omitNarration />
+          </Suspense>
+        </div>
       </section>
 
       </>)}
