@@ -1,5 +1,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
+import { fetchQuery } from "relay-runtime";
+import environment from "@/api/relay/environment";
 import { useNavigate, useSearchParams } from "react-router";
 import Layout from "@/layout/Layout";
 import SparkPageHeader from "@/shared/SparkPageHeader";
@@ -30,6 +32,11 @@ import {
   type PeopleTab,
   type PersonRow,
 } from "./peopleRoutingControls";
+import {
+  PEOPLE_PAGE_SIZE,
+  peopleSearchIsActive,
+  peopleServerFilters,
+} from "./peopleListFilters";
 
 export {
   DefaultRmmSelector,
@@ -66,6 +73,30 @@ const initialsOf = (name: string) =>
     .slice(0, 2)
     .toUpperCase() || "?";
 
+function toPeopleRows(
+  payload: UsersQueryType["response"] | null | undefined,
+): PersonRow[] {
+  return (
+    payload?.users?.edges
+      ?.map((e) => e?.node)
+      ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
+      ?.map((n) => {
+        const name = [n.firstName, n.lastName].filter(Boolean).join(" ");
+        const role = n.role?.name ?? "Member";
+        const slug = role.toString().toLowerCase().replace(/\s+/g, "-");
+        return {
+          id: String(n.id),
+          uuid: String(n.uuid),
+          name: name || (n.email ?? "Unknown"),
+          email: n.email ?? "",
+          role,
+          roleSlug: slug,
+          initials: initialsOf(name || (n.email ?? "")),
+        };
+      }) ?? []
+  );
+}
+
 const Inner: React.FC<{
   activeTab: PeopleTab;
   onChangeTab: (tab: PeopleTab) => void;
@@ -75,42 +106,75 @@ const Inner: React.FC<{
   const { tenantId } = useAuthStore();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchHits, setSearchHits] = useState<UsersQueryType["response"] | null>(
+    null,
+  );
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => window.clearTimeout(id);
+  }, [search]);
 
   const data = useLazyLoadQuery<UsersQueryType>(
     UsersQuery,
     {
       filters: tenantId ? { tenantId } : null,
-      first: 500,
+      first: PEOPLE_PAGE_SIZE,
     },
     { fetchPolicy: "store-or-network" },
   );
 
-  const rows: PersonRow[] = useMemo(() => {
-    return (
-      data?.users?.edges
-        ?.map((e) => e?.node)
-        ?.filter((n): n is NonNullable<typeof n> => Boolean(n))
-        ?.map((n) => {
-          const name = [n.firstName, n.lastName].filter(Boolean).join(" ");
-          const role = n.role?.name ?? "Member";
-          const slug = role.toString().toLowerCase().replace(/\s+/g, "-");
-          return {
-            id: String(n.id),
-            uuid: String(n.uuid),
-            name: name || (n.email ?? "Unknown"),
-            email: n.email ?? "",
-            role,
-            roleSlug: slug,
-            initials: initialsOf(name || (n.email ?? "")),
-          };
-        }) ?? []
-    );
-  }, [data]);
+  const serverSearch = peopleSearchIsActive(debouncedSearch, roleFilter);
+  useEffect(() => {
+    if (!serverSearch) {
+      setSearchHits(null);
+      setSearching(false);
+      return;
+    }
+    let live = true;
+    setSearching(true);
+    const subscription = fetchQuery<UsersQueryType>(environment, UsersQuery, {
+      filters: peopleServerFilters({
+        tenantId,
+        search: debouncedSearch,
+        role: roleFilter,
+      }),
+      first: PEOPLE_PAGE_SIZE,
+    }).subscribe({
+      next: (payload) => {
+        if (!live) return;
+        setSearchHits(payload);
+        setSearching(false);
+      },
+      error: () => {
+        if (!live) return;
+        setSearchHits(null);
+        setSearching(false);
+      },
+    });
+    return () => {
+      live = false;
+      subscription.unsubscribe();
+    };
+  }, [serverSearch, debouncedSearch, roleFilter, tenantId]);
+
+  const roster = serverSearch && searchHits ? searchHits : data;
+
+  const rows: PersonRow[] = useMemo(() => toPeopleRows(roster), [roster]);
+  const countRows = useMemo(() => toPeopleRows(data), [data]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
+    const serverApplied = Boolean(serverSearch && searchHits);
     return rows.filter((r) => {
-      if (roleFilter !== "all" && r.roleSlug !== roleFilter) return false;
+      if (
+        !serverApplied &&
+        roleFilter !== "all" &&
+        r.roleSlug !== roleFilter
+      )
+        return false;
       if (
         q &&
         !r.name.toLowerCase().includes(q) &&
@@ -119,18 +183,17 @@ const Inner: React.FC<{
         return false;
       return true;
     });
-  }, [rows, search, roleFilter]);
+  }, [rows, search, roleFilter, serverSearch, searchHits]);
 
   const counts = useMemo(() => {
-    const c: Record<string, number> = { all: rows.length };
-    for (const r of rows) c[r.roleSlug] = (c[r.roleSlug] ?? 0) + 1;
+    const c: Record<string, number> = { all: countRows.length };
+    for (const r of countRows) c[r.roleSlug] = (c[r.roleSlug] ?? 0) + 1;
     return c;
-  }, [rows]);
-  // UsersQuery is capped at first:500 and search/role filter client-side, so
-  // beyond 500 people the list would silently truncate. Surface it instead
-  // of pretending the filtered list is complete (totalCount is already in
-  // the query selection — no extra fetch).
-  const totalPeople = data?.users?.totalCount ?? rows.length;
+  }, [countRows]);
+  // The users connection caps at 100. Name, email, and role go to the server
+  // so someone past that page can still be found. Counts on the chips stay
+  // on the unfiltered page.
+  const totalPeople = roster?.users?.totalCount ?? rows.length;
   const peopleTruncated = totalPeople > rows.length;
   void navigate;
 
@@ -556,7 +619,8 @@ const Inner: React.FC<{
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search…"
+              placeholder="Search name or email"
+              aria-label="Search people by name or email"
               className="rounded-xl text-xs"
               style={{
                 padding: "0.45rem 0.9rem",
@@ -569,6 +633,16 @@ const Inner: React.FC<{
             />
           </div>
 
+          {searching && (
+            <p
+              className="text-xs px-1"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+              role="status"
+            >
+              Searching the full roster…
+            </p>
+          )}
+
           {peopleTruncated && (
             <p
               className="text-xs px-4 py-3 rounded-xl mb-3"
@@ -579,9 +653,9 @@ const Inner: React.FC<{
               }}
               role="status"
             >
-              Showing the first {rows.length} of {totalPeople} people — this
-              list is capped, so search and role filters only apply to the
-              loaded {rows.length}. People beyond the cap are not shown.
+              Showing the first {rows.length} of {totalPeople}{" "}
+              {serverSearch ? "matches" : "people"}. Search by name or email
+              to find someone further down.
             </p>
           )}
 
