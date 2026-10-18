@@ -129,7 +129,7 @@ const ApprovalRow: React.FC<{
         ? { bg: "rgba(239,90,42,0.16)", border: "rgba(239,90,42,0.45)", fg: "var(--spark-orange)" }
         : h >= 24
           ? { bg: "rgba(214,196,95,0.14)", border: "rgba(214,196,95,0.4)", fg: "var(--spark-gold)" }
-          : { bg: "rgba(255,255,255,0.04)", border: "rgba(255,255,255,0.12)", fg: "rgba(255,255,255,0.55)" };
+          : { bg: "rgba(255,255,255,0.04)", border: "var(--spark-hairline, rgba(255,255,255,0.08))", fg: "var(--spark-muted, rgba(255,255,255,0.5))" };
     return (
       <span
         className="mono text-[10px] px-2 py-0.5 rounded-md"
@@ -176,7 +176,7 @@ const ApprovalRow: React.FC<{
                 className="mono text-[10px]"
                 style={{
                   letterSpacing: "0.16em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
                 }}
               >
                 {row.reqId}
@@ -193,7 +193,7 @@ const ApprovalRow: React.FC<{
             </p>
             <p
               className="text-xs mt-1"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
             >
               {row.type} · {row.requester}
             </p>
@@ -832,7 +832,7 @@ const ApprovalsInner: React.FC = () => {
           style={{
             color:
               stats.slaPct === null
-                ? "rgba(255,255,255,0.55)"
+                ? "var(--spark-muted, rgba(255,255,255,0.5))"
                 : stats.slaPct >= 80
                   ? "var(--spark-lime)"
                   : "var(--spark-orange)",
@@ -901,8 +901,8 @@ const ApprovalsInner: React.FC = () => {
         style={{
           letterSpacing: "0.14em",
           background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          color: "rgba(255,255,255,0.5)",
+          border: "1px solid var(--spark-hairline, rgba(255,255,255,0.08))",
+          color: "var(--spark-muted, rgba(255,255,255,0.5))",
         }}
       >
         ?
@@ -920,7 +920,7 @@ const ApprovalsInner: React.FC = () => {
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.18em",
-            color: "rgba(255,255,255,0.55)",
+            color: "var(--spark-muted, rgba(255,255,255,0.5))",
           }}
         >
           RECENTLY DECIDED · LAST 7D
@@ -929,7 +929,7 @@ const ApprovalsInner: React.FC = () => {
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.14em",
-            color: "rgba(255,255,255,0.4)",
+            color: "var(--spark-faint, rgba(255,255,255,0.38))",
           }}
         >
           {recentlyDecided.length} ITEMS
@@ -987,7 +987,7 @@ const ApprovalsInner: React.FC = () => {
                   className="mono text-[10px]"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-muted, rgba(255,255,255,0.5))",
                   }}
                 >
                   {d.row.reqId}
@@ -999,7 +999,7 @@ const ApprovalsInner: React.FC = () => {
                   className="mono text-[10px]"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.4)",
+                    color: "var(--spark-faint, rgba(255,255,255,0.38))",
                   }}
                 >
                   {when.toUpperCase()}
@@ -1007,7 +1007,7 @@ const ApprovalsInner: React.FC = () => {
               </div>
               <p
                 className="text-xs mt-1"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
               >
                 {d.row.locationDate} · {d.row.requester}
               </p>
@@ -1027,7 +1027,7 @@ const ApprovalsInner: React.FC = () => {
             {SearchBar}
             <div
               className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
             >
               No pending requests match "{search}".
             </div>
@@ -1035,7 +1035,7 @@ const ApprovalsInner: React.FC = () => {
         ) : (
           <div
             className="spark-card p-8 text-center text-sm"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+            style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
           >
             Nothing in the approval queue. Nice work.
           </div>
@@ -1085,7 +1085,7 @@ const ApprovalsInner: React.FC = () => {
         className="mono text-[10px]"
         style={{
           letterSpacing: "0.14em",
-          color: "rgba(255,255,255,0.55)",
+          color: "var(--spark-muted, rgba(255,255,255,0.5))",
         }}
       >
         CLEAR
@@ -1226,7 +1226,7 @@ const ApprovalsInner: React.FC = () => {
                 className="mono text-[11px] px-3"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
                 }}
               >
                 ESC
@@ -1295,7 +1295,7 @@ const ApprovalsInner: React.FC = () => {
                       className="mono text-[10px]"
                       style={{
                         letterSpacing: "0.14em",
-                        color: "rgba(255,255,255,0.45)",
+                        color: "var(--spark-muted, rgba(255,255,255,0.5))",
                       }}
                     >
                       {r.reqId}
@@ -1308,7 +1308,7 @@ const ApprovalsInner: React.FC = () => {
                   className="mono text-[10px] mt-1"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--spark-muted, rgba(255,255,255,0.5))",
                   }}
                 >
                   …and {selectedCount - 20} more
@@ -1324,7 +1324,7 @@ const ApprovalsInner: React.FC = () => {
                 className="mono text-[11px] px-3"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
                 }}
               >
                 CANCEL
@@ -1433,7 +1433,7 @@ const ApprovalsInner: React.FC = () => {
                 color:
                   bulkDeclineReason.trim().length < 8
                     ? "var(--spark-orange)"
-                    : "rgba(255,255,255,0.45)",
+                    : "var(--spark-muted, rgba(255,255,255,0.5))",
               }}
             >
               {bulkDeclineReason.trim().length < 8
@@ -1450,7 +1450,7 @@ const ApprovalsInner: React.FC = () => {
                 className="mono text-[11px] px-3"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
                 }}
               >
                 CANCEL
@@ -1631,7 +1631,7 @@ const ApprovalsInner: React.FC = () => {
                 color:
                   declineReason.trim().length < 8
                     ? "var(--spark-orange)"
-                    : "rgba(255,255,255,0.45)",
+                    : "var(--spark-muted, rgba(255,255,255,0.5))",
               }}
             >
               {declineReason.trim().length < 8
@@ -1648,7 +1648,7 @@ const ApprovalsInner: React.FC = () => {
                 className="mono text-[11px] px-3"
                 style={{
                   letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
                 }}
               >
                 CANCEL
@@ -1910,7 +1910,7 @@ export const ApprovalsBody: React.FC = () => {
             fallback={
               <div
                 className="spark-card p-8 text-center text-sm"
-                style={{ color: "rgba(255,255,255,0.55)" }}
+                style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
               >
                 Loading approvals…
               </div>
@@ -1992,7 +1992,7 @@ class ApprovalsErrorBoundary extends Component<
         </p>
         <p
           className="mono text-[10px] mt-4"
-          style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.4)" }}
+          style={{ letterSpacing: "0.14em", color: "var(--spark-faint, rgba(255,255,255,0.38))" }}
         >
           {this.state.error.message?.slice(0, 200)}
         </p>

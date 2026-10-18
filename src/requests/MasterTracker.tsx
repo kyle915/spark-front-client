@@ -423,7 +423,7 @@ const TrackerTable: React.FC<{
               style={{
                 fontSize: 10,
                 letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.45)",
+                color: "var(--spark-muted, rgba(255,255,255,0.5))",
               }}
             >
               {selectionEnabled ? (
@@ -628,7 +628,7 @@ const TrackerTable: React.FC<{
                         className="mono text-[10px] mt-0.5"
                         style={{
                           letterSpacing: "0.14em",
-                          color: "rgba(255,255,255,0.45)",
+                          color: "var(--spark-muted, rgba(255,255,255,0.5))",
                         }}
                       >
                         {r.timeLabel}
@@ -771,7 +771,7 @@ const TrackerTable: React.FC<{
                     {r.skus.length > 0 ? (
                       <span
                         className="block mt-1 text-[11px] line-clamp-2"
-                        style={{ color: "rgba(255,255,255,0.45)" }}
+                        style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
                         title={r.skus.join(", ")}
                       >
                         {r.skus.join(", ")}
@@ -846,7 +846,7 @@ const TrackerTable: React.FC<{
                             letterSpacing: "0.14em",
                             color: isExpanded
                               ? "var(--spark-lime)"
-                              : "rgba(255,255,255,0.55)",
+                              : "var(--spark-muted, rgba(255,255,255,0.5))",
                           }}
                           title="Internal notes & shipments"
                         >
@@ -875,7 +875,7 @@ const TrackerTable: React.FC<{
                             className="mono text-[10px] transition"
                             style={{
                               letterSpacing: "0.14em",
-                              color: "rgba(255,255,255,0.55)",
+                              color: "var(--spark-muted, rgba(255,255,255,0.5))",
                             }}
                             title="Clone this request to N new dates"
                           >
@@ -891,7 +891,7 @@ const TrackerTable: React.FC<{
                             className="mono text-[10px] transition"
                             style={{
                               letterSpacing: "0.14em",
-                              color: "rgba(255,255,255,0.55)",
+                              color: "var(--spark-muted, rgba(255,255,255,0.5))",
                             }}
                             title="Assign a BA to this event — sends a shift offer"
                           >
@@ -907,7 +907,7 @@ const TrackerTable: React.FC<{
                             className="mono text-[10px] transition"
                             style={{
                               letterSpacing: "0.14em",
-                              color: "rgba(255,255,255,0.55)",
+                              color: "var(--spark-muted, rgba(255,255,255,0.5))",
                             }}
                             title="Post this event's job to the public BA board — open to all eligible BAs"
                           >
@@ -1426,7 +1426,7 @@ const MasterTrackerInner: React.FC<{
         <div ref={loadMoreRef} className="py-3 text-center">
           <p
             className="mono text-[10px]"
-            style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.4)" }}
+            style={{ letterSpacing: "0.16em", color: "var(--spark-faint, rgba(255,255,255,0.38))" }}
           >
             {loadingMore ? "LOADING MORE…" : "SCROLL FOR MORE"}
           </p>
@@ -2149,7 +2149,7 @@ export default function MasterTracker() {
               className="mono text-[10px] px-3 py-1.5 rounded-xl"
               style={{
                 letterSpacing: "0.16em",
-                color: "rgba(255,255,255,0.55)",
+                color: "var(--spark-muted, rgba(255,255,255,0.5))",
                 border: "1px solid var(--spark-border)",
                 background: "transparent",
               }}
@@ -2182,7 +2182,7 @@ export default function MasterTracker() {
                 className="mono text-[10px]"
                 style={{
                   letterSpacing: "0.12em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
                 }}
               >
                 {torchProgram ? "PLANS" : "ALL PLANS"}
@@ -2193,7 +2193,7 @@ export default function MasterTracker() {
                 className="mono text-[10px]"
                 style={{
                   letterSpacing: "0.12em",
-                  color: "rgba(255,255,255,0.55)",
+                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
                 }}
               >
                 × CLEAR
@@ -2220,7 +2220,7 @@ export default function MasterTracker() {
               className="mono text-[9px] mt-1"
               style={{
                 letterSpacing: "0.12em",
-                color: "rgba(255,255,255,0.4)",
+                color: "var(--spark-faint, rgba(255,255,255,0.38))",
               }}
             >
               TRACKER REQUESTS
@@ -2243,7 +2243,7 @@ export default function MasterTracker() {
               className="mono text-[9px] mt-1"
               style={{
                 letterSpacing: "0.12em",
-                color: "rgba(255,255,255,0.4)",
+                color: "var(--spark-faint, rgba(255,255,255,0.38))",
               }}
               title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
             >
@@ -2267,7 +2267,7 @@ export default function MasterTracker() {
               className="mono text-[9px] mt-1"
               style={{
                 letterSpacing: "0.12em",
-                color: "rgba(255,255,255,0.4)",
+                color: "var(--spark-faint, rgba(255,255,255,0.38))",
               }}
               title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
             >
@@ -2291,7 +2291,7 @@ export default function MasterTracker() {
               className="mono text-[9px] mt-1"
               style={{
                 letterSpacing: "0.12em",
-                color: "rgba(255,255,255,0.4)",
+                color: "var(--spark-faint, rgba(255,255,255,0.38))",
               }}
               title="Program-to-date, same numbers as Insights. Not narrowed by the tracker filters above."
             >
@@ -2347,7 +2347,7 @@ export default function MasterTracker() {
           fallback={
             <div
               className="spark-card p-8 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
+              style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
             >
               Loading events…
             </div>
@@ -2578,7 +2578,7 @@ export default function MasterTracker() {
                   className="mono text-[11px] px-3"
                   style={{
                     letterSpacing: "0.14em",
-                    color: "rgba(255,255,255,0.55)",
+                    color: "var(--spark-muted, rgba(255,255,255,0.5))",
                   }}
                 >
                   CANCEL

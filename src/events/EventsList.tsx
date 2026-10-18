@@ -13,7 +13,7 @@ import { EventsQuery } from "@api/queries/EventsQuery";
 import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
 import { StatesQuery } from "@api/queries/StatesQuery";
 import type { StatesQuery as StatesQueryType } from "@api/queries/__generated__/StatesQuery.graphql";
-import Loading from "@shared/Loading";
+import { RecapsListSkeleton } from "@/layout/PageSkeletons";
 import {
   useRelayPagination,
   type PageLoadedPayload,
@@ -509,7 +509,7 @@ const EventsListInner = ({
         cancelText="Cancel"
         confirmButtonClass="btn-error"
       />
-      <Suspense fallback={<Loading />}>
+      <Suspense fallback={<RecapsListSkeleton />}>
         {queryRef ? (
           <EventsTableContent
             queryReference={queryRef}
@@ -528,7 +528,7 @@ const EventsListInner = ({
             isPageReachable={isPageReachable}
           />
         ) : (
-          <Loading />
+          <RecapsListSkeleton />
         )}
       </Suspense>
     </>

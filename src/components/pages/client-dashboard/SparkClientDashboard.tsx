@@ -105,7 +105,8 @@ const WeekAheadPanel: React.FC<{
   onHorizonDays: (days: AheadHorizon) => void;
   dateWindow: { startDate: string; endDate: string };
   torch: boolean;
-}> = ({ tenantId, horizonDays, onHorizonDays, dateWindow, torch }) => {
+  onOpenApprovals: () => void;
+}> = ({ tenantId, horizonDays, onHorizonDays, dateWindow, onOpenApprovals }) => {
   const navigate = useNavigate();
   const data = useLazyLoadQuery<ClientWeekAheadQueryType>(
     ClientWeekAheadQuery,
@@ -444,7 +445,7 @@ const WeekAheadPanel: React.FC<{
                 border: "1px solid var(--spark-border)",
               }}
             >
-              📒 Recaps
+              Recaps
             </button>
             <button
               onClick={() =>
@@ -460,9 +461,7 @@ const WeekAheadPanel: React.FC<{
               Master tracker
             </button>
             <button
-              onClick={() =>
-                navigate(torch ? "/field-marketing" : "/plans")
-              }
+              onClick={onOpenApprovals}
               className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
               style={{
                 background: "transparent",
@@ -470,29 +469,7 @@ const WeekAheadPanel: React.FC<{
                 border: "1px solid var(--spark-border)",
               }}
             >
-              {torch ? "Plans" : "Activation plans"}
-            </button>
-            <button
-              onClick={() => navigate("/today")}
-              className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              🗺 On the ground
-            </button>
-            <button
-              onClick={() => navigate("/reports")}
-              className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
-              style={{
-                background: "transparent",
-                color: "var(--spark-text)",
-                border: "1px solid var(--spark-border)",
-              }}
-            >
-              📊 Reports
+              Approvals
             </button>
           </div>
         </div>
@@ -669,6 +646,7 @@ const ClientInner: React.FC = () => {
             onHorizonDays={setHorizonDays}
             dateWindow={dateWindow}
             torch={torch}
+            onOpenApprovals={() => switchTab("approvals")}
           />
         </Suspense>
       )}
