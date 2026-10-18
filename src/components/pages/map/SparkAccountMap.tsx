@@ -1,5 +1,6 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
+import { fetchQuery } from "relay-runtime";
 import { useNavigate } from "react-router";
 import {
   APIProvider,
@@ -21,7 +22,12 @@ import {
 import Layout from "@/layout/Layout";
 import { AccountMapQuery } from "@/api/queries/AccountMapQuery";
 import type { AccountMapQuery as AccountMapQueryType } from "@api/queries/__generated__/AccountMapQuery.graphql";
+import environment from "@/api/relay/environment";
 import { useAuthStore } from "@/store/authStore";
+import {
+  ACCOUNT_MAP_PAGE_SIZE,
+  accountMapTruncation,
+} from "./accountMapPages";
 import useSparkRole from "@/hooks/useSparkRole";
 import { CountReel } from "@/motion/CountReel";
 import {
@@ -57,6 +63,10 @@ type Account = {
 };
 
 type CoverageFilter = "all" | CoverageClass | "planned";
+
+type MapPin = NonNullable<
+  NonNullable<AccountMapQueryType["response"]["accountMapPins"]>[number]
+>;
 
 /** City + ST from a US one-line address when Location FKs are empty. */
 function marketFromAddress(address: string | null | undefined): {
@@ -152,9 +162,18 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   // This component only commits after the pin query resolves, so the
   // effect mounts Maps JS on the following paint — the pin list first.
   const [mapsReady, setMapsReady] = useState(false);
+  const [extraPins, setExtraPins] = useState<MapPin[]>([]);
+  const [scanned, setScanned] = useState(ACCOUNT_MAP_PAGE_SIZE);
+  const [loadingRest, setLoadingRest] = useState(false);
 
   useEffect(() => {
     if (tenantId) setUploaded(loadUploadedAccounts(tenantId));
+  }, [tenantId]);
+
+  useEffect(() => {
+    setExtraPins([]);
+    setScanned(ACCOUNT_MAP_PAGE_SIZE);
+    setLoadingRest(false);
   }, [tenantId]);
 
   useEffect(() => {
@@ -163,15 +182,45 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
 
   const data = useLazyLoadQuery<AccountMapQueryType>(
     AccountMapQuery,
-    { first: 2000, tenantId: tenantId || null },
+    { first: 2000, offset: 0, tenantId: tenantId || null },
     { fetchPolicy: "store-or-network" },
   );
 
+  const pinTotal = data?.accountMapPinTotal ?? null;
+  const truncation = accountMapTruncation({ total: pinTotal, scanned });
+  const serverPins = useMemo(() => {
+    const first = (data?.accountMapPins ?? []).filter((p): p is MapPin => Boolean(p));
+    return [...first, ...extraPins];
+  }, [data, extraPins]);
+
+  const loadRest = useCallback(async () => {
+    if (loadingRest || pinTotal == null || scanned >= pinTotal) return;
+    setLoadingRest(true);
+    try {
+      let offset = scanned;
+      const accumulated = [...extraPins];
+      while (offset < pinTotal) {
+        const page = await fetchQuery<AccountMapQueryType>(
+          environment,
+          AccountMapQuery,
+          { first: ACCOUNT_MAP_PAGE_SIZE, offset, tenantId: tenantId || null },
+          { fetchPolicy: "network-only" },
+        ).toPromise();
+        const rows = (page?.accountMapPins ?? []).filter((p): p is MapPin => Boolean(p));
+        accumulated.push(...rows);
+        offset += ACCOUNT_MAP_PAGE_SIZE;
+        setExtraPins([...accumulated]);
+        setScanned(offset);
+        if (rows.length === 0) break;
+      }
+    } finally {
+      setLoadingRest(false);
+    }
+  }, [extraPins, loadingRest, pinTotal, scanned, tenantId]);
+
   const accounts: Account[] = useMemo(() => {
     const map = new Map<string, Account>();
-    const pins = (data?.accountMapPins ?? []).filter(
-      (p): p is NonNullable<typeof p> => Boolean(p),
-    );
+    const pins = serverPins;
     for (const r of pins) {
       const lat = Number(r.lat);
       const lng = Number(r.lng);
@@ -247,7 +296,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     }
 
     return Array.from(map.values());
-  }, [data, uploaded]);
+  }, [serverPins, uploaded]);
 
   // Distinct list of states present in the dataset for the dropdown.
   const states = useMemo(
@@ -335,6 +384,35 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
         title="Plan from the map."
         support="Coverage counts filed recaps only — Sampled is 1 visit, Repeat is 2+, and future work is labelled Planned. Click any pin to schedule a demo."
       />
+
+      {truncation.truncated && truncation.label ? (
+        <div
+          role="status"
+          className="spark-card px-4 py-3 flex flex-wrap items-center gap-3"
+        >
+          <p className="text-sm" style={{ color: "var(--spark-text)" }}>
+            <span className="font-semibold" style={{ color: "var(--spark-orange)" }}>
+              {truncation.label}
+            </span>{" "}
+            location pins. This map is not the full list yet.
+          </p>
+          <button
+            type="button"
+            disabled={loadingRest}
+            onClick={() => void loadRest()}
+            className="mono text-[11px]"
+            style={{
+              letterSpacing: "0.14em",
+              color: "#0a0d09",
+              background: loadingRest ? "rgba(197,245,70,0.45)" : "var(--spark-lime)",
+              borderRadius: 999,
+              padding: "6px 12px",
+            }}
+          >
+            {loadingRest ? "LOADING…" : "LOAD THE REST"}
+          </button>
+        </div>
+      ) : null}
 
       {/* Uploader */}
       <AccountUploader onImported={setUploaded} />

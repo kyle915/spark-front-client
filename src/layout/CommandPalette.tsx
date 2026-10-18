@@ -14,7 +14,12 @@ import { RequestSearchQuery } from "@/api/queries/RequestSearchQuery";
 import type { RequestSearchQuery as RequestSearchQueryType } from "@api/queries/__generated__/RequestSearchQuery.graphql";
 import { RecapsSearchQuery } from "@/api/queries/RecapsSearchQuery";
 import type { RecapsSearchQuery as RecapsSearchQueryType } from "@api/queries/__generated__/RecapsSearchQuery.graphql";
+import { EventSearchQuery } from "@/api/queries/EventSearchQuery";
+import type { EventSearchQuery as EventSearchQueryType } from "@api/queries/__generated__/EventSearchQuery.graphql";
+import { ClientSearchQuery } from "@/api/queries/ClientSearchQuery";
+import type { ClientSearchQuery as ClientSearchQueryType } from "@api/queries/__generated__/ClientSearchQuery.graphql";
 import {
+  Building2,
   LayoutDashboard,
   ListChecks,
   Calendar,
@@ -68,6 +73,7 @@ type CommandEntry = {
     style?: React.CSSProperties;
   }>;
   keywords?: string;
+  state?: { clientName?: string; clientEmail?: string };
 };
 
 const ENTRIES: CommandEntry[] = [
@@ -251,6 +257,102 @@ export const CommandPalette: React.FC = () => {
     };
   }, [open, query]);
 
+  // Live event search. `events(q)` is a contains match on the event name.
+  const [eventEntries, setEventEntries] = useState<CommandEntry[]>([]);
+  useEffect(() => {
+    const q = query.trim();
+    if (!open || q.length < 2) {
+      setEventEntries([]);
+      return;
+    }
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      fetchQuery<EventSearchQueryType>(environment, EventSearchQuery, {
+        q,
+        first: 6,
+      })
+        .toPromise()
+        .then((data) => {
+          if (cancelled) return;
+          const rows = (data?.events?.edges ?? [])
+            .map((e) => e?.node)
+            .filter((n): n is NonNullable<typeof n> => Boolean(n))
+            .map((n) => {
+              const when = n.date
+                ? new Date(n.date).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "";
+              return {
+                id: `event-${n.uuid}`,
+                label: n.name || "Event",
+                hint: ["Event", n.request?.retailer?.name, when]
+                  .filter(Boolean)
+                  .join(" · "),
+                to: `/event/view/${n.uuid}`,
+                Icon: Calendar,
+              } as CommandEntry;
+            });
+          setEventEntries(rows);
+        })
+        .catch(() => {
+          if (!cancelled) setEventEntries([]);
+        });
+    }, 220);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [open, query]);
+
+  // Live client search. `clients(q)` matches the client name. No tenant
+  // filter: spark-admin Jump can open any brand. Client-role never runs this.
+  const [clientEntries, setClientEntries] = useState<CommandEntry[]>([]);
+  useEffect(() => {
+    const q = query.trim();
+    if (!open || isClient || q.length < 2) {
+      setClientEntries([]);
+      return;
+    }
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      fetchQuery<ClientSearchQueryType>(environment, ClientSearchQuery, {
+        q,
+        filters: {},
+        first: 6,
+      })
+        .toPromise()
+        .then((data) => {
+          if (cancelled) return;
+          const rows = (data?.clients?.edges ?? [])
+            .map((e) => e?.node)
+            .filter((n): n is NonNullable<typeof n> => Boolean(n))
+            .map((n) => {
+              return {
+                id: `client-${n.uuid}`,
+                label: n.name || "Client",
+                hint: ["Client", n.email].filter(Boolean).join(" · "),
+                to: n.tenantId ? `/clients/${n.tenantId}` : "/clients",
+                state: {
+                  clientName: n.name ?? "",
+                  clientEmail: n.email ?? "",
+                },
+                Icon: Building2,
+              } as CommandEntry;
+            });
+          setClientEntries(rows);
+        })
+        .catch(() => {
+          if (!cancelled) setClientEntries([]);
+        });
+    }, 220);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  }, [open, query, isClient]);
+
   // Live recap search — covers BOTH recap families (legacy fixed-form
   // and per-tenant custom templates) in one round trip, so a Borjomi
   // custom recap is as findable as a Liquid Death legacy one. Same
@@ -353,8 +455,25 @@ export const CommandPalette: React.FC = () => {
         to: row.to,
         Icon: Clock,
       }));
-    return [...recentEntries, ...recapEntries, ...requestEntries, ...baEntries, ...pages];
-  }, [query, baEntries, requestEntries, recapEntries, recents, isClient]);
+    return [
+      ...recentEntries,
+      ...recapEntries,
+      ...eventEntries,
+      ...requestEntries,
+      ...clientEntries,
+      ...baEntries,
+      ...pages,
+    ];
+  }, [
+    query,
+    baEntries,
+    requestEntries,
+    eventEntries,
+    clientEntries,
+    recapEntries,
+    recents,
+    isClient,
+  ]);
 
   const grouped = useMemo(
     () =>
@@ -373,7 +492,7 @@ export const CommandPalette: React.FC = () => {
       hint: entry.hint,
       to: entry.to,
     });
-    navigate(entry.to);
+    navigate(entry.to, entry.state ? { state: entry.state } : undefined);
     setOpen(false);
   };
 

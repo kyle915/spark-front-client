@@ -35,10 +35,15 @@ describe("list fetch caps (no silent truncation)", () => {
     expect(warm).not.toContain("loadSparkRequestView()");
   });
 
-  it("account map still caps pins at 2000 and mounts Maps after that query", () => {
+  it("account map still caps a page at 2000, labels a short page, and mounts Maps after the first query", () => {
     const map = src("../components/pages/map/SparkAccountMap.tsx");
+    const query = src("./queries/AccountMapQuery.ts");
     expect(map).toContain("first: 2000");
     expect(map).toContain("setMapsReady(true)");
+    expect(map).toContain("accountMapTruncation");
+    expect(map).toContain("LOAD THE REST");
+    expect(query).toContain("accountMapPinTotal");
+    expect(query).toContain("offset: $offset");
   });
 
   it("sidebar badges do not download the 2000-request list", () => {
