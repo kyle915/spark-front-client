@@ -11,6 +11,7 @@ import {
   showsEventActivationSchedule,
   showsLegacyBulkDates,
   visitSlotIssues,
+  visitSlotsAfterPartialSuccess,
   visitSlotsForSubmit,
   type VisitSlot,
 } from "./eventActivationSchedule";
@@ -215,5 +216,25 @@ describe("computeCreateRequestBlocker & quick-date presets", () => {
     expect(presets[0].iso).toBe("2026-10-17");
     expect(presets[1].iso).toBe("2026-10-18");
     expect(presets[5].iso).toBe("2026-10-31");
+  });
+});
+
+describe("visitSlotsAfterPartialSuccess", () => {
+  it("drops only the dates that already landed", () => {
+    const slots = [
+      row("2026-10-18"),
+      row("2026-10-19", "13:00", "17:00"),
+      row("2026-10-20"),
+    ];
+    expect(
+      visitSlotsAfterPartialSuccess(slots, [row("2026-10-18"), row("2026-10-20")]),
+    ).toEqual([row("2026-10-19", "13:00", "17:00")]);
+  });
+
+  it("drops one copy when two slots share a date and only one succeeded", () => {
+    const slots = [row("2026-10-18"), row("2026-10-18")];
+    expect(visitSlotsAfterPartialSuccess(slots, [row("2026-10-18")])).toEqual([
+      row("2026-10-18"),
+    ]);
   });
 });

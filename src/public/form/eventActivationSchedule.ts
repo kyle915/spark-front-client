@@ -73,6 +73,29 @@ export function blankVisitSlot(from?: VisitSlot): VisitSlot {
   };
 }
 
+/**
+ * After a bulk submit where some dates landed and some failed, drop only
+ * the dates that already succeeded so a retry does not file them again.
+ * Matching is one-for-one so two identical slots do not both disappear
+ * when only one succeeded.
+ */
+export function visitSlotsAfterPartialSuccess(
+  slots: VisitSlot[],
+  succeeded: VisitSlot[],
+): VisitSlot[] {
+  const remaining = slots.slice();
+  for (const done of succeeded) {
+    const idx = remaining.findIndex(
+      (slot) =>
+        slot.date === done.date &&
+        slot.startTime === done.startTime &&
+        slot.endTime === done.endTime,
+    );
+    if (idx >= 0) remaining.splice(idx, 1);
+  }
+  return remaining;
+}
+
 /** Extra rows with no date are empty and must not be submitted. */
 export function visitSlotsForSubmit(slots: VisitSlot[]): VisitSlot[] {
   if (slots.length === 0) return [];
