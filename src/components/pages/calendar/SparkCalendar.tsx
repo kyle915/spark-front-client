@@ -221,8 +221,8 @@ const TimeGrid: React.FC<{ shifts: Shift[]; days: Date[] }> = ({
                 className="mono"
                 style={{
                   fontSize: 10,
-                  letterSpacing: "0.14em",
-                  color: "rgba(255,255,255,0.4)",
+                  letterSpacing: "0.04em",
+                  color: "rgba(255,255,255,0.28)",
                   position: "relative",
                   top: -7,
                 }}
@@ -559,32 +559,32 @@ export default function SparkCalendar() {
           <SparkCalendarInner anchor={anchor} />
         </Suspense>
 
-        {/* Legend */}
-        <div className="flex items-center gap-5 px-2 flex-wrap">
-          {[
-            { label: "Retail", color: KIND_COLOR.retail },
-            { label: "On-premise", color: KIND_COLOR.onprem },
-            { label: "Event", color: KIND_COLOR.event },
-          ].map((k) => (
-            <div key={k.label} className="flex items-center gap-2">
+        {/* Legend — same quiet chip row as Today / Account Map */}
+        <div className="flex items-center gap-2 px-1 flex-wrap">
+          {(
+            [
+              { label: "Retail", color: KIND_COLOR.retail },
+              { label: "On-prem", color: KIND_COLOR.onprem },
+              { label: "Event", color: KIND_COLOR.event },
+            ] as const
+          ).map((k) => (
+            <span
+              key={k.label}
+              className="chip chip-sm"
+              style={{ color: k.color, borderColor: k.color }}
+            >
               <span
-                className="w-2.5 h-2.5 rounded-full"
+                aria-hidden
                 style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 9999,
                   background: k.color,
-                  boxShadow: `0 0 6px ${k.color}`,
+                  display: "inline-block",
                 }}
               />
-              <span
-                className="mono"
-                style={{
-                  fontSize: 10,
-                  letterSpacing: "0.18em",
-                  color: "rgba(255,255,255,0.55)",
-                }}
-              >
-                {k.label.toUpperCase()}
-              </span>
-            </div>
+              {k.label}
+            </span>
           ))}
         </div>
       </div>

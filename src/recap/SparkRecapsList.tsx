@@ -257,6 +257,19 @@ const conversionStr = (
   return `${Math.round((r.productsSold / base) * 100)}%`;
 };
 
+/** When both Eng and Conv are on screen, Conv keeps lime and Eng goes neutral. */
+function demoteEngWhenConvIsLime<
+  T extends { label: string; tone?: "default" | "lime" | "orange" },
+>(items: T[]): T[] {
+  const convIsPrimary = items.some(
+    (k) => k.label === "Conv" && k.tone === "lime",
+  );
+  if (!convIsPrimary) return items;
+  return items.map((k) =>
+    k.label === "Eng" ? { ...k, tone: "default" } : k,
+  );
+}
+
 const formatDate = (raw: string | null | undefined) => {
   if (!raw) return "";
   try {
@@ -462,6 +475,8 @@ const RecapCard: React.FC<{
   const emptyShell = recapIsEmptyShell(recap);
   const approved = recap.approved || Boolean(forceApproved);
   const statusText = emptyShell ? "Not filed" : recapReviewStatus(approved);
+  const convValue = conversionStr(recap, "—");
+  const convLive = convValue !== "—";
   const completeness = emptyShell
     ? "Not filed"
     : [
@@ -734,7 +749,7 @@ const RecapCard: React.FC<{
         style={{ borderTop: "1px solid var(--spark-border)" }}
       >
         <SparkStat
-          tone="lime"
+          tone={convLive ? undefined : "lime"}
           value={
             recap.engagements != null
               ? recap.engagements.toLocaleString()
@@ -751,8 +766,8 @@ const RecapCard: React.FC<{
           label="Sold"
         />
         <SparkStat
-          tone="lime"
-          value={conversionStr(recap, "—")}
+          tone={convLive ? "lime" : undefined}
+          value={convValue}
           label={recap.isDryDemo ? "Conv · dry demo" : "Conv"}
         />
       </div>
@@ -3715,18 +3730,20 @@ export default function SparkRecapsList() {
         </div>
 
         <div className="spark-bento" aria-label="Recap totals in view">
-          {recapListKpis({
-            filteredTotal: meta.filteredTotal,
-            loaded: meta.loaded,
-            total: meta.total,
-            engagements: meta.totalConsumers,
-            sold: meta.totalProducts,
-            conversionEngagements: meta.conversionConsumers,
-            conversionSold: meta.conversionProducts,
-            conversionDryDemos: meta.conversionDryDemos,
-            notInTotals: meta.notInTotals,
-            recapType: activationFilter,
-          }).map((k) => (
+          {demoteEngWhenConvIsLime(
+            recapListKpis({
+              filteredTotal: meta.filteredTotal,
+              loaded: meta.loaded,
+              total: meta.total,
+              engagements: meta.totalConsumers,
+              sold: meta.totalProducts,
+              conversionEngagements: meta.conversionConsumers,
+              conversionSold: meta.conversionProducts,
+              conversionDryDemos: meta.conversionDryDemos,
+              notInTotals: meta.notInTotals,
+              recapType: activationFilter,
+            }),
+          ).map((k) => (
             <SparkBentoTile key={k.label} {...k} />
           ))}
         </div>

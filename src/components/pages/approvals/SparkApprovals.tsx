@@ -15,6 +15,7 @@ import useSparkRole from "@/hooks/useSparkRole";
 import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
 import SparkOverlay from "@/shared/SparkOverlay";
 import SparkPageHeader from "@/shared/SparkPageHeader";
+import { CountReel } from "@/motion/CountReel";
 
 /**
  * Spark v2 — Approvals.
@@ -95,6 +96,7 @@ const ApprovalRow: React.FC<{
   selected: boolean;
   focused: boolean;
   busy: boolean;
+  zebra: boolean;
 }> = ({
   row,
   onView,
@@ -105,6 +107,7 @@ const ApprovalRow: React.FC<{
   selected,
   focused,
   busy,
+  zebra,
 }) => {
   const sourceChip =
     row.source === "external" ? (
@@ -144,79 +147,75 @@ const ApprovalRow: React.FC<{
       </span>
     );
   })();
+  const actionPad = focused ? "px-3 py-1.5 text-sm" : "px-2.5 py-1 text-xs";
   return (
     <div
       onClick={onFocus}
-      className="spark-card p-5 transition"
+      className={
+        selected
+          ? "cursor-pointer transition-colors bg-[rgba(197,245,70,0.07)]"
+          : focused
+            ? "cursor-pointer transition-colors bg-[rgba(95,184,239,0.08)]"
+            : zebra
+              ? "cursor-pointer transition-colors bg-white/[0.035] hover:bg-white/[0.08]"
+              : "cursor-pointer transition-colors hover:bg-white/[0.08]"
+      }
       style={{
+        borderBottom: "1px solid var(--spark-border)",
         outline: selected
           ? "2px solid var(--spark-lime)"
           : focused
             ? "2px solid var(--spark-sky)"
-            : "1px solid transparent",
-        outlineOffset: selected || focused ? -1 : 0,
-        boxShadow: focused
-          ? "0 0 24px rgba(95,184,239,0.25)"
-          : undefined,
+            : "none",
+        outlineOffset: -1,
+        padding: focused ? "0.85rem 1rem" : "0.4rem 0.75rem",
       }}
     >
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={onToggleSelect}
-            onClick={(e) => e.stopPropagation()}
-            className="mt-1.5 w-4 h-4 cursor-pointer accent-[var(--spark-lime)]"
-            aria-label={`Select ${row.reqId}`}
-          />
-          <div>
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span
-                className="mono text-[10px]"
-                style={{
-                  letterSpacing: "0.16em",
-                  color: "var(--spark-muted, rgba(255,255,255,0.5))",
-                }}
-              >
-                {row.reqId}
-              </span>
-              {sourceChip}
-              {ageChip}
-            </div>
-            <p className="font-bold text-base">{row.venue}</p>
-            <p
-              className="text-sm"
-              style={{ color: "rgba(255,255,255,0.65)" }}
-            >
-              {row.locationDate}
-            </p>
-            <p
-              className="text-xs mt-1"
-              style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
-            >
-              {row.type} · {row.requester}
-            </p>
-            <p
-              className="mono text-[10px] mt-2"
-              style={{
-                letterSpacing: "0.14em",
-                color: "var(--spark-gold)",
-              }}
-            >
-              {row.statusNote.toUpperCase()}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2 shrink-0">
+      <div className="flex items-center gap-3 min-w-0 flex-wrap">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelect}
+          onClick={(e) => e.stopPropagation()}
+          className="w-4 h-4 shrink-0 cursor-pointer accent-[var(--spark-lime)]"
+          aria-label={`Select ${row.reqId}`}
+        />
+        <span
+          className="mono text-[10px] shrink-0"
+          style={{
+            letterSpacing: "0.14em",
+            color: "var(--spark-muted, rgba(255,255,255,0.5))",
+          }}
+        >
+          {row.reqId}
+        </span>
+        <p
+          className={`font-semibold truncate min-w-0 ${focused ? "text-base" : "text-sm"}`}
+          style={{ flex: "1 1 140px" }}
+        >
+          {row.venue}
+        </p>
+        <span
+          className="text-xs truncate hidden md:inline"
+          style={{ color: "rgba(255,255,255,0.55)", maxWidth: 220 }}
+        >
+          {row.locationDate}
+        </span>
+        <span
+          className="text-xs shrink-0 hidden lg:inline"
+          style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
+        >
+          {row.type}
+        </span>
+        {ageChip}
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
           <button
             onClick={onApprove}
             disabled={busy}
-            className="px-4 py-2 rounded-xl text-sm font-semibold"
+            className={`${actionPad} rounded-lg font-semibold`}
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 24px rgba(197,245,70,0.35)",
               opacity: busy ? 0.5 : 1,
             }}
           >
@@ -225,7 +224,7 @@ const ApprovalRow: React.FC<{
           <button
             onClick={onDecline}
             disabled={busy}
-            className="px-4 py-2 rounded-xl text-sm transition"
+            className={`${actionPad} rounded-lg transition`}
             style={{
               background: "transparent",
               color: "var(--spark-orange)",
@@ -237,7 +236,7 @@ const ApprovalRow: React.FC<{
           </button>
           <button
             onClick={onView}
-            className="px-4 py-2 rounded-xl text-sm transition"
+            className={`${actionPad} rounded-lg transition`}
             style={{
               background: "transparent",
               color: "var(--spark-text)",
@@ -248,6 +247,28 @@ const ApprovalRow: React.FC<{
           </button>
         </div>
       </div>
+      {focused ? (
+        <div className="mt-3 pl-7 space-y-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            {sourceChip}
+          </div>
+          <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+            {row.locationDate}
+          </p>
+          <p
+            className="text-xs"
+            style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
+          >
+            {row.type} · {row.requester}
+          </p>
+          <p
+            className="mono text-[10px]"
+            style={{ letterSpacing: "0.14em", color: "var(--spark-gold)" }}
+          >
+            {row.statusNote.toUpperCase()}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -804,7 +825,7 @@ const ApprovalsInner: React.FC = () => {
           className="tab-num text-3xl font-bold mt-1"
           style={{ color: "var(--spark-orange)" }}
         >
-          {stats.pending}
+          <CountReel value={stats.pending} />
         </p>
       </div>
       <div className="spark-card p-4">
@@ -813,7 +834,7 @@ const ApprovalsInner: React.FC = () => {
           className="tab-num text-3xl font-bold mt-1"
           style={{ color: "var(--spark-lime)" }}
         >
-          {stats.approvedLast30}
+          <CountReel value={stats.approvedLast30} />
         </p>
       </div>
       <div className="spark-card p-4">
@@ -822,7 +843,7 @@ const ApprovalsInner: React.FC = () => {
           className="tab-num text-3xl font-bold mt-1"
           style={{ color: "var(--spark-orange)" }}
         >
-          {stats.declinedLast30}
+          <CountReel value={stats.declinedLast30} />
         </p>
       </div>
       <div className="spark-card p-4">
@@ -1129,11 +1150,12 @@ const ApprovalsInner: React.FC = () => {
           are any SLA breaches (so the toggle is always reachable). */}
       {(pendingRows.length > 4 || slaBreachCount > 0) && SearchBar}
       {BulkBar}
-      <div className="space-y-3">
+      <div className="spark-card overflow-hidden">
       {rows.map((r, idx) => (
         <ApprovalRow
           key={r.uuid}
           row={r}
+          zebra={idx % 2 === 1}
           busy={busyId === r.id}
           selected={selectedIds.has(r.id)}
           focused={focusedIdx === idx}

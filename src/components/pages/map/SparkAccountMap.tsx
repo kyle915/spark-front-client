@@ -23,6 +23,7 @@ import { AccountMapQuery } from "@/api/queries/AccountMapQuery";
 import type { AccountMapQuery as AccountMapQueryType } from "@api/queries/__generated__/AccountMapQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import { CountReel } from "@/motion/CountReel";
 import {
   loadUploadedAccounts,
   type UploadedAccount,
@@ -342,11 +343,8 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="spark-card p-4">
           <p className="label-mini">ACCOUNTS</p>
-          <p
-            className="tab-num text-3xl font-bold mt-1"
-            style={{ color: "var(--spark-lime)" }}
-          >
-            {counts.all || "—"}
+          <p className="tab-num text-3xl font-bold mt-1">
+            {counts.all > 0 ? <CountReel value={counts.all} /> : "—"}
           </p>
         </div>
         <div className="spark-card p-4">
@@ -355,7 +353,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             className="tab-num text-3xl font-bold mt-1"
             style={{ color: "var(--spark-lime)" }}
           >
-            {counts.sampled || "—"}
+            {counts.sampled > 0 ? <CountReel value={counts.sampled} /> : "—"}
           </p>
         </div>
         <div className="spark-card p-4">
@@ -364,7 +362,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             className="tab-num text-3xl font-bold mt-1"
             style={{ color: "var(--spark-sky)" }}
           >
-            {counts.repeat || "—"}
+            {counts.repeat > 0 ? <CountReel value={counts.repeat} /> : "—"}
           </p>
         </div>
         <div className="spark-card p-4">
@@ -373,7 +371,11 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             className="tab-num text-3xl font-bold mt-1"
             style={{ color: "var(--spark-orange)" }}
           >
-            {counts.neverVisited || "—"}
+            {counts.neverVisited > 0 ? (
+              <CountReel value={counts.neverVisited} />
+            ) : (
+              "—"
+            )}
           </p>
         </div>
       </div>
