@@ -4,15 +4,19 @@ import {
   clearCachedContext,
   clearPendingClock,
   enqueueClockIn,
+  enqueueClockOut,
   flushPendingClock,
+  flushPendingClockOut,
   formatSavedClockTime,
   isOfflineClockFailure,
   newIdempotencyKey,
   offlineClockBanner,
+  offlineClockOutBanner,
   parseClientClockedInAt,
   pendingClockKey,
   readCachedContext,
   readPendingClock,
+  readPendingClockOut,
   writeCachedContext,
   writePendingClock,
   type PendingClockIn,
@@ -246,6 +250,80 @@ describe("pending clock-in queue", () => {
     expect(readPendingClock("X", storage)).toEqual(row);
     clearPendingClock("X", storage);
     expect(readPendingClock("X", storage)).toBeNull();
+  });
+});
+
+describe("pending clock-out queue", () => {
+  it("saves the clock-out tap the same way clock-in does", () => {
+    const storage = new MemoryStorage();
+    const pending = enqueueClockOut(
+      {
+        code: "FF-YMMK3Q",
+        token: "sess-1",
+        clockedOutAt: THREE_PM,
+        nowMs: THREE_PM_MS,
+      },
+      storage,
+    );
+    expect(pending.clockedOutAt).toBe(new Date(THREE_PM).toISOString());
+    expect(offlineClockOutBanner(pending.clockedOutAt)).toContain("clock you out");
+    expect(offlineClockOutBanner(pending.clockedOutAt)).toContain("Time saved:");
+  });
+
+  it("flushes kind out with the saved tap time and does not touch a queued clock-in", async () => {
+    const storage = new MemoryStorage();
+    enqueueClockIn(
+      { code: "FF-YMMK3Q", token: "sess-1", clockedInAt: THREE_PM, nowMs: THREE_PM_MS },
+      storage,
+    );
+    const pending = enqueueClockOut(
+      {
+        code: "FF-YMMK3Q",
+        token: "sess-1",
+        clockedOutAt: new Date(THREE_PM_MS + 3 * 60 * 60 * 1000).toISOString(),
+        nowMs: THREE_PM_MS + 3 * 60 * 60 * 1000,
+      },
+      storage,
+    );
+    const calls: Record<string, unknown>[] = [];
+    const result = await flushPendingClockOut(
+      {
+        code: "FF-YMMK3Q",
+        postClock: async (body) => {
+          calls.push(body);
+          return { ok: true, status: 200 };
+        },
+      },
+      storage,
+    );
+    expect(result).toBe("flushed");
+    expect(calls[0]).toMatchObject({
+      kind: "out",
+      clockedOutAt: pending.clockedOutAt,
+      idempotencyKey: pending.id,
+    });
+    expect(readPendingClock("FF-YMMK3Q", storage)?.clockedInAt).toBe(
+      new Date(THREE_PM).toISOString(),
+    );
+  });
+
+  it("keeps the clock-out row when the flush is still offline", async () => {
+    const storage = new MemoryStorage();
+    enqueueClockOut(
+      { code: "LD-1", token: "t", clockedOutAt: THREE_PM, nowMs: THREE_PM_MS },
+      storage,
+    );
+    const result = await flushPendingClockOut(
+      {
+        code: "LD-1",
+        postClock: async () => {
+          throw new TypeError("Failed to fetch");
+        },
+      },
+      storage,
+    );
+    expect(result).toBe("retry");
+    expect(readPendingClockOut("LD-1", storage)?.token).toBe("t");
   });
 });
 
