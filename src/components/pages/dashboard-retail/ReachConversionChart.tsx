@@ -10,10 +10,10 @@ import {
 } from "chart.js";
 
 import { Chart as ChartMixed } from "react-chartjs-2";
-import { memo, useMemo } from "react";
-import type { ChartData, ChartOptions } from "chart.js";
+import { memo } from "react";
+import type { ChartData } from "chart.js";
 
-import { useThemeMode } from "@/hooks/useThemeMode";
+import { sparkChartOptions } from "@/lib/chartTheme";
 import ChartCard from "@/components/charts/ChartCard";
 import { TrendingUp } from "lucide-react";
 
@@ -34,15 +34,6 @@ export type ReachConversionItem = {
 };
 
 function ReachConversionChart({ data }: { data: ReachConversionItem[] }) {
-  const [isDark] = useThemeMode();
-
-  const { textColor, gridColor } = useMemo(() => {
-    return {
-      textColor: isDark ? "#e5e7eb" : "#1f2937",
-      gridColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)",
-    };
-  }, [isDark]);
-
   const chartData: ChartData<"bar" | "line"> = {
     labels: data.map((d) => d.market),
     datasets: [
@@ -69,40 +60,22 @@ function ReachConversionChart({ data }: { data: ReachConversionItem[] }) {
     ],
   };
 
-  const options: ChartOptions<"bar" | "line"> = {
-    responsive: true,
-    maintainAspectRatio: false,
-
-    plugins: {
-      legend: {
-        position: "top",
-        labels: {
-          color: textColor,
-          usePointStyle: true,
-        },
-      },
-    },
-
+  const options = sparkChartOptions<"bar" | "line">({
     scales: {
       x: {
         ticks: {
-          color: textColor,
           maxRotation: 45,
           minRotation: 45,
         },
-        grid: { color: gridColor },
       },
 
       y1: {
         type: "linear",
         position: "left",
         beginAtZero: true,
-        ticks: { color: textColor },
-        grid: { color: gridColor },
         title: {
           display: true,
           text: "Consumers Sampled",
-          color: textColor,
         },
       },
 
@@ -113,18 +86,16 @@ function ReachConversionChart({ data }: { data: ReachConversionItem[] }) {
         min: 0,
         max: 100,
         ticks: {
-          color: textColor,
           callback: (v) => `${v}%`,
         },
         grid: { drawOnChartArea: false },
         title: {
           display: true,
           text: "Conversion Rate (%)",
-          color: textColor,
         },
       },
     },
-  };
+  });
 
   return (
     <ChartCard

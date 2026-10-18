@@ -15,8 +15,8 @@ import {
   type Plugin,
 } from "chart.js";
 import { Chart as ChartMixed } from "react-chartjs-2";
-import type { ChartData, ChartOptions } from "chart.js";
-import { useThemeMode } from "@/hooks/useThemeMode";
+import type { ChartData } from "chart.js";
+import { sparkChartOptions } from "@/lib/chartTheme";
 import { TenantKpisQuery } from "@/api/queries/TenantKpisQuery";
 import type { TenantKpisQuery as TenantKpisQueryType } from "@api/queries/__generated__/TenantKpisQuery.graphql";
 import { collapseSamplingKpis } from "@/lib/collapseSamplingKpis";
@@ -126,20 +126,11 @@ const TrendChart: React.FC<{
   series: readonly TrendSeries[];
   note?: string | null;
 }> = ({ data, series, note }) => {
-  const [isDark] = useThemeMode();
   const sparseFlags = useMemo(
     () => sparseMonthFlags(data, series),
     [data, series],
   );
   const sparseCount = sparseFlags.filter(Boolean).length;
-
-  const { textColor, gridColor } = useMemo(
-    () => ({
-      textColor: isDark ? "#e5e7eb" : "#1f2937",
-      gridColor: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.1)",
-    }),
-    [isDark],
-  );
 
   const chartData: ChartData<"bar" | "line"> = {
     labels: data.map((d) => d.month),
@@ -165,57 +156,36 @@ const TrendChart: React.FC<{
     ],
   };
 
-  const options: ChartOptions<"bar" | "line"> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: "top",
-        labels: { color: textColor, font: { size: 12 } },
-      },
-    },
+  const options = sparkChartOptions<"bar" | "line">({
     scales: {
       y1: {
         type: "linear",
         position: "left",
         beginAtZero: true,
-        ticks: { color: textColor },
-        grid: { color: gridColor },
         title: {
           display: true,
           text: series.map((s) => s.label).join(" / "),
-          color: textColor,
-          font: { size: 11 },
         },
       },
       y2: {
         type: "linear",
         position: "right",
         beginAtZero: true,
-        ticks: {
-          color: textColor,
-          precision: 0,
-        },
+        ticks: { precision: 0 },
         grid: { drawOnChartArea: false },
         title: {
           display: true,
           text: "Recaps",
-          color: textColor,
-          font: { size: 11 },
         },
       },
-      x: {
-        ticks: { color: textColor },
-        grid: { color: gridColor },
-      },
+      x: {},
     },
-  };
+  });
 
   return (
     <div>
       <div style={{ height: 280 }}>
         <ChartMixed
-          key={isDark ? "dark" : "light"}
           type="bar"
           data={chartData}
           options={options}
