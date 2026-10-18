@@ -423,9 +423,17 @@ h1, h2, h3, h4, h5, h6, .display {
   --spark-surface-2: #161a12;
   --spark-border: #1f2418;
   --spark-text: #f2f3ee;
+  --spark-text-secondary: rgba(255, 255, 255, 0.62);
+  --spark-text-meta: rgba(255, 255, 255, 0.48);
+  --spark-faint: rgba(255, 255, 255, 0.38);
   --spark-hairline: rgba(255, 255, 255, 0.08);
+  --spark-radius-control: 8px;
   --spark-radius-card: 14px;
+  --spark-radius-panel: 18px;
   --spark-radius-sheet: 22px;
+  --spark-elev-1: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --spark-elev-2: 0 18px 36px rgba(0, 0, 0, 0.35);
+  --spark-elev-3: 0 24px 48px rgba(0, 0, 0, 0.4);
   --spark-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --spark-spring-duration: 0.35s;
   --spark-hit: 44px;
@@ -548,7 +556,7 @@ body:has(.spark-login-page) {
   background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
   border: 1px solid var(--spark-hairline, var(--spark-border));
   border-radius: var(--spark-radius-card, 14px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--spark-elev-1, 0 8px 24px rgba(0, 0, 0, 0.28));
   transition:
     border-color 0.2s ease,
     transform var(--spark-spring-duration, 0.35s) var(--spark-spring, cubic-bezier(0.22, 1, 0.36, 1)),
@@ -637,7 +645,7 @@ body:has(.spark-login-page) {
   padding: 0.4rem 0.55rem;
   background: rgba(255, 255, 255, 0.015);
   border: 1px solid var(--spark-hairline, var(--spark-border));
-  border-radius: 10px;
+  border-radius: var(--spark-radius-control, 8px);
 }
 .spark-filter-bar .label-mini {
   margin-right: 0.15rem;
@@ -680,7 +688,7 @@ body:has(.spark-login-page) {
 .spark-sticky-filters {
   padding: 0.45rem 0.55rem !important;
   gap: 0.4rem !important;
-  border-radius: 10px !important;
+  border-radius: var(--spark-radius-control, 8px) !important;
   border-color: rgba(255, 255, 255, 0.07) !important;
   background: rgba(10, 13, 9, 0.9) !important;
   backdrop-filter: saturate(180%) blur(14px);
@@ -763,10 +771,10 @@ thead .spark-table-sticky-date {
 .spark-card-glow {
   background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
   border: 1px solid rgba(197, 245, 70, 0.4);
-  border-radius: 24px;
+  border-radius: var(--spark-radius-sheet, 22px);
   box-shadow:
     0 0 0 1px rgba(197, 245, 70, 0.1),
-    0 24px 48px rgba(0, 0, 0, 0.4);
+    var(--spark-elev-3, 0 24px 48px rgba(0, 0, 0, 0.4));
 }
 
 /* === KPI tile === */
@@ -774,7 +782,7 @@ thead .spark-table-sticky-date {
   padding: 1.5rem;
   background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
   border: 1px solid var(--spark-border);
-  border-radius: 22px;
+  border-radius: var(--spark-radius-sheet, 22px);
   cursor: default;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -787,7 +795,7 @@ thead .spark-table-sticky-date {
   border-color: rgba(197, 245, 70, 0.4);
   box-shadow:
     0 0 0 1px rgba(197, 245, 70, 0.12),
-    0 18px 36px rgba(0, 0, 0, 0.35);
+    var(--spark-elev-2, 0 18px 36px rgba(0, 0, 0, 0.35));
 }
 .kpi-icon {
   width: 36px;
@@ -818,7 +826,7 @@ thead .spark-table-sticky-date {
   margin-top: 1rem;
 }
 .kpi-label {
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--spark-text-secondary, rgba(255, 255, 255, 0.62));
   font-size: 0.85rem;
   margin-top: 0.4rem;
 }
@@ -872,7 +880,7 @@ thead .spark-table-sticky-date {
   font-size: 9px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
   margin-top: 6px;
 }
 .spark-idx {
@@ -880,7 +888,7 @@ thead .spark-table-sticky-date {
   font-size: 10px;
   letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
-  color: rgba(255, 255, 255, 0.28);
+  color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
   width: 1.6em;
   flex-shrink: 0;
 }
@@ -920,7 +928,7 @@ thead .spark-table-sticky-date {
   gap: 0.85rem;
   padding: 0.6rem 0.9rem;
   border-radius: 12px;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--spark-text-secondary, rgba(255, 255, 255, 0.62));
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -974,7 +982,7 @@ thead .spark-table-sticky-date {
   font-size: 0.6rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
   padding: 0.7rem 0.9rem 0.1rem;
 }
 
@@ -1357,7 +1365,7 @@ body { background: var(--spark-bg); }
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   border: 1px solid var(--spark-border);
-  border-radius: 18px;
+  border-radius: var(--spark-radius-panel, 18px);
   overflow: hidden;
   background: linear-gradient(
     135deg,
@@ -1553,7 +1561,7 @@ body { background: var(--spark-bg); }
   text-transform: uppercase;
 }
 .spark-crumb-root {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
   flex-shrink: 0;
 }
 .spark-crumb-sep {
@@ -1595,6 +1603,48 @@ body { background: var(--spark-bg); }
 :root {
   --spark-focus-ring: rgba(197, 245, 70, 0.75);
   --spark-focus-offset: 2px;
+  --spark-text-secondary: rgba(255, 255, 255, 0.62);
+  --spark-text-meta: rgba(255, 255, 255, 0.48);
+  --spark-faint: rgba(255, 255, 255, 0.38);
+  --spark-radius-control: 8px;
+  --spark-radius-panel: 18px;
+  --spark-elev-1: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --spark-elev-2: 0 18px 36px rgba(0, 0, 0, 0.35);
+  --spark-elev-3: 0 24px 48px rgba(0, 0, 0, 0.4);
+  --spark-scrollbar-thumb: rgba(255, 255, 255, 0.28);
+  --spark-scrollbar-track: #0a0b0d;
+}
+
+/* Keyboard focus stays lime on dark ops. Paper recolors the ring below
+   so a lime stroke does not disappear on RecapDocument. */
+:focus-visible {
+  outline: 2px solid var(--spark-focus-ring);
+  outline-offset: var(--spark-focus-offset);
+}
+.nav-item:focus-visible,
+.btn-square:focus-visible,
+.btn-ghost:focus-visible,
+button.outline-none:focus-visible,
+a.outline-none:focus-visible,
+[class~="outline-none"]:focus-visible {
+  outline: 2px solid var(--spark-focus-ring);
+  outline-offset: var(--spark-focus-offset);
+}
+.recap-doc :focus-visible {
+  outline-color: var(--recap-heading, #3f5c12);
+}
+
+::selection {
+  background: rgba(197, 245, 70, 0.28);
+  color: inherit;
+}
+
+/* Dark-ops muted ladder must not wash out light recap paper. */
+.recap-doc .spark-idx,
+.recap-doc .spark-stat-hint,
+.recap-doc .nav-section,
+.recap-doc .spark-crumb-root {
+  color: var(--recap-muted, #5c6154);
 }
 
 .spark-focus-ring:focus-visible,
@@ -1653,4 +1703,67 @@ tr:hover > td .spark-row-actions > a,
 }
 .spark-sheet-body {
   padding: 0.85rem 1.15rem 1.25rem;
+}
+
+/* Thin dark scrollbars — main, sidebar, sheets, Jump. Light recap paper keeps the native bar. */
+main:not(.recap-doc-body),
+.spark-sidebar,
+.spark-sidebar nav,
+.spark-sheet-body,
+.spark-overlay-panel,
+.spark-overlay-panel .hide-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--spark-scrollbar-thumb) var(--spark-scrollbar-track);
+}
+.spark-overlay-panel .hide-scroll {
+  scrollbar-width: thin !important;
+}
+main:not(.recap-doc-body)::-webkit-scrollbar,
+.spark-sidebar::-webkit-scrollbar,
+.spark-sidebar nav::-webkit-scrollbar,
+.spark-sheet-body::-webkit-scrollbar,
+.spark-overlay-panel::-webkit-scrollbar,
+.spark-overlay-panel .hide-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+main:not(.recap-doc-body)::-webkit-scrollbar-track,
+.spark-sidebar::-webkit-scrollbar-track,
+.spark-sidebar nav::-webkit-scrollbar-track,
+.spark-sheet-body::-webkit-scrollbar-track,
+.spark-overlay-panel::-webkit-scrollbar-track,
+.spark-overlay-panel .hide-scroll::-webkit-scrollbar-track {
+  background: var(--spark-scrollbar-track);
+}
+main:not(.recap-doc-body)::-webkit-scrollbar-thumb,
+.spark-sidebar::-webkit-scrollbar-thumb,
+.spark-sidebar nav::-webkit-scrollbar-thumb,
+.spark-sheet-body::-webkit-scrollbar-thumb,
+.spark-overlay-panel::-webkit-scrollbar-thumb,
+.spark-overlay-panel .hide-scroll::-webkit-scrollbar-thumb {
+  background: var(--spark-scrollbar-thumb);
+  border: 1px solid var(--spark-scrollbar-track);
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hov,
+  .spark-card.hov,
+  .kpi.kpi-hover,
+  .pill-btn {
+    transition-duration: 0.01ms;
+  }
+  .hov:hover,
+  .spark-card.hov:hover,
+  .kpi.kpi-hover:hover {
+    transform: none;
+  }
+  .livepulse,
+  .spark-blink,
+  .pill-btn.on {
+    animation: none;
+  }
+  .pill-btn.on {
+    box-shadow: none;
+  }
 }
