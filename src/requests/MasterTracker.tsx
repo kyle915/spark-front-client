@@ -35,6 +35,7 @@ import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
 import SparkGhostButton from "@/shared/SparkGhostButton";
 import SparkFilterBar from "@/shared/SparkFilterBar";
 import SparkEmptyState from "@/shared/SparkEmptyState";
+import { trackerRowDestination } from "./trackerRowDestination";
 import { CountReel } from "@/motion/CountReel";
 import {
   buildTrackerUrlParams,
@@ -398,13 +399,56 @@ const TrackerTable: React.FC<{
     }
   }, [visibleCount, rows]);
   const visibleRows = rows.slice(0, visibleCount);
+  const openRow = (r: Row) => {
+    navigate(trackerRowDestination(r), { state: { from: "/requests/list" } });
+  };
 
   return (
     <div
       className="spark-card overflow-hidden"
       style={{ borderRadius: 20 }}
     >
-      <div className="overflow-auto max-h-[75vh]">
+      <div className="md:hidden">
+        {rows.length === 0 ? (
+          <SparkEmptyState
+            className="border-0 rounded-none"
+            title="No events match"
+            body="Try clearing status, when, or market filters."
+          />
+        ) : (
+          <ul className="divide-y" style={{ borderColor: "var(--spark-border)" }}>
+            {visibleRows.map((r) => {
+              const slug = r.statusSlug.toLowerCase();
+              const chipClass = STATUS_CHIP[slug] ?? "chip chip-muted";
+              const label = STATUS_LABEL[slug] ?? r.statusSlug.toUpperCase();
+              return (
+                <li key={r.uuid}>
+                  <button
+                    type="button"
+                    className="w-full text-left px-4 py-3"
+                    onClick={() => openRow(r)}
+                  >
+                    <span className="flex items-start justify-between gap-3">
+                      <span className="text-sm" style={{ color: "rgba(255,255,255,0.85)" }}>
+                        {r.dateLabel}
+                      </span>
+                      <span className={`${chipClass} chip-sm`}>{label}</span>
+                    </span>
+                    <span className="block text-sm font-semibold mt-1">{r.venue}</span>
+                    <span
+                      className="block text-xs mt-0.5"
+                      style={{ color: "rgba(255,255,255,0.55)" }}
+                    >
+                      {r.type}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+      <div className="hidden md:block overflow-auto max-h-[75vh]">
         <table
           className="w-full text-sm"
           style={{ minWidth: 1200 }}
@@ -562,20 +606,7 @@ const TrackerTable: React.FC<{
               // Every navigation off the Master Tracker stamps
               // `from: "/requests/list"` so the destination's Back link
               // returns HERE, not the legacy "All Events" view.
-              const fromTracker = { state: { from: "/requests/list" } };
-              const onClick = () => {
-                if (r.recapEventUuid) {
-                  navigate(`/event/view/${r.recapEventUuid}`, fromTracker);
-                } else if (isDone && r.eventUuid) {
-                  navigate(`/event/view/${r.eventUuid}`, fromTracker);
-                } else if (isDone) {
-                  navigate("/recap/list");
-                } else if (r.eventUuid) {
-                  navigate(`/event/view/${r.eventUuid}`, fromTracker);
-                } else {
-                  navigate(`/request/view/${r.uuid}`, fromTracker);
-                }
-              };
+              const onClick = () => openRow(r);
               const selected = Boolean(selectedIds?.has(r.id));
               const zebra = rowIdx % 2 === 1;
               return (
