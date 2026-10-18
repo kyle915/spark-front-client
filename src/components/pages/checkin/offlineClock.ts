@@ -22,6 +22,17 @@ export type PendingClockIn = {
   longitude?: number;
 };
 
+export type PendingClockOut = {
+  v: 1;
+  id: string;
+  code: string;
+  token: string;
+  clockedOutAt: string;
+  queuedAt: number;
+  latitude?: number;
+  longitude?: number;
+};
+
 export type StorageLike = {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
@@ -29,6 +40,8 @@ export type StorageLike = {
 };
 
 export const pendingClockKey = (code: string) => `@spark.checkin.pendingClock/${code}`;
+export const pendingClockOutKey = (code: string) =>
+  `@spark.checkin.pendingClockOut/${code}`;
 export const cachedContextKey = (code: string) => `@spark.checkin.ctx/${code}`;
 
 const memoryStore = new Map<string, string>();
@@ -86,6 +99,13 @@ export function offlineClockBanner(iso: string): string {
   return when
     ? `No service — we'll clock you in when you're back online. Time saved: ${when}.`
     : "No service — we'll clock you in when you're back online.";
+}
+
+export function offlineClockOutBanner(iso: string): string {
+  const when = formatSavedClockTime(iso);
+  return when
+    ? `No service — we'll clock you out when you're back online. Time saved: ${when}.`
+    : "No service — we'll clock you out when you're back online.";
 }
 
 export function isOfflineClockFailure(input: {
@@ -179,6 +199,114 @@ export function enqueueClockIn(
   };
   writePendingClock(pending, storage);
   return pending;
+}
+
+export function readPendingClockOut(
+  code: string,
+  storage: StorageLike = liveStorage(),
+): PendingClockOut | null {
+  if (!code) return null;
+  try {
+    const raw = storage.getItem(pendingClockOutKey(code));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as PendingClockOut;
+    if (!parsed || parsed.v !== 1 || parsed.code !== code) return null;
+    if (!parsed.id || !parsed.clockedOutAt || !parsed.token) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function writePendingClockOut(
+  pending: PendingClockOut,
+  storage: StorageLike = liveStorage(),
+): PendingClockOut | null {
+  try {
+    storage.setItem(pendingClockOutKey(pending.code), JSON.stringify(pending));
+    return pending;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingClockOut(
+  code: string,
+  storage: StorageLike = liveStorage(),
+): void {
+  try {
+    storage.removeItem(pendingClockOutKey(code));
+  } catch {
+    /* disposable */
+  }
+}
+
+export function enqueueClockOut(
+  args: {
+    code: string;
+    token: string;
+    clockedOutAt?: string;
+    latitude?: number;
+    longitude?: number;
+    nowMs?: number;
+  },
+  storage: StorageLike = liveStorage(),
+): PendingClockOut {
+  const existing = readPendingClockOut(args.code, storage);
+  if (existing && existing.token === args.token) return existing;
+  const nowMs = args.nowMs ?? Date.now();
+  const parsed = parseClientClockedInAt(
+    args.clockedOutAt ?? new Date(nowMs).toISOString(),
+    nowMs,
+  );
+  const clockedOutAt = parsed.ok ? parsed.iso : new Date(nowMs).toISOString();
+  const pending: PendingClockOut = {
+    v: 1,
+    id: newIdempotencyKey(),
+    code: args.code,
+    token: args.token,
+    clockedOutAt,
+    queuedAt: nowMs,
+    ...(args.latitude != null ? { latitude: args.latitude } : {}),
+    ...(args.longitude != null ? { longitude: args.longitude } : {}),
+  };
+  writePendingClockOut(pending, storage);
+  return pending;
+}
+
+export async function flushPendingClockOut(
+  args: {
+    code: string;
+    postClock: (body: Record<string, unknown>) => Promise<{
+      ok: boolean;
+      status: number;
+      alreadyOut?: boolean;
+    }>;
+  },
+  storage: StorageLike = liveStorage(),
+): Promise<ClockFlushResult> {
+  const pending = readPendingClockOut(args.code, storage);
+  if (!pending) return "none";
+  try {
+    const res = await args.postClock({
+      kind: "out",
+      session: pending.token,
+      clockedOutAt: pending.clockedOutAt,
+      occurredAt: pending.clockedOutAt,
+      idempotencyKey: pending.id,
+      ...(pending.latitude != null ? { latitude: pending.latitude } : {}),
+      ...(pending.longitude != null ? { longitude: pending.longitude } : {}),
+    });
+    if (res.ok || res.alreadyOut || res.status === 409) {
+      clearPendingClockOut(args.code, storage);
+      return res.alreadyOut ? "already" : "flushed";
+    }
+    if (isOfflineClockFailure({ status: res.status })) return "retry";
+    return "retry";
+  } catch (error) {
+    if (isOfflineClockFailure({ error })) return "retry";
+    return "retry";
+  }
 }
 
 export type ClockFlushResult = "none" | "flushed" | "retry" | "already";

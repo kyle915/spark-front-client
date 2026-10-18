@@ -119,14 +119,20 @@ import {
   CLOCK_FETCH_TIMEOUT_MS,
   clearCachedContext,
   clearPendingClock,
+  clearPendingClockOut,
   enqueueClockIn,
+  enqueueClockOut,
   flushPendingClock,
+  flushPendingClockOut,
   isOfflineClockFailure,
   offlineClockBanner,
+  offlineClockOutBanner,
   readCachedContext,
   readPendingClock,
+  readPendingClockOut,
   writeCachedContext,
   type PendingClockIn,
+  type PendingClockOut,
 } from "./offlineClock";
 import {
   clearPendingRecap,
@@ -1699,6 +1705,9 @@ function CheckedInFlow({
   const [queuedClock, setQueuedClock] = useState<PendingClockIn | null>(() =>
     readPendingClock(code),
   );
+  const [queuedClockOut, setQueuedClockOut] = useState<PendingClockOut | null>(
+    () => readPendingClockOut(code),
+  );
   const [queuedRecap, setQueuedRecap] = useState<PendingRecap | null>(() =>
     readPendingRecap(code),
   );
@@ -1741,7 +1750,11 @@ function CheckedInFlow({
   // A queued clock-in is the shift they already started. Treat it as on the
   // clock so they can fill the recap offline instead of staring at Clock in.
   const effectiveClock: Clock["state"] =
-    queuedClock && clockState === "not_started" ? "clocked_in" : clockState;
+    queuedClock && clockState === "not_started"
+      ? "clocked_in"
+      : queuedClockOut && clockState === "clocked_in"
+        ? "clocked_out"
+        : clockState;
   const clockInAt = queuedClock?.clockedInAt ?? ctx.session?.clock.clockInAt ?? null;
 
   const shiftActionsRef = useRef<HTMLDivElement | null>(null);
@@ -1803,6 +1816,20 @@ function CheckedInFlow({
     setMsg(offlineClockBanner(row.clockedInAt));
   };
 
+  const queueOfflineOut = (
+    coords: { latitude?: number; longitude?: number },
+    tappedAt: string,
+  ) => {
+    const row = enqueueClockOut({
+      code,
+      token,
+      clockedOutAt: tappedAt,
+      ...coords,
+    });
+    setQueuedClockOut(row);
+    setMsg(offlineClockOutBanner(row.clockedOutAt));
+  };
+
   const tryFlushPending = useCallback(async () => {
     const result = await flushPendingClock({
       code,
@@ -1824,6 +1851,32 @@ function CheckedInFlow({
     }
     return result;
     // `post` closes over code+token, which are stable for this session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, token, onRefresh]);
+
+  const tryFlushClockOut = useCallback(async () => {
+    const result = await flushPendingClockOut({
+      code,
+      postClock: async (body) => {
+        const res = await post("clock", body);
+        let alreadyOut = false;
+        try {
+          const json = (await res.clone().json()) as {
+            alreadyOut?: boolean;
+            clock?: Clock;
+          };
+          alreadyOut = Boolean(json.alreadyOut);
+        } catch {
+          /* body may be empty on a gateway error */
+        }
+        return { ok: res.ok, status: res.status, alreadyOut };
+      },
+    });
+    if (result === "flushed" || result === "already") {
+      setQueuedClockOut(readPendingClockOut(code));
+      await onRefresh();
+    }
+    return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, token, onRefresh]);
 
@@ -1864,10 +1917,11 @@ function CheckedInFlow({
   }, [code, onRefresh]);
 
   useEffect(() => {
-    if (!queuedClock && !queuedRecap && !queuedMileage) return;
+    if (!queuedClock && !queuedClockOut && !queuedRecap && !queuedMileage) return;
     const run = () => {
       void (async () => {
         if (queuedClock) await tryFlushPending();
+        if (queuedClockOut) await tryFlushClockOut();
         if (queuedMileage) await tryFlushMileage();
         if (queuedRecap) await tryFlushRecap();
       })();
@@ -1885,9 +1939,11 @@ function CheckedInFlow({
     };
   }, [
     queuedClock,
+    queuedClockOut,
     queuedRecap,
     queuedMileage,
     tryFlushPending,
+    tryFlushClockOut,
     tryFlushMileage,
     tryFlushRecap,
   ]);
@@ -1951,6 +2007,10 @@ function CheckedInFlow({
       clearPendingClock(code);
       setQueuedClock(null);
     }
+    if (kind === "in" && queuedClockOut) {
+      clearPendingClockOut(code);
+      setQueuedClockOut(null);
+    }
     // Best-effort geolocation — clocking works even if it's denied/unavailable.
     const withCoords = async (coords: { latitude?: number; longitude?: number }) => {
       try {
@@ -1962,6 +2022,7 @@ function CheckedInFlow({
           }
         }
         const useQueued = kind === "in" && !startingFreshShift && queuedClock;
+        const useQueuedOut = kind === "out" && queuedClockOut;
         const res = await post("clock", {
           kind,
           ...coords,
@@ -1970,9 +2031,13 @@ function CheckedInFlow({
                 clockedInAt: useQueued ? queuedClock.clockedInAt : tappedAt,
                 ...(useQueued ? { idempotencyKey: queuedClock.id } : {}),
               }
-            : {}),
+            : {
+                clockedOutAt: useQueuedOut ? queuedClockOut.clockedOutAt : tappedAt,
+                occurredAt: useQueuedOut ? queuedClockOut.clockedOutAt : tappedAt,
+                ...(useQueuedOut ? { idempotencyKey: queuedClockOut.id } : {}),
+              }),
         });
-        let json: { message?: string; alreadyIn?: boolean; clock?: Clock } = {};
+        let json: { message?: string; alreadyIn?: boolean; alreadyOut?: boolean; clock?: Clock } = {};
         try {
           json = (await res.json()) as typeof json;
         } catch {
@@ -1983,6 +2048,10 @@ function CheckedInFlow({
             setInPhase("success");
             await holdActionSuccess();
             queueOfflineIn(coords, tappedAt);
+            return;
+          }
+          if (kind === "out" && isOfflineClockFailure({ status: res.status })) {
+            queueOfflineOut(coords, tappedAt);
             return;
           }
           if (kind === "in") setInPhase("idle");
@@ -1997,12 +2066,20 @@ function CheckedInFlow({
           setInPhase("success");
           await holdActionSuccess();
         }
+        if (kind === "out") {
+          clearPendingClockOut(code);
+          setQueuedClockOut(null);
+        }
         await onRefresh();
       } catch (error) {
         if (kind === "in" && isOfflineClockFailure({ error })) {
           setInPhase("success");
           await holdActionSuccess();
           queueOfflineIn(coords, tappedAt);
+          return;
+        }
+        if (kind === "out" && isOfflineClockFailure({ error })) {
+          queueOfflineOut(coords, tappedAt);
           return;
         }
         if (kind === "in") setInPhase("idle");
@@ -2561,6 +2638,9 @@ function CheckedInFlow({
                 In {fmtTime(clockInAt)}
                 {ctx.session?.clock.clockOutAt ? ` · Out ${fmtTime(ctx.session.clock.clockOutAt)}` : ""}
                 {queuedClock ? " · saved on this device" : ""}
+                {queuedClockOut && !ctx.session?.clock.clockOutAt
+                  ? ` · Out ${fmtTime(queuedClockOut.clockedOutAt)} saved on this device`
+                  : ""}
               </div>
             ) : null}
           </div>
@@ -2629,6 +2709,11 @@ function CheckedInFlow({
             {offlineClockBanner(queuedClock.clockedInAt)}
           </p>
         ) : null}
+        {queuedClockOut ? (
+          <p style={{ ...errText, color: "#92400e" }}>
+            {offlineClockOutBanner(queuedClockOut.clockedOutAt)}
+          </p>
+        ) : null}
         {queuedMileage ? (
           <p style={{ ...errText, color: "#92400e" }}>
             {offlineMileageBanner()}
@@ -2639,7 +2724,7 @@ function CheckedInFlow({
             {offlineRecapBanner(queuedRecap.submittedAt)}
           </p>
         ) : null}
-        {msg && !queuedClock && !queuedMileage && !queuedRecap ? (
+        {msg && !queuedClock && !queuedClockOut && !queuedMileage && !queuedRecap ? (
           <p style={errText}>{msg}</p>
         ) : null}
       </div>
