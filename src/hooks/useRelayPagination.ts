@@ -123,7 +123,9 @@ export function useRelayPagination<TQuery extends OperationType>({
   const loadWithTracking = useCallback(
     (variables: TQuery["variables"]) => {
       setLastVariables(variables);
-      loadQuery(variables, { fetchPolicy: "network-only" });
+      // Back-navigation should paint the list already in the store.
+      // A cold open still hits the network when the store is empty.
+      loadQuery(variables, { fetchPolicy: "store-or-network" });
     },
     [loadQuery],
   );
@@ -348,12 +350,15 @@ export function useRelayPagination<TQuery extends OperationType>({
     if (!lastVariables) return;
 
     setIsRefreshing(true);
+    // Explicit refresh stays on the network. loadQuery picks up the
+    // same request so the table actually repaints.
+    loadQuery(lastVariables, { fetchPolicy: "network-only" });
     fetchQuery(environment, query, lastVariables, {
       fetchPolicy: "network-only",
     })
       .toPromise()
       .finally(() => setIsRefreshing(false));
-  }, [environment, lastVariables, query]);
+  }, [environment, lastVariables, loadQuery, query]);
 
   const isPageReachable = useCallback(
     (page: number) => {

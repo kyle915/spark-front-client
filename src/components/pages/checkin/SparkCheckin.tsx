@@ -135,6 +135,12 @@ import {
   type PendingClockOut,
 } from "./offlineClock";
 import {
+  IDENTIFY_OFFLINE_NO_CACHE,
+  IDENTIFY_OFFLINE_QUEUED,
+  flushPendingIdentify,
+  writePendingIdentify,
+} from "./offlineIdentify";
+import {
   clearPendingRecap,
   enqueueRecap,
   offlineRecapBanner,
@@ -1153,33 +1159,32 @@ function IdentifyStep({
       }
       if (!date) return setErr("Pick the date you're working.");
     }
+    const identifyBody: Record<string, unknown> = needsEventDetails
+      ? {
+          firstName,
+          lastName,
+          phone,
+          email,
+          eventDate: date,
+          ...(hasPrograms ? { eventTypeId } : {}),
+          ...(onGig
+            ? { planEventId: onGig.id }
+            : !overrides && planGigAnswer === PLAN_GIG_NONE
+              ? { planEventId: PLAN_GIG_NONE }
+              : {}),
+          ...(omitPlace
+            ? {}
+            : marketPicker
+              ? { market: mkt }
+              : { storeName, address: addr }),
+        }
+      : { firstName, lastName, phone, email };
     setBusy(true);
     try {
       const res = await fetch(`${apiOrigin()}/api/public/checkin/${encodeURIComponent(code)}/identify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          needsEventDetails
-            ? {
-                firstName,
-                lastName,
-                phone,
-                email,
-                eventDate: date,
-                ...(hasPrograms ? { eventTypeId } : {}),
-                ...(onGig
-                  ? { planEventId: onGig.id }
-                  : !overrides && planGigAnswer === PLAN_GIG_NONE
-                    ? { planEventId: PLAN_GIG_NONE }
-                    : {}),
-                ...(omitPlace
-                  ? {}
-                  : marketPicker
-                    ? { market: mkt }
-                    : { storeName, address: addr }),
-              }
-            : { firstName, lastName, phone, email },
-        ),
+        body: JSON.stringify(identifyBody),
       });
       const json = await res.json();
       if (!res.ok || !json.sessionToken) {
@@ -1212,10 +1217,42 @@ function IdentifyStep({
       });
       onDone(json.sessionToken);
     } catch {
-      setErr("No service. Stay on this page and tap again when you have a bar.");
+      if (readCachedContext(code)) {
+        writePendingIdentify(code, identifyBody);
+        setErr(IDENTIFY_OFFLINE_QUEUED);
+      } else {
+        setErr(IDENTIFY_OFFLINE_NO_CACHE);
+      }
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    let inflight = false;
+    const flush = () => {
+      if (inflight) return;
+      inflight = true;
+      void flushPendingIdentify({ code, origin: apiOrigin() })
+        .then((result) => {
+          if (cancelled) return;
+          if (result.status === "flushed" && result.sessionToken) {
+            onDone(result.sessionToken);
+          } else if (result.status === "rejected" && result.message) {
+            setErr(result.message);
+          }
+        })
+        .finally(() => {
+          inflight = false;
+        });
+    };
+    window.addEventListener("online", flush);
+    flush();
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", flush);
+    };
+  }, [code, onDone]);
 
   return (
     <div style={card}>

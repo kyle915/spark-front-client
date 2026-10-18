@@ -6151,7 +6151,8 @@ type Query {
   sidebarRequestCounts(tenantId: ID = null): SidebarRequestCounts!
   recapListKinds(tenantId: ID = null): RecapListKinds!
   sidebarAlertCandidates(tenantId: ID = null): [SidebarAlertCandidate!]!
-  accountMapPins(tenantId: ID = null, first: Int = null): [AccountMapPin!]!
+  accountMapPins(tenantId: ID = null, first: Int = null, offset: Int = null): [AccountMapPin!]!
+  accountMapPinTotal(tenantId: ID = null): Int!
   accountMapCoverage(tenantId: ID = null): AccountMapCoverage!
   request(id: ID = null, uuid: ID = null): Request
   activityLogs(first: Int = 50, kind: String = null): [RequestActivityLogEntry!]!

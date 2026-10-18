@@ -38,6 +38,8 @@ describe("jumpRecents", () => {
     expect(jumpGroupOf("recap-abc")).toBe("recaps");
     expect(jumpGroupOf("crecap-xyz")).toBe("recaps");
     expect(jumpGroupOf("req-1")).toBe("requests");
+    expect(jumpGroupOf("event-9")).toBe("events");
+    expect(jumpGroupOf("client-3")).toBe("clients");
     expect(jumpGroupOf("ba-2")).toBe("people");
     expect(jumpGroupOf("dashboard")).toBe("pages");
     expect(JUMP_GROUP_ORDER[0]).toBe("recents");

@@ -14,8 +14,15 @@ import { EventsQuery } from "@/api/queries/EventsQuery";
 import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
 import { RecentLocationPingsQuery } from "@/api/queries/RecentLocationPingsQuery";
 import type { RecentLocationPingsQuery as RecentLocationPingsQueryType } from "@api/queries/__generated__/RecentLocationPingsQuery.graphql";
+import { LiveShiftBoardQuery } from "@/api/queries/LiveShiftBoardQuery";
+import type { LiveShiftBoardQuery as LiveShiftBoardQueryType } from "@api/queries/__generated__/LiveShiftBoardQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
+import {
+  assigneesForEvent,
+  clockStateLabel,
+  type TodayShift,
+} from "./todayShiftStatus";
 import { SparkBentoTile, SparkStat } from "@/shared/SparkStatBlocks";
 import { todayGroundKpis } from "@/shared/sparkStat";
 import SparkPageHeader from "@/shared/SparkPageHeader";
@@ -62,6 +69,13 @@ type Ping = {
   freshnessMin: number;
 };
 
+const clockTone = (status: string): string => {
+  if (status === "clocked_in") return "var(--spark-lime)";
+  if (status === "clocked_out") return "var(--spark-sky, #6db3f2)";
+  if (status === "no_show" || status === "missed") return "var(--spark-orange)";
+  return "rgba(255,255,255,0.55)";
+};
+
 const minutesSince = (iso: string): number => {
   try {
     const t = new Date(iso).getTime();
@@ -74,6 +88,7 @@ const minutesSince = (iso: string): number => {
 const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
   const navigate = useNavigate();
   const { tenantId } = useAuthStore();
+  const { isClient } = useSparkRole();
   const [openKey, setOpenKey] = useState<string | null>(null);
   const today = useMemo(() => {
     const d = new Date();
@@ -165,6 +180,39 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
     }));
   }, [pingData]);
   const [openPing, setOpenPing] = useState<string | null>(null);
+
+  const shiftData = useLazyLoadQuery<LiveShiftBoardQueryType>(
+    LiveShiftBoardQuery,
+    { tenantId: tenantId || null },
+    { fetchPolicy: "store-and-network", fetchKey: pingTick },
+  );
+  const liveShifts: TodayShift[] = useMemo(() => {
+    return (shiftData?.liveShiftBoard ?? [])
+      .filter((row): row is NonNullable<typeof row> => Boolean(row))
+      .map((row) => ({
+        eventUuid: String(row.eventUuid),
+        assigned: (row.assigned ?? [])
+          .filter((ba): ba is NonNullable<typeof ba> => Boolean(ba))
+          .map((ba) => ({
+            ambassadorUuid: String(ba.ambassadorUuid),
+            name: ba.name ?? "",
+            status: ba.status ?? "",
+          })),
+      }));
+  }, [shiftData]);
+  const clockSummary = useMemo(() => {
+    let clockedIn = 0;
+    let clockedOut = 0;
+    let noShows = 0;
+    for (const shift of liveShifts) {
+      for (const ba of shift.assigned) {
+        if (ba.status === "clocked_in") clockedIn += 1;
+        else if (ba.status === "clocked_out") clockedOut += 1;
+        else if (ba.status === "no_show" || ba.status === "missed") noShows += 1;
+      }
+    }
+    return { clockedIn, clockedOut, noShows };
+  }, [liveShifts]);
 
   const mappable = shifts.filter((s) => s.coords !== null);
   const center = useMemo(() => {
@@ -439,15 +487,43 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
           className="p-4 flex items-center justify-between"
           style={{ borderBottom: "1px solid var(--spark-border)" }}
         >
-          <h3 className="font-bold">
-            Today
-            <span
-              className="mono text-xs ml-2"
-              style={{ color: "rgba(255,255,255,0.45)" }}
+          <div className="min-w-0">
+            <h3 className="font-bold">
+              Today
+              <span
+                className="mono text-xs ml-2"
+                style={{ color: "rgba(255,255,255,0.45)" }}
+              >
+                {shifts.length} EVENT{shifts.length === 1 ? "" : "S"}
+              </span>
+            </h3>
+            <p
+              className="mono text-[10px] mt-1"
+              style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.55)" }}
             >
-              {shifts.length} EVENT{shifts.length === 1 ? "" : "S"}
-            </span>
-          </h3>
+              {clockSummary.clockedIn} CLOCKED IN · {clockSummary.clockedOut} OUT ·{" "}
+              <span
+                style={{
+                  color:
+                    clockSummary.noShows > 0
+                      ? "var(--spark-orange)"
+                      : "rgba(255,255,255,0.55)",
+                }}
+              >
+                {clockSummary.noShows} NO-SHOW{clockSummary.noShows === 1 ? "" : "S"}
+              </span>
+            </p>
+          </div>
+          {!isClient ? (
+            <button
+              type="button"
+              onClick={() => navigate("/live-board")}
+              className="mono text-[10px] shrink-0"
+              style={{ letterSpacing: "0.14em", color: "var(--spark-lime)" }}
+            >
+              ON THE CLOCK
+            </button>
+          ) : null}
         </div>
         <ul className="overflow-y-auto flex-1">
           {shifts.length === 0 && (
@@ -459,6 +535,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             </li>
           )}
           {shifts.map((s) => {
+            const assignees = assigneesForEvent(s.uuid, liveShifts);
             const liveBaNames = Array.from(
               new Set(
                 pings
@@ -515,17 +592,30 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                         {s.address}
                       </p>
                     )}
-                    {liveBaNames.length > 0 && (
-                      <p
-                        className="mono text-[10px] mt-1.5 truncate"
-                        style={{
-                          letterSpacing: "0.14em",
-                          color: "var(--spark-lime)",
-                        }}
-                      >
-                        BA · {liveBaNames.join(", ")}
-                      </p>
-                    )}
+                    {assignees.length > 0
+                      ? assignees.map((ba) => (
+                          <p
+                            key={ba.ambassadorUuid}
+                            className="mono text-[10px] mt-1.5 truncate"
+                            style={{
+                              letterSpacing: "0.12em",
+                              color: clockTone(ba.status),
+                            }}
+                          >
+                            {ba.name} · {clockStateLabel(ba.status)}
+                          </p>
+                        ))
+                      : liveBaNames.length > 0 && (
+                          <p
+                            className="mono text-[10px] mt-1.5 truncate"
+                            style={{
+                              letterSpacing: "0.14em",
+                              color: "var(--spark-lime)",
+                            }}
+                          >
+                            BA · {liveBaNames.join(", ")}
+                          </p>
+                        )}
                   </div>
                   <SparkStat
                     size="sm"
@@ -555,7 +645,7 @@ export default function SparkToday() {
         <SparkPageHeader
           eyebrow="LIVE · TODAY"
           title={isClient ? "Today's activations." : "Today, on the ground."}
-          support="Every event happening right now, plus the assigned BAs and their GPS clock-in/out locations."
+          support="Every event on today's board, who is clocked in, clocked out, or a no-show, and their GPS. Punch edits stay on On the Clock."
         />
 
         <Suspense fallback={<DashboardSkeleton />}>

@@ -9,8 +9,9 @@ import { graphql } from "react-relay";
  * never_visited=0); requests alone are only ever `planned`.
  */
 export const AccountMapQuery = graphql`
-  query AccountMapQuery($tenantId: ID, $first: Int) {
-    accountMapPins(tenantId: $tenantId, first: $first) {
+  query AccountMapQuery($tenantId: ID, $first: Int, $offset: Int) {
+    accountMapPinTotal(tenantId: $tenantId)
+    accountMapPins(tenantId: $tenantId, first: $first, offset: $offset) {
       id
       name
       address
