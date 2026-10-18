@@ -1652,5 +1652,6 @@ tr:hover > td .spark-row-actions > a,
   margin: 0.7rem auto 0.35rem;
 }
 .spark-sheet-body {
-  padding: 0.85rem 1.15rem 1.25rem;
+  /* lf-field-client: clear the home indicator. Parallel PR also edits this file. */
+  padding: 0.85rem 1.15rem calc(1.25rem + env(safe-area-inset-bottom, 0px));
 }

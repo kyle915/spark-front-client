@@ -117,7 +117,7 @@ export function VoiceRecapCard({
   return (
     <div>
       <h2 style={{ fontSize: 18, margin: "0 0 6px" }}>What happened</h2>
-      <p style={{ fontSize: 13, opacity: 0.65, margin: "0 0 10px" }}>
+      <p style={{ color: "#44403c", fontSize: 13, opacity: 1, margin: "0 0 10px" }}>
         {speech
           ? "Record a note. When you stop, it drafts the text boxes. Counts stay blank for you to type."
           : "This browser can't dictate. Type or paste what happened, then draft the text boxes. Counts stay blank."}

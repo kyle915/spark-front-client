@@ -13,6 +13,7 @@ import { dispatchOpenJump } from "@/motion/opsMotion";
 import { PublicFormPill } from "./PublicFormPill";
 import { usePublicFormLink } from "@/hooks/usePublicFormLink";
 import { useMobileNav } from "./MobileNavContext";
+import { TenantLogo } from "./TenantLogo.tsx";
 
 /**
  * Spark v2 topbar — wireframe-faithful version of spark-demo/index.html
@@ -102,7 +103,7 @@ const PillGroup: React.FC<{
 );
 
 export const SparkTopbar: React.FC = () => {
-  const { user } = useAuthStore();
+  const { user, tenantMeta, tenantSlug } = useAuthStore();
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -140,6 +141,7 @@ export const SparkTopbar: React.FC = () => {
         <button
           type="button"
           className="md:hidden btn btn-ghost btn-sm btn-square shrink-0"
+          style={{ minWidth: "var(--spark-hit, 44px)", minHeight: "var(--spark-hit, 44px)" }}
           aria-label="Open menu"
           onClick={toggleNav}
         >
@@ -154,6 +156,16 @@ export const SparkTopbar: React.FC = () => {
         >
           <Bars3Icon className="w-5 h-5 opacity-70" />
         </button>
+        {isClient ? (
+          <TenantLogo
+            variant="header"
+            tone="dark"
+            name={tenantMeta?.requestUrlName}
+            requestUrlName={tenantMeta?.requestUrlName}
+            tenantSlug={tenantSlug}
+            image={tenantMeta?.logo}
+          />
+        ) : null}
         <nav className="spark-crumb min-w-0" aria-label="Breadcrumb">
           <span className="spark-crumb-root hidden sm:inline">
             {crumb.parent}

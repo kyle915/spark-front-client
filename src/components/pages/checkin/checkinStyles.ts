@@ -49,6 +49,13 @@ export const label: CSSProperties = {
   color: "#1c1917",
   opacity: 1,
 };
+/** Helper copy on cream. Solid stone — washed 12–13px at 0.5–0.7 failed contrast. */
+export const helperText: CSSProperties = {
+  color: "#44403c",
+  fontSize: 13,
+  lineHeight: 1.45,
+  opacity: 1,
+};
 export const input: CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
@@ -74,16 +81,18 @@ export const photoBadge: CSSProperties = {
 };
 export const photoRemove: CSSProperties = {
   position: "absolute",
-  top: -8,
-  right: -8,
-  width: 32,
-  height: 32,
+  top: -10,
+  right: -10,
+  width: 44,
+  height: 44,
+  minWidth: 44,
+  minHeight: 44,
   borderRadius: 999,
   border: "none",
   background: "#14181a",
   color: "#fff",
   fontSize: 18,
-  lineHeight: "32px",
+  lineHeight: "44px",
   cursor: "pointer",
   padding: 0,
   zIndex: 1,
