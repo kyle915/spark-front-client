@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
+import { thumbUrl } from "@/utils/thumb";
 
 export type PhotoLightboxItem = {
   name?: string;
   url: string;
+  /** Optional pre-sized thumbnail for the filmstrip; derived from `url` when absent. */
+  thumb?: string;
   caption?: string;
 };
 
@@ -235,8 +238,9 @@ export function PhotoLightbox({
                 }}
               >
                 <img
-                  src={p.url}
+                  src={p.thumb || thumbUrl(p.url, 400) || p.url}
                   alt=""
+                  loading="lazy"
                   style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                 />
               </button>

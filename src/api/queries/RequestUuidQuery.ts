@@ -169,61 +169,18 @@ export const RequestUuidQuery = graphql`
           name
           slug
         }
+        # Only the approved flag stays on the main query: it gates the
+        # Cancel-event action in the header, so it must be known
+        # synchronously. Everything else about recaps (metrics, files,
+        # ambassador, hero) lives in RequestFieldReportsQuery, loaded
+        # lazily by the Field Reports section.
         recaps {
           id
-          uuid
-          name
           approved
-          totalEngagements
-          productsSold
-          totalCansSold
-          createdAt
-          ambassador {
-            id
-            uuid
-            user {
-              id
-              firstName
-              lastName
-            }
-          }
-          recapFiles {
-            id
-            file
-            fileType {
-              id
-              name
-              extension
-            }
-          }
         }
-        # Custom-template recaps for this event. Field Reports must show
-        # these alongside legacy recaps so the panel matches the count the
-        # Master Tracker chip reported. CustomRecap has a different shape
-        # (heroImageUrl / soldUnits vs recapFiles / productsSold); the
-        # panel normalizes both into one row model.
         customRecaps {
           id
-          uuid
-          name
           approved
-          totalEngagements
-          soldUnits
-          isDryDemo
-          peopleEngaged
-          excludeFromAggregates
-          createdAt
-          heroImageUrl
-          customRecapFilesCount
-          ambassador {
-            id
-            uuid
-            user {
-              id
-              firstName
-              lastName
-            }
-          }
         }
       }
       createdAt
