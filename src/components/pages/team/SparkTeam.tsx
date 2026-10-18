@@ -12,6 +12,7 @@
 import React, { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -169,12 +170,9 @@ const Section: React.FC<{
         </p>
       </div>
       {users.length === 0 ? (
-        <div
-          className="spark-card p-6 text-center"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          No {title.toLowerCase()} in this workspace yet.
-        </div>
+        <SparkEmptyState
+          title={`No ${title.toLowerCase()} in this workspace yet.`}
+        />
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {users.map((u) => (

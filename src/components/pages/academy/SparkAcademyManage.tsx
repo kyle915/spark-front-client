@@ -12,6 +12,7 @@ import React, { Suspense, useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import useSparkRole from "@/hooks/useSparkRole";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
@@ -266,12 +267,10 @@ const ManageInner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
 
       <div className="space-y-2">
         {modules.length === 0 ? (
-          <div
-            className="spark-card p-8 text-center"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            No modules yet. Create your first to publish it to mobile.
-          </div>
+          <SparkEmptyState
+            title="No modules yet"
+            body="Create your first to publish it to mobile."
+          />
         ) : (
           modules.map((m) => (
             <div

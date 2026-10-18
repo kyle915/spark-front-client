@@ -1693,6 +1693,37 @@ tr:hover > td .spark-row-actions > a,
   border-radius: 6px;
 }
 
+/* Recap cards + Tracker rows: secondary actions stay out of the scan
+   until hover or keyboard focus. Touch devices keep them visible —
+   hover never fires there, and Delete/Share must stay reachable. */
+@media (hover: hover) and (pointer: fine) {
+  .spark-row-actions--until-hover {
+    pointer-events: none;
+  }
+  .spark-row-actions--until-hover > button,
+  .spark-row-actions--until-hover > a {
+    opacity: 0;
+  }
+  tr:hover .spark-row-actions--until-hover,
+  tr:focus-within .spark-row-actions--until-hover,
+  .spark-card:hover .spark-row-actions--until-hover,
+  .spark-card:focus-within .spark-row-actions--until-hover {
+    pointer-events: auto;
+  }
+  tr:hover .spark-row-actions--until-hover > button,
+  tr:hover .spark-row-actions--until-hover > a,
+  tr:focus-within .spark-row-actions--until-hover > button,
+  tr:focus-within .spark-row-actions--until-hover > a,
+  .spark-card:hover .spark-row-actions--until-hover > button,
+  .spark-card:hover .spark-row-actions--until-hover > a,
+  .spark-card:focus-within .spark-row-actions--until-hover > button,
+  .spark-card:focus-within .spark-row-actions--until-hover > a,
+  .spark-row-actions--until-hover > button:focus-visible,
+  .spark-row-actions--until-hover > a:focus-visible {
+    opacity: 1;
+  }
+}
+
 /* Vaul sheet — larger drag affordance + quieter header hairline */
 .spark-sheet-handle {
   width: 2.75rem;

@@ -247,7 +247,7 @@ const TodayEvents = () => {
                 placeholder="Search tenant..."
               />
             </div> */}
-            <div className="rounded-xl  bg-base-100 p-4 shadow-sm">
+            <div className="spark-card p-4">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-1">
                   <FilterIcon className="w-4 h-4" />

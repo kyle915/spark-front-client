@@ -2,6 +2,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import { MissingRecapEventsQuery } from "@/api/queries/MissingRecapEventsQuery";
@@ -205,21 +206,10 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
 
   if (rows.length === 0) {
     return (
-      <div
-        className="spark-card p-8 text-center"
-        style={{ color: "rgba(255,255,255,0.65)" }}
-      >
-        <p
-          className="display text-lg font-bold mb-2"
-          style={{ color: "var(--spark-lime)" }}
-        >
-          ✦ All clear
-        </p>
-        <p className="text-sm">
-          Every shift in the last {lookbackDays} day{lookbackDays === 1 ? "" : "s"}{" "}
-          has a recap on file.
-        </p>
-      </div>
+      <SparkEmptyState
+        title="✦ All clear"
+        body={`Every shift in the last ${lookbackDays} day${lookbackDays === 1 ? "" : "s"} has a recap on file.`}
+      />
     );
   }
 

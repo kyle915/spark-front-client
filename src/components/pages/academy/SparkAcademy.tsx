@@ -2,6 +2,7 @@ import React, { Suspense, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { AcademyModulesAdminQuery } from "@/api/queries/AcademyModulesAdminQuery";
@@ -201,16 +202,21 @@ const AcademyInner: React.FC<{ tenantId: string; isAdmin: boolean }> = ({
       </div>
 
       {filtered.length === 0 ? (
-        <div
-          className="spark-card p-10 text-center text-sm"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          {modules.length === 0
-            ? isAdmin
-              ? 'No modules yet. Build the first one on Manage — "Liquid Death · Brand 101" is a good start.'
-              : "Your Ignite RMM hasn't published any training modules yet."
-            : "No modules match these filters."}
-        </div>
+        modules.length === 0 ? (
+          isAdmin ? (
+            <SparkEmptyState
+              title="No modules yet"
+              body='Build the first one on Manage — "Liquid Death · Brand 101" is a good start.'
+            />
+          ) : (
+            <SparkEmptyState
+              title="No modules yet"
+              body="Your Ignite RMM hasn't published any training modules yet."
+            />
+          )
+        ) : (
+          <SparkEmptyState title="No modules match these filters." />
+        )
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((m) => (

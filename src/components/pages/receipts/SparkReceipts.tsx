@@ -9,6 +9,7 @@ import {
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { QRCodeCanvas } from "qrcode.react";
 import Layout from "@/layout/Layout";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import { ReceiptsQuery } from "@/api/queries/ReceiptsQuery";
 import type { ReceiptsQuery as ReceiptsQueryType } from "@api/queries/__generated__/ReceiptsQuery.graphql";
 import { ReceiptCampaignsQuery } from "@/api/queries/ReceiptCampaignsQuery";
@@ -1486,13 +1487,9 @@ const SubmissionsQueue: React.FC<{
 
   if (visible.length === 0) {
     return (
-      <div
-        className="spark-card p-8 text-center text-sm"
-        style={{ color: "rgba(255,255,255,0.55)" }}
-      >
-        Nothing in {TABS.find((t) => t.key === tab)?.label.toLowerCase()} right
-        now.
-      </div>
+      <SparkEmptyState
+        title={`Nothing in ${TABS.find((t) => t.key === tab)?.label.toLowerCase()} right now.`}
+      />
     );
   }
 
@@ -1622,15 +1619,10 @@ const CampaignList: React.FC<{
 
   if (campaigns.length === 0) {
     return (
-      <div
-        className="spark-card p-8 text-center"
-        style={{ color: "rgba(255,255,255,0.55)" }}
-      >
-        <p className="text-sm">No campaigns yet.</p>
-        <p className="text-xs mt-1">
-          Create one to start collecting consumer receipts and paying rewards.
-        </p>
-      </div>
+      <SparkEmptyState
+        title="No campaigns yet."
+        body="Create one to start collecting consumer receipts and paying rewards."
+      />
     );
   }
 

@@ -7,6 +7,7 @@ import React, { Suspense, useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import useSparkRole from "@/hooks/useSparkRole";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
@@ -164,12 +165,10 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
 
       <div className="space-y-2">
         {rows.length === 0 ? (
-          <div
-            className="spark-card p-8 text-center"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            No announcements yet. Post your first to reach every BA.
-          </div>
+          <SparkEmptyState
+            title="No announcements yet"
+            body="Post your first to reach every BA."
+          />
         ) : (
           rows.map((r) => (
             <div key={r.uuid} className="spark-card p-4 flex items-start justify-between gap-3">

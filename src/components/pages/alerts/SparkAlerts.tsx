@@ -2,6 +2,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
 import type { RequestsQuery as RequestsQueryType } from "@api/queries/__generated__/RequestsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -229,12 +230,10 @@ const Inner: React.FC = () => {
       </div>
 
       {rows.length === 0 ? (
-        <div
-          className="spark-card p-8 text-center text-sm"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          Quiet on the wire. Nothing new in the last 48 hours.
-        </div>
+        <SparkEmptyState
+          title="Quiet on the wire."
+          body="Nothing new in the last 48 hours."
+        />
       ) : (
         <div className="spark-card overflow-hidden">
           <ul>

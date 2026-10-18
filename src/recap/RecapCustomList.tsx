@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import Layout from "@/layout/Layout";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import { useLazyLoadQuery, usePreloadedQuery } from "react-relay/hooks";
 import DataTableRelay from "@/shared/DataTableRelay";
 import {
@@ -118,11 +119,7 @@ const CustomRecapsTableContent = ({
           </div>
         ),
       }}
-      emptyState={
-        <div className="alert alert-info">
-          <span>{emptyMessage}</span>
-        </div>
-      }
+      emptyState={<SparkEmptyState title={emptyMessage} />}
     />
   );
 };
@@ -411,7 +408,7 @@ const RecapCustomList = () => {
       ========================= */}
       <div className="flex flex-col gap-4">
         {/* FILTERS PANEL */}
-        <div className="rounded-xl bg-base-100 p-4 shadow-sm border border-base-200">
+        <div className="spark-card p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-1">
               <FilterIcon className="w-4 h-4" />

@@ -830,7 +830,7 @@ const TrackerTable: React.FC<{
                       // action lands in the horizontal-scroll region and you
                       // have to scroll sideways to reach it.
                       <div
-                        className="spark-row-actions"
+                        className="spark-row-actions spark-row-actions--until-hover"
                         style={{ maxWidth: 300 }}
                       >
                         <button

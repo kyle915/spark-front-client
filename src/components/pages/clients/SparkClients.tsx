@@ -16,6 +16,7 @@ import { useAuthStore } from "@/store/authStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { ClientsQuery } from "@/api/queries/ClientsQuery";
 import type { ClientsQuery as ClientsQueryType } from "@api/queries/__generated__/ClientsQuery.graphql";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
 
@@ -99,14 +100,14 @@ const Inner: React.FC = () => {
       />
 
       {filtered.length === 0 ? (
-        <div
-          className="spark-card p-8 text-center"
-          style={{ color: "rgba(255,255,255,0.55)" }}
-        >
-          {clients.length === 0
-            ? "No clients in this workspace yet. Use + New client to add one."
-            : "No matches."}
-        </div>
+        clients.length === 0 ? (
+          <SparkEmptyState
+            title="No clients in this workspace yet"
+            body="Use + New client to add one."
+          />
+        ) : (
+          <SparkEmptyState title="No matches." />
+        )
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((c) => (

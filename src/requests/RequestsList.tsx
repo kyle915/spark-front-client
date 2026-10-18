@@ -821,7 +821,7 @@ const RequestsList = ({ fixedFilters }: RequestsListProps) => {
                 placeholder="Select a tenant"
               />
             </div> */}
-              <div className="bg-base-100 rounded-xl border border-base-300 shadow-sm">
+              <div className="spark-card">
                 <div
                   className="flex items-center justify-between cursor-pointer px-6 py-4 select-none"
                   onClick={handleToggleFilters}
