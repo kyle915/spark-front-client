@@ -40,6 +40,13 @@ import {
 } from "./torchRequestForm";
 import EventActivationSchedule from "./components/EventActivationSchedule";
 import {
+  clearPublicFormDraft,
+  hasPublicFormDraftContent,
+  readPublicFormDraft,
+  writePublicFormDraft,
+  type PublicFormDraft,
+} from "./publicFormDraft";
+import {
   showsBaCountSelector,
   showsEventActivationSchedule,
   showsLegacyBulkDates,
@@ -183,6 +190,157 @@ function ExpressFormBody() {
     requestorName: string;
     approved: boolean;
   } | null>(null);
+
+  // On-device draft (localStorage, keyed by tenant slug). A saved draft is
+  // offered, never silently applied; autosave only starts once the visitor
+  // has resumed/discarded it or there was none to offer.
+  const [pendingDraft, setPendingDraft] = useState<PublicFormDraft | null>(null);
+  const [draftGateOpen, setDraftGateOpen] = useState(false);
+  useEffect(() => {
+    const saved = slug ? readPublicFormDraft(slug) : null;
+    if (saved) setPendingDraft(saved);
+    else setDraftGateOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const draftSnapshot = (): Omit<PublicFormDraft, "v" | "slug" | "savedAt"> => ({
+    venue,
+    address,
+    latitude,
+    longitude,
+    storeQ,
+    pickedStore,
+    date,
+    extraDates,
+    visitSlots,
+    startTime,
+    endTime,
+    timezoneId,
+    requestTypeId,
+    productIds,
+    productNameById,
+    selectedProductTypeId,
+    requestorEmail,
+    requestorName,
+    storeContact,
+    storeManagerName,
+    storeManagerPhone,
+    baCount,
+    distributorQ,
+    distributorId,
+    distributorName,
+    notes,
+    schedulingStatus,
+    nonActiveProductRequired,
+    casesToBeShipped,
+    accountSpendAmount,
+    eventAssetsNeeded,
+    loadInTime,
+    onsitePoc,
+    additionalTeamDetails,
+    multiBrand,
+    coBrandSelection,
+  });
+
+  useEffect(() => {
+    if (!slug || !draftGateOpen) return;
+    const timer = window.setTimeout(() => {
+      const snapshot = draftSnapshot();
+      if (hasPublicFormDraftContent(snapshot)) writePublicFormDraft(slug, snapshot);
+      else clearPublicFormDraft(slug);
+    }, 400);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    slug,
+    draftGateOpen,
+    venue,
+    address,
+    latitude,
+    longitude,
+    storeQ,
+    pickedStore,
+    date,
+    extraDates,
+    visitSlots,
+    startTime,
+    endTime,
+    timezoneId,
+    requestTypeId,
+    productIds,
+    productNameById,
+    selectedProductTypeId,
+    requestorEmail,
+    requestorName,
+    storeContact,
+    storeManagerName,
+    storeManagerPhone,
+    baCount,
+    distributorQ,
+    distributorId,
+    distributorName,
+    notes,
+    schedulingStatus,
+    nonActiveProductRequired,
+    casesToBeShipped,
+    accountSpendAmount,
+    eventAssetsNeeded,
+    loadInTime,
+    onsitePoc,
+    additionalTeamDetails,
+    multiBrand,
+    coBrandSelection,
+  ]);
+
+  const resumeDraft = () => {
+    if (!pendingDraft) return;
+    const d = pendingDraft;
+    setVenue(d.venue);
+    setAddress(d.address);
+    setLatitude(d.latitude);
+    setLongitude(d.longitude);
+    setStoreQ(d.storeQ);
+    pickedStoreRef.current = d.pickedStore?.id ?? null;
+    setPickedStore(d.pickedStore);
+    setDate(d.date);
+    setExtraDates(d.extraDates);
+    setVisitSlots(d.visitSlots);
+    setStartTime(d.startTime);
+    setEndTime(d.endTime);
+    setTimezoneId(d.timezoneId);
+    setRequestTypeId(d.requestTypeId);
+    setProductIds(d.productIds);
+    setProductNameById(d.productNameById);
+    setSelectedProductTypeId(d.selectedProductTypeId);
+    setRequestorEmail(d.requestorEmail);
+    setRequestorName(d.requestorName);
+    setStoreContact(d.storeContact);
+    setStoreManagerName(d.storeManagerName);
+    setStoreManagerPhone(d.storeManagerPhone);
+    setBaCount(d.baCount);
+    setDistributorQ(d.distributorQ);
+    setDistributorId(d.distributorId);
+    setDistributorName(d.distributorName);
+    setNotes(d.notes);
+    setSchedulingStatus(d.schedulingStatus);
+    setNonActiveProductRequired(d.nonActiveProductRequired);
+    setCasesToBeShipped(d.casesToBeShipped);
+    setAccountSpendAmount(d.accountSpendAmount);
+    setEventAssetsNeeded(d.eventAssetsNeeded);
+    setLoadInTime(d.loadInTime);
+    setOnsitePoc(d.onsitePoc);
+    setAdditionalTeamDetails(d.additionalTeamDetails);
+    setMultiBrand(d.multiBrand);
+    setCoBrandSelection(d.coBrandSelection);
+    setPendingDraft(null);
+    setDraftGateOpen(true);
+  };
+
+  const discardDraft = () => {
+    if (slug) clearPublicFormDraft(slug);
+    setPendingDraft(null);
+    setDraftGateOpen(true);
+  };
 
   const pickStoreAccount = (store: { id: string; name: string; address?: string | null }) => {
     const storeAddress = store.address ?? "";
@@ -486,6 +644,10 @@ function ExpressFormBody() {
     }
 
     if (failures.length === 0) {
+      // Filed — the on-device draft has served its purpose. Close the gate
+      // so the partial reset below doesn't immediately re-save one.
+      if (slug) clearPublicFormDraft(slug);
+      setDraftGateOpen(false);
       setConfirmation({
         count: successes,
         routedTo: lastRouted,
@@ -547,6 +709,53 @@ function ExpressFormBody() {
               : `Submissions are routed to the applicable ${brandName} RMM for approval.`}
           </p>
         </div>
+
+        {pendingDraft && (
+          <div
+            className="rounded-xl p-4 flex flex-wrap items-center gap-3"
+            style={{
+              background: "var(--spark-surface, #11140e)",
+              border: "1px solid var(--spark-lime, #c5f546)",
+            }}
+            role="status"
+          >
+            <div className="flex-1 min-w-[200px]">
+              <p className="text-sm font-semibold" style={{ color: "var(--spark-text, #f2f3ee)" }}>
+                Resume your request?
+              </p>
+              <p className="text-[12px] mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+                We saved your progress on this device
+                {pendingDraft.savedAt
+                  ? ` on ${new Date(pendingDraft.savedAt).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}`
+                  : ""}
+                . Nothing has been submitted yet.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={resumeDraft}
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{ background: "var(--spark-lime, #c5f546)", color: "#0a0d09" }}
+            >
+              Resume
+            </button>
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text, #f2f3ee)",
+                border: "1px solid var(--spark-border, #1f2418)",
+              }}
+            >
+              Discard
+            </button>
+          </div>
+        )}
 
         {/* Venue + Address */}
         <Card title="VENUE">
