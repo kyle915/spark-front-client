@@ -9,27 +9,36 @@ function read(rel: string): string {
   return readFileSync(join(root, rel), "utf8");
 }
 
-describe("collapsed sidebar icon rail", () => {
+describe("sidebar stays expanded", () => {
   const sidebar = read("src/layout/SparkSidebar.tsx");
-  const css = read("src/index.css");
+  const topbar = read("src/layout/SparkTopbar.tsx");
+  const nav = read("src/layout/MobileNavContext.tsx");
 
-  it("uses the spark glyph when collapsed and the wordmark when expanded", () => {
-    expect(sidebar).toContain('className="spark-sidebar-glyph"');
+  it("keeps the w-64 wordmark and never applies the icon rail", () => {
+    expect(sidebar).toContain("w-64");
+    expect(sidebar).not.toContain("is-collapsed");
+    expect(sidebar).not.toContain("iconRail");
+    expect(sidebar).not.toContain("w-[4.5rem]");
     expect(sidebar).toContain('src="/legal/spark-logo.png"');
-    expect(sidebar).not.toContain('width: iconRail ? "2.4rem"');
-    expect(sidebar).toContain("aria-label={label}");
+    expect(sidebar).toContain('alt="Spark by Ignite"');
+    expect(sidebar).not.toContain("spark-sidebar-glyph");
   });
 
-  it("keeps a 4.5rem rail with 36px targets, a lime active chip, and a portaled tip", () => {
-    expect(css).toContain(".spark-sidebar.is-collapsed {\n  width: 4.5rem;");
-    expect(css).toContain("width: 36px;");
-    expect(css).toContain("height: 36px;");
-    expect(css).toContain("rgba(197, 245, 70, 0.16)");
-    expect(css).toContain(".spark-rail-tip");
-    expect(css).toContain("JetBrains Mono");
-    expect(css).toContain(".spark-rail-dot");
-    expect(sidebar).toContain("spark-rail-section");
-    expect(sidebar).toContain("spark-sidebar-footer");
-    expect(sidebar).toContain("<RailTip");
+  it("has no desktop collapse control", () => {
+    expect(sidebar).not.toContain("PanelLeft");
+    expect(sidebar).not.toContain("Collapse sidebar");
+    expect(sidebar).not.toContain("toggleCollapsed");
+    expect(topbar).not.toContain("Collapse sidebar");
+    expect(topbar).not.toContain("toggleCollapsed");
+    expect(sidebar).toContain('aria-label="Close menu"');
+    expect(topbar).toContain('aria-label="Open menu"');
+  });
+
+  it("clears the stored collapse flag and does not read it back", () => {
+    expect(nav).toContain('const COLLAPSE_KEY = "spark-sidebar-collapsed"');
+    expect(nav).toContain("localStorage.removeItem(COLLAPSE_KEY)");
+    expect(nav).not.toContain("localStorage.getItem");
+    expect(nav).not.toContain("setCollapsed");
+    expect(nav).not.toContain("toggleCollapsed");
   });
 });
