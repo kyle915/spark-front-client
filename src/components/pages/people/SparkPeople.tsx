@@ -608,10 +608,10 @@ const Inner: React.FC<{
                       color: "var(--spark-muted, rgba(255,255,255,0.5))",
                     }}
                   >
-                    <th className="px-4 py-3">PERSON</th>
-                    <th className="px-4 py-3">EMAIL</th>
-                    <th className="px-4 py-3">ROLE</th>
-                    <th className="px-4 py-3 text-right">ACTIONS</th>
+                    <th className="px-4 py-2">PERSON</th>
+                    <th className="px-4 py-2">EMAIL</th>
+                    <th className="px-4 py-2">ROLE</th>
+                    <th className="px-4 py-2 text-right">ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -626,32 +626,37 @@ const Inner: React.FC<{
                       </td>
                     </tr>
                   )}
-                  {visibleFiltered.map((p) => (
+                  {visibleFiltered.map((p, idx) => (
                     <tr
                       key={p.uuid}
+                      className={
+                        idx % 2 === 1
+                          ? "transition-colors bg-white/[0.04] hover:bg-white/[0.09]"
+                          : "transition-colors hover:bg-white/[0.09]"
+                      }
                       style={{ borderBottom: "1px solid var(--spark-border)" }}
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2">
                         <div className="flex items-center gap-3">
                           <span className="spark-avatar">{p.initials}</span>
                           <span className="font-medium">{p.name}</span>
                         </div>
                       </td>
                       <td
-                        className="px-4 py-3 mono text-xs"
+                        className="px-4 py-2 mono text-xs"
                         style={{ color: "rgba(255,255,255,0.7)" }}
                       >
                         {p.email}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2">
                         <span
                           className={ROLE_CHIP[p.roleSlug] ?? "chip chip-muted"}
                         >
                           {p.role.toUpperCase()}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="inline-flex items-center gap-3">
+                      <td className="px-4 py-2 text-right">
+                        <div className="spark-row-actions justify-end">
                           <button
                             onClick={() => {
                               navigator.clipboard.writeText(p.email);

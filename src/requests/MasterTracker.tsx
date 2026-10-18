@@ -35,6 +35,7 @@ import SparkPrimaryButton from "@/shared/SparkPrimaryButton";
 import SparkGhostButton from "@/shared/SparkGhostButton";
 import SparkFilterBar from "@/shared/SparkFilterBar";
 import SparkEmptyState from "@/shared/SparkEmptyState";
+import { CountReel } from "@/motion/CountReel";
 import {
   buildTrackerUrlParams,
   parseTrackerUrlParams,
@@ -106,9 +107,6 @@ const STATUS_FILTERS: { key: string; label: string; chip: string }[] = [
   { key: "done", label: "Done", chip: "chip chip-muted" },
   { key: "all", label: "All", chip: "chip chip-muted" },
 ];
-
-const fmtNum = (v: number | null | undefined) =>
-  typeof v === "number" ? v.toLocaleString() : "0";
 
 type RecapStatus = "submitted" | "due" | "none";
 
@@ -428,64 +426,64 @@ const TrackerTable: React.FC<{
             >
               {selectionEnabled ? (
                 <th
-                  className="px-3 py-3 w-10 sticky top-0 z-10"
+                  className="px-3 py-2 w-10 sticky top-0 z-10"
                   style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
                   aria-label="Select"
                 />
               ) : null}
-              <th className="px-4 py-3 sticky top-0 spark-table-sticky-date">
+              <th className="px-3 py-2 sticky top-0 spark-table-sticky-date">
                 DATE
               </th>
               <th
-                className="px-4 py-3 sticky top-0 z-10"
+                className="px-3 py-2 sticky top-0 z-10"
                 style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
               >
                 STATUS
               </th>
               <th
-                className="px-4 py-3 sticky top-0 z-10"
+                className="px-3 py-2 sticky top-0 z-10"
                 style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
               >
                 MARKET
               </th>
               <th
-                className="px-4 py-3 sticky top-0 z-10"
+                className="px-3 py-2 sticky top-0 z-10"
                 style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
               >
                 VENUE
               </th>
               <th
-                className="px-4 py-3 sticky top-0 z-10 spark-table-hide-sm"
+                className="px-3 py-2 sticky top-0 z-10 spark-table-hide-sm"
                 style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
               >
                 ADDRESS
               </th>
               <th
-                className="px-4 py-3 sticky top-0 z-10"
+                className="px-3 py-2 sticky top-0 z-10"
                 style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
               >
                 TYPE
               </th>
               <th
-                className="px-4 py-3 text-right sticky top-0 z-10"
+                className="px-3 py-2 text-right sticky top-0 z-10"
                 style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
               >
                 CONSUMERS
               </th>
               <th
-                className="px-4 py-3 text-right sticky top-0 z-10"
+                className="px-3 py-2 text-right sticky top-0 z-10"
                 style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
               >
                 1ST-TIME
               </th>
               <th
-                className="px-4 py-3 sticky top-0 z-10"
+                className="px-3 py-2 sticky top-0 z-10"
                 style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
               >
                 RECAP
               </th>
               <th
-                className="px-4 py-3 sticky top-0 z-10"
+                className="px-3 py-2 sticky top-0 z-10"
                 style={{ background: "var(--spark-surface-2, #0A0B0D)" }}
               >
                 NOTES
@@ -516,7 +514,7 @@ const TrackerTable: React.FC<{
                 <tr key={`hdr-${rowIdx}`}>
                   <td
                     colSpan={colCount}
-                    className="px-4 py-3 mono"
+                    className="px-3 py-2 mono"
                     style={{
                       letterSpacing: "0.16em",
                       fontSize: 11,
@@ -578,31 +576,27 @@ const TrackerTable: React.FC<{
                   navigate(`/request/view/${r.uuid}`, fromTracker);
                 }
               };
+              const selected = Boolean(selectedIds?.has(r.id));
+              const zebra = rowIdx % 2 === 1;
               return (
                 <React.Fragment key={r.uuid}>
                 {headerEl}
                 <tr
-                  className="cursor-pointer transition"
+                  className={
+                    selected
+                      ? "cursor-pointer transition-colors bg-[rgba(197,245,70,0.07)] hover:bg-[rgba(197,245,70,0.12)]"
+                      : zebra
+                        ? "cursor-pointer transition-colors bg-white/[0.04] hover:bg-white/[0.09]"
+                        : "cursor-pointer transition-colors hover:bg-white/[0.09]"
+                  }
                   style={{
                     borderBottom: "1px solid var(--spark-border)",
-                    background: selectedIds?.has(r.id)
-                      ? "rgba(197,245,70,0.04)"
-                      : "transparent",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!selectedIds?.has(r.id))
-                      e.currentTarget.style.background = "rgba(255,255,255,0.02)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = selectedIds?.has(r.id)
-                      ? "rgba(197,245,70,0.04)"
-                      : "transparent";
                   }}
                   onClick={onClick}
                 >
                   {selectionEnabled && onToggleSelect ? (
                     <td
-                      className="px-3 py-3 align-top"
+                      className="px-3 py-2 align-top"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <input
@@ -619,7 +613,7 @@ const TrackerTable: React.FC<{
                     </td>
                   ) : null}
                   <td
-                    className="px-4 py-3 align-top spark-table-sticky-date"
+                    className="px-3 py-2 align-top spark-table-sticky-date"
                     style={{ color: "rgba(255,255,255,0.85)" }}
                   >
                     <p className="text-sm">{r.dateLabel}</p>
@@ -635,7 +629,7 @@ const TrackerTable: React.FC<{
                       </p>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <div className="flex flex-col items-start gap-1">
                       <span className={`${chipClass} chip-sm`}>{label}</span>
                       {r.assignedBa > 0 ? (
@@ -683,8 +677,8 @@ const TrackerTable: React.FC<{
                         ))}
                     </div>
                   </td>
-                  <td className="px-4 py-3">{r.market}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">{r.market}</td>
+                  <td className="px-3 py-2">
                     <span className="font-semibold text-[15px]">{r.venue}</span>
                     <span
                       className="block text-[11px] mt-0.5 opacity-60 tracking-wide"
@@ -758,13 +752,13 @@ const TrackerTable: React.FC<{
                     ) : null}
                   </td>
                   <td
-                    className="px-4 py-3 text-[13px] max-w-[280px] spark-table-hide-sm"
+                    className="px-3 py-2 text-[13px] max-w-[280px] spark-table-hide-sm"
                     style={{ color: "rgba(255,255,255,0.85)" }}
                   >
                     <span className="line-clamp-2">{r.address || "—"}</span>
                   </td>
                   <td
-                    className="px-4 py-3 text-xs"
+                    className="px-3 py-2 text-xs"
                     style={{ color: "rgba(255,255,255,0.7)" }}
                   >
                     {r.type}
@@ -779,7 +773,7 @@ const TrackerTable: React.FC<{
                     ) : null}
                   </td>
                   <td
-                    className="px-4 py-3 text-right tab-num"
+                    className="px-3 py-2 text-right tab-num"
                     style={{
                       color: isDone ? "var(--spark-text)" : "rgba(255,255,255,0.3)",
                     }}
@@ -787,14 +781,14 @@ const TrackerTable: React.FC<{
                     {isDone ? "—" : "—"}
                   </td>
                   <td
-                    className="px-4 py-3 text-right tab-num"
+                    className="px-3 py-2 text-right tab-num"
                     style={{
                       color: isDone ? "var(--spark-lime)" : "rgba(255,255,255,0.3)",
                     }}
                   >
                     —
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     {r.recapStatus === "submitted" ? (
                       <span
                         className="chip chip-lime chip-sm"
@@ -818,7 +812,7 @@ const TrackerTable: React.FC<{
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     {isClient ? (
                       <span
                         className="mono text-[10px]"
@@ -1507,7 +1501,7 @@ const RmmFilterInner: React.FC<{
  */
 const ConsumersStat: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const consumers = useConsumersSampled(tenantId, 0);
-  return <>{fmtNum(consumers)}</>;
+  return <CountReel value={consumers} />;
 };
 
 /**
@@ -1517,7 +1511,7 @@ const ConsumersStat: React.FC<{ tenantId: string }> = ({ tenantId }) => {
  */
 const FirstTimeStat: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const firstTime = useFirstTimeConsumers(tenantId, 0);
-  return <>{firstTime == null ? "—" : fmtNum(firstTime)}</>;
+  return firstTime == null ? "—" : <CountReel value={firstTime} />;
 };
 
 /**
@@ -1529,7 +1523,7 @@ const ProductsPurchasedStat: React.FC<{ tenantId: string }> = ({
   tenantId,
 }) => {
   const purchased = useProductsPurchased(tenantId, 0);
-  return <>{purchased == null ? "—" : fmtNum(purchased)}</>;
+  return purchased == null ? "—" : <CountReel value={purchased} />;
 };
 
 export default function MasterTracker() {
@@ -2214,7 +2208,7 @@ export default function MasterTracker() {
               {/* Match the status chips (all-time, this tenant). Distinct from
                   Insights Program KPIs events (= activations that produced a
                   recap). */}
-              {fmtNum(total)}
+              <CountReel value={total} />
             </p>
             <p
               className="mono text-[9px] mt-1"
