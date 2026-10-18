@@ -68,38 +68,38 @@ describe("clientRecapKpis", () => {
     expect(labels).toEqual(["Engagements", "Sold", "Photos"]);
   });
 
-  it("dry demo: conversion vs people engaged, labelled", () => {
+  it("dry demo uses consumers sampled, not people engaged", () => {
     expect(
       clientRecapKpis({
-        engagements: 30,
-        consumersSampled: 0,
-        soldUnits: 6,
+        engagements: 40,
+        consumersSampled: 18,
+        soldUnits: 4,
         unitsSampled: 0,
         photoCount: 5,
         activationType: "Torch THC-Retail Sampling",
         isDryDemo: true,
-        peopleEngaged: 30,
+        peopleEngaged: 22,
       }),
     ).toEqual([
-      { label: "Dry demo · people engaged", value: "30" },
-      { label: "Sold", value: "6" },
-      { label: "Conv · vs. people engaged (dry demo)", value: "20%" },
+      { label: "Engagements", value: "40" },
+      { label: "Sold", value: "4" },
+      { label: "Conv", value: "22%" },
       { label: "Photos", value: "5" },
     ]);
   });
 
-  it("dry demo with no people engaged or sampled shows no conv", () => {
+  it("dry demo with zero consumers sampled does not invent a rate", () => {
     const labels = clientRecapKpis({
-      engagements: 0,
+      engagements: 30,
       consumersSampled: 0,
-      soldUnits: 17,
+      soldUnits: 6,
       unitsSampled: 0,
       photoCount: 2,
       activationType: "Torch THC-Retail Sampling",
       isDryDemo: true,
-      peopleEngaged: null,
+      peopleEngaged: 30,
     }).map((k) => k.label);
-    expect(labels).toEqual(["Dry demo", "Sold", "Photos"]);
+    expect(labels).toEqual(["Engagements", "Sold", "Photos"]);
   });
 
   it("uses the template's per-SKU total label for sampled units", () => {

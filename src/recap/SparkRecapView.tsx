@@ -94,6 +94,7 @@ import { formatRecapProductName } from "@/recap/recapFieldLabel";
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
 import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
 import PushToPlanButton from "@/field/PushToPlanButton";
+import { recapTypeForRow } from "@/lib/activationBucket";
 
 const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
 const RecapReviewChecks = lazy(() => import("./RecapReviewChecks"));
@@ -1251,7 +1252,17 @@ const SparkRecapInner: React.FC<{
 
       {!isClient && (
         <Suspense fallback={null}>
-          <RecapReviewChecks recapId={recap.id} isCustom={false} />
+          <RecapReviewChecks
+            recapId={recap.id}
+            isCustom={false}
+            conversion={{
+              requestType: null,
+              recapType: recapTypeForRow(recap.recapType, null),
+              engagements: recap.totalEngagements,
+              consumersSampled: null,
+              productsSold: recap.productsSold,
+            }}
+          />
         </Suspense>
       )}
 

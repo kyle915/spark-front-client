@@ -41,6 +41,7 @@ export const RecapQuery = graphql`
       clientSignoffAt
       totalEngagements
       productsSold
+      recapType
       totalCansSold
       totalPacksSold
       totalEarnings

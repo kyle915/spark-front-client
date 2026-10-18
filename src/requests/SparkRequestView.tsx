@@ -24,6 +24,8 @@ import SmartStaffingPanel from "./SmartStaffingPanel";
 import CancelDemoDialog from "./CancelDemoDialog";
 import { pickHeroImage } from "@/utils/recapFileUrl";
 import { displayBaCount } from "@/public/form/eventActivationSchedule";
+import { recapTypeForRow, type RecapTypeKey } from "@/lib/activationBucket";
+import { sumConversionBases } from "@/shared/sparkStat";
 
 type Mentionable = { id: string; name: string; email: string };
 
@@ -38,9 +40,8 @@ type RecapCard = {
   approved: boolean;
   totalEngagements: number | null;
   productsSold: number | null;
-  // Dry demo (no product tasted): CONV divides its sold by People engaged.
-  isDryDemo: boolean;
-  peopleEngaged: number | null;
+  consumersSampled: number | null;
+  recapType: RecapTypeKey;
   // 3rd-party / agency recap: listed, but kept out of every total.
   excludeFromAggregates: boolean;
   baName: string | null;
@@ -70,8 +71,8 @@ const normalizeLegacyRecap = (recap: NonNullable<LegacyRecap>): RecapCard => ({
   approved: Boolean(recap.approved),
   totalEngagements: recap.totalEngagements ?? null,
   productsSold: recap.productsSold ?? null,
-  isDryDemo: false,
-  peopleEngaged: null,
+  consumersSampled: null,
+  recapType: recapTypeForRow(recap.recapType, null),
   excludeFromAggregates: false,
   baName: baNameFrom(recap.ambassador?.user),
   hero: pickHeroImage(recap.recapFiles ?? []),
@@ -89,8 +90,8 @@ const normalizeCustomRecap = (recap: NonNullable<CustomRecap>): RecapCard => ({
   totalEngagements: recap.totalEngagements ?? null,
   // CustomRecap exposes a single soldUnits count rather than productsSold.
   productsSold: recap.soldUnits ?? null,
-  isDryDemo: Boolean(recap.isDryDemo),
-  peopleEngaged: recap.peopleEngaged ?? null,
+  consumersSampled: recap.consumersSampled ?? null,
+  recapType: recapTypeForRow(recap.recapType, null),
   excludeFromAggregates: Boolean(recap.excludeFromAggregates),
   baName: baNameFrom(recap.ambassador?.user),
   // CustomRecap precomputes a browser-renderable hero URL server-side; the
@@ -1704,16 +1705,17 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
     (s, r) => s + (r.recap.productsSold ?? 0),
     0,
   );
-  let convBase = 0;
-  let convSold = 0;
-  for (const { recap } of counted) {
-    const base = recap.isDryDemo
-      ? recap.peopleEngaged || recap.totalEngagements || 0
-      : recap.totalEngagements ?? 0;
-    if (base <= 0) continue;
-    convBase += base;
-    convSold += recap.productsSold ?? 0;
-  }
+  const conversion = sumConversionBases(
+    counted.map(({ recap }) => ({
+      requestType: null,
+      recapType: recap.recapType,
+      engagements: recap.totalEngagements,
+      consumersSampled: recap.consumersSampled,
+      productsSold: recap.productsSold,
+    })),
+  );
+  const convBase = conversion.engagements;
+  const convSold = conversion.sold;
   const fmt = (d: string | null) => {
     if (!d) return "";
     const parsed = parseCalendarDate(d);

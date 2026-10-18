@@ -56,7 +56,7 @@ import {
 } from "@/motion/opsMotion";
 import { SparkBentoTile, SparkStat } from "@/shared/SparkStatBlocks";
 import {
-  conversionBase,
+  recapConversionPercent,
   recapListKpis,
   sumConversionBases,
   aggregateRows,
@@ -92,7 +92,6 @@ import {
 import {
   recapActivationFilterLabel,
   recapMatchesActivationFilter,
-  recapTypeCountsTowardConversion,
   recapTypeForRow,
   type RecapActivationFilter,
   type RecapTypeKey,
@@ -234,12 +233,10 @@ type Recap = {
   archivedAt: string | null;
 };
 
-// CONV = products sold ÷ consumers SAMPLED (a sampling program's conversion is
-// sold-per-person-sampled, NOT sold-per-engagement). Falls back to engagements
-// for legacy recaps with no separate sampled count; dry demos divide by People
-// engaged (see conversionBase). Event / Guerilla / Seeding rows have no CONV.
-// `empty` is what to show when there's no base/sold (— for the card, "" for
-// CSV/TSV cells).
+// CONV = products sold ÷ consumers sampled. Same formula for dry demos.
+// Falls back to engagements only when there is no separate sampled count.
+// Event / Guerilla / Seeding rows have no CONV. `empty` is what to show
+// when there's no base/sold (— for the card, "" for CSV/TSV cells).
 const conversionStr = (
   r: {
     productsSold: number | null;
@@ -250,12 +247,7 @@ const conversionStr = (
     recapType: RecapTypeKey;
   },
   empty: string,
-): string => {
-  if (!recapTypeCountsTowardConversion(r.recapType)) return empty;
-  const base = conversionBase({ ...r, requestType: null });
-  if (!base || base <= 0 || !r.productsSold) return empty;
-  return `${Math.round((r.productsSold / base) * 100)}%`;
-};
+): string => recapConversionPercent({ ...r, requestType: null }, empty);
 
 /** When both Eng and Conv are on screen, Conv keeps lime and Eng goes neutral. */
 function demoteEngWhenConvIsLime<
@@ -768,7 +760,7 @@ const RecapCard: React.FC<{
         <SparkStat
           tone={convLive ? "lime" : undefined}
           value={convValue}
-          label={recap.isDryDemo ? "Conv · dry demo" : "Conv"}
+          label="Conv"
         />
       </div>
       ) : null}
