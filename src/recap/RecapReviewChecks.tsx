@@ -2,6 +2,7 @@ import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { RecapReviewChecksQuery } from "@/api/queries/RecapReviewChecksQuery";
 import type { RecapReviewChecksQuery as RecapReviewChecksQueryType } from "@api/queries/__generated__/RecapReviewChecksQuery.graphql";
+import { recapConversionChip, type RecapKpiRow } from "@/shared/sparkStat";
 import {
   reviewCheckCounts,
   reviewCheckTint,
@@ -16,10 +17,11 @@ import {
  * Advisory only — approving stays a human click.
  */
 
-const Inner: React.FC<{ recapId: string; isCustom: boolean }> = ({
-  recapId,
-  isCustom,
-}) => {
+const Inner: React.FC<{
+  recapId: string;
+  isCustom: boolean;
+  conversion: RecapKpiRow;
+}> = ({ recapId, isCustom, conversion }) => {
   const data = useLazyLoadQuery<RecapReviewChecksQueryType>(
     RecapReviewChecksQuery,
     { recapId, isCustom },
@@ -33,7 +35,9 @@ const Inner: React.FC<{ recapId: string; isCustom: boolean }> = ({
     () => reviewCheckCounts(data?.recapReviewChecks),
     [data],
   );
-  if (visible.length === 0) return null;
+  const conv = recapConversionChip(conversion);
+  const convTint = reviewCheckTint(conv.status);
+  const flagged = counts.flagged + (conv.status === "flag" ? 1 : 0);
   return (
     <div
       className="rounded-2xl px-4 py-3"
@@ -51,12 +55,23 @@ const Inner: React.FC<{ recapId: string; isCustom: boolean }> = ({
           className="text-[12px]"
           style={{ color: "rgba(255,255,255,0.6)" }}
         >
-          {counts.flagged > 0
-            ? `${counts.flagged} to look at · advisory only`
+          {flagged > 0
+            ? `${flagged} to look at · advisory only`
             : "Nothing flagged · advisory only"}
         </span>
       </div>
       <div className="flex flex-wrap gap-2 mt-2">
+        <span
+          className="text-[12px] px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"
+          style={{
+            color: convTint.color,
+            background: convTint.background,
+            border: `1px solid ${convTint.border}`,
+          }}
+        >
+          <span aria-hidden="true">{convTint.mark}</span>
+          {conv.label}
+        </span>
         {visible.map((check) => {
           const status: ReviewCheckStatus = check.flagged ? "flag" : "pass";
           const tint = reviewCheckTint(status);
@@ -110,10 +125,11 @@ class QuietBoundary extends Component<
   }
 }
 
-const RecapReviewChecks: React.FC<{ recapId: string; isCustom: boolean }> = ({
-  recapId,
-  isCustom,
-}) => {
+const RecapReviewChecks: React.FC<{
+  recapId: string;
+  isCustom: boolean;
+  conversion: RecapKpiRow;
+}> = ({ recapId, isCustom, conversion }) => {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     let idleId: number | undefined;
@@ -132,7 +148,7 @@ const RecapReviewChecks: React.FC<{ recapId: string; isCustom: boolean }> = ({
   if (!ready) return null;
   return (
     <QuietBoundary>
-      <Inner recapId={recapId} isCustom={isCustom} />
+      <Inner recapId={recapId} isCustom={isCustom} conversion={conversion} />
     </QuietBoundary>
   );
 };

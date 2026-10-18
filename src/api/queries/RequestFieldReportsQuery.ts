@@ -29,6 +29,7 @@ export const RequestFieldReportsQuery = graphql`
           approved
           totalEngagements
           productsSold
+          recapType
           ambassador {
             id
             uuid
@@ -55,8 +56,8 @@ export const RequestFieldReportsQuery = graphql`
           approved
           totalEngagements
           soldUnits
-          isDryDemo
-          peopleEngaged
+          consumersSampled
+          recapType
           excludeFromAggregates
           heroImageUrl
           customRecapFilesCount

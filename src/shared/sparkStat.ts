@@ -23,8 +23,9 @@ export type RecapKpiRow = {
   engagements: number | null | undefined;
   consumersSampled?: number | null | undefined;
   productsSold: number | null | undefined;
-  /** Dry demo (no product tasted): CONV base is People engaged. */
+  /** Dry demo flag. CONV uses the same denominator as product retail. */
   isDryDemo?: boolean | null | undefined;
+  /** People pitched. Not the conversion denominator. */
   peopleEngaged?: number | null | undefined;
   /** 3rd-party / agency recap kept out of every total. */
   excludeFromAggregates?: boolean | null | undefined;
@@ -38,13 +39,77 @@ export function aggregateRows<T extends { excludeFromAggregates?: boolean | null
 }
 
 /**
- * One recap's CONV denominator. Live sampling: consumers sampled, else
- * engagements. Dry demo: People engaged (shoppers pitched), else the
- * consumers-sampled value. 0 means its purchases can't be paired.
+ * One recap's CONV denominator. Product retail and dry demos use the same
+ * one: consumers sampled, else engagements when the recap has no separate
+ * sampled count. People engaged is a different count and is not used.
+ * 0 means its purchases can't be paired.
  */
 export function conversionBase(r: RecapKpiRow): number {
-  if (r.isDryDemo) return r.peopleEngaged || r.consumersSampled || 0;
   return r.consumersSampled ?? r.engagements ?? 0;
+}
+
+/** At or above this, the recap-detail conversion check is a pass. */
+export const CONVERSION_OK_PERCENT = 20;
+
+export type RecapConversion =
+  | {
+      applies: true;
+      pct: number;
+      sold: number;
+      base: number;
+      /** "sampled" when a consumers-sampled count exists; "engaged" is the legacy fallback. */
+      baseNoun: "sampled" | "engaged";
+      ok: boolean;
+    }
+  | { applies: false; reason: string };
+
+/**
+ * The Recaps-list CONV for one row: sold ÷ {@link conversionBase}, integer
+ * percent, Retail + On-Premise only. Dry demos are not a second formula.
+ */
+export function recapConversion(r: RecapKpiRow): RecapConversion {
+  if (!rowCountsTowardConversion(r)) {
+    return {
+      applies: false,
+      reason: "Conversion does not apply · retail and on-premise only",
+    };
+  }
+  const sold = r.productsSold ?? 0;
+  const base = conversionBase(r);
+  if (!(base > 0)) {
+    return { applies: false, reason: "No conversion — consumers sampled is missing" };
+  }
+  if (!(sold > 0)) {
+    return { applies: false, reason: "No conversion — nothing sold" };
+  }
+  const pct = Math.round((sold / base) * 100);
+  return {
+    applies: true,
+    pct,
+    sold,
+    base,
+    baseNoun: r.consumersSampled != null ? "sampled" : "engaged",
+    ok: pct >= CONVERSION_OK_PERCENT,
+  };
+}
+
+/** Chip copy for the recap detail review strip. */
+export function recapConversionChip(r: RecapKpiRow): {
+  status: "pass" | "flag" | "na";
+  label: string;
+} {
+  const conv = recapConversion(r);
+  if (!conv.applies) return { status: "na", label: conv.reason };
+  return {
+    status: conv.ok ? "pass" : "flag",
+    label: `Conv ${conv.pct}% · ${conv.sold.toLocaleString()} sold / ${conv.base.toLocaleString()} ${conv.baseNoun}`,
+  };
+}
+
+/** List-card percent. `empty` when CONV does not apply or has no base. */
+export function recapConversionPercent(r: RecapKpiRow, empty: string): string {
+  const conv = recapConversion(r);
+  return conv.applies ? `${conv.pct}%` : empty;
 }
 
 /** Whether a row belongs in CONV at all (Retail + On-Premise only). */
@@ -57,8 +122,8 @@ export function rowCountsTowardConversion(r: RecapKpiRow): boolean {
 /**
  * Sum the CONV base / sold for Retail + On-Premise rows only.
  * Event / Guerilla / Seeding (and, by name, unclassified) rows are
- * excluded from CONV. Dry demos count against People engaged; a row with
- * no base adds no sold either.
+ * excluded from CONV. Dry demos use the same consumers-sampled base; a
+ * row with no base adds no sold either.
  */
 export function sumConversionBases(rows: RecapKpiRow[]): {
   engagements: number;
@@ -82,8 +147,8 @@ export function sumConversionBases(rows: RecapKpiRow[]): {
 
 /**
  * Recaps list strip — numbers from the loaded/filtered set, never invented.
- * IN VIEW / ENG / SOLD stay all-program; CONV is sold ÷ eng over Retail +
- * On-Premise only (Event activations excluded from both sides).
+ * IN VIEW / ENG / SOLD stay all-program; CONV is sold ÷ consumers sampled
+ * over Retail + On-Premise only (Event activations excluded from both sides).
  */
 export function recapListKpis(input: {
   filteredTotal: number;
@@ -95,7 +160,7 @@ export function recapListKpis(input: {
   conversionEngagements: number;
   /** Retail + on-prem sold (CONV numerator). */
   conversionSold: number;
-  /** Dry demos inside the CONV totals (paired with People engaged). */
+  /** Dry demos inside the CONV totals (same consumers-sampled base). */
   conversionDryDemos?: number;
   /** 3rd-party recaps in view, left out of Eng / Sold / Conv. */
   notInTotals?: number;
@@ -154,7 +219,7 @@ export function recapListKpis(input: {
             input.conversionDryDemos
               ? `Retail + on-prem · incl. ${input.conversionDryDemos} dry demo${
                   input.conversionDryDemos === 1 ? "" : "s"
-                } vs people engaged`
+                }`
               : "Retail + on-prem",
           ),
       tone: hasConv ? "lime" : "default",
@@ -190,9 +255,8 @@ export function padIndex(n: number): string {
 }
 
 /**
- * Insights CONV tile suffix: live-sampled vs dry-demo split, so a program
- * with dry demos shows what each side contributes. Empty when there are no
- * dry demos in range.
+ * Insights CONV tile suffix: live-sampled vs dry-demo split. Both sides
+ * use sold ÷ consumers sampled. Empty when there are no dry demos in range.
  */
 export function conversionSplitNote(conv: {
   sold: number;
@@ -216,12 +280,12 @@ export function conversionSplitNote(conv: {
   ];
   if (dryRecaps > 0) {
     parts.push(
-      ` · dry demos ${pct(drySold, dryBase)} vs people engaged (${drySold.toLocaleString()}/${dryBase.toLocaleString()})`,
+      ` · dry demos ${pct(drySold, dryBase)} (${drySold.toLocaleString()}/${dryBase.toLocaleString()})`,
     );
   }
   if (unpaired > 0) {
     parts.push(
-      ` · ${unpaired} dry demo${unpaired === 1 ? "" : "s"} with no people engaged left out`,
+      ` · ${unpaired} dry demo${unpaired === 1 ? "" : "s"} with no consumers sampled left out`,
     );
   }
   return parts.join("");

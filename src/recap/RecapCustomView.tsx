@@ -148,6 +148,7 @@ import {
 import { RecapClientSignoffMutation } from "@/api/mutations/RecapClientSignoffMutation";
 import type { RecapClientSignoffMutation as RecapClientSignoffMutationType } from "@/api/mutations/__generated__/RecapClientSignoffMutation.graphql";
 import PushToPlanButton from "@/field/PushToPlanButton";
+import { recapTypeForRow } from "@/lib/activationBucket";
 import { RecapPhotoReusePanel } from "./RecapPhotoReusePanel";
 
 const RecapQualityPanel = lazy(() => import("./RecapQualityPanel"));
@@ -1693,7 +1694,20 @@ const RecapCustomViewInner = ({
 
           {!isClient && (
             <Suspense fallback={null}>
-              <RecapReviewChecks recapId={recap.id} isCustom={true} />
+              <RecapReviewChecks
+                recapId={recap.id}
+                isCustom={true}
+                conversion={{
+                  requestType: null,
+                  recapType: recapTypeForRow(
+                    recap.recapType,
+                    recap.customRecapTemplate?.name,
+                  ),
+                  engagements: recap.totalEngagements,
+                  consumersSampled: recap.consumersSampled,
+                  productsSold: recap.soldUnits,
+                }}
+              />
             </Suspense>
           )}
 

@@ -1,4 +1,4 @@
-import { countsTowardConversion } from "@/lib/activationBucket";
+import { recapConversion } from "@/shared/sparkStat";
 
 export type ClientRecapKpi = { label: string; value: string };
 
@@ -7,9 +7,8 @@ export type ClientRecapKpi = { label: string; value: string };
  * ENG / SOLD / CONV when we have them; otherwise sampled + photo count.
  * CONV is sold ÷ consumers sampled (engagements only when no sampled count
  * is logged) and only for Retail / On-Premise — never for Event activations.
- * Never invents a conversion from missing sold or a zero base. Dry demos
- * (no product tasted) are labelled and divide by People engaged (else the
- * consumers-sampled value) instead.
+ * Dry demos use that same denominator. Never invents a conversion from
+ * missing sold or a zero base.
  */
 export function clientRecapKpis(input: {
   engagements: number | null | undefined;
@@ -18,38 +17,14 @@ export function clientRecapKpis(input: {
   unitsSampled: number | null | undefined;
   photoCount: number;
   activationType?: string | null | undefined;
+  /** Kept so callers can pass the flag. CONV does not use it. */
   isDryDemo?: boolean | null | undefined;
+  /** People pitched. Not the conversion denominator. */
   peopleEngaged?: number | null | undefined;
   /** Template copy for the per-SKU total, e.g. "Total cans sampled". */
   unitsSampledLabel?: string;
 }): ClientRecapKpi[] {
   const out: ClientRecapKpi[] = [];
-  if (input.isDryDemo) {
-    const pitched = input.peopleEngaged || input.consumersSampled || 0;
-    if (pitched > 0) {
-      out.push({
-        label: "Dry demo · people engaged",
-        value: pitched.toLocaleString(),
-      });
-    } else {
-      out.push({ label: "Dry demo", value: "No tasting" });
-    }
-    if (typeof input.soldUnits === "number") {
-      out.push({ label: "Sold", value: input.soldUnits.toLocaleString() });
-    }
-    const convEligible =
-      input.activationType === undefined ||
-      countsTowardConversion(input.activationType);
-    if (convEligible && typeof input.soldUnits === "number" && pitched > 0) {
-      const pct = Math.round((input.soldUnits / pitched) * 1000) / 10;
-      out.push({
-        label: "Conv · vs. people engaged (dry demo)",
-        value: `${pct}%`,
-      });
-    }
-    out.push({ label: "Photos", value: String(input.photoCount) });
-    return out.slice(0, 4);
-  }
   if (typeof input.engagements === "number") {
     out.push({
       label: "Engagements",
@@ -59,21 +34,15 @@ export function clientRecapKpis(input: {
   if (typeof input.soldUnits === "number") {
     out.push({ label: "Sold", value: input.soldUnits.toLocaleString() });
   }
-  const base =
-    typeof input.consumersSampled === "number"
-      ? input.consumersSampled
-      : input.engagements;
-  const convEligible =
-    input.activationType === undefined ||
-    countsTowardConversion(input.activationType);
-  if (
-    convEligible &&
-    typeof input.soldUnits === "number" &&
-    typeof base === "number" &&
-    base > 0
-  ) {
-    const pct = Math.round((input.soldUnits / base) * 1000) / 10;
-    out.push({ label: "Conv", value: `${pct}%` });
+  const conv = recapConversion({
+    requestType: input.activationType,
+    recapType: input.activationType == null ? "retail" : undefined,
+    engagements: input.engagements,
+    consumersSampled: input.consumersSampled,
+    productsSold: input.soldUnits,
+  });
+  if (conv.applies) {
+    out.push({ label: "Conv", value: `${conv.pct}%` });
   } else if (typeof input.unitsSampled === "number" && input.unitsSampled > 0) {
     out.push({
       label: input.unitsSampledLabel || "Sampled",

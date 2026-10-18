@@ -100,6 +100,7 @@ export const GetCustomRecapQuery = graphql`
       consumersSampled
       isDryDemo
       peopleEngaged
+      recapType
       fillingForAmbassador
       late
       incomplete
