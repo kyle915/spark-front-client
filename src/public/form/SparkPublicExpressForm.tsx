@@ -51,6 +51,7 @@ import {
   showsEventActivationSchedule,
   showsLegacyBulkDates,
   visitSlotIssues,
+  visitSlotsAfterPartialSuccess,
   visitSlotsForSubmit,
   type VisitSlot,
 } from "./eventActivationSchedule";
@@ -560,6 +561,7 @@ function ExpressFormBody() {
     let allApproved = true;
     let lastRouted: string | null = null;
     const failures: string[] = [];
+    const succeededSlots: VisitSlot[] = [];
 
     for (const slot of submitSlots) {
       const d = slot.date;
@@ -626,6 +628,7 @@ function ExpressFormBody() {
       try {
         const result = await submit(input);
         successes += 1;
+        succeededSlots.push(slot);
         if (result?.status?.slug !== "approved") allApproved = false;
         // Grab the RMM the *first* successful submission was routed
         // to. With bulk dates the routing is identical for every row
@@ -670,6 +673,22 @@ function ExpressFormBody() {
       setNonActiveProductRequired("");
       setCasesToBeShipped("");
     } else {
+      const remaining = visitSlotsAfterPartialSuccess(
+        multiDateEvent ? visitSlots : submitSlots,
+        succeededSlots,
+      );
+      if (multiDateEvent) {
+        setVisitSlots(
+          remaining.length > 0
+            ? remaining
+            : [{ date: "", startTime: "12:00", endTime: "16:00" }],
+        );
+      } else if (remaining.length > 0) {
+        setDate(remaining[0].date);
+        setStartTime(remaining[0].startTime);
+        setEndTime(remaining[0].endTime);
+        setExtraDates(remaining.slice(1).map((slot) => slot.date));
+      }
       setError(
         `Submitted ${successes} of ${submitSlots.length}. Failed: ${failures.join("; ")}`,
       );
