@@ -27,6 +27,7 @@ import ActiveTenantAskAi from "@/components/ai/ActiveTenantAskAi";
 import AskAiButton from "@/components/ai/AskAiButton";
 import { InsightsBody } from "@/components/pages/insights/SparkInsights";
 import { requestDateKey } from "@/lib/requestDateKey";
+import { rankUpcomingRetailers } from "@/components/pages/client-dashboard/topRetailers";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { buildTrackerUrlParams } from "@/requests/masterTrackerFilters";
 import SparkPageHeader from "@/shared/SparkPageHeader";
@@ -221,30 +222,20 @@ const WeekAheadPanel: React.FC<{
     return buckets;
   }, [data, horizonDays]);
 
-  // Top retailers in the selected horizon.
+  // Top retailers in the selected horizon. Blank retailer names are
+  // excluded so a missing account cannot become the top row.
   const topRetailers = useMemo(() => {
     const rows =
       data?.requests?.edges
         ?.map((e) => e?.node)
         ?.filter((n): n is NonNullable<typeof n> => Boolean(n)) ?? [];
-    const map = new Map<string, number>();
-    const today = startOfDay(new Date());
-    const endExclusive = new Date(today);
-    endExclusive.setDate(today.getDate() + horizonDays);
-    for (const r of rows) {
-      const k = requestDateKey(r.date);
-      if (!k) continue;
-      const [y, mo, d] = k.split("-").map(Number);
-      const ms = new Date(y, mo - 1, d).getTime();
-      if (!Number.isFinite(ms)) continue;
-      if (ms < today.getTime() || ms >= endExclusive.getTime()) continue;
-      const name = r.retailer?.name ?? "—";
-      map.set(name, (map.get(name) ?? 0) + 1);
-    }
-    return [...map.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name, count]) => ({ name, count }));
+    return rankUpcomingRetailers(
+      rows.map((r) => ({
+        date: r.date,
+        retailerName: r.retailer?.name,
+      })),
+      { today: startOfDay(new Date()), horizonDays, limit: 5 },
+    );
   }, [data, horizonDays]);
 
   const maxWeekCount = Math.max(1, ...aheadBuckets.map((b) => b.count));
@@ -405,17 +396,32 @@ const WeekAheadPanel: React.FC<{
             <ul className="space-y-2">
               {topRetailers.map((row) => (
                 <li
-                  key={row.name}
-                  className="flex items-center justify-between"
+                  key={row.key}
+                  className="flex items-center justify-between gap-3 min-w-0"
                 >
-                  <span className="text-sm truncate">{row.name}</span>
                   <span
-                    className="mono text-[10px] px-2 py-1 rounded-full"
+                    className="text-sm truncate min-w-0"
+                    style={
+                      row.quiet
+                        ? { color: "rgba(255,255,255,0.45)" }
+                        : undefined
+                    }
+                  >
+                    {row.name}
+                  </span>
+                  <span
+                    className="mono text-[10px] px-2 py-1 rounded-full shrink-0 whitespace-nowrap"
                     style={{
                       letterSpacing: "0.14em",
-                      color: "var(--spark-lime)",
-                      background: "rgba(197,245,70,0.08)",
-                      border: "1px solid rgba(197,245,70,0.25)",
+                      color: row.quiet
+                        ? "rgba(255,255,255,0.45)"
+                        : "var(--spark-lime)",
+                      background: row.quiet
+                        ? "transparent"
+                        : "rgba(197,245,70,0.08)",
+                      border: row.quiet
+                        ? "1px solid rgba(255,255,255,0.12)"
+                        : "1px solid rgba(197,245,70,0.25)",
                     }}
                   >
                     {row.count} {row.count === 1 ? "EVENT" : "EVENTS"}
