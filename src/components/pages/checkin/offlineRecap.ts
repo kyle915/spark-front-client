@@ -52,16 +52,27 @@ async function fetchWithDeadline(
   init: RequestInit,
   timeoutMs: number,
 ): Promise<Response> {
+  // Reject on our own clock. Aborting the fetch is not enough: iOS Safari
+  // often never settles a PUT whose body is a photo, so the tile stayed on
+  // "uploading" and Submit stayed disabled until the BA gave up.
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    return await fetchImpl(url, { ...init, signal: ctrl.signal });
-  } catch (error) {
-    if (ctrl.signal.aborted) throw new PhotoUploadTimeoutError();
-    throw error;
-  } finally {
-    clearTimeout(timer);
-  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      ctrl.abort();
+      reject(new PhotoUploadTimeoutError());
+    }, timeoutMs);
+    fetchImpl(url, { ...init, signal: ctrl.signal }).then(
+      (response) => {
+        clearTimeout(timer);
+        resolve(response);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        if (ctrl.signal.aborted) reject(new PhotoUploadTimeoutError());
+        else reject(error);
+      },
+    );
+  });
 }
 
 export type PendingRecapFile = {

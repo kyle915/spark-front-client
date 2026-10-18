@@ -538,6 +538,27 @@ describe("putCheckinPhoto", () => {
       );
     });
 
+  it("fails a stalled PUT even when the browser ignores abort", async () => {
+    const err = await putCheckinPhoto({
+      code: "TH-1",
+      token: "tok",
+      file: sampleFile(),
+      apiOrigin: "https://api.example",
+      timeoutMs: { url: 30, put: 30 },
+      fetchImpl: async (input) => {
+        if (String(input).includes("/upload-url")) {
+          return new Response(
+            JSON.stringify({ uploadUrl: "https://signed.example/put", blobName: "b.jpg" }),
+            { status: 200 },
+          );
+        }
+        return new Promise<Response>(() => {});
+      },
+    }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(PhotoUploadTimeoutError);
+    expect(isOfflineClockFailure({ error: err })).toBe(true);
+  });
+
   it("fails a stalled PUT fast with a no-signal error instead of hanging", async () => {
     let puts = 0;
     const err = await putCheckinPhoto({
