@@ -1,4 +1,5 @@
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router";
 import { useAuthStore } from "@/store/authStore";
 import { isTorchTenant } from "@/field/torch";
@@ -357,7 +358,7 @@ const CollapsibleNavSection: React.FC<{
 
   if (collapsed) {
     return (
-      <div className="space-y-0.5 px-1">
+      <div className="spark-rail-section">
         {section.items.map((item) => (
           <NavRow
             key={item.label}
@@ -412,14 +413,24 @@ const NavRow: React.FC<{
   const cls = `nav-item ${active ? "active" : ""}`;
   const Icon = item.Icon;
   const label = isClient && item.clientLabel ? item.clientLabel : item.label;
+  const anchorRef = useRef<HTMLElement | null>(null);
+  const [tipOpen, setTipOpen] = useState(false);
+  const tipHandlers = collapsed
+    ? {
+        onMouseEnter: () => setTipOpen(true),
+        onMouseLeave: () => setTipOpen(false),
+        onFocus: () => setTipOpen(true),
+        onBlur: () => setTipOpen(false),
+      }
+    : {};
   const content = (
     <>
       <span
         className="shrink-0 flex items-center justify-center"
-        style={{ width: 22, opacity: 0.85 }}
+        style={{ width: collapsed ? 36 : 22, opacity: 0.85 }}
         aria-hidden
       >
-        <Icon size={16} />
+        <Icon size={collapsed ? 18 : 16} />
       </span>
       {!collapsed ? (
         <>
@@ -432,25 +443,64 @@ const NavRow: React.FC<{
             </span>
           )}
         </>
+      ) : item.chip ? (
+        <span className="spark-rail-dot" aria-hidden />
+      ) : null}
+      {collapsed && tipOpen && anchorRef.current ? (
+        <RailTip label={label} anchor={anchorRef.current} />
       ) : null}
     </>
   );
   if (item.stub || !effectiveTo) {
     return (
       <button
+        ref={(node) => {
+          anchorRef.current = node;
+        }}
         onClick={() => onStub(item.label)}
         className={cls}
         title={label}
         aria-label={label}
+        {...tipHandlers}
       >
         {content}
       </button>
     );
   }
   return (
-    <Link to={effectiveTo} className={cls} title={label} aria-label={label}>
+    <Link
+      ref={(node) => {
+        anchorRef.current = node;
+      }}
+      to={effectiveTo}
+      className={cls}
+      title={label}
+      aria-label={label}
+      {...tipHandlers}
+    >
       {content}
     </Link>
+  );
+};
+
+/** Dark label to the right of the collapsed rail. Portaled so the nav scroll doesn't clip it. */
+const RailTip: React.FC<{ label: string; anchor: HTMLElement }> = ({
+  label,
+  anchor,
+}) => {
+  const rect = anchor.getBoundingClientRect();
+  return createPortal(
+    <span
+      className="spark-rail-tip"
+      role="tooltip"
+      style={{
+        top: rect.top + rect.height / 2,
+        left: rect.right + 10,
+      }}
+    >
+      {label}
+    </span>,
+    document.body,
   );
 };
 
@@ -655,27 +705,36 @@ export const SparkSidebar: React.FC = () => {
           dark sidebar (the source logo is black on transparent). */}
       <div
         className={[
-          "spark-sidebar-brand flex gap-2",
+          "spark-sidebar-brand flex items-center gap-2",
           iconRail
-            ? "flex-col items-center px-2 py-3"
-            : "px-5 py-5 items-center justify-between",
+            ? "justify-between px-1.5 py-2"
+            : "px-5 py-5 justify-between",
         ].join(" ")}
         style={{ borderBottom: "1px solid var(--spark-border)" }}
       >
-        <img
-          src="/legal/spark-logo.png"
-          alt="Spark by Ignite"
-          style={{
-            height: iconRail ? "auto" : 28,
-            width: iconRail ? "2.4rem" : "auto",
-            display: "block",
-            filter: "invert(1) hue-rotate(180deg)",
-          }}
-        />
+        {iconRail ? (
+          <span className="spark-sidebar-glyph" title="Spark by Ignite">
+            <img src="/legal/spark-logo.png" alt="Spark" />
+          </span>
+        ) : (
+          <img
+            src="/legal/spark-logo.png"
+            alt="Spark by Ignite"
+            style={{
+              height: 28,
+              width: "auto",
+              display: "block",
+              filter: "invert(1) hue-rotate(180deg)",
+            }}
+          />
+        )}
         <div className="flex items-center gap-1">
           <button
             type="button"
-            className="hidden md:inline-flex btn btn-ghost btn-sm btn-square"
+            className={[
+              "hidden md:inline-flex btn btn-ghost btn-square",
+              iconRail ? "btn-xs" : "btn-sm",
+            ].join(" ")}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             onClick={toggleCollapsed}
@@ -756,7 +815,10 @@ export const SparkSidebar: React.FC = () => {
 
       {/* Footer */}
       <div
-        className="px-3 py-3 flex items-center gap-3"
+        className={[
+          "spark-sidebar-footer px-3 py-3 flex items-center gap-3",
+          iconRail ? "justify-center" : "",
+        ].join(" ")}
         style={{ borderTop: "1px solid var(--spark-border)" }}
       >
         <span className="spark-avatar">{initial}</span>

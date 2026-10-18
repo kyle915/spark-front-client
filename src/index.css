@@ -1524,9 +1524,13 @@ body { background: var(--spark-bg); }
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Desktop sidebar icon-rail (shadcn-admin / TailAdmin pattern) */
+/* Desktop sidebar icon rail. Width stays 4.5rem so the page title in the
+   topbar is not covered. The collapsed mark is the spark S cropped from
+   /legal/spark-logo.png (ink box x 32–150, y 40–225 of the 719×304 wordmark),
+   not the wordmark squeezed into the rail. */
 .spark-sidebar.is-collapsed {
   width: 4.5rem;
+  overflow: visible;
 }
 .spark-sidebar.is-collapsed .nav-section,
 .spark-sidebar.is-collapsed .nav-badge,
@@ -1534,19 +1538,94 @@ body { background: var(--spark-bg); }
 .spark-sidebar.is-collapsed .spark-sidebar-expand-only {
   display: none !important;
 }
+.spark-sidebar-glyph {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  position: relative;
+  overflow: hidden;
+  display: block;
+}
+.spark-sidebar-glyph img {
+  position: absolute;
+  width: calc(719 / 185 * 28px);
+  height: calc(304 / 185 * 28px);
+  max-width: none;
+  left: calc((28px - (118 / 185 * 28px)) / 2 - (32 / 185 * 28px));
+  top: calc(-40 / 185 * 28px);
+  filter: invert(1) hue-rotate(180deg);
+  display: block;
+}
+.spark-sidebar.is-collapsed .spark-rail-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.spark-sidebar.is-collapsed .spark-rail-section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
 .spark-sidebar.is-collapsed .nav-item {
+  position: relative;
   justify-content: center;
-  padding-left: 0.65rem;
-  padding-right: 0.65rem;
+  align-items: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  margin: 0;
+  padding: 0;
   gap: 0;
+  border-radius: 10px;
+}
+.spark-sidebar.is-collapsed .nav-item.active {
+  background: rgba(197, 245, 70, 0.16);
+  color: var(--spark-lime);
+  box-shadow: inset 0 0 0 1px rgba(197, 245, 70, 0.28);
 }
 .spark-sidebar.is-collapsed .nav-item.active::before {
   display: none;
 }
+.spark-sidebar.is-collapsed .spark-rail-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--spark-lime);
+  box-shadow: 0 0 6px rgba(197, 245, 70, 0.7);
+}
+.spark-rail-tip {
+  position: fixed;
+  z-index: 80;
+  transform: translateY(-50%);
+  pointer-events: none;
+  background: #0a0b0d;
+  color: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--spark-lime);
+  border-radius: 6px;
+  padding: 0.28rem 0.5rem;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
 .spark-sidebar.is-collapsed .spark-sidebar-brand {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.spark-sidebar.is-collapsed .spark-sidebar-footer {
   justify-content: center;
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* Quieter topbar crumb */
