@@ -109,7 +109,7 @@ export const SparkTopbar: React.FC = () => {
   const { pathname } = useLocation();
   const crumb = useBreadcrumb();
   const { role, isClient, setRole } = useSparkRole();
-  const { toggle: toggleNav, toggleCollapsed } = useMobileNav();
+  const { toggle: toggleNav } = useMobileNav();
   const initial = (user?.firstName ?? user?.email ?? "U")
     .charAt(0)
     .toUpperCase();
@@ -146,15 +146,6 @@ export const SparkTopbar: React.FC = () => {
           onClick={toggleNav}
         >
           <Bars3Icon className="w-5 h-5" />
-        </button>
-        <button
-          type="button"
-          className="hidden md:inline-flex btn btn-ghost btn-sm btn-square shrink-0"
-          aria-label="Collapse sidebar"
-          title="Collapse sidebar"
-          onClick={toggleCollapsed}
-        >
-          <Bars3Icon className="w-5 h-5 opacity-70" />
         </button>
         {isClient ? (
           <TenantLogo
