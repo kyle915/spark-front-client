@@ -15,6 +15,7 @@ import React, { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
@@ -229,12 +230,10 @@ const Inner: React.FC = () => {
           Your favorites
         </h2>
         {favs.length === 0 ? (
-          <div
-            className="spark-card p-8 text-center"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            No favorites yet. Star a BA below to add them.
-          </div>
+          <SparkEmptyState
+            title="No favorites yet"
+            body="Star a BA below to add them."
+          />
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {favs.map((f) => (
@@ -275,14 +274,11 @@ const Inner: React.FC = () => {
           />
         </div>
         {others.length === 0 ? (
-          <div
-            className="spark-card p-6 text-center"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-          >
-            {all.length === 0
-              ? "No active BAs in this workspace yet."
-              : "No matches."}
-          </div>
+          all.length === 0 ? (
+            <SparkEmptyState title="No active BAs in this workspace yet." />
+          ) : (
+            <SparkEmptyState title="No matches." />
+          )
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {others.map((n) => (

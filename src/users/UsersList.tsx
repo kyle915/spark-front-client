@@ -518,7 +518,7 @@ const UsersList = () => {
       </div>
 
       <div className="flex flex-col gap-4">
-        <div className="bg-base-100 rounded-xl border border-base-300 shadow-sm">
+        <div className="spark-card">
           <div className="flex items-center justify-between cursor-pointer px-6 py-4 select-none">
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-3">

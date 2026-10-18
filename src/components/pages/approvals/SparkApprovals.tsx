@@ -13,6 +13,7 @@ import { useAuthStore } from "@/store/authStore";
 import { useAlertStore } from "@/store/alertStore";
 import useSparkRole from "@/hooks/useSparkRole";
 import { refreshSidebarCounts } from "@/hooks/useSidebarCounts";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import SparkOverlay from "@/shared/SparkOverlay";
 import SparkPageHeader from "@/shared/SparkPageHeader";
 import { CountReel } from "@/motion/CountReel";
@@ -1046,20 +1047,13 @@ const ApprovalsInner: React.FC = () => {
         {pendingRows.length > 0 && search ? (
           <>
             {SearchBar}
-            <div
-              className="spark-card p-8 text-center text-sm"
-              style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
-            >
-              No pending requests match "{search}".
-            </div>
+            <SparkEmptyState title={`No pending requests match "${search}".`} />
           </>
         ) : (
-          <div
-            className="spark-card p-8 text-center text-sm"
-            style={{ color: "var(--spark-muted, rgba(255,255,255,0.5))" }}
-          >
-            Nothing in the approval queue. Nice work.
-          </div>
+          <SparkEmptyState
+            title="Nothing in the approval queue."
+            body="Nice work."
+          />
         )}
         {RecentlyDecided}
       </div>

@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { useMutation } from "react-relay/hooks";
 
 import Layout from "@/layout/Layout";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import DataTableRelay from "@/shared/DataTableRelay";
 import type { Column } from "@/types/columnsTypes";
 import { useAuthStore } from "@/store/authStore";
@@ -397,9 +398,7 @@ const GoalsList = () => {
             ),
           }}
           emptyState={
-            <div className="alert alert-info">
-              <span>No goals found for this tenant.</span>
-            </div>
+            <SparkEmptyState title="No goals found for this tenant." />
           }
         />
       </div>

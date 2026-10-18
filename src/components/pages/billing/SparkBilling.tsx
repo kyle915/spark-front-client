@@ -7,6 +7,7 @@ import {
 } from "react";
 import { useLazyLoadQuery, useMutation } from "react-relay/hooks";
 import Layout from "@/layout/Layout";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import { InvoicesQuery } from "@/api/queries/InvoicesQuery";
 import type {
   InvoicesQuery as InvoicesQueryType,
@@ -856,22 +857,13 @@ const InvoiceList: React.FC<{
   };
 
   if (invoices.length === 0) {
-    return (
-      <div
-        className="spark-card p-8 text-center"
-        style={{ color: "rgba(255,255,255,0.55)" }}
-      >
-        <p className="text-sm">
-          {status === "all"
-            ? "No invoices yet."
-            : `No ${status} invoices.`}
-        </p>
-        {status === "all" && (
-          <p className="text-xs mt-1">
-            Create one to bill a client for a campaign or activation.
-          </p>
-        )}
-      </div>
+    return status === "all" ? (
+      <SparkEmptyState
+        title="No invoices yet."
+        body="Create one to bill a client for a campaign or activation."
+      />
+    ) : (
+      <SparkEmptyState title={`No ${status} invoices.`} />
     );
   }
 

@@ -2,6 +2,7 @@ import { Suspense, useMemo } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import { EventsQuery } from "@/api/queries/EventsQuery";
 import type { EventsQuery as EventsQueryType } from "@api/queries/__generated__/EventsQuery.graphql";
 import { RequestsQuery } from "@/api/queries/RequestsQuery";
@@ -156,12 +157,7 @@ const Inner: React.FC = () => {
 
   if (groups.length === 0) {
     return (
-      <div
-        className="spark-card p-10 text-center text-sm"
-        style={{ color: "rgba(255,255,255,0.55)" }}
-      >
-        Nothing on the schedule for the next 7 days.
-      </div>
+      <SparkEmptyState title="Nothing on the schedule for the next 7 days." />
     );
   }
 

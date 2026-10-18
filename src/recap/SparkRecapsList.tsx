@@ -681,7 +681,7 @@ const RecapCard: React.FC<{
       ) : null}
       {showSla && !emptyShell && recap.date ? <SlaHours since={recap.date} /> : null}
 
-      <div className="relative z-10 spark-row-actions mt-2">
+      <div className="relative z-10 spark-row-actions spark-row-actions--until-hover mt-2">
         {recap.requestUuid && onOpenRequest && (
           <button
             type="button"

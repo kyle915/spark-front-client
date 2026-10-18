@@ -2,6 +2,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useLazyLoadQuery } from "react-relay/hooks";
 import { useNavigate } from "react-router";
 import Layout from "@/layout/Layout";
+import SparkEmptyState from "@/shared/SparkEmptyState";
 import { JobsQuery } from "@/api/queries/JobsQuery";
 import type { JobsQuery as JobsQueryType } from "@api/queries/__generated__/JobsQuery.graphql";
 import { useAuthStore } from "@/store/authStore";
@@ -86,14 +87,7 @@ const JobsInner: React.FC = () => {
   }, [data]);
 
   if (jobs.length === 0) {
-    return (
-      <div
-        className="spark-card p-8 text-center text-sm"
-        style={{ color: "rgba(255,255,255,0.55)" }}
-      >
-        No jobs posted yet.
-      </div>
-    );
+    return <SparkEmptyState title="No jobs posted yet." />;
   }
 
   return (
