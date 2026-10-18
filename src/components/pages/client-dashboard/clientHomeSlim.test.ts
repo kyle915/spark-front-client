@@ -24,8 +24,11 @@ describe("client home stays slim", () => {
     expect(dash).not.toContain("tenantWeeklyNarration");
   });
 
-  it("mounts the insights stack only after Performance is opened", () => {
-    expect(dash).toContain("performanceOpen ?");
+  it("shows program performance on first paint with no hide control", () => {
+    expect(dash).not.toContain("performanceOpen");
+    expect(dash).not.toContain('"HIDE"');
+    expect(dash).not.toContain('"SHOW"');
+    expect(dash).toContain("Pace, charts, markets, and timeline");
     expect(dash).toContain("<InsightsBody embedded omitNarration />");
     expect(insights).toContain("omitNarration");
     expect(insights).toContain("<WeeklyNarrationCard");
