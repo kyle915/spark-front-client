@@ -461,7 +461,10 @@ describe("recapConversion", () => {
         consumersSampled: 18,
         isDryDemo: true,
         peopleEngaged: null,
-      }).reason,
-    ).toBe("No conversion — people engaged is missing");
+      }),
+    ).toEqual({
+      applies: false,
+      reason: "No conversion — people engaged is missing",
+    });
   });
 });
