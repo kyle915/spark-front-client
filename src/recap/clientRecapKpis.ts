@@ -6,8 +6,9 @@ export type ClientRecapKpi = { label: string; value: string };
  * Honest client-facing numbers for a recap review.
  * ENG / SOLD / CONV when we have them; otherwise sampled + photo count.
  * CONV is sold ÷ consumers sampled (engagements only when no sampled count
- * is logged) and only for Retail / On-Premise — never for Event activations.
- * Dry demos use that same denominator. Never invents a conversion from
+ * is logged) for product retail, and sold ÷ people engaged for a dry demo.
+ * Retail / On-Premise only — never for Event activations. A dry demo does
+ * not fall back to consumers sampled. Never invents a conversion from
  * missing sold or a zero base.
  */
 export function clientRecapKpis(input: {
@@ -17,9 +18,9 @@ export function clientRecapKpis(input: {
   unitsSampled: number | null | undefined;
   photoCount: number;
   activationType?: string | null | undefined;
-  /** Kept so callers can pass the flag. CONV does not use it. */
+  /** Dry demo: CONV divides by people engaged. */
   isDryDemo?: boolean | null | undefined;
-  /** People pitched. Not the conversion denominator. */
+  /** People pitched. The dry-demo conversion denominator. */
   peopleEngaged?: number | null | undefined;
   /** Template copy for the per-SKU total, e.g. "Total cans sampled". */
   unitsSampledLabel?: string;
@@ -40,6 +41,8 @@ export function clientRecapKpis(input: {
     engagements: input.engagements,
     consumersSampled: input.consumersSampled,
     productsSold: input.soldUnits,
+    isDryDemo: input.isDryDemo,
+    peopleEngaged: input.peopleEngaged,
   });
   if (conv.applies) {
     out.push({ label: "Conv", value: `${conv.pct}%` });

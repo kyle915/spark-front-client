@@ -233,10 +233,10 @@ type Recap = {
   archivedAt: string | null;
 };
 
-// CONV = products sold ÷ consumers sampled. Same formula for dry demos.
-// Falls back to engagements only when there is no separate sampled count.
-// Event / Guerilla / Seeding rows have no CONV. `empty` is what to show
-// when there's no base/sold (— for the card, "" for CSV/TSV cells).
+// CONV = products sold ÷ consumers sampled for product retail, and
+// products sold ÷ people engaged for a dry demo. Event / Guerilla /
+// Seeding rows have no CONV. `empty` is what to show when there's no
+// base/sold (— for the card, "" for CSV/TSV cells).
 const conversionStr = (
   r: {
     productsSold: number | null;

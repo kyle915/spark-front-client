@@ -48,30 +48,31 @@ describe("sumConversionBases", () => {
     ).toEqual({ engagements: 130, sold: 25, dryDemos: 0 });
   });
 
-  it("uses consumers sampled for dry demos, same as product retail", () => {
+  it("uses people engaged for dry demos and consumers sampled for product retail", () => {
     const product = {
       requestType: "Torch THC-Retail Sampling",
       engagements: 40,
       consumersSampled: 18,
       productsSold: 4,
       isDryDemo: false,
-      peopleEngaged: null,
+      peopleEngaged: 40,
     };
     const dry = {
       ...product,
+      consumersSampled: 0,
       isDryDemo: true,
       peopleEngaged: 22,
     };
     expect(conversionBase(product)).toBe(18);
-    expect(conversionBase(dry)).toBe(18);
+    expect(conversionBase(dry)).toBe(22);
     expect(sumConversionBases([product, dry])).toEqual({
-      engagements: 36,
+      engagements: 40,
       sold: 8,
       dryDemos: 1,
     });
   });
 
-  it("does not invent a dry rate from people engaged when sampled is 0", () => {
+  it("leaves a dry demo with no people engaged out and ignores people engaged on product retail", () => {
     expect(
       sumConversionBases([
         {
@@ -80,7 +81,7 @@ describe("sumConversionBases", () => {
           consumersSampled: 0,
           productsSold: 6,
           isDryDemo: true,
-          peopleEngaged: 30,
+          peopleEngaged: 0,
         },
         {
           requestType: "Torch THC-Retail Sampling",
@@ -91,6 +92,14 @@ describe("sumConversionBases", () => {
           peopleEngaged: null,
         },
         {
+          requestType: "Torch THC-Retail Sampling",
+          engagements: 40,
+          consumersSampled: 18,
+          productsSold: 4,
+          isDryDemo: false,
+          peopleEngaged: 40,
+        },
+        {
           requestType: "Event Activation",
           engagements: 0,
           productsSold: 9,
@@ -98,7 +107,7 @@ describe("sumConversionBases", () => {
           peopleEngaged: 40,
         },
       ]),
-    ).toEqual({ engagements: 25, sold: 5, dryDemos: 1 });
+    ).toEqual({ engagements: 18, sold: 4, dryDemos: 0 });
   });
 
   it("ignores unclassified / null request types", () => {
@@ -128,7 +137,7 @@ describe("recapListKpis", () => {
         conversionSold: 16,
         conversionDryDemos: 1,
       }).find((k) => k.label === "Conv")?.hint,
-    ).toBe("Retail + on-prem · incl. 1 dry demo");
+    ).toBe("Retail + on-prem · incl. 1 dry demo vs people engaged");
   });
 
   it("builds in-view / eng / sold / conv from loaded numbers", () => {
@@ -340,7 +349,7 @@ describe("conversionSplitNote", () => {
         unpairedDryRecaps: 2,
       }),
     ).toBe(
-      " · live sampled 20% (10/50) · dry demos 20% (6/30) · 2 dry demos with no consumers sampled left out",
+      " · live sampled 20% (10/50) · dry demos 20% (6/30 people engaged) · 2 dry demos with no people engaged left out",
     );
   });
 });
@@ -353,25 +362,37 @@ describe("recapConversion", () => {
     productsSold: 4,
   };
 
-  it("same sold and different sampled counts are the two list rates", () => {
-    const product = recapConversion({ ...retail, consumersSampled: 18 });
-    expect(product.applies && product.pct).toBe(22);
+  it("dry demo is sold over people engaged even when consumers sampled is empty", () => {
     const dry = recapConversion({
       ...retail,
-      consumersSampled: 22,
+      consumersSampled: 0,
       isDryDemo: true,
-      peopleEngaged: 40,
+      peopleEngaged: 22,
     });
-    expect(dry.applies && dry.pct).toBe(18);
-    expect(dry.applies && dry.base).toBe(22);
+    expect(dry).toMatchObject({
+      applies: true,
+      pct: 18,
+      sold: 4,
+      base: 22,
+      baseNoun: "engaged",
+      ok: false,
+    });
+    expect(
+      recapConversionChip({
+        ...retail,
+        consumersSampled: null,
+        isDryDemo: true,
+        peopleEngaged: 22,
+      }).label,
+    ).toBe("Conv 18% · 4 sold / 22 engaged");
   });
 
-  it("ignores people engaged when a dry demo also has consumers sampled", () => {
+  it("product retail ignores a higher people engaged count", () => {
     const conv = recapConversion({
       ...retail,
       consumersSampled: 18,
-      isDryDemo: true,
-      peopleEngaged: 22,
+      isDryDemo: false,
+      peopleEngaged: 40,
     });
     expect(conv).toMatchObject({
       applies: true,
@@ -381,6 +402,13 @@ describe("recapConversion", () => {
       baseNoun: "sampled",
       ok: true,
     });
+    expect(
+      recapConversionChip({
+        ...retail,
+        consumersSampled: 18,
+        peopleEngaged: 40,
+      }).label,
+    ).toBe("Conv 22% · 4 sold / 18 sampled");
   });
 
   it("classifies 20% as ok and below 20% as a warning", () => {
@@ -415,17 +443,28 @@ describe("recapConversion", () => {
     ).toBe("na");
   });
 
-  it("does not invent a percent when the denominator is missing", () => {
+  it("does not invent a percent when people engaged is missing on a dry demo", () => {
     expect(
       recapConversion({
         ...retail,
-        consumersSampled: 0,
+        consumersSampled: 18,
         isDryDemo: true,
-        peopleEngaged: 22,
+        peopleEngaged: 0,
       }),
     ).toEqual({
       applies: false,
-      reason: "No conversion — consumers sampled is missing",
+      reason: "No conversion — people engaged is missing",
+    });
+    expect(
+      recapConversion({
+        ...retail,
+        consumersSampled: 18,
+        isDryDemo: true,
+        peopleEngaged: null,
+      }),
+    ).toEqual({
+      applies: false,
+      reason: "No conversion — people engaged is missing",
     });
   });
 });
