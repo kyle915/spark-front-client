@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   CHECK_IN_ANOTHER_GIG_HINT,
   CHECK_IN_SOMEWHERE_ELSE,
+  clearChosenShiftDate,
   clockInForTodayLabel,
   eventCalendarDate,
   finishPriorRecapLabel,
@@ -14,9 +15,13 @@ import {
   newDayPrimaryLabel,
   offerFinishPriorRecap,
   PAST_DAY_NO_CLOCK,
+  readChosenShiftDate,
+  shiftDateForFindOrCreate,
+  showNewDayGate,
   START_OVER_LINK,
   walkupDayKind,
   walkupDayLabel,
+  writeChosenShiftDate,
 } from "@/components/pages/checkin/leftoverCheckin";
 import { supportsStandingSecondShift } from "@/components/pages/checkin/secondShift";
 
@@ -149,6 +154,78 @@ describe("leftoverCheckin", () => {
       today: "2026-08-23",
     });
     expect(day === "leftover_prior_day" && second).toBe(false);
+  });
+});
+
+describe("picked past shift date", () => {
+  const storage = () => {
+    const bag = new Map<string, string>();
+    return {
+      getItem: (key: string) => bag.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        bag.set(key, value);
+      },
+      removeItem: (key: string) => {
+        bag.delete(key);
+      },
+    };
+  };
+
+  it("sends 2026-10-16 to find-or-create and does not replace it with today", () => {
+    const today = "2026-10-18";
+    const picked = "2026-10-16";
+    expect(shiftDateForFindOrCreate({ picked, today })).toBe("2026-10-16");
+    expect(shiftDateForFindOrCreate({ picked: `${picked}T12:00:00Z`, today })).toBe(
+      "2026-10-16",
+    );
+    expect(shiftDateForFindOrCreate({ picked: "", today })).toBe(today);
+
+    const store = storage();
+    writeChosenShiftDate("TH-2HRV3D", { date: picked, chosenOn: today }, store);
+    const chosen = readChosenShiftDate("TH-2HRV3D", store);
+    expect(chosen).toEqual({ date: "2026-10-16", chosenOn: "2026-10-18" });
+    // Session created for the picked day must stay on that day. The new-day
+    // button would clock in for today and drop Oct 16.
+    expect(
+      showNewDayGate({
+        eventDate: "2026-10-16T12:00:00Z",
+        today,
+        chosen,
+      }),
+    ).toBe(false);
+    expect(clockInForTodayLabel(today)).toBe("Clock in for Sunday, Oct 18");
+    clearChosenShiftDate("TH-2HRV3D", store);
+  });
+
+  it("still leads with Clock in for today when a saved prior-day shift was not picked this visit", () => {
+    expect(
+      showNewDayGate({
+        eventDate: "2026-10-16T12:00:00Z",
+        today: "2026-10-18",
+        chosen: null,
+      }),
+    ).toBe(true);
+    expect(
+      showNewDayGate({
+        eventDate: "2026-10-16T12:00:00Z",
+        today: "2026-10-19",
+        chosen: { date: "2026-10-16", chosenOn: "2026-10-18" },
+      }),
+    ).toBe(true);
+    expect(
+      showNewDayGate({
+        eventDate: "2026-10-18T12:00:00Z",
+        today: "2026-10-18",
+        chosen: { date: "2026-10-16", chosenOn: "2026-10-18" },
+      }),
+    ).toBe(false);
+  });
+
+  it("clears a remembered pick so the next visit can offer today again", () => {
+    const store = storage();
+    writeChosenShiftDate("TH-2HRV3D", { date: "2026-10-16", chosenOn: "2026-10-18" }, store);
+    clearChosenShiftDate("TH-2HRV3D", store);
+    expect(readChosenShiftDate("TH-2HRV3D", store)).toBeNull();
   });
 });
 

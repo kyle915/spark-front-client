@@ -162,6 +162,8 @@ import {
   CHECK_IN_ANOTHER_GIG_HINT,
   CHECK_IN_SOMEWHERE_ELSE,
   CLEAR_LEFTOVER_ERROR,
+  clearChosenShiftDate,
+  eventCalendarDate,
   finishPriorRecapLabel,
   isLeftoverCheckinSession,
   isPastDayWalkupSession,
@@ -169,7 +171,11 @@ import {
   newDayPrimaryLabel,
   offerFinishPriorRecap,
   PAST_DAY_NO_CLOCK,
+  readChosenShiftDate,
+  shiftDateForFindOrCreate,
+  showNewDayGate,
   START_OVER_LINK,
+  writeChosenShiftDate,
 } from "./leftoverCheckin";
 import {
   canAttemptOpenPunchResume,
@@ -597,6 +603,14 @@ export default function SparkCheckin() {
         eventDate: openShift.eventDate || today,
       });
       if (cancelled || !json) return;
+      const chosen = readChosenShiftDate(code);
+      if (
+        chosen &&
+        chosen.chosenOn === today &&
+        eventCalendarDate(chosen.date) !== today
+      ) {
+        return;
+      }
       try {
         window.localStorage.setItem(storeKey, json.sessionToken);
       } catch {
@@ -654,6 +668,7 @@ export default function SparkCheckin() {
     resumeAttempted.current = true;
     try {
       window.localStorage.removeItem(storeKey);
+      clearChosenShiftDate(code);
       clearPendingClock(code);
       clearPendingRecap(code);
       clearPendingMileage(code);
@@ -675,7 +690,11 @@ export default function SparkCheckin() {
   const priorDaySession =
     identified &&
     ctx?.mode === "tenant" &&
-    isLeftoverCheckinSession(ctx?.event?.date, todayISO());
+    showNewDayGate({
+      eventDate: ctx?.event?.date,
+      today: todayISO(),
+      chosen: readChosenShiftDate(code),
+    });
   // True only while they chose to file the prior day's recap. Until then the
   // new-day gate is the page, so yesterday's event title stays off screen.
   const [priorRecapOpen, setPriorRecapOpen] = useState(false);
@@ -946,8 +965,14 @@ function IdentifyStep({
   const [address, setAddress] = useState("");
   const [storeSuggestField, setStoreSuggestField] = useState<"address" | "name" | null>(null);
   // Default to today — the overwhelmingly common case is a BA checking in for
-  // the shift they're standing in.
-  const [eventDate, setEventDate] = useState(() => todayISO());
+  // the shift they're standing in. A past day already picked on this visit
+  // (the form remounted) stays that day instead of snapping back to today.
+  const [eventDate, setEventDate] = useState(() => {
+    const today = todayISO();
+    const chosen = readChosenShiftDate(code);
+    if (chosen && chosen.chosenOn === today && chosen.date !== today) return chosen.date;
+    return today;
+  });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
@@ -1125,7 +1150,11 @@ function IdentifyStep({
     setErr(null);
     if (!firstName.trim()) return setErr("Enter your name.");
     if (!recapOnly && !phone.trim()) return setErr("Enter a phone number.");
-    const date = overrides?.eventDate ?? eventDate;
+    const today = todayISO();
+    const date = shiftDateForFindOrCreate({
+      picked: overrides?.eventDate ?? eventDate,
+      today,
+    });
     const addr = overrides?.address ?? address;
     const mkt = overrides?.market ?? market;
     // Unfiled-shift taps supply an address even when Product Seeding is selected.
@@ -1158,6 +1187,11 @@ function IdentifyStep({
         }
       }
       if (!date) return setErr("Pick the date you're working.");
+      if (eventCalendarDate(date) !== today) {
+        writeChosenShiftDate(code, { date, chosenOn: today });
+      } else {
+        clearChosenShiftDate(code);
+      }
     }
     const identifyBody: Record<string, unknown> = needsEventDetails
       ? {
@@ -1612,7 +1646,14 @@ function IdentifyStep({
             min={shiftedISO(-CHECKIN_MAX_PAST_DAYS)}
             max={shiftedISO(CHECKIN_MAX_FUTURE_DAYS)}
             value={eventDate}
-            onChange={(e) => setEventDate(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setEventDate(next);
+              const today = todayISO();
+              const cal = eventCalendarDate(next);
+              if (cal && cal !== today) writeChosenShiftDate(code, { date: cal, chosenOn: today });
+              else if (cal === today) clearChosenShiftDate(code);
+            }}
           />
         </>
       ) : null}
@@ -1653,17 +1694,31 @@ function CheckedInFlow({
   onRefresh: () => Promise<void>;
   onPriorRecapOpen: (open: boolean) => void;
 }) {
+  const today = todayISO();
+  // Prior calendar day restored from an earlier visit: the gate is the page
+  // until they open that recap. A date picked on this visit is not leftover.
+  const leftover =
+    ctx.mode === "tenant" &&
+    showNewDayGate({
+      eventDate: ctx.event?.date,
+      today,
+      chosen: readChosenShiftDate(code),
+    });
+  const pastDay = isPastDayWalkupSession(ctx.event?.date, ctx.event?.startTime);
+  // Second shift is Feel Free + same calendar day only. A prior-day session
+  // never presents as a second shift, including while they finish that recap.
+  const secondShiftOk = supportsStandingSecondShift({
+    mode: ctx.mode,
+    brand: ctx.brand,
+    recapOnly: ctx.recapOnly,
+    eventDate: ctx.event?.date,
+    today,
+  });
   const [busy, setBusy] = useState<"" | "in" | "out">("");
   const [inPhase, setInPhase] = useState<ActionPhase>("idle");
   // Recap-only first landing must still go through payable mileage when enabled
   // — jumping straight to RecapForm used to 400 with needs_payable_mileage.
-  const bootRecapOnly =
-    Boolean(ctx.recapOnly) &&
-    !hasRecap &&
-    !(
-      ctx.mode === "tenant" &&
-      isLeftoverCheckinSession(ctx.event?.date, todayISO())
-    );
+  const bootRecapOnly = Boolean(ctx.recapOnly) && !hasRecap && !leftover;
   const bootNeedMiles =
     bootRecapOnly &&
     shouldCollectPayableMileage({
@@ -1725,20 +1780,6 @@ function CheckedInFlow({
   };
   const [msg, setMsg] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
-  const today = todayISO();
-  // Prior calendar day: the gate is the page until they open that recap.
-  const leftover =
-    ctx.mode === "tenant" && isLeftoverCheckinSession(ctx.event?.date, today);
-  const pastDay = isPastDayWalkupSession(ctx.event?.date, ctx.event?.startTime);
-  // Second shift is Feel Free + same calendar day only. A prior-day session
-  // never presents as a second shift, including while they finish that recap.
-  const secondShiftOk = supportsStandingSecondShift({
-    mode: ctx.mode,
-    brand: ctx.brand,
-    recapOnly: ctx.recapOnly,
-    eventDate: ctx.event?.date,
-    today,
-  });
   const [queuedClock, setQueuedClock] = useState<PendingClockIn | null>(() =>
     readPendingClock(code),
   );
@@ -1767,13 +1808,9 @@ function CheckedInFlow({
   // behind its button, draft intact.
   useEffect(() => {
     if (showRecap || showMileageStep) return;
-    // A new calendar day must not reopen yesterday's report. The gate leads.
-    if (
-      ctx.mode === "tenant" &&
-      isLeftoverCheckinSession(ctx.event?.date, todayISO())
-    ) {
-      return;
-    }
+    // A restored prior-day shift must not reopen yesterday's report. The gate leads.
+    // A date picked this visit is not that case — its recap should reopen.
+    if (leftover) return;
     const open = readOpenRecap(code, token);
     if (open === "existing" || (open === "new" && ctx.recapOnly)) openRecap(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2245,12 +2282,7 @@ function CheckedInFlow({
         busy={busy !== ""}
         onBack={() => {
           setShowMileageStep(false);
-          if (
-            ctx.mode === "tenant" &&
-            isLeftoverCheckinSession(ctx.event?.date, todayISO())
-          ) {
-            setShowRecap(false);
-          }
+          if (leftover) setShowRecap(false);
         }}
         onContinue={(miles) => {
           if (miles != null && Number.isFinite(miles)) {
@@ -2364,10 +2396,7 @@ function CheckedInFlow({
           null
         }
         onCancel={() => {
-          if (
-            ctx.mode === "tenant" &&
-            isLeftoverCheckinSession(ctx.event?.date, todayISO())
-          ) {
+          if (leftover) {
             setShowMileageStep(false);
             setShowRecap(false);
             return;
