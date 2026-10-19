@@ -41,6 +41,8 @@ type RecapCard = {
   totalEngagements: number | null;
   productsSold: number | null;
   consumersSampled: number | null;
+  isDryDemo: boolean;
+  peopleEngaged: number | null;
   recapType: RecapTypeKey;
   // 3rd-party / agency recap: listed, but kept out of every total.
   excludeFromAggregates: boolean;
@@ -72,6 +74,8 @@ const normalizeLegacyRecap = (recap: NonNullable<LegacyRecap>): RecapCard => ({
   totalEngagements: recap.totalEngagements ?? null,
   productsSold: recap.productsSold ?? null,
   consumersSampled: null,
+  isDryDemo: false,
+  peopleEngaged: null,
   recapType: recapTypeForRow(recap.recapType, null),
   excludeFromAggregates: false,
   baName: baNameFrom(recap.ambassador?.user),
@@ -91,6 +95,8 @@ const normalizeCustomRecap = (recap: NonNullable<CustomRecap>): RecapCard => ({
   // CustomRecap exposes a single soldUnits count rather than productsSold.
   productsSold: recap.soldUnits ?? null,
   consumersSampled: recap.consumersSampled ?? null,
+  isDryDemo: Boolean(recap.isDryDemo),
+  peopleEngaged: recap.peopleEngaged ?? null,
   recapType: recapTypeForRow(recap.recapType, null),
   excludeFromAggregates: Boolean(recap.excludeFromAggregates),
   baName: baNameFrom(recap.ambassador?.user),
@@ -1712,6 +1718,8 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
       engagements: recap.totalEngagements,
       consumersSampled: recap.consumersSampled,
       productsSold: recap.productsSold,
+      isDryDemo: recap.isDryDemo,
+      peopleEngaged: recap.peopleEngaged,
     })),
   );
   const convBase = conversion.engagements;

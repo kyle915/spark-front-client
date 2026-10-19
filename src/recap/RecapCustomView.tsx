@@ -1706,6 +1706,8 @@ const RecapCustomViewInner = ({
                   engagements: recap.totalEngagements,
                   consumersSampled: recap.consumersSampled,
                   productsSold: recap.soldUnits,
+                  isDryDemo: recap.isDryDemo,
+                  peopleEngaged: recap.peopleEngaged,
                 }}
               />
             </Suspense>

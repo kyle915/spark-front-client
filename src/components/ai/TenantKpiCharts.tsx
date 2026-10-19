@@ -355,7 +355,7 @@ const TenantKpiCharts: React.FC<{
           count: program.consumersSampled,
           sub:
             program.dryDemos > 0
-              ? `${fmt(program.demos)} demos · incl. ${fmt(program.dryDemos)} dry (People engaged)`
+              ? `${fmt(program.demos)} demos · incl. ${fmt(program.dryDemos)} dry (${fmt(program.dryPeopleEngaged)} people engaged)`
               : `${fmt(program.demos)} demos`,
           tone: "lime" as const,
         },
@@ -370,7 +370,10 @@ const TenantKpiCharts: React.FC<{
           label: "Conversion",
           value:
             program.conversionPct == null ? "—" : `${program.conversionPct}%`,
-          sub: "Units sold ÷ consumers sampled",
+          sub:
+            program.dryDemos > 0
+              ? "Units sold ÷ consumers sampled · dry demos ÷ people engaged"
+              : "Units sold ÷ consumers sampled",
           tone: "sky" as const,
         },
         ...audience,

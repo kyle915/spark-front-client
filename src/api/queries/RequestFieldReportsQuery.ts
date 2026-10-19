@@ -57,6 +57,8 @@ export const RequestFieldReportsQuery = graphql`
           totalEngagements
           soldUnits
           consumersSampled
+          isDryDemo
+          peopleEngaged
           recapType
           excludeFromAggregates
           heroImageUrl
