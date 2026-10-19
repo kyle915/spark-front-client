@@ -12,6 +12,11 @@
  * Same-day open punches must survive temporary navigation (release QR /
  * PR #577) and keep "Continue your recap" / "Clocking in for a new shift?".
  *
+ * A date the BA just picked on this visit — including a past day inside the
+ * 90-day window — is the shift they are filing. That must not trip the
+ * new-day gate. The gate is only for a saved shift restored from an earlier
+ * visit whose calendar day is not today.
+ *
  * Second shift (same calendar day, Feel Free market) is a different flow —
  * see ``secondShift.ts``. These must never look alike:
  *   leftover     = prior calendar day still restored
@@ -64,6 +69,124 @@ export function isLeftoverCheckinSession(
   today: string,
 ): boolean {
   return walkupDayKind(eventDate, today) === "leftover_prior_day";
+}
+
+/**
+ * Civil date the BA picked on identify, and the visit day they picked it.
+ * ``chosenOn === today`` means this visit. A later calendar day treats the
+ * saved shift as leftover again.
+ */
+export type ChosenShiftDate = {
+  date: string;
+  chosenOn: string;
+};
+
+export const CHOSEN_SHIFT_DATE_KEY = (code: string) =>
+  `@spark.checkin.chosenDate/${code}`;
+
+type DateStorage = {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+};
+
+const memoryChosen = new Map<string, ChosenShiftDate>();
+
+function browserDateStorage(): DateStorage | null {
+  try {
+    if (typeof window !== "undefined" && window.localStorage) return window.localStorage;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function asChosenShiftDate(value: unknown): ChosenShiftDate | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as { date?: unknown; chosenOn?: unknown };
+  const date = eventCalendarDate(typeof row.date === "string" ? row.date : null);
+  const chosenOn = eventCalendarDate(typeof row.chosenOn === "string" ? row.chosenOn : null);
+  if (!date || !chosenOn) return null;
+  return { date, chosenOn };
+}
+
+export function readChosenShiftDate(
+  code: string,
+  storage?: DateStorage | null,
+): ChosenShiftDate | null {
+  if (!code) return null;
+  const mem = memoryChosen.get(code);
+  if (mem) return mem;
+  const store = storage === undefined ? browserDateStorage() : storage;
+  if (!store) return null;
+  try {
+    const raw = store.getItem(CHOSEN_SHIFT_DATE_KEY(code));
+    if (!raw) return null;
+    return asChosenShiftDate(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+export function writeChosenShiftDate(
+  code: string,
+  row: ChosenShiftDate,
+  storage?: DateStorage | null,
+): ChosenShiftDate | null {
+  const chosen = asChosenShiftDate(row);
+  if (!code || !chosen) return null;
+  memoryChosen.set(code, chosen);
+  const store = storage === undefined ? browserDateStorage() : storage;
+  try {
+    store?.setItem(CHOSEN_SHIFT_DATE_KEY(code), JSON.stringify(chosen));
+  } catch {
+    /* private mode — memory still holds this visit */
+  }
+  return chosen;
+}
+
+export function clearChosenShiftDate(code: string, storage?: DateStorage | null): void {
+  if (!code) return;
+  memoryChosen.delete(code);
+  const store = storage === undefined ? browserDateStorage() : storage;
+  try {
+    store?.removeItem(CHOSEN_SHIFT_DATE_KEY(code));
+  } catch {
+    /* private mode */
+  }
+}
+
+/**
+ * Date posted to identify / find-or-create. A deliberate pick wins, including
+ * a past day. Today is only the default when the picker is empty.
+ */
+export function shiftDateForFindOrCreate(opts: {
+  picked: string | null | undefined;
+  today: string;
+}): string {
+  const picked = eventCalendarDate(opts.picked);
+  if (picked) return picked;
+  return eventCalendarDate(opts.today) || opts.today;
+}
+
+/**
+ * "Clock in for [today]" leads only when a saved shift from another day was
+ * restored. A date picked on this visit stays the shift through clock-in
+ * and recap — it is not replaced by today.
+ */
+export function showNewDayGate(opts: {
+  eventDate: string | null | undefined;
+  today: string;
+  chosen?: ChosenShiftDate | null;
+}): boolean {
+  if (!isLeftoverCheckinSession(opts.eventDate, opts.today)) return false;
+  const picked = eventCalendarDate(opts.chosen?.date);
+  const eventCal = eventCalendarDate(opts.eventDate);
+  const chosenOn = eventCalendarDate(opts.chosen?.chosenOn);
+  if (picked && eventCal && chosenOn && picked === eventCal && chosenOn === opts.today) {
+    return false;
+  }
+  return true;
 }
 
 /**
