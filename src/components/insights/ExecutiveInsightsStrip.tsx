@@ -37,8 +37,8 @@ import {
 const fmt = (n: number) => n.toLocaleString();
 
 const ACTIVATION_BADGE_COLOR: Record<string, string> = {
-  retail: "var(--spark-lime)",
-  onprem: "var(--spark-orange)",
+  retail: "var(--spark-orange)",
+  onprem: "rgba(255,255,255,0.65)",
   event: "var(--spark-sky)",
 };
 
@@ -46,7 +46,7 @@ const rateChip = (d: RateDelta): { label: string; color: string } | null => {
   if (d.kind === "none") return null;
   const color =
     d.kind === "pts" && d.pts > 0
-      ? "var(--spark-lime)"
+      ? "var(--spark-text)"
       : d.kind === "pts" && d.pts < 0
         ? "var(--spark-orange)"
         : "rgba(255,255,255,0.55)";
@@ -59,59 +59,51 @@ const Tile: React.FC<{
   value: string;
   hint?: string;
   chip?: { label: string; color: string } | null;
-  accent?: "lime" | "orange" | "neutral";
+  accent?: "good" | "orange" | "neutral";
 }> = ({ eyebrow, label, value, hint, chip, accent = "neutral" }) => (
   <div
-    className="rounded-xl p-4"
+    className="py-1 px-1"
     style={{
-      background:
-        accent === "lime"
-          ? "rgba(197,245,70,0.08)"
-          : accent === "orange"
-            ? "rgba(239,90,42,0.10)"
-            : "rgba(255,255,255,0.03)",
-      border: `1px solid ${
-        accent === "lime"
-          ? "rgba(197,245,70,0.30)"
-          : accent === "orange"
-            ? "rgba(239,90,42,0.35)"
-            : "var(--spark-border)"
-      }`,
+      borderLeft:
+        accent === "orange"
+          ? "2px solid var(--spark-orange)"
+          : "1px solid var(--spark-border)",
+      paddingLeft: 14,
     }}
   >
     <p
-      className="mono text-[9px]"
-      style={{ letterSpacing: "0.14em", color: "rgba(255,255,255,0.45)" }}
+      className="display text-[12px]"
+      style={{ color: "rgba(255,255,255,0.45)" }}
     >
       {eyebrow}
     </p>
     <p
-      className="mono text-[10px] mt-1"
-      style={{ letterSpacing: "0.12em", color: "rgba(255,255,255,0.55)" }}
+      className="display text-[13px] mt-0.5"
+      style={{ color: "rgba(255,255,255,0.62)" }}
     >
-      {label.toUpperCase()}
+      {label}
     </p>
     <div className="flex items-baseline gap-2 mt-1 flex-wrap">
       <p
         className="tab-num font-bold text-2xl"
         style={{
+          fontFamily: "JetBrains Mono, ui-monospace, monospace",
+          letterSpacing: "-0.03em",
           color:
-            accent === "lime"
-              ? "var(--spark-lime)"
-              : accent === "orange"
-                ? "var(--spark-orange)"
-                : "var(--spark-text)",
+            accent === "orange"
+              ? "var(--spark-orange)"
+              : "var(--spark-text)",
         }}
       >
         {value}
       </p>
       {chip && (
         <span
-          className="mono text-[10px] px-2 py-0.5 rounded-md"
+          className="display text-[11px] px-2 py-0.5 rounded-md"
           style={{
             color: chip.color,
             background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.14)",
+            border: "1px solid var(--spark-border)",
           }}
         >
           {chip.label}
@@ -120,8 +112,8 @@ const Tile: React.FC<{
     </div>
     {hint && (
       <p
-        className="text-[11px] mt-1"
-        style={{ color: "rgba(255,255,255,0.55)" }}
+        className="text-[12px] mt-1.5 leading-snug"
+        style={{ color: "rgba(255,255,255,0.5)" }}
       >
         {hint}
       </p>
@@ -332,8 +324,8 @@ const PulseCard: React.FC<{
     conv?.pct != null && sampled > 0 && sold > 0 ? conv.pct : null;
   const convPct = convPctValue != null ? `${Math.round(convPctValue)}%` : "—";
   const convAccent =
-    convPctValue != null && convPctValue > 0
-      ? ("lime" as const)
+    convPctValue != null && convPctValue > 0 && convPctValue < 20
+      ? ("orange" as const)
       : ("neutral" as const);
 
   const oneLiner = useMemo(
@@ -394,13 +386,10 @@ const PulseCard: React.FC<{
       <div className="flex items-end justify-between mb-4 flex-wrap gap-3">
         <div className="min-w-0">
           <p
-            className="mono text-[10px]"
-            style={{
-              letterSpacing: "0.18em",
-              color: "rgba(255,255,255,0.45)",
-            }}
+            className="display text-[12px]"
+            style={{ color: "rgba(255,255,255,0.45)" }}
           >
-            EXECUTIVE · {rangeLabel.toUpperCase()}
+            Executive · {rangeLabel}
           </p>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <h2
@@ -417,7 +406,7 @@ const PulseCard: React.FC<{
               return (
                 <span
                   key={b.key}
-                  className="mono text-[10px] px-2 py-0.5 rounded-md inline-flex items-center gap-1.5"
+                  className="display text-[11px] px-2 py-0.5 rounded-md inline-flex items-center gap-1.5"
                   style={{
                     color,
                     background: "rgba(255,255,255,0.04)",
@@ -462,7 +451,7 @@ const PulseCard: React.FC<{
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Tile
-          eyebrow="RETAIL + ON-PREM"
+          eyebrow="Retail + on-prem"
           label="Conversion"
           value={convPct}
           hint={
@@ -490,9 +479,7 @@ const PulseCard: React.FC<{
           accent={convAccent}
         />
         <Tile
-          eyebrow={
-            trial ? trial.label.toUpperCase() : comparisonPeriod.toUpperCase()
-          }
+          eyebrow={trial ? trial.label : comparisonPeriod}
           label="Trial quality"
           value={trial ? `${trial.pct}%` : "—"}
           hint={
@@ -507,19 +494,14 @@ const PulseCard: React.FC<{
               : "Hidden until first-time and consumers both exist"
           }
           chip={trial ? rateChip(trial.delta) : null}
-          accent={trial ? "lime" : "neutral"}
+          accent="neutral"
         />
         <Tile
-          eyebrow="THIS WEEK IN FIELD"
+          eyebrow="This week in field"
           label="Scheduled → approved"
           value={`${fmt(cadence?.scheduledNext7 ?? 0)} · ${fmt(cadence?.approvedRecapsLast7 ?? 0)}`}
           hint={`Next 7d scheduled · last 7d approved recaps`}
-          accent={
-            (cadence?.scheduledNext7 ?? 0) > 0 ||
-            (cadence?.approvedRecapsLast7 ?? 0) > 0
-              ? "lime"
-              : "neutral"
-          }
+          accent="neutral"
         />
       </div>
 
@@ -530,13 +512,10 @@ const PulseCard: React.FC<{
         >
           <div className="flex items-baseline justify-between flex-wrap gap-2 mb-2">
             <p
-              className="mono text-[10px]"
-              style={{
-                letterSpacing: "0.14em",
-                color: "rgba(255,255,255,0.45)",
-              }}
+              className="display text-[12px]"
+              style={{ color: "rgba(255,255,255,0.45)" }}
             >
-              TOP SKUS SAMPLED · APPROVED · STRUCTURED
+              Top SKUs sampled · approved · structured
             </p>
             {sold > 0 && (
               <p
@@ -571,14 +550,14 @@ const PulseCard: React.FC<{
                       className="h-full rounded-full"
                       style={{
                         width: `${pct}%`,
-                        background: "var(--spark-lime)",
+                        background: "rgba(242,243,238,0.55)",
                       }}
                     />
                   </div>
                   <p
                     className="tab-num mono text-sm font-semibold tabular-nums"
                     style={{
-                      color: "var(--spark-lime)",
+                      color: "var(--spark-text)",
                       minWidth: 48,
                       textAlign: "right",
                     }}
