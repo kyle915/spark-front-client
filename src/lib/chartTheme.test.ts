@@ -38,10 +38,10 @@ describe("sparkChartOptions", () => {
       boxWidth: 10,
     });
     expect(options.plugins?.tooltip).toMatchObject({
-      backgroundColor: "rgba(10,13,9,0.92)",
+      backgroundColor: "rgba(10,11,13,0.92)",
       titleColor: sparkChartText,
       bodyColor: sparkChartMuted,
-      borderColor: "rgba(197,245,70,0.25)",
+      borderColor: "rgba(255,255,255,0.14)",
       borderWidth: 1,
     });
 

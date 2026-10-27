@@ -6,34 +6,33 @@
 /* ========================================================================
  * Spark v2 theme (new build default)
  * ----------------------------------------------------------------------
- * Lime accent (#c5f546) on near-black (#0a0d09). Designed to feel like a
- * modern Apple-grade operations console — generous whitespace, soft hover
- * lifts, subtle glow on accent text/icons. Mirrors the design system from
- * the spark-by-ignite/index.html wireframes.
+ * Off-white accent (#f2f3ee) on neutral near-black (#0A0B0D). Orange
+ * (#ef5a2a) is the only chromatic brand mark and the warning color.
+ * Quiet ops console — no highlighter lime.
  * ====================================================================== */
 @plugin "daisyui/theme" {
   name: "spark-v2";
   default: true;
   prefersdark: true;
   color-scheme: "dark";
-  --color-base-100: #11140f;
-  --color-base-200: #0a0d09;
-  --color-base-300: #181c14;
+  --color-base-100: #141416;
+  --color-base-200: #0A0B0D;
+  --color-base-300: #1c1c1f;
   --color-base-content: rgba(255, 255, 255, 0.92);
-  --color-primary: #c5f546;
-  --color-primary-content: #0a0d09;
+  --color-primary: #f2f3ee;
+  --color-primary-content: #0A0B0D;
   --color-secondary: rgba(255, 255, 255, 0.08);
   --color-secondary-content: rgba(255, 255, 255, 0.92);
-  --color-accent: #c5f546;
-  --color-accent-content: #0a0d09;
-  --color-neutral: #181c14;
+  --color-accent: #f2f3ee;
+  --color-accent-content: #0A0B0D;
+  --color-neutral: #1c1c1f;
   --color-neutral-content: rgba(255, 255, 255, 0.92);
   --color-info: #6dd5fa;
-  --color-info-content: #0a0d09;
-  --color-success: #c5f546;
-  --color-success-content: #0a0d09;
+  --color-info-content: #0A0B0D;
+  --color-success: #f2f3ee;
+  --color-success-content: #0A0B0D;
   --color-warning: #ff8a4c;
-  --color-warning-content: #0a0d09;
+  --color-warning-content: #0A0B0D;
   --color-error: #ff5470;
   --color-error-content: #ffffff;
   --radius-selector: 0.5rem;
@@ -255,8 +254,8 @@ html[color-scheme="light"] .app-logo-public-default {
   width: 32px;
   height: 32px;
   border-radius: 9999px;
-  background: #c5f546;
-  color: #0a0d09;
+  background: #f2f3ee;
+  color: #0A0B0D;
   border: 2px solid #0a0d09;
   font-family: "JetBrains Mono", ui-monospace, monospace;
   font-size: 11px;
@@ -316,7 +315,7 @@ h1, h2, h3, h4, h5, h6, .display {
 /* Lime accent text with a soft glow — used for headline highlights */
 .spark-accent {
   color: var(--color-primary);
-  filter: drop-shadow(0 0 12px rgba(197, 245, 70, 0.35));
+  filter: drop-shadow(0 0 12px rgba(242, 243, 238, 0.35));
 }
 
 /* The Spark wordmark style: italic, tightened, with a quiet "BY IGNITE" tag */
@@ -353,7 +352,7 @@ h1, h2, h3, h4, h5, h6, .display {
 }
 .hov:hover {
   transform: translateY(-2px);
-  border-color: rgba(197, 245, 70, 0.3);
+  border-color: rgba(242, 243, 238, 0.3);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
@@ -372,7 +371,7 @@ h1, h2, h3, h4, h5, h6, .display {
   border: 1px solid currentColor;
   background: rgba(255, 255, 255, 0.04);
 }
-.chip-lime    { color: var(--color-primary); background: rgba(197, 245, 70, 0.10); }
+.chip-lime    { color: var(--color-primary); background: rgba(242, 243, 238, 0.10); }
 .chip-orange  { color: var(--color-warning); background: rgba(255, 138, 76, 0.10); }
 .chip-sky     { color: var(--color-info);    background: rgba(109, 213, 250, 0.10); }
 .chip-muted   { color: rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.04); }
@@ -392,15 +391,12 @@ h1, h2, h3, h4, h5, h6, .display {
 
 /* Subtle grid background used on hero panels (e.g. login splash) */
 .spark-grid-bg {
-  background-image:
-    linear-gradient(rgba(197, 245, 70, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(197, 245, 70, 0.05) 1px, transparent 1px);
-  background-size: 32px 32px;
+  background-image: none;
 }
 
 /* Soft radial glow behind hero numbers / headlines */
 .spark-glow {
-  background: radial-gradient(circle at 50% 0%, rgba(197, 245, 70, 0.18), transparent 60%);
+  background: transparent;
 }
 
 /* ============================================================
@@ -412,16 +408,18 @@ h1, h2, h3, h4, h5, h6, .display {
 
 /* Local vars so the rules below read like the demo source */
 [data-theme="spark-v2"] {
-  --spark-lime: #c5f546;
-  --spark-lime-dim: #9dc338;
+  /* --spark-lime kept as the quiet accent token name for existing callers;
+     value is off-white. Chromatic brand mark is orange. */
+  --spark-lime: #f2f3ee;
+  --spark-lime-dim: #c8c9c4;
   --spark-orange: #ef5a2a;
   --spark-sky: #5fb8ef;
   --spark-purple: #a08bd9;
   --spark-gold: #ffc400;
-  --spark-bg: #0a0d09;
-  --spark-surface: #11140e;
-  --spark-surface-2: #161a12;
-  --spark-border: #1f2418;
+  --spark-bg: #0A0B0D;
+  --spark-surface: #141416;
+  --spark-surface-2: #1a1a1d;
+  --spark-border: #2a2a2e;
   --spark-text: #f2f3ee;
   --spark-text-secondary: rgba(255, 255, 255, 0.62);
   --spark-text-meta: rgba(255, 255, 255, 0.48);
@@ -444,38 +442,16 @@ h1, h2, h3, h4, h5, h6, .display {
   --font-stencil: 'Bungee', 'Impact', sans-serif;
 }
 
-/* === Spark mesh — shared decorative backdrop ===
-   Mirrors the Ignite site's creative on /spark: deep black-navy base,
-   soft lime + orange radial glows in opposing corners, a faint dot
-   grid overlay. Used on every full-page shell via the .spark-mesh
-   class. Fixed-position pseudo-element so it doesn't scroll. */
+/* === Spark mesh — flat dark page shell (no radials, no dot grid) === */
 .spark-mesh {
   position: relative;
-  background-color: var(--spark-bg, #0a0d09);
+  background-color: var(--spark-bg, #0A0B0D);
   isolation: isolate;
 }
-.spark-mesh::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -2;
-  background:
-    radial-gradient(circle at 8% 0%, rgba(197, 245, 70, 0.10), transparent 40%),
-    radial-gradient(circle at 100% 12%, rgba(239, 90, 42, 0.08), transparent 45%),
-    radial-gradient(circle at 50% 100%, rgba(95, 184, 239, 0.06), transparent 55%);
-}
+.spark-mesh::before,
 .spark-mesh::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-  /* Subtle dot grid at 0.04 alpha — same vibe as the Ignite hero
-     ticker pattern but quieter so dashboard / form cards remain legible. */
-  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.9) 30%, rgba(0, 0, 0, 0.9) 70%, transparent);
+  content: none;
+  display: none;
 }
 
 /* === Spark Login — scoped overrides ===
@@ -538,16 +514,16 @@ body:has(.spark-login-page) {
 
 /* === Form input (Spark v2) — used across public + internal forms === */
 .spark-input {
-  background: var(--spark-bg, #0a0d09);
+  background: var(--spark-bg, #0A0B0D);
   border: 1px solid var(--spark-border, #1f2418);
   color: var(--spark-text, #f2f3ee);
   transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
 }
 .spark-input::placeholder { color: rgba(255, 255, 255, 0.4); }
-.spark-input:hover { border-color: rgba(197, 245, 70, 0.25); }
+.spark-input:hover { border-color: rgba(242, 243, 238, 0.25); }
 .spark-input:focus {
-  border-color: var(--spark-lime, #c5f546);
-  box-shadow: 0 0 0 3px rgba(197, 245, 70, 0.15);
+  border-color: var(--spark-lime, #f2f3ee);
+  box-shadow: 0 0 0 3px rgba(242, 243, 238, 0.15);
   background: rgba(17, 20, 14, 0.95);
 }
 
@@ -565,7 +541,7 @@ body:has(.spark-login-page) {
 }
 .spark-card.hov:hover {
   transform: translateY(-2px);
-  border-color: rgba(197, 245, 70, 0.22);
+  border-color: rgba(242, 243, 238, 0.22);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
 }
 
@@ -667,8 +643,8 @@ body:has(.spark-login-page) {
 .spark-filter-bar input.spark-filter-search:focus,
 .spark-filter-bar input.spark-filter-search:focus-visible,
 .spark-filter-bar select:focus-visible {
-  border-color: rgba(197, 245, 70, 0.45);
-  box-shadow: 0 0 0 2px rgba(197, 245, 70, 0.14);
+  border-color: rgba(242, 243, 238, 0.45);
+  box-shadow: 0 0 0 2px rgba(242, 243, 238, 0.14);
 }
 .spark-filter-bar .chip,
 .spark-filter-bar .pill-btn {
@@ -680,7 +656,7 @@ body:has(.spark-login-page) {
 .spark-filter-bar .chip:focus-visible,
 .spark-filter-bar .pill-btn:focus-visible,
 .spark-filter-bar button:focus-visible {
-  outline: 2px solid rgba(197, 245, 70, 0.7);
+  outline: 2px solid rgba(242, 243, 238, 0.7);
   outline-offset: 2px;
 }
 
@@ -769,33 +745,27 @@ thead .spark-table-sticky-date {
   border-radius: 14px;
 }
 .spark-card-glow {
-  background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
-  border: 1px solid rgba(197, 245, 70, 0.4);
+  background: var(--spark-surface);
+  border: 1px solid var(--spark-border);
   border-radius: var(--spark-radius-sheet, 22px);
-  box-shadow:
-    0 0 0 1px rgba(197, 245, 70, 0.1),
-    var(--spark-elev-3, 0 24px 48px rgba(0, 0, 0, 0.4));
+  box-shadow: none;
 }
 
 /* === KPI tile === */
 .kpi {
   padding: 1.5rem;
-  background: linear-gradient(180deg, var(--spark-surface), var(--spark-surface-2));
+  background: var(--spark-surface);
   border: 1px solid var(--spark-border);
   border-radius: var(--spark-radius-sheet, 22px);
   cursor: default;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color 0.2s ease;
 }
 .kpi.kpi-hover:hover {
-  transform: translateY(-2px);
-  border-color: rgba(197, 245, 70, 0.35);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 .kpi.kpi-glow {
-  border-color: rgba(197, 245, 70, 0.4);
-  box-shadow:
-    0 0 0 1px rgba(197, 245, 70, 0.12),
-    var(--spark-elev-2, 0 18px 36px rgba(0, 0, 0, 0.35));
+  border-color: var(--spark-border);
+  box-shadow: none;
 }
 .kpi-icon {
   width: 36px;
@@ -803,17 +773,17 @@ thead .spark-table-sticky-date {
   border-radius: 10px;
   display: grid;
   place-items: center;
-  background: rgba(197, 245, 70, 0.1);
+  background: rgba(242, 243, 238, 0.1);
   color: var(--spark-lime);
-  border: 1px solid rgba(197, 245, 70, 0.25);
+  border: 1px solid rgba(242, 243, 238, 0.25);
   font-size: 1rem;
 }
 .kpi-delta {
   font-family: "JetBrains Mono", monospace;
-  color: var(--spark-lime);
+  color: var(--spark-text);
   font-size: 0.7rem;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
 }
 .kpi-delta.neg { color: var(--spark-orange); }
 .kpi-delta.muted { color: rgba(255, 255, 255, 0.45); }
@@ -916,9 +886,9 @@ thead .spark-table-sticky-date {
 }
 .pill-btn:hover { color: rgba(255, 255, 255, 0.85); }
 .pill-btn.on {
-  color: #0a0d09;
+  color: #0A0B0D;
   background: var(--spark-lime);
-  box-shadow: 0 0 14px rgba(197, 245, 70, 0.35);
+  box-shadow: none;
 }
 
 /* === Sidebar nav === */
@@ -945,8 +915,8 @@ thead .spark-table-sticky-date {
   color: var(--spark-text);
 }
 .nav-item.active {
-  background: rgba(197, 245, 70, 0.06);
-  color: var(--spark-lime);
+  background: transparent;
+  color: var(--spark-text);
   font-weight: 600;
 }
 .nav-item.active::before {
@@ -956,9 +926,9 @@ thead .spark-table-sticky-date {
   top: 28%;
   bottom: 28%;
   width: 2px;
-  background: var(--spark-lime);
+  background: var(--spark-orange);
   border-radius: 2px;
-  opacity: 0.85;
+  opacity: 1;
   box-shadow: none;
 }
 .nav-icon {
@@ -978,10 +948,10 @@ thead .spark-table-sticky-date {
   border-radius: 4px;
 }
 .nav-section {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.6rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
   color: var(--spark-text-meta, rgba(255, 255, 255, 0.48));
   padding: 0.7rem 0.9rem 0.1rem;
 }
@@ -991,8 +961,8 @@ thead .spark-table-sticky-date {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--spark-lime);
-  box-shadow: 0 0 10px var(--spark-lime);
+  background: var(--spark-orange);
+  box-shadow: none;
   flex-shrink: 0;
 }
 @keyframes livepulse {
@@ -1358,7 +1328,7 @@ body { background: var(--spark-bg); }
   background: var(--spark-lime);
 }
 .recap-detail-tab:focus-visible {
-  outline: 2px solid rgba(197, 245, 70, 0.75);
+  outline: 2px solid rgba(242, 243, 238, 0.75);
   outline-offset: 2px;
 }
 .recap-kpi-strip {
@@ -1408,8 +1378,8 @@ body { background: var(--spark-bg); }
   place-items: center;
   margin-bottom: 0.5rem;
   font-size: 0.75rem;
-  background: rgba(197, 245, 70, 0.12);
-  border: 1px solid rgba(197, 245, 70, 0.28);
+  background: rgba(242, 243, 238, 0.12);
+  border: 1px solid rgba(242, 243, 238, 0.28);
   color: var(--spark-lime);
 }
 .recap-kpi-label {
@@ -1584,9 +1554,9 @@ body { background: var(--spark-bg); }
   border-radius: 10px;
 }
 .spark-sidebar.is-collapsed .nav-item.active {
-  background: rgba(197, 245, 70, 0.16);
-  color: var(--spark-lime);
-  box-shadow: inset 0 0 0 1px rgba(197, 245, 70, 0.28);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--spark-text);
+  box-shadow: none;
 }
 .spark-sidebar.is-collapsed .nav-item.active::before {
   display: none;
@@ -1598,8 +1568,8 @@ body { background: var(--spark-bg); }
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--spark-lime);
-  box-shadow: 0 0 6px rgba(197, 245, 70, 0.7);
+  background: var(--spark-orange);
+  box-shadow: none;
 }
 .spark-rail-tip {
   position: fixed;
@@ -1608,12 +1578,12 @@ body { background: var(--spark-bg); }
   pointer-events: none;
   background: #0a0b0d;
   color: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--spark-lime);
+  border: 1px solid var(--spark-border);
   border-radius: 6px;
   padding: 0.28rem 0.5rem;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: "Space Grotesk", sans-serif;
   font-size: 11px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
@@ -1680,7 +1650,7 @@ body { background: var(--spark-bg); }
    Focus rings for keyboard users; quieter row-action chrome; sheet hit targets.
    Do not adopt Untitled/Kibo/shadcn kits wholesale. */
 :root {
-  --spark-focus-ring: rgba(197, 245, 70, 0.75);
+  --spark-focus-ring: rgba(242, 243, 238, 0.45);
   --spark-focus-offset: 2px;
   --spark-text-secondary: rgba(255, 255, 255, 0.62);
   --spark-text-meta: rgba(255, 255, 255, 0.48);
@@ -1714,7 +1684,7 @@ a.outline-none:focus-visible,
 }
 
 ::selection {
-  background: rgba(197, 245, 70, 0.28);
+  background: rgba(242, 243, 238, 0.28);
   color: inherit;
 }
 

@@ -1,13 +1,13 @@
 import type { ChartOptions } from "chart.js";
 
-/** Shared Spark dark Chart.js chrome (DashWind-inspired, lime/sky ops). */
+/** Shared Spark dark Chart.js chrome — off-white / sky / orange, no lime. */
 export const SPARK_CHART_PALETTE = [
-  "rgba(197,245,70,0.85)",
-  "rgba(56,189,248,0.85)",
+  "rgba(242,243,238,0.75)",
+  "rgba(95,184,239,0.85)",
   "rgba(239,90,42,0.85)",
-  "rgba(168,85,247,0.85)",
-  "rgba(250,204,21,0.85)",
-  "rgba(255,255,255,0.45)",
+  "rgba(168,85,247,0.75)",
+  "rgba(255,255,255,0.35)",
+  "rgba(255,255,255,0.22)",
 ];
 
 export const sparkChartText = "rgba(255,255,255,0.72)";
@@ -37,10 +37,10 @@ export function sparkLegendDefaults() {
 
 export function sparkTooltipDefaults() {
   return {
-    backgroundColor: "rgba(10,13,9,0.92)",
+    backgroundColor: "rgba(10,11,13,0.92)",
     titleColor: sparkChartText,
     bodyColor: sparkChartMuted,
-    borderColor: "rgba(197,245,70,0.25)",
+    borderColor: "rgba(255,255,255,0.14)",
     borderWidth: 1,
     padding: 10,
   };

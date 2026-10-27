@@ -76,7 +76,7 @@ const DEFAULT_SERIES: readonly TrendSeries[] = [
   { key: "samples", label: "Samples" },
 ];
 
-const SERIES_COLORS = ["rgba(95,184,239,0.85)", "rgba(239,90,42,0.85)"];
+const SERIES_COLORS = ["rgba(242,243,238,0.72)", "rgba(95,184,239,0.85)"];
 
 const seriesValue = (row: MonthRow, key: string): number =>
   Number((row as Record<string, unknown>)[key]) || 0;
@@ -147,9 +147,9 @@ const TrendChart: React.FC<{
         type: "line",
         label: "Recaps",
         data: data.map((d) => d.recaps),
-        borderColor: "rgb(197,245,70)",
-        pointBackgroundColor: "rgb(197,245,70)",
-        borderWidth: 3,
+        borderColor: "rgba(242,243,238,0.85)",
+        pointBackgroundColor: "rgba(242,243,238,0.95)",
+        borderWidth: 2,
         tension: 0.35,
         yAxisID: "y2",
       },
@@ -219,58 +219,86 @@ const TrendChart: React.FC<{
   );
 };
 
-/* ───────────────────────── stat tile ───────────────────────── */
+/* ───────────────────────── primary + quiet supporting stats ───────────────────────── */
 
-const StatTile: React.FC<{
+type KpiTile = {
   label: string;
   value: string;
   count?: number;
   sub?: string;
-  tone: "lime" | "sky" | "gold" | "purple";
-}> = ({ label, value, count, sub, tone }) => {
-  const toneColor: Record<string, string> = {
-    lime: "var(--spark-lime)",
-    sky: "var(--spark-sky)",
-    gold: "var(--spark-gold)",
-    purple: "var(--spark-purple)",
-  };
-  return (
-    <div
-      className="spark-card rounded-2xl px-4 py-4"
-      style={{ borderTop: `2px solid ${toneColor[tone]}` }}
-    >
-      <p
-        className="mono text-[9px]"
-        style={{
-          letterSpacing: "0.18em",
-          color: "rgba(255,255,255,0.55)",
-          textTransform: "uppercase",
-        }}
-      >
-        {label}
-      </p>
-      <p
-        className="display tab-num font-bold mt-1.5"
-        style={{
-          fontSize: "clamp(1.4rem, 3vw, 1.9rem)",
-          letterSpacing: "-0.03em",
-          lineHeight: 1.05,
-          color: "var(--spark-text)",
-        }}
-      >
-        {typeof count === "number" ? <CountReel value={count} /> : value}
-      </p>
-      {sub && (
-        <p
-          className="text-[11px] mt-1 leading-snug"
-          style={{ color: "rgba(255,255,255,0.5)" }}
-        >
-          {sub}
-        </p>
-      )}
-    </div>
-  );
+  primary?: boolean;
 };
+
+const PrimaryFigure: React.FC<{
+  label: string;
+  value: string;
+  count?: number;
+  sub?: string;
+}> = ({ label, value, count, sub }) => (
+  <div className="py-1">
+    <p
+      className="display text-sm"
+      style={{ color: "rgba(255,255,255,0.55)", letterSpacing: "-0.01em" }}
+    >
+      {label}
+    </p>
+    <p
+      className="display tab-num font-bold mt-1"
+      style={{
+        fontSize: "clamp(2.4rem, 5vw, 3.25rem)",
+        letterSpacing: "-0.045em",
+        lineHeight: 1,
+        color: "var(--spark-text)",
+      }}
+    >
+      {typeof count === "number" ? <CountReel value={count} /> : value}
+    </p>
+    {sub && (
+      <p
+        className="text-[13px] mt-2 leading-snug"
+        style={{ color: "rgba(255,255,255,0.45)" }}
+      >
+        {sub}
+      </p>
+    )}
+  </div>
+);
+
+const QuietStat: React.FC<{
+  label: string;
+  value: string;
+  count?: number;
+  sub?: string;
+}> = ({ label, value, count, sub }) => (
+  <div className="min-w-0 px-3 first:pl-0 last:pr-0">
+    <p
+      className="display text-[12px]"
+      style={{ color: "rgba(255,255,255,0.5)", letterSpacing: "-0.01em" }}
+    >
+      {label}
+    </p>
+    <p
+      className="tab-num font-semibold mt-0.5"
+      style={{
+        fontFamily: "JetBrains Mono, ui-monospace, monospace",
+        fontSize: "clamp(1.05rem, 2vw, 1.25rem)",
+        letterSpacing: "-0.03em",
+        lineHeight: 1.15,
+        color: "var(--spark-text)",
+      }}
+    >
+      {typeof count === "number" ? <CountReel value={count} /> : value}
+    </p>
+    {sub && (
+      <p
+        className="text-[11px] mt-1 leading-snug"
+        style={{ color: "rgba(255,255,255,0.4)" }}
+      >
+        {sub}
+      </p>
+    )}
+  </div>
+);
 
 /* ───────────────────────── year dropdown ───────────────────────── */
 
@@ -317,38 +345,42 @@ const TenantKpiCharts: React.FC<{
 
   const kpis = data?.tenantKpis;
 
-  const tiles = useMemo((): {
-    label: string;
-    value: string;
-    count?: number;
-    sub?: string;
-    tone: "lime" | "sky" | "gold" | "purple";
-  }[] => {
-    if (!kpis) return [];
+  const { primary, supporting } = useMemo((): {
+    primary: KpiTile | null;
+    supporting: KpiTile[];
+  } => {
+    if (!kpis) return { primary: null, supporting: [] };
     const program = kpis.program;
     if (program) {
-      // Retail-sales programs (Torch): the Conversion tile's recap set — no
-      // engagements, units sold = cans + packs at 1 each.
+      // Retail-sales programs: conversion is the primary figure when present.
       const audience = [
         {
           label: "First-time consumers",
           value: program.firstTimeConsumers,
-          tone: "purple" as const,
         },
         {
           label: "Brand-aware",
           value: program.brandAwareConsumers,
-          tone: "sky" as const,
         },
         {
           label: "Willing to purchase",
           value: program.willingToPurchase,
-          tone: "gold" as const,
         },
       ]
         .filter((t) => t.value > 0)
         .map((t) => ({ ...t, value: fmt(t.value), count: t.value }));
-      return [
+      const formula =
+        program.dryDemos > 0
+          ? "Units sold ÷ consumers sampled · dry demos ÷ people engaged"
+          : "Units sold ÷ consumers sampled";
+      const primary: KpiTile = {
+        label: "Conversion",
+        value:
+          program.conversionPct == null ? "—" : `${program.conversionPct}%`,
+        sub: formula,
+        primary: true,
+      };
+      const supporting: KpiTile[] = [
         {
           label: "Consumers sampled",
           value: fmt(program.consumersSampled),
@@ -357,27 +389,16 @@ const TenantKpiCharts: React.FC<{
             program.dryDemos > 0
               ? `${fmt(program.demos)} demos · incl. ${fmt(program.dryDemos)} dry (${fmt(program.dryPeopleEngaged)} people engaged)`
               : `${fmt(program.demos)} demos`,
-          tone: "lime" as const,
         },
         {
           label: "Units sold",
           value: fmt(program.unitsSold),
           count: program.unitsSold,
           sub: `${fmt(program.cansSold)} cans · ${fmt(program.packsSold)} packs`,
-          tone: "gold" as const,
-        },
-        {
-          label: "Conversion",
-          value:
-            program.conversionPct == null ? "—" : `${program.conversionPct}%`,
-          sub:
-            program.dryDemos > 0
-              ? "Units sold ÷ consumers sampled · dry demos ÷ people engaged"
-              : "Units sold ÷ consumers sampled",
-          tone: "sky" as const,
         },
         ...audience,
       ];
+      return { primary, supporting };
     }
     // Core metrics every tenant tracks — always shown, even at 0 (a real 0 is
     // meaningful here). The consumer-signal metrics below are template-
@@ -392,32 +413,25 @@ const TenantKpiCharts: React.FC<{
       label: t.label,
       value: fmt(t.value),
       count: t.value,
-      tone: (t.key === "totalEngagements" ? "sky" : "lime") as "lime" | "sky",
     }));
-    const core = [
-      ...sampling,
-      {
-        label: "Products sold",
-        value: fmt(kpis.productsSold),
-        count: kpis.productsSold,
-        tone: "gold" as const,
-      },
-    ];
+    const sold: KpiTile = {
+      label: "Products sold",
+      value: fmt(kpis.productsSold),
+      count: kpis.productsSold,
+      primary: true,
+    };
     const optional = [
       {
         label: "First-time consumers",
         value: kpis.firstTimeConsumers,
-        tone: "purple" as const,
       },
       {
         label: "Brand-aware",
         value: kpis.brandAwareConsumers,
-        tone: "sky" as const,
       },
       {
         label: "Willing to purchase",
         value: kpis.willingToPurchase,
-        tone: "gold" as const,
       },
     ]
       .filter((t) => t.value > 0)
@@ -425,9 +439,8 @@ const TenantKpiCharts: React.FC<{
         label: t.label,
         value: fmt(t.value),
         count: t.value,
-        tone: t.tone,
       }));
-    return [...core, ...optional];
+    return { primary: sold, supporting: [...sampling, ...optional] };
   }, [kpis]);
 
   if (!kpis) return null;
@@ -436,7 +449,7 @@ const TenantKpiCharts: React.FC<{
   const series: readonly TrendSeries[] = kpis.trendSeries?.length
     ? kpis.trendSeries
     : DEFAULT_SERIES;
-  const seriesTitle = series.map((s) => s.label.toUpperCase());
+  const seriesTitle = series.map((s) => s.label);
 
   // All-zero / empty: a brand-new tenant with nothing logged yet. Show a quiet
   // empty state rather than a grid of zeros and a blank chart.
@@ -463,15 +476,15 @@ const TenantKpiCharts: React.FC<{
         </h2>
         <div className="flex items-center gap-3 flex-wrap">
           <p
-            className="mono text-[10px]"
-            style={{ letterSpacing: "0.18em", color: "rgba(255,255,255,0.45)" }}
+            className="display text-[12px]"
+            style={{ color: "rgba(255,255,255,0.45)" }}
           >
             {scopeNote
-              ? scopeNote.toUpperCase()
+              ? scopeNote
               : kpis.events > 0
-                ? `${fmt(kpis.events)} WITH RECAPS · ${fmt(kpis.recaps)} RECAPS`
+                ? `${fmt(kpis.events)} with recaps · ${fmt(kpis.recaps)} recaps`
                 : selectedYear === null
-                  ? "ALL TIME"
+                  ? "All time"
                   : `${selectedYear}`}
           </p>
           {/* Compact year dropdown — drives the $year query variable above, so
@@ -480,12 +493,11 @@ const TenantKpiCharts: React.FC<{
             aria-label="KPI time range"
             value={yearValue}
             onChange={(e) => setYearValue(e.target.value)}
-            className="mono text-[11px] rounded-lg px-2.5 py-1.5 cursor-pointer"
+            className="display text-[12px] rounded-lg px-2.5 py-1.5 cursor-pointer"
             style={{
               background: "rgba(255,255,255,0.04)",
               border: "1px solid var(--spark-border)",
               color: "var(--spark-text)",
-              letterSpacing: "0.06em",
             }}
           >
             {yearOptions.map((o) => (
@@ -506,31 +518,53 @@ const TenantKpiCharts: React.FC<{
         </p>
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {tiles.map((t) => (
-              <StatTile
-                key={t.label}
-                label={t.label}
-                value={t.value}
-                count={t.count}
-                sub={t.sub}
-                tone={t.tone}
-              />
-            ))}
-          </div>
+          {primary && (
+            <PrimaryFigure
+              label={primary.label}
+              value={primary.value}
+              count={primary.count}
+              sub={primary.sub}
+            />
+          )}
+          {supporting.length > 0 && (
+            <div
+              className="mt-5 flex flex-wrap gap-y-4"
+              style={{
+                borderTop: "1px solid var(--spark-border)",
+                paddingTop: 16,
+              }}
+            >
+              {supporting.map((t, i) => (
+                <div
+                  key={t.label}
+                  className="min-w-[140px] flex-1"
+                  style={{
+                    borderLeft:
+                      i === 0 ? "none" : "1px solid var(--spark-border)",
+                    paddingLeft: i === 0 ? 0 : 16,
+                    marginLeft: i === 0 ? 0 : 4,
+                  }}
+                >
+                  <QuietStat
+                    label={t.label}
+                    value={t.value}
+                    count={t.count}
+                    sub={t.sub}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="mt-6">
             {hasTrend ? (
               <>
                 <p
-                  className="mono text-[10px] mb-3"
-                  style={{
-                    letterSpacing: "0.18em",
-                    color: "rgba(255,255,255,0.45)",
-                  }}
+                  className="display text-[13px] mb-3"
+                  style={{ color: "rgba(255,255,255,0.5)" }}
                 >
-                  MONTHLY TREND · RECAPS (RIGHT) / {seriesTitle.join(" + ")}{" "}
-                  (LEFT)
+                  Monthly trend · Recaps (right) / {seriesTitle.join(" + ")}{" "}
+                  (left)
                 </p>
                 <TrendChart
                   data={trend}
@@ -541,13 +575,10 @@ const TenantKpiCharts: React.FC<{
             ) : (
               <div>
                 <p
-                  className="mono text-[10px] mb-3"
-                  style={{
-                    letterSpacing: "0.18em",
-                    color: "rgba(255,255,255,0.45)",
-                  }}
+                  className="display text-[13px] mb-3"
+                  style={{ color: "rgba(255,255,255,0.5)" }}
                 >
-                  MONTHLY TREND · RECAPS / {seriesTitle.join(" / ")}
+                  Monthly trend · Recaps / {seriesTitle.join(" / ")}
                 </p>
                 <div className="spark-chart-empty min-h-[180px]">
                   No monthly trend data yet.

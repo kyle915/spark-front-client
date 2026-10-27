@@ -52,7 +52,7 @@ export function reviewCheckCounts(
   };
 }
 
-/** Exhaustive status → chip tint. Dark ops chrome: lime pass, orange flag. */
+/** Exhaustive status → chip tint. Dark ops chrome: off-white pass, orange flag. */
 export function reviewCheckTint(status: ReviewCheckStatus): {
   color: string;
   background: string;
@@ -69,9 +69,9 @@ export function reviewCheckTint(status: ReviewCheckStatus): {
       };
     case "pass":
       return {
-        color: "#c5f546",
-        background: "rgba(197,245,70,0.10)",
-        border: "rgba(197,245,70,0.35)",
+        color: "#f2f3ee",
+        background: "rgba(242,243,238,0.08)",
+        border: "rgba(242,243,238,0.28)",
         mark: "✓",
       };
     case "na":
