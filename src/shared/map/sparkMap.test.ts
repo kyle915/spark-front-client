@@ -3,7 +3,7 @@ import { CARTO_DARK_TILE, STATUS_COLOR } from "./sparkMapTokens";
 
 describe("sparkMap tokens", () => {
   it("keeps Account Map status colors", () => {
-    expect(STATUS_COLOR.recent).toBe("#c5f546");
+    expect(STATUS_COLOR.recent).toBe("#f2f3ee");
     expect(STATUS_COLOR.scheduled).toBe("#5fb8ef");
     expect(STATUS_COLOR.unvisited).toBe("#ef5a2a");
   });

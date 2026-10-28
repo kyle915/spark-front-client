@@ -62,7 +62,7 @@ export default function ForgotPassword() {
       className="min-h-screen flex items-center justify-center p-4"
       style={{
         background:
-          "radial-gradient(circle at 20% 10%, rgba(197,245,70,0.18), transparent 55%), radial-gradient(circle at 80% 90%, rgba(95,184,239,0.10), transparent 55%), #0a0d09",
+          "radial-gradient(circle at 20% 10%, rgba(242,243,238,0.18), transparent 55%), radial-gradient(circle at 80% 90%, rgba(95,184,239,0.10), transparent 55%), #0a0d09",
       }}
     >
       <div
@@ -71,7 +71,7 @@ export default function ForgotPassword() {
           background: "#0A0B0D",
           minHeight: 680,
           boxShadow:
-            "0 60px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(214,243,95,0.15), 0 0 80px rgba(214,243,95,0.10)",
+            "0 60px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(242,243,238,0.15), 0 0 80px rgba(242,243,238,0.10)",
         }}
       >
         <div
@@ -95,7 +95,7 @@ export default function ForgotPassword() {
                 fontFamily: "var(--font-mono, monospace)",
                 fontSize: 10,
                 letterSpacing: "0.28em",
-                color: "#D6F35F",
+                color: "#f2f3ee",
                 textTransform: "uppercase",
                 textAlign: "center",
               }}
@@ -134,8 +134,8 @@ export default function ForgotPassword() {
               <div
                 className="rounded-xl p-4 text-center"
                 style={{
-                  background: "rgba(214,243,95,0.08)",
-                  border: "1px solid rgba(214,243,95,0.4)",
+                  background: "rgba(242,243,238,0.08)",
+                  border: "1px solid rgba(242,243,238,0.4)",
                 }}
               >
                 <p
@@ -143,7 +143,7 @@ export default function ForgotPassword() {
                     fontFamily: "var(--font-mono, monospace)",
                     fontSize: 10,
                     letterSpacing: "0.22em",
-                    color: "#D6F35F",
+                    color: "#f2f3ee",
                   }}
                 >
                   CHECK YOUR INBOX

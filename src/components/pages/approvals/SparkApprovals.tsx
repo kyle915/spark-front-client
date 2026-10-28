@@ -154,7 +154,7 @@ const ApprovalRow: React.FC<{
       onClick={onFocus}
       className={
         selected
-          ? "cursor-pointer transition-colors bg-[rgba(197,245,70,0.07)]"
+          ? "cursor-pointer transition-colors bg-[rgba(242,243,238,0.07)]"
           : focused
             ? "cursor-pointer transition-colors bg-[rgba(95,184,239,0.08)]"
             : zebra
@@ -1070,8 +1070,8 @@ const ApprovalsInner: React.FC = () => {
       style={{
         background: "rgba(17,20,14,0.92)",
         backdropFilter: "blur(10px)",
-        border: "1px solid rgba(197,245,70,0.35)",
-        boxShadow: "0 0 24px rgba(197,245,70,0.18)",
+        border: "1px solid rgba(242,243,238,0.35)",
+        boxShadow: "0 0 24px rgba(242,243,238,0.18)",
       }}
     >
       <span
@@ -1128,7 +1128,7 @@ const ApprovalsInner: React.FC = () => {
         style={{
           background: "var(--spark-lime)",
           color: "#0a0d09",
-          boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+          boxShadow: "0 0 18px rgba(242,243,238,0.35)",
           opacity: bulkBusy ? 0.5 : 1,
         }}
       >
@@ -1296,8 +1296,8 @@ const ApprovalsInner: React.FC = () => {
             <div
               className="mt-4 p-4 rounded-xl text-xs max-h-48 overflow-y-auto"
               style={{
-                background: "rgba(197,245,70,0.06)",
-                border: "1px solid rgba(197,245,70,0.18)",
+                background: "rgba(242,243,238,0.06)",
+                border: "1px solid rgba(242,243,238,0.18)",
                 color: "rgba(255,255,255,0.75)",
                 lineHeight: 1.5,
               }}
@@ -1352,7 +1352,7 @@ const ApprovalsInner: React.FC = () => {
                 style={{
                   background: "var(--spark-lime)",
                   color: "#0a0d09",
-                  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+                  boxShadow: "0 0 24px rgba(242,243,238,0.35)",
                   opacity: bulkBusy ? 0.5 : 1,
                 }}
               >
@@ -1516,8 +1516,8 @@ const ApprovalsInner: React.FC = () => {
             <div
               className="mt-4 p-4 rounded-xl text-xs"
               style={{
-                background: "rgba(197,245,70,0.06)",
-                border: "1px solid rgba(197,245,70,0.18)",
+                background: "rgba(242,243,238,0.06)",
+                border: "1px solid rgba(242,243,238,0.18)",
                 color: "rgba(255,255,255,0.75)",
                 lineHeight: 1.6,
               }}
@@ -1861,9 +1861,9 @@ export const ApprovalsBody: React.FC = () => {
         <div
           className="spark-card p-5"
           style={{
-            borderColor: "rgba(197,245,70,0.25)",
+            borderColor: "rgba(242,243,238,0.25)",
             background:
-              "linear-gradient(180deg, rgba(197,245,70,0.06), transparent)",
+              "linear-gradient(180deg, rgba(242,243,238,0.06), transparent)",
           }}
         >
           <p

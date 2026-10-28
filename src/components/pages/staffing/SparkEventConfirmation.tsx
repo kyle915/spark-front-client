@@ -237,8 +237,8 @@ const ConfirmationStatusChip: React.FC<{
   const tone =
     status === "Sent"
       ? {
-          background: "rgba(197,245,70,0.14)",
-          border: "1px solid rgba(197,245,70,0.4)",
+          background: "rgba(242,243,238,0.14)",
+          border: "1px solid rgba(242,243,238,0.4)",
           color: "var(--spark-lime)",
         }
       : status === "Error"

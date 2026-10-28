@@ -289,7 +289,7 @@ export default function EmailCampaignReportModal({
                 color: "#0a0d09",
                 boxShadow:
                   ready && !isSending
-                    ? "0 0 16px rgba(197,245,70,0.4)"
+                    ? "0 0 16px rgba(242,243,238,0.4)"
                     : "none",
               }}
             >

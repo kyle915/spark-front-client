@@ -673,9 +673,9 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                                   className="chip shrink-0 mono text-[9px]"
                                   style={{
                                     display: "inline-flex",
-                                    color: "var(--spark-lime, #c5f546)",
+                                    color: "var(--spark-lime, #f2f3ee)",
                                     border:
-                                      "1px solid rgba(197,245,70,0.45)",
+                                      "1px solid rgba(242,243,238,0.45)",
                                     letterSpacing: "0.1em",
                                   }}
                                 >
@@ -711,9 +711,9 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                       }}
                       className="mt-2 w-full text-left px-3 py-2 rounded-lg text-sm transition hover:bg-white/5"
                       style={{
-                        border: "1px dashed rgba(197,245,70,0.4)",
-                        color: "var(--spark-lime, #c5f546)",
-                        background: "rgba(197,245,70,0.04)",
+                        border: "1px dashed rgba(242,243,238,0.4)",
+                        color: "var(--spark-lime, #f2f3ee)",
+                        background: "rgba(242,243,238,0.04)",
                       }}
                     >
                       + New event
@@ -728,8 +728,8 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                     <div
                       className="mt-2 rounded-lg p-3 space-y-2"
                       style={{
-                        border: "1px dashed rgba(197,245,70,0.4)",
-                        background: "rgba(197,245,70,0.04)",
+                        border: "1px dashed rgba(242,243,238,0.4)",
+                        background: "rgba(242,243,238,0.04)",
                       }}
                     >
                       <p className="label-mini">New event</p>
@@ -900,7 +900,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                           disabled={isCreatingEvent}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
                           style={{
-                            background: "var(--spark-lime, #c5f546)",
+                            background: "var(--spark-lime, #f2f3ee)",
                             color: "#0a0d09",
                           }}
                           onClick={onCreateEvent}
@@ -934,7 +934,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                     borderRadius: 8,
                     background: "rgba(255,255,255,0.04)",
                     border: templateId
-                      ? "1px solid rgba(197,245,70,0.4)"
+                      ? "1px solid rgba(242,243,238,0.4)"
                       : "1px solid rgba(255,200,80,0.5)",
                     color: "#fff",
                   }}
@@ -949,7 +949,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                 {clientName ? (
                   <p
                     className="text-xs mt-1"
-                    style={{ color: "rgba(197,245,70,0.85)" }}
+                    style={{ color: "rgba(242,243,238,0.85)" }}
                   >
                     Recap fields from <b>{clientName}</b>’s template will be
                     used to map this PDF.
@@ -992,7 +992,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
                 {fileName && (
                   <p
                     className="text-xs mt-1"
-                    style={{ color: "rgba(197,245,70,0.85)" }}
+                    style={{ color: "rgba(242,243,238,0.85)" }}
                   >
                     {fileName}
                     {uploadPhase === "uploading"
@@ -1059,7 +1059,7 @@ const Inner: React.FC<Props> = ({ onClose, onImported }) => {
               !pickedFile
             }
             style={{
-              background: "var(--spark-lime, #c5f546)",
+              background: "var(--spark-lime, #f2f3ee)",
               color: "#0a0d09",
             }}
             onClick={onSubmit}

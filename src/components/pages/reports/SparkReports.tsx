@@ -33,7 +33,7 @@ ChartJS.register(
 );
 
 const SPARK_PALETTE = [
-  "#c5f546", // lime
+  "#f2f3ee", // lime
   "#5fb8ef", // sky
   "#a08bd9", // purple
   "#d6c45f", // gold
@@ -180,8 +180,8 @@ const EventsPerWeekChart: React.FC = () => {
       {
         label: "Requests created",
         data: values,
-        backgroundColor: "rgba(197,245,70,0.65)",
-        borderColor: "rgba(197,245,70,1)",
+        backgroundColor: "rgba(242,243,238,0.65)",
+        borderColor: "rgba(242,243,238,1)",
         borderWidth: 1,
         borderRadius: 6,
       },
@@ -422,8 +422,8 @@ const TopRetailersChart: React.FC = () => {
       {
         label: "Consumers sampled",
         data: values,
-        backgroundColor: "rgba(197,245,70,0.55)",
-        borderColor: "rgba(197,245,70,1)",
+        backgroundColor: "rgba(242,243,238,0.55)",
+        borderColor: "rgba(242,243,238,1)",
         borderWidth: 1,
         borderRadius: 6,
       },

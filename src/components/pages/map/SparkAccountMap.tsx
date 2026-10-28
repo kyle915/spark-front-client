@@ -404,7 +404,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
             style={{
               letterSpacing: "0.14em",
               color: "#0a0d09",
-              background: loadingRest ? "rgba(197,245,70,0.45)" : "var(--spark-lime)",
+              background: loadingRest ? "rgba(242,243,238,0.45)" : "var(--spark-lime)",
               borderRadius: 999,
               padding: "6px 12px",
             }}
@@ -786,7 +786,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                                 );
                               }}
                               style={{
-                                background: "#c5f546",
+                                background: "#f2f3ee",
                                 color: "#0a0d09",
                                 border: "none",
                                 padding: "10px 14px",
@@ -797,7 +797,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                                 fontSize: 14,
                                 cursor: "pointer",
                                 boxShadow:
-                                  "0 0 18px rgba(197,245,70,0.55)",
+                                  "0 0 18px rgba(242,243,238,0.55)",
                               }}
                             >
                               ✦ Schedule a visit

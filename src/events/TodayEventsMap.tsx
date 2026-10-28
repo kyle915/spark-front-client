@@ -194,8 +194,8 @@ const TodayEventsMap = () => {
                 center={center}
                 radius={radius}
                 pathOptions={{
-                  color: "#c5f546",
-                  fillColor: "#c5f546",
+                  color: "#f2f3ee",
+                  fillColor: "#f2f3ee",
                   fillOpacity: 0.08,
                 }}
               />

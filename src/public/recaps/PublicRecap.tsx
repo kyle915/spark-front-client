@@ -484,7 +484,7 @@ const PublicRecap: React.FC = () => {
                     i === 0
                       ? {
                           boxShadow:
-                            "0 8px 22px color-mix(in srgb, var(--recap-brand, #c5f546) 10%, transparent)",
+                            "0 8px 22px color-mix(in srgb, var(--recap-brand, #f2f3ee) 10%, transparent)",
                         }
                       : undefined
                   }

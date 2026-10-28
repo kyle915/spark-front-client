@@ -358,7 +358,7 @@ const ReceiptUpload: React.FC = () => {
           disabled={submitting || !file}
           className="w-full px-6 py-3.5 rounded-2xl text-base font-bold transition"
           style={{
-            background: "#c5f546",
+            background: "#f2f3ee",
             color: "#0a0d09",
             opacity: submitting || !file ? 0.5 : 1,
             fontFamily: "Georgia, serif",

@@ -48,17 +48,17 @@ const accentForOverall = (overall: string): string =>
  * amber-red (spark-orange), neutral / unknown → a muted neutral so it sits
  * quietly. Each tone carries its solid `text` color (for the quote glyph / chip
  * label) plus matching rgba `bg` / `border` tints — explicit rgba literals,
- * the same way <TenantKpiCharts> and the client dashboard tint their lime pills
- * (e.g. `rgba(197,245,70,0.08)`), rather than alpha-suffixing a CSS var.
+ * the same way <TenantKpiCharts> and the client dashboard tint their bone pills
+ * (e.g. `rgba(242,243,238,0.08)`), rather than alpha-suffixing a CSS var.
  */
 type TonePalette = { text: string; bg: string; border: string };
 
 const TONE_PALETTE: Record<string, TonePalette> = {
-  // lime #c5f546 → 197,245,70
+  // bone #f2f3ee → 242,243,238
   positive: {
     text: "var(--spark-lime)",
-    bg: "rgba(197,245,70,0.10)",
-    border: "rgba(197,245,70,0.30)",
+    bg: "rgba(242,243,238,0.10)",
+    border: "rgba(242,243,238,0.30)",
   },
   // orange #ef5a2a → 239,90,42 (restrained, not an alarm red)
   negative: {

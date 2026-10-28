@@ -97,7 +97,7 @@ const modeLabel = (mode: string): string =>
 
 const modeColor = (mode: string): string =>
   mode === "quantity"
-    ? "var(--spark-lime, #c5f546)"
+    ? "var(--spark-lime, #f2f3ee)"
     : mode === "sessions"
       ? "rgba(255,200,80,0.85)"
       : "rgba(255,255,255,0.4)";
@@ -340,7 +340,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           <div
             key={t.label}
             className="spark-card rounded-2xl px-4 py-3"
-            style={{ borderTop: "2px solid var(--spark-lime, #c5f546)" }}
+            style={{ borderTop: "2px solid var(--spark-lime, #f2f3ee)" }}
           >
             <p className="mono text-[9px]" style={eyebrow}>
               {t.label}
@@ -460,7 +460,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                     </div>
                   )}
                 </div>
-                <span className="mono text-[10px]" style={{ color: "var(--spark-lime, #c5f546)" }}>
+                <span className="mono text-[10px]" style={{ color: "var(--spark-lime, #f2f3ee)" }}>
                   {fmtDateTime(shift.startTime)}
                 </span>
               </li>
@@ -488,7 +488,7 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 : undefined
             }
             className="text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-40"
-            style={{ background: "var(--spark-lime, #c5f546)", color: "#0a0d09" }}
+            style={{ background: "var(--spark-lime, #f2f3ee)", color: "#0a0d09" }}
           >
             {summaryInFlight ? "Summarizing…" : "✦ Summarize with AI"}
           </button>
@@ -498,12 +498,12 @@ const ReportBody: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           <div
             className="rounded-xl p-3 mb-4 text-xs whitespace-pre-line"
             style={{
-              background: "rgba(197,245,70,0.06)",
-              border: "1px solid rgba(197,245,70,0.25)",
+              background: "rgba(242,243,238,0.06)",
+              border: "1px solid rgba(242,243,238,0.25)",
               color: "rgba(255,255,255,0.9)",
             }}
           >
-            <p className="mono text-[9px] mb-2" style={{ color: "var(--spark-lime, #c5f546)", letterSpacing: "0.1em" }}>
+            <p className="mono text-[9px] mb-2" style={{ color: "var(--spark-lime, #f2f3ee)", letterSpacing: "0.1em" }}>
               AI SUMMARY{summaryIsStale ? " · FROM A PREVIOUS WINDOW — RE-SUMMARIZE FOR THIS ONE" : ""}
             </p>
             {aiSummary}

@@ -103,7 +103,7 @@ export default function SparkFormLayout({
             className="hidden sm:inline mono text-[10px] ml-2"
             style={{
               letterSpacing: "0.18em",
-              color: "var(--spark-lime, #c5f546)",
+              color: "var(--spark-lime, #f2f3ee)",
             }}
           >
             REQUEST FORM

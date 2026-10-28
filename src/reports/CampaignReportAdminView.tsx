@@ -51,7 +51,7 @@ const ghostBtn: React.CSSProperties = {
 const limeBtn: React.CSSProperties = {
   background: "var(--spark-lime)",
   color: "#0a0d09",
-  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+  boxShadow: "0 0 24px rgba(242,243,238,0.35)",
 };
 
 type AiAnswerResult = {

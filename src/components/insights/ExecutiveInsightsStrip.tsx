@@ -227,6 +227,7 @@ const PulseCard: React.FC<{
   rangeLabel: string;
   comparisonPeriod: "month" | "quarter" | "year";
   chromeless?: boolean;
+  detail?: boolean;
   conv: ConvValue;
   cadence: CadenceValue;
   compare: CompareValue;
@@ -238,6 +239,7 @@ const PulseCard: React.FC<{
   rangeLabel,
   comparisonPeriod,
   chromeless = false,
+  detail = true,
   conv,
   cadence,
   compare,
@@ -449,6 +451,7 @@ const PulseCard: React.FC<{
         {oneLiner}
       </p>
 
+      {detail && (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Tile
           eyebrow="Retail + on-prem"
@@ -504,8 +507,9 @@ const PulseCard: React.FC<{
           accent="neutral"
         />
       </div>
+      )}
 
-      {topSkus.length > 0 && (
+      {detail && topSkus.length > 0 && (
         <div
           className="mt-4 pt-4"
           style={{ borderTop: "1px solid var(--spark-border)" }}
@@ -582,6 +586,8 @@ type PulseProps = {
   comparisonPeriod: "month" | "quarter" | "year";
   /** Skip outer spark-card when nested in a connected bento. */
   chromeless?: boolean;
+  /** False keeps just the one-liner; tiles and Top SKUs stay collapsed. */
+  detail?: boolean;
 };
 
 function useReported<T>(onSame: (prev: T, next: T) => boolean) {
@@ -669,6 +675,7 @@ function PulseQueries(props: PulseProps) {
             rangeLabel={props.rangeLabel}
             comparisonPeriod={comparisonPeriod}
             chromeless={props.chromeless}
+            detail={props.detail}
             conv={conv.slot.value}
             cadence={cadence.slot.value}
             compare={compare.slot.value}

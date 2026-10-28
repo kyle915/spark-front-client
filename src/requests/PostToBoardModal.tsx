@@ -158,8 +158,8 @@ export default function PostToBoardModal({
             <div
               className="rounded-xl p-4"
               style={{
-                background: "rgba(197,245,70,0.06)",
-                border: "1px solid rgba(197,245,70,0.3)",
+                background: "rgba(242,243,238,0.06)",
+                border: "1px solid rgba(242,243,238,0.3)",
               }}
             >
               <p
@@ -303,7 +303,7 @@ export default function PostToBoardModal({
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
                 boxShadow: canSubmit
-                  ? "0 0 16px rgba(197,245,70,0.35)"
+                  ? "0 0 16px rgba(242,243,238,0.35)"
                   : "none",
               }}
             >

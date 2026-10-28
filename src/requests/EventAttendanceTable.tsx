@@ -123,7 +123,7 @@ const Inner: React.FC<{ eventUuid: string; refreshKey: number; bump: () => void 
                 </td>
                 <td
                   className="py-2 pr-3 text-right mono"
-                  style={{ color: "var(--spark-lime, #c5f546)" }}
+                  style={{ color: "var(--spark-lime, #f2f3ee)" }}
                 >
                   {r.hoursOnSite != null ? r.hoursOnSite.toFixed(2) : "—"}
                 </td>

@@ -1104,7 +1104,7 @@ const SparkRequestInner: React.FC = () => {
                     style={{ background: "transparent" }}
                     onMouseEnter={(e) =>
                       (e.currentTarget.style.background =
-                        "rgba(197,245,70,0.06)")
+                        "rgba(242,243,238,0.06)")
                     }
                     onMouseLeave={(e) =>
                       (e.currentTarget.style.background = "transparent")
@@ -1202,11 +1202,11 @@ const SparkRequestInner: React.FC = () => {
                           style={{
                             letterSpacing: "0.14em",
                             background: selected
-                              ? "var(--spark-lime, #c5f546)"
+                              ? "var(--spark-lime, #f2f3ee)"
                               : "rgba(255,255,255,0.04)",
                             color: selected ? "#0a0d09" : "rgba(255,255,255,0.7)",
                             border: selected
-                              ? "1px solid var(--spark-lime, #c5f546)"
+                              ? "1px solid var(--spark-lime, #f2f3ee)"
                               : "1px solid rgba(255,255,255,0.1)",
                           }}
                         >
@@ -1464,7 +1464,7 @@ const SparkRequestInner: React.FC = () => {
                               }}
                               onMouseEnter={(e) => {
                                 (e.currentTarget as HTMLButtonElement).style.background =
-                                  "rgba(197,245,70,0.08)";
+                                  "rgba(242,243,238,0.08)";
                               }}
                               onMouseLeave={(e) => {
                                 (e.currentTarget as HTMLButtonElement).style.background =
@@ -1531,7 +1531,7 @@ const SparkRequestInner: React.FC = () => {
                               }}
                               onMouseEnter={(e) => {
                                 (e.currentTarget as HTMLButtonElement).style.background =
-                                  "rgba(197,245,70,0.08)";
+                                  "rgba(242,243,238,0.08)";
                               }}
                               onMouseLeave={(e) => {
                                 (e.currentTarget as HTMLButtonElement).style.background =
@@ -1583,8 +1583,8 @@ const SparkRequestInner: React.FC = () => {
             <div
               className="rounded-xl p-3 space-y-2"
               style={{
-                background: "rgba(197,245,70,0.06)",
-                border: "1px solid rgba(197,245,70,0.25)",
+                background: "rgba(242,243,238,0.06)",
+                border: "1px solid rgba(242,243,238,0.25)",
               }}
             >
               <p
@@ -1753,13 +1753,13 @@ const SparkRequestInner: React.FC = () => {
                     className="aspect-square rounded-xl relative overflow-hidden transition"
                     style={{
                       background: on
-                        ? "rgba(197,245,70,0.10)"
+                        ? "rgba(242,243,238,0.10)"
                         : "rgba(255,255,255,0.025)",
                       border: on
                         ? "2px solid var(--spark-lime)"
                         : "1px solid var(--spark-border)",
                       boxShadow: on
-                        ? "0 0 18px rgba(197,245,70,0.25)"
+                        ? "0 0 18px rgba(242,243,238,0.25)"
                         : "none",
                     }}
                     title={p.name}
@@ -1917,7 +1917,7 @@ const SparkRequestInner: React.FC = () => {
                 color: "#0a0d09",
                 boxShadow: !canSubmit
                   ? "none"
-                  : "0 0 24px rgba(197,245,70,0.35)",
+                  : "0 0 24px rgba(242,243,238,0.35)",
                 opacity: !canSubmit ? 0.5 : 1,
               }}
             >

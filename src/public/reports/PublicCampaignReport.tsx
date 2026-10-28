@@ -172,9 +172,9 @@ const PublicCampaignReport: React.FC = () => {
           rel="noreferrer"
           className="px-4 py-2 rounded-xl text-sm font-semibold"
           style={{
-            background: "var(--spark-lime, #c5f546)",
+            background: "var(--spark-lime, #f2f3ee)",
             color: "#0a0d09",
-            boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+            boxShadow: "0 0 24px rgba(242,243,238,0.35)",
             textDecoration: "none",
           }}
           title="Download this report as a PDF"

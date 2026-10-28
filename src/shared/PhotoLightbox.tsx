@@ -11,7 +11,7 @@ export type PhotoLightboxItem = {
 
 const C = {
   text: "var(--spark-text, #f2f3ee)",
-  lime: "var(--spark-lime, #c5f546)",
+  lime: "var(--spark-lime, #f2f3ee)",
   border: "var(--spark-border, #1f2418)",
   surface: "var(--spark-surface, #11140e)",
   muted: "rgba(255,255,255,0.55)",

@@ -511,8 +511,8 @@ const Inner: React.FC = () => {
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 display text-xl font-bold"
             style={{
-              background: "rgba(197,245,70,0.12)",
-              border: "1px solid rgba(197,245,70,0.3)",
+              background: "rgba(242,243,238,0.12)",
+              border: "1px solid rgba(242,243,238,0.3)",
               color: "var(--spark-lime)",
             }}
           >
@@ -545,7 +545,7 @@ const Inner: React.FC = () => {
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+              boxShadow: "0 0 18px rgba(242,243,238,0.35)",
               opacity: busy !== "idle" ? 0.5 : 1,
             }}
           >
@@ -822,11 +822,11 @@ const Inner: React.FC = () => {
               className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 display text-xl font-bold"
               style={{
                 background: allClean
-                  ? "rgba(197,245,70,0.12)"
+                  ? "rgba(242,243,238,0.12)"
                   : "rgba(239,90,42,0.12)",
                 border: `1px solid ${
                   allClean
-                    ? "rgba(197,245,70,0.3)"
+                    ? "rgba(242,243,238,0.3)"
                     : "rgba(239,90,42,0.3)"
                 }`,
                 color: allClean
@@ -896,7 +896,7 @@ const Inner: React.FC = () => {
                   style={{
                     background: "var(--spark-lime)",
                     color: "#0a0d09",
-                    boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                    boxShadow: "0 0 18px rgba(242,243,238,0.35)",
                     opacity:
                       busy !== "idle" || successCount === 0 ? 0.5 : 1,
                   }}
@@ -1015,7 +1015,7 @@ const Inner: React.FC = () => {
               <div
                 className="px-4 py-2 flex items-center justify-between"
                 style={{
-                  background: "rgba(197,245,70,0.06)",
+                  background: "rgba(242,243,238,0.06)",
                   borderBottom: "1px solid var(--spark-border)",
                 }}
               >
@@ -1053,8 +1053,8 @@ const Inner: React.FC = () => {
                       className="mono text-[10px] shrink-0 px-2 py-0.5 rounded-md"
                       style={{
                         letterSpacing: "0.12em",
-                        background: "rgba(197,245,70,0.12)",
-                        border: "1px solid rgba(197,245,70,0.3)",
+                        background: "rgba(242,243,238,0.12)",
+                        border: "1px solid rgba(242,243,238,0.3)",
                         color: "var(--spark-lime)",
                       }}
                     >

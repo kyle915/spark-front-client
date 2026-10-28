@@ -563,7 +563,7 @@ const TrackerTable: React.FC<{
                       letterSpacing: "0.16em",
                       fontSize: 11,
                       color: "var(--spark-lime)",
-                      background: "rgba(197,245,70,0.04)",
+                      background: "rgba(242,243,238,0.04)",
                       borderTop: "1px solid var(--spark-border)",
                       borderBottom: "1px solid var(--spark-border)",
                     }}
@@ -615,7 +615,7 @@ const TrackerTable: React.FC<{
                 <tr
                   className={
                     selected
-                      ? "cursor-pointer transition-colors bg-[rgba(197,245,70,0.07)] hover:bg-[rgba(197,245,70,0.12)]"
+                      ? "cursor-pointer transition-colors bg-[rgba(242,243,238,0.07)] hover:bg-[rgba(242,243,238,0.12)]"
                       : zebra
                         ? "cursor-pointer transition-colors bg-white/[0.04] hover:bg-white/[0.09]"
                         : "cursor-pointer transition-colors hover:bg-white/[0.09]"
@@ -723,7 +723,7 @@ const TrackerTable: React.FC<{
                         className="block mono text-[9px] mt-1 truncate max-w-[160px]"
                         style={{
                           letterSpacing: "0.1em",
-                          color: "rgba(197,245,70,0.75)",
+                          color: "rgba(242,243,238,0.75)",
                         }}
                         title={`Plan: ${r.planName}`}
                       >
@@ -2188,8 +2188,8 @@ export default function MasterTracker() {
           <div
             className="spark-card px-4 py-3 flex flex-wrap items-center justify-between gap-2"
             style={{
-              borderColor: "rgba(197,245,70,0.35)",
-              background: "rgba(197,245,70,0.06)",
+              borderColor: "rgba(242,243,238,0.35)",
+              background: "rgba(242,243,238,0.06)",
             }}
           >
             <p

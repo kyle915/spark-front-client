@@ -305,7 +305,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
                 ))}
                 <th
                   className="text-right py-2 pl-3 font-semibold"
-                  style={{ color: "var(--spark-lime, #c5f546)" }}
+                  style={{ color: "var(--spark-lime, #f2f3ee)" }}
                 >
                   All markets
                 </th>
@@ -343,7 +343,7 @@ const MetroBreakdownCard: React.FC<Props> = ({ tenantId }) => {
                     })}
                     <td
                       className="text-right py-2 pl-3 tabular-nums font-semibold"
-                      style={{ color: "var(--spark-lime, #c5f546)" }}
+                      style={{ color: "var(--spark-lime, #f2f3ee)" }}
                     >
                       {fmtNum(total)}
                     </td>

@@ -139,9 +139,9 @@ const StatTile: React.FC<{
     className="rounded-xl p-3"
     style={{
       background: highlight
-        ? "rgba(197,245,70,0.08)"
+        ? "rgba(242,243,238,0.08)"
         : "rgba(255,255,255,0.03)",
-      border: `1px solid ${highlight ? "rgba(197,245,70,0.30)" : "var(--spark-border)"}`,
+      border: `1px solid ${highlight ? "rgba(242,243,238,0.30)" : "var(--spark-border)"}`,
     }}
   >
     <p

@@ -169,11 +169,11 @@ const mapPathGen = geoPath(mapProjection);
 
 /* ─────────────────────── color ramp ─────────────────────── */
 
-// Muted base (a dark spark-surface tone) → bright spark-lime accent. We
+// Muted base (a dark spark-surface tone) → bright spark accent. We
 // interpolate the two rgb triples by value/max — no d3-scale needed. States
 // with no data render in EMPTY_FILL (a neutral, near-invisible fill).
-const RAMP_BASE: [number, number, number] = [34, 41, 26]; // muted lime-tinted dark
-const RAMP_ACCENT: [number, number, number] = [197, 245, 70]; // var(--spark-lime)
+const RAMP_BASE: [number, number, number] = [32, 34, 30]; // muted neutral dark
+const RAMP_ACCENT: [number, number, number] = [242, 243, 238]; // var(--spark-lime)
 const EMPTY_FILL = "rgba(255,255,255,0.045)";
 const STROKE = "#0a0d09"; // var(--spark-bg) — thin separators between states
 

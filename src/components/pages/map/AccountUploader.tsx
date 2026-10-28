@@ -118,8 +118,8 @@ export const AccountUploader: React.FC<{
       className="rounded-2xl p-5 transition"
       style={{
         background:
-          "linear-gradient(180deg, rgba(197,245,70,0.06), transparent)",
-        border: "1px dashed rgba(197,245,70,0.35)",
+          "linear-gradient(180deg, rgba(242,243,238,0.06), transparent)",
+        border: "1px dashed rgba(242,243,238,0.35)",
       }}
       onDragOver={(e) => {
         e.preventDefault();
@@ -186,7 +186,7 @@ export const AccountUploader: React.FC<{
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+              boxShadow: "0 0 18px rgba(242,243,238,0.35)",
               opacity: busy ? 0.5 : 1,
             }}
           >

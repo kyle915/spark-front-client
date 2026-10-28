@@ -33,7 +33,7 @@ export const UpdateBanner: React.FC = () => {
         padding: "10px 14px 10px 18px",
         borderRadius: 12,
         background: "rgba(18,20,16,0.96)",
-        border: "1px solid var(--spark-lime, #c5f546)",
+        border: "1px solid var(--spark-lime, #f2f3ee)",
         boxShadow: "0 8px 30px rgba(0,0,0,0.45)",
         color: "rgba(255,255,255,0.92)",
         fontSize: 14,
@@ -54,7 +54,7 @@ export const UpdateBanner: React.FC = () => {
           borderRadius: 8,
           border: "none",
           cursor: "pointer",
-          background: "var(--spark-lime, #c5f546)",
+          background: "var(--spark-lime, #f2f3ee)",
           color: "#0a0d09",
           whiteSpace: "nowrap",
         }}

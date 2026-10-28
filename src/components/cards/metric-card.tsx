@@ -112,7 +112,7 @@ export function MetricCard({
             style={{
               background:
                 tone === "lime"
-                  ? "rgba(197,245,70,0.12)"
+                  ? "rgba(242,243,238,0.12)"
                   : tone === "orange"
                     ? "rgba(239,90,42,0.12)"
                     : "rgba(255,255,255,0.04)",

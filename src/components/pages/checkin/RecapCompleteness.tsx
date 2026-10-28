@@ -137,7 +137,7 @@ export function PhotoQualityWarnings({
                 minHeight: 48,
                 borderRadius: 10,
                 border: "none",
-                background: "#c5f546",
+                background: "#f2f3ee",
                 color: "#0A0B0D",
                 fontSize: 14,
                 fontWeight: 700,

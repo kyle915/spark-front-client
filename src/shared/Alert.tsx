@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAlertStore, type Alert } from "@store/alertStore";
 
 const TONE: Record<Alert["type"], { border: string; accent: string }> = {
-  success: { border: "rgba(197,245,70,0.35)", accent: "var(--spark-lime)" },
+  success: { border: "rgba(242,243,238,0.35)", accent: "var(--spark-lime)" },
   error: {
     border: "rgba(239,90,42,0.45)",
     accent: "var(--spark-orange, #ef5a2a)",

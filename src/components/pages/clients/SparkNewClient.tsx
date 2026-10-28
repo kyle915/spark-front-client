@@ -116,7 +116,7 @@ export default function SparkNewClient() {
   const [draft, setDraft] = useState<Draft>({
     name: "",
     slug: "",
-    brandColor: "#c5f546",
+    brandColor: "#f2f3ee",
     logoUrl: "",
     donorTemplateId: "",
     newTemplateName: "",

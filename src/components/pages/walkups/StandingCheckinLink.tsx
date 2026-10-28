@@ -146,9 +146,9 @@ const StandingCheckinLink: React.FC = () => {
                 className="rounded-xl p-3"
                 style={{
                   border: isActive
-                    ? "1px solid rgba(197,245,70,0.55)"
+                    ? "1px solid rgba(242,243,238,0.55)"
                     : "1px solid var(--spark-border)",
-                  background: isActive ? "rgba(197,245,70,0.06)" : "transparent",
+                  background: isActive ? "rgba(242,243,238,0.06)" : "transparent",
                 }}
               >
                 <div className="flex items-start justify-between gap-3 flex-wrap">

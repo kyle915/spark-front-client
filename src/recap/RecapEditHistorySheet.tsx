@@ -65,7 +65,7 @@ export function RecapEditHistorySheet({
                         {change.oldValue ?? "—"}
                       </span>
                       {" → "}
-                      <span style={{ color: "var(--spark-lime, #c5f546)" }}>
+                      <span style={{ color: "var(--spark-lime, #f2f3ee)" }}>
                         {change.newValue ?? "—"}
                       </span>
                     </div>

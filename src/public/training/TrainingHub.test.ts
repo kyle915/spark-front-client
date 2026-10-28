@@ -20,7 +20,7 @@ describe("training hub tenant skin", () => {
     const theme = trainingHubTheme("Torch THC");
     expect(theme.isLiquidDeath).toBe(false);
     expect(theme.bg).toBe("#0A0B0D");
-    expect(theme.accent).toBe("#c5f546");
+    expect(theme.accent).toBe("#f2f3ee");
     expect(theme.displayFont).toContain("Space Grotesk");
     expect(theme.text).not.toBe("#F4EFE3");
   });

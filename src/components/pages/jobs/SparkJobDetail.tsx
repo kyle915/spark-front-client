@@ -684,7 +684,7 @@ const BABriefingCard: React.FC<{
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
                 opacity: inFlight || !dirty ? 0.5 : 1,
-                boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+                boxShadow: "0 0 24px rgba(242,243,238,0.35)",
               }}
             >
               {inFlight ? "Saving…" : "Save briefing"}
@@ -1402,7 +1402,7 @@ const PostJobModal: React.FC<{
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
                 boxShadow:
-                  valid && !posting ? "0 0 16px rgba(197,245,70,0.35)" : "none",
+                  valid && !posting ? "0 0 16px rgba(242,243,238,0.35)" : "none",
               }}
             >
               {posting ? "Posting…" : "📣 Post job"}
@@ -1667,7 +1667,7 @@ const EditJobModal: React.FC<{
               background: "var(--spark-lime)",
               color: "#0a0d09",
               boxShadow:
-                valid && !saving ? "0 0 16px rgba(197,245,70,0.35)" : "none",
+                valid && !saving ? "0 0 16px rgba(242,243,238,0.35)" : "none",
             }}
           >
             {saving ? "Saving…" : "Save changes"}
@@ -1910,7 +1910,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 style={{
                   background: "var(--spark-lime)",
                   color: "#0a0d09",
-                  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+                  boxShadow: "0 0 24px rgba(242,243,238,0.35)",
                 }}
               >
                 📣 Post job
@@ -1921,9 +1921,9 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
                 className="px-3 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-1.5"
                 title="This job is live to BAs on the job board"
                 style={{
-                  background: "rgba(197,245,70,0.12)",
+                  background: "rgba(242,243,238,0.12)",
                   color: "var(--spark-lime)",
-                  border: "1px solid rgba(197,245,70,0.35)",
+                  border: "1px solid rgba(242,243,238,0.35)",
                 }}
               >
                 <span style={{ fontSize: "0.7rem" }}>●</span> Live to BAs
@@ -1965,7 +1965,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
               style={{
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
-                boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+                boxShadow: "0 0 24px rgba(242,243,238,0.35)",
               }}
             >
               ⤴ Share job link

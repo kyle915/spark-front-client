@@ -70,9 +70,9 @@ const overdueChipStyle = (
     };
   }
   return {
-    background: "rgba(197,245,70,0.08)",
+    background: "rgba(242,243,238,0.08)",
     color: "var(--spark-lime)",
-    border: "1px solid rgba(197,245,70,0.25)",
+    border: "1px solid rgba(242,243,238,0.25)",
     label: `OVERDUE ${hoursOverdue}h`,
   };
 };
@@ -330,8 +330,8 @@ const Inner: React.FC<{ tenantId: string | null; lookbackDays: number }> = ({
         <div
           className="flex items-center gap-3 flex-wrap px-4 py-3 rounded-xl"
           style={{
-            background: "rgba(197,245,70,0.08)",
-            border: "1px solid rgba(197,245,70,0.28)",
+            background: "rgba(242,243,238,0.08)",
+            border: "1px solid rgba(242,243,238,0.28)",
           }}
         >
           <span

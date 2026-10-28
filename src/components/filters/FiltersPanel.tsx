@@ -205,7 +205,7 @@ export default function FiltersPanel({ onApplyFilters }: FiltersPanelProps) {
           <div className="flex items-center gap-3">
             <div
               className="p-2 rounded-lg"
-              style={{ background: "rgba(197,245,70,0.10)" }}
+              style={{ background: "rgba(242,243,238,0.10)" }}
             >
               <Funnel size={18} style={{ color: "var(--spark-lime)" }} />
             </div>
@@ -315,9 +315,9 @@ export default function FiltersPanel({ onApplyFilters }: FiltersPanelProps) {
                 type="button"
                 className="px-4 py-2 rounded-xl text-sm font-semibold"
                 style={{
-                  background: "rgba(197,245,70,0.14)",
+                  background: "rgba(242,243,238,0.14)",
                   color: "var(--spark-lime)",
-                  border: "1px solid rgba(197,245,70,0.35)",
+                  border: "1px solid rgba(242,243,238,0.35)",
                 }}
                 onClick={handleApply}
               >

@@ -118,7 +118,7 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
           <div
             key={t.label}
             className="spark-card rounded-2xl px-4 py-3"
-            style={{ borderTop: "2px solid var(--spark-lime, #c5f546)" }}
+            style={{ borderTop: "2px solid var(--spark-lime, #f2f3ee)" }}
           >
             <p
               className="mono text-[9px]"
@@ -151,7 +151,7 @@ const Table: React.FC<{ tenantId: string; start: string; end: string }> = ({
           disabled={rows.length === 0}
           className="text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-50"
           style={{
-            background: "var(--spark-lime, #c5f546)",
+            background: "var(--spark-lime, #f2f3ee)",
             color: "#0a0d09",
           }}
         >

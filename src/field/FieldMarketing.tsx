@@ -695,7 +695,7 @@ export default function FieldMarketing() {
           </p>
         ) : null}
         {notice ? (
-          <p className="text-sm" style={{ color: "var(--spark-lime, #c5f546)" }}>
+          <p className="text-sm" style={{ color: "var(--spark-lime, #f2f3ee)" }}>
             {notice}
           </p>
         ) : null}
@@ -1048,7 +1048,7 @@ export default function FieldMarketing() {
                           <Link
                             to={`/request/view/${row.requestUuid}`}
                             className="inline-block px-2 py-0.5 rounded border border-white/10 hover:border-white/30"
-                            style={{ color: "#c5f546" }}
+                            style={{ color: "#f2f3ee" }}
                             title="Open the request"
                           >
                             {rowStatus(row)} ↗
@@ -1060,7 +1060,7 @@ export default function FieldMarketing() {
                               color: row.requestCancelled
                                 ? ORANGE
                                 : row.status === "submitted"
-                                  ? "#c5f546"
+                                  ? "#f2f3ee"
                                   : hasLogged(row)
                                     ? "rgba(255,255,255,0.7)"
                                     : "rgba(255,255,255,0.55)",
@@ -1078,12 +1078,12 @@ export default function FieldMarketing() {
                             className="block mt-1 mono text-[10px] px-2 py-0.5 rounded-full"
                             style={{
                               letterSpacing: "0.08em",
-                              color: row.resultsCounted ? "#c5f546" : "#ef5a2a",
+                              color: row.resultsCounted ? "#f2f3ee" : "#ef5a2a",
                               background: row.resultsCounted
-                                ? "rgba(197,245,70,0.10)"
+                                ? "rgba(242,243,238,0.10)"
                                 : "rgba(239,90,42,0.10)",
                               border: row.resultsCounted
-                                ? "1px solid rgba(197,245,70,0.3)"
+                                ? "1px solid rgba(242,243,238,0.3)"
                                 : "1px solid rgba(239,90,42,0.3)",
                             }}
                             onClick={() => setResultsFor(row)}

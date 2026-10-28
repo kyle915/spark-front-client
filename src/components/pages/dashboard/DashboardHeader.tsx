@@ -38,9 +38,9 @@ const DashboardHeader = ({ quarterLabel, title }: DashboardHeaderProps) => {
           href="/#performance"
           className="px-3 py-2 rounded-xl text-sm font-semibold"
           style={{
-            background: "rgba(197,245,70,0.10)",
+            background: "rgba(242,243,238,0.10)",
             color: "var(--spark-lime)",
-            border: "1px solid rgba(197,245,70,0.35)",
+            border: "1px solid rgba(242,243,238,0.35)",
             textDecoration: "none",
           }}
         >

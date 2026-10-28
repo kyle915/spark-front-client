@@ -809,7 +809,7 @@ export default function SparkRecapCreate() {
               className={inputCls}
               style={{
                 border: templateId
-                  ? "1px solid rgba(197,245,70,0.4)"
+                  ? "1px solid rgba(242,243,238,0.4)"
                   : "1px solid rgba(255,200,80,0.5)",
               }}
             >
@@ -822,7 +822,7 @@ export default function SparkRecapCreate() {
             </select>
           </label>
           {selectedTemplate ? (
-            <p className="text-xs mt-1" style={{ color: "rgba(197,245,70,0.85)" }}>
+            <p className="text-xs mt-1" style={{ color: "rgba(242,243,238,0.85)" }}>
               Filing against{" "}
               <b>{selectedTemplate.tenant?.name ?? "this client"}</b>’s{" "}
               <b>{selectedTemplate.name}</b> ·{" "}
@@ -1274,7 +1274,7 @@ export default function SparkRecapCreate() {
           style={{
             background: "var(--spark-lime)",
             color: "#0a0d09",
-            boxShadow: "0 0 24px rgba(197,245,70,0.4)",
+            boxShadow: "0 0 24px rgba(242,243,238,0.4)",
             opacity: submitting || !canSubmit ? 0.5 : 1,
           }}
         >

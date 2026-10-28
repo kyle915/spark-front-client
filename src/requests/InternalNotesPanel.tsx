@@ -411,7 +411,7 @@ export const InternalNotesPanel: React.FC<{
                   background: "transparent",
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(197,245,70,0.06)")
+                  (e.currentTarget.style.background = "rgba(242,243,238,0.06)")
                 }
                 onMouseLeave={(e) =>
                   (e.currentTarget.style.background = "transparent")
@@ -451,7 +451,7 @@ export const InternalNotesPanel: React.FC<{
             color: "#0a0d09",
             boxShadow:
               draft.trim() || shipmentMode
-                ? "0 0 12px rgba(197,245,70,0.35)"
+                ? "0 0 12px rgba(242,243,238,0.35)"
                 : "none",
             opacity: draft.trim() || shipmentMode ? 1 : 0.4,
           }}
@@ -498,8 +498,8 @@ export const InternalNotesPanel: React.FC<{
                   <div
                     className="mt-2 p-2 rounded-lg"
                     style={{
-                      background: "rgba(197,245,70,0.06)",
-                      border: "1px solid rgba(197,245,70,0.25)",
+                      background: "rgba(242,243,238,0.06)",
+                      border: "1px solid rgba(242,243,238,0.25)",
                     }}
                   >
                     <p className="text-xs font-semibold">{n.shipment.label}</p>

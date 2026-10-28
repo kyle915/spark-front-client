@@ -945,7 +945,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+              boxShadow: "0 0 18px rgba(242,243,238,0.35)",
               opacity: busy ? 0.5 : 1,
             }}
           >
@@ -1091,7 +1091,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 16px rgba(197,245,70,0.35)",
+              boxShadow: "0 0 16px rgba(242,243,238,0.35)",
             }}
             title="Invite a brand ambassador to this shift — they'll get a push on their phone"
           >
@@ -1485,7 +1485,7 @@ const Inner: React.FC<{ uuid: string; from: string }> = ({ uuid, from }) => {
                 style={{
                   background: "var(--spark-lime)",
                   color: "#0a0d09",
-                  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+                  boxShadow: "0 0 24px rgba(242,243,238,0.35)",
                   opacity: busy ? 0.5 : 1,
                 }}
               >
@@ -1798,7 +1798,7 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
                 className="h-32 relative overflow-hidden"
                 style={{
                   background:
-                    "radial-gradient(circle at 50% 50%, rgba(197,245,70,0.10), transparent 70%)",
+                    "radial-gradient(circle at 50% 50%, rgba(242,243,238,0.10), transparent 70%)",
                 }}
               >
                 {hero ? (
@@ -1832,9 +1832,9 @@ const FieldReportsPanel: React.FC<{ request: FieldReportsRequest }> = ({
                       letterSpacing: "0.14em",
                       padding: "2px 6px",
                       borderRadius: 999,
-                      background: "rgba(197,245,70,0.15)",
+                      background: "rgba(242,243,238,0.15)",
                       color: "var(--spark-lime)",
-                      border: "1px solid rgba(197,245,70,0.35)",
+                      border: "1px solid rgba(242,243,238,0.35)",
                     }}
                   >
                     ◉ {fileCount} FILE{fileCount === 1 ? "" : "S"}

@@ -608,7 +608,7 @@ export const CommandPalette: React.FC = () => {
                         }}
                         style={{
                           background: on
-                            ? "rgba(197,245,70,0.08)"
+                            ? "rgba(242,243,238,0.08)"
                             : "transparent",
                           color: on ? "var(--spark-lime)" : "var(--spark-text)",
                           borderRadius: 0,
@@ -619,7 +619,7 @@ export const CommandPalette: React.FC = () => {
                           aria-hidden
                           style={{
                             color: on
-                              ? "rgba(197,245,70,0.55)"
+                              ? "rgba(242,243,238,0.55)"
                               : "rgba(255,255,255,0.28)",
                           }}
                         >
@@ -643,7 +643,7 @@ export const CommandPalette: React.FC = () => {
                             style={{
                               letterSpacing: "0.14em",
                               color: on
-                                ? "rgba(197,245,70,0.65)"
+                                ? "rgba(242,243,238,0.65)"
                                 : "rgba(255,255,255,0.4)",
                             }}
                           >

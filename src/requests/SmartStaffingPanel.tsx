@@ -218,7 +218,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
                 style={{
                   borderBottom: "1px solid rgba(255,255,255,0.04)",
                   cursor: locked ? "default" : "pointer",
-                  background: checked ? "rgba(197,245,70,0.06)" : "transparent",
+                  background: checked ? "rgba(242,243,238,0.06)" : "transparent",
                   opacity: locked ? 0.55 : 1,
                 }}
               >
@@ -240,7 +240,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
                   style={{
                     width: 32,
                     height: 32,
-                    background: "rgba(197,245,70,0.10)",
+                    background: "rgba(242,243,238,0.10)",
                     color: "var(--spark-lime)",
                     fontSize: 12,
                   }}
@@ -277,8 +277,8 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
                         style={{
                           letterSpacing: "0.16em",
                           color: "var(--spark-lime)",
-                          background: "rgba(197,245,70,0.10)",
-                          border: "1px solid rgba(197,245,70,0.30)",
+                          background: "rgba(242,243,238,0.10)",
+                          border: "1px solid rgba(242,243,238,0.30)",
                           padding: "1px 6px",
                           borderRadius: 999,
                         }}
@@ -330,7 +330,7 @@ const Inner: React.FC<{ eventId: string; eventLabel: string }> = ({
                 color: "#0a0d09",
                 boxShadow:
                   selectedCount > 0
-                    ? "0 0 16px rgba(197,245,70,0.35)"
+                    ? "0 0 16px rgba(242,243,238,0.35)"
                     : "none",
               }}
             >

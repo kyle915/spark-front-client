@@ -60,11 +60,11 @@ export type AiChart = {
 };
 
 // Dark-theme palette, reused across series in order. Mirrors the workspace
-// chart colors used by TenantKpiCharts (sky / purple / lime / gold).
+// chart colors used by TenantKpiCharts (sky / purple / bone / gold).
 const PALETTE = [
   "rgba(95,184,239,0.85)", // sky
   "rgb(109,78,195)", // purple
-  "rgb(197,245,70)", // lime
+  "rgb(242,243,238)", // bone
   "rgba(244,196,84,0.9)", // gold
   "rgba(239,116,116,0.85)", // coral
 ];

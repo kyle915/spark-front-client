@@ -376,7 +376,7 @@ const CampaignUpload: React.FC = () => {
             <div
               className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-bold"
               style={{
-                background: pick(brandVars, "--color-primary", "#c5f546"),
+                background: pick(brandVars, "--color-primary", "#f2f3ee"),
                 color: pick(brandVars, "--color-primary-content", "#0a0d09"),
               }}
             >
@@ -544,7 +544,7 @@ const CampaignUpload: React.FC = () => {
           disabled={submitting || !file || !payoutHandle.trim()}
           className="w-full px-6 py-3.5 rounded-2xl text-base font-bold transition"
           style={{
-            background: pick(brandVars, "--color-primary", "#c5f546"),
+            background: pick(brandVars, "--color-primary", "#f2f3ee"),
             color: pick(brandVars, "--color-primary-content", "#0a0d09"),
             opacity: submitting || !file || !payoutHandle.trim() ? 0.5 : 1,
             fontFamily: "Georgia, serif",

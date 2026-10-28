@@ -111,7 +111,7 @@ const RecipientPicker: React.FC<{
                 <label
                   key={g.uuid}
                   className="flex items-center gap-2 px-3 py-2 cursor-pointer text-sm"
-                  style={{ background: checked ? "rgba(197,245,70,0.08)" : undefined }}
+                  style={{ background: checked ? "rgba(242,243,238,0.08)" : undefined }}
                 >
                   <input
                     type="checkbox"
@@ -147,7 +147,7 @@ const RecipientPicker: React.FC<{
               <label
                 key={b.uuid}
                 className="flex items-center gap-2 px-3 py-2 cursor-pointer text-sm"
-                style={{ background: checked ? "rgba(197,245,70,0.08)" : undefined }}
+                style={{ background: checked ? "rgba(242,243,238,0.08)" : undefined }}
               >
                 <input
                   type="checkbox"

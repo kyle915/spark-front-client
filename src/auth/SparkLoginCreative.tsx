@@ -36,7 +36,6 @@ const WORDS = [
 
 const WORD_INTERVAL_MS = 2400;
 
-const LIME = "#D6F35F";
 const BONE = "#F5F2EC";
 const ORANGE = "#FF5A1F";
 
@@ -88,13 +87,13 @@ export default function SparkLoginCreative(_props: Props) {
     >
       {/* ---------- Atmosphere ---------- */}
 
-      {/* Drifting lime grid, masked to a soft center ellipse */}
+      {/* Drifting hairline grid, masked to a soft center ellipse */}
       <div
         style={{
           position: "absolute",
           inset: 0,
           backgroundImage:
-            "linear-gradient(rgba(214,243,95,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(214,243,95,0.06) 1px, transparent 1px)",
+            "linear-gradient(rgba(242,243,238,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(242,243,238,0.06) 1px, transparent 1px)",
           backgroundSize: "56px 56px",
           animation: "spk-grid-drift 32s linear infinite",
           maskImage:
@@ -104,7 +103,7 @@ export default function SparkLoginCreative(_props: Props) {
           pointerEvents: "none",
         }}
       />
-      {/* Glow A — lime, upper left */}
+      {/* Glow A — bone, upper left */}
       <div
         style={{
           position: "absolute",
@@ -113,7 +112,7 @@ export default function SparkLoginCreative(_props: Props) {
           width: "80%",
           height: "70%",
           background:
-            "radial-gradient(ellipse, rgba(214,243,95,0.30), transparent 65%)",
+            "radial-gradient(ellipse, rgba(242,243,238,0.10), transparent 65%)",
           filter: "blur(30px)",
           animation: "spk-glow-a 22s ease-in-out infinite",
           pointerEvents: "none",
@@ -146,9 +145,9 @@ export default function SparkLoginCreative(_props: Props) {
             width: 3,
             height: 3,
             borderRadius: 999,
-            background: LIME,
+            background: BONE,
             opacity: 0.4,
-            boxShadow: `0 0 6px ${LIME}`,
+            boxShadow: `0 0 6px ${BONE}`,
             animation: `spk-pulse ${2 + (i % 5) * 0.4}s ease-in-out infinite`,
             animationDelay: i * 0.18 + "s",
             pointerEvents: "none",
@@ -168,7 +167,7 @@ export default function SparkLoginCreative(_props: Props) {
           fontWeight: 900,
           lineHeight: 0.85,
           letterSpacing: "-0.06em",
-          color: "rgba(214,243,95,0.045)",
+          color: "rgba(242,243,238,0.045)",
           textTransform: "uppercase",
           animation: "spk-stencil-pan 30s ease-in-out infinite alternate",
           pointerEvents: "none",
@@ -191,9 +190,9 @@ export default function SparkLoginCreative(_props: Props) {
             [v]: 32,
             [h]: 32,
             [v === "top" ? "borderTop" : "borderBottom"]:
-              "1px solid rgba(214,243,95,0.3)",
+              "1px solid rgba(242,243,238,0.3)",
             [h === "left" ? "borderLeft" : "borderRight"]:
-              "1px solid rgba(214,243,95,0.3)",
+              "1px solid rgba(242,243,238,0.3)",
           }}
         />
       ))}
@@ -224,7 +223,7 @@ export default function SparkLoginCreative(_props: Props) {
             style={{
               height: 42,
               width: "auto",
-              filter: "drop-shadow(0 0 18px rgba(214,243,95,0.45))",
+              filter: "drop-shadow(0 0 18px rgba(242,243,238,0.18))",
             }}
           />
         </div>
@@ -252,8 +251,8 @@ export default function SparkLoginCreative(_props: Props) {
                 width: 6,
                 height: 6,
                 borderRadius: 999,
-                background: LIME,
-                boxShadow: `0 0 8px ${LIME}`,
+                background: BONE,
+                boxShadow: `0 0 8px ${BONE}`,
                 animation: "spk-pulse 1.6s infinite",
                 flexShrink: 0,
               }}
@@ -294,7 +293,7 @@ export default function SparkLoginCreative(_props: Props) {
                   fontFamily: "var(--font-mono)",
                   fontSize: 13,
                   fontWeight: 700,
-                  color: LIME,
+                  color: BONE,
                   lineHeight: 1,
                 }}
               >
@@ -305,7 +304,7 @@ export default function SparkLoginCreative(_props: Props) {
                   width: 1,
                   flex: 1,
                   background:
-                    "linear-gradient(180deg, rgba(214,243,95,0.55), rgba(214,243,95,0.05))",
+                    "linear-gradient(180deg, rgba(242,243,238,0.55), rgba(242,243,238,0.05))",
                 }}
               />
               <span
@@ -346,11 +345,11 @@ export default function SparkLoginCreative(_props: Props) {
                         fontSize: "clamp(34px, 3.6vw, 58px)",
                         lineHeight: 1.05,
                         letterSpacing: "-0.04em",
-                        color: LIME,
+                        color: BONE,
                         fontStyle: "italic",
                         textWrap: "balance",
                         textShadow:
-                          "0 0 60px rgba(214,243,95,0.5), 0 0 18px rgba(214,243,95,0.28)",
+                          "0 0 60px rgba(242,243,238,0.22), 0 0 18px rgba(242,243,238,0.12)",
                         opacity: isActive ? 1 : 0,
                         transform: isActive
                           ? "translateY(0)"
@@ -361,7 +360,7 @@ export default function SparkLoginCreative(_props: Props) {
                         // while the incoming one eases up. The artboard
                         // used a symmetric 600ms cross-fade at ±26%, but
                         // at our clamped sizes that leaves both lines lit
-                        // at 50% for a beat, and the heavy lime glow turns
+                        // at 50% for a beat, and the heavy bone glow turns
                         // the overlap into a smear. Same motion language,
                         // just no double-exposure.
                         transition: isActive
@@ -387,9 +386,9 @@ export default function SparkLoginCreative(_props: Props) {
                   key={idx}
                   style={{
                     height: "100%",
-                    background: LIME,
+                    background: BONE,
                     transformOrigin: "left center",
-                    boxShadow: "0 0 10px rgba(214,243,95,0.6)",
+                    boxShadow: "0 0 10px rgba(242,243,238,0.35)",
                     animation: `spk-prog ${WORD_INTERVAL_MS}ms linear forwards`,
                   }}
                 />
@@ -411,7 +410,7 @@ export default function SparkLoginCreative(_props: Props) {
           </div>
         </div>
 
-        {/* Stat ledger — hairline grid, lime figures */}
+        {/* Stat ledger — hairline grid, bone figures */}
         <div
           style={{
             display: "grid",
@@ -432,7 +431,7 @@ export default function SparkLoginCreative(_props: Props) {
                   fontFamily: "var(--font-mono)",
                   fontWeight: 700,
                   fontSize: 24,
-                  color: LIME,
+                  color: BONE,
                   letterSpacing: "-0.01em",
                 }}
               >

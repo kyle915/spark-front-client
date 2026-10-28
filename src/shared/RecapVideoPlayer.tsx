@@ -102,7 +102,7 @@ export function RecapVideoPlayer({
                 rel="noreferrer"
                 className="mt-4 inline-block rounded-xl px-4 py-2 text-sm font-semibold"
                 style={{
-                  background: "var(--spark-lime, #c5f546)",
+                  background: "var(--spark-lime, #f2f3ee)",
                   color: "#0a0d09",
                   textDecoration: "none",
                 }}

@@ -217,7 +217,7 @@ const Inner: React.FC = () => {
           style={{
             background: "var(--spark-lime)",
             color: "#0a0d09",
-            boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+            boxShadow: "0 0 24px rgba(242,243,238,0.35)",
           }}
         >
           + New template
@@ -1073,7 +1073,7 @@ const ManageFieldsModal: React.FC<{
                 color: "#0a0d09",
                 boxShadow: addDisabled
                   ? "none"
-                  : "0 0 16px rgba(197,245,70,0.30)",
+                  : "0 0 16px rgba(242,243,238,0.30)",
               }}
             >
               {isCreating ? "Adding…" : "+ Add field"}

@@ -285,7 +285,7 @@ const Inner: React.FC<{ apiKey: string | undefined }> = ({ apiKey }) => {
                 pins={mappable.map((s) => ({
                   id: s.uuid,
                   position: s.coords!,
-                  color: "#c5f546",
+                  color: "#f2f3ee",
                   title: s.name,
                   onClick: () => setOpenKey(s.uuid),
                 }))}

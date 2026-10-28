@@ -213,11 +213,11 @@ export default function ShareRecapsBulkModal({
               className="px-3 py-2 rounded-xl text-sm font-semibold transition"
               style={{
                 background: copied
-                  ? "rgba(197,245,70,0.15)"
+                  ? "rgba(242,243,238,0.15)"
                   : "transparent",
                 color: copied ? "var(--spark-lime)" : "var(--spark-text)",
                 border: `1px solid ${
-                  copied ? "rgba(197,245,70,0.4)" : "var(--spark-border)"
+                  copied ? "rgba(242,243,238,0.4)" : "var(--spark-border)"
                 }`,
               }}
             >
@@ -297,8 +297,8 @@ export default function ShareRecapsBulkModal({
               <div
                 className="rounded-xl p-4 text-sm"
                 style={{
-                  background: "rgba(197,245,70,0.08)",
-                  border: "1px solid rgba(197,245,70,0.3)",
+                  background: "rgba(242,243,238,0.08)",
+                  border: "1px solid rgba(242,243,238,0.3)",
                   color: "var(--spark-lime)",
                 }}
               >
@@ -347,7 +347,7 @@ export default function ShareRecapsBulkModal({
                 color: "#0a0d09",
                 boxShadow:
                   recipientsRaw.trim().length > 0 && !overCap
-                    ? "0 0 16px rgba(197,245,70,0.35)"
+                    ? "0 0 16px rgba(242,243,238,0.35)"
                     : "none",
               }}
             >

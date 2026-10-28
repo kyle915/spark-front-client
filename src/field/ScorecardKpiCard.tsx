@@ -48,7 +48,7 @@ export default function ScorecardKpiCard({
         <span
           style={{
             color: hasActual
-              ? "var(--spark-lime, #c5f546)"
+              ? "var(--spark-lime, #f2f3ee)"
               : "rgba(255,255,255,0.35)",
           }}
         >
@@ -81,7 +81,7 @@ export default function ScorecardKpiCard({
               className="h-full rounded-full transition-[width] duration-500"
               style={{
                 width: `${Math.min(100, pct)}%`,
-                background: "var(--spark-lime, #c5f546)",
+                background: "var(--spark-lime, #f2f3ee)",
                 minWidth: hasActual && (kpi.logged ?? 0) > 0 ? 4 : 0,
               }}
             />

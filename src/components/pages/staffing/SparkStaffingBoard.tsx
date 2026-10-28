@@ -166,7 +166,7 @@ const BulkBaPicker: React.FC<{
                   style={{
                     width: 28,
                     height: 28,
-                    background: "rgba(197,245,70,0.15)",
+                    background: "rgba(242,243,238,0.15)",
                     color: "var(--spark-lime)",
                   }}
                 >
@@ -342,8 +342,8 @@ const Inner: React.FC<{
             letterSpacing: "0.14em",
             color: unstaffed > 0 ? "var(--spark-orange)" : "var(--spark-lime)",
             background:
-              unstaffed > 0 ? "rgba(239,90,42,0.12)" : "rgba(197,245,70,0.1)",
-            border: `1px solid ${unstaffed > 0 ? "rgba(239,90,42,0.35)" : "rgba(197,245,70,0.3)"}`,
+              unstaffed > 0 ? "rgba(239,90,42,0.12)" : "rgba(242,243,238,0.1)",
+            border: `1px solid ${unstaffed > 0 ? "rgba(239,90,42,0.35)" : "rgba(242,243,238,0.3)"}`,
             padding: "3px 10px",
             borderRadius: 999,
           }}
@@ -366,7 +366,7 @@ const Inner: React.FC<{
             padding: "4px 12px",
             color: bulkMode ? "#0a0d09" : "var(--spark-lime)",
             background: bulkMode ? "var(--spark-lime)" : "transparent",
-            border: `1px solid ${bulkMode ? "var(--spark-lime)" : "rgba(197,245,70,0.35)"}`,
+            border: `1px solid ${bulkMode ? "var(--spark-lime)" : "rgba(242,243,238,0.35)"}`,
           }}
         >
           {bulkMode ? "✕ EXIT BULK" : "⊕ BULK ASSIGN"}
@@ -379,9 +379,9 @@ const Inner: React.FC<{
           style={{
             color: banner.ok ? "var(--spark-lime)" : "var(--spark-orange)",
             background: banner.ok
-              ? "rgba(197,245,70,0.1)"
+              ? "rgba(242,243,238,0.1)"
               : "rgba(239,90,42,0.1)",
-            border: `1px solid ${banner.ok ? "rgba(197,245,70,0.3)" : "rgba(239,90,42,0.3)"}`,
+            border: `1px solid ${banner.ok ? "rgba(242,243,238,0.3)" : "rgba(239,90,42,0.3)"}`,
           }}
         >
           {banner.text}
@@ -479,15 +479,15 @@ const Inner: React.FC<{
                             className="rounded-lg p-1.5"
                             style={{
                               background: isSel
-                                ? "rgba(197,245,70,0.18)"
+                                ? "rgba(242,243,238,0.18)"
                                 : s.isStaffed
-                                  ? "rgba(197,245,70,0.06)"
+                                  ? "rgba(242,243,238,0.06)"
                                   : "rgba(239,90,42,0.06)",
                               border: `1px solid ${
                                 isSel
                                   ? "var(--spark-lime)"
                                   : s.isStaffed
-                                    ? "rgba(197,245,70,0.2)"
+                                    ? "rgba(242,243,238,0.2)"
                                     : "rgba(239,90,42,0.25)"
                               }`,
                             }}
@@ -545,16 +545,16 @@ const Inner: React.FC<{
                                 background: bulkMode
                                   ? isSel
                                     ? "var(--spark-lime)"
-                                    : "rgba(197,245,70,0.1)"
+                                    : "rgba(242,243,238,0.1)"
                                   : s.isStaffed
                                     ? "transparent"
-                                    : "rgba(197,245,70,0.1)",
+                                    : "rgba(242,243,238,0.1)",
                                 border: `1px solid ${
                                   bulkMode
-                                    ? "rgba(197,245,70,0.4)"
+                                    ? "rgba(242,243,238,0.4)"
                                     : s.isStaffed
                                       ? "var(--spark-border)"
-                                      : "rgba(197,245,70,0.3)"
+                                      : "rgba(242,243,238,0.3)"
                                 }`,
                               }}
                             >

@@ -203,7 +203,7 @@ export default function FormDatePicker<T extends FieldValues>({
               style={
                 {
                   color: "var(--spark-text, #f2f3ee)",
-                  "--color-accent": "#c5f546",
+                  "--color-accent": "#f2f3ee",
                   "--color-text-on-accent": "#0a0b0d",
                 } as React.CSSProperties
               }

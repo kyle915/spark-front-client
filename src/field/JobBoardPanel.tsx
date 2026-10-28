@@ -93,7 +93,7 @@ const CANCEL_BOOKING = `
 `;
 
 const MUTED = "rgba(255,255,255,0.45)";
-const LIME = "var(--spark-lime, #c5f546)";
+const LIME = "var(--spark-lime, #f2f3ee)";
 const ORANGE = "var(--spark-orange, #ef5a2a)";
 
 function startsOnLabel(iso: string | null): string {
@@ -359,7 +359,7 @@ export default function JobBoardPanel({ tenantId }: { tenantId: string | null | 
                   <span
                     className="mono text-[11px] px-2 py-1 rounded"
                     style={{
-                      background: full ? "rgba(239,90,42,0.14)" : "rgba(197,245,70,0.12)",
+                      background: full ? "rgba(239,90,42,0.14)" : "rgba(242,243,238,0.12)",
                       color: full ? ORANGE : LIME,
                     }}
                   >
@@ -382,7 +382,7 @@ export default function JobBoardPanel({ tenantId }: { tenantId: string | null | 
                   onSave={(value) => void saveGig(gig, { publicNotes: value })}
                 />
                 {gig.bookings.length ? (
-                  <ul className="space-y-1 pl-3" style={{ borderLeft: "2px solid rgba(197,245,70,0.35)" }}>
+                  <ul className="space-y-1 pl-3" style={{ borderLeft: "2px solid rgba(242,243,238,0.35)" }}>
                     {gig.bookings.map((b) => (
                       <li key={b.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                         <span className="font-semibold">{b.name}</span>
