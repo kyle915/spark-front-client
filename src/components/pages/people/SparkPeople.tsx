@@ -842,7 +842,7 @@ const Inner: React.FC<{
               style={{
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
-                boxShadow: "0 0 20px rgba(197,245,70,0.35)",
+                boxShadow: "0 0 20px rgba(242,243,238,0.35)",
               }}
             >
               + Invite admin
@@ -941,7 +941,7 @@ const Inner: React.FC<{
                 style={{
                   background: "var(--spark-lime)",
                   color: "#0a0d09",
-                  boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                  boxShadow: "0 0 18px rgba(242,243,238,0.35)",
                   opacity: recapEmailsInFlight || !recapDirty ? 0.5 : 1,
                 }}
               >
@@ -997,7 +997,7 @@ const Inner: React.FC<{
                     ? "var(--spark-lime)"
                     : "var(--spark-surface-2)",
                   boxShadow: reportEnabled
-                    ? "0 0 14px rgba(197,245,70,0.35)"
+                    ? "0 0 14px rgba(242,243,238,0.35)"
                     : "none",
                   cursor: reportEnabledInFlight ? "default" : "pointer",
                   opacity: reportEnabledInFlight ? 0.6 : 1,
@@ -1101,7 +1101,7 @@ const Inner: React.FC<{
                     ? "var(--spark-lime)"
                     : "var(--spark-surface-2)",
                   boxShadow: digestEnabled
-                    ? "0 0 14px rgba(197,245,70,0.35)"
+                    ? "0 0 14px rgba(242,243,238,0.35)"
                     : "none",
                   cursor: digestEnabledInFlight ? "default" : "pointer",
                   opacity: digestEnabledInFlight ? 0.6 : 1,
@@ -1574,7 +1574,7 @@ const InviteModal: React.FC<{
               style={{
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
-                boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                boxShadow: "0 0 18px rgba(242,243,238,0.35)",
                 opacity: bulkBusy ? 0.6 : 1,
               }}
             >
@@ -1688,7 +1688,7 @@ const BulkResults: React.FC<{
           style={{
             background: "var(--spark-lime)",
             color: "#0a0d09",
-            boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+            boxShadow: "0 0 18px rgba(242,243,238,0.35)",
           }}
         >
           Done

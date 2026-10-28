@@ -234,7 +234,7 @@ const inputStyle: React.CSSProperties = {
 const limeButton: React.CSSProperties = {
   background: "var(--spark-lime)",
   color: "#0a0d09",
-  boxShadow: "0 0 16px rgba(197,245,70,0.3)",
+  boxShadow: "0 0 16px rgba(242,243,238,0.3)",
 };
 
 const ghostButton: React.CSSProperties = {
@@ -1012,7 +1012,7 @@ const ReceiptCard: React.FC<{
           style={{
             minHeight: 160,
             background:
-              "radial-gradient(circle at 50% 50%, rgba(197,245,70,0.08), transparent 70%)",
+              "radial-gradient(circle at 50% 50%, rgba(242,243,238,0.08), transparent 70%)",
             borderRight: "1px solid var(--spark-border)",
           }}
         >

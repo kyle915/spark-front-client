@@ -55,7 +55,7 @@ export default function ActivationPlanPipelineStrip({
                   width: `${fill * 100}%`,
                   height: "100%",
                   background:
-                    i >= 3 ? "var(--spark-lime)" : "rgba(197,245,70,0.55)",
+                    i >= 3 ? "var(--spark-lime)" : "rgba(242,243,238,0.55)",
                 }}
               />
             </div>

@@ -115,15 +115,15 @@ export function trainingHubTheme(
       "'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
     bg: "#0A0B0D",
     text: "#F2F3EE",
-    accent: "#c5f546",
-    secondary: "#c5f546",
+    accent: "#f2f3ee",
+    secondary: "#f2f3ee",
     muted: "rgba(242,243,238,0.55)",
     cardBg: "#11140e",
     cardBorder: "rgba(255,255,255,0.08)",
     description: "rgba(242,243,238,0.72)",
-    buttonBg: "#c5f546",
+    buttonBg: "#f2f3ee",
     buttonColor: "#0A0B0D",
-    videoButtonBg: "#c5f546",
+    videoButtonBg: "#f2f3ee",
   };
 }
 

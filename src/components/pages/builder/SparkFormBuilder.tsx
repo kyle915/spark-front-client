@@ -169,9 +169,9 @@ const FieldRow: React.FC<{
         className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer"
         style={{
           background: field.required
-            ? "rgba(197,245,70,0.10)"
+            ? "rgba(242,243,238,0.10)"
             : "transparent",
-          border: `1px solid ${field.required ? "rgba(197,245,70,0.4)" : "var(--spark-border)"}`,
+          border: `1px solid ${field.required ? "rgba(242,243,238,0.4)" : "var(--spark-border)"}`,
           color: field.required ? "var(--spark-lime)" : "rgba(255,255,255,0.65)",
           fontSize: "0.75rem",
           fontFamily: "JetBrains Mono, monospace",
@@ -531,7 +531,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 20px rgba(197,245,70,0.35)",
+              boxShadow: "0 0 20px rgba(242,243,238,0.35)",
               opacity: busy ? 0.6 : 1,
             }}
           >
@@ -620,9 +620,9 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 className="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer text-sm"
                 style={{
                   background: draft.internal
-                    ? "rgba(197,245,70,0.10)"
+                    ? "rgba(242,243,238,0.10)"
                     : "rgba(255,255,255,0.025)",
-                  border: `1px solid ${draft.internal ? "rgba(197,245,70,0.4)" : "var(--spark-border)"}`,
+                  border: `1px solid ${draft.internal ? "rgba(242,243,238,0.4)" : "var(--spark-border)"}`,
                 }}
               >
                 <input
@@ -737,7 +737,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               style={{
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
-                boxShadow: "0 0 14px rgba(197,245,70,0.25)",
+                boxShadow: "0 0 14px rgba(242,243,238,0.25)",
                 opacity: busy ? 0.6 : 1,
               }}
             >

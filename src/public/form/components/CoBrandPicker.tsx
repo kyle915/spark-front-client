@@ -5,7 +5,7 @@ import type { CoBrandSelection } from "./coBrandPayload";
 
 const pill = (active: boolean) => ({
   letterSpacing: "0.18em",
-  background: active ? "var(--spark-lime, #c5f546)" : "rgba(255,255,255,0.05)",
+  background: active ? "var(--spark-lime, #f2f3ee)" : "rgba(255,255,255,0.05)",
   color: active ? "#0a0d09" : "rgba(255,255,255,0.75)",
   border: "1px solid rgba(255,255,255,0.1)",
 });
@@ -130,9 +130,9 @@ function CoBrandSkus({
               onClick={() => toggle(p.id)}
               className="rounded-2xl overflow-hidden text-left transition"
               style={{
-                background: active ? "rgba(197,245,70,0.1)" : "var(--spark-surface-2, #161a12)",
+                background: active ? "rgba(242,243,238,0.1)" : "var(--spark-surface-2, #161a12)",
                 border: active
-                  ? "2px solid var(--spark-lime, #c5f546)"
+                  ? "2px solid var(--spark-lime, #f2f3ee)"
                   : "1px solid var(--spark-border, #1f2418)",
               }}
             >

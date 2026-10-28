@@ -29,8 +29,8 @@ type TrailPoint = {
   source: string;
 };
 
-const TRAIL_LIME = "#c5f546";
-const TRAIL_LIME_TRANSLUCENT = "rgba(197,245,70,0.35)";
+const TRAIL_LIME = "#f2f3ee";
+const TRAIL_LIME_TRANSLUCENT = "rgba(242,243,238,0.35)";
 
 const fmtTimeLabel = (raw: string): string => {
   try {

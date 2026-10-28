@@ -328,14 +328,14 @@ const Tile: React.FC<{
     style={{
       background: accent
         ? accent.includes("lime")
-          ? "rgba(197,245,70,0.08)"
+          ? "rgba(242,243,238,0.08)"
           : accent.includes("orange")
             ? "rgba(239,90,42,0.10)"
             : "rgba(255,255,255,0.03)"
         : "rgba(255,255,255,0.03)",
       border: `1px solid ${
         accent?.includes("lime")
-          ? "rgba(197,245,70,0.30)"
+          ? "rgba(242,243,238,0.30)"
           : accent?.includes("orange")
             ? "rgba(239,90,42,0.35)"
             : "var(--spark-border)"

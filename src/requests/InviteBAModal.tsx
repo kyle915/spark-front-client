@@ -152,7 +152,7 @@ const SuggestionsInner: React.FC<{
               borderTop: "1px solid rgba(255,255,255,0.04)",
               cursor: invited || busy ? "default" : "pointer",
               background: invited
-                ? "rgba(197,245,70,0.04)"
+                ? "rgba(242,243,238,0.04)"
                 : "transparent",
               opacity: invited ? 0.7 : 1,
             }}
@@ -175,7 +175,7 @@ const SuggestionsInner: React.FC<{
               style={{
                 width: 32,
                 height: 32,
-                background: "rgba(197,245,70,0.10)",
+                background: "rgba(242,243,238,0.10)",
                 color: "var(--spark-lime)",
                 fontSize: 12,
               }}
@@ -756,7 +756,7 @@ const Inner: React.FC<{
                   borderBottom: "1px solid var(--spark-border)",
                   cursor: row.alreadyInvited || busy ? "default" : "pointer",
                   background: checked
-                    ? "rgba(197,245,70,0.06)"
+                    ? "rgba(242,243,238,0.06)"
                     : "transparent",
                 }}
               >
@@ -778,7 +778,7 @@ const Inner: React.FC<{
                   style={{
                     width: 32,
                     height: 32,
-                    background: "rgba(197,245,70,0.10)",
+                    background: "rgba(242,243,238,0.10)",
                     color: "var(--spark-lime)",
                     fontSize: 12,
                   }}
@@ -840,8 +840,8 @@ const Inner: React.FC<{
                         style={{
                           letterSpacing: "0.16em",
                           color: "var(--spark-lime)",
-                          background: "rgba(197,245,70,0.10)",
-                          border: "1px solid rgba(197,245,70,0.30)",
+                          background: "rgba(242,243,238,0.10)",
+                          border: "1px solid rgba(242,243,238,0.30)",
                           padding: "1px 6px",
                           borderRadius: 999,
                         }}
@@ -923,7 +923,7 @@ const Inner: React.FC<{
                 color: "#0a0d09",
                 boxShadow:
                   selectedIds.size > 0
-                    ? "0 0 16px rgba(197,245,70,0.35)"
+                    ? "0 0 16px rgba(242,243,238,0.35)"
                     : "none",
               }}
             >

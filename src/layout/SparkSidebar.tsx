@@ -667,7 +667,7 @@ export const SparkSidebar: React.FC = () => {
               <span
                 className="w-5 h-5 rounded-sm text-[10px] font-bold flex items-center justify-center shrink-0"
                 style={{
-                  background: "rgba(197,245,70,0.15)",
+                  background: "rgba(242,243,238,0.15)",
                   color: "var(--spark-lime)",
                 }}
               >

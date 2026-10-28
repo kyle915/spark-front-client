@@ -46,7 +46,7 @@ export function RecapClientSignoff({
             disabled={approving}
             onClick={onApprove}
             className="mt-3 px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
-            style={{ background: "var(--spark-lime, #c5f546)", color: "#0a0d09" }}
+            style={{ background: "var(--spark-lime, #f2f3ee)", color: "#0a0d09" }}
           >
             {approving ? "Approving…" : "Approve recap"}
           </button>
@@ -66,7 +66,7 @@ export function RecapClientSignoff({
     return (
       <div
         className="spark-card p-5"
-        style={{ borderColor: "color-mix(in srgb, var(--recap-brand, #c5f546) 40%, transparent)" }}
+        style={{ borderColor: "color-mix(in srgb, var(--recap-brand, #f2f3ee) 40%, transparent)" }}
       >
         <p
           className="mono text-[10px]"

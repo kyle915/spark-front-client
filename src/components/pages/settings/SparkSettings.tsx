@@ -340,8 +340,8 @@ export default function SparkSettings() {
                     <span
                       className="mono w-8 h-8 rounded-lg flex items-center justify-center"
                       style={{
-                        background: "rgba(197,245,70,0.10)",
-                        border: "1px solid rgba(197,245,70,0.25)",
+                        background: "rgba(242,243,238,0.10)",
+                        border: "1px solid rgba(242,243,238,0.25)",
                         color: "var(--spark-lime)",
                       }}
                     >

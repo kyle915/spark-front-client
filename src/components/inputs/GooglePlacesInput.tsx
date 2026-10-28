@@ -569,7 +569,7 @@ export default function GooglePlacesInput({
               onMouseEnter={(e) =>
                 (e.currentTarget.style.background = light
                   ? "#f3f4f6"
-                  : "rgba(197,245,70,0.06)")
+                  : "rgba(242,243,238,0.06)")
               }
               onMouseLeave={(e) =>
                 (e.currentTarget.style.background = "transparent")
@@ -619,12 +619,12 @@ export default function GooglePlacesInput({
                 borderTop: light
                   ? "1px solid #e5e7eb"
                   : "1px solid rgba(255,255,255,0.06)",
-                color: light ? "#166534" : "var(--spark-lime, #c5f546)",
+                color: light ? "#166534" : "var(--spark-lime, #f2f3ee)",
               }}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.background = light
                   ? "#ecfdf5"
-                  : "rgba(197,245,70,0.08)")
+                  : "rgba(242,243,238,0.08)")
               }
               onMouseLeave={(e) =>
                 (e.currentTarget.style.background = light

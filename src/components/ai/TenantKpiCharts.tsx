@@ -329,7 +329,9 @@ const TenantKpiCharts: React.FC<{
   tenantId: string;
   /** Honest label when a page-level range does not drive this year API. */
   scopeNote?: string;
-}> = ({ tenantId, scopeNote }) => {
+  /** Skip outer spark-card when nested in a connected bento. */
+  chromeless?: boolean;
+}> = ({ tenantId, scopeNote, chromeless = false }) => {
   const yearOptions = useYearOptions();
   // Default = This year (current calendar year). The selected value drives the
   // query variable below, so changing it refetches via useLazyLoadQuery.
@@ -466,7 +468,10 @@ const TenantKpiCharts: React.FC<{
   );
 
   return (
-    <div className="spark-card p-6 lg:p-8" style={{ borderRadius: 22 }}>
+    <div
+      className={chromeless ? undefined : "spark-card p-6 lg:p-8"}
+      style={chromeless ? undefined : { borderRadius: 22 }}
+    >
       <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
         <h2
           className="display text-lg lg:text-xl font-bold"

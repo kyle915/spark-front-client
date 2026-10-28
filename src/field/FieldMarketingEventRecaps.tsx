@@ -355,7 +355,7 @@ export default function FieldMarketingEventRecaps({
                       <a
                         href={recapUrl(row)}
                         className="text-xs underline-offset-2 hover:underline"
-                        style={{ color: "var(--spark-lime, #c5f546)" }}
+                        style={{ color: "var(--spark-lime, #f2f3ee)" }}
                       >
                         Open recap
                       </a>

@@ -207,8 +207,8 @@ const Inner: React.FC<{
           style={{
             letterSpacing: "0.12em",
             color: "var(--spark-lime)",
-            background: "rgba(197,245,70,0.1)",
-            border: "1px solid rgba(197,245,70,0.3)",
+            background: "rgba(242,243,238,0.1)",
+            border: "1px solid rgba(242,243,238,0.3)",
             padding: "4px 12px",
             borderRadius: 999,
           }}

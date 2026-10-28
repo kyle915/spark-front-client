@@ -707,7 +707,7 @@ function ExpressFormBody() {
             className="mono text-[10px]"
             style={{
               letterSpacing: "0.22em",
-              color: "var(--spark-lime, #c5f546)",
+              color: "var(--spark-lime, #f2f3ee)",
             }}
           >
             REQUEST A TEAM
@@ -734,7 +734,7 @@ function ExpressFormBody() {
             className="rounded-xl p-4 flex flex-wrap items-center gap-3"
             style={{
               background: "var(--spark-surface, #11140e)",
-              border: "1px solid var(--spark-lime, #c5f546)",
+              border: "1px solid var(--spark-lime, #f2f3ee)",
             }}
             role="status"
           >
@@ -757,7 +757,7 @@ function ExpressFormBody() {
               type="button"
               onClick={resumeDraft}
               className="px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: "var(--spark-lime, #c5f546)", color: "#0a0d09" }}
+              style={{ background: "var(--spark-lime, #f2f3ee)", color: "#0a0d09" }}
             >
               Resume
             </button>
@@ -827,7 +827,7 @@ function ExpressFormBody() {
                   className="mono text-[10px] mt-1"
                   style={{
                     letterSpacing: "0.16em",
-                    color: retailerId ? "var(--spark-lime, #c5f546)" : "rgba(255,255,255,0.45)",
+                    color: retailerId ? "var(--spark-lime, #f2f3ee)" : "rgba(255,255,255,0.45)",
                   }}
                 >
                   {retailerId
@@ -961,11 +961,11 @@ function ExpressFormBody() {
                       style={{
                         letterSpacing: "0.14em",
                         background: selected
-                          ? "var(--spark-lime, #c5f546)"
+                          ? "var(--spark-lime, #f2f3ee)"
                           : "rgba(255,255,255,0.04)",
                         color: selected ? "#0a0d09" : "rgba(255,255,255,0.7)",
                         border: selected
-                          ? "1px solid var(--spark-lime, #c5f546)"
+                          ? "1px solid var(--spark-lime, #f2f3ee)"
                           : "1px solid rgba(255,255,255,0.1)",
                       }}
                     >
@@ -1004,7 +1004,7 @@ function ExpressFormBody() {
             type="button"
             onClick={() => setExtraDates([...extraDates, ""])}
             className="mono text-[11px] px-3 py-2 rounded-xl"
-            style={{ letterSpacing: "0.18em", background: "rgba(197,245,70,0.1)", color: "var(--spark-lime, #c5f546)", border: "1px dashed rgba(197,245,70,0.35)" }}
+            style={{ letterSpacing: "0.18em", background: "rgba(242,243,238,0.1)", color: "var(--spark-lime, #f2f3ee)", border: "1px dashed rgba(242,243,238,0.35)" }}
           >
             + ANOTHER VISIT AT THIS VENUE
           </button>
@@ -1055,10 +1055,10 @@ function ExpressFormBody() {
                     className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition"
                     style={{
                       background: selected
-                        ? "rgba(197,245,70,0.1)"
+                        ? "rgba(242,243,238,0.1)"
                         : "var(--spark-surface-2, #161a12)",
                       border: selected
-                        ? "2px solid var(--spark-lime, #c5f546)"
+                        ? "2px solid var(--spark-lime, #f2f3ee)"
                         : "1px solid var(--spark-border, #1f2418)",
                     }}
                   >
@@ -1068,7 +1068,7 @@ function ExpressFormBody() {
                         width: 16,
                         height: 16,
                         border: selected
-                          ? "5px solid var(--spark-lime, #c5f546)"
+                          ? "5px solid var(--spark-lime, #f2f3ee)"
                           : "2px solid rgba(255,255,255,0.3)",
                         background: selected ? "#0a0d09" : "transparent",
                       }}
@@ -1188,7 +1188,7 @@ function ExpressFormBody() {
                 className="mono text-[10px] px-3 py-1.5 rounded-full"
                 style={{
                   letterSpacing: "0.18em",
-                  background: selectedProductTypeId === null ? "var(--spark-lime, #c5f546)" : "rgba(255,255,255,0.05)",
+                  background: selectedProductTypeId === null ? "var(--spark-lime, #f2f3ee)" : "rgba(255,255,255,0.05)",
                   color: selectedProductTypeId === null ? "#0a0d09" : "rgba(255,255,255,0.7)",
                   border: "1px solid rgba(255,255,255,0.1)",
                 }}
@@ -1203,7 +1203,7 @@ function ExpressFormBody() {
                   className="mono text-[10px] px-3 py-1.5 rounded-full"
                   style={{
                     letterSpacing: "0.18em",
-                    background: selectedProductTypeId === pt.id ? "var(--spark-lime, #c5f546)" : "rgba(255,255,255,0.05)",
+                    background: selectedProductTypeId === pt.id ? "var(--spark-lime, #f2f3ee)" : "rgba(255,255,255,0.05)",
                     color: selectedProductTypeId === pt.id ? "#0a0d09" : "rgba(255,255,255,0.7)",
                     border: "1px solid rgba(255,255,255,0.1)",
                   }}
@@ -1223,9 +1223,9 @@ function ExpressFormBody() {
                   onClick={() => toggleProduct(p.id)}
                   className="rounded-2xl overflow-hidden text-left transition"
                   style={{
-                    background: selected ? "rgba(197,245,70,0.1)" : "var(--spark-surface-2, #161a12)",
-                    border: selected ? "2px solid var(--spark-lime, #c5f546)" : "1px solid var(--spark-border, #1f2418)",
-                    boxShadow: selected ? "0 0 18px rgba(197,245,70,0.25)" : "none",
+                    background: selected ? "rgba(242,243,238,0.1)" : "var(--spark-surface-2, #161a12)",
+                    border: selected ? "2px solid var(--spark-lime, #f2f3ee)" : "1px solid var(--spark-border, #1f2418)",
+                    boxShadow: selected ? "0 0 18px rgba(242,243,238,0.25)" : "none",
                   }}
                 >
                   <div className="relative w-full aspect-square" style={{ background: "rgba(255,255,255,0.04)" }}>
@@ -1300,10 +1300,10 @@ function ExpressFormBody() {
                       className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition"
                       style={{
                         background: selected
-                          ? "rgba(197,245,70,0.1)"
+                          ? "rgba(242,243,238,0.1)"
                           : "var(--spark-surface-2, #161a12)",
                         border: selected
-                          ? "2px solid var(--spark-lime, #c5f546)"
+                          ? "2px solid var(--spark-lime, #f2f3ee)"
                           : "1px solid var(--spark-border, #1f2418)",
                       }}
                     >
@@ -1313,7 +1313,7 @@ function ExpressFormBody() {
                           width: 16,
                           height: 16,
                           border: selected
-                            ? "5px solid var(--spark-lime, #c5f546)"
+                            ? "5px solid var(--spark-lime, #f2f3ee)"
                             : "2px solid rgba(255,255,255,0.3)",
                           background: selected ? "#0a0d09" : "transparent",
                         }}
@@ -1462,9 +1462,9 @@ function ExpressFormBody() {
             disabled={!canSubmit}
             className="px-5 py-3 rounded-xl text-sm font-semibold"
             style={{
-              background: "var(--spark-lime, #c5f546)",
+              background: "var(--spark-lime, #f2f3ee)",
               color: "#0a0d09",
-              boxShadow: "0 0 24px rgba(197,245,70,0.4)",
+              boxShadow: "0 0 24px rgba(242,243,238,0.4)",
               opacity: canSubmit ? 1 : 0.5,
             }}
           >
@@ -1491,15 +1491,15 @@ function ExpressFormBody() {
               background: "#11140e",
               border: "1px solid var(--spark-border, #1f2418)",
               boxShadow:
-                "0 60px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(214,243,95,0.15), 0 0 80px rgba(214,243,95,0.10)",
+                "0 60px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(242,243,238,0.15), 0 0 80px rgba(242,243,238,0.10)",
             }}
           >
             {/* Lime status band */}
             <div
               style={{
                 padding: "14px 22px",
-                background: "rgba(214,243,95,0.10)",
-                borderBottom: "1px solid rgba(214,243,95,0.25)",
+                background: "rgba(242,243,238,0.10)",
+                borderBottom: "1px solid rgba(242,243,238,0.25)",
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
@@ -1510,8 +1510,8 @@ function ExpressFormBody() {
                   width: 8,
                   height: 8,
                   borderRadius: 999,
-                  background: "#D6F35F",
-                  boxShadow: "0 0 12px #D6F35F",
+                  background: "#f2f3ee",
+                  boxShadow: "0 0 12px #f2f3ee",
                   animation: "spk-pulse 1.6s infinite",
                 }}
               />
@@ -1519,7 +1519,7 @@ function ExpressFormBody() {
                 className="mono text-[10px]"
                 style={{
                   letterSpacing: "0.24em",
-                  color: "#D6F35F",
+                  color: "#f2f3ee",
                 }}
               >
                 {confirmation.approved
@@ -1553,7 +1553,7 @@ function ExpressFormBody() {
                     {confirmation.routedTo ? (
                       <>
                         They've been routed to{" "}
-                        <strong style={{ color: "var(--spark-lime, #c5f546)" }}>
+                        <strong style={{ color: "var(--spark-lime, #f2f3ee)" }}>
                           {confirmation.routedTo}
                         </strong>{" "}
                         for review.
@@ -1636,8 +1636,8 @@ function ExpressFormBody() {
                   className="px-4 py-3 rounded-xl text-sm font-semibold"
                   style={{
                     background: "transparent",
-                    color: "var(--spark-lime, #c5f546)",
-                    border: "1px solid rgba(197,245,70,0.4)",
+                    color: "var(--spark-lime, #f2f3ee)",
+                    border: "1px solid rgba(242,243,238,0.4)",
                   }}
                 >
                   + Add another visit (same venue)
@@ -1683,9 +1683,9 @@ function ExpressFormBody() {
                 onClick={() => setConfirmation(null)}
                 className="mt-2 w-full px-5 py-3 rounded-xl text-sm font-semibold"
                 style={{
-                  background: "var(--spark-lime, #c5f546)",
+                  background: "var(--spark-lime, #f2f3ee)",
                   color: "#0a0d09",
-                  boxShadow: "0 0 24px rgba(197,245,70,0.4)",
+                  boxShadow: "0 0 24px rgba(242,243,238,0.4)",
                 }}
               >
                 Done — close this
@@ -1769,7 +1769,7 @@ const Card: React.FC<{ title: string; children: React.ReactNode }> = ({ title, c
       className="mono text-[10px]"
       style={{
         letterSpacing: "0.18em",
-        color: "var(--spark-lime, #c5f546)",
+        color: "var(--spark-lime, #f2f3ee)",
       }}
     >
       {title}

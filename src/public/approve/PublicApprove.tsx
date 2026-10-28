@@ -320,7 +320,7 @@ const PublicApprove: React.FC = () => {
           disabled={submitting}
           className="px-6 py-3 rounded-2xl text-sm font-bold transition"
           style={{
-            background: "#c5f546",
+            background: "#f2f3ee",
             color: "#0a0d09",
             opacity: submitting ? 0.5 : 1,
             boxShadow: "0 0 0 1px rgba(10,13,9,0.08)",

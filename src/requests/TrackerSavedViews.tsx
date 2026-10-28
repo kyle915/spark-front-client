@@ -163,7 +163,7 @@ const Inner: React.FC<Props> = ({ snapshot, onApply }) => {
               onClick={saveCurrent}
               className="text-xs px-3 py-1.5 rounded-lg font-semibold"
               style={{
-                background: "var(--spark-lime, #c5f546)",
+                background: "var(--spark-lime, #f2f3ee)",
                 color: "#0a0d09",
               }}
             >

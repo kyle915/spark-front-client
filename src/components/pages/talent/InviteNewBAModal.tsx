@@ -170,7 +170,7 @@ export default function InviteNewBAModal({ onClose, onInvited }: Props) {
               color: "#0a0d09",
               boxShadow:
                 emailValid && !isInviting
-                  ? "0 0 16px rgba(197,245,70,0.35)"
+                  ? "0 0 16px rgba(242,243,238,0.35)"
                   : "none",
             }}
           >

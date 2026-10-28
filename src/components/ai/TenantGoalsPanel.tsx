@@ -95,7 +95,7 @@ const toneFor = (target: number, pacePct: number): Tone => {
     return { color: "rgba(255,255,255,0.35)", track: "rgba(255,255,255,0.06)" };
   }
   if (pacePct >= 100) {
-    return { color: "var(--spark-lime)", track: "rgba(197,245,70,0.10)" };
+    return { color: "var(--spark-lime)", track: "rgba(242,243,238,0.10)" };
   }
   return { color: "var(--spark-gold, #f0b429)", track: "rgba(240,180,41,0.10)" };
 };
@@ -155,7 +155,7 @@ const PaceRow: React.FC<{ item: GoalItem }> = ({ item }) => {
               background: tone.color,
               boxShadow:
                 hasTarget && item.pacePct >= 100
-                  ? "0 0 10px rgba(197,245,70,0.45)"
+                  ? "0 0 10px rgba(242,243,238,0.45)"
                   : "none",
               transition: "width 240ms ease",
             }}
@@ -347,7 +347,7 @@ const EditGoalsModal: React.FC<{
               style={{
                 background: "var(--spark-lime)",
                 color: "#0a0d09",
-                boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                boxShadow: "0 0 18px rgba(242,243,238,0.35)",
                 opacity: isSaving ? 0.5 : 1,
               }}
             >
@@ -478,8 +478,8 @@ const TenantGoalsPanel: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             onClick={() => setEditing(true)}
             className="mono text-[11px] rounded-lg px-3 py-1.5 cursor-pointer"
             style={{
-              background: "rgba(197,245,70,0.08)",
-              border: "1px solid rgba(197,245,70,0.30)",
+              background: "rgba(242,243,238,0.08)",
+              border: "1px solid rgba(242,243,238,0.30)",
               color: "var(--spark-lime)",
               letterSpacing: "0.10em",
             }}

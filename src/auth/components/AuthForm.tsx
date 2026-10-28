@@ -68,7 +68,7 @@ export default function AuthForm({
             type="checkbox"
             className="checkbox checkbox-sm"
             style={{
-              accentColor: "#D6F35F",
+              accentColor: "#f2f3ee",
               borderColor: "rgba(245,242,236,0.3)",
             }}
           />
@@ -78,7 +78,7 @@ export default function AuthForm({
           to="/forgot-password"
           className="hover:underline"
           style={{
-            color: "#D6F35F",
+            color: "#f2f3ee",
             fontFamily: "var(--font-mono, monospace)",
             fontSize: 11,
             letterSpacing: "0.12em",

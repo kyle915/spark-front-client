@@ -92,10 +92,10 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
           disabled={saving}
           className="px-3 py-1.5 rounded-md text-xs font-semibold transition"
           style={{
-            background: enabled ? "var(--spark-lime, #c5f546)" : "transparent",
+            background: enabled ? "var(--spark-lime, #f2f3ee)" : "transparent",
             color: enabled ? "#0a0d09" : "rgba(255,255,255,0.7)",
             border: enabled
-              ? "1px solid var(--spark-lime, #c5f546)"
+              ? "1px solid var(--spark-lime, #f2f3ee)"
               : "1px solid rgba(255,255,255,0.2)",
             opacity: saving ? 0.6 : 1,
           }}
@@ -184,7 +184,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
                   <td className="py-2 pr-3 text-right">{miles(s.totalMiles)}</td>
                   <td
                     className="py-2 text-right mono"
-                    style={{ color: "var(--spark-lime, #c5f546)" }}
+                    style={{ color: "var(--spark-lime, #f2f3ee)" }}
                   >
                     {money(s.reimbursementAmount)}
                   </td>
@@ -206,7 +206,7 @@ const Inner: React.FC<{ eventUuid: string }> = ({ eventUuid }) => {
                 </td>
                 <td
                   className="py-2 text-right mono font-semibold"
-                  style={{ color: "var(--spark-lime, #c5f546)" }}
+                  style={{ color: "var(--spark-lime, #f2f3ee)" }}
                 >
                   {money(summary.totalReimbursement)}
                 </td>

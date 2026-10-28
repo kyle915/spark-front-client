@@ -101,7 +101,7 @@ export function DropOffLocationsField({
   products,
   required = false,
   theme = "checkin",
-  accent = "#C5F546",
+  accent = "#f2f3ee",
 }: Props) {
   const baseId = useId();
   const [locatingIdx, setLocatingIdx] = useState<number | null>(null);

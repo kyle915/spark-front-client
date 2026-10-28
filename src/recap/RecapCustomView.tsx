@@ -214,7 +214,7 @@ const ghostBtn: React.CSSProperties = {
 const limeBtn: React.CSSProperties = {
   background: "var(--spark-lime)",
   color: "#0a0d09",
-  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+  boxShadow: "0 0 24px rgba(242,243,238,0.35)",
 };
 const dangerBtn: React.CSSProperties = {
   background: "transparent",
@@ -2656,7 +2656,7 @@ const RecapCustomViewInner = ({
               <div className="flex items-center gap-3">
                 <div
                   className="p-2 rounded-lg"
-                  style={{ background: "rgba(197,245,70,0.10)" }}
+                  style={{ background: "rgba(242,243,238,0.10)" }}
                 >
                   <ImageIcon className="h-6 w-6" style={lime} />
                 </div>
@@ -2722,7 +2722,7 @@ const RecapCustomViewInner = ({
                         <div
                           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
                           style={{
-                            background: "rgba(197,245,70,0.10)",
+                            background: "rgba(242,243,238,0.10)",
                             color: "var(--spark-lime)",
                           }}
                         >
@@ -3088,7 +3088,7 @@ const RecapCustomViewInner = ({
                     ? {
                         background: "transparent",
                         color: "var(--spark-lime)",
-                        border: "1px solid rgba(197,245,70,0.45)",
+                        border: "1px solid rgba(242,243,238,0.45)",
                         opacity: isApproving ? 0.5 : 1,
                       }
                     : { ...limeBtn, opacity: isApproving ? 0.5 : 1 }
@@ -3319,7 +3319,7 @@ const RecapCustomViewInner = ({
                     i === 0
                       ? {
                           boxShadow:
-                            "0 0 28px color-mix(in srgb, var(--recap-brand, #c5f546) 25%, transparent)",
+                            "0 0 28px color-mix(in srgb, var(--recap-brand, #f2f3ee) 25%, transparent)",
                         }
                       : undefined
                   }

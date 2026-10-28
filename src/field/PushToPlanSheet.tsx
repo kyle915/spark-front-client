@@ -189,8 +189,8 @@ export default function PushToPlanSheet({
             <div
               className="rounded-xl p-3 flex flex-wrap items-center gap-3 justify-between"
               style={{
-                border: "1px solid rgba(197,245,70,0.3)",
-                background: "rgba(197,245,70,0.06)",
+                border: "1px solid rgba(242,243,238,0.3)",
+                background: "rgba(242,243,238,0.06)",
               }}
             >
               <div className="min-w-0">
@@ -247,7 +247,7 @@ export default function PushToPlanSheet({
                           border: on
                             ? "1px solid var(--spark-lime)"
                             : "1px solid var(--spark-border)",
-                          background: on ? "rgba(197,245,70,0.07)" : "rgba(255,255,255,0.02)",
+                          background: on ? "rgba(242,243,238,0.07)" : "rgba(255,255,255,0.02)",
                         }}
                       >
                         <div className="flex items-start justify-between gap-3">

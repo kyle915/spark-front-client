@@ -1356,7 +1356,7 @@ const SparkRecapInner: React.FC<{
       {isAdmin && editingNumbers && (
         <div
           className="spark-card p-6"
-          style={{ borderColor: "rgba(197,245,70,0.3)" }}
+          style={{ borderColor: "rgba(242,243,238,0.3)" }}
         >
           <p
             className="mono text-[10px]"
@@ -1935,7 +1935,7 @@ const SparkRecapInner: React.FC<{
                 className="italic text-sm leading-relaxed pl-4"
                 style={{
                   color: "var(--recap-text, #14160f)",
-                  borderLeft: "2px solid rgba(197,245,70,0.5)",
+                  borderLeft: "2px solid rgba(242,243,238,0.5)",
                 }}
               >
                 "{consumerFeedback.quotes}"
@@ -2094,9 +2094,9 @@ const SparkRecapInner: React.FC<{
       <div
         className="spark-card p-6"
         style={{
-          borderColor: "rgba(197,245,70,0.25)",
+          borderColor: "rgba(242,243,238,0.25)",
           background:
-            "linear-gradient(180deg, rgba(197,245,70,0.04), transparent)",
+            "linear-gradient(180deg, rgba(242,243,238,0.04), transparent)",
         }}
       >
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -2413,7 +2413,7 @@ const SparkRecapInner: React.FC<{
                 className="italic text-sm leading-relaxed pl-4"
                 style={{
                   color: "var(--recap-text, #14160f)",
-                  borderLeft: "2px solid rgba(197,245,70,0.5)",
+                  borderLeft: "2px solid rgba(242,243,238,0.5)",
                 }}
               >
                 "{notes}"
@@ -2689,13 +2689,13 @@ const SparkRecapInner: React.FC<{
                       ? {
                           background: "transparent",
                           color: "var(--spark-lime)",
-                          border: "1px solid rgba(197,245,70,0.45)",
+                          border: "1px solid rgba(242,243,238,0.45)",
                           opacity: isApproving ? 0.5 : 1,
                         }
                       : {
                           background: "var(--spark-lime)",
                           color: "#0a0d09",
-                          boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                          boxShadow: "0 0 18px rgba(242,243,238,0.35)",
                           opacity: isApproving ? 0.5 : 1,
                         }
                   }
@@ -2718,7 +2718,7 @@ const SparkRecapInner: React.FC<{
                     style={{
                       background: "var(--spark-lime)",
                       color: "#0a0d09",
-                      boxShadow: "0 0 18px rgba(197,245,70,0.35)",
+                      boxShadow: "0 0 18px rgba(242,243,238,0.35)",
                       opacity: isApproving ? 0.5 : 1,
                     }}
                     title="Approve this recap and advance to the next unapproved recap in the queue"

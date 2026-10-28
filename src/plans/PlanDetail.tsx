@@ -56,7 +56,7 @@ const STATUS_MIX: Array<{
   { slug: "pending", label: "Pending", color: "rgba(255,255,255,0.35)" },
   { slug: "queue", label: "Queue", color: "rgba(255,255,255,0.45)" },
   { slug: "approved", label: "Approved", color: "var(--spark-sky, #7dd3fc)" },
-  { slug: "scheduled", label: "Scheduled", color: "rgba(197,245,70,0.75)" },
+  { slug: "scheduled", label: "Scheduled", color: "rgba(242,243,238,0.75)" },
   { slug: "done", label: "Done", color: "var(--spark-lime)" },
   { slug: "declined", label: "Declined", color: "var(--spark-orange)" },
 ];
@@ -349,7 +349,7 @@ const PlanRequestsRoster: React.FC<{
                   key={r.id}
                   style={{
                     borderBottom: "1px solid var(--spark-border)",
-                    background: on ? "rgba(197,245,70,0.05)" : undefined,
+                    background: on ? "rgba(242,243,238,0.05)" : undefined,
                   }}
                 >
                   {canEdit ? (
@@ -544,10 +544,10 @@ const AttachUnplannedPanel: React.FC<{
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer"
                   style={{
                     background: on
-                      ? "rgba(197,245,70,0.08)"
+                      ? "rgba(242,243,238,0.08)"
                       : "transparent",
                     border: `1px solid ${
-                      on ? "rgba(197,245,70,0.35)" : "var(--spark-border)"
+                      on ? "rgba(242,243,238,0.35)" : "var(--spark-border)"
                     }`,
                   }}
                 >

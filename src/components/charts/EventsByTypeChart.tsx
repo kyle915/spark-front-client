@@ -15,12 +15,12 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 type EventsByTypeAnalytics = Record<string, number>;
 
 const SPARK_PALETTE = [
-  "rgba(197,245,70,0.90)", // lime
+  "rgba(242,243,238,0.90)", // lime
   "rgba(95,184,239,0.90)", // sky
   "rgba(239,90,42,0.90)", // orange
   "rgba(245,200,66,0.90)", // gold
   "rgba(255,255,255,0.35)",
-  "rgba(197,245,70,0.45)",
+  "rgba(242,243,238,0.45)",
 ];
 
 function EventsByTypeChart({ analytics }: { analytics: EventsByTypeAnalytics }) {

@@ -478,8 +478,8 @@ body:has(.spark-login-page) {
   -webkit-text-fill-color: rgba(245,242,236,0.55) !important;
 }
 .spark-login-form input.input:focus {
-  border-color: #D6F35F !important;
-  box-shadow: 0 0 0 3px rgba(214,243,95,0.18) !important;
+  border-color: #f2f3ee !important;
+  box-shadow: 0 0 0 3px rgba(242,243,238,0.18) !important;
   background: rgba(245,242,236,0.16) !important;
 }
 .spark-login-form input.input:-webkit-autofill,
@@ -498,13 +498,13 @@ body:has(.spark-login-page) {
   text-transform: uppercase !important;
 }
 .spark-login-form .btn.btn-primary {
-  background: #D6F35F !important;
-  border-color: #D6F35F !important;
+  background: #f2f3ee !important;
+  border-color: #f2f3ee !important;
   color: #0A0B0D !important;
   font-family: var(--font-display, 'Space Grotesk', sans-serif) !important;
   font-weight: 700 !important;
   letter-spacing: -0.01em !important;
-  box-shadow: 0 0 24px rgba(214,243,95,0.25) !important;
+  box-shadow: 0 0 24px rgba(242,243,238,0.25) !important;
 }
 .spark-login-form .btn.btn-primary:hover {
   background: #C2DF4D !important;

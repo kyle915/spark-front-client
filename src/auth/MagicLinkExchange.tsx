@@ -88,7 +88,7 @@ export default function MagicLinkExchange() {
           className="mono text-[10px]"
           style={{
             letterSpacing: "0.18em",
-            color: error ? "var(--spark-orange, #ef5a2a)" : "var(--spark-lime, #c5f546)",
+            color: error ? "var(--spark-orange, #ef5a2a)" : "var(--spark-lime, #f2f3ee)",
           }}
         >
           {error ? "SIGN-IN FAILED" : "SIGNING YOU IN…"}
@@ -108,7 +108,7 @@ export default function MagicLinkExchange() {
               onClick={() => navigate("/login", { replace: true })}
               className="mt-5 px-4 py-2.5 rounded-xl text-sm font-semibold"
               style={{
-                background: "var(--spark-lime, #c5f546)",
+                background: "var(--spark-lime, #f2f3ee)",
                 color: "#0a0d09",
               }}
             >

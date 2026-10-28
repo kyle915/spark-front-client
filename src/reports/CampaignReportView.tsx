@@ -581,7 +581,7 @@ const CampaignReportView: React.FC<{ report: CampaignReportData }> = ({
                       color: ba.isExternal ? C.gold : C.lime,
                       background: ba.isExternal
                         ? "rgba(255,201,96,0.10)"
-                        : "rgba(197,245,70,0.10)",
+                        : "rgba(242,243,238,0.10)",
                     }}
                   >
                     {ba.isExternal ? "EXTERNAL" : "ROSTER"}

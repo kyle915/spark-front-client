@@ -100,7 +100,7 @@ const Login = () => {
       className="spark-login-page h-dvh w-full overflow-hidden flex"
       style={{
         background:
-          "radial-gradient(circle at 20% 10%, rgba(197,245,70,0.18), transparent 55%), radial-gradient(circle at 80% 90%, rgba(95,184,239,0.10), transparent 55%), #0A0B0D",
+          "radial-gradient(circle at 20% 10%, rgba(242,243,238,0.18), transparent 55%), radial-gradient(circle at 80% 90%, rgba(95,184,239,0.10), transparent 55%), #0A0B0D",
       }}
     >
       <div

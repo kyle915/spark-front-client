@@ -623,7 +623,7 @@ const Inner: React.FC<{ tenantId: string; uuid: string }> = ({
           style={{
             background: "var(--spark-lime)",
             color: "#0a0d09",
-            boxShadow: saveDisabled ? "none" : "0 0 16px rgba(197,245,70,0.30)",
+            boxShadow: saveDisabled ? "none" : "0 0 16px rgba(242,243,238,0.30)",
           }}
         >
           {isUpdating ? "Saving…" : "Save changes"}

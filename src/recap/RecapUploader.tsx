@@ -193,7 +193,7 @@ export const RecapUploader: React.FC<Props> = ({
         }}
         className="w-full rounded-xl px-4 py-5 text-sm font-semibold transition active:scale-[0.99]"
         style={{
-          background: dragOver ? "rgba(197,245,70,0.10)" : "transparent",
+          background: dragOver ? "rgba(242,243,238,0.10)" : "transparent",
           color: "var(--spark-text)",
           border: `2px dashed ${
             dragOver ? "var(--spark-lime)" : "var(--spark-border)"

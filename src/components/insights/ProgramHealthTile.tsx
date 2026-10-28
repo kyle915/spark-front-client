@@ -108,13 +108,13 @@ const Step: React.FC<{
         : "var(--spark-text)";
   const bg =
     tone === "lime"
-      ? "rgba(197,245,70,0.08)"
+      ? "rgba(242,243,238,0.08)"
       : tone === "orange"
         ? "rgba(239,90,42,0.10)"
         : "rgba(255,255,255,0.03)";
   const border =
     tone === "lime"
-      ? "rgba(197,245,70,0.30)"
+      ? "rgba(242,243,238,0.30)"
       : tone === "orange"
         ? "rgba(239,90,42,0.35)"
         : "var(--spark-border)";

@@ -252,8 +252,8 @@ const Inner: React.FC<{ filter: Filter; refreshKey: number; bump: () => void }> 
                     style={{
                       letterSpacing: "0.14em",
                       color: "var(--spark-lime)",
-                      background: "rgba(197,245,70,0.1)",
-                      border: "1px solid rgba(197,245,70,0.3)",
+                      background: "rgba(242,243,238,0.1)",
+                      border: "1px solid rgba(242,243,238,0.3)",
                       padding: "1px 6px",
                       borderRadius: 999,
                     }}

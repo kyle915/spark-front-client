@@ -150,8 +150,8 @@ export default function TrackerPlanAttachBar({
     <div
       className="flex flex-wrap items-center gap-2 px-4 py-3 rounded-2xl"
       style={{
-        background: "rgba(197,245,70,0.06)",
-        border: "1px solid rgba(197,245,70,0.22)",
+        background: "rgba(242,243,238,0.06)",
+        border: "1px solid rgba(242,243,238,0.22)",
       }}
     >
       <span

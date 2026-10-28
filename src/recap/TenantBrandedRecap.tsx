@@ -64,6 +64,6 @@ export function recapBrandBtn(): CSSProperties {
   return {
     background: "var(--recap-brand, var(--spark-lime))",
     color: "var(--recap-brand-ink, #0a0d09)",
-    boxShadow: "0 0 24px color-mix(in srgb, var(--recap-brand, #c5f546) 35%, transparent)",
+    boxShadow: "0 0 24px color-mix(in srgb, var(--recap-brand, #f2f3ee) 35%, transparent)",
   };
 }

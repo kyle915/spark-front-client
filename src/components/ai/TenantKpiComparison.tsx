@@ -73,12 +73,12 @@ const MUTED: Pick<ChipStyle, "text" | "bg" | "border"> = {
 const chipForDelta = (d: PeriodDelta): ChipStyle => {
   switch (d.kind) {
     case "up":
-      // lime #c5f546 → 197,245,70
+      // bone #f2f3ee → 242,243,238
       return {
         label: `↑ ${d.pct}%`,
         text: "var(--spark-lime)",
-        bg: "rgba(197,245,70,0.10)",
-        border: "rgba(197,245,70,0.30)",
+        bg: "rgba(242,243,238,0.10)",
+        border: "rgba(242,243,238,0.30)",
       };
     case "down":
       // orange #ef5a2a → 239,90,42 (restrained, not an alarm red).
@@ -104,8 +104,8 @@ const chipForDelta = (d: PeriodDelta): ChipStyle => {
         return {
           label: `↑ >${d.cappedPct}%`,
           text: "var(--spark-lime)",
-          bg: "rgba(197,245,70,0.10)",
-          border: "rgba(197,245,70,0.30)",
+          bg: "rgba(242,243,238,0.10)",
+          border: "rgba(242,243,238,0.30)",
         };
       }
       return {
@@ -232,8 +232,8 @@ const ConversionTile: React.FC<{
     chip = {
       label,
       text: "var(--spark-lime)",
-      bg: "rgba(197,245,70,0.10)",
-      border: "rgba(197,245,70,0.30)",
+      bg: "rgba(242,243,238,0.10)",
+      border: "rgba(242,243,238,0.30)",
     };
   else
     chip = {

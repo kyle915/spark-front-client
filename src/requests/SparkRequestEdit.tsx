@@ -578,7 +578,7 @@ const Inner: React.FC<{ uuid: string }> = ({ uuid }) => {
           style={{
             background: "var(--spark-lime)",
             color: "#0a0d09",
-            boxShadow: "0 0 24px rgba(197,245,70,0.4)",
+            boxShadow: "0 0 24px rgba(242,243,238,0.4)",
             opacity: submitting ? 0.5 : 1,
           }}
         >

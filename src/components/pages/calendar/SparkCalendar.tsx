@@ -250,7 +250,7 @@ const TimeGrid: React.FC<{ shifts: Shift[]; days: Date[] }> = ({
                 position: "relative",
                 borderLeft: "1px solid var(--spark-border)",
                 background: isToday
-                  ? "linear-gradient(180deg, rgba(197,245,70,0.025), transparent)"
+                  ? "linear-gradient(180deg, rgba(242,243,238,0.025), transparent)"
                   : "transparent",
                 height: hours.length * HOUR_PX,
               }}

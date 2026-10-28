@@ -109,7 +109,7 @@ export const ExportReceiptsButton: React.FC<Props> = ({
   const buttonStyle: React.CSSProperties =
     variant === "primary"
       ? {
-          background: "var(--spark-lime, #c5f546)",
+          background: "var(--spark-lime, #f2f3ee)",
           color: "#0a0d09",
         }
       : {
@@ -211,7 +211,7 @@ export const ExportReceiptsButton: React.FC<Props> = ({
                 disabled={isExporting}
                 className="px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
                 style={{
-                  background: "var(--spark-lime, #c5f546)",
+                  background: "var(--spark-lime, #f2f3ee)",
                   color: "#0a0d09",
                 }}
                 onClick={onExport}

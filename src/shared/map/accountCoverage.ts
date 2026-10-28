@@ -45,7 +45,7 @@ export function coverageLabel(cls: CoverageClass): string {
 export function coverageColor(cls: CoverageClass): string {
   switch (cls) {
     case "sampled":
-      return "#c5f546";
+      return "#f2f3ee";
     case "repeat":
       return "#5fb8ef";
     case "never_visited":

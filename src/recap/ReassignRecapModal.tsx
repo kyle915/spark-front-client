@@ -176,7 +176,7 @@ const Inner: React.FC<Props> = ({
                 }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.background =
-                    "rgba(197,245,70,0.06)";
+                    "rgba(242,243,238,0.06)";
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLButtonElement).style.background =

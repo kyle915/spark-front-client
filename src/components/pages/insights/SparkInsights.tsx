@@ -498,6 +498,7 @@ export function InsightsBody({
   const showAlert = useAlertStore((s) => s.showAlert);
   const [range, setRange] = useState<RangeKey>("30d");
   const [selectedState, setSelectedState] = useState<string | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
   const [copying, setCopying] = useState(false);
   const { program, choose: chooseProgram } = useDashboardProgram(torch);
   const fieldProgram = program === "field";
@@ -698,12 +699,11 @@ export function InsightsBody({
 
       {!fieldProgram ? (
       <>
+      {/* One band: executive one-liner + supporting tiles + one chart.
+          Everything heavier sits behind More detail so the first paint is
+          a single answer instead of a wall of panels. */}
       {tenantId && (
         <div className="spark-card overflow-hidden" style={{ borderRadius: 22 }}>
-          <div className="p-5 lg:p-6">
-            <PaceToGoalHero tenantId={tenantId} chromeless />
-          </div>
-          <div style={{ borderTop: "1px solid var(--spark-border)" }} />
           <div className="p-5 lg:p-6">
             <ExecutiveInsightsStrip
               tenantId={tenantId}
@@ -712,121 +712,155 @@ export function InsightsBody({
               rangeLabel={rangeLabel}
               comparisonPeriod={comparisonPeriod}
               chromeless
+              detail={showDetail}
             />
+          </div>
+          <div style={{ borderTop: "1px solid var(--spark-border)" }} />
+          <div className="p-5 lg:p-6">
+            <Suspense
+              fallback={
+                <div
+                  className="p-6 text-center text-sm"
+                  style={{ color: "rgba(255,255,255,0.55)" }}
+                >
+                  Loading program KPIs…
+                </div>
+              }
+            >
+              <TenantKpiCharts
+                tenantId={tenantId}
+                scopeNote={`Calendar ${kpiYear} · not scoped to ${rangeLabel}`}
+                chromeless
+              />
+            </Suspense>
           </div>
         </div>
       )}
 
-      {tenantId && (
-        <MarketConcentrationStrip
-          tenantId={tenantId}
-          startDate={startDate}
-          endDate={endDate}
-          rangeLabel={rangeLabel}
-          onStateSelect={(code) => setSelectedState(code)}
-        />
-      )}
-
-      {tenantId && (
-        <Suspense
-          fallback={
-            <div
-              className="spark-card p-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.55)" }}
-            >
-              Loading program KPIs…
-            </div>
-          }
-        >
-          <TenantKpiCharts
-            tenantId={tenantId}
-            scopeNote={`Calendar ${kpiYear} · not scoped to ${rangeLabel}`}
-          />
-        </Suspense>
-      )}
-
-      {tenantId && (
-        <Suspense fallback={null}>
-          <TenantKpiComparison
-            tenantId={tenantId}
-            period={comparisonPeriod}
-            scopeNote={`Complete calendar ${comparisonPeriod}s · closest to ${rangeLabel}`}
-          />
-        </Suspense>
-      )}
-
-      {tenantId && (
-        <Suspense fallback={null}>
-          <TenantInsightsPanel
-            tenantId={tenantId}
-            startDate={startDate}
-            endDate={endDate}
-          />
-        </Suspense>
-      )}
-
       {tenantId && !omitNarration && <WeeklyNarrationCard tenantId={tenantId} />}
 
+      {/* Pace, markets, year-over-year, AI, geo, and the timeline. Gated on
+          state rather than <details> so none of their queries fire until
+          someone actually asks for the detail. */}
       {tenantId && (
-        <Suspense fallback={null}>
-          <ActivationBreakdown
+        <div>
+          <button
+            type="button"
+            aria-expanded={showDetail}
+            onClick={() => setShowDetail((v) => !v)}
+            className="spark-card w-full px-5 py-4 flex items-center justify-between text-left"
+            style={{ borderRadius: 18 }}
+          >
+            <span>
+              <span
+                className="mono block text-[10px]"
+                style={{
+                  letterSpacing: "0.16em",
+                  color: "rgba(255,255,255,0.45)",
+                }}
+              >
+                MORE DETAIL
+              </span>
+              <span className="block text-sm font-semibold mt-1">
+                Pace to goal, markets, year-over-year, AI, and timeline
+              </span>
+            </span>
+            <span
+              className="mono text-xs"
+              style={{ color: "rgba(255,255,255,0.55)" }}
+            >
+              {showDetail ? "Hide" : "Show"}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {tenantId && showDetail && (
+        <div className="space-y-6 lg:space-y-8">
+          <PaceToGoalHero tenantId={tenantId} />
+
+          <MarketConcentrationStrip
             tenantId={tenantId}
             startDate={startDate}
             endDate={endDate}
             rangeLabel={rangeLabel}
+            onStateSelect={(code) => setSelectedState(code)}
           />
-        </Suspense>
-      )}
 
-      {tenantId && (
-        <BelowFold
-          fallback={
-            <div
-              className="spark-card p-6 text-center text-sm"
-              style={{ color: "rgba(255,255,255,0.35)" }}
-            >
-              Map loads as you scroll…
-            </div>
-          }
-        >
-          <div className="space-y-6 lg:space-y-8">
-            <Suspense fallback={null}>
-              <TenantSentimentCard tenantId={tenantId} />
-            </Suspense>
-            <Suspense fallback={null}>
-              <TenantGeoHeatmap
-                tenantId={tenantId}
-                startDate={startDate}
-                endDate={endDate}
-                rangeLabel={rangeLabel}
-                onStateSelect={(code) => setSelectedState(code)}
-              />
-            </Suspense>
-            <Suspense fallback={null}>
-              <MetroBreakdownCard tenantId={tenantId} />
-            </Suspense>
-          </div>
-        </BelowFold>
-      )}
+          <Suspense fallback={null}>
+            <TenantKpiComparison
+              tenantId={tenantId}
+              period={comparisonPeriod}
+              scopeNote={`Complete calendar ${comparisonPeriod}s · closest to ${rangeLabel}`}
+            />
+          </Suspense>
 
-      <Suspense
-        fallback={
-          <div
-            className="spark-card p-6 text-center text-sm"
-            style={{ color: "rgba(255,255,255,0.55)" }}
+          <Suspense fallback={null}>
+            <TenantInsightsPanel
+              tenantId={tenantId}
+              startDate={startDate}
+              endDate={endDate}
+            />
+          </Suspense>
+
+          <Suspense fallback={null}>
+            <ActivationBreakdown
+              tenantId={tenantId}
+              startDate={startDate}
+              endDate={endDate}
+              rangeLabel={rangeLabel}
+            />
+          </Suspense>
+
+          <BelowFold
+            fallback={
+              <div
+                className="spark-card p-6 text-center text-sm"
+                style={{ color: "rgba(255,255,255,0.35)" }}
+              >
+                Map loads as you scroll…
+              </div>
+            }
           >
-            Loading timeline…
-          </div>
-        }
-      >
-        <InsightsTimeline
-          tenantId={tenantId || ""}
-          filters={filters}
-          rangeLabel={rangeLabel}
-          selectedState={selectedState}
-          onClearState={() => setSelectedState(null)}
-        />
-      </Suspense>
+            <div className="space-y-6 lg:space-y-8">
+              <Suspense fallback={null}>
+                <TenantSentimentCard tenantId={tenantId} />
+              </Suspense>
+              <Suspense fallback={null}>
+                <TenantGeoHeatmap
+                  tenantId={tenantId}
+                  startDate={startDate}
+                  endDate={endDate}
+                  rangeLabel={rangeLabel}
+                  onStateSelect={(code) => setSelectedState(code)}
+                />
+              </Suspense>
+              <Suspense fallback={null}>
+                <MetroBreakdownCard tenantId={tenantId} />
+              </Suspense>
+            </div>
+          </BelowFold>
+
+          <Suspense
+            fallback={
+              <div
+                className="spark-card p-6 text-center text-sm"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
+                Loading timeline…
+              </div>
+            }
+          >
+            <InsightsTimeline
+              tenantId={tenantId}
+              filters={filters}
+              rangeLabel={rangeLabel}
+              selectedState={selectedState}
+              onClearState={() => setSelectedState(null)}
+            />
+          </Suspense>
+        </div>
+      )}
       </>
       ) : null}
     </div>

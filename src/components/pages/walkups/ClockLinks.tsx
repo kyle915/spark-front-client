@@ -79,7 +79,7 @@ function Kicker({ children }: { children: ReactNode }) {
 
 function Pill({ tone, children }: { tone: "lime" | "orange" | "muted"; children: ReactNode }) {
   const colors = {
-    lime: ["var(--spark-lime)", "rgba(197,245,70,0.1)", "rgba(197,245,70,0.3)"],
+    lime: ["var(--spark-lime)", "rgba(242,243,238,0.1)", "rgba(242,243,238,0.3)"],
     orange: ["var(--spark-orange)", "rgba(239,90,42,0.12)", "rgba(239,90,42,0.35)"],
     muted: ["rgba(255,255,255,0.6)", "rgba(255,255,255,0.05)", "rgba(255,255,255,0.15)"],
   }[tone];

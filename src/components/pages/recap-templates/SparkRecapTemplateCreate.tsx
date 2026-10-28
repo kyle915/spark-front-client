@@ -435,8 +435,8 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                 style={{
                   letterSpacing: "0.14em",
                   color: "var(--spark-lime)",
-                  background: "rgba(197,245,70,0.08)",
-                  border: "1px solid rgba(197,245,70,0.25)",
+                  background: "rgba(242,243,238,0.08)",
+                  border: "1px solid rgba(242,243,238,0.25)",
                 }}
               >
                 {s.name.toUpperCase()}
@@ -653,7 +653,7 @@ const Inner: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             color: "#0a0d09",
             boxShadow: submitDisabled
               ? "none"
-              : "0 0 16px rgba(197,245,70,0.30)",
+              : "0 0 16px rgba(242,243,238,0.30)",
           }}
         >
           {isCreating ? "Saving…" : "Create template"}

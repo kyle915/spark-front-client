@@ -134,7 +134,7 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
                 onClick={() => merge(idx)}
                 className="text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-50"
                 style={{
-                  background: "var(--spark-lime, #c5f546)",
+                  background: "var(--spark-lime, #f2f3ee)",
                   color: "#0a0d09",
                 }}
               >
@@ -170,7 +170,7 @@ const Inner: React.FC<{ tenantId: string; onClose: () => void }> = ({
                   style={{
                     color:
                       e.recapsFiled > 0
-                        ? "var(--spark-lime, #c5f546)"
+                        ? "var(--spark-lime, #f2f3ee)"
                         : "rgba(255,255,255,0.4)",
                   }}
                 >

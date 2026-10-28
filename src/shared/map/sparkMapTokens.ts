@@ -1,6 +1,6 @@
 /** Account Map / Leaflet pin colors — visited / scheduled / needs visit. */
 export const STATUS_COLOR = {
-  recent: "#c5f546",
+  recent: "#f2f3ee",
   scheduled: "#5fb8ef",
   unvisited: "#ef5a2a",
 } as const;

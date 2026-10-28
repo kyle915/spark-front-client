@@ -59,8 +59,8 @@ export default function MagicLinkButton({
       <div
         className="mt-6 rounded-xl p-4 text-center"
         style={{
-          background: "rgba(197,245,70,0.08)",
-          border: "1px solid rgba(197,245,70,0.35)",
+          background: "rgba(242,243,238,0.08)",
+          border: "1px solid rgba(242,243,238,0.35)",
         }}
       >
         <p

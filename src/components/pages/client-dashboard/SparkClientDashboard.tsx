@@ -3,15 +3,12 @@
  *
  * Lives at /client-dashboard (and /client). Answers:
  *   1. What's happening ahead (7 / 30 / 90 days)?
- *   2. Program performance (pace / KPIs / map) — same body as admin Dashboard
- *   3. Approvals + account map tabs
+ *   2. Approvals + account map
+ *   3. Program performance (pace / KPIs) — Performance tab only
  *
- * Month-ahead uses slim ClientWeekAheadQuery (date + retailer over
- * the selected horizon) under its own Suspense, so the header and
- * program cards are not blocked on that list. Sidebar badge counts
- * come from useSidebarCounts.
- * Approvals / map tabs lazy-load their bodies. Legacy /insights
- * redirects here.
+ * Overview stays scannable: week-ahead, narration, quick links.
+ * Performance embeds InsightsBody. Approvals / map lazy-load.
+ * Legacy /insights redirects here (#performance).
  */
 
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
@@ -54,7 +51,7 @@ const ClientApprovalsBody = lazy(() =>
   })),
 );
 
-type TabKey = "overview" | "approvals" | "map";
+type TabKey = "overview" | "performance" | "approvals" | "map";
 type AheadHorizon = 7 | 30 | 90;
 
 // Read the active tab from the URL hash so deep-links (e.g.
@@ -63,7 +60,7 @@ type AheadHorizon = 7 | 30 | 90;
 const readTabFromHash = (): TabKey => {
   if (typeof window === "undefined") return "overview";
   const h = (window.location.hash || "").replace(/^#/, "").toLowerCase();
-  if (h === "approvals" || h === "map") return h;
+  if (h === "approvals" || h === "map" || h === "performance") return h;
   return "overview";
 };
 
@@ -109,7 +106,8 @@ const WeekAheadPanel: React.FC<{
   dateWindow: { startDate: string; endDate: string };
   torch: boolean;
   onOpenApprovals: () => void;
-}> = ({ tenantId, horizonDays, onHorizonDays, dateWindow, onOpenApprovals }) => {
+  onOpenPerformance: () => void;
+}> = ({ tenantId, horizonDays, onHorizonDays, dateWindow, onOpenApprovals, onOpenPerformance }) => {
   const navigate = useNavigate();
   const data = useLazyLoadQuery<ClientWeekAheadQueryType>(
     ClientWeekAheadQuery,
@@ -289,7 +287,7 @@ const WeekAheadPanel: React.FC<{
               style={{
                 letterSpacing: "0.12em",
                 color: "var(--spark-lime)",
-                border: "1px solid rgba(197,245,70,0.35)",
+                border: "1px solid rgba(242,243,238,0.35)",
                 background: "transparent",
               }}
             >
@@ -341,7 +339,7 @@ const WeekAheadPanel: React.FC<{
                     minHeight: 8,
                     boxShadow:
                       b.count > 0
-                        ? "0 0 12px rgba(197,245,70,0.20)"
+                        ? "0 0 12px rgba(242,243,238,0.20)"
                         : "none",
                   }}
                   title={`${b.count} event${b.count === 1 ? "" : "s"}`}
@@ -419,10 +417,10 @@ const WeekAheadPanel: React.FC<{
                         : "var(--spark-lime)",
                       background: row.quiet
                         ? "transparent"
-                        : "rgba(197,245,70,0.08)",
+                        : "rgba(242,243,238,0.08)",
                       border: row.quiet
                         ? "1px solid rgba(255,255,255,0.12)"
-                        : "1px solid rgba(197,245,70,0.25)",
+                        : "1px solid rgba(242,243,238,0.25)",
                     }}
                   >
                     {row.count} {row.count === 1 ? "EVENT" : "EVENTS"}
@@ -478,6 +476,17 @@ const WeekAheadPanel: React.FC<{
               }}
             >
               Approvals
+            </button>
+            <button
+              onClick={onOpenPerformance}
+              className="px-3 py-2.5 rounded-xl text-sm font-semibold text-left"
+              style={{
+                background: "transparent",
+                color: "var(--spark-text)",
+                border: "1px solid var(--spark-border)",
+              }}
+            >
+              Performance
             </button>
           </div>
         </div>
@@ -541,7 +550,7 @@ const ClientInner: React.FC = () => {
           <SparkPageHeader
             eyebrow="YOUR PROGRAM · MONTH AHEAD"
             title="Home"
-            support="Upcoming schedule and program performance."
+            support="What's ahead this month. Performance lives on its own tab."
             action={
               <Suspense fallback={<AskAiButton tenantId={tenantId} />}>
                 <ActiveTenantAskAi />
@@ -570,6 +579,7 @@ const ClientInner: React.FC = () => {
         {(
           [
             { key: "overview", label: "Overview" },
+            { key: "performance", label: "Performance" },
             {
               key: "approvals",
               label: `Approvals${counts.approvals > 0 ? ` · ${counts.approvals}` : ""}`,
@@ -590,7 +600,7 @@ const ClientInner: React.FC = () => {
                   ? "var(--spark-text)"
                   : "rgba(255,255,255,0.55)",
                 borderBottom: active
-                  ? "2px solid var(--spark-lime)"
+                  ? "2px solid var(--spark-orange)"
                   : "2px solid transparent",
               }}
             >
@@ -667,39 +677,22 @@ const ClientInner: React.FC = () => {
             dateWindow={dateWindow}
             torch={torch}
             onOpenApprovals={() => switchTab("approvals")}
+            onOpenPerformance={() => switchTab("performance")}
           />
         </Suspense>
       )}
 
       {tenantId ? <WeeklyNarrationCard tenantId={tenantId} /> : null}
 
-      <section
-        id="client-performance"
-        className="spark-card overflow-hidden"
-        style={{ borderRadius: 20 }}
-      >
-        <div className="px-5 py-4">
-          <span
-            className="mono block text-[10px]"
-            style={{ letterSpacing: "0.16em", color: "rgba(255,255,255,0.45)" }}
-          >
-            PERFORMANCE
-          </span>
-          <span className="block text-sm font-semibold mt-1">
-            Pace, charts, markets, and timeline
-          </span>
-        </div>
-        <div
-          className="px-5 pb-5"
-          style={{ borderTop: "1px solid var(--spark-border)" }}
-        >
+      </>)}
+
+      {activeTab === "performance" && (
+        <section id="client-performance" className="space-y-4">
           <Suspense fallback={<DashboardSkeleton />}>
             <InsightsBody embedded omitNarration />
           </Suspense>
-        </div>
-      </section>
-
-      </>)}
+        </section>
+      )}
       </>)}
     </div>
   );

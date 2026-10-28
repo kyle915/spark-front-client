@@ -28,7 +28,7 @@
 
 .plans-card-interactive:hover {
   transform: translateY(-2px);
-  border-color: rgba(197, 245, 70, 0.28);
+  border-color: rgba(242, 243, 238, 0.28);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
 }
 
@@ -129,8 +129,8 @@
 }
 
 .plans-input:focus {
-  border-color: rgba(197, 245, 70, 0.45);
-  box-shadow: 0 0 0 3px rgba(197, 245, 70, 0.12);
+  border-color: rgba(242, 243, 238, 0.45);
+  box-shadow: 0 0 0 3px rgba(242, 243, 238, 0.12);
 }
 
 .plans-fade-in {

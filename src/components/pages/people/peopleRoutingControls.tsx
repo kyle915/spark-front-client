@@ -95,7 +95,7 @@ export const PeopleTabsSwitcher: React.FC<{
               background: isActive ? "var(--spark-lime)" : "transparent",
               color: isActive ? "#0a0d09" : "rgba(255,255,255,0.68)",
               boxShadow: isActive
-                ? "0 0 16px rgba(197,245,70,0.28)"
+                ? "0 0 16px rgba(242,243,238,0.28)"
                 : "none",
             }}
           >
@@ -174,7 +174,7 @@ export const DefaultRmmSelector: React.FC<{
             style={{
               letterSpacing: "0.14em",
               background: selectedPerson
-                ? "rgba(197,245,70,0.14)"
+                ? "rgba(242,243,238,0.14)"
                 : "rgba(255,255,255,0.06)",
               color: selectedPerson
                 ? "var(--spark-lime)"
@@ -262,7 +262,7 @@ export const DefaultRmmSelector: React.FC<{
             className="w-full px-3.5 py-2.5 text-left text-xs flex items-center justify-between gap-2 transition"
             style={{
               background:
-                selectedId === "" ? "rgba(197,245,70,0.08)" : "transparent",
+                selectedId === "" ? "rgba(242,243,238,0.08)" : "transparent",
               color:
                 selectedId === ""
                   ? "var(--spark-lime)"
@@ -303,7 +303,7 @@ export const DefaultRmmSelector: React.FC<{
                 className="w-full px-3.5 py-2.5 text-left text-xs flex items-center justify-between gap-3 transition"
                 style={{
                   background: isSelected
-                    ? "rgba(197,245,70,0.08)"
+                    ? "rgba(242,243,238,0.08)"
                     : "transparent",
                   color: "var(--spark-text)",
                   borderBottom: "1px solid var(--spark-border)",

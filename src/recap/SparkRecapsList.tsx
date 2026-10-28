@@ -311,7 +311,7 @@ const ghostBtn: React.CSSProperties = {
 const limeBtn: React.CSSProperties = {
   background: "var(--spark-lime)",
   color: "#0a0d09",
-  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
+  boxShadow: "0 0 24px rgba(242,243,238,0.35)",
 };
 
 type LegacyRecapNode =
@@ -541,7 +541,7 @@ const RecapCard: React.FC<{
       className="h-32 relative overflow-hidden"
       style={{
         background:
-          "radial-gradient(circle at 50% 50%, rgba(197,245,70,0.10), transparent 70%)",
+          "radial-gradient(circle at 50% 50%, rgba(242,243,238,0.10), transparent 70%)",
       }}
     >
       {recap.heroImage && !heroFailed ? (
@@ -657,7 +657,7 @@ const RecapCard: React.FC<{
           className="mono text-[10px] mt-1"
           style={{
             letterSpacing: "0.1em",
-            color: "rgba(197,245,70,0.75)",
+            color: "rgba(242,243,238,0.75)",
           }}
         >
           {recap.approvalMeta}
@@ -684,8 +684,8 @@ const RecapCard: React.FC<{
             className="mono inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px]"
             style={{
               letterSpacing: "0.14em",
-              background: "rgba(197,245,70,0.10)",
-              border: "1px solid rgba(197,245,70,0.30)",
+              background: "rgba(242,243,238,0.10)",
+              border: "1px solid rgba(242,243,238,0.30)",
               color: "var(--spark-lime)",
             }}
             title="View the parent request on the Master Tracker"
@@ -814,11 +814,11 @@ const RecapCompactRow: React.FC<{
       style={{
         minHeight: 48,
         background: focused
-          ? "rgba(197,245,70,0.08)"
+          ? "rgba(242,243,238,0.08)"
           : selected
-            ? "rgba(197,245,70,0.05)"
+            ? "rgba(242,243,238,0.05)"
             : "transparent",
-        outline: focused ? "1px solid rgba(197,245,70,0.45)" : undefined,
+        outline: focused ? "1px solid rgba(242,243,238,0.45)" : undefined,
         outlineOffset: -1,
       }}
     >
@@ -847,7 +847,7 @@ const RecapCompactRow: React.FC<{
           width: 40,
           height: 40,
           borderRadius: 10,
-          background: "rgba(197,245,70,0.08)",
+          background: "rgba(242,243,238,0.08)",
         }}
       >
         {recap.heroImage && !heroFailed ? (
@@ -1917,8 +1917,8 @@ const RecapsListFetched: React.FC<{
                     style={{
                       letterSpacing: "0.12em",
                       color: "var(--spark-lime)",
-                      background: "rgba(197,245,70,0.10)",
-                      border: "1px solid rgba(197,245,70,0.28)",
+                      background: "rgba(242,243,238,0.10)",
+                      border: "1px solid rgba(242,243,238,0.28)",
                     }}
                   >
                     {chip.label}
@@ -3214,7 +3214,7 @@ export default function SparkRecapsList() {
                     style={{
                       background:
                         pipelineKey === key
-                          ? "rgba(197,245,70,0.16)"
+                          ? "rgba(242,243,238,0.16)"
                           : "transparent",
                       color:
                         pipelineKey === key
@@ -3288,7 +3288,7 @@ export default function SparkRecapsList() {
                         style={{
                           background:
                             density === key
-                              ? "rgba(197,245,70,0.16)"
+                              ? "rgba(242,243,238,0.16)"
                               : "transparent",
                           color:
                             density === key
@@ -3390,7 +3390,7 @@ export default function SparkRecapsList() {
                         style={{
                           background:
                             datePreset === p
-                              ? "rgba(197,245,70,0.16)"
+                              ? "rgba(242,243,238,0.16)"
                               : "transparent",
                           color:
                             datePreset === p
@@ -3454,7 +3454,7 @@ export default function SparkRecapsList() {
                   className="px-2.5 py-2 text-xs font-semibold"
                   style={{
                     background:
-                      density === key ? "rgba(197,245,70,0.16)" : "transparent",
+                      density === key ? "rgba(242,243,238,0.16)" : "transparent",
                     color:
                       density === key
                         ? "var(--spark-lime)"
@@ -3552,7 +3552,7 @@ export default function SparkRecapsList() {
                   className="px-2.5 py-2 text-xs font-semibold"
                   style={{
                     background:
-                      datePreset === p ? "rgba(197,245,70,0.16)" : "transparent",
+                      datePreset === p ? "rgba(242,243,238,0.16)" : "transparent",
                     color:
                       datePreset === p
                         ? "var(--spark-lime)"
@@ -3906,8 +3906,8 @@ export default function SparkRecapsList() {
                   style={{
                     letterSpacing: "0.12em",
                     color: "var(--spark-lime)",
-                    background: "rgba(197,245,70,0.10)",
-                    border: "1px solid rgba(197,245,70,0.28)",
+                    background: "rgba(242,243,238,0.10)",
+                    border: "1px solid rgba(242,243,238,0.28)",
                   }}
                 >
                   {chip.label}
@@ -4109,7 +4109,7 @@ export default function SparkRecapsList() {
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 18px rgba(197,245,70,0.4)",
+              boxShadow: "0 0 18px rgba(242,243,238,0.4)",
             }}
             title={
               selectedIds.size > CAMPAIGN_REPORT_MAX

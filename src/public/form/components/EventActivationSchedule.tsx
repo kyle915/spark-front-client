@@ -116,7 +116,7 @@ export default function EventActivationSchedule({
           onChange([...slots, blankVisitSlot(slots[slots.length - 1])])
         }
         className="mono text-[10px]"
-        style={{ letterSpacing: "0.14em", color: "var(--spark-lime, #c5f546)" }}
+        style={{ letterSpacing: "0.14em", color: "var(--spark-lime, #f2f3ee)" }}
       >
         + Add another date
       </button>
@@ -150,7 +150,7 @@ export default function EventActivationSchedule({
             onClick={() => onBaCount(clampBaCount(baCount + 1))}
             disabled={baCount >= BA_COUNT_MAX}
             className="w-9 h-9 grid place-items-center disabled:opacity-40"
-            style={{ color: "var(--spark-lime, #c5f546)" }}
+            style={{ color: "var(--spark-lime, #f2f3ee)" }}
           >
             +
           </button>
