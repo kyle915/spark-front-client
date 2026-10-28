@@ -311,7 +311,7 @@ const ghostBtn: React.CSSProperties = {
 const limeBtn: React.CSSProperties = {
   background: "var(--spark-lime)",
   color: "#0a0d09",
-  boxShadow: "0 0 24px rgba(242,243,238,0.35)",
+  boxShadow: "0 0 24px rgba(197,245,70,0.35)",
 };
 
 type LegacyRecapNode =
@@ -541,7 +541,7 @@ const RecapCard: React.FC<{
       className="h-32 relative overflow-hidden"
       style={{
         background:
-          "radial-gradient(circle at 50% 50%, rgba(242,243,238,0.10), transparent 70%)",
+          "radial-gradient(circle at 50% 50%, rgba(197,245,70,0.10), transparent 70%)",
       }}
     >
       {recap.heroImage && !heroFailed ? (
@@ -657,7 +657,7 @@ const RecapCard: React.FC<{
           className="mono text-[10px] mt-1"
           style={{
             letterSpacing: "0.1em",
-            color: "rgba(242,243,238,0.75)",
+            color: "rgba(197,245,70,0.75)",
           }}
         >
           {recap.approvalMeta}
@@ -684,8 +684,8 @@ const RecapCard: React.FC<{
             className="mono inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px]"
             style={{
               letterSpacing: "0.14em",
-              background: "rgba(242,243,238,0.10)",
-              border: "1px solid rgba(242,243,238,0.30)",
+              background: "rgba(197,245,70,0.10)",
+              border: "1px solid rgba(197,245,70,0.30)",
               color: "var(--spark-lime)",
             }}
             title="View the parent request on the Master Tracker"
@@ -812,13 +812,15 @@ const RecapCompactRow: React.FC<{
     <div
       className="spark-inset-row relative"
       style={{
-        minHeight: 48,
+        minHeight: 42,
+        padding: "4px 10px",
+        gap: 8,
         background: focused
-          ? "rgba(242,243,238,0.08)"
+          ? "rgba(239,90,42,0.10)"
           : selected
-            ? "rgba(242,243,238,0.05)"
+            ? "rgba(239,90,42,0.07)"
             : "transparent",
-        outline: focused ? "1px solid rgba(242,243,238,0.45)" : undefined,
+        outline: focused ? "1px solid rgba(239,90,42,0.55)" : undefined,
         outlineOffset: -1,
       }}
     >
@@ -837,17 +839,17 @@ const RecapCompactRow: React.FC<{
             type="checkbox"
             checked={selected}
             onChange={onToggleSelect}
-            style={{ accentColor: "var(--spark-lime)", width: 14, height: 14 }}
+            style={{ accentColor: "#ef5a2a", width: 14, height: 14 }}
           />
         </label>
       )}
       <div
         className="relative z-10 shrink-0 overflow-hidden"
         style={{
-          width: 40,
-          height: 40,
-          borderRadius: 10,
-          background: "rgba(242,243,238,0.08)",
+          width: 34,
+          height: 34,
+          borderRadius: 8,
+          background: "rgba(239,90,42,0.08)",
         }}
       >
         {recap.heroImage && !heroFailed ? (
@@ -868,7 +870,7 @@ const RecapCompactRow: React.FC<{
         )}
       </div>
       <div className="min-w-0 flex-1 relative z-10">
-        <p className="text-sm font-semibold truncate">{recap.baName || "Unattributed"}</p>
+        <p className="text-[13px] font-semibold leading-tight truncate">{recap.baName || "Unattributed"}</p>
         {recap.isThirdParty ? (
           <div className="mt-1 flex items-center gap-1 flex-wrap">
             <ThirdPartyRecapBadge compact notInTotals={recap.excludeFromAggregates} />
@@ -888,10 +890,11 @@ const RecapCompactRow: React.FC<{
           {recap.retailerName && recap.retailerName !== "—"
             ? recap.retailerName
             : recap.name}
+          {recap.date ? ` · ${formatDate(recap.date)}` : ""}
         </p>
       </div>
       <span
-        className={`relative z-10 chip shrink-0 ${
+        className={`relative z-10 chip chip-sm shrink-0 ${
           emptyShell ? "" : approved ? "chip-lime" : "chip-orange"
         }`}
         style={
@@ -906,7 +909,7 @@ const RecapCompactRow: React.FC<{
       >
         {statusText}
       </span>
-      <div className="relative z-10 flex items-center gap-3 shrink-0">
+      <div className="relative z-10 hidden sm:flex items-center gap-2 shrink-0">
         <SparkStat
           size="sm"
           tone="lime"
@@ -1917,8 +1920,8 @@ const RecapsListFetched: React.FC<{
                     style={{
                       letterSpacing: "0.12em",
                       color: "var(--spark-lime)",
-                      background: "rgba(242,243,238,0.10)",
-                      border: "1px solid rgba(242,243,238,0.28)",
+                      background: "rgba(197,245,70,0.10)",
+                      border: "1px solid rgba(197,245,70,0.28)",
                     }}
                   >
                     {chip.label}
@@ -2085,11 +2088,11 @@ export default function SparkRecapsList() {
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [density, setDensity] = useState<"cards" | "compact">(() => {
     try {
-      return localStorage.getItem("spark-recaps-density") === "compact"
-        ? "compact"
-        : "cards";
+      const saved = localStorage.getItem("spark-recaps-density");
+      if (saved === "cards" || saved === "compact") return saved;
+      return isClient ? "cards" : "compact";
     } catch {
-      return "cards";
+      return isClient ? "cards" : "compact";
     }
   });
   const [focusedIdx, setFocusedIdx] = useState(-1);
@@ -2332,6 +2335,9 @@ export default function SparkRecapsList() {
       justApprovedIds,
     ],
   );
+  const visibleReviewCount = queueItems.filter(
+    (item) => !item.approved && !item.archived,
+  ).length;
 
   useEffect(() => {
     if (isClient || queueItems.length === 0) return;
@@ -3172,7 +3178,7 @@ export default function SparkRecapsList() {
           }
         />
         <div
-          className="sticky top-0 z-20 spark-card spark-sticky-filters flex flex-col"
+          className="sticky top-0 z-20 spark-card spark-sticky-filters !bg-[#0A0B0D] flex flex-col"
         >
           <div className="flex flex-wrap gap-2 items-center">
             <div className="min-w-[120px] mr-1 shrink-0">
@@ -3214,7 +3220,7 @@ export default function SparkRecapsList() {
                     style={{
                       background:
                         pipelineKey === key
-                          ? "rgba(242,243,238,0.16)"
+                          ? "rgba(197,245,70,0.16)"
                           : "transparent",
                       color:
                         pipelineKey === key
@@ -3226,6 +3232,26 @@ export default function SparkRecapsList() {
                   </button>
                 ))}
               </div>
+            )}
+            {!isClient && (
+              <button
+                type="button"
+                disabled={reviewNextBusy}
+                onClick={() => {
+                  void openNextReview();
+                }}
+                className="rounded-xl px-3 py-2 text-xs font-bold shrink-0"
+                style={{
+                  color: "#fff",
+                  background: "#ef5a2a",
+                  border: "1px solid #ef5a2a",
+                  opacity: reviewNextBusy ? 0.6 : 1,
+                }}
+              >
+                {reviewNextBusy
+                  ? "Opening…"
+                  : `Review next${visibleReviewCount ? ` · ${visibleReviewCount}` : ""}`}
+              </button>
             )}
             <RecapTypeChips
               chips={typeChips}
@@ -3288,7 +3314,7 @@ export default function SparkRecapsList() {
                         style={{
                           background:
                             density === key
-                              ? "rgba(242,243,238,0.16)"
+                              ? "rgba(197,245,70,0.16)"
                               : "transparent",
                           color:
                             density === key
@@ -3390,7 +3416,7 @@ export default function SparkRecapsList() {
                         style={{
                           background:
                             datePreset === p
-                              ? "rgba(242,243,238,0.16)"
+                              ? "rgba(197,245,70,0.16)"
                               : "transparent",
                           color:
                             datePreset === p
@@ -3454,7 +3480,7 @@ export default function SparkRecapsList() {
                   className="px-2.5 py-2 text-xs font-semibold"
                   style={{
                     background:
-                      density === key ? "rgba(242,243,238,0.16)" : "transparent",
+                      density === key ? "rgba(197,245,70,0.16)" : "transparent",
                     color:
                       density === key
                         ? "var(--spark-lime)"
@@ -3552,7 +3578,7 @@ export default function SparkRecapsList() {
                   className="px-2.5 py-2 text-xs font-semibold"
                   style={{
                     background:
-                      datePreset === p ? "rgba(242,243,238,0.16)" : "transparent",
+                      datePreset === p ? "rgba(197,245,70,0.16)" : "transparent",
                     color:
                       datePreset === p
                         ? "var(--spark-lime)"
@@ -3719,6 +3745,55 @@ export default function SparkRecapsList() {
               )}
             </div>
           )}
+          <div
+            className="flex items-center gap-2 overflow-x-auto pt-1"
+            aria-label="Current recap filter context"
+            style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
+          >
+            <span
+              className="mono text-[9px] font-bold shrink-0"
+              style={{ letterSpacing: "0.14em", color: "#ef5a2a" }}
+            >
+              VIEW
+            </span>
+            <span className="text-[11px] font-semibold whitespace-nowrap">
+              {windowLabel}
+            </span>
+            <span
+              className="mono text-[9px] shrink-0"
+              style={{ color: "rgba(255,255,255,0.45)" }}
+            >
+              {meta.filteredTotal} MATCHING
+            </span>
+            {filterChips.map((chip) => (
+              <span
+                key={chip.key}
+                className="mono text-[9px] px-2 py-1 rounded-full whitespace-nowrap shrink-0"
+                style={{
+                  letterSpacing: "0.1em",
+                  color: "#ef5a2a",
+                  background: "rgba(239,90,42,0.10)",
+                  border: "1px solid rgba(239,90,42,0.30)",
+                }}
+              >
+                {chip.label}
+              </span>
+            ))}
+            {!isQueueDefault && filterChips.length > 0 && (
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="mono text-[9px] px-2 py-1 rounded-full whitespace-nowrap shrink-0"
+                style={{
+                  color: "rgba(255,255,255,0.68)",
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.14)",
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="spark-bento" aria-label="Recap totals in view">
@@ -3897,37 +3972,6 @@ export default function SparkRecapsList() {
             <option value="eng-desc">Most consumers</option>
             <option value="sold-desc">Most products sold</option>
           </select>
-          {filterChips.length > 0 && !isQueueDefault && (
-            <div className="flex flex-wrap gap-2 items-center w-full">
-              {filterChips.map((chip) => (
-                <span
-                  key={chip.key}
-                  className="mono text-[10px] px-2.5 py-1.5 rounded-full"
-                  style={{
-                    letterSpacing: "0.12em",
-                    color: "var(--spark-lime)",
-                    background: "rgba(242,243,238,0.10)",
-                    border: "1px solid rgba(242,243,238,0.28)",
-                  }}
-                >
-                  {chip.label}
-                </span>
-              ))}
-              <button
-                type="button"
-                onClick={clearAllFilters}
-                className="mono text-[10px] px-2.5 py-1.5 rounded-full font-semibold"
-                style={{
-                  letterSpacing: "0.12em",
-                  color: "rgba(255,255,255,0.7)",
-                  background: "transparent",
-                  border: "1px solid var(--spark-border)",
-                }}
-              >
-                Clear all
-              </button>
-            </div>
-          )}
         </div>
 
         <Suspense fallback={<RecapsListSkeleton />}>
@@ -4109,7 +4153,7 @@ export default function SparkRecapsList() {
             style={{
               background: "var(--spark-lime)",
               color: "#0a0d09",
-              boxShadow: "0 0 18px rgba(242,243,238,0.4)",
+              boxShadow: "0 0 18px rgba(197,245,70,0.4)",
             }}
             title={
               selectedIds.size > CAMPAIGN_REPORT_MAX
